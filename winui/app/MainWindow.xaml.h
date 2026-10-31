@@ -68,6 +68,7 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::CalendarViewSelectedDatesChangedEventArgs const& args);
         void OnRefreshCalendarClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnNewEventClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnExportCalendarClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
         /* Gestionnaires des contacts */
         void OnContactSearchChanged(
@@ -80,6 +81,7 @@ namespace winrt::EvolutionWin::implementation
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
         void OnNewContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnExportContactsClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnComposeToContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnDeleteContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
@@ -191,6 +193,10 @@ namespace winrt::EvolutionWin::implementation
         fire_and_forget ShowNewEventDialogAsync();
         void LoadContacts(hstring const& query);
         fire_and_forget ShowNewContactDialogAsync();
+
+        /* Exportation vCard / iCalendar */
+        fire_and_forget ExportCalendarAsync(Windows::Data::Json::JsonArray sources);
+        fire_and_forget ExportContactsAsync(Windows::Data::Json::JsonArray books);
 
         /* shared with the compose windows */
         std::shared_ptr<::EvolutionWin::CoreBridge> m_core;

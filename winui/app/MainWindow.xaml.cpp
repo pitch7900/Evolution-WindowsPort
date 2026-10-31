@@ -4090,6 +4090,124 @@ namespace winrt::EvolutionWin::implementation
         });
     }
 
+    /* Remplace les caractères interdits dans un nom de fichier Windows.
+     * Paramètres :
+     *   name     : nom proposé (nom d'agenda, de carnet d'adresses…)
+     *   fallback : nom utilisé si le résultat est vide */
+    static hstring SanitizeFileName(hstring const& name, hstring const& fallback)
+    {
+        std::wstring clean{ name };
+        for (auto& c : clean)
+            if (wcschr(L"\\/:*?\"<>|", c) || c < 32)
+                c = L'_';
+        return clean.empty() ? fallback : hstring{ clean };
+    }
+
+    /* Gestionnaire du bouton « Exporter » du calendrier : liste les agendas et
+     * listes de tâches, puis propose l'exportation de l'un d'eux. */
+    void MainWindow::OnExportCalendarClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        m_core->ListSources(L"calendar,tasks", [this](hstring const& json, hstring const& error)
+        {
+            JsonArray sources;
+            if (!error.empty() || !JsonArray::TryParse(json, sources))
+            {
+                ShowStatus(L"Exportation : " + error, InfoBarSeverity::Error);
+                return;
+            }
+            if (sources.Size() == 0)
+            {
+                ShowStatus(L"Aucun agenda ni liste de tâches à exporter.", InfoBarSeverity::Warning);
+                return;
+            }
+            ExportCalendarAsync(sources);
+        });
+    }
+
+    /* Demande l'agenda ou la liste de tâches à exporter, puis le fichier .ics
+     * de destination, et lance l'exportation iCalendar par evo-core.
+     * Paramètres :
+     *   sources : tableau JSON [{"uid", "name", "kind"}] des agendas et listes de tâches */
+    fire_and_forget MainWindow::ExportCalendarAsync(JsonArray sources)
+    {
+        auto strong = get_strong();
+        if (m_dialog_open || !Content() || !Content().XamlRoot())
+            co_return;
+
+        m_dialog_open = true;
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(L"Exporter au format iCalendar"));
+        dialog.PrimaryButtonText(L"Exporter");
+        dialog.CloseButtonText(L"Annuler");
+        dialog.DefaultButton(ContentDialogButton::Primary);
+
+        StackPanel panel;
+        panel.Spacing(10);
+        panel.MinWidth(380);
+
+        ComboBox source_box;
+        source_box.Header(box_value(L"Agenda ou liste de tâches"));
+        source_box.HorizontalAlignment(HorizontalAlignment::Stretch);
+        for (auto const& value : sources)
+        {
+            auto source = value.GetObject();
+            hstring label = source.GetNamedString(L"kind", L"") == L"tasks" ? L"Tâches" : L"Agenda";
+            source_box.Items().Append(box_value(label + L" : " + source.GetNamedString(L"name", L"")));
+        }
+        source_box.SelectedIndex(0);
+        panel.Children().Append(source_box);
+
+        TextBlock hint;
+        hint.Text(L"Tous les événements ou toutes les tâches sont enregistrés dans un fichier .ics, avec leurs fuseaux horaires.");
+        hint.TextWrapping(TextWrapping::Wrap);
+        hint.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+        panel.Children().Append(hint);
+
+        dialog.Content(panel);
+
+        auto result = co_await dialog.ShowAsync();
+        m_dialog_open = false;
+
+        int index = source_box.SelectedIndex();
+        if (result != ContentDialogResult::Primary || index < 0)
+            co_return;
+
+        auto source = sources.GetObjectAt(static_cast<uint32_t>(index));
+        hstring uid = source.GetNamedString(L"uid", L"");
+        hstring name = source.GetNamedString(L"name", L"");
+        bool tasks = source.GetNamedString(L"kind", L"") == L"tasks";
+
+        Windows::Storage::Pickers::FileSavePicker picker;
+        InitializePicker(picker);
+        picker.SuggestedFileName(SanitizeFileName(name, tasks ? L"taches" : L"agenda"));
+        picker.FileTypeChoices().Insert(L"Calendrier iCalendar", single_threaded_vector<hstring>({ L".ics" }));
+
+        auto file = co_await picker.PickSaveFileAsync();
+        if (!file)
+            co_return;
+        hstring dest = file.Path();
+
+        JsonObject request;
+        request.SetNamedValue(L"source_uid", JsonValue::CreateStringValue(uid));
+        request.SetNamedValue(L"path", JsonValue::CreateStringValue(dest));
+
+        ShowStatus(L"Exportation de « " + name + L" »…", InfoBarSeverity::Informational);
+        m_core->ExportCalendar(request.Stringify(), [this, dest, tasks](hstring const& json, hstring const& error)
+        {
+            JsonObject answer;
+            if (!error.empty() || !JsonObject::TryParse(json, answer))
+            {
+                ShowStatus(L"Exportation : " + error, InfoBarSeverity::Error);
+                return;
+            }
+            auto count = static_cast<uint32_t>(answer.GetNamedNumber(L"count", 0));
+            ShowStatus(hstring{ std::to_wstring(count) + (tasks ? L" tâche(s) exportée(s)" : L" événement(s) exporté(s)") +
+                L" dans « " + std::wstring{ dest } + L" »." }, InfoBarSeverity::Success);
+        });
+    }
+
     /* Charge la liste des contacts depuis les carnets d'adresses EDS.
      * Paramètres :
      *   query : texte de filtrage optionnel sur le nom ou l'adresse e-mail */
@@ -4254,6 +4372,130 @@ namespace winrt::EvolutionWin::implementation
             }
             ShowStatus(L"Contact enregistré.", InfoBarSeverity::Success);
             LoadContacts(ContactSearchBox().Text());
+        });
+    }
+
+    /* Gestionnaire du bouton « Exporter » des contacts : liste les carnets
+     * d'adresses, puis propose l'exportation vCard. */
+    void MainWindow::OnExportContactsClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        m_core->ListSources(L"contacts", [this](hstring const& json, hstring const& error)
+        {
+            JsonArray books;
+            if (!error.empty() || !JsonArray::TryParse(json, books))
+            {
+                ShowStatus(L"Exportation : " + error, InfoBarSeverity::Error);
+                return;
+            }
+            if (books.Size() == 0)
+            {
+                ShowStatus(L"Aucun carnet d'adresses à exporter.", InfoBarSeverity::Warning);
+                return;
+            }
+            ExportContactsAsync(books);
+        });
+    }
+
+    /* Demande le carnet d'adresses et le format (un seul fichier .vcf ou un
+     * fichier par contact), puis la destination, et lance l'exportation vCard.
+     * Paramètres :
+     *   books : tableau JSON [{"uid", "name", "kind"}] des carnets d'adresses */
+    fire_and_forget MainWindow::ExportContactsAsync(JsonArray books)
+    {
+        auto strong = get_strong();
+        if (m_dialog_open || !Content() || !Content().XamlRoot())
+            co_return;
+
+        m_dialog_open = true;
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(L"Exporter les contacts"));
+        dialog.PrimaryButtonText(L"Exporter");
+        dialog.CloseButtonText(L"Annuler");
+        dialog.DefaultButton(ContentDialogButton::Primary);
+
+        StackPanel panel;
+        panel.Spacing(10);
+        panel.MinWidth(380);
+
+        ComboBox book_box;
+        book_box.Header(box_value(L"Carnet d'adresses"));
+        book_box.HorizontalAlignment(HorizontalAlignment::Stretch);
+        book_box.Items().Append(box_value(L"Tous les carnets d'adresses"));
+        for (auto const& value : books)
+            book_box.Items().Append(box_value(value.GetObject().GetNamedString(L"name", L"")));
+        book_box.SelectedIndex(0);
+        panel.Children().Append(book_box);
+
+        RadioButtons format;
+        format.Header(box_value(L"Format vCard"));
+        format.Items().Append(box_value(L"Un seul fichier .vcf"));
+        format.Items().Append(box_value(L"Un fichier .vcf par contact, dans un dossier"));
+        format.SelectedIndex(0);
+        panel.Children().Append(format);
+
+        dialog.Content(panel);
+
+        auto result = co_await dialog.ShowAsync();
+        m_dialog_open = false;
+
+        if (result != ContentDialogResult::Primary)
+            co_return;
+
+        int index = book_box.SelectedIndex();
+        hstring book_uid;
+        hstring name = L"Contacts";
+        if (index > 0)
+        {
+            auto book = books.GetObjectAt(static_cast<uint32_t>(index - 1));
+            book_uid = book.GetNamedString(L"uid", L"");
+            name = book.GetNamedString(L"name", L"Contacts");
+        }
+        bool per_contact = format.SelectedIndex() == 1;
+
+        hstring dest;
+        if (per_contact)
+        {
+            Windows::Storage::Pickers::FolderPicker picker;
+            InitializePicker(picker);
+            picker.FileTypeFilter().Append(L"*");
+
+            auto folder = co_await picker.PickSingleFolderAsync();
+            if (!folder)
+                co_return;
+            dest = folder.Path();
+        }
+        else
+        {
+            Windows::Storage::Pickers::FileSavePicker picker;
+            InitializePicker(picker);
+            picker.SuggestedFileName(SanitizeFileName(name, L"Contacts"));
+            picker.FileTypeChoices().Insert(L"Carte de visite vCard", single_threaded_vector<hstring>({ L".vcf" }));
+
+            auto file = co_await picker.PickSaveFileAsync();
+            if (!file)
+                co_return;
+            dest = file.Path();
+        }
+
+        JsonObject request;
+        request.SetNamedValue(L"book_uid", JsonValue::CreateStringValue(book_uid));
+        request.SetNamedValue(L"path", JsonValue::CreateStringValue(dest));
+        request.SetNamedValue(L"per_contact", JsonValue::CreateBooleanValue(per_contact));
+
+        ShowStatus(L"Exportation des contacts…", InfoBarSeverity::Informational);
+        m_core->ExportContacts(request.Stringify(), [this, dest](hstring const& json, hstring const& error)
+        {
+            JsonObject answer;
+            if (!error.empty() || !JsonObject::TryParse(json, answer))
+            {
+                ShowStatus(L"Exportation des contacts : " + error, InfoBarSeverity::Error);
+                return;
+            }
+            auto count = static_cast<uint32_t>(answer.GetNamedNumber(L"count", 0));
+            ShowStatus(hstring{ std::to_wstring(count) + L" contact(s) exporté(s) dans « " + std::wstring{ dest } + L" »." },
+                InfoBarSeverity::Success);
         });
     }
 
