@@ -1129,6 +1129,25 @@ Problèmes rencontrés :
    une arborescence complète. Un ancien `evolution-source-registry` lancé depuis
    `C:\gtk-build` (avant la réorganisation) occupait aussi le bus D-Bus.
 
+4. **Boîte de réception vide au premier lancement** (VM Windows 11 neuve,
+   MSI 0.9.0 ; autres dossiers corrects) : la relève de démarrage ouvrait la
+   boîte de réception par `camel_store_get_inbox_folder_sync`, dont
+   l'implémentation par défaut (IMAP) crée un **second `CamelFolder` hors du
+   cache de dossiers du magasin**. evo-core suivait cette instance ; les
+   messages téléchargés par le serveur IMAP allaient dans l'autre (celle du
+   cache) : la liste restait vide, sans erreur. Avec un cache existant, les
+   deux instances relisent le même résumé sur disque, d'où un problème
+   invisible sur le poste de développement. Correctif : nom de la boîte de
+   réception lu dans l'arborescence (`CAMEL_FOLDER_TYPE_INBOX`), dossier
+   ouvert comme les autres (`camel_store_get_folder_sync`). De plus,
+   `core_ensure_connected` sérialise les connexions et vérifie l'état
+   `CONNECTED` : `camel_offline_store_set_online_sync` répond « succès »
+   immédiatement si un autre fil est en train de connecter, et une relève
+   IMAP lancée alors est ignorée sans erreur. Reproduit avec un cache vide
+   (variables `XDG_DATA_HOME` / `XDG_CACHE_HOME`) et une seconde liste
+   déclenchée par `folder-changed`, comme le fait l'interface : 3 échecs
+   sur 10 avant, 0 sur 15 après (MSI 0.9.1).
+
 **Validé** : `evo-core-test` (lecture seule) avec le compte IMAP réel :
 comptes, dossiers, 56 messages, lecture d'un message. Reste à valider dans
 l'interface : dialogue TLS, connexion OAuth2 (inscription d'application

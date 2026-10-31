@@ -36,6 +36,9 @@ struct _EvoCore {
 	GMutex folders_lock;
 	GSource *refresh_source;
 
+	/* serializes core_ensure_connected () */
+	GMutex connect_lock;
+
 	/* startup state, protected by lock */
 	GMutex lock;
 	GCond cond;
@@ -1369,18 +1372,29 @@ core_ensure_connected (EvoCore *core,
 		       CamelStore *store,
 		       GError **error)
 {
+	gboolean success = TRUE;
+
 	if (!CAMEL_IS_NETWORK_SERVICE (store))
 		return TRUE;
+
+	/* One connection at a time, and connected on return: while another
+	 * thread is connecting, camel_offline_store_set_online_sync () returns
+	 * success at once, and an IMAP refresh started then is skipped without
+	 * error, e.g. an empty inbox on a first run (startup refresh and the
+	 * message list connecting together). */
+	g_mutex_lock (&core->connect_lock);
 
 	/* offline-capable stores (IMAP) refuse to work until set online;
 	 * this also connects them */
 	if (CAMEL_IS_OFFLINE_STORE (store) && !camel_offline_store_get_online (CAMEL_OFFLINE_STORE (store)))
-		return camel_offline_store_set_online_sync (CAMEL_OFFLINE_STORE (store), TRUE, core->cancellable, error);
+		success = camel_offline_store_set_online_sync (CAMEL_OFFLINE_STORE (store), TRUE, core->cancellable, error);
 
-	if (camel_service_get_connection_status (CAMEL_SERVICE (store)) == CAMEL_SERVICE_CONNECTED)
-		return TRUE;
+	if (success && camel_service_get_connection_status (CAMEL_SERVICE (store)) != CAMEL_SERVICE_CONNECTED)
+		success = camel_service_connect_sync (CAMEL_SERVICE (store), core->cancellable, error);
 
-	return camel_service_connect_sync (CAMEL_SERVICE (store), core->cancellable, error);
+	g_mutex_unlock (&core->connect_lock);
+
+	return success;
 }
 
 /* --- accounts --- */
@@ -3109,6 +3123,44 @@ cleanup:
 
 /* --- refresh --- */
 
+static const gchar *
+folder_info_find_inbox (CamelFolderInfo *fi)
+{
+	for (; fi; fi = fi->next) {
+		const gchar *found;
+
+		if ((fi->flags & CAMEL_FOLDER_TYPE_MASK) == CAMEL_FOLDER_TYPE_INBOX)
+			return fi->full_name;
+
+		found = folder_info_find_inbox (fi->child);
+		if (found)
+			return found;
+	}
+
+	return NULL;
+}
+
+/* Full name of the inbox of a store, from its folder tree, to open it like
+ * any other folder (core_ref_folder). Not camel_store_get_inbox_folder_sync ():
+ * its default implementation (IMAP) opens a second CamelFolder, outside the
+ * store's folder cache; on a first run the messages fetched by the server go
+ * to the cached instance while the list showed the other one, empty. */
+static gchar *
+core_dup_inbox_name (EvoCore *core,
+		     CamelStore *store)
+{
+	CamelFolderInfo *fi;
+	gchar *name = NULL;
+
+	fi = camel_store_get_folder_info_sync (store, NULL, CAMEL_STORE_FOLDER_INFO_RECURSIVE, core->cancellable, NULL);
+	if (fi) {
+		name = g_strdup (folder_info_find_inbox (fi));
+		camel_folder_info_free (fi);
+	}
+
+	return name ? name : g_strdup ("INBOX");
+}
+
 static gchar *
 core_refresh_run (EvoCore *core,
 		  gchar **args,
@@ -3125,7 +3177,7 @@ core_refresh_run (EvoCore *core,
 		GHashTableIter iter;
 		GPtrArray *opened;
 		gpointer key, value;
-		gchar *prefix;
+		gchar *prefix, *inbox_name;
 		GError *local_error = NULL;
 		guint ii;
 
@@ -3142,11 +3194,10 @@ core_refresh_run (EvoCore *core,
 		}
 
 		/* the inbox is followed even when not shown, for new mail */
-		inbox = camel_store_get_inbox_folder_sync (CAMEL_STORE (service), core->cancellable, NULL);
-		if (inbox) {
-			g_object_unref (core_track_folder (core, uid, inbox));
-			g_object_unref (inbox);
-		}
+		inbox_name = core_dup_inbox_name (core, CAMEL_STORE (service));
+		inbox = core_ref_folder (core, uid, inbox_name, NULL);
+		g_clear_object (&inbox);
+		g_free (inbox_name);
 
 		/* refreshing emits "changed" on the folders with new messages */
 		prefix = g_strconcat (uid, "\x1F", NULL);
@@ -5098,7 +5149,8 @@ evo_core_new (EvoCoreEventFunc event_func,
 	g_mutex_init (&core->lock);
 	g_cond_init (&core->cond);
 	g_mutex_init (&core->folders_lock);
-	core->folders = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+	g_mutex_init (&core->connect_lock);
+	core->folders =g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 	core->oauth2_pending = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, core_oauth2_pending_free);
 
 	/* network requests run in parallel, a few at a time */
@@ -5140,6 +5192,7 @@ evo_core_free (EvoCore *core)
 	}
 	g_hash_table_destroy (core->folders);
 	g_mutex_clear (&core->folders_lock);
+	g_mutex_clear (&core->connect_lock);
 
 	g_clear_object (&core->session);
 	g_clear_object (&core->registry);

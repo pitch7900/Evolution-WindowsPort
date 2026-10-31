@@ -89,7 +89,7 @@ tools\run-winui-debug.bat    :: Lance EvolutionWin.exe avec journaux de débogag
 
 ```bat
 tools\build-msi.bat          :: dist\Evolution-<version>-x64.msi (WiX v5, autonome)
-msiexec /i dist\Evolution-0.8.0-x64.msi /qn   :: installation silencieuse (par machine)
+msiexec /i dist\Evolution-0.9.1-x64.msi /qn   :: installation silencieuse (par machine)
 ```
 
 ---
