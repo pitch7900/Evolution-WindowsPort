@@ -130,6 +130,59 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Crée un dossier.
+         * Paramètres :
+         *   account : identifiant du compte
+         *   parent  : chemin complet du parent ("" : premier niveau du compte)
+         *   name    : nom du nouveau dossier
+         *   handler : rappel recevant {"full_name": "..."} */
+        void CreateFolder(winrt::hstring const& account, winrt::hstring const& parent, winrt::hstring const& name,
+                          CoreHandler handler)
+        {
+            evo_core_create_folder(m_core, winrt::to_string(account).c_str(), winrt::to_string(parent).c_str(),
+                winrt::to_string(name).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Renomme un dossier (il garde son parent).
+         * Paramètres :
+         *   account  : identifiant du compte
+         *   folder   : chemin complet du dossier
+         *   new_name : nouveau nom (sans chemin)
+         *   handler  : rappel recevant {"full_name": "..."} */
+        void RenameFolder(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& new_name,
+                          CoreHandler handler)
+        {
+            evo_core_rename_folder(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                winrt::to_string(new_name).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Déplace (copy = false) ou copie (copy = true) un dossier sous un
+         * autre parent du même compte.
+         * Paramètres :
+         *   account : identifiant du compte
+         *   folder  : chemin complet du dossier
+         *   parent  : chemin complet du nouveau parent ("" : premier niveau)
+         *   copy    : copier les messages au lieu de déplacer le dossier
+         *   handler : rappel recevant {"full_name": "..."} (et "count" pour une copie) */
+        void MoveOrCopyFolder(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& parent,
+                              bool copy, CoreHandler handler)
+        {
+            (copy ? evo_core_copy_folder : evo_core_move_folder)(m_core, winrt::to_string(account).c_str(),
+                winrt::to_string(folder).c_str(), winrt::to_string(parent).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Supprime un dossier sans sous-dossiers, et définitivement ses messages.
+         * Paramètres :
+         *   account : identifiant du compte
+         *   folder  : chemin complet du dossier
+         *   handler : rappel recevant {"count": n} */
+        void DeleteFolder(winrt::hstring const& account, winrt::hstring const& folder, CoreHandler handler)
+        {
+            evo_core_delete_folder(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Recherche les messages d'un dossier correspondant à une requête.
          * Paramètres :
          *   account   : identifiant du compte

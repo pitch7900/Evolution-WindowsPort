@@ -206,6 +206,29 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Input::ContextRequestedEventArgs const& args);
         fire_and_forget RunFolderActionAsync(EvolutionWin::FolderItem item, hstring action);
 
+        /* Gestion des dossiers : créer, renommer, déplacer, copier, supprimer */
+        hstring NodeFolderName(Microsoft::UI::Xaml::Controls::TreeViewNode const& node);
+        Windows::Data::Json::JsonObject FindFolderJson(Windows::Data::Json::JsonArray const& folders, hstring const& full_name);
+        void AppendFolderManagementItems(
+            Microsoft::UI::Xaml::Controls::MenuFlyout const& menu,
+            EvolutionWin::FolderItem const& item,
+            hstring const& full_name);
+        void AppendFolderTargetItems(
+            Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items,
+            Windows::Data::Json::JsonArray const& folders,
+            hstring const& prefix,
+            hstring const& excluded,
+            hstring const& skipped,
+            bool selectable_only,
+            std::function<void(hstring const&)> const& on_pick);
+        Windows::Foundation::IAsyncOperation<hstring> PromptFolderNameAsync(hstring title, hstring label, hstring initial);
+        fire_and_forget CreateFolderAsync(hstring account, hstring parent, hstring parent_name);
+        fire_and_forget RenameFolderAsync(hstring account, hstring full_name, hstring name);
+        void MoveOrCopyFolder(hstring const& account, hstring const& full_name, hstring const& name,
+                              hstring const& parent, bool copy);
+        fire_and_forget DeleteFolderAsync(hstring account, hstring full_name, hstring name, int32_t total);
+        void ReloadAccountFolders(hstring const& account, hstring const& old_name, hstring const& new_name);
+
         /* Étape 3 : Calendrier et Contacts */
         void LoadEvents();
         fire_and_forget ShowNewEventDialogAsync();

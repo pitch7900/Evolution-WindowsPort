@@ -191,6 +191,90 @@ void		evo_core_move_message		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Gestion des dossiers d'un compte. Les chemins complets sont ceux de
+ * evo_core_list_folders () (séparateur « / » quel que soit le séparateur du
+ * serveur IMAP). Chaque opération réussie émet "folders-updated".
+ * Les dossiers spéciaux (Boîte de réception, Boîte d'envoi, Corbeille,
+ * Indésirables, Envoyés, Brouillons, dossiers virtuels), et les dossiers qui
+ * en contiennent, ne peuvent être ni renommés, ni déplacés, ni supprimés.
+ * Les déplacements et copies restent dans le même compte. */
+
+/* Crée un dossier.
+ * Paramètres :
+ *   core             : instance du moteur evo-core
+ *   account_uid      : identifiant du compte
+ *   parent_full_name : chemin complet du parent ("" : premier niveau du compte)
+ *   name             : nom du nouveau dossier (sans « / »)
+ *   func             : rappel recevant {"full_name": "..."}
+ *   user_data        : données utilisateur transmises au rappel */
+void		evo_core_create_folder		(EvoCore *core,
+						 const char *account_uid,
+						 const char *parent_full_name,
+						 const char *name,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Renomme un dossier ; il garde son parent, ses sous-dossiers le suivent.
+ * Paramètres :
+ *   core             : instance du moteur evo-core
+ *   account_uid      : identifiant du compte
+ *   folder_full_name : chemin complet du dossier
+ *   new_name         : nouveau nom (sans chemin ni « / »)
+ *   func             : rappel recevant {"full_name": "<nouveau chemin complet>"}
+ *   user_data        : données utilisateur transmises au rappel */
+void		evo_core_rename_folder		(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *new_name,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Déplace un dossier (et ses sous-dossiers) sous un autre parent du compte.
+ * Paramètres :
+ *   core                 : instance du moteur evo-core
+ *   account_uid          : identifiant du compte
+ *   folder_full_name     : chemin complet du dossier
+ *   new_parent_full_name : chemin complet du nouveau parent ("" : premier niveau)
+ *   func                 : rappel recevant {"full_name": "<nouveau chemin complet>"}
+ *   user_data            : données utilisateur transmises au rappel */
+void		evo_core_move_folder		(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *new_parent_full_name,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Copie un dossier sous un autre parent du compte : dossier de même nom créé
+ * puis tous ses messages copiés (originaux conservés, sous-dossiers non
+ * copiés).
+ * Paramètres :
+ *   core                 : instance du moteur evo-core
+ *   account_uid          : identifiant du compte
+ *   folder_full_name     : chemin complet du dossier copié
+ *   new_parent_full_name : chemin complet du parent de la copie ("" : premier niveau)
+ *   func                 : rappel recevant {"full_name": "<copie>", "count": n}
+ *   user_data            : données utilisateur transmises au rappel */
+void		evo_core_copy_folder		(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *new_parent_full_name,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Supprime un dossier. Refusé s'il a des sous-dossiers ; ses messages sont
+ * supprimés définitivement avec lui (à confirmer dans l'interface).
+ * Paramètres :
+ *   core             : instance du moteur evo-core
+ *   account_uid      : identifiant du compte
+ *   folder_full_name : chemin complet du dossier
+ *   func             : rappel recevant {"count": <messages supprimés>}
+ *   user_data        : données utilisateur transmises au rappel */
+void		evo_core_delete_folder		(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Recherche dans un dossier les messages correspondant à la requête (objet,
  * expéditeur, destinataires ou corps du message), triés du plus récent au plus
  * ancien.
