@@ -277,6 +277,47 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Liste les tâches des listes de tâches activées.
+         * Paramètres :
+         *   list_uid : identifiant de la liste de tâches (vide pour toutes)
+         *   handler  : rappel recevant le tableau JSON des tâches */
+        void ListTasks(winrt::hstring const& list_uid, CoreHandler handler)
+        {
+            evo_core_list_tasks(m_core, winrt::to_string(list_uid).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Crée une tâche.
+         * Paramètres :
+         *   task_json : description JSON de la tâche (voir evo_core_create_task)
+         *   handler   : rappel recevant {"uid", "list_uid"} */
+        void CreateTask(winrt::hstring const& task_json, CoreHandler handler)
+        {
+            evo_core_create_task(m_core, winrt::to_string(task_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Modifie les champs indiqués d'une tâche.
+         * Paramètres :
+         *   task_json : JSON {"list_uid", "uid", champs modifiés...}
+         *   handler   : rappel recevant {} */
+        void ModifyTask(winrt::hstring const& task_json, CoreHandler handler)
+        {
+            evo_core_modify_task(m_core, winrt::to_string(task_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Supprime une tâche.
+         * Paramètres :
+         *   list_uid : identifiant de la liste de tâches
+         *   task_uid : identifiant de la tâche
+         *   handler  : rappel recevant {} */
+        void DeleteTask(winrt::hstring const& list_uid, winrt::hstring const& task_uid, CoreHandler handler)
+        {
+            evo_core_delete_task(m_core, winrt::to_string(list_uid).c_str(), winrt::to_string(task_uid).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Liste ou recherche les contacts des carnets d'adresses activés.
          * Paramètres :
          *   query   : texte recherché (ou chaîne vide pour tous)

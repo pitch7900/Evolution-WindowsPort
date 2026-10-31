@@ -385,6 +385,75 @@ void		evo_core_delete_event		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Liste les tâches (VTODO) des listes de tâches activées, triées par
+ * échéance (sans échéance à la fin), puis priorité, puis objet. Les
+ * occurrences détachées des tâches périodiques sont ignorées.
+ * Dates en secondes Unix (0 = aucune) ; une date seule (« *_date_only ») vaut
+ * minuit heure locale. "priority" : 0 non définie, 1 (haute) à 9 (basse).
+ * "status" : "needs-action", "in-process", "completed", "cancelled",
+ * "waiting" (en attente) ou "deferred" (différée) ; les deux derniers sont
+ * enregistrés dans X-EVOLUTIONWIN-STATUS, avec STATUS IN-PROCESS ou
+ * NEEDS-ACTION pour les autres clients.
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   list_uid  : identifiant de la liste de tâches ("" ou NULL pour toutes)
+ *   func      : rappel recevant [{"uid": "...", "summary": "...",
+ *               "description": "...", "start": 0, "start_date_only": false,
+ *               "due": 1730000000, "due_date_only": true, "completed": 0,
+ *               "priority": 5, "status": "in-process", "percent": 40,
+ *               "categories": ["..."], "list_uid": "...", "list_name": "...",
+ *               "readonly": false}, ...]
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_list_tasks		(EvoCore *core,
+						 const char *list_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Crée une tâche dans la liste de tâches par défaut (ou celle indiquée par
+ * "list_uid"). Format attendu pour task_json (tous les champs facultatifs) :
+ * {"list_uid": "...", "summary": "...", "description": "...",
+ *  "start": 0, "start_date_only": true, "due": 1730000000, "due_date_only": true,
+ *  "priority": 1, "status": "needs-action", "percent": 0, "categories": ["..."]}
+ * Dates : 0 = aucune ; avec "*_date_only" (vrai par défaut), seul le jour
+ * local est retenu. "status": "completed" (ou "percent": 100 sans état)
+ * marque la tâche terminée à 100 % avec sa date d'achèvement (COMPLETED).
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   task_json : description de la tâche au format JSON UTF-8
+ *   func      : rappel recevant {"uid": "...", "list_uid": "..."}
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_create_task		(EvoCore *core,
+						 const char *task_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Modifie une tâche : "list_uid" et "uid" désignent la tâche, et seuls les
+ * autres champs présents (même format que evo_core_create_task) sont changés,
+ * ex. {"list_uid": "...", "uid": "...", "status": "completed"}. Les autres
+ * propriétés de la tâche (alarmes, pièces jointes...) sont conservées.
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   task_json : modifications au format JSON UTF-8
+ *   func      : rappel recevant {}
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_modify_task		(EvoCore *core,
+						 const char *task_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Supprime une tâche.
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   list_uid  : identifiant de la liste de tâches (ou "" pour la liste par défaut)
+ *   task_uid  : identifiant de la tâche à supprimer
+ *   func      : rappel recevant {}
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_delete_task		(EvoCore *core,
+						 const char *list_uid,
+						 const char *task_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Liste ou recherche les contacts des carnets d'adresses activés.
  * Paramètres :
  *   core      : instance du moteur evo-core

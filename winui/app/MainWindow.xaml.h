@@ -85,6 +85,24 @@ namespace winrt::EvolutionWin::implementation
         void OnComposeToContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnDeleteContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
+        /* Gestionnaires des tâches */
+        void OnNewTaskClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnNewTaskAccelerator(
+            Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender,
+            Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
+        void OnRefreshTasksClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTaskListChanged(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+        void OnTaskFilterChanged(
+            Microsoft::UI::Xaml::Controls::SelectorBar const& sender,
+            Microsoft::UI::Xaml::Controls::SelectorBarSelectionChangedEventArgs const& args);
+        void OnTaskSortChanged(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+        void OnShowCompletedTasksClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTaskItemClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& args);
+
         /* Gestionnaires des paramètres / comptes */
         void OnAddAccountClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRemoteContentModeChanged(
@@ -198,6 +216,16 @@ namespace winrt::EvolutionWin::implementation
         fire_and_forget ExportCalendarAsync(Windows::Data::Json::JsonArray sources);
         fire_and_forget ExportContactsAsync(Windows::Data::Json::JsonArray books);
 
+        /* Tâches (VTODO) */
+        void LoadTasks();
+        void RestoreTaskViewSettings();
+        void ShowTasks();
+        bool MatchesTaskFilter(Windows::Data::Json::JsonObject const& task, hstring const& filter);
+        Microsoft::UI::Xaml::UIElement BuildTaskRow(Windows::Data::Json::JsonObject const& task, bool show_list);
+        void SetTaskCompleted(Windows::Data::Json::JsonObject const& task, bool completed);
+        void DeleteTaskItem(Windows::Data::Json::JsonObject const& task);
+        fire_and_forget ShowTaskEditorAsync(Windows::Data::Json::JsonObject task);
+
         /* shared with the compose windows */
         std::shared_ptr<::EvolutionWin::CoreBridge> m_core;
         Windows::Data::Json::JsonArray m_accounts{ nullptr };
@@ -218,6 +246,15 @@ namespace winrt::EvolutionWin::implementation
         bool m_reader_ready{ false };
         bool m_dialog_open{ false };
         int64_t m_selected_day_start{ 0 };
+        /* vue Tâches : listes de tâches [{"uid", "name", "kind"}], toutes les
+           tâches chargées (avant filtres) et liste affichée ("" = toutes) */
+        Windows::Data::Json::JsonArray m_task_lists{ nullptr };
+        Windows::Data::Json::JsonArray m_all_tasks{ nullptr };
+        hstring m_task_list_uid;
+        /* préférences de la vue relues ; contrôles mis à jour par le code */
+        bool m_task_view_restored{ false };
+        bool m_updating_task_view{ false };
+        uint64_t m_task_request{ 0 };
         /* Document du lecteur : chaque affichage reçoit une adresse unique
          * (http://reader.evolution.invalid/…) servie par WebResourceRequested,
          * ce qui identifie sans ambiguïté le document chargé ; le contenu
