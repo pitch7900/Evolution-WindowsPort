@@ -1,0 +1,71 @@
+/*
+ * SPDX-License-Identifier: LGPL-2.0-or-later
+ */
+
+#if !defined (__LIBEDATASERVER_H_INSIDE__) && !defined (LIBEDATASERVER_COMPILATION)
+#error "Only <libedataserver/libedataserver.h> should be included directly."
+#endif
+
+#ifndef E_SOURCE_ADDRESS_BOOK_H
+#define E_SOURCE_ADDRESS_BOOK_H
+
+#include <libedataserver/e-source-backend.h>
+
+/* Standard GObject macros */
+#define E_TYPE_SOURCE_ADDRESS_BOOK \
+	(e_source_address_book_get_type ())
+#define E_SOURCE_ADDRESS_BOOK(obj) \
+	(G_TYPE_CHECK_INSTANCE_CAST \
+	((obj), E_TYPE_SOURCE_ADDRESS_BOOK, ESourceAddressBook))
+#define E_SOURCE_ADDRESS_BOOK_CLASS(cls) \
+	(G_TYPE_CHECK_CLASS_CAST \
+	((cls), E_TYPE_SOURCE_ADDRESS_BOOK, ESourceAddressBookClass))
+#define E_IS_SOURCE_ADDRESS_BOOK(obj) \
+	(G_TYPE_CHECK_INSTANCE_TYPE \
+	((obj), E_TYPE_SOURCE_ADDRESS_BOOK))
+#define E_IS_SOURCE_ADDRESS_BOOK_CLASS(cls) \
+	(G_TYPE_CHECK_CLASS_TYPE \
+	((cls), E_TYPE_SOURCE_ADDRESS_BOOK))
+#define E_SOURCE_ADDRESS_BOOK_GET_CLASS(obj) \
+	(G_TYPE_INSTANCE_GET_CLASS \
+	((obj), E_TYPE_SOURCE_ADDRESS_BOOK, ESourceAddressBookClass))
+
+/**
+ * E_SOURCE_EXTENSION_ADDRESS_BOOK:
+ *
+ * Pass this extension name to e_source_get_extension() to access
+ * #ESourceAddressBook.  This is also used as a group name in key files.
+ *
+ * Since: 3.6
+ **/
+#define E_SOURCE_EXTENSION_ADDRESS_BOOK "Address Book"
+
+G_BEGIN_DECLS
+
+typedef struct _ESourceAddressBook ESourceAddressBook;
+typedef struct _ESourceAddressBookClass ESourceAddressBookClass;
+typedef struct _ESourceAddressBookPrivate ESourceAddressBookPrivate;
+
+/**
+ * ESourceAddressBook:
+ * Since: 3.6
+ **/
+struct _ESourceAddressBook {
+	/*< private >*/
+	ESourceBackend parent;
+	ESourceAddressBookPrivate *priv;
+};
+
+struct _ESourceAddressBookClass {
+	ESourceBackendClass parent_class;
+};
+
+GType		e_source_address_book_get_type	(void) G_GNUC_CONST;
+
+guint		e_source_address_book_get_order	(ESourceAddressBook *extension);
+void		e_source_address_book_set_order	(ESourceAddressBook *extension,
+						 guint order);
+
+G_END_DECLS
+
+#endif /* E_SOURCE_ADDRESS_BOOK_H */

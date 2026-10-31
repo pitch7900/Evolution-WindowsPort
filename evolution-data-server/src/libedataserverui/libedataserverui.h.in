@@ -1,0 +1,23 @@
+/*
+ * SPDX-License-Identifier: LGPL-2.0-or-later
+ */
+
+#ifndef LIBEDATASERVERUI@UI_VERSION@_H
+#define LIBEDATASERVERUI@UI_VERSION@_H
+
+#define __LIBEDATASERVERUI_H_INSIDE__
+
+#include <libedataserverui@UI_VERSION@/e-buffer-tagger.h>
+#include <libedataserverui@UI_VERSION@/e-cell-renderer-color.h>
+#include <libedataserverui@UI_VERSION@/e-certificate-widget.h>
+#include <libedataserverui@UI_VERSION@/e-credentials-prompter.h>
+#include <libedataserverui@UI_VERSION@/e-credentials-prompter-impl.h>
+#include <libedataserverui@UI_VERSION@/e-credentials-prompter-impl-oauth2.h>
+#include <libedataserverui@UI_VERSION@/e-credentials-prompter-impl-password.h>
+#include <libedataserverui@UI_VERSION@/e-reminders-widget.h>
+#include <libedataserverui@UI_VERSION@/e-trust-prompt.h>
+#include <libedataserverui@UI_VERSION@/e-webdav-discover-widget.h>
+
+#undef __LIBEDATASERVERUI_H_INSIDE__
+
+#endif /* LIBEDATASERVERUI@UI_VERSION@_H */

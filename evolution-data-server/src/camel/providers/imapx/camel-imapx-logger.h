@@ -1,0 +1,62 @@
+/*
+ * SPDX-License-Identifier: LGPL-2.0-or-later
+ */
+
+#ifndef CAMEL_IMAPX_LOGGER_H
+#define CAMEL_IMAPX_LOGGER_H
+
+#include <gio/gio.h>
+
+#include "camel-imapx-server.h"
+
+/* Standard GObject macros */
+#define CAMEL_TYPE_IMAPX_LOGGER \
+	(camel_imapx_logger_get_type ())
+#define CAMEL_IMAPX_LOGGER(obj) \
+	(G_TYPE_CHECK_INSTANCE_CAST \
+	((obj), CAMEL_TYPE_IMAPX_LOGGER, CamelIMAPXLogger))
+#define CAMEL_IMAPX_LOGGER_CLASS(cls) \
+	(G_TYPE_CHECK_CLASS_CAST \
+	((cls), CAMEL_TYPE_IMAPX_LOGGER, CamelIMAPXLoggerClass))
+#define CAMEL_IS_IMAPX_LOGGER(obj) \
+	(G_TYPE_CHECK_INSTANCE_TYPE \
+	((obj), CAMEL_TYPE_IMAPX_LOGGER))
+#define CAMEL_IS_IMAPX_LOGGER_CLASS(cls) \
+	(G_TYPE_CHECK_CLASS_TYPE \
+	((cls), CAMEL_TYPE_IMAPX_LOGGER))
+#define CAMEL_IMAPX_LOGGER_GET_CLASS(obj) \
+	(G_TYPE_INSTANCE_GET_CLASS \
+	((obj), CAMEL_TYPE_IMAPX_LOGGER, CamelIMAPXLoggerClass))
+
+G_BEGIN_DECLS
+
+typedef struct _CamelIMAPXLogger CamelIMAPXLogger;
+typedef struct _CamelIMAPXLoggerClass CamelIMAPXLoggerClass;
+typedef struct _CamelIMAPXLoggerPrivate CamelIMAPXLoggerPrivate;
+
+/**
+ * CamelIMAPXLogger:
+ * Since: 3.12
+ **/
+struct _CamelIMAPXLogger {
+	/*< private >*/
+	GObject parent;
+	CamelIMAPXLoggerPrivate *priv;
+};
+
+struct _CamelIMAPXLoggerClass {
+	GObjectClass parent_class;
+
+	/* Padding for future expansion */
+	gpointer reserved[20];
+};
+
+GType		camel_imapx_logger_get_type	(void) G_GNUC_CONST;
+GConverter *	camel_imapx_logger_new		(gchar prefix,
+						 CamelIMAPXServer *server);
+gchar		camel_imapx_logger_get_prefix	(CamelIMAPXLogger *logger);
+
+G_END_DECLS
+
+#endif /* CAMEL_IMAPX_LOGGER_H */
+

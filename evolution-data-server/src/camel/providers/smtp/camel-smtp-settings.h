@@ -1,0 +1,77 @@
+/*
+ * SPDX-License-Identifier: LGPL-2.0-or-later
+ */
+
+#ifndef CAMEL_SMTP_SETTINGS_H
+#define CAMEL_SMTP_SETTINGS_H
+
+#include <camel/camel.h>
+
+/* Standard GObject macros */
+#define CAMEL_TYPE_SMTP_SETTINGS \
+	(camel_smtp_settings_get_type ())
+#define CAMEL_SMTP_SETTINGS(obj) \
+	(G_TYPE_CHECK_INSTANCE_CAST \
+	((obj), CAMEL_TYPE_SMTP_SETTINGS, CamelSmtpSettings))
+#define CAMEL_SMTP_SETTINGS_CLASS(cls) \
+	(G_TYPE_CHECK_CLASS_CAST \
+	((cls), CAMEL_TYPE_SMTP_SETTINGS, CamelSmtpSettingsClass))
+#define CAMEL_IS_SMTP_SETTINGS(obj) \
+	(G_TYPE_CHECK_INSTANCE_TYPE \
+	((obj), CAMEL_TYPE_SMTP_SETTINGS))
+#define CAMEL_IS_SMTP_SETTINGS_CLASS(cls) \
+	(G_TYPE_CHECK_CLASS_TYPE \
+	((cls), CAMEL_TYPE_SMTP_SETTINGS))
+#define CAMEL_SMTP_SETTINGS_GET_CLASS(obj) \
+	(G_TYPE_INSTANCE_GET_CLASS \
+	((obj), CAMEL_TYPE_SMTP_SETTINGS, CamelSmtpSettingsClass))
+
+G_BEGIN_DECLS
+
+typedef struct _CamelSmtpSettings CamelSmtpSettings;
+typedef struct _CamelSmtpSettingsClass CamelSmtpSettingsClass;
+typedef struct _CamelSmtpSettingsPrivate CamelSmtpSettingsPrivate;
+
+struct _CamelSmtpSettings {
+	CamelSettings parent;
+	CamelSmtpSettingsPrivate *priv;
+};
+
+struct _CamelSmtpSettingsClass {
+	CamelSettingsClass parent_class;
+
+	/* Padding for future expansion */
+	gpointer reserved[20];
+};
+
+GType		camel_smtp_settings_get_type	(void) G_GNUC_CONST;
+
+gboolean	camel_smtp_settings_get_reencode_data
+						(CamelSmtpSettings *settings);
+void		camel_smtp_settings_set_reencode_data
+						(CamelSmtpSettings *settings,
+						 gboolean reencode_data);
+gboolean	camel_smtp_settings_get_dsn_ret_full
+						(CamelSmtpSettings *settings);
+void		camel_smtp_settings_set_dsn_ret_full
+						(CamelSmtpSettings *settings,
+						 gboolean dsn_ret_full);
+gboolean	camel_smtp_settings_get_dsn_notify_success
+						(CamelSmtpSettings *settings);
+void		camel_smtp_settings_set_dsn_notify_success
+						(CamelSmtpSettings *settings,
+						 gboolean dsn_notify_success);
+gboolean	camel_smtp_settings_get_dsn_notify_failure
+						(CamelSmtpSettings *settings);
+void		camel_smtp_settings_set_dsn_notify_failure
+						(CamelSmtpSettings *settings,
+						 gboolean dsn_notify_failure);
+gboolean	camel_smtp_settings_get_dsn_notify_delay
+						(CamelSmtpSettings *settings);
+void		camel_smtp_settings_set_dsn_notify_delay
+						(CamelSmtpSettings *settings,
+						 gboolean dsn_notify_delay);
+
+G_END_DECLS
+
+#endif /* CAMEL_SMTP_SETTINGS_H */

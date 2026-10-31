@@ -1,0 +1,68 @@
+/*
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ */
+
+#include "evolution-config.h"
+
+#include <e-util/e-util.h>
+
+#include "e-settings-weekday-chooser.h"
+
+#include "calendar/gui/calendar-config.h"
+#include <calendar/gui/e-weekday-chooser.h>
+
+struct _ESettingsWeekdayChooserPrivate {
+	gint placeholder;
+};
+
+G_DEFINE_DYNAMIC_TYPE_EXTENDED (ESettingsWeekdayChooser, e_settings_weekday_chooser, E_TYPE_EXTENSION, 0,
+	G_ADD_PRIVATE_DYNAMIC (ESettingsWeekdayChooser))
+
+static void
+settings_weekday_chooser_constructed (GObject *object)
+{
+	EExtension *extension;
+	EExtensible *extensible;
+
+	extension = E_EXTENSION (object);
+	extensible = e_extension_get_extensible (extension);
+
+	calendar_config_connect_week_start_day_setting_get (extensible, "week-start-day");
+
+	/* Chain up to parent's constructed() method. */
+	G_OBJECT_CLASS (e_settings_weekday_chooser_parent_class)->constructed (object);
+}
+
+static void
+e_settings_weekday_chooser_class_init (ESettingsWeekdayChooserClass *class)
+{
+	GObjectClass *object_class;
+	EExtensionClass *extension_class;
+
+	object_class = G_OBJECT_CLASS (class);
+	object_class->constructed = settings_weekday_chooser_constructed;
+
+	extension_class = E_EXTENSION_CLASS (class);
+	extension_class->extensible_type = E_TYPE_WEEKDAY_CHOOSER;
+}
+
+static void
+e_settings_weekday_chooser_class_finalize (ESettingsWeekdayChooserClass *class)
+{
+}
+
+static void
+e_settings_weekday_chooser_init (ESettingsWeekdayChooser *extension)
+{
+	extension->priv = e_settings_weekday_chooser_get_instance_private (extension);
+}
+
+void
+e_settings_weekday_chooser_type_register (GTypeModule *type_module)
+{
+	/* XXX G_DEFINE_DYNAMIC_TYPE declares a static type registration
+	 *     function, so we have to wrap it with a public function in
+	 *     order to register types from a separate compilation unit. */
+	e_settings_weekday_chooser_register_type (type_module);
+}
+

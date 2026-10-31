@@ -1,0 +1,318 @@
+/*
+ * SPDX-FileCopyrightText: (C) 1999-2008 Novell, Inc. (www.novell.com)
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ * SPDX-FileContributor: Chris Toshok <toshok@ximian.com>
+ */
+
+#include "evolution-config.h"
+
+#include <gtk/gtk.h>
+#include <glib/gi18n.h>
+
+#include "eab-editor.h"
+#include "e-util/e-util.h"
+#include "addressbook/gui/widgets/eab-gui-util.h"
+
+struct _EABEditorPrivate {
+	EShell *shell;
+};
+
+enum {
+	PROP_0,
+	PROP_SHELL,
+	N_PROPS
+};
+
+static GParamSpec *properties[N_PROPS] = { NULL, };
+
+enum {
+	EDITOR_CLOSED,
+	LAST_SIGNAL
+};
+
+static guint signals[LAST_SIGNAL];
+
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (EABEditor, eab_editor, G_TYPE_OBJECT)
+
+static void
+eab_editor_quit_requested_cb (EShell *shell,
+                              EShellQuitReason reason,
+                              EABEditor *editor)
+{
+	GtkWindow *window;
+
+	/* Quit immediately if another Evolution process asked us to. */
+	if (reason == E_SHELL_QUIT_REMOTE_REQUEST)
+		return;
+
+	window = eab_editor_get_window (editor);
+
+	eab_editor_raise (editor);
+	if (!eab_editor_prompt_to_save_changes (editor, window))
+		e_shell_cancel_quit (shell);
+}
+
+static void
+eab_editor_set_shell (EABEditor *editor,
+                      EShell *shell)
+{
+	g_return_if_fail (editor->priv->shell == NULL);
+	g_return_if_fail (E_IS_SHELL (shell));
+
+	editor->priv->shell = g_object_ref (shell);
+
+	g_signal_connect (
+		shell, "quit-requested",
+		G_CALLBACK (eab_editor_quit_requested_cb), editor);
+}
+
+static void
+eab_editor_set_property (GObject *object,
+                         guint property_id,
+                         const GValue *value,
+                         GParamSpec *pspec)
+{
+	switch (property_id) {
+		case PROP_SHELL:
+			eab_editor_set_shell (
+				EAB_EDITOR (object),
+				g_value_get_object (value));
+			return;
+	}
+
+	G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+}
+
+static void
+eab_editor_get_property (GObject *object,
+                         guint property_id,
+                         GValue *value,
+                         GParamSpec *pspec)
+{
+	switch (property_id) {
+		case PROP_SHELL:
+			g_value_set_object (
+				value, eab_editor_get_shell (
+				EAB_EDITOR (object)));
+			return;
+	}
+
+	G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+}
+
+static void
+eab_editor_dispose (GObject *object)
+{
+	EABEditor *self = EAB_EDITOR (object);
+
+	if (self->priv->shell != NULL) {
+		g_signal_handlers_disconnect_matched (
+			self->priv->shell, G_SIGNAL_MATCH_DATA,
+			0, 0, NULL, NULL, object);
+		g_clear_object (&self->priv->shell);
+	}
+
+	/* Chain up to parent's dispose() method. */
+	G_OBJECT_CLASS (eab_editor_parent_class)->dispose (object);
+}
+
+static void
+eab_editor_class_init (EABEditorClass *class)
+{
+	GObjectClass *object_class;
+
+	object_class = G_OBJECT_CLASS (class);
+	object_class->set_property = eab_editor_set_property;
+	object_class->get_property = eab_editor_get_property;
+	object_class->dispose = eab_editor_dispose;
+
+	/**
+	 * EABEditor:shell
+	 *
+	 * The EShell singleton
+	 **/
+	properties[PROP_SHELL] =
+		g_param_spec_object (
+			"shell", NULL, NULL,
+			E_TYPE_SHELL,
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+
+	g_object_class_install_properties (object_class, N_PROPS, properties);
+
+	signals[EDITOR_CLOSED] = g_signal_new (
+		"editor_closed",
+		G_OBJECT_CLASS_TYPE (object_class),
+		G_SIGNAL_RUN_FIRST,
+		G_STRUCT_OFFSET (EABEditorClass, editor_closed),
+		NULL, NULL,
+		g_cclosure_marshal_VOID__VOID,
+		G_TYPE_NONE, 0);
+}
+
+static void
+eab_editor_init (EABEditor *editor)
+{
+	editor->priv = eab_editor_get_instance_private (editor);
+}
+
+EShell *
+eab_editor_get_shell (EABEditor *editor)
+{
+	g_return_val_if_fail (EAB_IS_EDITOR (editor), NULL);
+
+	return E_SHELL (editor->priv->shell);
+}
+
+void
+eab_editor_show (EABEditor *editor)
+{
+	EABEditorClass *class;
+
+	g_return_if_fail (EAB_IS_EDITOR (editor));
+
+	class = EAB_EDITOR_GET_CLASS (editor);
+	g_return_if_fail (class != NULL);
+	g_return_if_fail (class->show != NULL);
+
+	class->show (editor);
+}
+
+void
+eab_editor_close (EABEditor *editor)
+{
+	EABEditorClass *class;
+
+	g_return_if_fail (EAB_IS_EDITOR (editor));
+
+	class = EAB_EDITOR_GET_CLASS (editor);
+	g_return_if_fail (class != NULL);
+	g_return_if_fail (class->close != NULL);
+
+	class->close (editor);
+}
+
+void
+eab_editor_raise (EABEditor *editor)
+{
+	EABEditorClass *class;
+
+	g_return_if_fail (EAB_IS_EDITOR (editor));
+
+	class = EAB_EDITOR_GET_CLASS (editor);
+	g_return_if_fail (class != NULL);
+	g_return_if_fail (class->raise != NULL);
+
+	class->raise (editor);
+}
+
+void
+eab_editor_save_contact (EABEditor *editor,
+                         gboolean should_close)
+{
+	EABEditorClass *class;
+
+	g_return_if_fail (EAB_IS_EDITOR (editor));
+
+	class = EAB_EDITOR_GET_CLASS (editor);
+	g_return_if_fail (class != NULL);
+	g_return_if_fail (class->save_contact != NULL);
+
+	class->save_contact (editor, should_close);
+}
+
+gboolean
+eab_editor_is_changed (EABEditor *editor)
+{
+	EABEditorClass *class;
+
+	g_return_val_if_fail (EAB_IS_EDITOR (editor), FALSE);
+
+	class = EAB_EDITOR_GET_CLASS (editor);
+	g_return_val_if_fail (class != NULL, FALSE);
+	g_return_val_if_fail (class->is_changed != NULL, FALSE);
+
+	return class->is_changed (editor);
+}
+
+gboolean
+eab_editor_is_valid (EABEditor *editor)
+{
+	EABEditorClass *class;
+
+	g_return_val_if_fail (EAB_IS_EDITOR (editor), FALSE);
+
+	class = EAB_EDITOR_GET_CLASS (editor);
+	g_return_val_if_fail (class != NULL, FALSE);
+	g_return_val_if_fail (class->is_valid != NULL, FALSE);
+
+	return class->is_valid (editor);
+}
+
+GtkWindow *
+eab_editor_get_window (EABEditor *editor)
+{
+	EABEditorClass *class;
+
+	g_return_val_if_fail (EAB_IS_EDITOR (editor), NULL);
+
+	class = EAB_EDITOR_GET_CLASS (editor);
+	g_return_val_if_fail (class != NULL, NULL);
+	g_return_val_if_fail (class->get_window != NULL, NULL);
+
+	return class->get_window (editor);
+}
+
+/* This function prompts for saving if editor conents are in changed state and
+ * save or discards or cancels (just returns with out doing anything) according
+ * to user input.  Editor gets destroyed in case of save and discard case. */
+
+gboolean
+eab_editor_prompt_to_save_changes (EABEditor *editor,
+                                   GtkWindow *window)
+{
+	if (!eab_editor_is_changed (editor)) {
+		eab_editor_close (EAB_EDITOR (editor));
+		return TRUE;
+	}
+
+	switch (eab_prompt_save_dialog (window)) {
+	case GTK_RESPONSE_YES:
+		if (!eab_editor_is_valid (editor)) {
+			return FALSE;
+		}
+		eab_editor_save_contact (editor, TRUE);
+		return TRUE;
+	case GTK_RESPONSE_NO:
+		eab_editor_close (EAB_EDITOR (editor));
+		return TRUE;
+	case GTK_RESPONSE_CANCEL:
+	default:
+		return FALSE;
+	}
+}
+
+void
+eab_editor_emit_closed (EABEditor *editor)
+{
+	g_return_if_fail (EAB_IS_EDITOR (editor));
+
+	g_signal_emit (editor, signals[EDITOR_CLOSED], 0);
+}
+
+void
+eab_editor_maybe_report_error (EABEditor *editor,
+			       const gchar *message,
+			       const GError *error)
+{
+	GtkWindow *window;
+
+	g_return_if_fail (EAB_IS_EDITOR (editor));
+
+	if (!error || g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+		return;
+
+	window = eab_editor_get_window (editor);
+
+	eab_error_dialog (NULL, window, message, error);
+}

@@ -1,0 +1,81 @@
+/*
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ */
+
+#include "evolution-config.h"
+
+#include "e-settings-date-edit.h"
+
+#include "calendar/gui/calendar-config.h"
+#include <e-util/e-util.h>
+
+struct _ESettingsDateEditPrivate {
+	gint placeholder;
+};
+
+G_DEFINE_DYNAMIC_TYPE_EXTENDED (ESettingsDateEdit, e_settings_date_edit, E_TYPE_EXTENSION, 0,
+	G_ADD_PRIVATE_DYNAMIC (ESettingsDateEdit))
+
+static void
+settings_date_edit_constructed (GObject *object)
+{
+	EExtension *extension;
+	EExtensible *extensible;
+	GSettings *settings;
+
+	extension = E_EXTENSION (object);
+	extensible = e_extension_get_extensible (extension);
+
+	settings = e_util_ref_settings ("org.gnome.evolution.calendar");
+
+	g_settings_bind (
+		settings, "show-week-numbers",
+		extensible, "show-week-numbers",
+		G_SETTINGS_BIND_GET);
+
+	g_settings_bind (
+		settings, "use-24hour-format",
+		extensible, "use-24-hour-format",
+		G_SETTINGS_BIND_GET);
+
+	calendar_config_connect_week_start_day_setting_get (extensible, "week-start-day");
+
+	g_object_unref (settings);
+
+	/* Chain up to parent's constructed() method. */
+	G_OBJECT_CLASS (e_settings_date_edit_parent_class)->constructed (object);
+}
+
+static void
+e_settings_date_edit_class_init (ESettingsDateEditClass *class)
+{
+	GObjectClass *object_class;
+	EExtensionClass *extension_class;
+
+	object_class = G_OBJECT_CLASS (class);
+	object_class->constructed = settings_date_edit_constructed;
+
+	extension_class = E_EXTENSION_CLASS (class);
+	extension_class->extensible_type = E_TYPE_DATE_EDIT;
+}
+
+static void
+e_settings_date_edit_class_finalize (ESettingsDateEditClass *class)
+{
+}
+
+static void
+e_settings_date_edit_init (ESettingsDateEdit *extension)
+{
+	extension->priv = e_settings_date_edit_get_instance_private (extension);
+}
+
+void
+e_settings_date_edit_type_register (GTypeModule *type_module)
+{
+	/* XXX G_DEFINE_DYNAMIC_TYPE declares a static type registration
+	 *     function, so we have to wrap it with a public function in
+	 *     order to register types from a separate compilation unit. */
+	e_settings_date_edit_register_type (type_module);
+}
+

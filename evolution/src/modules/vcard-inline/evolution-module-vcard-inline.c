@@ -1,0 +1,39 @@
+/*
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ */
+
+#include "e-mail-formatter-vcard.h"
+#include "e-mail-parser-vcard.h"
+#include "e-mail-part-vcard.h"
+
+#include <gmodule.h>
+
+void e_module_load (GTypeModule *type_module);
+void e_module_unload (GTypeModule *type_module);
+const gchar * g_module_check_init (GModule *module);
+
+G_MODULE_EXPORT void
+e_module_load (GTypeModule *type_module)
+{
+	e_mail_formatter_vcard_type_register (type_module);
+	e_mail_parser_vcard_type_register (type_module);
+	e_mail_part_vcard_type_register (type_module);
+}
+
+G_MODULE_EXPORT void
+e_module_unload (GTypeModule *type_module)
+{
+}
+
+G_MODULE_EXPORT const gchar *
+g_module_check_init (GModule *module)
+{
+	/* FIXME Until mail is split into a module library and a
+	 *       reusable shared library, prevent the module from
+	 *       being unloaded.  Unloading the module resets all
+	 *       static variables, which screws up foo_get_type()
+	 *       functions among other things. */
+	g_module_make_resident (module);
+
+	return NULL;
+}

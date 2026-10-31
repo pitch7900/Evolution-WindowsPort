@@ -1,0 +1,76 @@
+/*
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ */
+
+#include "evolution-config.h"
+
+#include "e-settings-calendar-item.h"
+
+#include "calendar/gui/calendar-config.h"
+#include <e-util/e-util.h>
+
+struct _ESettingsCalendarItemPrivate {
+	gint placeholder;
+};
+
+G_DEFINE_DYNAMIC_TYPE_EXTENDED (ESettingsCalendarItem, e_settings_calendar_item, E_TYPE_EXTENSION, 0,
+	G_ADD_PRIVATE_DYNAMIC (ESettingsCalendarItem))
+
+static void
+settings_calendar_item_constructed (GObject *object)
+{
+	EExtension *extension;
+	EExtensible *extensible;
+	GSettings *settings;
+
+	extension = E_EXTENSION (object);
+	extensible = e_extension_get_extensible (extension);
+
+	settings = e_util_ref_settings ("org.gnome.evolution.calendar");
+
+	g_settings_bind (
+		settings, "show-week-numbers",
+		extensible, "show-week-numbers",
+		G_SETTINGS_BIND_GET);
+
+	calendar_config_connect_week_start_day_setting_get (extensible, "week-start-day");
+
+	g_object_unref (settings);
+
+	/* Chain up to parent's constructed() method. */
+	G_OBJECT_CLASS (e_settings_calendar_item_parent_class)->constructed (object);
+}
+
+static void
+e_settings_calendar_item_class_init (ESettingsCalendarItemClass *class)
+{
+	GObjectClass *object_class;
+	EExtensionClass *extension_class;
+
+	object_class = G_OBJECT_CLASS (class);
+	object_class->constructed = settings_calendar_item_constructed;
+
+	extension_class = E_EXTENSION_CLASS (class);
+	extension_class->extensible_type = E_TYPE_CALENDAR_ITEM;
+}
+
+static void
+e_settings_calendar_item_class_finalize (ESettingsCalendarItemClass *class)
+{
+}
+
+static void
+e_settings_calendar_item_init (ESettingsCalendarItem *extension)
+{
+	extension->priv = e_settings_calendar_item_get_instance_private (extension);
+}
+
+void
+e_settings_calendar_item_type_register (GTypeModule *type_module)
+{
+	/* XXX G_DEFINE_DYNAMIC_TYPE declares a static type registration
+	 *     function, so we have to wrap it with a public function in
+	 *     order to register types from a separate compilation unit. */
+	e_settings_calendar_item_register_type (type_module);
+}
+
