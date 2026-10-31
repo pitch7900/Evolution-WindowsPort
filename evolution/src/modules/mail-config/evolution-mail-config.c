@@ -14,8 +14,8 @@
 #include "e-mail-config-yahoo-summary.h"
 
 /* Module Entry Points */
-void e_module_load (GTypeModule *type_module);
-void e_module_unload (GTypeModule *type_module);
+G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
+G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
 
 void e_mail_config_local_accounts_register_types (GTypeModule *type_module);
 void e_mail_config_remote_accounts_register_types (GTypeModule *type_module);

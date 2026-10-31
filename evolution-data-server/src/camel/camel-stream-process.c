@@ -24,7 +24,7 @@
 #include "camel-file-utils.h"
 #include "camel-stream-process.h"
 
-extern gint camel_verbose_debug;
+#include "camel-debug.h"
 
 struct _CamelStreamProcessPrivate {
 	gint sockfd;

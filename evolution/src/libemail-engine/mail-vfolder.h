@@ -14,8 +14,11 @@
 
 #include <libemail-engine/e-mail-session.h>
 #include <libemail-engine/em-vfolder-rule.h>
+#include <libemail-engine/em-vfolder-context.h>
 
 void		vfolder_load_storage		(EMailSession *session);
+EMVFolderContext *
+		mail_vfolder_get_context	(void);
 
 /* close up, clean up */
 void		mail_vfolder_shutdown		(void);

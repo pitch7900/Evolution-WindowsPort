@@ -1934,6 +1934,7 @@ static const gchar *prefix = NULL;
 static const gchar *cp_prefix;
 
 static const gchar *localedir;
+static const gchar *libexecdir;
 static const gchar *imagesdir;
 static const gchar *credentialmoduledir;
 static const gchar *uimoduledir;
@@ -2043,6 +2044,7 @@ setup (void)
 	g_free (cp_pfx);
 
 	localedir = replace_prefix (cp_prefix, E_DATA_SERVER_LOCALEDIR);
+	libexecdir = replace_prefix (prefix, E_DATA_SERVER_LIBEXECDIR);
 	imagesdir = replace_prefix (prefix, E_DATA_SERVER_IMAGESDIR);
 	credentialmoduledir = replace_prefix (prefix, E_DATA_SERVER_CREDENTIALMODULEDIR);
 	uimoduledir = replace_prefix (prefix, E_DATA_SERVER_UIMODULEDIR);
@@ -2075,6 +2077,177 @@ PRIVATE_GETTER (uimoduledir);
 PUBLIC_GETTER (prefix)
 PUBLIC_GETTER (cp_prefix)
 PUBLIC_GETTER (localedir)
+
+/* D-Bus services started on demand: the session bus GLib runs on Windows
+ * (gdbus.exe) has no activation from .service files */
+static const struct {
+	const gchar *bus_name;
+	const gchar *executable;
+} win32_dbus_services[] = {
+	{ SOURCES_DBUS_SERVICE_NAME, "evolution-source-registry.exe" },
+	{ ADDRESS_BOOK_DBUS_SERVICE_NAME, "evolution-addressbook-factory.exe" },
+	{ CALENDAR_DBUS_SERVICE_NAME, "evolution-calendar-factory.exe" },
+	{ USER_PROMPTER_DBUS_SERVICE_NAME, "evolution-user-prompter.exe" }
+};
+
+/* Seconds to wait for a started service to own its bus name */
+#define WIN32_DBUS_SERVICE_START_TIMEOUT 30
+
+G_LOCK_DEFINE_STATIC (win32_dbus_services);
+
+static gboolean
+win32_dbus_name_has_owner (GDBusConnection *connection,
+			   const gchar *bus_name,
+			   GCancellable *cancellable,
+			   GError **error)
+{
+	GVariant *reply;
+	gboolean has_owner = FALSE;
+
+	reply = g_dbus_connection_call_sync (connection,
+		"org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
+		"NameHasOwner", g_variant_new ("(s)", bus_name), G_VARIANT_TYPE ("(b)"),
+		G_DBUS_CALL_FLAGS_NONE, -1, cancellable, error);
+
+	if (reply) {
+		g_variant_get (reply, "(b)", &has_owner);
+		g_variant_unref (reply);
+	}
+
+	return has_owner;
+}
+
+static gboolean
+win32_is_current_executable (const gchar *executable)
+{
+	wchar_t wpath[MAX_PATH];
+	gchar *path, *basename;
+	gboolean same;
+
+	if (!GetModuleFileNameW (NULL, wpath, G_N_ELEMENTS (wpath)))
+		return FALSE;
+
+	path = g_utf16_to_utf8 (wpath, -1, NULL, NULL, NULL);
+	basename = path ? g_path_get_basename (path) : NULL;
+	same = basename && g_ascii_strcasecmp (basename, executable) == 0;
+
+	g_free (basename);
+	g_free (path);
+
+	return same;
+}
+
+/**
+ * e_util_win32_ensure_dbus_service:
+ * @bus_name: a well-known D-Bus name of an evolution-data-server service
+ * @cancellable: optional #GCancellable object, or %NULL
+ * @error: return location for a #GError, or %NULL
+ *
+ * Windows only. Makes sure the evolution-data-server service owning @bus_name
+ * runs: GLib's session bus on Windows cannot activate services, so the
+ * service executable is started (without a console window) and the function
+ * waits until it owns @bus_name. Names not belonging to a known service are
+ * ignored.
+ *
+ * Returns: %TRUE when the service runs (or @bus_name is not a known service),
+ *    %FALSE on error
+ *
+ * Since: 3.64
+ **/
+gboolean
+e_util_win32_ensure_dbus_service (const gchar *bus_name,
+				  GCancellable *cancellable,
+				  GError **error)
+{
+	GDBusConnection *connection;
+	const gchar *executable = NULL;
+	gchar *path;
+	gunichar2 *wpath;
+	STARTUPINFOW startup_info = { 0 };
+	PROCESS_INFORMATION process_info = { 0 };
+	gboolean success = FALSE;
+	guint ii;
+
+	g_return_val_if_fail (bus_name != NULL, FALSE);
+
+	for (ii = 0; ii < G_N_ELEMENTS (win32_dbus_services); ii++) {
+		if (g_strcmp0 (win32_dbus_services[ii].bus_name, bus_name) == 0) {
+			executable = win32_dbus_services[ii].executable;
+			break;
+		}
+	}
+
+	/* not ours, or called by the service itself */
+	if (!executable || win32_is_current_executable (executable))
+		return TRUE;
+
+	connection = g_bus_get_sync (G_BUS_TYPE_SESSION, cancellable, error);
+	if (!connection)
+		return FALSE;
+
+	/* one start attempt at a time within this process */
+	G_LOCK (win32_dbus_services);
+
+	if (win32_dbus_name_has_owner (connection, bus_name, cancellable, NULL)) {
+		success = TRUE;
+		goto exit;
+	}
+
+	setup ();
+	path = g_build_filename (libexecdir, executable, NULL);
+	wpath = g_utf8_to_utf16 (path, -1, NULL, NULL, NULL);
+
+	startup_info.cb = sizeof (startup_info);
+
+	if (!wpath || !CreateProcessW ((LPCWSTR) wpath, NULL, NULL, NULL, FALSE,
+		CREATE_NO_WINDOW, NULL, NULL, &startup_info, &process_info)) {
+		gchar *msg = g_win32_error_message (GetLastError ());
+
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+			"Failed to start “%s”: %s", path, msg);
+
+		g_free (msg);
+	} else {
+		gint64 deadline;
+
+		CloseHandle (process_info.hThread);
+
+		deadline = g_get_monotonic_time () + WIN32_DBUS_SERVICE_START_TIMEOUT * G_USEC_PER_SEC;
+
+		while (!(success = win32_dbus_name_has_owner (connection, bus_name, cancellable, NULL))) {
+			if (g_cancellable_set_error_if_cancelled (cancellable, error))
+				break;
+
+			/* exited: another instance may have won the name, check once more */
+			if (WaitForSingleObject (process_info.hProcess, 0) == WAIT_OBJECT_0) {
+				success = win32_dbus_name_has_owner (connection, bus_name, cancellable, NULL);
+				if (!success)
+					g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+						"“%s” exited without owning “%s”", path, bus_name);
+				break;
+			}
+
+			if (g_get_monotonic_time () > deadline) {
+				g_set_error (error, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
+					"“%s” did not own “%s” in time", path, bus_name);
+				break;
+			}
+
+			g_usleep (G_USEC_PER_SEC / 10);
+		}
+
+		CloseHandle (process_info.hProcess);
+	}
+
+	g_free (wpath);
+	g_free (path);
+
+ exit:
+	G_UNLOCK (win32_dbus_services);
+	g_object_unref (connection);
+
+	return success;
+}
 
 /**
  * e_util_win32_initialize:
@@ -2150,12 +2323,10 @@ e_util_win32_initialize (void)
 		g_free (path);
 	}
 
-	/* Make sure D-Bus is running. The executable makes sure the daemon
-	   is not restarted, thus it's safe to be called witn D-Bus already
-	   running. */
-	if (system ("dbus-launch.exe") != 0) {
-		/* Ignore, just to mute compiler warning */;
-	}
+	/* No explicit D-Bus start: on Windows GLib autolaunches its own session
+	 * bus (gdbus.exe, address published in shared memory) on the first
+	 * session bus connection. Running the freedesktop dbus-launch.exe with
+	 * system() also flashed a console window. */
 }
 
 #endif	/* G_OS_WIN32 */
@@ -2712,8 +2883,10 @@ e_util_generate_uid (void)
 	add_i64 (g_get_monotonic_time ());
 	add_i64 (g_get_real_time ());
 	add_i64 (getpid ());
+#ifndef G_OS_WIN32
 	add_i64 (getgid ());
 	add_i64 (getppid ());
+#endif
 	add_i64 (g_atomic_int_add (&counter, 1));
 
 	add_str (g_get_host_name (), "localhost");

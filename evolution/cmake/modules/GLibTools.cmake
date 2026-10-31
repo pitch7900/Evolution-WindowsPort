@@ -283,19 +283,21 @@ endif(NOT GLIB_COMPILE_RESOURCES)
 macro(glib_compile_resources _sourcedir _outputprefix _cname _inxml)
 	execute_process(
 		COMMAND ${GLIB_COMPILE_RESOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/${_inxml} --sourcedir=${_sourcedir} --generate-dependencies
-		OUTPUT_VARIABLE ${_outputprefix}_DEPS
+		OUTPUT_VARIABLE _glib_compile_resources_deps
 	)
-	string(REGEX REPLACE "\n" ";" ${_outputprefix}_DEPS "${${_outputprefix}_DEPS}")
+	# Fixed variable name: _outputprefix is an absolute path, which is not a
+	# valid variable name on Windows ("C:/...")
+	string(REGEX REPLACE "\n" ";" _glib_compile_resources_deps "${_glib_compile_resources_deps}")
 	add_custom_command(
 		OUTPUT ${_outputprefix}.h
 		COMMAND ${GLIB_COMPILE_RESOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/${_inxml} --target=${_outputprefix}.h --sourcedir=${_sourcedir} --c-name ${_cname} --generate-header
-		DEPENDS ${_inxml} ${${_outputprefix}_DEPS} ${ARGN}
+		DEPENDS ${_inxml} ${_glib_compile_resources_deps} ${ARGN}
 		VERBATIM
 	)
 	add_custom_command(
 		OUTPUT ${_outputprefix}.c
 		COMMAND ${GLIB_COMPILE_RESOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/${_inxml} --target=${_outputprefix}.c --sourcedir=${_sourcedir} --c-name ${_cname} --generate-source
-		DEPENDS ${_inxml} ${${_outputprefix}_DEPS} ${ARGN}
+		DEPENDS ${_inxml} ${_glib_compile_resources_deps} ${ARGN}
 		VERBATIM
 	)
 endmacro(glib_compile_resources)

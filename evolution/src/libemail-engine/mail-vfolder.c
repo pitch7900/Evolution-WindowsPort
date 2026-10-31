@@ -27,6 +27,14 @@
  * and vfoldertypes.xml should be moved here really. */
 EMVFolderContext *context;	/* context remains open all time */
 
+/* Accessor for the UI library: data symbols are not reachable across DLLs
+ * on Windows without an explicit import declaration. */
+EMVFolderContext *
+mail_vfolder_get_context (void)
+{
+	return context;
+}
+
 /* lock for accessing shared resources (below) */
 G_LOCK_DEFINE_STATIC (vfolder);
 

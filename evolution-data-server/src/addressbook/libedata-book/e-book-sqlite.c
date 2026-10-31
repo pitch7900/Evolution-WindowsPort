@@ -178,16 +178,16 @@ ebsql_origin_str (EbSqlCursorOrigin origin)
 	} G_STMT_END
 
 /* Format strings are passed through dgettext(), need to be reformatted */
-#define EBSQL_SET_ERROR(error, code, fmt, args...) \
+#define EBSQL_SET_ERROR(error, code, fmt, ...) \
 	G_STMT_START { \
 		if (ebsql_debug_flags & EBSQL_DEBUG_ERRORS) { \
 			gchar *format = g_strdup_printf ( \
 				"ERR [%%s]: Set error code '%%s': %s\n", fmt); \
 			g_printerr (format, G_STRFUNC, \
-				    ebsql_error_str (code), ## args); \
+				    ebsql_error_str (code), ## __VA_ARGS__); \
 			g_free (format); \
 		} \
-		g_set_error (error, E_BOOK_SQLITE_ERROR, code, fmt, ## args); \
+		g_set_error (error, E_BOOK_SQLITE_ERROR, code, fmt, ## __VA_ARGS__); \
 	} G_STMT_END
 
 #define EBSQL_SET_ERROR_LITERAL(error, code, detail) \

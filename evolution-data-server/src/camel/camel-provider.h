@@ -32,7 +32,7 @@
 
 G_BEGIN_DECLS
 
-extern gchar *camel_provider_type_name[CAMEL_NUM_PROVIDER_TYPES];
+CAMEL_VAR gchar *camel_provider_type_name[CAMEL_NUM_PROVIDER_TYPES];
 
 /* Flags for url_flags. "ALLOW" means the config dialog will let the
  * user configure it. "NEED" implies "ALLOW" but means the user must

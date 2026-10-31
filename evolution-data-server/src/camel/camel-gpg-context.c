@@ -1139,6 +1139,8 @@ exception:
 	errno = errnosave;
 #else
 	/* FIXME: Port me */
+	GError *local_error = NULL;
+
 	g_warning ("%s: Not implemented", G_STRFUNC);
 
 	errno = EINVAL;

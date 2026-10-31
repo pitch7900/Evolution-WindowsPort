@@ -151,6 +151,10 @@ gchar *		e_util_replace_prefix		(const gchar *configure_time_prefix,
 						 const gchar *runtime_prefix,
 						 const gchar *configure_time_path);
 void		e_util_win32_initialize		(void);
+gboolean	e_util_win32_ensure_dbus_service
+						(const gchar *bus_name,
+						 GCancellable *cancellable,
+						 GError **error);
 #endif
 
 #define e_named_timeout_add(interval, function, data) \

@@ -23,7 +23,9 @@
 
 #include "camel-debug.h"
 
-gint camel_verbose_debug;
+/* initialized: a tentative definition is a COMMON symbol, which MSVC's
+ * automatic DLL export (WINDOWS_EXPORT_ALL_SYMBOLS) does not export */
+gint camel_verbose_debug = 0;
 
 static GHashTable *debug_table = NULL;
 

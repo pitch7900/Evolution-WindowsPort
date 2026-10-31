@@ -135,6 +135,9 @@
 /* Define if libc defines an altzone variable */
 #cmakedefine HAVE_ALTZONE 1
 
+/* Define if the MSVC CRT provides _get_timezone() and _get_dstbias() */
+#cmakedefine HAVE__TIMEZONE 1
+
 /* Define if libc defines localtime_r function */
 #cmakedefine HAVE_LOCALTIME_R
 

@@ -14,6 +14,10 @@
 #include "e-shell.h"
 
 #include <errno.h>
+#ifdef _WIN32
+#include <string.h>
+#include <windows.h> /* SetThreadLocale (), MAKELCID () */
+#endif
 #include <glib/gi18n.h>
 #include <glib/gstdio.h>
 #include <libebackend/libebackend.h>
@@ -2010,6 +2014,19 @@ static gboolean quit = FALSE;
 static gchar *geometry = NULL;
 static gchar *requested_view = NULL;
 static gchar **remaining_args;
+
+#ifdef G_OS_WIN32
+static gboolean
+is_any_gettext_catalog_installed (void)
+{
+	gchar txt[2] = { 0, 0 };
+	const gchar *text;
+
+	text = gettext (txt);
+
+	return text && strcmp (text, "") != 0;
+}
+#endif
 
 static GOptionEntry app_options[] = {
 #ifdef G_OS_WIN32

@@ -213,7 +213,8 @@ enum {
 	CAMEL_MIME_IS_ATTRCHAR  = 1 << 9	/* attribute-char safe (rfc2184) */
 };
 
-extern gushort camel_mime_special_table[256];
+CAMEL_VAR gushort camel_mime_special_table[256];
+CAMEL_VAR gint camel_header_param_encode_filenames_in_rfc_2047;
 
 #define camel_mime_is_ctrl(x) ((camel_mime_special_table[(guchar)(x)] & CAMEL_MIME_IS_CTRL) != 0)
 #define camel_mime_is_lwsp(x) ((camel_mime_special_table[(guchar)(x)] & CAMEL_MIME_IS_LWSP) != 0)

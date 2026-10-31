@@ -26,4 +26,8 @@ add_evolution_module(module-webkit-editor
 	extra_ldflags
 )
 
-add_subdirectory(web-extension)
+# WebView2 (Windows) has no in-process web extensions: the JavaScript files
+# they load are injected into the pages instead.
+if(NOT WIN32)
+	add_subdirectory(web-extension)
+endif(NOT WIN32)

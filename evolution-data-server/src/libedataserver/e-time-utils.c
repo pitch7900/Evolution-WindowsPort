@@ -2099,6 +2099,16 @@ e_mktime_utc (struct tm *tm)
   #endif
 	} else
 		tt -= timezone;
+#elif defined (HAVE__TIMEZONE)
+	{
+		/* MSVC CRT: seconds west of UTC and the DST bias */
+		long tz = 0, dst_bias = 0;
+
+		_get_timezone (&tz);
+		_get_dstbias (&dst_bias);
+
+		tt -= tm->tm_isdst > 0 ? tz + dst_bias : tz;
+	}
 #endif
 
 	return tt;
@@ -2132,6 +2142,15 @@ e_localtime_with_offset (time_t tt,
   #endif
 	} else
 		*offset = -timezone;
+#elif defined (HAVE__TIMEZONE)
+	{
+		long tz = 0, dst_bias = 0;
+
+		_get_timezone (&tz);
+		_get_dstbias (&dst_bias);
+
+		*offset = -(tm->tm_isdst > 0 ? tz + dst_bias : tz);
+	}
 #endif
 }
 

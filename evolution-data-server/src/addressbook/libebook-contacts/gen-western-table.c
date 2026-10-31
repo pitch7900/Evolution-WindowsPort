@@ -60,6 +60,11 @@ process_content (const gchar *content)
 
 	for (ii = 0; lines && lines[ii]; ii++) {
 		gchar *line = lines[ii];
+		gsize len = strlen (line);
+
+		/* the input can have CRLF line endings (e.g. a Windows checkout) */
+		if (len > 0 && line[len - 1] == '\r')
+			line[len - 1] = '\0';
 
 		if (!*line) {
 			strings = g_slist_reverse (strings);

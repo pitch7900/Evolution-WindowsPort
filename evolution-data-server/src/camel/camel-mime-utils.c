@@ -38,6 +38,12 @@
 #endif
 #include "camel-utf8.h"
 
+#ifdef _MSC_VER
+/* camel_mime_special_table is const data defined in the generated
+ * camel-mime-tables.c; automatic DLL exports skip read-only data */
+#pragma comment(linker, "/EXPORT:camel_mime_special_table,DATA")
+#endif
+
 #ifdef G_OS_WIN32
 #ifdef gmtime_r
 #undef gmtime_r
@@ -119,6 +125,16 @@ camel_mktime_utc (struct tm *tm)
 #endif
 	} else
 		tt -= timezone;
+#elif defined (HAVE__TIMEZONE)
+	{
+		/* MSVC CRT: seconds west of UTC and the DST bias */
+		long tz = 0, dst_bias = 0;
+
+		_get_timezone (&tz);
+		_get_dstbias (&dst_bias);
+
+		tt -= tm->tm_isdst > 0 ? tz + dst_bias : tz;
+	}
 #endif
 
 	return tt;
@@ -152,6 +168,15 @@ camel_localtime_with_offset (time_t tt,
 #endif
 	} else
 		*offset = -timezone;
+#elif defined (HAVE__TIMEZONE)
+	{
+		long tz = 0, dst_bias = 0;
+
+		_get_timezone (&tz);
+		_get_dstbias (&dst_bias);
+
+		*offset = -(tm->tm_isdst > 0 ? tz + dst_bias : tz);
+	}
 #endif
 }
 
@@ -4761,8 +4786,10 @@ camel_header_msgid_generate (const gchar *domain)
 	add_i64 (g_get_monotonic_time ());
 	add_i64 (g_get_real_time ());
 	add_i64 (getpid ());
+#ifndef G_OS_WIN32
 	add_i64 (getgid ());
 	add_i64 (getppid ());
+#endif
 	add_i64 (g_atomic_int_add (&counter, 1));
 
 	add_str (domain, "localhost");

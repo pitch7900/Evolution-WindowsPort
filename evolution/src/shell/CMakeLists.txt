@@ -164,7 +164,10 @@ target_link_libraries(evolution
 	${CLUTTER_GTK_LDFLAGS}
 )
 
-if(WIN32)
+if(MSVC)
+	# CMake compiles .rc sources with rc.exe
+	target_sources(evolution PRIVATE evolution-icon.rc)
+elseif(WIN32)
 	find_program(WINDRES windres)
 	if(WINDRES)
 		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/evolution-icon.o

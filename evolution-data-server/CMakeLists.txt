@@ -437,7 +437,10 @@ endif(ENABLE_GTK4)
 # **************************************************************
 
 pkg_check_modules(JSON_GLIB REQUIRED json-glib-1.0>=${json_glib_minimum_version})
-pkg_check_modules(UUID REQUIRED uuid>=${uuid_minimum_version})
+if(NOT WIN32)
+	# Windows uses g_uuid_string_random() instead
+	pkg_check_modules(UUID REQUIRED uuid>=${uuid_minimum_version})
+endif(NOT WIN32)
 
 if(ENABLE_GTK)
 	add_printable_option(ENABLE_OAUTH2_WEBKITGTK "Enable WebKitGTK gtk3 for built-in OAuth2 authentications" ON)
@@ -567,14 +570,15 @@ endif(WITH_LIBDB)
 # iconv checking
 # ******************************
 
-set(CMAKE_REQUIRED_LIBRARIES "-liconv")
+# bare library name: CMake turns it into -liconv or iconv.lib (MSVC)
+set(CMAKE_REQUIRED_LIBRARIES iconv)
 CHECK_C_SOURCE_COMPILES("#include <iconv.h>
 			#include <stdlib.h>
 			int main(void) { iconv_t cd; cd = iconv_open (\"UTF-8\", \"ISO-8859-1\"); return 0; }" HAVE_LIBICONV)
 unset(CMAKE_REQUIRED_LIBRARIES)
 
 if(HAVE_LIBICONV)
-	set(ICONV_LIBS "-liconv")
+	set(ICONV_LIBS iconv)
 	set(HAVE_ICONV ON)
 else(HAVE_LIBICONV)
 	set(ICONV_LIBS "")
@@ -586,7 +590,8 @@ if(NOT HAVE_ICONV)
 endif(NOT HAVE_ICONV)
 
 set(CMAKE_REQUIRED_LIBRARIES ${ICONV_LIBS})
-file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/" _binary_dir_with_separator)
+# CMake-style path: native Windows backslashes would be read as escapes
+set(_binary_dir_with_separator "${CMAKE_BINARY_DIR}/")
 CHECK_C_SOURCE_RUNS("#define ICONV_DETECT_BUILD_DIR \"${_binary_dir_with_separator}\"
 		     #include \"${CMAKE_SOURCE_DIR}/iconv-detect.c\"" _correct_iconv)
 unset(_binary_dir_with_separator)
@@ -696,9 +701,13 @@ CHECK_C_SOURCE_COMPILES("#include <time.h>
 CHECK_C_SOURCE_COMPILES("#include <time.h>
 			int main(void) { altzone = 1; return 0; }" HAVE_ALTZONE)
 
-if((NOT HAVE_TM_GMTOFF) AND (NOT HAVE_TIMEZONE))
+# MSVC CRT: _get_timezone()/_get_dstbias() instead of the POSIX variables
+CHECK_C_SOURCE_COMPILES("#include <time.h>
+			int main(void) { long tz; _get_timezone (&tz); _get_dstbias (&tz); return 0; }" HAVE__TIMEZONE)
+
+if((NOT HAVE_TM_GMTOFF) AND (NOT HAVE_TIMEZONE) AND (NOT HAVE__TIMEZONE))
 	message(FATAL_ERROR "Unable to find a way to determine timezone")
-endif((NOT HAVE_TM_GMTOFF) AND (NOT HAVE_TIMEZONE))
+endif((NOT HAVE_TM_GMTOFF) AND (NOT HAVE_TIMEZONE) AND (NOT HAVE__TIMEZONE))
 
 CHECK_C_SOURCE_COMPILES("#include <time.h>
 			int main(void) { localtime_r(NULL, NULL); return 0; }" HAVE_LOCALTIME_R)
@@ -747,10 +756,15 @@ CHECK_C_SOURCE_COMPILES("#include <sys/types.h>
 
 add_printable_option(ENABLE_IPV6 "Enable IPv6 support" ON)
 
-CHECK_C_SOURCE_COMPILES("#include <sys/types.h>
-			#include <sys/socket.h>
-			#include <netinet/in.h>
-			#include <netdb.h>
+if(WIN32)
+	# Winsock provides getaddrinfo() and IPv6
+	set(_addrinfo_includes "#include <winsock2.h>\n#include <ws2tcpip.h>")
+	set(CMAKE_REQUIRED_LIBRARIES ws2_32)
+else(WIN32)
+	set(_addrinfo_includes "#include <sys/types.h>\n#include <sys/socket.h>\n#include <netinet/in.h>\n#include <netdb.h>")
+endif(WIN32)
+
+CHECK_C_SOURCE_COMPILES("${_addrinfo_includes}
 			#include <stddef.h>
 
 			int main(void) {
@@ -781,10 +795,7 @@ if(NOT have_addrinfo)
 	endif(ENABLE_IPV6)
 else(NOT have_addrinfo)
 	if(ENABLE_IPV6)
-		CHECK_C_SOURCE_COMPILES("#include <sys/types.h>
-					#include <sys/socket.h>
-					#include <netinet/in.h>
-					#include <netdb.h>
+		CHECK_C_SOURCE_COMPILES("${_addrinfo_includes}
 
 					int main(void) {
 						struct addrinfo hints;
@@ -793,6 +804,11 @@ else(NOT have_addrinfo)
 					}" HAVE_AI_ADDRCONFIG)
 	endif(ENABLE_IPV6)
 endif(NOT have_addrinfo)
+
+unset(_addrinfo_includes)
+if(WIN32)
+	unset(CMAKE_REQUIRED_LIBRARIES)
+endif(WIN32)
 
 # **********************************
 # Weather calendar backend support
@@ -945,7 +961,18 @@ CHECK_SYMBOL_EXISTS(malloc_trim malloc.h HAVE_MALLOC_TRIM)
 # subparts flags
 # ******************************
 
-pkg_check_modules(DATA_SERVER REQUIRED gio-2.0 gmodule-2.0 libsecret-1>=${libsecret_minimum_version} libxml-2.0 libsoup-3.0 ${mozilla_nspr} ${mozilla_nss})
+if(WIN32)
+	# Secrets are stored in the Windows Credential Manager, see e-secret-store.c
+	set(_secret_module "")
+	set(LIBSECRET_PC_REQUIRES "")
+else(WIN32)
+	set(_secret_module libsecret-1>=${libsecret_minimum_version})
+	# used by src/libedataserver/libedataserver.pc.in
+	set(LIBSECRET_PC_REQUIRES "libsecret-1")
+endif(WIN32)
+
+pkg_check_modules(DATA_SERVER REQUIRED gio-2.0 gmodule-2.0 ${_secret_module} libxml-2.0 libsoup-3.0 ${mozilla_nspr} ${mozilla_nss})
+unset(_secret_module)
 set(DATA_SERVER_INCLUDE_DIRS ${DATA_SERVER_INCLUDE_DIRS} ${MANUAL_NSPR_INCLUDES} ${MANUAL_NSS_INCLUDES})
 set(DATA_SERVER_LDFLAGS ${DATA_SERVER_LDFLAGS} ${MANUAL_NSPR_LIBS} ${MANUAL_NSS_LIBS})
 

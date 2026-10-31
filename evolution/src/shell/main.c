@@ -171,19 +171,6 @@ handle_term_signal (gpointer data)
 }
 #endif
 
-#ifdef G_OS_WIN32
-static gboolean
-is_any_gettext_catalog_installed (void)
-{
-	gchar txt[2] = { 0, 0 };
-	gchar *text;
-
-	text = gettext (txt);
-
-	return text && strcmp (text, "") != 0;
-}
-#endif
-
 static void G_GNUC_NORETURN
 shell_force_shutdown (void)
 {

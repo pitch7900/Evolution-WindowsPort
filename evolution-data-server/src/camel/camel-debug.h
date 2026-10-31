@@ -12,12 +12,15 @@
 #define CAMEL_DEBUG_H
 
 #include <glib.h>
+#include <camel/camel-enums.h>
 
 /* This is how the basic debug checking strings should be done */
 #define CAMEL_DEBUG_IMAP "imap"
 #define CAMEL_DEBUG_IMAP_FOLDER "imap:folder"
 
 G_BEGIN_DECLS
+
+CAMEL_VAR gint camel_verbose_debug;
 
 void camel_debug_init (void);
 gboolean camel_debug (const gchar *mode);

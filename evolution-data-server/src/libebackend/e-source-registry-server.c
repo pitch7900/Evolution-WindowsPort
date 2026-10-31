@@ -1707,6 +1707,12 @@ e_source_registry_server_load_resource (ESourceRegistryServer *server,
 		gchar *resource_uri;
 		GError *local_error = NULL;
 
+#ifdef G_OS_WIN32
+		/* there is no sendmail (nor a Camel sendmail provider) on Windows */
+		if (g_strcmp0 (children[ii], "sendmail.source") == 0)
+			continue;
+#endif
+
 		child_path = g_build_path ("/", path, children[ii], NULL);
 		resource_uri = g_strconcat ("resource://", child_path, NULL);
 		file = g_file_new_for_uri (resource_uri);

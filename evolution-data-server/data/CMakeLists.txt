@@ -36,7 +36,8 @@ if(NOT WITH_GOOGLE_CLIENT_ID STREQUAL "")
 	set(CMAKE_REQUIRED_INCLUDES ${CMAKE_BINARY_DIR} ${DATA_SERVER_INCLUDE_DIRS})
 	set(CMAKE_REQUIRED_LIBRARIES ${DATA_SERVER_LDFLAGS})
 	list(APPEND CMAKE_REQUIRED_DEFINITIONS -DG_LOG_DOMAIN=\"oauth2-value-helper\" -DBUILDING_VALUE_HELPER=1)
-	file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/oauth2-google-client-id" _binary_dir_to_file)
+	# CMake-style path: native Windows backslashes would be read as escapes
+	set(_binary_dir_to_file "${CMAKE_BINARY_DIR}/oauth2-google-client-id")
 	CHECK_C_SOURCE_RUNS("#define DECODE_KEY \"${WITH_GOOGLE_CLIENT_ID}\"
 			     #define DECODE_TO_FILE \"${_binary_dir_to_file}\"
 			     #define DECODE_REVERSED 1

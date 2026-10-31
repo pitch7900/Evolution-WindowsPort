@@ -31,7 +31,13 @@
 #include <glib/gi18n-lib.h>
 #include <json-glib/json-glib.h>
 #include <libsoup/soup.h>
+#ifdef G_OS_WIN32
+#ifndef UUID_STR_LEN
+#define UUID_STR_LEN 37
+#endif
+#else
 #include <uuid/uuid.h>
+#endif
 
 #include "e-dbus-identity-broker.h"
 
@@ -75,10 +81,17 @@ e_ms_oapxbc_class_init (EMsOapxbcClass *klass)
 static void
 e_ms_oapxbc_init (EMsOapxbc *self)
 {
+#ifdef G_OS_WIN32
+	gchar *session_id = g_uuid_string_random ();
+
+	g_strlcpy (self->session_id, session_id, sizeof (self->session_id));
+	g_free (session_id);
+#else
 	uuid_t session_id;
 
 	uuid_generate_random (session_id);
 	uuid_unparse_lower (session_id, self->session_id);
+#endif
 }
 
 /**

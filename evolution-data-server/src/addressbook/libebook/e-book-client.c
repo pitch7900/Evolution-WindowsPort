@@ -1071,6 +1071,12 @@ book_client_init_in_dbus_thread (GTask *task,
 		return;
 	}
 
+#ifdef G_OS_WIN32
+	/* no D-Bus activation on Windows: start the service if needed;
+	 * a failure surfaces as the error of the call below */
+	e_util_win32_ensure_dbus_service (ADDRESS_BOOK_DBUS_SERVICE_NAME, NULL, NULL);
+#endif
+
 	factory_proxy = e_dbus_address_book_factory_proxy_new_sync (
 		connection,
 		G_DBUS_PROXY_FLAGS_NONE,

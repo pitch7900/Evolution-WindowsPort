@@ -31,7 +31,11 @@ typedef struct {
 	gchar *local_archive_folder;
 } MailConfig;
 
+#ifndef CAMEL_VAR
+/* camel-mime-utils.h declares it (with the DLL import attribute needed by
+ * MSVC) when Camel provides CAMEL_VAR */
 extern gint camel_header_param_encode_filenames_in_rfc_2047;
+#endif
 
 static MailConfig *config = NULL;
 static GSettings *mail_settings = NULL;

@@ -58,7 +58,10 @@ target_link_libraries(evolution-alarm-notify
 	${GTK_LDFLAGS}
 )
 
-if(WIN32)
+if(MSVC)
+	# CMake compiles .rc sources with rc.exe
+	target_sources(evolution-alarm-notify PRIVATE evolution-alarm-notify-icon.rc)
+elseif(WIN32)
 	find_program(WINDRES windres)
 	if(WINDRES)
 		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/evolution-alarm-notify-icon.o

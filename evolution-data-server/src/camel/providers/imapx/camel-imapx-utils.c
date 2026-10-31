@@ -24,7 +24,6 @@
 #define d(...) camel_imapx_debug(debug, __VA_ARGS__)
 
 gint camel_imapx_debug_flags;
-extern gint camel_verbose_debug;
 
 #define debug_set_flag(flag) do { \
 	if ((CAMEL_IMAPX_DEBUG_ALL & CAMEL_IMAPX_DEBUG_ ## flag) && \

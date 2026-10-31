@@ -28,10 +28,12 @@
 
 #include <libsoup/soup.h>
 
+#ifndef G_OS_WIN32
 /* XXX Yeah, yeah... */
 #define SECRET_API_SUBJECT_TO_CHANGE
 
 #include <libsecret/secret.h>
+#endif
 
 #include <libedataserver/libedataserver.h>
 
@@ -66,6 +68,21 @@ struct _EPassMsg {
 				 * dispatch functions from others */
 };
 
+#ifdef G_OS_WIN32
+/* There is no Secret Service on Windows: passwords go through EDS'
+ * e_secret_store_*(), which uses the Windows Credential Manager. The key
+ * mirrors the libsecret attributes; the protocol is optional, as there. */
+static gchar *
+ep_secret_uid (GUri *uri,
+	       gboolean with_protocol)
+{
+	return g_strdup_printf ("Evolution:%s%s%s@%s",
+		with_protocol && g_uri_get_scheme (uri) ? g_uri_get_scheme (uri) : "",
+		with_protocol && g_uri_get_scheme (uri) ? "://" : "",
+		g_uri_get_user (uri) ? g_uri_get_user (uri) : "",
+		g_uri_get_host (uri) ? g_uri_get_host (uri) : "");
+}
+#else
 /* XXX probably want to share this with evalution-source-registry-migrate-sources.c */
 static const SecretSchema e_passwords_schema = {
 	"org.gnome.Evolution.Password",
@@ -77,6 +94,7 @@ static const SecretSchema e_passwords_schema = {
 		{ "protocol", SECRET_SCHEMA_ATTRIBUTE_STRING, },
 	}
 };
+#endif
 
 G_LOCK_DEFINE_STATIC (passwords);
 static GThread *main_thread = NULL;
@@ -214,6 +232,15 @@ ep_remember_password (EPassMsg *msg)
 	if (uri == NULL)
 		goto exit;
 
+#ifdef G_OS_WIN32
+	{
+		gchar *uid = ep_secret_uid (uri, TRUE);
+
+		e_secret_store_store_sync (uid, password, msg->key, TRUE, NULL, &error);
+
+		g_free (uid);
+	}
+#else
 	secret_password_store_sync (
 		&e_passwords_schema,
 		SECRET_COLLECTION_DEFAULT,
@@ -224,6 +251,7 @@ ep_remember_password (EPassMsg *msg)
 		"server", g_uri_get_host (uri),
 		"protocol", g_uri_get_scheme (uri),
 		NULL);
+#endif
 
 	/* Only remove the password from the session hash
 	 * if the keyring insertion was successful. */
@@ -259,12 +287,27 @@ ep_forget_password (EPassMsg *msg)
 	 *     to ep_keyring_delete_passwords(), which also knows about
 	 *     the backward-compatibility issue and will filter the list
 	 *     appropriately. */
+#ifdef G_OS_WIN32
+	{
+		gchar *uid;
+
+		uid = ep_secret_uid (uri, TRUE);
+		e_secret_store_delete_sync (uid, NULL, &error);
+		g_free (uid);
+
+		uid = ep_secret_uid (uri, FALSE);
+		if (!error)
+			e_secret_store_delete_sync (uid, NULL, &error);
+		g_free (uid);
+	}
+#else
 	secret_password_clear_sync (
 		&e_passwords_schema, NULL, &error,
 		"application", "Evolution",
 		"user", g_uri_get_user (uri),
 		"server", g_uri_get_host (uri),
 		NULL);
+#endif
 
 	if (error != NULL)
 		g_propagate_error (&msg->error, error);
@@ -294,6 +337,23 @@ ep_get_password (EPassMsg *msg)
 	if (uri == NULL)
 		goto exit;
 
+#ifdef G_OS_WIN32
+	{
+		gchar *uid;
+
+		uid = ep_secret_uid (uri, TRUE);
+		e_secret_store_lookup_sync (uid, &msg->password, NULL, &error);
+		g_free (uid);
+
+		if (msg->password == NULL) {
+			g_clear_error (&error);
+
+			uid = ep_secret_uid (uri, FALSE);
+			e_secret_store_lookup_sync (uid, &msg->password, NULL, &error);
+			g_free (uid);
+		}
+	}
+#else
 	msg->password = secret_password_lookup_sync (
 		&e_passwords_schema, NULL, &error,
 		"application", "Evolution",
@@ -319,6 +379,7 @@ ep_get_password (EPassMsg *msg)
 		"user", g_uri_get_user (uri),
 		"server", g_uri_get_host (uri),
 		NULL);
+#endif
 
 done:
 	if (error != NULL)

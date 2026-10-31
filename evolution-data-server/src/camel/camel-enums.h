@@ -9,6 +9,16 @@
 #ifndef CAMEL_ENUMS_H
 #define CAMEL_ENUMS_H
 
+/* Declares a public data symbol of libcamel. MSVC has no automatic data
+ * import across DLLs: users of the library need __declspec(dllimport). */
+#ifndef CAMEL_VAR
+#if defined (_MSC_VER) && !defined (CAMEL_COMPILATION)
+#define CAMEL_VAR extern __declspec (dllimport)
+#else
+#define CAMEL_VAR extern
+#endif
+#endif
+
 /**
  * CamelAuthenticationResult:
  * @CAMEL_AUTHENTICATION_ERROR:

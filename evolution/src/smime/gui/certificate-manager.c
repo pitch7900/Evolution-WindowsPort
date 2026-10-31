@@ -1604,10 +1604,13 @@ static void
 unload_certs (CertPage *cp)
 {
 	GtkTreeStore *treemodel;
-	GType types[cp->columns_count];
+	GType *types;
 	gint i;
 
 	g_return_if_fail (cp != NULL);
+
+	/* no variable-length array: not supported by MSVC */
+	types = g_newa (GType, cp->columns_count);
 
 	for (i = 0; i < cp->columns_count; i++)
 		types[i] = cp->columns[i].type;

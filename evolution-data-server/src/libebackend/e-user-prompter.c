@@ -220,6 +220,12 @@ user_prompter_prompt_thread (GTask *task,
 	 * which can be blocked by the e_user_prompter_prompt_sync() call anyway */
 	g_main_context_push_thread_default (main_context);
 
+#ifdef G_OS_WIN32
+	/* no D-Bus activation on Windows: start the service if needed;
+	 * a failure surfaces as the error of the call below */
+	e_util_win32_ensure_dbus_service (USER_PROMPTER_DBUS_SERVICE_NAME, NULL, NULL);
+#endif
+
 	dbus_prompter = e_dbus_user_prompter_proxy_new_for_bus_sync (
 		G_BUS_TYPE_SESSION,
 		G_DBUS_PROXY_FLAGS_NONE,

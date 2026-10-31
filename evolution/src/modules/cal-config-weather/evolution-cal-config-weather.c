@@ -25,8 +25,8 @@ typedef ESourceConfigBackend ECalConfigWeather;
 typedef ESourceConfigBackendClass ECalConfigWeatherClass;
 
 /* Module Entry Points */
-void e_module_load (GTypeModule *type_module);
-void e_module_unload (GTypeModule *type_module);
+G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
+G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
 
 typedef struct _Context Context;
 

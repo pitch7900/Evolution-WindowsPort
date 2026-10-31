@@ -10,7 +10,8 @@
 
 #include <nspr.h>
 
-#ifdef G_OS_WIN32
+/* _WIN32, not G_OS_WIN32: glib.h is not included yet at this point */
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #endif

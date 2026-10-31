@@ -1052,6 +1052,97 @@ web_view_ensure_scheme_known (WebKitWebView *web_view,
 	}
 }
 
+#ifdef G_OS_WIN32
+static void
+web_view_win32_append_js_file (GString *source,
+			       const gchar *filename)
+{
+	gchar *content = NULL;
+	GError *error = NULL;
+
+	if (g_file_get_contents (filename, &content, NULL, &error)) {
+		g_string_append (source, content);
+		g_string_append_c (source, '\n');
+		g_free (content);
+	} else {
+		g_warning ("Failed to load '%s': %s", filename, error ? error->message : "Unknown error");
+		g_clear_error (&error);
+	}
+}
+
+static void
+web_view_win32_append_js_plugins (GString *source,
+				  const gchar *top_path)
+{
+	const gchar *name;
+	gchar *path;
+	GDir *dir;
+
+	path = g_build_filename (top_path, "preview-plugins", NULL);
+	dir = g_dir_open (path, 0, NULL);
+
+	while (dir && (name = g_dir_read_name (dir)) != NULL) {
+		if (g_str_has_suffix (name, ".js") || g_str_has_suffix (name, ".JS")) {
+			gchar *filename = g_build_filename (path, name, NULL);
+
+			web_view_win32_append_js_file (source, filename);
+			g_free (filename);
+		}
+	}
+
+	if (dir)
+		g_dir_close (dir);
+	g_free (path);
+}
+
+/* WebView2 (the Windows WebKit replacement) runs no web process extension
+ * (src/web-extensions): the JavaScript the extension loads into the main
+ * frame is added as a user script instead. The two native helpers it
+ * provides are approximated in JavaScript: no tooltip for links, and the
+ * link reference test compares the texts without their scheme. */
+static void
+web_view_win32_add_user_scripts (WebKitUserContentManager *manager)
+{
+	static gchar *source = NULL;
+	WebKitUserScript *script;
+
+	if (!source) {
+		GString *js = g_string_new ("if (window === window.top) {\n");
+		gchar *filename;
+
+		/* e-convert.js first, e-web-view.js uses it */
+		filename = g_build_filename (EVOLUTION_WEBKITDATADIR, "e-convert.js", NULL);
+		web_view_win32_append_js_file (js, filename);
+		g_free (filename);
+
+		filename = g_build_filename (EVOLUTION_WEBKITDATADIR, "e-web-view.js", NULL);
+		web_view_win32_append_js_file (js, filename);
+		g_free (filename);
+
+		g_string_append (js,
+			"if (window.Evo) Evo.getUriTooltip = function (uri) { return uri ? uri : null; };\n"
+			"if (window.EvoConvert) EvoConvert.linkRequiresReference = function (href, text) {\n"
+			"\tif (!href || !text) return false;\n"
+			"\tif (!/^(https?|ftps?|mailto|file):/i.test(href)) return false;\n"
+			"\tvar norm = function (s) { return s.replace(/^[a-z]+:(\\/\\/)?/i, '').replace(/\\/$/, '').toLowerCase(); };\n"
+			"\treturn norm(href) !== norm(text);\n"
+			"};\n");
+
+		web_view_win32_append_js_plugins (js, EVOLUTION_WEBKITDATADIR);
+		web_view_win32_append_js_plugins (js, e_get_user_data_dir ());
+
+		g_string_append (js, "}\n");
+
+		source = g_string_free (js, FALSE);
+	}
+
+	script = webkit_user_script_new (source, WEBKIT_USER_CONTENT_INJECT_TOP_FRAME,
+		WEBKIT_USER_SCRIPT_INJECT_AT_DOCUMENT_START, NULL, NULL);
+	webkit_user_content_manager_add_script (manager, script);
+	webkit_user_script_unref (script);
+}
+#endif /* G_OS_WIN32 */
+
 static GObject*
 web_view_constructor (GType type,
                       guint n_construct_properties,
@@ -1069,8 +1160,15 @@ web_view_constructor (GType type,
 		if ((param = find_property (n_construct_properties, construct_properties, param_spec)))
 			g_value_take_object (param->value, e_web_view_get_default_webkit_settings ());
 		param_spec = g_object_class_find_property(object_class, "user-content-manager");
-		if ((param = find_property (n_construct_properties, construct_properties, param_spec)))
-			g_value_take_object (param->value, webkit_user_content_manager_new ());
+		if ((param = find_property (n_construct_properties, construct_properties, param_spec))) {
+			WebKitUserContentManager *manager = webkit_user_content_manager_new ();
+
+			#ifdef G_OS_WIN32
+			web_view_win32_add_user_scripts (manager);
+			#endif
+
+			g_value_take_object (param->value, manager);
+		}
 		param_spec = g_object_class_find_property (object_class, "web-context");
 		if ((param = find_property (n_construct_properties, construct_properties, param_spec))) {
 			/* Share one web_context between all previews. */

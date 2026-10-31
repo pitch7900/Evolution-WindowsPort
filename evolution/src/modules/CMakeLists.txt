@@ -91,7 +91,12 @@ add_subdirectory(settings)
 add_subdirectory(startup-wizard)
 add_subdirectory(vcard-inline)
 add_subdirectory(webkit-editor)
-add_subdirectory(webkit-inspector)
+
+# The inspector module is not built on Windows (WebView2), whose developer
+# tools are reached through the WebKitGTK shim.
+if(NOT WIN32)
+	add_subdirectory(webkit-inspector)
+endif(NOT WIN32)
 
 if(ENABLE_ALARM_NOTIFY_MODULE)
 add_subdirectory(alarm-notify)

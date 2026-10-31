@@ -25,7 +25,6 @@
 #define d(x)  /* (printf("%s:%s: ",  G_STRLOC, G_STRFUNC), (x))*/
 
 /* NOTE: Once mail is moved to EDS, this context needs to be created ofr Mail UI. */
-extern EMVFolderContext *context;	/* context remains open all time */
 
 void
 vfolder_edit (EMailBackend *backend,
@@ -47,7 +46,7 @@ vfolder_edit (EMailBackend *backend,
 
 	vfolder_load_storage (session);
 
-	dialog = em_vfolder_editor_new (context);
+	dialog = em_vfolder_editor_new (mail_vfolder_get_context ());
 	gtk_window_set_title (
 		GTK_WINDOW (dialog), _("Search Folders"));
 	gtk_window_set_transient_for (
@@ -55,10 +54,10 @@ vfolder_edit (EMailBackend *backend,
 
 	switch (gtk_dialog_run (GTK_DIALOG (dialog))) {
 		case GTK_RESPONSE_OK:
-			e_rule_context_save ((ERuleContext *) context, filename);
+			e_rule_context_save ((ERuleContext *) mail_vfolder_get_context (), filename);
 			break;
 		default:
-			e_rule_context_revert ((ERuleContext *) context, filename);
+			e_rule_context_revert ((ERuleContext *) mail_vfolder_get_context (), filename);
 			break;
 	}
 
@@ -86,7 +85,7 @@ vfolder_edit_response_cb (GtkWidget *dialog,
 		e_filter_rule_copy (rule, newrule);
 		config_dir = mail_session_get_config_dir ();
 		user = g_build_filename (config_dir, "vfolders.xml", NULL);
-		e_rule_context_save ((ERuleContext *) context, user);
+		e_rule_context_save ((ERuleContext *) mail_vfolder_get_context (), user);
 		g_free (user);
 	}
 
@@ -115,7 +114,7 @@ vfolder_edit_rule (EMailSession *session,
 
 	if (folder_name != NULL) {
 		rule = e_rule_context_find_rule (
-			(ERuleContext *) context, folder_name, NULL);
+			(ERuleContext *) mail_vfolder_get_context (), folder_name, NULL);
 		g_free (folder_name);
 	}
 
@@ -145,7 +144,7 @@ vfolder_edit_rule (EMailSession *session,
 	container = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
 	gtk_box_set_spacing (GTK_BOX (container), 6);
 
-	widget = e_filter_rule_get_widget (newrule, (ERuleContext *) context);
+	widget = e_filter_rule_get_widget (newrule, (ERuleContext *) mail_vfolder_get_context ());
 	gtk_box_pack_start (GTK_BOX (container), widget, TRUE, TRUE, 0);
 	gtk_widget_show (widget);
 
@@ -181,7 +180,7 @@ new_rule_clicked (GtkWidget *w,
 		}
 
 		if (e_rule_context_find_rule (
-			(ERuleContext *) context, rule->name, rule->source)) {
+			(ERuleContext *) mail_vfolder_get_context (), rule->name, rule->source)) {
 			e_alert_run_dialog_for_args (
 				GTK_WINDOW (w), "mail:vfolder-notunique",
 				rule->name, NULL);
@@ -189,10 +188,10 @@ new_rule_clicked (GtkWidget *w,
 		}
 
 		g_object_ref (rule);
-		e_rule_context_add_rule ((ERuleContext *) context, rule);
+		e_rule_context_add_rule ((ERuleContext *) mail_vfolder_get_context (), rule);
 		config_dir = mail_session_get_config_dir ();
 		user = g_build_filename (config_dir, "vfolders.xml", NULL);
-		e_rule_context_save ((ERuleContext *) context, user);
+		e_rule_context_save ((ERuleContext *) mail_vfolder_get_context (), user);
 		g_free (user);
 	}
 
@@ -224,7 +223,7 @@ vfolder_clone_rule (EMailSession *session,
 	rule = em_vfolder_editor_rule_new (session);
 
 	xml = e_filter_rule_xml_encode (in);
-	e_filter_rule_xml_decode (rule, xml, (ERuleContext *) context);
+	e_filter_rule_xml_decode (rule, xml, (ERuleContext *) mail_vfolder_get_context ());
 	xmlFreeNodeList (xml);
 
 	return rule;
@@ -248,7 +247,7 @@ vfolder_gui_add_rule (EMVFolderRule *rule)
 	GtkDialog *gd;
 	GtkWidget *container;
 
-	w = e_filter_rule_get_widget ((EFilterRule *) rule, (ERuleContext *) context);
+	w = e_filter_rule_get_widget ((EFilterRule *) rule, (ERuleContext *) mail_vfolder_get_context ());
 
 	gd = (GtkDialog *) gtk_dialog_new_with_buttons (
 		_("New Search Folder"),
@@ -292,7 +291,7 @@ vfolder_gui_add_from_message (EMailSession *session,
 	g_return_if_fail (CAMEL_IS_MIME_MESSAGE (message));
 
 	rule = (EMVFolderRule *) em_vfolder_rule_from_message (
-		context, message, flags, folder);
+		mail_vfolder_get_context (), message, flags, folder);
 	vfolder_gui_add_rule (rule);
 }
 
@@ -307,6 +306,6 @@ vfolder_gui_add_from_address (EMailSession *session,
 	g_return_if_fail (addr != NULL);
 
 	rule = (EMVFolderRule *) em_vfolder_rule_from_address (
-		context, addr, flags, folder);
+		mail_vfolder_get_context (), addr, flags, folder);
 	vfolder_gui_add_rule (rule);
 }

@@ -8,8 +8,8 @@
 #include "e-plugin-lib.h"
 
 /* Module Entry Points */
-void e_module_load (GTypeModule *type_module);
-void e_module_unload (GTypeModule *type_module);
+G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
+G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
 
 G_MODULE_EXPORT void
 e_module_load (GTypeModule *type_module)

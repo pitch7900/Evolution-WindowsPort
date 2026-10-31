@@ -291,9 +291,17 @@ pkg_check_modules(EVOLUTION_DATA_SERVER REQUIRED
 )
 
 pkg_check_modules(A11Y REQUIRED atk)
-pkg_check_modules(LIBSECRET REQUIRED libsecret-1>=${libsecret_minimum_version})
+# Windows: e-passwords.c stores secrets with EDS' e_secret_store_*()
+# (Windows Credential Manager) instead of libsecret
+if(NOT WIN32)
+	pkg_check_modules(LIBSECRET REQUIRED libsecret-1>=${libsecret_minimum_version})
+endif(NOT WIN32)
 pkg_check_modules(LIBSOUP REQUIRED libsoup-3.0>=${soup_minimum_version})
-pkg_check_modules(WEB_EXTENSION REQUIRED webkit2gtk-4.1>=${webkit2gtk_minimum_version})
+# WebView2 (Windows) has no in-process web extensions: the JavaScript files
+# they load are injected into the pages instead, see WINDOWS-PORT.md.
+if(NOT WIN32)
+	pkg_check_modules(WEB_EXTENSION REQUIRED webkit2gtk-4.1>=${webkit2gtk_minimum_version})
+endif(NOT WIN32)
 pkg_check_modules(SQLITE3 REQUIRED sqlite3>=${sqlite_minimum_version})
 
 pkg_check_variable(EDS_SOURCES_DBUS_SERVICE_NAME evolution-data-server-1.2 sourcesdbusservicename)
@@ -385,14 +393,15 @@ endif(WITH_HELP)
 # iconv checking
 # ******************************
 
-set(CMAKE_REQUIRED_LIBRARIES "-liconv")
+# bare library name: CMake turns it into -liconv or iconv.lib (MSVC)
+set(CMAKE_REQUIRED_LIBRARIES iconv)
 CHECK_C_SOURCE_COMPILES("#include <iconv.h>
 			#include <stdlib.h>
 			int main(void) { iconv_t cd; cd = iconv_open (\"UTF-8\", \"ISO-8859-1\"); return 0; }" HAVE_LIBICONV)
 unset(CMAKE_REQUIRED_LIBRARIES)
 
 if(HAVE_LIBICONV)
-	set(ICONV_LIBS "-liconv")
+	set(ICONV_LIBS iconv)
 	set(HAVE_ICONV ON)
 else(HAVE_LIBICONV)
 	set(ICONV_LIBS "")
@@ -404,7 +413,8 @@ if(NOT HAVE_ICONV)
 endif(NOT HAVE_ICONV)
 
 set(CMAKE_REQUIRED_LIBRARIES ${ICONV_LIBS})
-file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/" _binary_dir_with_separator)
+# CMake-style path: native Windows backslashes would be read as escapes
+set(_binary_dir_with_separator "${CMAKE_BINARY_DIR}/")
 CHECK_C_SOURCE_RUNS("#define ICONV_DETECT_BUILD_DIR \"${_binary_dir_with_separator}\"
 		     #include \"${CMAKE_SOURCE_DIR}/iconv-detect.c\"" _correct_iconv)
 unset(_binary_dir_with_separator)
@@ -427,9 +437,13 @@ CHECK_C_SOURCE_COMPILES("#include <time.h>
 CHECK_C_SOURCE_COMPILES("#include <time.h>
 			int main(void) { altzone = 1; return 0; }" HAVE_ALTZONE)
 
-if((NOT HAVE_TM_GMTOFF) AND (NOT HAVE_TIMEZONE))
+# MSVC CRT: _get_timezone()/_get_dstbias() instead of the POSIX variables
+CHECK_C_SOURCE_COMPILES("#include <time.h>
+			int main(void) { long tz; _get_timezone (&tz); _get_dstbias (&tz); return 0; }" HAVE__TIMEZONE)
+
+if((NOT HAVE_TM_GMTOFF) AND (NOT HAVE_TIMEZONE) AND (NOT HAVE__TIMEZONE))
 	message(FATAL_ERROR "Unable to find a way to determine timezone")
-endif((NOT HAVE_TM_GMTOFF) AND (NOT HAVE_TIMEZONE))
+endif((NOT HAVE_TM_GMTOFF) AND (NOT HAVE_TIMEZONE) AND (NOT HAVE__TIMEZONE))
 
 # ******************************
 # iso-codes
@@ -785,8 +799,9 @@ endif(HAVE_LIBICALVCAL)
 set(CMAKE_REQUIRED_DEFINITIONS ${GNOME_PLATFORM_CFLAGS})
 set(CMAKE_REQUIRED_INCLUDES ${GNOME_PLATFORM_INCLUDE_DIRS})
 set(CMAKE_REQUIRED_LIBRARIES ${GNOME_PLATFORM_LDFLAGS})
-file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/appdata-releases.txt" _output_filename)
-file(TO_NATIVE_PATH "${CMAKE_SOURCE_DIR}/NEWS" _news_filename)
+# CMake-style paths: native Windows backslashes would be read as escapes
+set(_output_filename "${CMAKE_BINARY_DIR}/appdata-releases.txt")
+set(_news_filename "${CMAKE_SOURCE_DIR}/NEWS")
 CHECK_C_SOURCE_RUNS("#define BUILD_RUN 1
 		     #define BUILD_OUTPUT \"${_output_filename}\"
 		     #define BUILD_TYPE \"${APPDATA_RELEASE_TYPE}\"

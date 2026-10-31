@@ -1070,6 +1070,12 @@ source_registry_object_manager_thread (gpointer data)
 	 * for this thread before creating the client. */
 	g_main_context_push_thread_default (closure->main_context);
 
+#ifdef G_OS_WIN32
+	/* no D-Bus activation on Windows: start the service if needed;
+	 * a failure surfaces as the error of the call below */
+	e_util_win32_ensure_dbus_service (SOURCES_DBUS_SERVICE_NAME, NULL, NULL);
+#endif
+
 	object_manager = e_dbus_object_manager_client_new_for_bus_sync (
 		G_BUS_TYPE_SESSION,
 		G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,

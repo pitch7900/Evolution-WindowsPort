@@ -18,6 +18,9 @@
 
 #ifdef G_OS_WIN32
 #include <string.h>
+#include <windows.h>
+#include <wincred.h>
+#include <gio/gio.h>
 #include <errno.h>
 #else
 #include <libsecret/secret.h>
@@ -28,14 +31,45 @@
 
 #ifdef G_OS_WIN32
 
+/* Permanent secrets are kept in the Windows Credential Manager (DPAPI
+ * protected, per user), session secrets only in memory. The old base64
+ * "secrets" key file, used by previous Win32 builds, is read as a fallback
+ * and its entries are migrated to the Credential Manager on lookup. */
+
 G_LOCK_DEFINE_STATIC (secrets_file);
 static GHashTable *session_secrets = NULL;
 #define SECRETS_SECTION "Secrets"
+#define CREDENTIAL_TARGET_PREFIX "Evolution-Data-Server:"
+
+static gunichar2 *
+win32_credential_target (const gchar *uid)
+{
+	gchar *target;
+	gunichar2 *wtarget;
+
+	target = g_strconcat (CREDENTIAL_TARGET_PREFIX, uid, NULL);
+	wtarget = g_utf8_to_utf16 (target, -1, NULL, NULL, NULL);
+	g_free (target);
+
+	return wtarget;
+}
+
+static void
+win32_set_error_from_last_error (GError **error,
+				 const gchar *what)
+{
+	DWORD err = GetLastError ();
+	gchar *msg;
+
+	msg = g_win32_error_message (err);
+	g_set_error (error, G_IO_ERROR, g_io_error_from_win32_error (err), "%s: %s", what, msg);
+	g_free (msg);
+}
 
 static gchar *
-encode_secret (const gchar *secret)
+get_secrets_filename (void)
 {
-	return g_base64_encode ((const guchar *) secret, strlen (secret));
+	return g_build_filename (e_get_user_config_dir (), "secrets", NULL);
 }
 
 static gchar *
@@ -52,70 +86,70 @@ decode_secret (const gchar *secret)
 	}
 
 	tmp = g_strndup ((const gchar *) decoded, len);
-	g_free (decoded);
+	e_util_safe_free_string ((gchar *) decoded);
 
 	return tmp;
 }
 
+/* Reads (and optionally removes) the secret from the legacy key file */
 static gchar *
-get_secrets_filename (void)
+legacy_secrets_file_take (const gchar *uid,
+			  gboolean remove)
 {
-	return g_build_filename (e_get_user_config_dir (), "secrets", NULL);
-}
-
-static GKeyFile *
-read_secrets_file (GError **error)
-{
-	gchar *filename;
 	GKeyFile *secrets;
+	gchar *filename, *tmp, *secret = NULL;
+
+	filename = get_secrets_filename ();
+
+	if (!g_file_test (filename, G_FILE_TEST_IS_REGULAR)) {
+		g_free (filename);
+		return NULL;
+	}
 
 	secrets = g_key_file_new ();
 
-	filename = get_secrets_filename ();
+	if (g_key_file_load_from_file (secrets, filename, G_KEY_FILE_NONE, NULL)) {
+		tmp = g_key_file_get_string (secrets, SECRETS_SECTION, uid, NULL);
+		if (tmp) {
+			secret = *tmp ? decode_secret (tmp) : g_strdup ("");
+			e_util_safe_free_string (tmp);
 
-	if (g_file_test (filename, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_REGULAR)) {
-		if (!g_key_file_load_from_file (secrets, filename, G_KEY_FILE_NONE, error)) {
-			g_key_file_free (secrets);
-			secrets = NULL;
+			if (remove && g_key_file_remove_key (secrets, SECRETS_SECTION, uid, NULL))
+				g_key_file_save_to_file (secrets, filename, NULL);
 		}
 	}
 
+	g_key_file_free (secrets);
 	g_free (filename);
 
-	return secrets;
+	return secret;
 }
 
 static gboolean
-store_secrets_file (GKeyFile *secrets,
-		    GError **error)
+win32_credential_write (const gchar *uid,
+			const gchar *secret,
+			GError **error)
 {
-	gchar *content, *filename;
-	gsize length;
+	CREDENTIALW cred = { 0 };
+	gunichar2 *target, *user;
 	gboolean success;
 
-	g_return_val_if_fail (secrets != NULL, FALSE);
+	target = win32_credential_target (uid);
+	user = g_utf8_to_utf16 (uid, -1, NULL, NULL, NULL);
 
-	if (!g_file_test (e_get_user_config_dir (), G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
-		if (g_mkdir_with_parents (e_get_user_config_dir (), 0700) == -1) {
-			g_set_error_literal (
-				error, G_FILE_ERROR,
-				g_file_error_from_errno (errno),
-				g_strerror (errno));
-			return FALSE;
-		}
-	}
+	cred.Type = CRED_TYPE_GENERIC;
+	cred.TargetName = (LPWSTR) target;
+	cred.UserName = (LPWSTR) user;
+	cred.CredentialBlobSize = (DWORD) strlen (secret);
+	cred.CredentialBlob = (LPBYTE) secret;
+	cred.Persist = CRED_PERSIST_LOCAL_MACHINE;
 
-	content = g_key_file_to_data (secrets, &length, error);
-	if (!content)
-		return FALSE;
+	success = CredWriteW (&cred, 0) != FALSE;
+	if (!success)
+		win32_set_error_from_last_error (error, "CredWrite");
 
-
-	filename = get_secrets_filename ();
-
-	success = g_file_set_contents (filename, content, length, error);
-
-	g_free (filename);
-	g_free (content);
+	g_free (target);
+	g_free (user);
 
 	return success;
 }
@@ -126,40 +160,23 @@ e_win32_secret_store_secret_sync (const gchar *uid,
 				  gboolean permanently,
 				  GError **error)
 {
-	GKeyFile *secrets;
-	gboolean success;
+	gboolean success = TRUE;
 
 	g_return_val_if_fail (uid != NULL, FALSE);
 
 	G_LOCK (secrets_file);
 
 	if (permanently) {
-		secrets = read_secrets_file (error);
-		success = secrets != NULL;
-
-		if (secrets) {
-			gchar *encoded;
-
-			encoded = secret && *secret ? encode_secret (secret) : g_strdup (secret);
-
-			g_key_file_set_string (secrets, SECRETS_SECTION, uid, encoded);
-
-			success = store_secrets_file (secrets, error);
-
-			g_key_file_free (secrets);
-			g_free (encoded);
-		}
+		success = win32_credential_write (uid, secret ? secret : "", error);
+		e_util_safe_free_string (legacy_secrets_file_take (uid, TRUE));
 	} else {
-		gchar *encoded;
-
 		if (!session_secrets)
 			session_secrets = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, (GDestroyNotify) e_util_safe_free_string);
 
-		encoded = secret && *secret ? encode_secret (secret) : g_strdup (secret);
-		if (!encoded)
+		if (!secret)
 			g_hash_table_remove (session_secrets, uid);
 		else
-			g_hash_table_insert (session_secrets, g_strdup (uid), encoded);
+			g_hash_table_insert (session_secrets, g_strdup (uid), g_strdup (secret));
 	}
 
 	G_UNLOCK (secrets_file);
@@ -171,34 +188,37 @@ static gchar *
 e_win32_secret_lookup_secret_sync (const gchar *uid,
 				   GError **error)
 {
-	GKeyFile *secrets;
 	gchar *secret = NULL;
 
 	g_return_val_if_fail (uid != NULL, NULL);
 
 	G_LOCK (secrets_file);
 
-	if (session_secrets) {
-		const gchar *encoded;
-
-		encoded = g_hash_table_lookup (session_secrets, uid);
-		if (encoded)
-			secret = decode_secret (encoded);
-	}
+	if (session_secrets)
+		secret = g_strdup (g_hash_table_lookup (session_secrets, uid));
 
 	if (!secret) {
-		secrets = read_secrets_file (error);
-		if (secrets) {
-			gchar *tmp;
+		PCREDENTIALW cred = NULL;
+		gunichar2 *target;
 
-			tmp = g_key_file_get_string (secrets, SECRETS_SECTION, uid, NULL);
-			if (tmp) {
-				secret = *tmp ? decode_secret (tmp) : g_strdup ("");
-				g_free (tmp);
-			}
+		target = win32_credential_target (uid);
 
-			g_key_file_free (secrets);
+		if (CredReadW ((LPCWSTR) target, CRED_TYPE_GENERIC, 0, &cred)) {
+			secret = g_strndup ((const gchar *) cred->CredentialBlob, cred->CredentialBlobSize);
+			SecureZeroMemory (cred->CredentialBlob, cred->CredentialBlobSize);
+			CredFree (cred);
+		} else if (GetLastError () != ERROR_NOT_FOUND) {
+			win32_set_error_from_last_error (error, "CredRead");
 		}
+
+		g_free (target);
+	}
+
+	if (!secret && !(error && *error)) {
+		/* Migrate from the legacy plain key file */
+		secret = legacy_secrets_file_take (uid, FALSE);
+		if (secret && win32_credential_write (uid, secret, NULL))
+			e_util_safe_free_string (legacy_secrets_file_take (uid, TRUE));
 	}
 
 	G_UNLOCK (secrets_file);
@@ -210,33 +230,31 @@ static gboolean
 e_win32_secret_delete_secret_sync (const gchar *uid,
 				   GError **error)
 {
-	GKeyFile *secrets;
-	gboolean success = FALSE;
+	gunichar2 *target;
+	gboolean success = TRUE;
 
 	g_return_val_if_fail (uid != NULL, FALSE);
 
 	G_LOCK (secrets_file);
 
-	if (session_secrets) {
-		success = g_hash_table_remove (session_secrets, uid);
+	if (session_secrets)
+		g_hash_table_remove (session_secrets, uid);
+
+	target = win32_credential_target (uid);
+
+	if (!CredDeleteW ((LPCWSTR) target, CRED_TYPE_GENERIC, 0) && GetLastError () != ERROR_NOT_FOUND) {
+		win32_set_error_from_last_error (error, "CredDelete");
+		success = FALSE;
 	}
 
-	secrets = read_secrets_file (error);
-	if (secrets) {
-		success = TRUE;
+	g_free (target);
 
-		if (g_key_file_remove_key (secrets, SECRETS_SECTION, uid, NULL)) {
-			success = store_secrets_file (secrets, error);
-		}
-
-		g_key_file_free (secrets);
-	}
+	e_util_safe_free_string (legacy_secrets_file_take (uid, TRUE));
 
 	G_UNLOCK (secrets_file);
 
 	return success;
 }
-
 #else /* G_OS_WIN32 */
 
 #define KEYRING_ITEM_ATTRIBUTE_UID	"e-source-uid"
