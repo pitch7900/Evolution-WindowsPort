@@ -71,6 +71,9 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   lu, suivi ; relève F5 / F9 / Maj+F9 ; gestion du dossier affiché ;
   filtres, volet des dossiers masquable et disposition par défaut ;
   Calendrier : nouvel événement, exporter, aujourd'hui / 30 prochains jours.
+- **Barre d'accès rapide** dans la barre de titre : Envoyer/Recevoir et
+  Nouveau message par défaut ; personnalisable (tous les dossiers, répondre,
+  supprimer, imprimer, nouvel événement, nouvelle tâche), choix mémorisé.
 
 ### Corrigé
 

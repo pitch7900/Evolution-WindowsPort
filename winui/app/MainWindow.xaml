@@ -27,6 +27,10 @@
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                 <FontIcon Glyph="&#xE715;" FontSize="14" />
                 <TextBlock Text="Evolution" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                <!-- barre d'accès rapide, personnalisable (MainWindow::RebuildQuickAccess) ;
+                     zone cliquable déclarée à Windows (UpdateTitleBarPassthrough) -->
+                <StackPanel x:Name="QuickAccessBar" Orientation="Horizontal" Spacing="2" Margin="12,0,0,0"
+                            VerticalAlignment="Center" SizeChanged="OnQuickAccessSizeChanged" />
             </StackPanel>
         </Grid>
 
