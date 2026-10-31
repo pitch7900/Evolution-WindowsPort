@@ -251,6 +251,14 @@
                                     <KeyboardAccelerator Modifiers="Control" Key="P" />
                                 </AppBarButton.KeyboardAccelerators>
                             </AppBarButton>
+                            <AppBarButton Label="Enregistrer sous" Click="OnSaveMessageClick">
+                                <AppBarButton.Icon>
+                                    <FontIcon Glyph="&#xE792;" />
+                                </AppBarButton.Icon>
+                                <AppBarButton.KeyboardAccelerators>
+                                    <KeyboardAccelerator Modifiers="Control" Key="S" />
+                                </AppBarButton.KeyboardAccelerators>
+                            </AppBarButton>
                         </CommandBar>
                         <TextBlock x:Name="MessageSubject" Style="{StaticResource SubtitleTextBlockStyle}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                         <TextBlock x:Name="MessageFrom" Style="{StaticResource BodyStrongTextBlockStyle}" IsTextSelectionEnabled="True" />
