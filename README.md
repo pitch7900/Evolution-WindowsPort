@@ -13,6 +13,7 @@ Pour le journal technique détaillé, l'historique des correctifs CMake/MSVC et 
 | --- | --- | --- | --- |
 | Evolution | [github.com/GNOME/evolution](https://github.com/GNOME/evolution) | [gitlab.gnome.org/GNOME/evolution](https://gitlab.gnome.org/GNOME/evolution) | commit `be33fb6204` |
 | Evolution Data Server | [github.com/GNOME/evolution-data-server](https://github.com/GNOME/evolution-data-server) | [gitlab.gnome.org/GNOME/evolution-data-server](https://gitlab.gnome.org/GNOME/evolution-data-server) | commit `ea6b0124d` |
+| evolution-ews (Exchange / Microsoft 365) | [github.com/GNOME/evolution-ews](https://github.com/GNOME/evolution-ews) | [gitlab.gnome.org/GNOME/evolution-ews](https://gitlab.gnome.org/GNOME/evolution-ews) | commit `19cb82b3` |
 
 ---
 
@@ -46,6 +47,7 @@ Le projet s'articule autour de deux couches principales :
 | [`dist/`](./dist) | Binaires packagés pour la distribution (MSI, `.exe`, DLL) |
 | [`evolution/`](./evolution) | Code source d'Evolution adapté pour MSVC |
 | [`evolution-data-server/`](./evolution-data-server) | Code source d'Evolution Data Server adapté pour Windows 11 / MSVC |
+| [`evolution-ews/`](./evolution-ews) | Code source d'evolution-ews (Microsoft 365 via Microsoft Graph, Exchange Web Services) compilé avec MSVC |
 | [`deps/`](./deps) | Sources tierces téléchargées automatiquement (NSS, NSPR, libical, SDK WebView2) |
 | [`gtk-build/`](./gtk-build) | Pile GTK3 / GLib / libsoup3 compilée avec `gvsbuild` et préfixe d'installation commun (`gtk-build/gtk/x64/release`, ignoré par Git) |
 
@@ -69,6 +71,7 @@ tools\build-gtk.bat          :: Pile GTK3 / GLib via gvsbuild (1 à 2 h la premi
 tools\build-nss.bat          :: NSPR + NSS (S/MIME et TLS)
 tools\build-libical.bat      :: libical + libical-glib (fuseaux horaires intégrés)
 tools\build-eds.bat          :: evolution-data-server
+tools\build-ews.bat          :: evolution-ews (Microsoft 365 / Exchange Online)
 tools\build-webkit-shim.bat  :: Shim WebKitGTK 4.1 sur WebView2 (pour la version GTK)
 tools\build-evolution.bat    :: Evolution (version GTK transitoire)
 tools\build-winui-core.bat   :: evo-core.dll (moteur C pour le client WinUI 3)
@@ -97,6 +100,7 @@ Ce projet est distribué sous la **GNU Lesser General Public License, version 2.
 
 - **Evolution** : LGPL v2 ou (à votre choix) LGPL v3, voir [`evolution/COPYING`](./evolution/COPYING). Quelques fichiers relèvent d'autres licences (OpenLDAP, MPL/GPL/LGPL), qui y sont listées.
 - **Evolution Data Server** : LGPL v2 ou ultérieure, voir [`evolution-data-server/COPYING`](./evolution-data-server/COPYING).
+- **evolution-ews** : LGPL v2.1 ou ultérieure, voir [`evolution-ews/COPYING`](./evolution-ews/COPYING).
 
 Les fichiers repris de ces projets conservent leur licence et leurs mentions de copyright d'origine (en-têtes `SPDX-License-Identifier`).
 

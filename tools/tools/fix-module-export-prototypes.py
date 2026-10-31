@@ -25,8 +25,9 @@ def fix_file(path):
 
     changed = False
     for name in names:
-        # a prototype line for <name> ending with ';', without G_MODULE_EXPORT
-        proto = re.compile(r"^(?!G_MODULE_EXPORT)([ \t]*)([A-Za-z_][^;{}()\n]*?\b%s\s*\([^;{}]*\)\s*;)" % re.escape(name), re.M)
+        # a prototype line for <name> ending with ';', without G_MODULE_EXPORT;
+        # no '=' before the name: "x = name (...);" is a call, not a prototype
+        proto = re.compile(r"^(?!G_MODULE_EXPORT)([ \t]*)([A-Za-z_][^;{}()=\n]*?\b%s\s*\([^;{}]*\)\s*;)" % re.escape(name), re.M)
         text, count = proto.subn(r"\1G_MODULE_EXPORT \2", text)
         changed = changed or count > 0
 

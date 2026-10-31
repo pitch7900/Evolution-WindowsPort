@@ -125,6 +125,7 @@ namespace winrt::EvolutionWin::implementation
         /* Étape 2 : Gestion des comptes, certificats TLS et authentification OAuth2 */
         fire_and_forget PromptPasswordAsync(hstring source_uid, hstring name, hstring user, bool rejected);
         fire_and_forget PromptTlsCertificateAsync(Windows::Data::Json::JsonObject object);
+        fire_and_forget SignInOAuth2Async(hstring source_uid, hstring name);
         Windows::Foundation::IAsyncOperation<hstring> StartOAuth2SignInAsync(
             int provider_index, hstring client_id, hstring tenant_id, hstring login_hint);
         void RefreshAccountsView();

@@ -175,6 +175,38 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Crée un compte Microsoft 365 / Exchange Online (Microsoft Graph).
+         * Paramètres :
+         *   account_json : JSON {"email", "display_name", "full_name", "client_id"?, "tenant"?}
+         *   handler      : rappel recevant {"uid", "collection_uid"} */
+        void AddMicrosoft365Account(winrt::hstring const& account_json, CoreHandler handler)
+        {
+            evo_core_add_microsoft365_account(m_core, winrt::to_string(account_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Connexion OAuth2, étape 1 : page de connexion et adresse de redirection.
+         * Paramètres :
+         *   source_uid : uid du compte ou de sa collection
+         *   handler    : rappel recevant {"source_uid", "uri", "redirect_uri", "service"} */
+        void OAuth2Begin(winrt::hstring const& source_uid, CoreHandler handler)
+        {
+            evo_core_oauth2_begin(m_core, winrt::to_string(source_uid).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Connexion OAuth2, étape 2 : adresse de redirection atteinte (avec le code).
+         * Paramètres :
+         *   source_uid   : source_uid renvoyé par OAuth2Begin
+         *   redirect_uri : adresse complète atteinte
+         *   handler      : rappel recevant {} en cas de succès */
+        void OAuth2Finish(winrt::hstring const& source_uid, winrt::hstring const& redirect_uri, CoreHandler handler)
+        {
+            evo_core_oauth2_finish(m_core, winrt::to_string(source_uid).c_str(),
+                winrt::to_string(redirect_uri).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Supprime un compte de messagerie d'evolution-data-server.
          * Paramètres :
          *   account_uid : identifiant du compte à supprimer

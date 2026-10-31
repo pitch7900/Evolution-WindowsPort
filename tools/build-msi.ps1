@@ -100,7 +100,7 @@ foreach ($f in 'gioopenssl.dll', 'giognomeproxy.dll', 'giomodule.cache') {
 Copy-Into (Join-Path $Prefix 'share\glib-2.0\schemas\gschemas.compiled') (Join-Path $Stage 'share\glib-2.0\schemas')
 Copy-Item -Recurse -Force (Join-Path $Prefix 'share\libical') (Join-Path $Stage 'share\libical')
 
-$Domains = 'evolution-data-server.mo', 'glib20.mo', 'glib-networking.mo', 'libsoup-3.0.mo'
+$Domains = 'evolution-data-server.mo', 'evolution-ews.mo', 'glib20.mo', 'glib-networking.mo', 'libsoup-3.0.mo'
 Get-ChildItem (Join-Path $Prefix 'share\locale') -Directory | ForEach-Object {
 	$lang = $_.Name
 	foreach ($mo in $Domains) {

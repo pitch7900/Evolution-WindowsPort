@@ -41,6 +41,10 @@ struct _EvoCore {
 	GCond cond;
 	gboolean started;
 	gchar *start_error;
+
+	/* OAuth2 sign-ins in progress (evo_core_oauth2_begin/finish),
+	 * credentials source uid ~> CoreOAuth2Pending *, protected by lock */
+	GHashTable *oauth2_pending;
 };
 
 static JsonBuilder *	core_event_builder	(void);
@@ -281,6 +285,62 @@ evo_core_session_emit_auth_required (EvoCoreSession *self,
 	g_free (user);
 }
 
+/* Whether the authentication mechanism is an OAuth2 service of EDS (e.g.
+ * "Microsoft365"): its token comes from the source registry, which
+ * refreshes it, not from a password. */
+static gboolean
+evo_core_session_is_oauth2_method (EvoCoreSession *self,
+				   const gchar *mechanism)
+{
+	return mechanism && self->registry &&
+		e_oauth2_services_is_oauth2_alias (e_source_registry_get_oauth2_services (self->registry), mechanism);
+}
+
+/* Emits "oauth2-required" when an OAuth2 account has no valid token (never
+ * signed in, or refresh token revoked/expired): the interface opens the
+ * sign-in page (evo_core_oauth2_begin). source_uid is the source carrying
+ * the authentication, the collection for Microsoft 365 / EWS accounts.
+ * Once per source until evo_core_oauth2_finish () succeeds. */
+static void
+evo_core_session_emit_oauth2_required (EvoCoreSession *self,
+				       CamelService *service)
+{
+	ESource *source, *collection = NULL;
+	JsonBuilder *builder;
+	const gchar *uid;
+	gchar *user;
+
+	if (!self->core || !self->registry)
+		return;
+
+	source = e_source_registry_ref_source (self->registry, camel_service_get_uid (service));
+	if (source)
+		collection = e_source_registry_find_extension (self->registry, source, E_SOURCE_EXTENSION_COLLECTION);
+	uid = e_source_get_uid (collection ? collection : source);
+
+	g_mutex_lock (&self->prompted_lock);
+	if (!uid || g_hash_table_contains (self->prompted_sources, uid)) {
+		g_mutex_unlock (&self->prompted_lock);
+		g_clear_object (&collection);
+		g_clear_object (&source);
+		return;
+	}
+	g_hash_table_add (self->prompted_sources, g_strdup (uid));
+	g_mutex_unlock (&self->prompted_lock);
+
+	user = service_dup_user (service);
+
+	builder = core_event_builder ();
+	builder_add_string (builder, "source_uid", uid);
+	builder_add_string (builder, "name", camel_service_get_display_name (service));
+	builder_add_string (builder, "user", user ? user : "");
+	core_emit_builder (self->core, "oauth2-required", builder);
+
+	g_free (user);
+	g_clear_object (&collection);
+	g_clear_object (&source);
+}
+
 static gchar *
 evo_core_session_get_password (CamelSession *session,
 			       CamelService *service,
@@ -320,9 +380,18 @@ evo_core_session_authenticate_sync (CamelSession *session,
 	if (mechanism)
 		authtype = camel_sasl_authtype (mechanism);
 
-	/* mechanisms without password get one try */
-	if (authtype && !authtype->need_password)
-		return camel_service_authenticate_sync (service, mechanism, cancellable, error) == CAMEL_AUTHENTICATION_ACCEPTED;
+	/* mechanisms without password get one try; an EDS OAuth2 token
+	 * missing or refused (not a network error) needs a new sign-in */
+	if ((authtype && !authtype->need_password) ||
+	    evo_core_session_is_oauth2_method (EVO_CORE_SESSION (session), mechanism)) {
+		result = camel_service_authenticate_sync (service, mechanism, cancellable, error);
+
+		if (result == CAMEL_AUTHENTICATION_REJECTED &&
+		    evo_core_session_is_oauth2_method (EVO_CORE_SESSION (session), mechanism))
+			evo_core_session_emit_oauth2_required (EVO_CORE_SESSION (session), service);
+
+		return result == CAMEL_AUTHENTICATION_ACCEPTED;
+	}
 
 	password = evo_core_session_lookup_password (EVO_CORE_SESSION (session), service, cancellable, error);
 	if (!password) {
@@ -909,6 +978,56 @@ core_log_open (void)
 /* Core                                                                     */
 /* ------------------------------------------------------------------------ */
 
+/* An OAuth2 sign-in between evo_core_oauth2_begin () and
+ * evo_core_oauth2_finish (): the same service object must exchange the
+ * code (it may keep PKCE data per source) and the state must come back. */
+typedef struct {
+	EOAuth2Service *service;
+	gchar *state;
+} CoreOAuth2Pending;
+
+static void
+core_oauth2_pending_free (gpointer data)
+{
+	CoreOAuth2Pending *pending = data;
+
+	g_clear_object (&pending->service);
+	g_free (pending->state);
+	g_free (pending);
+}
+
+/* The OAuth2 services (EOAuth2Service implementations) are types registered
+ * by registry modules; ESourceRegistry collects them when it is created, so
+ * load them first. Microsoft 365 (Graph) and EWS come from evolution-ews,
+ * Google/Outlook.com from EDS; each one is optional. The modules stay
+ * loaded for the life of the process. */
+static void
+core_load_oauth2_modules (void)
+{
+	const gchar *names[] = {
+		"module-microsoft365-backend",
+		"module-ews-backend",
+		"module-oauth2-services"
+	};
+	gchar *dir;
+	guint ii;
+
+	dir = g_build_filename (e_util_get_prefix (), "lib", "evolution-data-server", "registry-modules", NULL);
+
+	for (ii = 0; ii < G_N_ELEMENTS (names); ii++) {
+		gchar *filename = g_strconcat (names[ii], "." G_MODULE_SUFFIX, NULL);
+		gchar *path = g_build_filename (dir, filename, NULL);
+
+		if (g_file_test (path, G_FILE_TEST_IS_REGULAR) && !e_module_load_file (path))
+			g_warning ("Cannot load OAuth2 module “%s”", path);
+
+		g_free (path);
+		g_free (filename);
+	}
+
+	g_free (dir);
+}
+
 /* The EDS services (libexec\*.exe), started by evo-core, inherit its
  * environment: put the folder of evo-core.dll, where the installed
  * application keeps every DLL (bin\), first in PATH so that they find
@@ -1099,6 +1218,8 @@ core_thread_func (gpointer user_data)
 	e_source_camel_register_types ();
 
 	core_emit (core, "status", "Connecting to evolution-data-server");
+
+	core_load_oauth2_modules ();
 
 	/* starts evolution-source-registry when needed */
 	core->registry = e_source_registry_new_sync (core->cancellable, &error);
@@ -3836,6 +3957,397 @@ core_add_account_run (EvoCore *core,
 	return json;
 }
 
+/* Microsoft 365 settings (CamelM365Settings, from evolution-ews) of a
+ * source, set through their properties: evo-core does not link to
+ * evolution-ews, the type comes with the loaded "microsoft365" provider. */
+static void
+core_set_m365_settings (ESource *source,
+			const gchar *email,
+			const gchar *client_id,
+			const gchar *tenant)
+{
+	ESourceCamel *extension;
+	CamelSettings *settings;
+	gboolean override_oauth2 = (client_id && *client_id) || (tenant && *tenant);
+
+	extension = e_source_get_extension (source, e_source_camel_get_extension_name ("microsoft365"));
+	settings = e_source_camel_get_settings (extension);
+
+	camel_network_settings_set_user (CAMEL_NETWORK_SETTINGS (settings), email);
+	g_object_set (settings, "email", email, NULL);
+
+	if (override_oauth2) {
+		g_object_set (settings, "override-oauth2", TRUE, NULL);
+		if (client_id && *client_id)
+			g_object_set (settings, "oauth2-client-id", client_id, NULL);
+		if (tenant && *tenant)
+			g_object_set (settings, "oauth2-tenant", tenant, NULL);
+	}
+}
+
+/* Crée un compte Microsoft 365 / Exchange Online (Microsoft Graph,
+ * evolution-ews) comme l'assistant d'Evolution : une collection (backend
+ * "microsoft365", authentification OAuth2 "Microsoft365") portant le compte
+ * de courrier, l'identité et le serveur d'envoi ; le module du registre
+ * ajoute lui-même les carnets d'adresses et agendas de la collection.
+ * L'interface enchaîne avec evo_core_oauth2_begin () sur "collection_uid".
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = JSON {"email", "display_name", "full_name",
+ *           "client_id"?, "tenant"?}
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : "{\"uid\":\"<compte>\",\"collection_uid\":\"...\"}", NULL sinon. */
+static gchar *
+core_add_m365_account_run (EvoCore *core,
+			   gchar **args,
+			   GError **error)
+{
+	JsonNode *root;
+	JsonObject *object;
+	const gchar *email, *name, *real_name, *client_id, *tenant;
+	ESource *collection_source, *account_source, *identity_source, *transport_source;
+	ESourceCollection *collection;
+	ESourceAuthentication *authentication;
+	ESourceMailAccount *mail_account;
+	ESourceMailIdentity *mail_identity;
+	ESourceMailSubmission *mail_submission;
+	ESourceMailTransport *mail_transport;
+	GList *sources = NULL;
+	CamelService *service;
+	JsonBuilder *builder;
+	gchar *json = NULL;
+
+	if (!camel_provider_get ("microsoft365", NULL)) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			"Le module Microsoft 365 (evolution-ews) n'est pas installé");
+		return NULL;
+	}
+
+	root = json_from_string (args[0], error);
+	if (!root)
+		return NULL;
+
+	object = JSON_NODE_HOLDS_OBJECT (root) ? json_node_get_object (root) : NULL;
+	email = object ? json_object_get_string_member_with_default (object, "email", "") : "";
+	if (!email || !*email) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "L'adresse e-mail est obligatoire");
+		json_node_unref (root);
+		return NULL;
+	}
+
+	name = json_object_get_string_member_with_default (object, "display_name", "");
+	if (!*name)
+		name = email;
+	real_name = json_object_get_string_member_with_default (object, "full_name", "");
+	if (!*real_name)
+		real_name = name;
+	client_id = json_object_get_string_member_with_default (object, "client_id", "");
+	tenant = json_object_get_string_member_with_default (object, "tenant", "");
+
+	collection_source = e_source_new (NULL, NULL, NULL);
+	account_source = e_source_new (NULL, NULL, NULL);
+	identity_source = e_source_new (NULL, NULL, NULL);
+	transport_source = e_source_new (NULL, NULL, NULL);
+
+	e_source_set_display_name (collection_source, name);
+	e_source_set_display_name (account_source, name);
+	e_source_set_display_name (identity_source, name);
+	e_source_set_display_name (transport_source, name);
+	e_source_set_parent (account_source, e_source_get_uid (collection_source));
+	e_source_set_parent (identity_source, e_source_get_uid (collection_source));
+	e_source_set_parent (transport_source, e_source_get_uid (collection_source));
+
+	/* collection: OAuth2 authentication, mail + calendars + contacts */
+	collection = e_source_get_extension (collection_source, E_SOURCE_EXTENSION_COLLECTION);
+	e_source_backend_set_backend_name (E_SOURCE_BACKEND (collection), "microsoft365");
+	e_source_collection_set_identity (collection, email);
+	e_source_collection_set_mail_enabled (collection, TRUE);
+	e_source_collection_set_calendar_enabled (collection, TRUE);
+	e_source_collection_set_contacts_enabled (collection, TRUE);
+
+	authentication = e_source_get_extension (collection_source, E_SOURCE_EXTENSION_AUTHENTICATION);
+	e_source_authentication_set_method (authentication, "Microsoft365");
+	e_source_authentication_set_user (authentication, email);
+	core_set_m365_settings (collection_source, email, client_id, tenant);
+
+	mail_account = e_source_get_extension (account_source, E_SOURCE_EXTENSION_MAIL_ACCOUNT);
+	e_source_backend_set_backend_name (E_SOURCE_BACKEND (mail_account), "microsoft365");
+	e_source_mail_account_set_identity_uid (mail_account, e_source_get_uid (identity_source));
+	core_set_m365_settings (account_source, email, client_id, tenant);
+
+	mail_identity = e_source_get_extension (identity_source, E_SOURCE_EXTENSION_MAIL_IDENTITY);
+	e_source_mail_identity_set_name (mail_identity, real_name);
+	e_source_mail_identity_set_address (mail_identity, email);
+	mail_submission = e_source_get_extension (identity_source, E_SOURCE_EXTENSION_MAIL_SUBMISSION);
+	e_source_mail_submission_set_transport_uid (mail_submission, e_source_get_uid (transport_source));
+	/* the server saves sent messages itself */
+	e_source_mail_submission_set_use_sent_folder (mail_submission, FALSE);
+	e_source_get_extension (identity_source, E_SOURCE_EXTENSION_MAIL_COMPOSITION);
+
+	mail_transport = e_source_get_extension (transport_source, E_SOURCE_EXTENSION_MAIL_TRANSPORT);
+	e_source_backend_set_backend_name (E_SOURCE_BACKEND (mail_transport), "microsoft365");
+	core_set_m365_settings (transport_source, email, client_id, tenant);
+
+	/* parents before children */
+	sources = g_list_append (sources, collection_source);
+	sources = g_list_append (sources, account_source);
+	sources = g_list_append (sources, identity_source);
+	sources = g_list_append (sources, transport_source);
+
+	if (!e_source_registry_create_sources_sync (core->registry, sources, core->cancellable, error))
+		goto exit;
+
+	service = camel_session_add_service (core->session, e_source_get_uid (account_source),
+		"microsoft365", CAMEL_PROVIDER_STORE, NULL);
+	g_clear_object (&service);
+	service = camel_session_add_service (core->session, e_source_get_uid (transport_source),
+		"microsoft365", CAMEL_PROVIDER_TRANSPORT, NULL);
+	g_clear_object (&service);
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	builder_add_string (builder, "uid", e_source_get_uid (account_source));
+	builder_add_string (builder, "collection_uid", e_source_get_uid (collection_source));
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+
+ exit:
+	g_list_free (sources);
+	g_object_unref (collection_source);
+	g_object_unref (account_source);
+	g_object_unref (identity_source);
+	g_object_unref (transport_source);
+	json_node_unref (root);
+
+	return json;
+}
+
+/* Source carrying the authentication of uid: its collection when it is
+ * part of one (Microsoft 365 / EWS accounts), else itself. */
+static ESource *
+core_ref_credentials_source (EvoCore *core,
+			     const gchar *uid,
+			     GError **error)
+{
+	ESource *source, *collection;
+
+	source = e_source_registry_ref_source (core->registry, uid);
+	if (!source) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "Compte introuvable : « %s »", uid);
+		return NULL;
+	}
+
+	collection = e_source_registry_find_extension (core->registry, source, E_SOURCE_EXTENSION_COLLECTION);
+	if (collection) {
+		g_object_unref (source);
+		return collection;
+	}
+
+	return source;
+}
+
+/* Première étape de la connexion OAuth2 d'un compte : adresse de la page de
+ * connexion du fournisseur, à ouvrir dans un navigateur intégré, et adresse
+ * de redirection, à surveiller (evo_core_oauth2_finish). Même construction
+ * que la fenêtre OAuth2 d'EDS (paramètres du service, "state" vérifié au
+ * retour).
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = uid du compte ou de sa collection
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : {"source_uid", "uri", "redirect_uri", "service"}, NULL sinon. */
+static gchar *
+core_oauth2_begin_run (EvoCore *core,
+		       gchar **args,
+		       GError **error)
+{
+	ESource *source;
+	EOAuth2Service *service;
+	CoreOAuth2Pending *pending;
+	GHashTable *query_form;
+	GUri *auth_uri;
+	JsonBuilder *builder;
+	gchar *query, *uri, *json;
+
+	source = core_ref_credentials_source (core, args[0], error);
+	if (!source)
+		return NULL;
+
+	service = e_oauth2_services_find (e_source_registry_get_oauth2_services (core->registry), source);
+	if (!service) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			"Aucun service OAuth2 pour « %s »", e_source_get_display_name (source));
+		g_object_unref (source);
+		return NULL;
+	}
+
+	auth_uri = g_uri_parse (e_oauth2_service_get_authentication_uri (service, source),
+		SOUP_HTTP_URI_FLAGS | G_URI_FLAGS_PARSE_RELAXED, error);
+	if (!auth_uri) {
+		g_object_unref (service);
+		g_object_unref (source);
+		return NULL;
+	}
+
+	query_form = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
+	e_oauth2_service_prepare_authentication_uri_query (service, source, query_form);
+	query = soup_form_encode_hash (query_form);
+	e_util_change_uri_component (&auth_uri, SOUP_URI_QUERY, query);
+	uri = g_uri_to_string_partial (auth_uri, G_URI_HIDE_PASSWORD);
+
+	pending = g_new0 (CoreOAuth2Pending, 1);
+	pending->service = g_object_ref (service);
+	pending->state = g_strdup (g_hash_table_lookup (query_form, "state"));
+
+	g_mutex_lock (&core->lock);
+	g_hash_table_insert (core->oauth2_pending, g_strdup (e_source_get_uid (source)), pending);
+	g_mutex_unlock (&core->lock);
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	builder_add_string (builder, "source_uid", e_source_get_uid (source));
+	builder_add_string (builder, "uri", uri);
+	builder_add_string (builder, "redirect_uri", e_oauth2_service_get_redirect_uri (service, source));
+	builder_add_string (builder, "service", e_oauth2_service_get_display_name (service));
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+
+	g_free (uri);
+	g_free (query);
+	g_hash_table_destroy (query_form);
+	g_uri_unref (auth_uri);
+	g_object_unref (service);
+	g_object_unref (source);
+
+	return json;
+}
+
+static ESource *
+core_oauth2_ref_source_cb (gpointer user_data,
+			   const gchar *uid)
+{
+	return e_source_registry_ref_source (user_data, uid);
+}
+
+/* Value of a query parameter of an URI, NULL when absent. */
+static gchar *
+uri_dup_query_param (const gchar *uri,
+		     const gchar *name)
+{
+	GUri *guri;
+	GHashTable *params;
+	gchar *value = NULL;
+
+	guri = g_uri_parse (uri, SOUP_HTTP_URI_FLAGS | G_URI_FLAGS_PARSE_RELAXED, NULL);
+	if (!guri)
+		return NULL;
+
+	if (g_uri_get_query (guri)) {
+		/* WWW_FORM: "+" is a space in the query */
+		params = g_uri_parse_params (g_uri_get_query (guri), -1, "&", G_URI_PARAMS_WWW_FORM, NULL);
+		if (params) {
+			value = g_strdup (g_hash_table_lookup (params, name));
+			g_hash_table_destroy (params);
+		}
+	}
+
+	g_uri_unref (guri);
+
+	return value;
+}
+
+/* Seconde étape : l'interface transmet l'adresse de redirection atteinte
+ * (elle contient le code d'autorisation) ; le code est échangé contre les
+ * jetons, que le service enregistre (magasin de secrets d'EDS, donc le
+ * Gestionnaire d'identifiants Windows) et que le registre EDS renouvellera.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = source_uid renvoyé par evo_core_oauth2_begin, [1] = adresse
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : "{}" en cas de succès, NULL sinon. */
+static gchar *
+core_oauth2_finish_run (EvoCore *core,
+			gchar **args,
+			GError **error)
+{
+	CoreOAuth2Pending *pending;
+	ESource *source;
+	gchar *code = NULL, *state, *error_message;
+	gboolean success;
+
+	g_mutex_lock (&core->lock);
+	pending = g_hash_table_lookup (core->oauth2_pending, args[0]);
+	if (pending)
+		g_hash_table_steal (core->oauth2_pending, args[0]);
+	g_mutex_unlock (&core->lock);
+
+	if (!pending) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Aucune connexion OAuth2 en cours");
+		return NULL;
+	}
+
+	source = core_ref_credentials_source (core, args[0], error);
+	if (!source) {
+		core_oauth2_pending_free (pending);
+		return NULL;
+	}
+
+	if (e_oauth2_service_extract_error_message (pending->service, source, NULL, args[1], NULL, &error_message)) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED, "%s",
+			error_message ? error_message : "Connexion refusée");
+		g_free (error_message);
+		success = FALSE;
+		goto exit;
+	}
+
+	if (!e_oauth2_service_extract_authorization_code (pending->service, source, NULL, args[1], NULL, &code) || !code) {
+		/* refusal or failure reported in the redirect (RFC 6749 4.1.2.1) */
+		error_message = uri_dup_query_param (args[1], "error_description");
+		if (!error_message)
+			error_message = uri_dup_query_param (args[1], "error");
+
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED, "%s",
+			error_message ? error_message : "L'adresse ne contient pas de code d'autorisation");
+		g_free (error_message);
+		success = FALSE;
+		goto exit;
+	}
+
+	/* the answer must belong to this sign-in */
+	state = uri_dup_query_param (args[1], "state");
+	if (pending->state && g_strcmp0 (state, pending->state) != 0) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+			"La réponse ne correspond pas à cette connexion (state)");
+		g_free (state);
+		success = FALSE;
+		goto exit;
+	}
+	g_free (state);
+
+	success = e_oauth2_service_receive_and_store_token_sync (pending->service, source, code,
+		core_oauth2_ref_source_cb, core->registry, core->cancellable, error);
+
+	if (success) {
+		EvoCoreSession *session = EVO_CORE_SESSION (core->session);
+
+		/* a later failure may prompt again */
+		g_mutex_lock (&session->prompted_lock);
+		g_hash_table_remove (session->prompted_sources, e_source_get_uid (source));
+		g_mutex_unlock (&session->prompted_lock);
+
+		evo_core_refresh (core);
+	}
+
+ exit:
+	e_util_safe_free_string (code);
+	g_object_unref (source);
+	core_oauth2_pending_free (pending);
+
+	return success ? g_strdup ("{}") : NULL;
+}
+
 /* Supprime un compte de messagerie, son identité et son serveur d'envoi SMTP
  * d'evolution-data-server ainsi que de la session Camel active.
  * Paramètres :
@@ -3910,6 +4422,37 @@ core_remove_account_run (EvoCore *core,
 			camel_session_remove_service (core->session, service);
 			g_object_unref (service);
 		}
+	}
+
+	/* Microsoft 365 / EWS: the collection holds the account, its identity,
+	 * transport, address books and calendars; removing it removes them all,
+	 * with the OAuth2 token */
+	{
+		ESource *collection;
+
+		collection = e_source_registry_find_extension (core->registry, account_source, E_SOURCE_EXTENSION_COLLECTION);
+		if (collection) {
+			EOAuth2Service *oauth2_service;
+			gboolean removed;
+
+			oauth2_service = e_oauth2_services_find (e_source_registry_get_oauth2_services (core->registry), collection);
+			if (oauth2_service) {
+				e_oauth2_service_delete_token_sync (oauth2_service, collection, core->cancellable, NULL);
+				g_object_unref (oauth2_service);
+			}
+
+			removed = e_source_remove_sync (collection, core->cancellable, error);
+
+			g_object_unref (collection);
+			g_clear_object (&transport_source);
+			g_clear_object (&identity_source);
+			g_object_unref (account_source);
+
+			return removed ? g_strdup ("{}") : NULL;
+		}
+	}
+
+	if (transport_source) {
 		e_source_remove_sync (transport_source, core->cancellable, NULL);
 		g_object_unref (transport_source);
 	}
@@ -4556,6 +5099,7 @@ evo_core_new (EvoCoreEventFunc event_func,
 	g_cond_init (&core->cond);
 	g_mutex_init (&core->folders_lock);
 	core->folders = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+	core->oauth2_pending = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, core_oauth2_pending_free);
 
 	/* network requests run in parallel, a few at a time */
 	core->pool = g_thread_pool_new (core_request_run, core, 4, FALSE, NULL);
@@ -4602,6 +5146,7 @@ evo_core_free (EvoCore *core)
 	g_main_loop_unref (core->loop);
 	g_main_context_unref (core->context);
 	g_object_unref (core->cancellable);
+	g_hash_table_destroy (core->oauth2_pending);
 	g_mutex_clear (&core->lock);
 	g_cond_clear (&core->cond);
 	g_free (core->start_error);
@@ -4917,6 +5462,47 @@ evo_core_add_account (EvoCore *core,
 	g_return_if_fail (account_json != NULL);
 
 	core_submit (core, core_add_account_run, g_strdupv (args), func, user_data);
+}
+
+void
+evo_core_add_microsoft365_account (EvoCore *core,
+				   const char *account_json,
+				   EvoCoreResultFunc func,
+				   void *user_data)
+{
+	gchar *args[] = { (gchar *) account_json, NULL };
+
+	g_return_if_fail (account_json != NULL);
+
+	core_submit (core, core_add_m365_account_run, g_strdupv (args), func, user_data);
+}
+
+void
+evo_core_oauth2_begin (EvoCore *core,
+		       const char *source_uid,
+		       EvoCoreResultFunc func,
+		       void *user_data)
+{
+	gchar *args[] = { (gchar *) source_uid, NULL };
+
+	g_return_if_fail (source_uid != NULL);
+
+	core_submit (core, core_oauth2_begin_run, g_strdupv (args), func, user_data);
+}
+
+void
+evo_core_oauth2_finish (EvoCore *core,
+			const char *source_uid,
+			const char *redirect_uri,
+			EvoCoreResultFunc func,
+			void *user_data)
+{
+	gchar *args[] = { (gchar *) source_uid, (gchar *) redirect_uri, NULL };
+
+	g_return_if_fail (source_uid != NULL);
+	g_return_if_fail (redirect_uri != NULL);
+
+	core_submit (core, core_oauth2_finish_run, g_strdupv (args), func, user_data);
 }
 
 /* Soumet une requête de suppression d'un compte de messagerie.

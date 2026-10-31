@@ -4,7 +4,8 @@ rem
 rem Tous les chemins sont déduits de l'emplacement de ce script (dossier tools\) :
 rem   <workspace>\evolution               sources d'Evolution (GTK)
 rem   <workspace>\evolution-data-server   sources d'EDS
-rem   <workspace>\winui                   client natif WinUI 3 (evo-core + EvolutionWin)
+rem   <workspace>\evolution-ews           sources d'evolution-ews (Exchange / Microsoft 365)
+rem   <workspace>\winui                  client natif WinUI 3 (evo-core + EvolutionWin)
 rem   <workspace>\tools                   scripts et outils de portage MSVC
 rem   <workspace>\deps                    sources tierces (NSS, NSPR, libical, SDK WebView2)
 rem   <workspace>\gtk-build               pile GTK / préfixe d'installation commun
@@ -13,6 +14,7 @@ rem   <workspace>\build                   exécutables finaux et dossiers interm
 if not defined EVO_WORKSPACE for %%I in ("%~dp0..") do set "EVO_WORKSPACE=%%~fI"
 if not defined EVO_SRC set "EVO_SRC=%EVO_WORKSPACE%\evolution"
 if not defined EDS_SRC set "EDS_SRC=%EVO_WORKSPACE%\evolution-data-server"
+if not defined EWS_SRC set "EWS_SRC=%EVO_WORKSPACE%\evolution-ews"
 if not defined WINUI_SRC set "WINUI_SRC=%EVO_WORKSPACE%\winui"
 if not defined DEPS set "DEPS=%EVO_WORKSPACE%\deps"
 if not defined BUILD_DIR set "BUILD_DIR=%EVO_WORKSPACE%\build"

@@ -21,6 +21,7 @@ deps/.vscode/
 # --- Historique Git amont (GNOME) conservé localement pour suivre l'amont ---
 evolution/.git-upstream/
 evolution-data-server/.git-upstream/
+evolution-ews/.git-upstream/
 
 # --- Paquets NuGet et fichiers générés par C++/WinRT & XAML ---
 winui/packages/

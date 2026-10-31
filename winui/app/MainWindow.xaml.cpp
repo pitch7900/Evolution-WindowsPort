@@ -187,6 +187,10 @@ namespace winrt::EvolutionWin::implementation
         {
             PromptTlsCertificateAsync(object);
         }
+        else if (event == L"oauth2-required")
+        {
+            SignInOAuth2Async(object.GetNamedString(L"source_uid", L""), object.GetNamedString(L"name", L""));
+        }
     }
 
     void MainWindow::ShowStatus(hstring const& message, InfoBarSeverity severity)
@@ -2187,6 +2191,111 @@ namespace winrt::EvolutionWin::implementation
         co_return L"";
     }
 
+    /* Connexion OAuth2 d'un compte géré par EDS (Microsoft 365...), à l'ajout
+     * du compte ou sur l'événement "oauth2-required" : la page de connexion du
+     * fournisseur s'ouvre dans un WebView2 ; la navigation vers l'adresse de
+     * redirection (code d'autorisation) est interceptée et transmise au
+     * moteur, qui enregistre les jetons (renouvelés ensuite par EDS).
+     * Paramètres :
+     *   source_uid : uid du compte ou de sa collection
+     *   name       : nom du compte, pour le titre et les messages */
+    fire_and_forget MainWindow::SignInOAuth2Async(hstring source_uid, hstring name)
+    {
+        auto strong = get_strong();
+        winrt::apartment_context ui_thread;
+
+        if (source_uid.empty() || !m_core)
+            co_return;
+
+        /* une autre boîte de dialogue est ouverte : attendre sa fermeture */
+        while (m_dialog_open)
+        {
+            co_await winrt::resume_after(std::chrono::milliseconds(150));
+            co_await ui_thread;
+        }
+        if (!Content() || !Content().XamlRoot())
+            co_return;
+        m_dialog_open = true;
+
+        /* étape 1 : adresse de connexion (rappel reçu sur ce thread) */
+        auto begin_json = std::make_shared<hstring>();
+        auto begin_error = std::make_shared<hstring>();
+        winrt::handle begun{ CreateEventW(nullptr, TRUE, FALSE, nullptr) };
+        HANDLE begun_event = begun.get();
+        m_core->OAuth2Begin(source_uid, [begin_json, begin_error, begun_event](hstring const& json, hstring const& error)
+        {
+            *begin_json = json;
+            *begin_error = error;
+            SetEvent(begun_event);
+        });
+        co_await winrt::resume_on_signal(begun_event);
+        co_await ui_thread;
+
+        JsonObject begin;
+        if (!begin_error->empty() || !JsonObject::TryParse(*begin_json, begin))
+        {
+            m_dialog_open = false;
+            ShowStatus(L"Connexion à « " + name + L" » : " + *begin_error, InfoBarSeverity::Error);
+            co_return;
+        }
+
+        hstring credentials_uid = begin.GetNamedString(L"source_uid", source_uid);
+        Uri redirect{ begin.GetNamedString(L"redirect_uri", L"") };
+        hstring service = begin.GetNamedString(L"service", L"OAuth2");
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(L"Connexion " + service + L" — " + name));
+        dialog.CloseButtonText(L"Annuler");
+
+        WebView2 web;
+        web.MinWidth(480);
+        web.MinHeight(600);
+        dialog.Content(web);
+
+        /* même hôte et même chemin que l'adresse de redirection : fin */
+        auto reached = std::make_shared<hstring>();
+        web.NavigationStarting([dialog, reached, redirect](WebView2 const&,
+            Microsoft::Web::WebView2::Core::CoreWebView2NavigationStartingEventArgs const& args)
+        {
+            try
+            {
+                Uri target{ args.Uri() };
+                if (_wcsicmp(target.Host().c_str(), redirect.Host().c_str()) == 0 &&
+                    _wcsicmp(target.Path().c_str(), redirect.Path().c_str()) == 0)
+                {
+                    args.Cancel(true);
+                    *reached = args.Uri();
+                    dialog.Hide();
+                }
+            }
+            catch (...) {}
+        });
+        web.Source(Uri{ begin.GetNamedString(L"uri", L"") });
+
+        co_await dialog.ShowAsync();
+        m_dialog_open = false;
+
+        if (reached->empty())
+        {
+            ShowStatus(L"Connexion à « " + name + L" » annulée.", InfoBarSeverity::Warning);
+            co_return;
+        }
+
+        /* étape 2 : échange du code et enregistrement des jetons */
+        ShowStatus(L"Connexion à « " + name + L" »…", InfoBarSeverity::Informational);
+        m_core->OAuth2Finish(credentials_uid, *reached, [this, name](hstring const&, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                ShowStatus(L"Connexion à « " + name + L" » : " + error, InfoBarSeverity::Error);
+                return;
+            }
+            ShowStatus(L"Connecté à « " + name + L" ».", InfoBarSeverity::Success);
+            LoadAccounts();
+        });
+    }
+
     /* Met à jour la liste des comptes affichée dans la vue Paramètres. */
     void MainWindow::RefreshAccountsView()
     {
@@ -2272,7 +2381,7 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Ajouter un compte IMAP / SMTP"));
+        dialog.Title(box_value(L"Ajouter un compte"));
         dialog.PrimaryButtonText(L"Ajouter");
         dialog.CloseButtonText(L"Annuler");
         dialog.DefaultButton(ContentDialogButton::Primary);
@@ -2287,6 +2396,8 @@ namespace winrt::EvolutionWin::implementation
         provider_box.Items().Append(box_value(L"IMAP / SMTP standard (mot de passe)"));
         provider_box.Items().Append(box_value(L"Microsoft 365 / Outlook.com (OAuth2 XOAUTH2)"));
         provider_box.Items().Append(box_value(L"Google / Gmail (OAuth2 XOAUTH2)"));
+        /* index 3 : compte evolution-ews (Microsoft Graph), sans IMAP/SMTP */
+        provider_box.Items().Append(box_value(L"Microsoft 365 / Exchange Online (courrier, agenda, contacts)"));
         provider_box.SelectedIndex(0);
         panel.Children().Append(provider_box);
 
@@ -2351,11 +2462,28 @@ namespace winrt::EvolutionWin::implementation
         password_box.Header(box_value(L"Mot de passe (ou jeton d'accès OAuth2 si déjà obtenu)"));
         panel.Children().Append(password_box);
 
-        provider_box.SelectionChanged([imap_host_box, imap_port_box, smtp_host_box, smtp_port_box, oauth_panel, tenant_id_box, password_box](
+        provider_box.SelectionChanged([imap_host_box, imap_port_box, smtp_host_box, smtp_port_box, oauth_panel, tenant_id_box, client_id_box, password_box](
             IInspectable const& sender, SelectionChangedEventArgs const&)
         {
             int idx = sender.as<ComboBox>().SelectedIndex();
-            if (idx == 1)
+
+            /* Microsoft Graph : ni serveurs ni mot de passe, connexion OAuth2 ensuite */
+            auto server_visibility = idx == 3 ? Visibility::Collapsed : Visibility::Visible;
+            imap_host_box.Visibility(server_visibility);
+            imap_port_box.Visibility(server_visibility);
+            smtp_host_box.Visibility(server_visibility);
+            smtp_port_box.Visibility(server_visibility);
+            password_box.Visibility(server_visibility);
+            client_id_box.PlaceholderText(idx == 3
+                ? L"Facultatif : application d'Evolution par défaut"
+                : L"Identifiant d'application Entra ID ou Google Cloud");
+
+            if (idx == 3)
+            {
+                oauth_panel.Visibility(Visibility::Visible);
+                tenant_id_box.Visibility(Visibility::Visible);
+            }
+            else if (idx == 1)
             {
                 imap_host_box.Text(L"outlook.office365.com");
                 imap_port_box.Text(L"993");
@@ -2397,6 +2525,39 @@ namespace winrt::EvolutionWin::implementation
         hstring email = email_box.Text();
         hstring imap_host = imap_host_box.Text();
         hstring smtp_host = smtp_host_box.Text();
+
+        if (provider_idx == 3)
+        {
+            if (email.empty())
+            {
+                ShowStatus(L"Veuillez renseigner l'adresse électronique du compte Microsoft 365.", InfoBarSeverity::Warning);
+                co_return;
+            }
+
+            hstring account_name = display_name_box.Text().empty() ? email : display_name_box.Text();
+            JsonObject m365;
+            m365.SetNamedValue(L"email", JsonValue::CreateStringValue(email));
+            m365.SetNamedValue(L"display_name", JsonValue::CreateStringValue(account_name));
+            m365.SetNamedValue(L"full_name", JsonValue::CreateStringValue(
+                full_name_box.Text().empty() ? email : full_name_box.Text()));
+            m365.SetNamedValue(L"client_id", JsonValue::CreateStringValue(client_id_box.Text()));
+            /* "common" est la valeur par défaut d'evolution-ews */
+            m365.SetNamedValue(L"tenant", JsonValue::CreateStringValue(
+                tenant_id_box.Text() == L"common" ? L"" : tenant_id_box.Text()));
+
+            m_core->AddMicrosoft365Account(m365.Stringify(), [this, account_name](hstring const& json, hstring const& error)
+            {
+                JsonObject created;
+                if (!error.empty() || !JsonObject::TryParse(json, created))
+                {
+                    ShowStatus(L"Ajout du compte : " + error, InfoBarSeverity::Error);
+                    return;
+                }
+                LoadAccounts();
+                SignInOAuth2Async(created.GetNamedString(L"collection_uid", L""), account_name);
+            });
+            co_return;
+        }
 
         if (email.empty() || imap_host.empty() || smtp_host.empty())
         {

@@ -250,6 +250,48 @@ void		evo_core_add_account		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Crée un compte Microsoft 365 / Exchange Online (Microsoft Graph, via
+ * evolution-ews) : courrier, agendas et carnets d'adresses. La connexion se
+ * fait ensuite par evo_core_oauth2_begin () sur "collection_uid".
+ * Format attendu pour account_json :
+ * {"email": "...", "display_name": "...", "full_name": "...",
+ *  "client_id": "..." (facultatif : application Entra ID propre),
+ *  "tenant": "..." (facultatif : "common" par défaut)}
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   account_json : configuration du compte au format JSON UTF-8
+ *   func         : rappel recevant {"uid": "...", "collection_uid": "..."}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_add_microsoft365_account
+						(EvoCore *core,
+						 const char *account_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Connexion OAuth2 interactive d'un compte (Microsoft 365...), en deux
+ * étapes, aussi en réponse à l'événement "oauth2-required"
+ * ({"source_uid", "name", "user"}) :
+ * 1. evo_core_oauth2_begin : rappel recevant {"source_uid", "uri",
+ *    "redirect_uri", "service"} ; ouvrir "uri" dans un navigateur intégré ;
+ * 2. dès qu'une navigation atteint "redirect_uri" (même hôte et chemin),
+ *    la transmettre complète à evo_core_oauth2_finish : le code est échangé
+ *    et les jetons enregistrés (rappel recevant {}), puis la relève reprend.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   source_uid   : uid du compte ou de sa collection / source_uid renvoyé
+ *   redirect_uri : adresse de redirection atteinte, avec ses paramètres
+ *   func         : rappel du résultat
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_oauth2_begin		(EvoCore *core,
+						 const char *source_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+void		evo_core_oauth2_finish		(EvoCore *core,
+						 const char *source_uid,
+						 const char *redirect_uri,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Supprime un compte de messagerie (compte de réception, identité et serveur
  * d'envoi associé) d'evolution-data-server et de la session courante.
  * Paramètres :

@@ -18,7 +18,8 @@ Les sources amont sont versionnées directement dans ce dépôt (monodépôt) :
 un premier commit importe Evolution (commit amont `be33fb6204`) et EDS
 (commit amont `ea6b0124d`) tels quels, le suivant applique les modifications
 Windows. `git diff <import>..<commit Windows> -- evolution` donne donc le
-correctif complet.
+correctif complet. evolution-ews (commit amont `19cb82b3`) est importé de la
+même façon (`evolution-ews\.git-upstream` en local).
 
 Sur le poste de développement, l'historique amont (GNOME) des deux projets
 est conservé localement dans `evolution\.git-upstream` et
@@ -57,6 +58,7 @@ tools\build-gtk.bat         :: pile GTK3 via gvsbuild (1 à 2 h la première foi
 tools\build-nss.bat         :: NSPR + NSS
 tools\build-libical.bat     :: libical + libical-glib
 tools\build-eds.bat         :: evolution-data-server
+tools\build-ews.bat         :: evolution-ews (Microsoft 365 / Exchange, parties EDS)
 tools\build-webkit-shim.bat :: API WebKitGTK sur WebView2 (phase 3)
 tools\build-evolution.bat   :: Evolution (version GTK transitoire)
 tools\build-winui-core.bat  :: evo-core.dll (moteur C pour le client WinUI 3)
@@ -78,6 +80,7 @@ Tous les scripts déduisent leurs chemins de leur propre emplacement
 | `<workspace>\build` | exécutables finaux prêts à l'emploi (`EvolutionWin.exe`, `evo-core.dll`, `evo-core-test.exe`, `evolution.exe`, `libexec\*.exe`) et sous-dossier `build\intermediate` (fichiers d'objets CMake/MSBuild, ignoré par Git) | `BUILD_DIR` / `BUILD_INTERMEDIATE` |
 | `<workspace>\evolution` | code source d'Evolution, branche `windows-native` | `EVO_SRC` |
 | `<workspace>\evolution-data-server` | code source d'EDS, branche `windows-native` | `EDS_SRC` |
+| `<workspace>\evolution-ews` | code source d'evolution-ews (Microsoft 365 / Exchange), branche `windows-native` | `EWS_SRC` |
 | `<workspace>\deps` | sources tierces (NSS, NSPR, libical, SDK WebView2) | `DEPS` |
 | `<workspace>\gtk-build` | dossier de la pile GTK compilée par gvsbuild (ignoré par Git) | `GTK_BUILD` |
 | `<workspace>\gtk-build\gtk\x64\release` | préfixe d'installation commun de toutes les dépendances | `PREFIX` (dérivé de `GTK_BUILD`) |
@@ -138,6 +141,7 @@ la racine du dépôt. Le dossier `evolution/win32/` contenait un ancien portage
 | `build-nss.bat` + `build-nss.sh` | NSPR + NSS (installe aussi `nss.pc`/`nspr.pc`) |
 | `build-libical.bat` | libical + libical-glib |
 | `build-eds.bat` | evolution-data-server |
+| `build-ews.bat` | evolution-ews (Microsoft 365 / Exchange), parties EDS seulement |
 | `build-webkit-shim.bat` | Shim WebKitGTK 4.1 sur WebView2 |
 | `build-evolution.bat` | Evolution (version GTK transitoire) |
 | `build-winui-core.bat` | `evo-core.dll` + `evo-core-test.exe` |
@@ -549,9 +553,76 @@ jalon du client natif. S/MIME, qui passe par NSS, n'est pas concerné.
 
 ### Étapes
 
-- [ ] Compiler evolution-ews avec MSVC (après EDS et Evolution)
-- [ ] Fenêtre OAuth2 sur WebView2
+- [x] Compiler evolution-ews avec MSVC (2026-10-31)
+- [x] Fenêtre OAuth2 sur WebView2 dans EvolutionWin (2026-10-31)
 - [ ] Test de bout en bout sur un tenant Exchange Online : courrier, agenda, contacts
+
+### Compilation d'evolution-ews
+
+Sources dans `<workspace>\evolution-ews` (dépôt GNOME, commit amont
+`19cb82b3`, branche `windows-native`). Script : `tools\build-ews.bat`
+(après `build-eds.bat`), avec `WITH_EVOLUTION=OFF` : seules les parties EDS
+sont compilées (fournisseurs Camel `ews` et `microsoft365`, backends carnet
+d'adresses et agenda, modules du registre, bibliothèques privées
+`evolution-ews.dll`, `evolution-microsoft365.dll`, `camel*-priv.dll`,
+`evolution-ews-common.dll`, déplacées dans `bin\`). Les pages de
+configuration de l'interface GTK ne servent pas à EvolutionWin.
+`WITH_MSPACK=OFF` : pas de libmspack (décompression du carnet d'adresses
+hors ligne OAB d'EWS).
+
+Correctifs : prototypes `G_MODULE_EXPORT` (C2375) par
+`tools\tools\fix-module-export-prototypes.py`, dont le motif confondait
+`x = fonction (...);` avec un prototype (corrigé : pas de `=` avant le nom) ;
+`e-cal-backend-ews-utils.h` déclare avec `G_MODULE_EXPORT` les trois
+fonctions exportées pour les tests.
+
+### Comptes Microsoft 365 dans EvolutionWin
+
+Le connecteur Microsoft 365 obtient ses jetons d'accès par
+`e_source_get_oauth2_access_token_sync` : le registre EDS les renouvelle à
+partir du jeton de rafraîchissement stocké (`OAuth2::Microsoft365[<adresse>]`
+dans le magasin de secrets d'EDS, donc le Gestionnaire d'identifiants
+Windows). Seule la **connexion initiale** est interactive ; sous Linux elle
+passe par un dialogue GTK/WebKit d'EDS, remplacé ici par EvolutionWin.
+
+evo-core :
+
+- charge au démarrage, avant le registre, les modules OAuth2
+  (`module-microsoft365-backend`, `module-ews-backend`,
+  `module-oauth2-services`) : `ESourceRegistry` y trouve les services ;
+- `evo_core_add_microsoft365_account` : sources créées comme par l'assistant
+  d'Evolution, une collection (backend `microsoft365`, authentification
+  `Microsoft365`, réglages `CamelM365Settings`) portant compte de courrier,
+  identité et serveur d'envoi ; le module du registre y ajoute les agendas
+  et carnets d'adresses (Graph). Identifiant d'application et tenant
+  facultatifs (application d'Evolution `20460e5d-…` et tenant `common` par
+  défaut) ;
+- `evo_core_oauth2_begin` / `evo_core_oauth2_finish` : même construction que
+  le dialogue d'EDS (paramètres du service, `state` vérifié au retour, refus
+  `error_description` remonté), code échangé et jetons enregistrés par
+  `e_oauth2_service_receive_and_store_token_sync` ;
+- événement `oauth2-required` quand le connecteur refuse l'authentification
+  (jeton absent ou révoqué ; pas sur une erreur réseau) ;
+- suppression : la collection entière (agendas et carnets compris) et le
+  jeton enregistré.
+
+EvolutionWin : choix « Microsoft 365 / Exchange Online » dans l'assistant
+d'ajout de compte (sans serveurs ni mot de passe), puis fenêtre de connexion
+WebView2 ; la navigation vers l'adresse de redirection
+(`…/oauth2/nativeclient`) est interceptée et transmise au moteur. Même
+fenêtre sur `oauth2-required`.
+
+**Testé** (2026-10-31) avec un compte fictif, créé puis supprimé dans le
+registre réel : création, adresse de connexion (point d'accès v2.0, droits
+Graph courrier/agenda/contacts/tâches, `offline_access`), refus de
+l'utilisateur, réponse falsifiée (`state` différent) rejetée, suppression
+sans reste. **Reste à valider** avec un vrai compte Microsoft 365 :
+connexion, relève, envoi, agendas et contacts ; un tenant d'entreprise peut
+exiger le consentement d'un administrateur pour l'application d'Evolution
+ou une inscription propre (identifiant et tenant dans l'assistant).
+
+Non fait : comptes EWS (Exchange sur site, `ews`) dans l'assistant ; les
+fournisseurs et backends sont compilés et installés.
 
 ## Phase 5 — Installeur MSI
 
@@ -1093,7 +1164,8 @@ OpenPGP avec Gpg4win.
 - [x] Phase 3 — EWebView sur WebView2 (lecture des mails) : fait pour la
   version GTK transitoire (2026-10-31)
 - [x] Phase 4 (WinUI 3) — éditeur HTML WebView2 et impression native réalisés dans `EvolutionWin` (S/MIME à venir)
-- [ ] Phase 4b — evolution-ews : Exchange Online via Microsoft Graph + OAuth2
+- [~] Phase 4b — evolution-ews compilé (MSVC), comptes Microsoft 365 (Graph,
+  OAuth2 WebView2) dans EvolutionWin ; test avec un vrai tenant à faire
 - [x] Phase 4c — OpenPGP : `camel-gpg-context.c` porté sur
   `g_spawn_async_with_pipes()` (testé le 2026-10-31) ; reste à intégrer
   Gpg4win comme prérequis optionnel de l'installeur MSI
