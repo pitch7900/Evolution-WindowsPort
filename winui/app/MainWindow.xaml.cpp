@@ -762,7 +762,7 @@ namespace winrt::EvolutionWin::implementation
     }
 
     /* Menu contextuel d'un dossier de l'arborescence : Marquer tout comme lu,
-     * Vider la Corbeille / les Indésirables, Supprimer tout, puis la gestion
+     * Vider la Corbeille / les Indésirables, Vider le dossier, puis la gestion
      * du dossier (Nouveau dossier, Renommer, Déplacer, Copier, Supprimer).
      * Sur un compte : Nouveau dossier (premier niveau). */
     void MainWindow::ShowFolderContextMenu(UIElement const&, Input::ContextRequestedEventArgs const& args)
@@ -809,7 +809,7 @@ namespace winrt::EvolutionWin::implementation
         menu.Items().Append(MenuFlyoutSeparator{});
 
         MenuFlyoutItem empty;
-        empty.Text(trash ? L"Vider la Corbeille" : junk ? L"Vider les Indésirables" : L"Supprimer tout");
+        empty.Text(trash ? L"Vider la Corbeille" : junk ? L"Vider les Indésirables" : L"Vider le dossier");
         empty.Icon(FontIcon{});
         empty.Icon().as<FontIcon>().Glyph(L"\xE74D");
         empty.Click([this, item](IInspectable const&, RoutedEventArgs const&)
@@ -841,7 +841,7 @@ namespace winrt::EvolutionWin::implementation
 
             ContentDialog confirm;
             confirm.XamlRoot(Content().XamlRoot());
-            confirm.Title(box_value(permanent ? L"Supprimer définitivement ?" : L"Supprimer tout ?"));
+            confirm.Title(box_value(permanent ? L"Supprimer définitivement ?" : L"Vider le dossier ?"));
             TextBlock text;
             text.TextWrapping(TextWrapping::Wrap);
             text.Text(permanent
