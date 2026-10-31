@@ -19,6 +19,13 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   installées ».
 - Fichiers `VERSION` et `CHANGELOG.md` ; `build-msi.bat` prend sa version
   dans `VERSION` par défaut.
+- Boîte **À propos** (en bas de la barre latérale) : version, licence,
+  liens vers le dépôt et ce journal, versions des composants
+  (evolution-data-server, evolution-ews, GLib, libsoup, Windows App SDK,
+  WebView2, Windows) et bouton « Copier les informations » pour les
+  rapports de bug.
+- Version de l'exécutable (propriétés du fichier) tirée de `VERSION`, comme
+  l'installeur et la boîte À propos.
 
 ### Corrigé
 

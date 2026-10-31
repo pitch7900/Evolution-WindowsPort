@@ -16,6 +16,9 @@ namespace winrt::EvolutionWin::implementation
         void OnNavigationSelectionChanged(
             Microsoft::UI::Xaml::Controls::NavigationView const& sender,
             Microsoft::UI::Xaml::Controls::NavigationViewSelectionChangedEventArgs const& args);
+        void OnNavigationItemInvoked(
+            Microsoft::UI::Xaml::Controls::NavigationView const& sender,
+            Microsoft::UI::Xaml::Controls::NavigationViewItemInvokedEventArgs const& args);
         void OnFolderInvoked(
             Microsoft::UI::Xaml::Controls::TreeView const& sender,
             Microsoft::UI::Xaml::Controls::TreeViewItemInvokedEventArgs const& args);
@@ -130,6 +133,7 @@ namespace winrt::EvolutionWin::implementation
             int provider_index, hstring client_id, hstring tenant_id, hstring login_hint);
         void RefreshAccountsView();
         fire_and_forget ShowAddAccountDialogAsync();
+        fire_and_forget ShowAboutDialogAsync();
 
         /* Étape 3 : Calendrier et Contacts */
         void LoadEvents();

@@ -108,7 +108,37 @@
     <ResourceCompile Include="EvolutionWin.rc" />
     <ClInclude Include="WindowIcon.h" />
     <None Include="Assets\EvolutionWin.ico" />
+    <!-- image de la boîte « À propos », à côté de l'exécutable -->
+    <CopyFileToFolders Include="Assets\EvolutionWin.png">
+      <DestinationFolders>$(OutDir)Assets</DestinationFolders>
+    </CopyFileToFolders>
   </ItemGroup>
+
+  <!-- Version de l'application : fichier VERSION à la racine du dépôt (comme
+       l'installeur), exposée en C++ et dans la ressource VERSIONINFO par
+       $(IntDir)evo-version.h -->
+  <PropertyGroup>
+    <EvoVersion>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)..\..\VERSION').Trim())</EvoVersion>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <Target Name="EvoGenerateVersionHeader" BeforeTargets="ClCompile;ResourceCompile">
+    <PropertyGroup>
+      <_EvoVersionNumbers>$(EvoVersion.Split('-')[0])</_EvoVersionNumbers>
+      <_EvoVersionComma>$(_EvoVersionNumbers.Replace('.', ',')),0</_EvoVersionComma>
+      <!-- "Microsoft.WindowsAppSDK.1.7.260224002" -> "1.7.260224002" -->
+      <_EvoAppSdkVersion>$([System.IO.Path]::GetFileName($(AppSdkDir.TrimEnd('\'))).Replace('Microsoft.WindowsAppSDK.', ''))</_EvoAppSdkVersion>
+    </PropertyGroup>
+    <MakeDir Directories="$(IntDir)" />
+    <WriteLinesToFile File="$(IntDir)evo-version.h" Overwrite="true" WriteOnlyWhenDifferent="true"
+                      Lines="/* generated from VERSION by EvolutionWin.vcxproj */;#define EVO_VERSION_STR &quot;$(EvoVersion)&quot;;#define EVO_VERSION_NUM $(_EvoVersionComma);#define EVO_WINDOWSAPPSDK_VERSION_STR &quot;$(_EvoAppSdkVersion)&quot;" />
+  </Target>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="CoreBridge.h" />

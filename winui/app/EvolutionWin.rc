@@ -3,6 +3,38 @@
 // l'exécutable). Assets\EvolutionWin.ico : icône d'Evolution (GNOME),
 // 16 à 256 px, générée depuis evolution/data/icons/hicolor_apps_scalable_evolution.svg.
 
+#include <winver.h>
 #include "WindowIcon.h"
+#include "evo-version.h"
 
 IDI_EVOLUTIONWIN ICON "Assets\\EvolutionWin.ico"
+
+// Version : fichier VERSION à la racine du dépôt (evo-version.h, généré)
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION EVO_VERSION_NUM
+ PRODUCTVERSION EVO_VERSION_NUM
+ FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+ FILEFLAGS 0x0L
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE VFT_APP
+ FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040C04B0"
+        BEGIN
+            VALUE "CompanyName", "Evolution-WindowsPort"
+            VALUE "FileDescription", "Evolution pour Windows"
+            VALUE "FileVersion", EVO_VERSION_STR
+            VALUE "InternalName", "EvolutionWin"
+            VALUE "LegalCopyright", "LGPL-2.1-or-later"
+            VALUE "OriginalFilename", "EvolutionWin.exe"
+            VALUE "ProductName", "Evolution"
+            VALUE "ProductVersion", EVO_VERSION_STR
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x040C, 1200
+    END
+END

@@ -397,6 +397,13 @@ void		evo_core_respond_tls_trust	(EvoCore *core,
 						 const char *trust_id,
 						 int trust_decision);
 
+/* Versions des composants du moteur, pour la boîte « À propos » et les
+ * rapports de bug (sans instance du moteur, appel synchrone) :
+ * {"evolution_data_server": "3.63.1", "evolution_ews": "3.63.1" (vide si
+ *  non installé), "glib": "2.86.0", "libsoup": "3.6.5"}
+ * Retourne : chaîne JSON statique, à ne pas libérer. */
+const char *	evo_core_version_info		(void);
+
 #ifdef __cplusplus
 }
 #endif
