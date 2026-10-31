@@ -121,13 +121,27 @@
                     <StackPanel Grid.Row="0" Padding="16,0,16,8" Spacing="4">
                         <Grid>
                             <TextBlock x:Name="FolderTitle" Text="Courrier" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
-                            <Button HorizontalAlignment="Right" Click="OnRefreshClick"
-                                    ToolTipService.ToolTip="Envoyer/Recevoir (F5)">
+                            <!-- clic : relève (F5) ; flèche : autres modes (F9, Maj+F9) -->
+                            <SplitButton HorizontalAlignment="Right" Click="OnRefreshSplitClick"
+                                         ToolTipService.ToolTip="Envoyer/Recevoir (F5)">
                                 <FontIcon Glyph="&#xE72C;" FontSize="14" />
-                                <Button.KeyboardAccelerators>
-                                    <KeyboardAccelerator Key="F5" />
-                                </Button.KeyboardAccelerators>
-                            </Button>
+                                <!-- actifs même menu fermé : portés par le bouton -->
+                                <SplitButton.KeyboardAccelerators>
+                                    <KeyboardAccelerator Key="F5" Invoked="OnRefreshAccelerator" />
+                                    <KeyboardAccelerator Key="F9" Invoked="OnRefreshAccelerator" />
+                                    <KeyboardAccelerator Modifiers="Shift" Key="F9" Invoked="OnRefreshAccelerator" />
+                                </SplitButton.KeyboardAccelerators>
+                                <SplitButton.Flyout>
+                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                        <MenuFlyoutItem Text="Envoyer/Recevoir" Click="OnRefreshClick"
+                                                        KeyboardAcceleratorTextOverride="F5" />
+                                        <MenuFlyoutItem Text="Envoyer/Recevoir tous les dossiers" Click="OnRefreshAllClick"
+                                                        KeyboardAcceleratorTextOverride="F9" />
+                                        <MenuFlyoutItem Text="Mettre à jour le dossier courant" Click="OnRefreshFolderClick"
+                                                        KeyboardAcceleratorTextOverride="Maj+F9" />
+                                    </MenuFlyout>
+                                </SplitButton.Flyout>
+                            </SplitButton>
                         </Grid>
                         <AutoSuggestBox x:Name="SearchBox" PlaceholderText="Rechercher dans ce dossier" QueryIcon="Find"
                                         TextChanged="OnSearchTextChanged" QuerySubmitted="OnSearchQuerySubmitted" />

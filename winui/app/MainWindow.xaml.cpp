@@ -939,6 +939,40 @@ namespace winrt::EvolutionWin::implementation
         m_core->Refresh();
     }
 
+    void MainWindow::OnRefreshSplitClick(SplitButton const&, SplitButtonClickEventArgs const&)
+    {
+        OnRefreshClick(nullptr, nullptr);
+    }
+
+    /* F9 : tous les dossiers de tous les comptes (progression dans la barre d'état) */
+    void MainWindow::OnRefreshAllClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ShowStatus(L"Relève de tous les dossiers…", InfoBarSeverity::Informational);
+        m_core->RefreshAll();
+    }
+
+    /* Maj+F9 : le dossier affiché seulement (la liste interroge le serveur) */
+    void MainWindow::OnRefreshFolderClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (m_folder.empty())
+            return;
+        ShowStatus(L"Mise à jour de « " + FolderTitle().Text() + L" »…", InfoBarSeverity::Informational);
+        LoadMessages(true);
+    }
+
+    void MainWindow::OnRefreshAccelerator(Input::KeyboardAccelerator const& sender,
+        Input::KeyboardAcceleratorInvokedEventArgs const& args)
+    {
+        args.Handled(true);
+
+        if (sender.Key() == Windows::System::VirtualKey::F5)
+            OnRefreshClick(nullptr, nullptr);
+        else if ((sender.Modifiers() & Windows::System::VirtualKeyModifiers::Shift) == Windows::System::VirtualKeyModifiers::Shift)
+            OnRefreshFolderClick(nullptr, nullptr);
+        else
+            OnRefreshAllClick(nullptr, nullptr);
+    }
+
     void MainWindow::OnNewMessageClick(IInspectable const&, RoutedEventArgs const&)
     {
         ::EvolutionWin::ComposeData data;

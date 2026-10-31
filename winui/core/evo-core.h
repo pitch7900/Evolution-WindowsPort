@@ -96,6 +96,12 @@ void		evo_core_get_message		(EvoCore *core,
  * "folder-changed" / "folders-updated" events follow. */
 void		evo_core_refresh		(EvoCore *core);
 
+/* Envoyer/Recevoir tous les dossiers (F9) : comme evo_core_refresh, plus
+ * tous les autres dossiers de chaque compte (progression par événements
+ * "status" {"message": "Relève de « compte » : dossier"}, message vide à
+ * la fin). */
+void		evo_core_refresh_all		(EvoCore *core);
+
 /* Envoie un message avec l'identité et le serveur SMTP d'un compte, puis
  * l'enregistre dans le dossier Envoyés du compte. Format attendu pour message_json :
  * {"account": "<account uid>", "to": "a@b, Name <c@d>", "cc": "", "bcc": "",
