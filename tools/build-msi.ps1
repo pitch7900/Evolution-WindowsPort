@@ -49,13 +49,14 @@ New-Item -ItemType Directory -Force $StageBin | Out-Null
 # --- EvolutionWin (Windows App SDK autonome) --------------------------------
 if (-not $SkipAppBuild) {
 	$App = Join-Path $env:WINUI_SRC 'app'
-	$Packages = Join-Path $env:WINUI_SRC 'packages'
+	$Packages = $env:WINUI_PACKAGES
 	if (-not (Test-Path (Join-Path $Packages 'Microsoft.WindowsAppSDK.1.7.260224002'))) {
 		& (Join-Path $Tools 'tools\nuget.exe') restore (Join-Path $App 'packages.config') -PackagesDirectory $Packages -NonInteractive
 		if ($LASTEXITCODE) { throw 'nuget restore a échoué' }
 	}
 	& msbuild (Join-Path $App 'EvolutionWin.vcxproj') -nologo -m -v:minimal `
 		-p:Configuration=Release -p:Platform=x64 "-p:GtkPrefix=$Prefix" `
+		"-p:PackagesDir=$Packages\" "-p:EvoCoreLibDir=$($env:BUILD_INTERMEDIATE)\evo-core\" `
 		"-p:SDKReferenceDirectoryRoot=${env:ProgramFiles(x86)}\Microsoft SDKs" `
 		"-p:OutDir=$StageBin\" "-p:IntDir=$($env:BUILD_INTERMEDIATE)\winui-app-obj\"
 	if ($LASTEXITCODE) { throw 'La compilation d''EvolutionWin a échoué' }
@@ -71,7 +72,8 @@ if (-not $SkipAppBuild) {
 Get-ChildItem $StageBin -File | Where-Object { $_.Extension -in '.pdb', '.lib', '.exp', '.ilk' } | Remove-Item -Force
 if (-not (Test-Path (Join-Path $StageBin 'EvolutionWin.exe'))) { throw 'EvolutionWin.exe absent' }
 
-Copy-Into (Join-Path $PrefixBin 'evo-core.dll') $StageBin
+# evo-core : compilé dans build\intermediate\evo-core (build-winui-core.bat)
+Copy-Into (Join-Path $env:BUILD_INTERMEDIATE 'evo-core\evo-core.dll') $StageBin
 
 # --- Services et modules d'EDS ---------------------------------------------
 # Exclus car ils entraînent GTK (EvolutionWin n'en a pas besoin) :

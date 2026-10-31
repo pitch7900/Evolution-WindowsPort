@@ -19,11 +19,28 @@ if not defined WINUI_SRC set "WINUI_SRC=%EVO_WORKSPACE%\winui"
 if not defined DEPS set "DEPS=%EVO_WORKSPACE%\deps"
 if not defined BUILD_DIR set "BUILD_DIR=%EVO_WORKSPACE%\build"
 if not defined BUILD_INTERMEDIATE set "BUILD_INTERMEDIATE=%BUILD_DIR%\intermediate"
+
+rem Worktree Git secondaire (branches de travail en parallèle) : la pile GTK et
+rem les paquets NuGet, volumineux et hors Git, sont repris du dépôt principal
+set "EVO_MAIN_WORKSPACE=%EVO_WORKSPACE%"
+for /f "usebackq delims=" %%I in (`git -C "%EVO_WORKSPACE%" rev-parse --path-format^=absolute --git-common-dir 2^>nul`) do for %%J in ("%%I\..") do set "EVO_MAIN_WORKSPACE=%%~fJ"
+
 if not defined GTK_BUILD (
 	if exist "%EVO_WORKSPACE%\gtk-build\gtk\x64\release" (
 		set "GTK_BUILD=%EVO_WORKSPACE%\gtk-build"
+	) else if exist "%EVO_MAIN_WORKSPACE%\gtk-build\gtk\x64\release" (
+		set "GTK_BUILD=%EVO_MAIN_WORKSPACE%\gtk-build"
 	) else (
 		set "GTK_BUILD=C:\gtk-build"
+	)
+)
+if not defined WINUI_PACKAGES (
+	if exist "%WINUI_SRC%\packages" (
+		set "WINUI_PACKAGES=%WINUI_SRC%\packages"
+	) else if exist "%EVO_MAIN_WORKSPACE%\winui\packages" (
+		set "WINUI_PACKAGES=%EVO_MAIN_WORKSPACE%\winui\packages"
+	) else (
+		set "WINUI_PACKAGES=%WINUI_SRC%\packages"
 	)
 )
 if not defined MSYS2_ROOT set "MSYS2_ROOT=C:\msys64"
