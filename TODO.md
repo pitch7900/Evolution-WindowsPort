@@ -190,10 +190,11 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 
 ### Tri et colonnes
 
-- [ ] 🟡 **Trier les emails** par clic sur l'en-tête de colonne et via *Affichage › Trier par* (la `ListView` actuelle n'a pas d'en-têtes de colonnes) :
-  - [ ] Date, Expéditeur, Destinataire, Objet, Taille, Pièces jointes, Importance, Indicateur (état / date de début / d'échéance), Catégories, Lu / non lu, Compte, Type
-  - [ ] 🟢 Inverser l'ordre du tri pour chaque critère
-  - [ ] 🟢 Mémoriser le tri par dossier
+- [x] 🟡 **Trier les emails** via la ligne « Trier par » au-dessus de la liste et *Affichage › Trier par* (la `ListView` actuelle n'a pas d'en-têtes de colonnes) :
+  - [x] Date, Expéditeur, Destinataire, Objet, Taille, Pièces jointes, Indicateur, Catégories, Lu / non lu
+  - [ ] Importance (absente des résumés Camel), Compte et Type (sans vue unifiée), date de début / d'échéance de l'indicateur
+  - [x] 🟢 Inverser l'ordre du tri pour chaque critère
+  - [x] 🟢 Mémoriser le tri par dossier
 - [ ] 🟡 **Regroupement** par critère de tri (Aujourd'hui, Hier, La semaine dernière…), avec Développer / Réduire les groupes
 - [ ] 🟡 **Ajouter / retirer des colonnes**
 - [ ] 🟡 **Changer l'affichage** : Compact, Unique, Aperçu ; 🟢 Rétablir l'affichage par défaut

@@ -1446,6 +1446,7 @@ namespace winrt::EvolutionWin::implementation
         ++m_search_request;
 
         FolderTitle().Text(item.Name());
+        LoadFolderSort();
         UpdateRibbon();
         SearchBox().Text(L"");
 
@@ -1524,11 +1525,17 @@ namespace winrt::EvolutionWin::implementation
         items.Clear();
         m_message_states.clear();
 
+        std::vector<JsonObject> shown;
         for (auto const& value : messages)
         {
             auto message = value.GetObject();
-            if (!MatchesQuickFilters(message))
-                continue;
+            if (MatchesQuickFilters(message))
+                shown.push_back(message);
+        }
+        SortMessages(shown);
+
+        for (auto const& message : shown)
+        {
             hstring uid = message.GetNamedString(L"uid");
             bool seen = message.GetNamedBoolean(L"seen", true);
             bool flagged = message.GetNamedBoolean(L"flagged", false);
@@ -3973,6 +3980,205 @@ namespace winrt::EvolutionWin::implementation
 
         auto source = Microsoft::UI::Input::InputNonClientPointerSource::GetForWindowId(AppWindow().Id());
         source.SetRegionRects(Microsoft::UI::Input::NonClientRegionKind::Passthrough, { rect });
+    }
+
+    /* Critères de tri de la liste des messages : clé mémorisée, libellé,
+     * ordre par défaut (décroissant pour la date et la taille). */
+    struct SortCriterion
+    {
+        wchar_t const* key;
+        wchar_t const* label;
+        bool descending;
+    };
+
+    static SortCriterion const SortCriteria[] = {
+        { L"date", L"Date", true },
+        { L"from", L"Expéditeur", false },
+        { L"to", L"Destinataire", false },
+        { L"subject", L"Objet", false },
+        { L"size", L"Taille", true },
+        { L"attachments", L"Pièces jointes", true },
+        { L"flagged", L"Indicateur", true },
+        { L"seen", L"Lu / non lu", false },
+        { L"categories", L"Catégories", false },
+    };
+
+    /* Préférence de tri du dossier affiché ("sort.<compte>/<dossier>" =
+     * "<critère>:asc|desc", par défaut la date décroissante). */
+    void MainWindow::LoadFolderSort()
+    {
+        hstring saved = ::EvolutionWin::Settings::Instance().GetString(
+            L"sort." + m_account + L"/" + m_folder, L"date:desc");
+        std::wstring value{ saved };
+        auto colon = value.find(L':');
+
+        m_sort_key = L"date";
+        m_sort_descending = true;
+        for (auto const& criterion : SortCriteria)
+        {
+            if (value.substr(0, colon) == criterion.key)
+            {
+                m_sort_key = criterion.key;
+                m_sort_descending = colon == std::wstring::npos || value.substr(colon + 1) != L"asc";
+            }
+        }
+        UpdateSortHeader();
+    }
+
+    void MainWindow::SaveFolderSort()
+    {
+        if (!m_account.empty() && !m_folder.empty())
+            ::EvolutionWin::Settings::Instance().SetString(L"sort." + m_account + L"/" + m_folder,
+                m_sort_key + (m_sort_descending ? L":desc" : L":asc"));
+        UpdateSortHeader();
+        ReapplyMessageFilters();
+    }
+
+    /* Ligne « Trier par » : critère et sens (flèche). */
+    void MainWindow::UpdateSortHeader()
+    {
+        for (auto const& criterion : SortCriteria)
+            if (m_sort_key == criterion.key)
+                SortButton().Content(box_value(hstring{ criterion.label }));
+        SortDirectionIcon().Glyph(m_sort_descending ? L"\xE74B" : L"\xE74A");
+        ToolTipService::SetToolTip(SortDirectionButton(), box_value(m_sort_descending
+            ? L"Ordre décroissant (cliquer pour inverser)"
+            : L"Ordre croissant (cliquer pour inverser)"));
+    }
+
+    /* Menu « Trier par » (ligne au-dessus de la liste et ruban Affichage) :
+     * critères puis sens, à choix unique. */
+    void MainWindow::OnSortMenuOpening(IInspectable const& sender, IInspectable const&)
+    {
+        auto menu = sender.as<MenuFlyout>();
+        menu.Items().Clear();
+
+        for (auto const& criterion : SortCriteria)
+        {
+            RadioMenuFlyoutItem entry;
+            entry.Text(criterion.label);
+            entry.GroupName(L"sort-key");
+            entry.IsChecked(m_sort_key == criterion.key);
+            hstring key = criterion.key;
+            bool descending = criterion.descending;
+            entry.Click([this, key, descending](IInspectable const&, RoutedEventArgs const&)
+            {
+                if (m_sort_key != key)
+                {
+                    m_sort_key = key;
+                    m_sort_descending = descending;
+                }
+                SaveFolderSort();
+            });
+            menu.Items().Append(entry);
+        }
+
+        menu.Items().Append(MenuFlyoutSeparator{});
+        for (bool descending : { false, true })
+        {
+            RadioMenuFlyoutItem entry;
+            entry.Text(descending ? L"Décroissant" : L"Croissant");
+            entry.GroupName(L"sort-direction");
+            entry.IsChecked(m_sort_descending == descending);
+            entry.Click([this, descending](IInspectable const&, RoutedEventArgs const&)
+            {
+                m_sort_descending = descending;
+                SaveFolderSort();
+            });
+            menu.Items().Append(entry);
+        }
+    }
+
+    void MainWindow::OnSortDirectionClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        m_sort_descending = !m_sort_descending;
+        SaveFolderSort();
+    }
+
+    /* Objet sans préfixes de réponse / transfert, pour le tri. */
+    static std::wstring NormalizedSubject(hstring const& subject)
+    {
+        std::wstring text{ subject };
+        for (bool stripped = true; stripped;)
+        {
+            stripped = false;
+            for (wchar_t const* prefix : { L"re:", L"tr:", L"fw:", L"fwd:", L"aw:", L"wg:" })
+            {
+                size_t len = wcslen(prefix);
+                if (text.size() >= len && _wcsnicmp(text.c_str(), prefix, len) == 0)
+                {
+                    text.erase(0, len);
+                    while (!text.empty() && iswspace(text.front()))
+                        text.erase(0, 1);
+                    stripped = true;
+                }
+            }
+        }
+        return text;
+    }
+
+    /* Comparaison de textes selon les règles de la langue de l'utilisateur
+     * (accents, casse ignorée) ; négatif, 0 ou positif. */
+    static int CompareText(std::wstring const& a, std::wstring const& b)
+    {
+        int result = CompareStringEx(LOCALE_NAME_USER_DEFAULT, NORM_IGNORECASE | LINGUISTIC_IGNOREDIACRITIC | SORT_DIGITSASNUMBERS,
+            a.c_str(), static_cast<int>(a.size()), b.c_str(), static_cast<int>(b.size()), nullptr, nullptr, 0);
+        return result == 0 ? 0 : result - CSTR_EQUAL;
+    }
+
+    /* Trie les messages affichés selon le critère et le sens choisis ; à
+     * égalité, du plus récent au plus ancien.
+     * Paramètres :
+     *   messages : résumés JSON à trier (sur place) */
+    void MainWindow::SortMessages(std::vector<JsonObject>& messages)
+    {
+        hstring key = m_sort_key;
+        bool descending = m_sort_descending;
+
+        auto first_label = [](JsonObject const& message)
+        {
+            auto labels = message.GetNamedArray(L"labels", JsonArray{});
+            return labels.Size() > 0 ? std::wstring{ labels.GetStringAt(0) } : std::wstring{};
+        };
+
+        auto compare = [&](JsonObject const& a, JsonObject const& b) -> int
+        {
+            if (key == L"from")
+                return CompareText(std::wstring{ SenderName(a.GetNamedString(L"from", L"")) },
+                                   std::wstring{ SenderName(b.GetNamedString(L"from", L"")) });
+            if (key == L"to")
+                return CompareText(std::wstring{ SenderName(a.GetNamedString(L"to", L"")) },
+                                   std::wstring{ SenderName(b.GetNamedString(L"to", L"")) });
+            if (key == L"subject")
+                return CompareText(NormalizedSubject(a.GetNamedString(L"subject", L"")),
+                                   NormalizedSubject(b.GetNamedString(L"subject", L"")));
+            if (key == L"size")
+            {
+                double sa = a.GetNamedNumber(L"size", 0), sb = b.GetNamedNumber(L"size", 0);
+                return sa < sb ? -1 : sa > sb ? 1 : 0;
+            }
+            if (key == L"attachments" || key == L"flagged" || key == L"seen")
+                return static_cast<int>(a.GetNamedBoolean(key, false)) - static_cast<int>(b.GetNamedBoolean(key, false));
+            if (key == L"categories")
+            {
+                /* sans catégorie : toujours à la fin */
+                auto la = first_label(a), lb = first_label(b);
+                if (la.empty() != lb.empty())
+                    return la.empty() ? (descending ? -1 : 1) : (descending ? 1 : -1);
+                return CompareText(la, lb);
+            }
+            double da = a.GetNamedNumber(L"date", 0), db = b.GetNamedNumber(L"date", 0);
+            return da < db ? -1 : da > db ? 1 : 0;
+        };
+
+        std::stable_sort(messages.begin(), messages.end(), [&](JsonObject const& a, JsonObject const& b)
+        {
+            int result = compare(a, b);
+            if (result != 0)
+                return descending ? result > 0 : result < 0;
+            /* à égalité : du plus récent au plus ancien */
+            return a.GetNamedNumber(L"date", 0) > b.GetNamedNumber(L"date", 0);
+        });
     }
 
     /* Croix du bandeau : l'avis affiché est retiré, le suivant apparaît. */

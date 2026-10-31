@@ -207,6 +207,13 @@
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8C3;" /></AppBarButton.Icon>
                         </AppBarButton>
                         <AppBarSeparator />
+                        <AppBarButton Label="Trier par">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8CB;" /></AppBarButton.Icon>
+                            <AppBarButton.Flyout>
+                                <MenuFlyout Opening="OnSortMenuOpening" />
+                            </AppBarButton.Flyout>
+                        </AppBarButton>
+                        <AppBarSeparator />
                         <AppBarToggleButton x:Name="RibbonFolderPaneToggle" Label="Volet des dossiers" IsChecked="True"
                                             Click="OnRibbonFolderPaneToggled">
                             <AppBarToggleButton.Icon><FontIcon Glyph="&#xE8A0;" /></AppBarToggleButton.Icon>
@@ -382,6 +389,21 @@
                                 </ToggleButton>
                             </StackPanel>
                         </Grid>
+                        <!-- tri de la liste (mémorisé par dossier) : MainWindow::SortMessages -->
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="Trier par :" VerticalAlignment="Center" Opacity="0.7"
+                                       Style="{StaticResource CaptionTextBlockStyle}" />
+                            <DropDownButton x:Name="SortButton" Content="Date" Padding="8,2" FontSize="12"
+                                            ToolTipService.ToolTip="Critère de tri">
+                                <DropDownButton.Flyout>
+                                    <MenuFlyout Opening="OnSortMenuOpening" />
+                                </DropDownButton.Flyout>
+                            </DropDownButton>
+                            <Button x:Name="SortDirectionButton" Click="OnSortDirectionClick" Padding="6,4"
+                                    ToolTipService.ToolTip="Inverser l'ordre du tri">
+                                <FontIcon x:Name="SortDirectionIcon" Glyph="&#xE74B;" FontSize="12" />
+                            </Button>
+                        </StackPanel>
                     </StackPanel>
                     <ListView x:Name="MessageList" Grid.Row="1" SelectionMode="Extended"
                               SelectionChanged="OnMessageSelectionChanged">

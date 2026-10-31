@@ -1855,6 +1855,30 @@ json_from_message_infos (GPtrArray *infos,
 		json_builder_add_boolean_value (builder, (flags & CAMEL_MESSAGE_FLAGGED) != 0);
 		json_builder_set_member_name (builder, "attachments");
 		json_builder_add_boolean_value (builder, (flags & CAMEL_MESSAGE_ATTACHMENTS) != 0);
+		/* for sorting the list: recipients, size, labels (categories),
+		 * follow-up due date */
+		json_builder_set_member_name (builder, "to");
+		json_builder_add_string_value (builder, camel_message_info_get_to (info) ? camel_message_info_get_to (info) : "");
+		json_builder_set_member_name (builder, "size");
+		json_builder_add_int_value (builder, camel_message_info_get_size (info));
+		json_builder_set_member_name (builder, "labels");
+		json_builder_begin_array (builder);
+		{
+			const CamelNamedFlags *user_flags = camel_message_info_get_user_flags (info);
+			guint jj, n_flags = user_flags ? camel_named_flags_get_length (user_flags) : 0;
+
+			for (jj = 0; jj < n_flags; jj++) {
+				const gchar *name = camel_named_flags_get (user_flags, jj);
+
+				/* IMAP system keywords are not categories */
+				if (name && *name && *name != '$' && *name != '\\')
+					json_builder_add_string_value (builder, name);
+			}
+		}
+		json_builder_end_array (builder);
+		json_builder_set_member_name (builder, "due_by");
+		json_builder_add_string_value (builder, camel_message_info_get_user_tag (info, "due-by") ?
+			camel_message_info_get_user_tag (info, "due-by") : "");
 		json_builder_end_object (builder);
 	}
 

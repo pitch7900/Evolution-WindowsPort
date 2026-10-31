@@ -74,6 +74,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 - **Barre d'accès rapide** dans la barre de titre : Envoyer/Recevoir et
   Nouveau message par défaut ; personnalisable (tous les dossiers, répondre,
   supprimer, imprimer, nouvel événement, nouvelle tâche), choix mémorisé.
+- **Tri des messages** : ligne « Trier par » au-dessus de la liste et menu
+  *Affichage › Trier par* ; date, expéditeur, destinataire, objet (sans
+  « Re: » / « TR: »), taille, pièces jointes, indicateur, lu / non lu,
+  catégories ; ordre inversable, tri mémorisé pour chaque dossier.
 
 ### Corrigé
 

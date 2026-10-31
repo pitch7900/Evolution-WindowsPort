@@ -35,6 +35,8 @@ namespace winrt::EvolutionWin::implementation
         void OnRibbonTodayClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRibbonNextDaysClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnQuickAccessSizeChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::SizeChangedEventArgs const& args);
+        void OnSortMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
+        void OnSortDirectionClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnInfoBannerClosed(
             Microsoft::UI::Xaml::Controls::InfoBar const& sender,
             Microsoft::UI::Xaml::Controls::InfoBarClosedEventArgs const& args);
@@ -334,6 +336,13 @@ namespace winrt::EvolutionWin::implementation
         void ClearBanner(std::wstring const& id);
         void RefreshBanner();
         void UpdateRibbon();
+        /* tri de la liste des messages (mémorisé par dossier) */
+        hstring m_sort_key{ L"date" };
+        bool m_sort_descending{ true };
+        void LoadFolderSort();
+        void SaveFolderSort();
+        void UpdateSortHeader();
+        void SortMessages(std::vector<Windows::Data::Json::JsonObject>& messages);
         void RebuildQuickAccess();
         void UpdateTitleBarPassthrough();
         EvolutionWin::FolderItem CurrentFolderItem();
