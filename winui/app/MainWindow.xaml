@@ -496,6 +496,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid Grid.Row="0">
                     <StackPanel Spacing="4">
@@ -532,6 +533,82 @@
                                Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <ListView x:Name="TrustedSenderList" SelectionMode="None" />
+                </StackPanel>
+
+                <!-- Signatures : éditeur, choix par compte, position -->
+                <StackPanel Grid.Row="3" Spacing="8" Margin="0,16,0,0">
+                    <Grid>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Signatures" Style="{StaticResource SubtitleTextBlockStyle}" />
+                            <TextBlock Text="Signatures texte ou HTML (mise en forme, liens, images) ajoutées aux messages selon le compte expéditeur."
+                                       Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <Button HorizontalAlignment="Right" VerticalAlignment="Center" Click="OnNewSignatureClick">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE710;" FontSize="14" />
+                                <TextBlock Text="Nouvelle signature" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                    <TextBlock x:Name="SignaturesEmpty" Visibility="Collapsed"
+                               Text="Aucune signature. La signature automatique (nom, organisation et adresse du compte) reste disponible."
+                               Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <ListView x:Name="SignatureList" SelectionMode="None" />
+
+                    <!-- éditeur de la signature créée ou modifiée -->
+                    <Border x:Name="SignatureEditorPanel" Visibility="Collapsed" Padding="16" CornerRadius="8" BorderThickness="1"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                        <StackPanel Spacing="8">
+                            <TextBlock x:Name="SignatureEditorTitle" Text="Nouvelle signature" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBox x:Name="SignatureNameBox" Header="Nom" PlaceholderText="Professionnelle, Personnelle…" />
+                            <RadioButtons x:Name="SignatureFormatChoice" Header="Format" MaxColumns="2"
+                                          SelectionChanged="OnSignatureFormatChanged">
+                                <x:String>HTML (mise en forme)</x:String>
+                                <x:String>Texte brut</x:String>
+                            </RadioButtons>
+                            <StackPanel x:Name="SignatureToolbar" Orientation="Horizontal" Spacing="4">
+                                <Button Tag="bold" Click="OnSignatureToolClick" ToolTipService.ToolTip="Gras">
+                                    <FontIcon Glyph="&#xE8DD;" FontSize="14" />
+                                </Button>
+                                <Button Tag="italic" Click="OnSignatureToolClick" ToolTipService.ToolTip="Italique">
+                                    <FontIcon Glyph="&#xE8DB;" FontSize="14" />
+                                </Button>
+                                <Button Tag="underline" Click="OnSignatureToolClick" ToolTipService.ToolTip="Souligné">
+                                    <FontIcon Glyph="&#xE8DC;" FontSize="14" />
+                                </Button>
+                                <AppBarSeparator />
+                                <Button Click="OnSignatureLinkClick" ToolTipService.ToolTip="Insérer un lien hypertexte">
+                                    <FontIcon Glyph="&#xE71B;" FontSize="14" />
+                                </Button>
+                                <Button Click="OnSignatureImageClick" ToolTipService.ToolTip="Insérer une image (intégrée au message)">
+                                    <FontIcon Glyph="&#xE8B9;" FontSize="14" />
+                                </Button>
+                                <Button Tag="removeFormat" Click="OnSignatureToolClick" ToolTipService.ToolTip="Effacer la mise en forme">
+                                    <FontIcon Glyph="&#xE8E6;" FontSize="14" />
+                                </Button>
+                            </StackPanel>
+                            <Border x:Name="SignatureHtmlContainer" Height="200" Background="White" RequestedTheme="Light"
+                                    CornerRadius="4" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                <controls:WebView2 x:Name="SignatureHtmlEditor" RequestedTheme="Light" DefaultBackgroundColor="White" />
+                            </Border>
+                            <TextBox x:Name="SignatureTextBox" Visibility="Collapsed" Height="200"
+                                     AcceptsReturn="True" TextWrapping="Wrap" IsSpellCheckEnabled="True"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                <Button Content="Annuler" Click="OnSignatureEditorCancel" />
+                                <Button Content="Enregistrer" Style="{StaticResource AccentButtonStyle}" Click="OnSignatureEditorSave" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <ToggleSwitch x:Name="SignatureAboveQuoteSwitch" Header="Position dans les réponses et transferts"
+                                  OnContent="Au-dessus du texte cité" OffContent="En dessous du texte cité"
+                                  Toggled="OnSignaturePlacementToggled" />
+                    <TextBlock Text="Signature par compte" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
+                    <ListView x:Name="SignatureAccountList" SelectionMode="None" />
                 </StackPanel>
             </Grid>
             </ScrollViewer>

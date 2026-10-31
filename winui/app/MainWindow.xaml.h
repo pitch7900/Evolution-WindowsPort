@@ -109,6 +109,18 @@ namespace winrt::EvolutionWin::implementation
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
 
+        /* Signatures (Paramètres) */
+        void OnNewSignatureClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnSignatureFormatChanged(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+        void OnSignatureToolClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        fire_and_forget OnSignatureLinkClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        fire_and_forget OnSignatureImageClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnSignatureEditorCancel(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        fire_and_forget OnSignatureEditorSave(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnSignaturePlacementToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
         /* Bandeau « Contenu externe bloqué » */
         void OnShowRemoteContentClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnTrustSenderClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -249,6 +261,17 @@ namespace winrt::EvolutionWin::implementation
         void DeleteTaskItem(Windows::Data::Json::JsonObject const& task);
         fire_and_forget ShowTaskEditorAsync(Windows::Data::Json::JsonObject task);
 
+        /* Signatures (MainWindow.Signatures.cpp) */
+        void RefreshSignaturesView();
+        void RebuildSignatureLists();
+        void OpenSignatureEditor(Windows::Data::Json::JsonObject const& signature);
+        fire_and_forget EnsureSignatureEditorAsync();
+        fire_and_forget SwitchSignatureFormatAsync(bool html);
+        void SetSignatureEditorHtml(hstring const& html);
+        Windows::Foundation::IAsyncOperation<hstring> SignatureEditorHtmlAsync();
+        fire_and_forget ExecuteSignatureCommandAsync(hstring command, hstring argument);
+        fire_and_forget ConfirmDeleteSignatureAsync(hstring uid, hstring name);
+
         /* shared with the compose windows */
         std::shared_ptr<::EvolutionWin::CoreBridge> m_core;
         Windows::Data::Json::JsonArray m_accounts{ nullptr };
@@ -297,6 +320,15 @@ namespace winrt::EvolutionWin::implementation
         uint32_t m_reader_blocked_count{ 0 };
         /* RadioButtons des préférences mis à jour par le code */
         bool m_updating_privacy_view{ false };
+        /* signatures (evo_core_list_signatures), uid de la signature éditée
+           ("" pour une nouvelle), éditeur HTML prêt, contrôles mis à jour par le code */
+        Windows::Data::Json::JsonArray m_signatures{ nullptr };
+        hstring m_editing_signature_uid;
+        bool m_signature_editor_started{ false };
+        bool m_signature_editor_ready{ false };
+        bool m_updating_signature_view{ false };
+        /* contenu à afficher dès que l'éditeur HTML est prêt */
+        hstring m_signature_pending_html;
         hstring m_account;
         hstring m_folder;
         /* only the latest message request is shown */

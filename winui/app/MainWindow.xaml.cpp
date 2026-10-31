@@ -605,6 +605,7 @@ namespace winrt::EvolutionWin::implementation
             SettingsViewPane().Visibility(Visibility::Visible);
             RefreshAccountsView();
             RefreshPrivacyView();
+            RefreshSignaturesView();
             return;
         }
 
@@ -2304,6 +2305,7 @@ namespace winrt::EvolutionWin::implementation
 
         ::EvolutionWin::ComposeData data;
         data.account = m_account;
+        data.reply = true;
 
         if (kind == ReplyKind::Forward)
         {
@@ -2415,6 +2417,7 @@ namespace winrt::EvolutionWin::implementation
 
             ::EvolutionWin::ComposeData data;
             data.account = account;
+            data.reply = true;
             if (!first_subject.empty())
             {
                 data.subject = StartsWithNoCase(first_subject, L"TR:") || StartsWithNoCase(first_subject, L"Fwd:")

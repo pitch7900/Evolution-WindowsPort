@@ -91,7 +91,18 @@
             </Grid.RowDefinitions>
 
             <TextBlock Grid.Row="0" Text="De" VerticalAlignment="Center" />
-            <ComboBox x:Name="FromBox" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" />
+            <Grid Grid.Row="0" Grid.Column="1" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox x:Name="FromBox" HorizontalAlignment="Stretch" SelectionChanged="OnFromChanged" />
+                <TextBlock Grid.Column="1" Text="Signature" VerticalAlignment="Center" />
+                <ComboBox x:Name="SignatureBox" Grid.Column="2" MinWidth="180" IsEnabled="False"
+                          SelectionChanged="OnSignatureChanged"
+                          ToolTipService.ToolTip="Signature insérée dans le message (selon le compte expéditeur)" />
+            </Grid>
 
             <TextBlock Grid.Row="1" Text="À" VerticalAlignment="Center" />
             <TextBox x:Name="ToBox" Grid.Row="1" Grid.Column="1" PlaceholderText="Destinataires, séparés par des virgules" InputScope="EmailNameOrAddress" />

@@ -17,6 +17,8 @@ namespace EvolutionWin
         winrt::hstring in_reply_to;
         winrt::hstring references;
         std::vector<winrt::hstring> attachments;
+        /* réponse ou transfert : signature des réponses, placement par rapport au texte cité */
+        bool reply{ false };
     };
 }
 
@@ -49,7 +51,17 @@ namespace winrt::EvolutionWin::implementation
         fire_and_forget OnInsertLinkClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnClearFormatClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
+        /* Signature : changement de compte expéditeur ou de signature */
+        void OnFromChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+        void OnSignatureChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+
     private:
+        void LoadSignatures();
+        void SelectAccountSignature();
+        Windows::Data::Json::JsonObject SelectedAccount();
+        std::wstring SignatureContent(bool html);
+        fire_and_forget ApplySignatureAsync();
+        std::wstring RemovePlainSignature(std::wstring text);
         void ShowStatus(hstring const& message, Microsoft::UI::Xaml::Controls::InfoBarSeverity severity);
         void RebuildAttachmentPanel();
         fire_and_forget InitializeEditorAsync();
@@ -66,6 +78,15 @@ namespace winrt::EvolutionWin::implementation
         bool m_editor_ready{ false };
         bool m_focus_editor_on_ready{ false };
         hstring m_pending_editor_html;
+        /* comptes (evo_core_list_accounts), signatures (evo_core_list_signatures)
+         * et uid de chaque entrée du sélecteur de signature */
+        Windows::Data::Json::JsonArray m_accounts{ nullptr };
+        Windows::Data::Json::JsonArray m_signatures{ nullptr };
+        std::vector<hstring> m_signature_choices;
+        /* sélecteur de signature mis à jour par le code */
+        bool m_updating_signature{ false };
+        /* bloc de signature inséré dans le texte brut, pour le remplacer */
+        std::wstring m_plain_signature;
     };
 }
 
