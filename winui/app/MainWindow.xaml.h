@@ -16,6 +16,9 @@ namespace winrt::EvolutionWin::implementation
         void OnNavigationSelectionChanged(
             Microsoft::UI::Xaml::Controls::NavigationView const& sender,
             Microsoft::UI::Xaml::Controls::NavigationViewSelectionChangedEventArgs const& args);
+        void OnInfoBannerClosed(
+            Microsoft::UI::Xaml::Controls::InfoBar const& sender,
+            Microsoft::UI::Xaml::Controls::InfoBarClosedEventArgs const& args);
         void OnNavigationItemInvoked(
             Microsoft::UI::Xaml::Controls::NavigationView const& sender,
             Microsoft::UI::Xaml::Controls::NavigationViewItemInvokedEventArgs const& args);
@@ -292,6 +295,25 @@ namespace winrt::EvolutionWin::implementation
         bool m_initialized{ false };
         bool m_reader_ready{ false };
         bool m_dialog_open{ false };
+
+        /* Bandeau d'information (vues Courrier et Calendrier) : avis identifiés,
+         * le dernier est affiché ; voir ShowBanner */
+        struct Banner
+        {
+            std::wstring id;
+            hstring title;
+            hstring message;
+            Microsoft::UI::Xaml::Controls::InfoBarSeverity severity;
+            hstring action_label;
+            std::function<void()> action;
+        };
+        std::vector<Banner> m_banners;
+        hstring m_view_tag{ L"mail" };
+        void ShowBanner(std::wstring const& id, hstring const& title, hstring const& message,
+            Microsoft::UI::Xaml::Controls::InfoBarSeverity severity,
+            hstring const& action_label, std::function<void()> action);
+        void ClearBanner(std::wstring const& id);
+        void RefreshBanner();
         int64_t m_selected_day_start{ 0 };
         /* vue Tâches : listes de tâches [{"uid", "name", "kind"}], toutes les
            tâches chargées (avant filtres) et liste affichée ("" = toutes) */

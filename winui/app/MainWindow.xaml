@@ -77,7 +77,17 @@
             </NavigationView.FooterMenuItems>
 
             <Grid>
-            <Grid x:Name="MailView">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- bandeau d'information des vues Courrier et Calendrier (compte à
+                 reconnecter, réponses automatiques…) : MainWindow::ShowBanner -->
+            <InfoBar x:Name="InfoBanner" Grid.Row="0" IsOpen="False" IsClosable="True"
+                     Margin="12,8,12,0" Closed="OnInfoBannerClosed" />
+
+            <Grid x:Name="MailView" Grid.Row="1">
                 <!-- largeurs des dossiers et de la liste : réglées par les
                      séparateurs et mémorisées (MainWindow::RestorePaneWidths) -->
                 <Grid.ColumnDefinitions>
@@ -321,7 +331,7 @@
             </Grid>
 
             <!-- Vue Calendrier -->
-            <Grid x:Name="CalendarViewPane" Visibility="Collapsed" Padding="24,16,24,16" ColumnSpacing="24">
+            <Grid x:Name="CalendarViewPane" Grid.Row="1" Visibility="Collapsed" Padding="24,16,24,16" ColumnSpacing="24">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
@@ -361,7 +371,7 @@
             </Grid>
 
             <!-- Vue Contacts -->
-            <Grid x:Name="ContactsViewPane" Visibility="Collapsed">
+            <Grid x:Name="ContactsViewPane" Grid.Row="1" Visibility="Collapsed">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="380" />
                     <ColumnDefinition Width="*" />
@@ -433,7 +443,7 @@
             </Grid>
 
             <!-- Vue Tâches -->
-            <Grid x:Name="TasksViewPane" Visibility="Collapsed" Padding="24,16,24,16" RowSpacing="12">
+            <Grid x:Name="TasksViewPane" Grid.Row="1" Visibility="Collapsed" Padding="24,16,24,16" RowSpacing="12">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -494,7 +504,7 @@
             </Grid>
 
             <!-- Vue Paramètres / Comptes -->
-            <ScrollViewer x:Name="SettingsViewPane" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer x:Name="SettingsViewPane" Grid.Row="1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
             <Grid Padding="32,24,32,24" RowSpacing="16">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />

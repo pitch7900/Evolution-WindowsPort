@@ -66,7 +66,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 - [ ] 🟡 **Barre d'outils à onglets façon ruban** pour les vues Mail et Calendrier : *Fichier*, *Accueil*, *Envoi/réception*, *Dossier*, *Affichage* (WinUI n'a pas de ruban : `TabView` / `SelectorBar` + `CommandBar`). Hors périmètre : intégrations tierces (Teams, OneNote, TeamViewer, Rainbow, Copilot)
 - [ ] 🟡 **Barre d'accès rapide** personnalisable dans la barre de titre (Envoyer/Recevoir, Annuler, etc.)
 - [x] 🟢 **Barre latérale gauche** de navigation entre modules (Mail, Calendrier, Contacts, Tâches) — `NavigationView` déjà en place, à restyler en barre d'icônes
-- [ ] 🟢 **Bandeau d'information** sous la barre d'outils (`InfoBar`), affiché dans les vues Mail et Calendrier (ex. réponses automatiques actives + bouton *Désactiver*)
+- [x] 🟢 **Bandeau d'information** sous la barre d'outils (`InfoBar`), affiché dans les vues Mail et Calendrier (ex. réponses automatiques actives + bouton *Désactiver*)
 
 ### Disposition des panneaux
 
@@ -103,6 +103,10 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [ ] 🟡 Autodiscover Exchange / Microsoft 365
   - [ ] 🟡 Autoconfig Thunderbird (`autoconfig.<domaine>`, base ISPDB)
   - [ ] 🟢 Enregistrements DNS SRV (`_imaps._tcp`, `_submission._tcp`)
+- [ ] 🟢 **S'inspirer du dépôt Thunderbird [thunderbird/autoconfig](https://github.com/thunderbird/autoconfig)** pour aller plus vite : base ISPDB (fichiers XML de configuration par fournisseur : serveurs, ports, chiffrement, méthode d'authentification, OAuth2) et format `clientConfig` des fichiers autoconfig
+  - [ ] Réutiliser le format XML et le parseur pour les trois sources : fichiers embarqués, `autoconfig.<domaine>` / `.well-known/autoconfig`, ISPDB en ligne (`https://autoconfig.thunderbird.net/v1.1/<domaine>`)
+  - [ ] Embarquer une copie des fournisseurs les plus courants (détection hors ligne, remplace la liste « Fournisseurs connus »), mise à jour à chaque version
+  - [ ] Vérifier la licence du dépôt avant d'embarquer les fichiers et mentionner la provenance
 - [ ] 🟡 **Confirmation / correction manuelle** : type détecté et paramètres proposés, possibilité de forcer un autre type ou de passer en configuration manuelle
 
 ### Compte par défaut
@@ -110,7 +114,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 - [x] 🟢 **Désigner le compte par défaut** dans la liste des comptes, avec indication visuelle (`e_source_registry_set_default_mail_account`)
 - [x] 🟢 Utilisé pour les nouveaux messages ; pour une réponse / un transfert, compte ayant reçu le message (repli sur le compte par défaut)
 - [ ] 🟢 Calendrier et carnet d'adresses par défaut pour les nouveaux événements et contacts — *les nouveaux éléments vont déjà dans le calendrier / carnet par défaut d'EDS ; reste : les choisir dans l'interface*
-- [ ] 🟡 Gestionnaire des liens `mailto:` (inscription d'EvolutionWin comme application de messagerie Windows)
+- [ ] 🟡 Gestionnaire des liens `mailto:` (inscription d'EvolutionWin comme application de messagerie Windows). Facultatif au moment de l'installation MSI et dans les menus de configuration de l'application par la suite.
 
 ### Signatures — 🟡
 
