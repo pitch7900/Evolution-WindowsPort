@@ -1,0 +1,48 @@
+# =============================================================================
+# Fichier .gitignore — Evolution-WindowsPort (Fork natif Windows 11 / MSVC)
+# =============================================================================
+
+# --- Pile GTK compilée par gvsbuild (trop volumineuse pour Git) ---
+gtk-build/
+
+# --- Sources et distributions tierces téléchargées (NSS, NSPR, libical, WebView2) ---
+deps/nss/
+deps/nspr/
+deps/libical/
+deps/webview2/
+deps/dist/
+deps/build/
+deps/.vscode/
+
+# --- Sorties de compilation (régénérées par tools\build-*.bat) ---
+# Les binaires à distribuer (MSI, .exe, DLL packagés) vont dans dist/.
+/build/
+
+# --- Historique Git amont (GNOME) conservé localement pour suivre l'amont ---
+evolution/.git-upstream/
+evolution-data-server/.git-upstream/
+
+# --- Paquets NuGet et fichiers générés par C++/WinRT & XAML ---
+winui/packages/
+winui/app/Generated Files/
+winui/app/x64/
+winui/app/Debug/
+winui/app/Release/
+
+# --- Environnement de développement (Visual Studio, VS Code, agents) ---
+.vs/
+.claude/
+*.VC.db
+*.VC.VC.opendb
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# --- Fichiers temporaires et système Windows ---
+Thumbs.db
+Desktop.ini
+*.tmp
+*.bak
+*~
+

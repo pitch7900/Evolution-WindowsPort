@@ -1,0 +1,6 @@
+# Autoconf site file used when building NSPR from MSYS2 bash with MSVC.
+# MSYS2 reports itself as cygwin, while NSPR expects a mingw triplet to
+# select its native WINNT/WIN95 code paths with cl.exe.
+ac_cv_build=x86_64-pc-mingw32
+ac_cv_host=x86_64-pc-mingw32
+ac_cv_target=x86_64-pc-mingw32

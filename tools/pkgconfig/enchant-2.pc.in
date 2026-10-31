@@ -1,0 +1,11 @@
+prefix=@PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libenchant
+Description: A spell checking library
+Version: 2.8.21
+Requires: glib-2.0 gmodule-2.0
+Libs: -L${libdir} -llibenchant
+Cflags: -I${includedir}/enchant-2

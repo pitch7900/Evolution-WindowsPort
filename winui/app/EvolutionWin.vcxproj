@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  EvolutionWin: native Windows mail client (WinUI 3, C++/WinRT) on top of
+  evo-core (evolution-data-server + Camel). Unpackaged and self-contained:
+  no MSIX, no Windows App SDK runtime to install.
+
+  Built with win32\msvc\build-winui-app.bat, which restores the NuGet
+  packages into ..\packages and passes GtkPrefix (MSVC builds of GLib, EDS
+  and evo-core).
+-->
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PackagesDir>$(MSBuildThisFileDirectory)..\packages\</PackagesDir>
+    <CppWinRTDir>$(PackagesDir)Microsoft.Windows.CppWinRT.2.0.250303.1\</CppWinRTDir>
+    <AppSdkDir>$(PackagesDir)Microsoft.WindowsAppSDK.1.7.260224002\</AppSdkDir>
+    <SdkBuildToolsDir>$(PackagesDir)Microsoft.Windows.SDK.BuildTools.10.0.26100.9457\</SdkBuildToolsDir>
+    <WebView2Dir>$(PackagesDir)Microsoft.Web.WebView2.1.0.4314.35\</WebView2Dir>
+    <WilDir>$(PackagesDir)Microsoft.Windows.ImplementationLibrary.1.0.260126.7\</WilDir>
+    <GtkPrefix Condition="'$(GtkPrefix)' == ''">C:\gtk-build\gtk\x64\release</GtkPrefix>
+  </PropertyGroup>
+  <Import Project="$(CppWinRTDir)build\native\Microsoft.Windows.CppWinRT.props" Condition="Exists('$(CppWinRTDir)build\native\Microsoft.Windows.CppWinRT.props')" />
+  <Import Project="$(AppSdkDir)build\native\Microsoft.WindowsAppSDK.props" Condition="Exists('$(AppSdkDir)build\native\Microsoft.WindowsAppSDK.props')" />
+  <Import Project="$(SdkBuildToolsDir)build\Microsoft.Windows.SDK.BuildTools.props" Condition="Exists('$(SdkBuildToolsDir)build\Microsoft.Windows.SDK.BuildTools.props')" />
+  <PropertyGroup Label="Globals">
+    <CppWinRTOptimized>true</CppWinRTOptimized>
+    <CppWinRTRootNamespaceAutoMerge>true</CppWinRTRootNamespaceAutoMerge>
+    <MinimalCoreWin>true</MinimalCoreWin>
+    <ProjectGuid>{6B3D2A9E-4F7C-4C1B-9E2D-7A5F0C3E8B41}</ProjectGuid>
+    <ProjectName>EvolutionWin</ProjectName>
+    <RootNamespace>EvolutionWin</RootNamespace>
+    <DefaultLanguage>fr-FR</DefaultLanguage>
+    <MinimumVisualStudioVersion>16.0</MinimumVisualStudioVersion>
+    <AppContainerApplication>false</AppContainerApplication>
+    <AppxPackage>false</AppxPackage>
+    <ApplicationType>Windows Store</ApplicationType>
+    <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.17763.0</WindowsTargetPlatformMinVersion>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <DesktopCompatible>true</DesktopCompatible>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
+      <WarningLevel>Level4</WarningLevel>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <AdditionalOptions>%(AdditionalOptions) /bigobj /utf-8</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalLibraryDirectories>$(GtkPrefix)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>evo-core.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <ClCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <ClCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <Manifest Include="app.manifest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="CoreBridge.h" />
+    <ClInclude Include="FolderItem.h">
+      <DependentUpon>FolderItem.idl</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="App.xaml.h">
+      <DependentUpon>App.xaml</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="MainWindow.xaml.h">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="ComposeWindow.xaml.h">
+      <DependentUpon>ComposeWindow.xaml</DependentUpon>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ApplicationDefinition Include="App.xaml" />
+    <Page Include="MainWindow.xaml" />
+    <Page Include="ComposeWindow.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="App.xaml.cpp">
+      <DependentUpon>App.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="MainWindow.xaml.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="ComposeWindow.xaml.cpp">
+      <DependentUpon>ComposeWindow.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="FolderItem.cpp">
+      <DependentUpon>FolderItem.idl</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Midl Include="FolderItem.idl" />
+    <Midl Include="ComposeWindow.idl">
+      <SubType>Code</SubType>
+      <DependentUpon>ComposeWindow.xaml</DependentUpon>
+    </Midl>
+    <Midl Include="MainWindow.idl">
+      <SubType>Code</SubType>
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </Midl>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(CppWinRTDir)build\native\Microsoft.Windows.CppWinRT.targets" Condition="Exists('$(CppWinRTDir)build\native\Microsoft.Windows.CppWinRT.targets')" />
+    <Import Project="$(AppSdkDir)build\native\Microsoft.WindowsAppSDK.targets" Condition="Exists('$(AppSdkDir)build\native\Microsoft.WindowsAppSDK.targets')" />
+    <Import Project="$(SdkBuildToolsDir)build\Microsoft.Windows.SDK.BuildTools.targets" Condition="Exists('$(SdkBuildToolsDir)build\Microsoft.Windows.SDK.BuildTools.targets')" />
+    <Import Project="$(WebView2Dir)build\native\Microsoft.Web.WebView2.targets" Condition="Exists('$(WebView2Dir)build\native\Microsoft.Web.WebView2.targets')" />
+    <Import Project="$(WilDir)build\native\Microsoft.Windows.ImplementationLibrary.targets" Condition="Exists('$(WilDir)build\native\Microsoft.Windows.ImplementationLibrary.targets')" />
+  </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(CppWinRTDir)build\native\Microsoft.Windows.CppWinRT.props')" Text="NuGet packages missing: run win32\msvc\build-winui-app.bat (nuget restore)." />
+    <Error Condition="!Exists('$(AppSdkDir)build\native\Microsoft.WindowsAppSDK.props')" Text="NuGet packages missing: run win32\msvc\build-winui-app.bat (nuget restore)." />
+  </Target>
+</Project>

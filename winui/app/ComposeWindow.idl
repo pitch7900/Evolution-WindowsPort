@@ -1,0 +1,8 @@
+namespace EvolutionWin
+{
+    [default_interface]
+    runtimeclass ComposeWindow : Microsoft.UI.Xaml.Window
+    {
+        ComposeWindow();
+    }
+}

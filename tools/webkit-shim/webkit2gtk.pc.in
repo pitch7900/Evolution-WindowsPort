@@ -1,0 +1,13 @@
+prefix=@PC_PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: WebKit2
+Description: WebKitGTK 4.1 API subset for Evolution on Windows (WebView2 shim)
+URL: https://gitlab.gnome.org/GNOME/evolution
+Version: @PROJECT_VERSION@
+Requires: gtk+-3.0 libsoup-3.0 javascriptcoregtk-@API_VERSION@
+Requires.private: json-glib-1.0
+Libs: -L${libdir} -l@LIBRARY_NAME@
+Cflags: -I${includedir}/@LIBRARY_NAME@

@@ -1,0 +1,11 @@
+prefix=@PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libicalvcal
+Description: An implementation of basic vCAL protocols
+Version: 3.0.20
+Requires: libical
+Libs: -L${libdir} -licalvcal
+Cflags: -I${includedir}

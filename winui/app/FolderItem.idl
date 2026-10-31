@@ -1,0 +1,22 @@
+namespace EvolutionWin
+{
+    /* Content of a node of the folder tree: an account or a folder.
+     * Observable: the unread count follows the engine's events. */
+    [bindable]
+    [default_interface]
+    runtimeclass FolderItem : Microsoft.UI.Xaml.Data.INotifyPropertyChanged
+    {
+        FolderItem(String name, String glyph, Int32 unread, String account, String folder, Boolean isAccount);
+
+        String Name { get; };
+        /* Segoe Fluent Icons glyph */
+        String Glyph { get; };
+        Int32 Unread;
+        /* "" when there is no unread message */
+        String UnreadText { get; };
+        String Account { get; };
+        /* full name; "" for accounts and non-selectable folders */
+        String Folder { get; };
+        Boolean IsAccount { get; };
+    }
+}

@@ -1,0 +1,12 @@
+prefix=@PC_PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: JavaScriptCoreGTK+
+Description: JavaScriptCore-GLib API subset for Evolution on Windows (provided by the WebView2 shim library)
+URL: https://gitlab.gnome.org/GNOME/evolution
+Version: @PROJECT_VERSION@
+Requires: glib-2.0 gobject-2.0
+Libs: -L${libdir} -l@LIBRARY_NAME@
+Cflags: -I${includedir}/@LIBRARY_NAME@

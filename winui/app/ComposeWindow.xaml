@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="EvolutionWin.ComposeWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    Title="Nouveau message">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Padding="12,0,0,0">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                <FontIcon Glyph="&#xE70F;" FontSize="14" />
+                <TextBlock x:Name="TitleText" Text="Nouveau message" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+
+        <CommandBar Grid.Row="1" DefaultLabelPosition="Right" HorizontalAlignment="Left" Margin="8,0,8,0">
+            <AppBarButton x:Name="SendButton" Label="Envoyer" Click="OnSendClick">
+                <AppBarButton.Icon>
+                    <FontIcon Glyph="&#xE724;" />
+                </AppBarButton.Icon>
+                <AppBarButton.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Control" Key="Enter" />
+                </AppBarButton.KeyboardAccelerators>
+            </AppBarButton>
+            <AppBarButton Label="Joindre" Click="OnAttachClick">
+                <AppBarButton.Icon>
+                    <FontIcon Glyph="&#xE723;" />
+                </AppBarButton.Icon>
+            </AppBarButton>
+            <AppBarSeparator />
+            <AppBarToggleButton x:Name="HtmlModeButton" Label="Format HTML" IsChecked="True" Click="OnFormatModeToggle">
+                <AppBarToggleButton.Icon>
+                    <FontIcon Glyph="&#xE8A5;" />
+                </AppBarToggleButton.Icon>
+            </AppBarToggleButton>
+            <AppBarSeparator />
+            <AppBarButton Label="Abandonner" Click="OnDiscardClick">
+                <AppBarButton.Icon>
+                    <FontIcon Glyph="&#xE74D;" />
+                </AppBarButton.Icon>
+            </AppBarButton>
+        </CommandBar>
+
+        <Grid Grid.Row="2" Padding="16,8,16,4" RowSpacing="8" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="De" VerticalAlignment="Center" />
+            <ComboBox x:Name="FromBox" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" />
+
+            <TextBlock Grid.Row="1" Text="À" VerticalAlignment="Center" />
+            <TextBox x:Name="ToBox" Grid.Row="1" Grid.Column="1" PlaceholderText="Destinataires, séparés par des virgules" InputScope="EmailNameOrAddress" />
+
+            <TextBlock Grid.Row="2" Text="Cc" VerticalAlignment="Center" />
+            <TextBox x:Name="CcBox" Grid.Row="2" Grid.Column="1" InputScope="EmailNameOrAddress" />
+
+            <TextBlock Grid.Row="3" Text="Cci" VerticalAlignment="Center" />
+            <TextBox x:Name="BccBox" Grid.Row="3" Grid.Column="1" InputScope="EmailNameOrAddress" />
+
+            <TextBlock Grid.Row="4" Text="Objet" VerticalAlignment="Center" />
+            <TextBox x:Name="SubjectBox" Grid.Row="4" Grid.Column="1" TextChanged="OnSubjectChanged" />
+
+            <ScrollViewer Grid.Row="5" Grid.ColumnSpan="2"
+                          HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="AttachmentPanel" Orientation="Horizontal" Spacing="8" Visibility="Collapsed" />
+            </ScrollViewer>
+        </Grid>
+
+        <!-- Barre d'outils de mise en forme HTML -->
+        <StackPanel x:Name="FormatToolbar" Grid.Row="3" Orientation="Horizontal" Spacing="4" Padding="16,4,16,4">
+            <Button Click="OnBoldClick" ToolTipService.ToolTip="Gras (Ctrl+B)">
+                <FontIcon Glyph="&#xE8DD;" FontSize="14" />
+            </Button>
+            <Button Click="OnItalicClick" ToolTipService.ToolTip="Italique (Ctrl+I)">
+                <FontIcon Glyph="&#xE8DB;" FontSize="14" />
+            </Button>
+            <Button Click="OnUnderlineClick" ToolTipService.ToolTip="Souligné (Ctrl+U)">
+                <FontIcon Glyph="&#xE8DC;" FontSize="14" />
+            </Button>
+            <Button Click="OnStrikeClick" ToolTipService.ToolTip="Barré">
+                <FontIcon Glyph="&#xEDE0;" FontSize="14" />
+            </Button>
+            <AppBarSeparator />
+            <Button Click="OnBulletsClick" ToolTipService.ToolTip="Liste à puces">
+                <FontIcon Glyph="&#xE8FD;" FontSize="14" />
+            </Button>
+            <Button Click="OnNumberingClick" ToolTipService.ToolTip="Liste numérotée">
+                <FontIcon Glyph="&#xE8EF;" FontSize="14" />
+            </Button>
+            <Button Click="OnQuoteClick" ToolTipService.ToolTip="Bloc de citation">
+                <FontIcon Glyph="&#xE9B1;" FontSize="14" />
+            </Button>
+            <AppBarSeparator />
+            <Button Click="OnInsertLinkClick" ToolTipService.ToolTip="Insérer un lien hypertexte">
+                <FontIcon Glyph="&#xE71B;" FontSize="14" />
+            </Button>
+            <Button Click="OnClearFormatClick" ToolTipService.ToolTip="Effacer la mise en forme">
+                <FontIcon Glyph="&#xE8E6;" FontSize="14" />
+            </Button>
+        </StackPanel>
+
+        <!-- Zone d'édition : WebView2 (HTML) et TextBox (texte brut) -->
+        <Grid x:Name="EditorRoot" Grid.Row="4" Margin="16,0,16,16">
+            <Border x:Name="HtmlEditorContainer" Background="White" RequestedTheme="Light" CornerRadius="6">
+                <controls:WebView2 x:Name="HtmlEditor" RequestedTheme="Light" DefaultBackgroundColor="White" />
+            </Border>
+            <TextBox x:Name="BodyBox" Visibility="Collapsed"
+                     AcceptsReturn="True" TextWrapping="Wrap" IsSpellCheckEnabled="True"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     FontFamily="Segoe UI" FontSize="14" />
+        </Grid>
+
+        <InfoBar x:Name="StatusBar" Grid.Row="5" IsOpen="False" IsClosable="True" />
+    </Grid>
+</Window>

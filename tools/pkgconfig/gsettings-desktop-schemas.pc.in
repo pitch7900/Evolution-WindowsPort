@@ -1,0 +1,8 @@
+prefix=@PREFIX@
+datadir=${prefix}/share
+includedir=${prefix}/include
+
+Name: gsettings-desktop-schemas
+Description: Shared GSettings schemas for the desktop
+Version: 51.0
+Cflags: -I${includedir}/gsettings-desktop-schemas

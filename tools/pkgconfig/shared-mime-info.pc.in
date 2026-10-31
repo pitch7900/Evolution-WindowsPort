@@ -1,0 +1,7 @@
+prefix=@PREFIX@
+datarootdir=${prefix}/share
+datadir=${datarootdir}
+
+Name: shared-mime-info
+Description: Freedesktop common MIME database (data only; GLib uses the Windows registry for content types)
+Version: 2.4

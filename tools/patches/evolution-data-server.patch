@@ -1,0 +1,1460 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 584de2746..79cfac7c0 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -437,7 +437,10 @@ endif(ENABLE_GTK4)
+ # **************************************************************
+ 
+ pkg_check_modules(JSON_GLIB REQUIRED json-glib-1.0>=${json_glib_minimum_version})
+-pkg_check_modules(UUID REQUIRED uuid>=${uuid_minimum_version})
++if(NOT WIN32)
++	# Windows uses g_uuid_string_random() instead
++	pkg_check_modules(UUID REQUIRED uuid>=${uuid_minimum_version})
++endif(NOT WIN32)
+ 
+ if(ENABLE_GTK)
+ 	add_printable_option(ENABLE_OAUTH2_WEBKITGTK "Enable WebKitGTK gtk3 for built-in OAuth2 authentications" ON)
+@@ -567,14 +570,15 @@ endif(WITH_LIBDB)
+ # iconv checking
+ # ******************************
+ 
+-set(CMAKE_REQUIRED_LIBRARIES "-liconv")
++# bare library name: CMake turns it into -liconv or iconv.lib (MSVC)
++set(CMAKE_REQUIRED_LIBRARIES iconv)
+ CHECK_C_SOURCE_COMPILES("#include <iconv.h>
+ 			#include <stdlib.h>
+ 			int main(void) { iconv_t cd; cd = iconv_open (\"UTF-8\", \"ISO-8859-1\"); return 0; }" HAVE_LIBICONV)
+ unset(CMAKE_REQUIRED_LIBRARIES)
+ 
+ if(HAVE_LIBICONV)
+-	set(ICONV_LIBS "-liconv")
++	set(ICONV_LIBS iconv)
+ 	set(HAVE_ICONV ON)
+ else(HAVE_LIBICONV)
+ 	set(ICONV_LIBS "")
+@@ -586,7 +590,8 @@ if(NOT HAVE_ICONV)
+ endif(NOT HAVE_ICONV)
+ 
+ set(CMAKE_REQUIRED_LIBRARIES ${ICONV_LIBS})
+-file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/" _binary_dir_with_separator)
++# CMake-style path: native Windows backslashes would be read as escapes
++set(_binary_dir_with_separator "${CMAKE_BINARY_DIR}/")
+ CHECK_C_SOURCE_RUNS("#define ICONV_DETECT_BUILD_DIR \"${_binary_dir_with_separator}\"
+ 		     #include \"${CMAKE_SOURCE_DIR}/iconv-detect.c\"" _correct_iconv)
+ unset(_binary_dir_with_separator)
+@@ -696,9 +701,13 @@ CHECK_C_SOURCE_COMPILES("#include <time.h>
+ CHECK_C_SOURCE_COMPILES("#include <time.h>
+ 			int main(void) { altzone = 1; return 0; }" HAVE_ALTZONE)
+ 
+-if((NOT HAVE_TM_GMTOFF) AND (NOT HAVE_TIMEZONE))
++# MSVC CRT: _get_timezone()/_get_dstbias() instead of the POSIX variables
++CHECK_C_SOURCE_COMPILES("#include <time.h>
++			int main(void) { long tz; _get_timezone (&tz); _get_dstbias (&tz); return 0; }" HAVE__TIMEZONE)
++
++if((NOT HAVE_TM_GMTOFF) AND (NOT HAVE_TIMEZONE) AND (NOT HAVE__TIMEZONE))
+ 	message(FATAL_ERROR "Unable to find a way to determine timezone")
+-endif((NOT HAVE_TM_GMTOFF) AND (NOT HAVE_TIMEZONE))
++endif((NOT HAVE_TM_GMTOFF) AND (NOT HAVE_TIMEZONE) AND (NOT HAVE__TIMEZONE))
+ 
+ CHECK_C_SOURCE_COMPILES("#include <time.h>
+ 			int main(void) { localtime_r(NULL, NULL); return 0; }" HAVE_LOCALTIME_R)
+@@ -747,10 +756,15 @@ CHECK_C_SOURCE_COMPILES("#include <sys/types.h>
+ 
+ add_printable_option(ENABLE_IPV6 "Enable IPv6 support" ON)
+ 
+-CHECK_C_SOURCE_COMPILES("#include <sys/types.h>
+-			#include <sys/socket.h>
+-			#include <netinet/in.h>
+-			#include <netdb.h>
++if(WIN32)
++	# Winsock provides getaddrinfo() and IPv6
++	set(_addrinfo_includes "#include <winsock2.h>\n#include <ws2tcpip.h>")
++	set(CMAKE_REQUIRED_LIBRARIES ws2_32)
++else(WIN32)
++	set(_addrinfo_includes "#include <sys/types.h>\n#include <sys/socket.h>\n#include <netinet/in.h>\n#include <netdb.h>")
++endif(WIN32)
++
++CHECK_C_SOURCE_COMPILES("${_addrinfo_includes}
+ 			#include <stddef.h>
+ 
+ 			int main(void) {
+@@ -781,10 +795,7 @@ if(NOT have_addrinfo)
+ 	endif(ENABLE_IPV6)
+ else(NOT have_addrinfo)
+ 	if(ENABLE_IPV6)
+-		CHECK_C_SOURCE_COMPILES("#include <sys/types.h>
+-					#include <sys/socket.h>
+-					#include <netinet/in.h>
+-					#include <netdb.h>
++		CHECK_C_SOURCE_COMPILES("${_addrinfo_includes}
+ 
+ 					int main(void) {
+ 						struct addrinfo hints;
+@@ -794,6 +805,11 @@ else(NOT have_addrinfo)
+ 	endif(ENABLE_IPV6)
+ endif(NOT have_addrinfo)
+ 
++unset(_addrinfo_includes)
++if(WIN32)
++	unset(CMAKE_REQUIRED_LIBRARIES)
++endif(WIN32)
++
+ # **********************************
+ # Weather calendar backend support
+ # **********************************
+@@ -945,7 +961,18 @@ CHECK_SYMBOL_EXISTS(malloc_trim malloc.h HAVE_MALLOC_TRIM)
+ # subparts flags
+ # ******************************
+ 
+-pkg_check_modules(DATA_SERVER REQUIRED gio-2.0 gmodule-2.0 libsecret-1>=${libsecret_minimum_version} libxml-2.0 libsoup-3.0 ${mozilla_nspr} ${mozilla_nss})
++if(WIN32)
++	# Secrets are stored in the Windows Credential Manager, see e-secret-store.c
++	set(_secret_module "")
++	set(LIBSECRET_PC_REQUIRES "")
++else(WIN32)
++	set(_secret_module libsecret-1>=${libsecret_minimum_version})
++	# used by src/libedataserver/libedataserver.pc.in
++	set(LIBSECRET_PC_REQUIRES "libsecret-1")
++endif(WIN32)
++
++pkg_check_modules(DATA_SERVER REQUIRED gio-2.0 gmodule-2.0 ${_secret_module} libxml-2.0 libsoup-3.0 ${mozilla_nspr} ${mozilla_nss})
++unset(_secret_module)
+ set(DATA_SERVER_INCLUDE_DIRS ${DATA_SERVER_INCLUDE_DIRS} ${MANUAL_NSPR_INCLUDES} ${MANUAL_NSS_INCLUDES})
+ set(DATA_SERVER_LDFLAGS ${DATA_SERVER_LDFLAGS} ${MANUAL_NSPR_LIBS} ${MANUAL_NSS_LIBS})
+ 
+diff --git a/config.h.in b/config.h.in
+index 922e99716..8558dec37 100644
+--- a/config.h.in
++++ b/config.h.in
+@@ -135,6 +135,9 @@
+ /* Define if libc defines an altzone variable */
+ #cmakedefine HAVE_ALTZONE 1
+ 
++/* Define if the MSVC CRT provides _get_timezone() and _get_dstbias() */
++#cmakedefine HAVE__TIMEZONE 1
++
+ /* Define if libc defines localtime_r function */
+ #cmakedefine HAVE_LOCALTIME_R
+ 
+diff --git a/data/CMakeLists.txt b/data/CMakeLists.txt
+index 5cdd46720..1900b7c9d 100644
+--- a/data/CMakeLists.txt
++++ b/data/CMakeLists.txt
+@@ -36,7 +36,8 @@ if(NOT WITH_GOOGLE_CLIENT_ID STREQUAL "")
+ 	set(CMAKE_REQUIRED_INCLUDES ${CMAKE_BINARY_DIR} ${DATA_SERVER_INCLUDE_DIRS})
+ 	set(CMAKE_REQUIRED_LIBRARIES ${DATA_SERVER_LDFLAGS})
+ 	list(APPEND CMAKE_REQUIRED_DEFINITIONS -DG_LOG_DOMAIN=\"oauth2-value-helper\" -DBUILDING_VALUE_HELPER=1)
+-	file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/oauth2-google-client-id" _binary_dir_to_file)
++	# CMake-style path: native Windows backslashes would be read as escapes
++	set(_binary_dir_to_file "${CMAKE_BINARY_DIR}/oauth2-google-client-id")
+ 	CHECK_C_SOURCE_RUNS("#define DECODE_KEY \"${WITH_GOOGLE_CLIENT_ID}\"
+ 			     #define DECODE_TO_FILE \"${_binary_dir_to_file}\"
+ 			     #define DECODE_REVERSED 1
+diff --git a/src/addressbook/backends/carddav/e-book-backend-carddav-factory.c b/src/addressbook/backends/carddav/e-book-backend-carddav-factory.c
+index e38ea1494..0266eacf4 100644
+--- a/src/addressbook/backends/carddav/e-book-backend-carddav-factory.c
++++ b/src/addressbook/backends/carddav/e-book-backend-carddav-factory.c
+@@ -16,8 +16,8 @@ typedef EBookBackendFactoryClass EBookBackendCardDAVFactoryClass;
+ static EModule *e_module;
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ /* Forward Declarations */
+ GType e_book_backend_carddav_factory_get_type (void);
+diff --git a/src/addressbook/backends/file/e-book-backend-file-factory.c b/src/addressbook/backends/file/e-book-backend-file-factory.c
+index 957f6ab57..d56fbb7d3 100644
+--- a/src/addressbook/backends/file/e-book-backend-file-factory.c
++++ b/src/addressbook/backends/file/e-book-backend-file-factory.c
+@@ -16,8 +16,8 @@ typedef EBookBackendFactoryClass EBookBackendFileFactoryClass;
+ static EModule *e_module;
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ /* Forward Declarations */
+ GType e_book_backend_file_factory_get_type (void);
+diff --git a/src/addressbook/backends/ldap/e-book-backend-ldap-factory.c b/src/addressbook/backends/ldap/e-book-backend-ldap-factory.c
+index b8e2a0204..dcb1dd578 100644
+--- a/src/addressbook/backends/ldap/e-book-backend-ldap-factory.c
++++ b/src/addressbook/backends/ldap/e-book-backend-ldap-factory.c
+@@ -16,8 +16,8 @@ typedef EBookBackendFactoryClass EBookBackendLDAPFactoryClass;
+ static EModule *e_module;
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ /* Forward Declarations */
+ GType e_book_backend_ldap_factory_get_type (void);
+diff --git a/src/addressbook/libebook-contacts/gen-western-table.c b/src/addressbook/libebook-contacts/gen-western-table.c
+index 96a02b3de..5ee7834f3 100644
+--- a/src/addressbook/libebook-contacts/gen-western-table.c
++++ b/src/addressbook/libebook-contacts/gen-western-table.c
+@@ -60,6 +60,11 @@ process_content (const gchar *content)
+ 
+ 	for (ii = 0; lines && lines[ii]; ii++) {
+ 		gchar *line = lines[ii];
++		gsize len = strlen (line);
++
++		/* the input can have CRLF line endings (e.g. a Windows checkout) */
++		if (len > 0 && line[len - 1] == '\r')
++			line[len - 1] = '\0';
+ 
+ 		if (!*line) {
+ 			strings = g_slist_reverse (strings);
+diff --git a/src/addressbook/libebook/e-book-client.c b/src/addressbook/libebook/e-book-client.c
+index 9a9910b01..7d9470329 100644
+--- a/src/addressbook/libebook/e-book-client.c
++++ b/src/addressbook/libebook/e-book-client.c
+@@ -1071,6 +1071,12 @@ book_client_init_in_dbus_thread (GTask *task,
+ 		return;
+ 	}
+ 
++#ifdef G_OS_WIN32
++	/* no D-Bus activation on Windows: start the service if needed;
++	 * a failure surfaces as the error of the call below */
++	e_util_win32_ensure_dbus_service (ADDRESS_BOOK_DBUS_SERVICE_NAME, NULL, NULL);
++#endif
++
+ 	factory_proxy = e_dbus_address_book_factory_proxy_new_sync (
+ 		connection,
+ 		G_DBUS_PROXY_FLAGS_NONE,
+diff --git a/src/addressbook/libedata-book/e-book-sqlite.c b/src/addressbook/libedata-book/e-book-sqlite.c
+index b10a309cf..02a0a2bbc 100644
+--- a/src/addressbook/libedata-book/e-book-sqlite.c
++++ b/src/addressbook/libedata-book/e-book-sqlite.c
+@@ -178,16 +178,16 @@ ebsql_origin_str (EbSqlCursorOrigin origin)
+ 	} G_STMT_END
+ 
+ /* Format strings are passed through dgettext(), need to be reformatted */
+-#define EBSQL_SET_ERROR(error, code, fmt, args...) \
++#define EBSQL_SET_ERROR(error, code, fmt, ...) \
+ 	G_STMT_START { \
+ 		if (ebsql_debug_flags & EBSQL_DEBUG_ERRORS) { \
+ 			gchar *format = g_strdup_printf ( \
+ 				"ERR [%%s]: Set error code '%%s': %s\n", fmt); \
+ 			g_printerr (format, G_STRFUNC, \
+-				    ebsql_error_str (code), ## args); \
++				    ebsql_error_str (code), ## __VA_ARGS__); \
+ 			g_free (format); \
+ 		} \
+-		g_set_error (error, E_BOOK_SQLITE_ERROR, code, fmt, ## args); \
++		g_set_error (error, E_BOOK_SQLITE_ERROR, code, fmt, ## __VA_ARGS__); \
+ 	} G_STMT_END
+ 
+ #define EBSQL_SET_ERROR_LITERAL(error, code, detail) \
+diff --git a/src/calendar/backends/caldav/e-cal-backend-caldav-factory.c b/src/calendar/backends/caldav/e-cal-backend-caldav-factory.c
+index 9748e236d..1e3b96160 100644
+--- a/src/calendar/backends/caldav/e-cal-backend-caldav-factory.c
++++ b/src/calendar/backends/caldav/e-cal-backend-caldav-factory.c
+@@ -22,8 +22,8 @@ typedef ECalBackendFactoryClass ECalBackendCalDAVTodosFactoryClass;
+ static EModule *e_module;
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ /* Forward Declarations */
+ GType e_cal_backend_caldav_events_factory_get_type (void);
+diff --git a/src/calendar/backends/contacts/e-cal-backend-contacts-factory.c b/src/calendar/backends/contacts/e-cal-backend-contacts-factory.c
+index 3d9f951f7..ed2e2ab50 100644
+--- a/src/calendar/backends/contacts/e-cal-backend-contacts-factory.c
++++ b/src/calendar/backends/contacts/e-cal-backend-contacts-factory.c
+@@ -16,8 +16,8 @@ typedef ECalBackendFactoryClass ECalBackendContactsEventsFactoryClass;
+ static EModule *e_module;
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ /* Forward Declarations */
+ GType e_cal_backend_contacts_events_factory_get_type (void);
+diff --git a/src/calendar/backends/file/e-cal-backend-file-factory.c b/src/calendar/backends/file/e-cal-backend-file-factory.c
+index fb0625f6a..d0e591a30 100644
+--- a/src/calendar/backends/file/e-cal-backend-file-factory.c
++++ b/src/calendar/backends/file/e-cal-backend-file-factory.c
+@@ -24,8 +24,8 @@ typedef ECalBackendFactoryClass ECalBackendFileTodosFactoryClass;
+ static EModule *e_module;
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ /* Forward Declarations */
+ GType e_cal_backend_file_events_factory_get_type (void);
+diff --git a/src/calendar/backends/gtasks/e-cal-backend-gtasks-factory.c b/src/calendar/backends/gtasks/e-cal-backend-gtasks-factory.c
+index 31e4aff64..bfbc62f57 100644
+--- a/src/calendar/backends/gtasks/e-cal-backend-gtasks-factory.c
++++ b/src/calendar/backends/gtasks/e-cal-backend-gtasks-factory.c
+@@ -16,8 +16,8 @@ typedef ECalBackendFactoryClass ECalBackendGTasksFactoryClass;
+ static EModule *e_module;
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ /* Forward Declarations */
+ GType e_cal_backend_gtasks_factory_get_type (void);
+diff --git a/src/calendar/backends/http/e-cal-backend-http-factory.c b/src/calendar/backends/http/e-cal-backend-http-factory.c
+index 0d4f192eb..5332650b9 100644
+--- a/src/calendar/backends/http/e-cal-backend-http-factory.c
++++ b/src/calendar/backends/http/e-cal-backend-http-factory.c
+@@ -22,8 +22,8 @@ typedef ECalBackendFactoryClass ECalBackendHttpTodosFactoryClass;
+ static EModule *e_module;
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ /* Forward Declarations */
+ GType e_cal_backend_http_events_factory_get_type (void);
+diff --git a/src/calendar/backends/weather/e-cal-backend-weather-factory.c b/src/calendar/backends/weather/e-cal-backend-weather-factory.c
+index fc486a338..a37d6b2d4 100644
+--- a/src/calendar/backends/weather/e-cal-backend-weather-factory.c
++++ b/src/calendar/backends/weather/e-cal-backend-weather-factory.c
+@@ -16,8 +16,8 @@ typedef ECalBackendFactoryClass ECalBackendWeatherEventsFactoryClass;
+ static EModule *e_module;
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ /* Forward Declarations */
+ GType e_cal_backend_weather_events_factory_get_type (void);
+diff --git a/src/calendar/backends/webdav-notes/e-cal-backend-webdav-notes-factory.c b/src/calendar/backends/webdav-notes/e-cal-backend-webdav-notes-factory.c
+index 478fd36b1..8d9aa2fc5 100644
+--- a/src/calendar/backends/webdav-notes/e-cal-backend-webdav-notes-factory.c
++++ b/src/calendar/backends/webdav-notes/e-cal-backend-webdav-notes-factory.c
+@@ -13,8 +13,8 @@ typedef ECalBackendFactoryClass ECalBackendWebDAVNotesFactoryClass;
+ static EModule *e_module;
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ /* Forward Declarations */
+ GType e_cal_backend_webdav_notes_factory_get_type (void);
+diff --git a/src/calendar/libecal/e-cal-client.c b/src/calendar/libecal/e-cal-client.c
+index ff934fab0..c892dd48f 100644
+--- a/src/calendar/libecal/e-cal-client.c
++++ b/src/calendar/libecal/e-cal-client.c
+@@ -1174,6 +1174,12 @@ cal_client_init_in_dbus_thread (GTask *task,
+ 		return;
+ 	}
+ 
++#ifdef G_OS_WIN32
++	/* no D-Bus activation on Windows: start the service if needed;
++	 * a failure surfaces as the error of the call below */
++	e_util_win32_ensure_dbus_service (CALENDAR_DBUS_SERVICE_NAME, NULL, NULL);
++#endif
++
+ 	factory_proxy = e_dbus_calendar_factory_proxy_new_sync (
+ 		connection,
+ 		G_DBUS_PROXY_FLAGS_NONE,
+diff --git a/src/camel/camel-debug.c b/src/camel/camel-debug.c
+index a9bfd4f2d..e4a9485f5 100644
+--- a/src/camel/camel-debug.c
++++ b/src/camel/camel-debug.c
+@@ -23,7 +23,9 @@
+ 
+ #include "camel-debug.h"
+ 
+-gint camel_verbose_debug;
++/* initialized: a tentative definition is a COMMON symbol, which MSVC's
++ * automatic DLL export (WINDOWS_EXPORT_ALL_SYMBOLS) does not export */
++gint camel_verbose_debug = 0;
+ 
+ static GHashTable *debug_table = NULL;
+ 
+diff --git a/src/camel/camel-debug.h b/src/camel/camel-debug.h
+index cddce94eb..0335fc766 100644
+--- a/src/camel/camel-debug.h
++++ b/src/camel/camel-debug.h
+@@ -12,6 +12,7 @@
+ #define CAMEL_DEBUG_H
+ 
+ #include <glib.h>
++#include <camel/camel-enums.h>
+ 
+ /* This is how the basic debug checking strings should be done */
+ #define CAMEL_DEBUG_IMAP "imap"
+@@ -19,6 +20,8 @@
+ 
+ G_BEGIN_DECLS
+ 
++CAMEL_VAR gint camel_verbose_debug;
++
+ void camel_debug_init (void);
+ gboolean camel_debug (const gchar *mode);
+ 
+diff --git a/src/camel/camel-enums.h b/src/camel/camel-enums.h
+index 06567a88f..4f6c85eda 100644
+--- a/src/camel/camel-enums.h
++++ b/src/camel/camel-enums.h
+@@ -9,6 +9,16 @@
+ #ifndef CAMEL_ENUMS_H
+ #define CAMEL_ENUMS_H
+ 
++/* Declares a public data symbol of libcamel. MSVC has no automatic data
++ * import across DLLs: users of the library need __declspec(dllimport). */
++#ifndef CAMEL_VAR
++#if defined (_MSC_VER) && !defined (CAMEL_COMPILATION)
++#define CAMEL_VAR extern __declspec (dllimport)
++#else
++#define CAMEL_VAR extern
++#endif
++#endif
++
+ /**
+  * CamelAuthenticationResult:
+  * @CAMEL_AUTHENTICATION_ERROR:
+diff --git a/src/camel/camel-gpg-context.c b/src/camel/camel-gpg-context.c
+index 71741bca9..b776021a0 100644
+--- a/src/camel/camel-gpg-context.c
++++ b/src/camel/camel-gpg-context.c
+@@ -1139,6 +1139,8 @@ exception:
+ 	errno = errnosave;
+ #else
+ 	/* FIXME: Port me */
++	GError *local_error = NULL;
++
+ 	g_warning ("%s: Not implemented", G_STRFUNC);
+ 
+ 	errno = EINVAL;
+diff --git a/src/camel/camel-mime-utils.c b/src/camel/camel-mime-utils.c
+index 48fdd5469..916ffb883 100644
+--- a/src/camel/camel-mime-utils.c
++++ b/src/camel/camel-mime-utils.c
+@@ -38,6 +38,12 @@
+ #endif
+ #include "camel-utf8.h"
+ 
++#ifdef _MSC_VER
++/* camel_mime_special_table is const data defined in the generated
++ * camel-mime-tables.c; automatic DLL exports skip read-only data */
++#pragma comment(linker, "/EXPORT:camel_mime_special_table,DATA")
++#endif
++
+ #ifdef G_OS_WIN32
+ #ifdef gmtime_r
+ #undef gmtime_r
+@@ -119,6 +125,16 @@ camel_mktime_utc (struct tm *tm)
+ #endif
+ 	} else
+ 		tt -= timezone;
++#elif defined (HAVE__TIMEZONE)
++	{
++		/* MSVC CRT: seconds west of UTC and the DST bias */
++		long tz = 0, dst_bias = 0;
++
++		_get_timezone (&tz);
++		_get_dstbias (&dst_bias);
++
++		tt -= tm->tm_isdst > 0 ? tz + dst_bias : tz;
++	}
+ #endif
+ 
+ 	return tt;
+@@ -152,6 +168,15 @@ camel_localtime_with_offset (time_t tt,
+ #endif
+ 	} else
+ 		*offset = -timezone;
++#elif defined (HAVE__TIMEZONE)
++	{
++		long tz = 0, dst_bias = 0;
++
++		_get_timezone (&tz);
++		_get_dstbias (&dst_bias);
++
++		*offset = -(tm->tm_isdst > 0 ? tz + dst_bias : tz);
++	}
+ #endif
+ }
+ 
+@@ -4761,8 +4786,10 @@ camel_header_msgid_generate (const gchar *domain)
+ 	add_i64 (g_get_monotonic_time ());
+ 	add_i64 (g_get_real_time ());
+ 	add_i64 (getpid ());
++#ifndef G_OS_WIN32
+ 	add_i64 (getgid ());
+ 	add_i64 (getppid ());
++#endif
+ 	add_i64 (g_atomic_int_add (&counter, 1));
+ 
+ 	add_str (domain, "localhost");
+diff --git a/src/camel/camel-mime-utils.h b/src/camel/camel-mime-utils.h
+index b5df5b5f8..4571b00b8 100644
+--- a/src/camel/camel-mime-utils.h
++++ b/src/camel/camel-mime-utils.h
+@@ -213,7 +213,8 @@ enum {
+ 	CAMEL_MIME_IS_ATTRCHAR  = 1 << 9	/* attribute-char safe (rfc2184) */
+ };
+ 
+-extern gushort camel_mime_special_table[256];
++CAMEL_VAR gushort camel_mime_special_table[256];
++CAMEL_VAR gint camel_header_param_encode_filenames_in_rfc_2047;
+ 
+ #define camel_mime_is_ctrl(x) ((camel_mime_special_table[(guchar)(x)] & CAMEL_MIME_IS_CTRL) != 0)
+ #define camel_mime_is_lwsp(x) ((camel_mime_special_table[(guchar)(x)] & CAMEL_MIME_IS_LWSP) != 0)
+diff --git a/src/camel/camel-msgport.c b/src/camel/camel-msgport.c
+index 65bd088e3..839428e55 100644
+--- a/src/camel/camel-msgport.c
++++ b/src/camel/camel-msgport.c
+@@ -10,7 +10,8 @@
+ 
+ #include <nspr.h>
+ 
+-#ifdef G_OS_WIN32
++/* _WIN32, not G_OS_WIN32: glib.h is not included yet at this point */
++#ifdef _WIN32
+ #define WIN32_LEAN_AND_MEAN
+ #include <winsock2.h>
+ #endif
+diff --git a/src/camel/camel-provider.h b/src/camel/camel-provider.h
+index 910cbaac4..5ed4dd692 100644
+--- a/src/camel/camel-provider.h
++++ b/src/camel/camel-provider.h
+@@ -32,7 +32,7 @@
+ 
+ G_BEGIN_DECLS
+ 
+-extern gchar *camel_provider_type_name[CAMEL_NUM_PROVIDER_TYPES];
++CAMEL_VAR gchar *camel_provider_type_name[CAMEL_NUM_PROVIDER_TYPES];
+ 
+ /* Flags for url_flags. "ALLOW" means the config dialog will let the
+  * user configure it. "NEED" implies "ALLOW" but means the user must
+diff --git a/src/camel/camel-stream-process.c b/src/camel/camel-stream-process.c
+index 133c4c15c..a3071f902 100644
+--- a/src/camel/camel-stream-process.c
++++ b/src/camel/camel-stream-process.c
+@@ -24,7 +24,7 @@
+ #include "camel-file-utils.h"
+ #include "camel-stream-process.h"
+ 
+-extern gint camel_verbose_debug;
++#include "camel-debug.h"
+ 
+ struct _CamelStreamProcessPrivate {
+ 	gint sockfd;
+diff --git a/src/camel/camel.h b/src/camel/camel.h
+index d907be024..11d311a2a 100644
+--- a/src/camel/camel.h
++++ b/src/camel/camel.h
+@@ -141,7 +141,7 @@
+ 
+ G_BEGIN_DECLS
+ 
+-extern gint camel_application_is_exiting;
++CAMEL_VAR gint camel_application_is_exiting;
+ 
+ gint camel_init (const gchar *certdb_dir, gboolean nss_init);
+ void camel_shutdown (void);
+diff --git a/src/camel/providers/imapx/camel-imapx-utils.c b/src/camel/providers/imapx/camel-imapx-utils.c
+index dbb6eb96a..ee779be9f 100644
+--- a/src/camel/providers/imapx/camel-imapx-utils.c
++++ b/src/camel/providers/imapx/camel-imapx-utils.c
+@@ -24,7 +24,6 @@
+ #define d(...) camel_imapx_debug(debug, __VA_ARGS__)
+ 
+ gint camel_imapx_debug_flags;
+-extern gint camel_verbose_debug;
+ 
+ #define debug_set_flag(flag) do { \
+ 	if ((CAMEL_IMAPX_DEBUG_ALL & CAMEL_IMAPX_DEBUG_ ## flag) && \
+diff --git a/src/libebackend/e-source-registry-server.c b/src/libebackend/e-source-registry-server.c
+index 9dbd77e19..979fbba1a 100644
+--- a/src/libebackend/e-source-registry-server.c
++++ b/src/libebackend/e-source-registry-server.c
+@@ -1707,6 +1707,12 @@ e_source_registry_server_load_resource (ESourceRegistryServer *server,
+ 		gchar *resource_uri;
+ 		GError *local_error = NULL;
+ 
++#ifdef G_OS_WIN32
++		/* there is no sendmail (nor a Camel sendmail provider) on Windows */
++		if (g_strcmp0 (children[ii], "sendmail.source") == 0)
++			continue;
++#endif
++
+ 		child_path = g_build_path ("/", path, children[ii], NULL);
+ 		resource_uri = g_strconcat ("resource://", child_path, NULL);
+ 		file = g_file_new_for_uri (resource_uri);
+diff --git a/src/libebackend/e-user-prompter.c b/src/libebackend/e-user-prompter.c
+index c8661c855..308163e29 100644
+--- a/src/libebackend/e-user-prompter.c
++++ b/src/libebackend/e-user-prompter.c
+@@ -220,6 +220,12 @@ user_prompter_prompt_thread (GTask *task,
+ 	 * which can be blocked by the e_user_prompter_prompt_sync() call anyway */
+ 	g_main_context_push_thread_default (main_context);
+ 
++#ifdef G_OS_WIN32
++	/* no D-Bus activation on Windows: start the service if needed;
++	 * a failure surfaces as the error of the call below */
++	e_util_win32_ensure_dbus_service (USER_PROMPTER_DBUS_SERVICE_NAME, NULL, NULL);
++#endif
++
+ 	dbus_prompter = e_dbus_user_prompter_proxy_new_for_bus_sync (
+ 		G_BUS_TYPE_SESSION,
+ 		G_DBUS_PROXY_FLAGS_NONE,
+diff --git a/src/libedataserver/CMakeLists.txt b/src/libedataserver/CMakeLists.txt
+index d6be937bd..1338d873c 100644
+--- a/src/libedataserver/CMakeLists.txt
++++ b/src/libedataserver/CMakeLists.txt
+@@ -257,6 +257,7 @@ target_compile_definitions(edataserver PRIVATE
+ 	-DG_LOG_DOMAIN=\"e-data-server\"
+ 	-DE_DATA_SERVER_PREFIX=\"${CMAKE_INSTALL_PREFIX}\"
+ 	-DE_DATA_SERVER_LOCALEDIR=\"${LOCALE_INSTALL_DIR}\"
++	-DE_DATA_SERVER_LIBEXECDIR=\"${LIBEXEC_INSTALL_DIR}\"
+ 	-DE_DATA_SERVER_IMAGESDIR=\"${imagesdir}\"
+ 	-DE_DATA_SERVER_CREDENTIALMODULEDIR=\"${credentialmoduledir}\"
+ 	-DE_DATA_SERVER_UIMODULEDIR=\"${uimoduledir}\"
+diff --git a/src/libedataserver/e-data-server-util.c b/src/libedataserver/e-data-server-util.c
+index 15574879c..7ca3d1e33 100644
+--- a/src/libedataserver/e-data-server-util.c
++++ b/src/libedataserver/e-data-server-util.c
+@@ -1934,6 +1934,7 @@ static const gchar *prefix = NULL;
+ static const gchar *cp_prefix;
+ 
+ static const gchar *localedir;
++static const gchar *libexecdir;
+ static const gchar *imagesdir;
+ static const gchar *credentialmoduledir;
+ static const gchar *uimoduledir;
+@@ -2043,6 +2044,7 @@ setup (void)
+ 	g_free (cp_pfx);
+ 
+ 	localedir = replace_prefix (cp_prefix, E_DATA_SERVER_LOCALEDIR);
++	libexecdir = replace_prefix (prefix, E_DATA_SERVER_LIBEXECDIR);
+ 	imagesdir = replace_prefix (prefix, E_DATA_SERVER_IMAGESDIR);
+ 	credentialmoduledir = replace_prefix (prefix, E_DATA_SERVER_CREDENTIALMODULEDIR);
+ 	uimoduledir = replace_prefix (prefix, E_DATA_SERVER_UIMODULEDIR);
+@@ -2076,6 +2078,177 @@ PUBLIC_GETTER (prefix)
+ PUBLIC_GETTER (cp_prefix)
+ PUBLIC_GETTER (localedir)
+ 
++/* D-Bus services started on demand: the session bus GLib runs on Windows
++ * (gdbus.exe) has no activation from .service files */
++static const struct {
++	const gchar *bus_name;
++	const gchar *executable;
++} win32_dbus_services[] = {
++	{ SOURCES_DBUS_SERVICE_NAME, "evolution-source-registry.exe" },
++	{ ADDRESS_BOOK_DBUS_SERVICE_NAME, "evolution-addressbook-factory.exe" },
++	{ CALENDAR_DBUS_SERVICE_NAME, "evolution-calendar-factory.exe" },
++	{ USER_PROMPTER_DBUS_SERVICE_NAME, "evolution-user-prompter.exe" }
++};
++
++/* Seconds to wait for a started service to own its bus name */
++#define WIN32_DBUS_SERVICE_START_TIMEOUT 30
++
++G_LOCK_DEFINE_STATIC (win32_dbus_services);
++
++static gboolean
++win32_dbus_name_has_owner (GDBusConnection *connection,
++			   const gchar *bus_name,
++			   GCancellable *cancellable,
++			   GError **error)
++{
++	GVariant *reply;
++	gboolean has_owner = FALSE;
++
++	reply = g_dbus_connection_call_sync (connection,
++		"org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
++		"NameHasOwner", g_variant_new ("(s)", bus_name), G_VARIANT_TYPE ("(b)"),
++		G_DBUS_CALL_FLAGS_NONE, -1, cancellable, error);
++
++	if (reply) {
++		g_variant_get (reply, "(b)", &has_owner);
++		g_variant_unref (reply);
++	}
++
++	return has_owner;
++}
++
++static gboolean
++win32_is_current_executable (const gchar *executable)
++{
++	wchar_t wpath[MAX_PATH];
++	gchar *path, *basename;
++	gboolean same;
++
++	if (!GetModuleFileNameW (NULL, wpath, G_N_ELEMENTS (wpath)))
++		return FALSE;
++
++	path = g_utf16_to_utf8 (wpath, -1, NULL, NULL, NULL);
++	basename = path ? g_path_get_basename (path) : NULL;
++	same = basename && g_ascii_strcasecmp (basename, executable) == 0;
++
++	g_free (basename);
++	g_free (path);
++
++	return same;
++}
++
++/**
++ * e_util_win32_ensure_dbus_service:
++ * @bus_name: a well-known D-Bus name of an evolution-data-server service
++ * @cancellable: optional #GCancellable object, or %NULL
++ * @error: return location for a #GError, or %NULL
++ *
++ * Windows only. Makes sure the evolution-data-server service owning @bus_name
++ * runs: GLib's session bus on Windows cannot activate services, so the
++ * service executable is started (without a console window) and the function
++ * waits until it owns @bus_name. Names not belonging to a known service are
++ * ignored.
++ *
++ * Returns: %TRUE when the service runs (or @bus_name is not a known service),
++ *    %FALSE on error
++ *
++ * Since: 3.64
++ **/
++gboolean
++e_util_win32_ensure_dbus_service (const gchar *bus_name,
++				  GCancellable *cancellable,
++				  GError **error)
++{
++	GDBusConnection *connection;
++	const gchar *executable = NULL;
++	gchar *path;
++	gunichar2 *wpath;
++	STARTUPINFOW startup_info = { 0 };
++	PROCESS_INFORMATION process_info = { 0 };
++	gboolean success = FALSE;
++	guint ii;
++
++	g_return_val_if_fail (bus_name != NULL, FALSE);
++
++	for (ii = 0; ii < G_N_ELEMENTS (win32_dbus_services); ii++) {
++		if (g_strcmp0 (win32_dbus_services[ii].bus_name, bus_name) == 0) {
++			executable = win32_dbus_services[ii].executable;
++			break;
++		}
++	}
++
++	/* not ours, or called by the service itself */
++	if (!executable || win32_is_current_executable (executable))
++		return TRUE;
++
++	connection = g_bus_get_sync (G_BUS_TYPE_SESSION, cancellable, error);
++	if (!connection)
++		return FALSE;
++
++	/* one start attempt at a time within this process */
++	G_LOCK (win32_dbus_services);
++
++	if (win32_dbus_name_has_owner (connection, bus_name, cancellable, NULL)) {
++		success = TRUE;
++		goto exit;
++	}
++
++	setup ();
++	path = g_build_filename (libexecdir, executable, NULL);
++	wpath = g_utf8_to_utf16 (path, -1, NULL, NULL, NULL);
++
++	startup_info.cb = sizeof (startup_info);
++
++	if (!wpath || !CreateProcessW ((LPCWSTR) wpath, NULL, NULL, NULL, FALSE,
++		CREATE_NO_WINDOW, NULL, NULL, &startup_info, &process_info)) {
++		gchar *msg = g_win32_error_message (GetLastError ());
++
++		g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
++			"Failed to start “%s”: %s", path, msg);
++
++		g_free (msg);
++	} else {
++		gint64 deadline;
++
++		CloseHandle (process_info.hThread);
++
++		deadline = g_get_monotonic_time () + WIN32_DBUS_SERVICE_START_TIMEOUT * G_USEC_PER_SEC;
++
++		while (!(success = win32_dbus_name_has_owner (connection, bus_name, cancellable, NULL))) {
++			if (g_cancellable_set_error_if_cancelled (cancellable, error))
++				break;
++
++			/* exited: another instance may have won the name, check once more */
++			if (WaitForSingleObject (process_info.hProcess, 0) == WAIT_OBJECT_0) {
++				success = win32_dbus_name_has_owner (connection, bus_name, cancellable, NULL);
++				if (!success)
++					g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
++						"“%s” exited without owning “%s”", path, bus_name);
++				break;
++			}
++
++			if (g_get_monotonic_time () > deadline) {
++				g_set_error (error, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
++					"“%s” did not own “%s” in time", path, bus_name);
++				break;
++			}
++
++			g_usleep (G_USEC_PER_SEC / 10);
++		}
++
++		CloseHandle (process_info.hProcess);
++	}
++
++	g_free (wpath);
++	g_free (path);
++
++ exit:
++	G_UNLOCK (win32_dbus_services);
++	g_object_unref (connection);
++
++	return success;
++}
++
+ /**
+  * e_util_win32_initialize:
+  *
+@@ -2150,12 +2323,10 @@ e_util_win32_initialize (void)
+ 		g_free (path);
+ 	}
+ 
+-	/* Make sure D-Bus is running. The executable makes sure the daemon
+-	   is not restarted, thus it's safe to be called witn D-Bus already
+-	   running. */
+-	if (system ("dbus-launch.exe") != 0) {
+-		/* Ignore, just to mute compiler warning */;
+-	}
++	/* No explicit D-Bus start: on Windows GLib autolaunches its own session
++	 * bus (gdbus.exe, address published in shared memory) on the first
++	 * session bus connection. Running the freedesktop dbus-launch.exe with
++	 * system() also flashed a console window. */
+ }
+ 
+ #endif	/* G_OS_WIN32 */
+@@ -2712,8 +2883,10 @@ e_util_generate_uid (void)
+ 	add_i64 (g_get_monotonic_time ());
+ 	add_i64 (g_get_real_time ());
+ 	add_i64 (getpid ());
++#ifndef G_OS_WIN32
+ 	add_i64 (getgid ());
+ 	add_i64 (getppid ());
++#endif
+ 	add_i64 (g_atomic_int_add (&counter, 1));
+ 
+ 	add_str (g_get_host_name (), "localhost");
+diff --git a/src/libedataserver/e-data-server-util.h b/src/libedataserver/e-data-server-util.h
+index bbfb62548..a6063bfaa 100644
+--- a/src/libedataserver/e-data-server-util.h
++++ b/src/libedataserver/e-data-server-util.h
+@@ -151,6 +151,10 @@ gchar *		e_util_replace_prefix		(const gchar *configure_time_prefix,
+ 						 const gchar *runtime_prefix,
+ 						 const gchar *configure_time_path);
+ void		e_util_win32_initialize		(void);
++gboolean	e_util_win32_ensure_dbus_service
++						(const gchar *bus_name,
++						 GCancellable *cancellable,
++						 GError **error);
+ #endif
+ 
+ #define e_named_timeout_add(interval, function, data) \
+diff --git a/src/libedataserver/e-ms-oapxbc.c b/src/libedataserver/e-ms-oapxbc.c
+index 32b0fe5a3..7079ccb64 100644
+--- a/src/libedataserver/e-ms-oapxbc.c
++++ b/src/libedataserver/e-ms-oapxbc.c
+@@ -31,7 +31,13 @@
+ #include <glib/gi18n-lib.h>
+ #include <json-glib/json-glib.h>
+ #include <libsoup/soup.h>
++#ifdef G_OS_WIN32
++#ifndef UUID_STR_LEN
++#define UUID_STR_LEN 37
++#endif
++#else
+ #include <uuid/uuid.h>
++#endif
+ 
+ #include "e-dbus-identity-broker.h"
+ 
+@@ -75,10 +81,17 @@ e_ms_oapxbc_class_init (EMsOapxbcClass *klass)
+ static void
+ e_ms_oapxbc_init (EMsOapxbc *self)
+ {
++#ifdef G_OS_WIN32
++	gchar *session_id = g_uuid_string_random ();
++
++	g_strlcpy (self->session_id, session_id, sizeof (self->session_id));
++	g_free (session_id);
++#else
+ 	uuid_t session_id;
+ 
+ 	uuid_generate_random (session_id);
+ 	uuid_unparse_lower (session_id, self->session_id);
++#endif
+ }
+ 
+ /**
+diff --git a/src/libedataserver/e-secret-store.c b/src/libedataserver/e-secret-store.c
+index ad2cccf6a..69495cbff 100644
+--- a/src/libedataserver/e-secret-store.c
++++ b/src/libedataserver/e-secret-store.c
+@@ -18,6 +18,9 @@
+ 
+ #ifdef G_OS_WIN32
+ #include <string.h>
++#include <windows.h>
++#include <wincred.h>
++#include <gio/gio.h>
+ #include <errno.h>
+ #else
+ #include <libsecret/secret.h>
+@@ -28,14 +31,45 @@
+ 
+ #ifdef G_OS_WIN32
+ 
++/* Permanent secrets are kept in the Windows Credential Manager (DPAPI
++ * protected, per user), session secrets only in memory. The old base64
++ * "secrets" key file, used by previous Win32 builds, is read as a fallback
++ * and its entries are migrated to the Credential Manager on lookup. */
++
+ G_LOCK_DEFINE_STATIC (secrets_file);
+ static GHashTable *session_secrets = NULL;
+ #define SECRETS_SECTION "Secrets"
++#define CREDENTIAL_TARGET_PREFIX "Evolution-Data-Server:"
++
++static gunichar2 *
++win32_credential_target (const gchar *uid)
++{
++	gchar *target;
++	gunichar2 *wtarget;
++
++	target = g_strconcat (CREDENTIAL_TARGET_PREFIX, uid, NULL);
++	wtarget = g_utf8_to_utf16 (target, -1, NULL, NULL, NULL);
++	g_free (target);
++
++	return wtarget;
++}
++
++static void
++win32_set_error_from_last_error (GError **error,
++				 const gchar *what)
++{
++	DWORD err = GetLastError ();
++	gchar *msg;
++
++	msg = g_win32_error_message (err);
++	g_set_error (error, G_IO_ERROR, g_io_error_from_win32_error (err), "%s: %s", what, msg);
++	g_free (msg);
++}
+ 
+ static gchar *
+-encode_secret (const gchar *secret)
++get_secrets_filename (void)
+ {
+-	return g_base64_encode ((const guchar *) secret, strlen (secret));
++	return g_build_filename (e_get_user_config_dir (), "secrets", NULL);
+ }
+ 
+ static gchar *
+@@ -52,70 +86,70 @@ decode_secret (const gchar *secret)
+ 	}
+ 
+ 	tmp = g_strndup ((const gchar *) decoded, len);
+-	g_free (decoded);
++	e_util_safe_free_string ((gchar *) decoded);
+ 
+ 	return tmp;
+ }
+ 
++/* Reads (and optionally removes) the secret from the legacy key file */
+ static gchar *
+-get_secrets_filename (void)
+-{
+-	return g_build_filename (e_get_user_config_dir (), "secrets", NULL);
+-}
+-
+-static GKeyFile *
+-read_secrets_file (GError **error)
++legacy_secrets_file_take (const gchar *uid,
++			  gboolean remove)
+ {
+-	gchar *filename;
+ 	GKeyFile *secrets;
++	gchar *filename, *tmp, *secret = NULL;
++
++	filename = get_secrets_filename ();
++
++	if (!g_file_test (filename, G_FILE_TEST_IS_REGULAR)) {
++		g_free (filename);
++		return NULL;
++	}
+ 
+ 	secrets = g_key_file_new ();
+ 
+-	filename = get_secrets_filename ();
++	if (g_key_file_load_from_file (secrets, filename, G_KEY_FILE_NONE, NULL)) {
++		tmp = g_key_file_get_string (secrets, SECRETS_SECTION, uid, NULL);
++		if (tmp) {
++			secret = *tmp ? decode_secret (tmp) : g_strdup ("");
++			e_util_safe_free_string (tmp);
+ 
+-	if (g_file_test (filename, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_REGULAR)) {
+-		if (!g_key_file_load_from_file (secrets, filename, G_KEY_FILE_NONE, error)) {
+-			g_key_file_free (secrets);
+-			secrets = NULL;
++			if (remove && g_key_file_remove_key (secrets, SECRETS_SECTION, uid, NULL))
++				g_key_file_save_to_file (secrets, filename, NULL);
+ 		}
+ 	}
+ 
++	g_key_file_free (secrets);
+ 	g_free (filename);
+ 
+-	return secrets;
++	return secret;
+ }
+ 
+ static gboolean
+-store_secrets_file (GKeyFile *secrets,
+-		    GError **error)
++win32_credential_write (const gchar *uid,
++			const gchar *secret,
++			GError **error)
+ {
+-	gchar *content, *filename;
+-	gsize length;
++	CREDENTIALW cred = { 0 };
++	gunichar2 *target, *user;
+ 	gboolean success;
+ 
+-	g_return_val_if_fail (secrets != NULL, FALSE);
+-
+-	if (!g_file_test (e_get_user_config_dir (), G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
+-		if (g_mkdir_with_parents (e_get_user_config_dir (), 0700) == -1) {
+-			g_set_error_literal (
+-				error, G_FILE_ERROR,
+-				g_file_error_from_errno (errno),
+-				g_strerror (errno));
+-			return FALSE;
+-		}
+-	}
+-
+-	content = g_key_file_to_data (secrets, &length, error);
+-	if (!content)
+-		return FALSE;
++	target = win32_credential_target (uid);
++	user = g_utf8_to_utf16 (uid, -1, NULL, NULL, NULL);
+ 
++	cred.Type = CRED_TYPE_GENERIC;
++	cred.TargetName = (LPWSTR) target;
++	cred.UserName = (LPWSTR) user;
++	cred.CredentialBlobSize = (DWORD) strlen (secret);
++	cred.CredentialBlob = (LPBYTE) secret;
++	cred.Persist = CRED_PERSIST_LOCAL_MACHINE;
+ 
+-	filename = get_secrets_filename ();
+-
+-	success = g_file_set_contents (filename, content, length, error);
++	success = CredWriteW (&cred, 0) != FALSE;
++	if (!success)
++		win32_set_error_from_last_error (error, "CredWrite");
+ 
+-	g_free (filename);
+-	g_free (content);
++	g_free (target);
++	g_free (user);
+ 
+ 	return success;
+ }
+@@ -126,40 +160,23 @@ e_win32_secret_store_secret_sync (const gchar *uid,
+ 				  gboolean permanently,
+ 				  GError **error)
+ {
+-	GKeyFile *secrets;
+-	gboolean success;
++	gboolean success = TRUE;
+ 
+ 	g_return_val_if_fail (uid != NULL, FALSE);
+ 
+ 	G_LOCK (secrets_file);
+ 
+ 	if (permanently) {
+-		secrets = read_secrets_file (error);
+-		success = secrets != NULL;
+-
+-		if (secrets) {
+-			gchar *encoded;
+-
+-			encoded = secret && *secret ? encode_secret (secret) : g_strdup (secret);
+-
+-			g_key_file_set_string (secrets, SECRETS_SECTION, uid, encoded);
+-
+-			success = store_secrets_file (secrets, error);
+-
+-			g_key_file_free (secrets);
+-			g_free (encoded);
+-		}
++		success = win32_credential_write (uid, secret ? secret : "", error);
++		e_util_safe_free_string (legacy_secrets_file_take (uid, TRUE));
+ 	} else {
+-		gchar *encoded;
+-
+ 		if (!session_secrets)
+ 			session_secrets = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, (GDestroyNotify) e_util_safe_free_string);
+ 
+-		encoded = secret && *secret ? encode_secret (secret) : g_strdup (secret);
+-		if (!encoded)
++		if (!secret)
+ 			g_hash_table_remove (session_secrets, uid);
+ 		else
+-			g_hash_table_insert (session_secrets, g_strdup (uid), encoded);
++			g_hash_table_insert (session_secrets, g_strdup (uid), g_strdup (secret));
+ 	}
+ 
+ 	G_UNLOCK (secrets_file);
+@@ -171,34 +188,37 @@ static gchar *
+ e_win32_secret_lookup_secret_sync (const gchar *uid,
+ 				   GError **error)
+ {
+-	GKeyFile *secrets;
+ 	gchar *secret = NULL;
+ 
+ 	g_return_val_if_fail (uid != NULL, NULL);
+ 
+ 	G_LOCK (secrets_file);
+ 
+-	if (session_secrets) {
+-		const gchar *encoded;
+-
+-		encoded = g_hash_table_lookup (session_secrets, uid);
+-		if (encoded)
+-			secret = decode_secret (encoded);
+-	}
++	if (session_secrets)
++		secret = g_strdup (g_hash_table_lookup (session_secrets, uid));
+ 
+ 	if (!secret) {
+-		secrets = read_secrets_file (error);
+-		if (secrets) {
+-			gchar *tmp;
++		PCREDENTIALW cred = NULL;
++		gunichar2 *target;
+ 
+-			tmp = g_key_file_get_string (secrets, SECRETS_SECTION, uid, NULL);
+-			if (tmp) {
+-				secret = *tmp ? decode_secret (tmp) : g_strdup ("");
+-				g_free (tmp);
+-			}
++		target = win32_credential_target (uid);
+ 
+-			g_key_file_free (secrets);
++		if (CredReadW ((LPCWSTR) target, CRED_TYPE_GENERIC, 0, &cred)) {
++			secret = g_strndup ((const gchar *) cred->CredentialBlob, cred->CredentialBlobSize);
++			SecureZeroMemory (cred->CredentialBlob, cred->CredentialBlobSize);
++			CredFree (cred);
++		} else if (GetLastError () != ERROR_NOT_FOUND) {
++			win32_set_error_from_last_error (error, "CredRead");
+ 		}
++
++		g_free (target);
++	}
++
++	if (!secret && !(error && *error)) {
++		/* Migrate from the legacy plain key file */
++		secret = legacy_secrets_file_take (uid, FALSE);
++		if (secret && win32_credential_write (uid, secret, NULL))
++			e_util_safe_free_string (legacy_secrets_file_take (uid, TRUE));
+ 	}
+ 
+ 	G_UNLOCK (secrets_file);
+@@ -210,33 +230,31 @@ static gboolean
+ e_win32_secret_delete_secret_sync (const gchar *uid,
+ 				   GError **error)
+ {
+-	GKeyFile *secrets;
+-	gboolean success = FALSE;
++	gunichar2 *target;
++	gboolean success = TRUE;
+ 
+ 	g_return_val_if_fail (uid != NULL, FALSE);
+ 
+ 	G_LOCK (secrets_file);
+ 
+-	if (session_secrets) {
+-		success = g_hash_table_remove (session_secrets, uid);
+-	}
+-
+-	secrets = read_secrets_file (error);
+-	if (secrets) {
+-		success = TRUE;
++	if (session_secrets)
++		g_hash_table_remove (session_secrets, uid);
+ 
+-		if (g_key_file_remove_key (secrets, SECRETS_SECTION, uid, NULL)) {
+-			success = store_secrets_file (secrets, error);
+-		}
++	target = win32_credential_target (uid);
+ 
+-		g_key_file_free (secrets);
++	if (!CredDeleteW ((LPCWSTR) target, CRED_TYPE_GENERIC, 0) && GetLastError () != ERROR_NOT_FOUND) {
++		win32_set_error_from_last_error (error, "CredDelete");
++		success = FALSE;
+ 	}
+ 
++	g_free (target);
++
++	e_util_safe_free_string (legacy_secrets_file_take (uid, TRUE));
++
+ 	G_UNLOCK (secrets_file);
+ 
+ 	return success;
+ }
+-
+ #else /* G_OS_WIN32 */
+ 
+ #define KEYRING_ITEM_ATTRIBUTE_UID	"e-source-uid"
+diff --git a/src/libedataserver/e-source-registry.c b/src/libedataserver/e-source-registry.c
+index 91c92f173..dca52380e 100644
+--- a/src/libedataserver/e-source-registry.c
++++ b/src/libedataserver/e-source-registry.c
+@@ -1070,6 +1070,12 @@ source_registry_object_manager_thread (gpointer data)
+ 	 * for this thread before creating the client. */
+ 	g_main_context_push_thread_default (closure->main_context);
+ 
++#ifdef G_OS_WIN32
++	/* no D-Bus activation on Windows: start the service if needed;
++	 * a failure surfaces as the error of the call below */
++	e_util_win32_ensure_dbus_service (SOURCES_DBUS_SERVICE_NAME, NULL, NULL);
++#endif
++
+ 	object_manager = e_dbus_object_manager_client_new_for_bus_sync (
+ 		G_BUS_TYPE_SESSION,
+ 		G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+diff --git a/src/libedataserver/e-time-utils.c b/src/libedataserver/e-time-utils.c
+index 56cdccb82..689ee639d 100644
+--- a/src/libedataserver/e-time-utils.c
++++ b/src/libedataserver/e-time-utils.c
+@@ -2099,6 +2099,16 @@ e_mktime_utc (struct tm *tm)
+   #endif
+ 	} else
+ 		tt -= timezone;
++#elif defined (HAVE__TIMEZONE)
++	{
++		/* MSVC CRT: seconds west of UTC and the DST bias */
++		long tz = 0, dst_bias = 0;
++
++		_get_timezone (&tz);
++		_get_dstbias (&dst_bias);
++
++		tt -= tm->tm_isdst > 0 ? tz + dst_bias : tz;
++	}
+ #endif
+ 
+ 	return tt;
+@@ -2132,6 +2142,15 @@ e_localtime_with_offset (time_t tt,
+   #endif
+ 	} else
+ 		*offset = -timezone;
++#elif defined (HAVE__TIMEZONE)
++	{
++		long tz = 0, dst_bias = 0;
++
++		_get_timezone (&tz);
++		_get_dstbias (&dst_bias);
++
++		*offset = -(tm->tm_isdst > 0 ? tz + dst_bias : tz);
++	}
+ #endif
+ }
+ 
+diff --git a/src/libedataserver/libedataserver.pc.in b/src/libedataserver/libedataserver.pc.in
+index 683d343a2..344dffe80 100644
+--- a/src/libedataserver/libedataserver.pc.in
++++ b/src/libedataserver/libedataserver.pc.in
+@@ -13,6 +13,6 @@ Name: libedataserver
+ Description: Utility library for Evolution Data Server
+ Version: @PROJECT_VERSION@
+ Requires: gio-2.0 gmodule-2.0 libxml-2.0 libsoup-3.0 json-glib-1.0
+-Requires.private: camel-@API_VERSION@ libsecret-1
++Requires.private: camel-@API_VERSION@ @LIBSECRET_PC_REQUIRES@
+ Libs: -L${libdir} -ledataserver-@API_VERSION@
+ Cflags: -I${privincludedir}
+diff --git a/src/modules/cache-reaper/module-cache-reaper.c b/src/modules/cache-reaper/module-cache-reaper.c
+index a255863db..744f383a5 100644
+--- a/src/modules/cache-reaper/module-cache-reaper.c
++++ b/src/modules/cache-reaper/module-cache-reaper.c
+@@ -7,8 +7,8 @@
+ #include <libebackend/libebackend.h>
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ G_MODULE_EXPORT void
+ e_module_load (GTypeModule *type_module)
+diff --git a/src/modules/gnome-online-accounts/module-credentials-goa.c b/src/modules/gnome-online-accounts/module-credentials-goa.c
+index c1edb6ffb..9327acded 100644
+--- a/src/modules/gnome-online-accounts/module-credentials-goa.c
++++ b/src/modules/gnome-online-accounts/module-credentials-goa.c
+@@ -7,8 +7,8 @@
+ #include "e-goa-password-based.h"
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ G_MODULE_EXPORT void
+ e_module_load (GTypeModule *type_module)
+diff --git a/src/modules/gnome-online-accounts/module-gnome-online-accounts.c b/src/modules/gnome-online-accounts/module-gnome-online-accounts.c
+index 2a5e27c04..629af56a8 100644
+--- a/src/modules/gnome-online-accounts/module-gnome-online-accounts.c
++++ b/src/modules/gnome-online-accounts/module-gnome-online-accounts.c
+@@ -85,8 +85,8 @@ struct _EGnomeOnlineAccountsClass {
+ };
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ /* Forward Declarations */
+ GType e_gnome_online_accounts_get_type (void);
+diff --git a/src/modules/google-backend/module-google-backend.c b/src/modules/google-backend/module-google-backend.c
+index a609033d5..efc728e4c 100644
+--- a/src/modules/google-backend/module-google-backend.c
++++ b/src/modules/google-backend/module-google-backend.c
+@@ -59,8 +59,8 @@ struct _EGoogleBackendFactoryClass {
+ };
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ /* Forward Declarations */
+ GType e_google_backend_get_type (void);
+diff --git a/src/modules/oauth2-services/module-oauth2-services.c b/src/modules/oauth2-services/module-oauth2-services.c
+index a898299a1..920318b02 100644
+--- a/src/modules/oauth2-services/module-oauth2-services.c
++++ b/src/modules/oauth2-services/module-oauth2-services.c
+@@ -271,8 +271,8 @@ e_oauth2_source_monitor_init (EOAuth2SourceMonitor *extension)
+ }
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ G_MODULE_EXPORT void
+ e_module_load (GTypeModule *type_module)
+diff --git a/src/modules/outlook-backend/module-outlook-backend.c b/src/modules/outlook-backend/module-outlook-backend.c
+index 086316bdf..82f4015d1 100644
+--- a/src/modules/outlook-backend/module-outlook-backend.c
++++ b/src/modules/outlook-backend/module-outlook-backend.c
+@@ -59,8 +59,8 @@ struct _EOutlookBackendFactoryClass {
+ };
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ /* Forward Declarations */
+ GType e_outlook_backend_get_type (void);
+diff --git a/src/modules/secret-monitor/module-secret-monitor.c b/src/modules/secret-monitor/module-secret-monitor.c
+index d78b1aa5e..b60da600d 100644
+--- a/src/modules/secret-monitor/module-secret-monitor.c
++++ b/src/modules/secret-monitor/module-secret-monitor.c
+@@ -61,8 +61,8 @@ static SecretSchema password_schema = {
+ };
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ /* Forward Declarations */
+ GType e_secret_monitor_get_type (void);
+diff --git a/src/modules/trust-prompt/module-trust-prompt.c b/src/modules/trust-prompt/module-trust-prompt.c
+index 9f4891328..8d09e73d7 100644
+--- a/src/modules/trust-prompt/module-trust-prompt.c
++++ b/src/modules/trust-prompt/module-trust-prompt.c
+@@ -25,8 +25,8 @@ struct _ETrustPromptClass {
+ };
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ /* Forward Declarations */
+ GType e_trust_prompt_get_type (void);
+diff --git a/src/modules/webdav-backend/module-webdav-backend.c b/src/modules/webdav-backend/module-webdav-backend.c
+index d613f0d67..ad6ced6ef 100644
+--- a/src/modules/webdav-backend/module-webdav-backend.c
++++ b/src/modules/webdav-backend/module-webdav-backend.c
+@@ -40,8 +40,8 @@ struct _EWebDAVBackendFactoryClass {
+ };
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ /* Forward Declarations */
+ GType e_webdav_backend_get_type (void);
+diff --git a/src/modules/yahoo-backend/module-yahoo-backend.c b/src/modules/yahoo-backend/module-yahoo-backend.c
+index a50cb3349..9740ccf63 100644
+--- a/src/modules/yahoo-backend/module-yahoo-backend.c
++++ b/src/modules/yahoo-backend/module-yahoo-backend.c
+@@ -58,8 +58,8 @@ struct _EYahooBackendFactoryClass {
+ };
+ 
+ /* Module Entry Points */
+-void e_module_load (GTypeModule *type_module);
+-void e_module_unload (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
++G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
+ 
+ /* Forward Declarations */
+ GType e_yahoo_backend_get_type (void);
+diff --git a/src/services/evolution-alarm-notify/CMakeLists.txt b/src/services/evolution-alarm-notify/CMakeLists.txt
+index 593999089..398d70865 100644
+--- a/src/services/evolution-alarm-notify/CMakeLists.txt
++++ b/src/services/evolution-alarm-notify/CMakeLists.txt
+@@ -58,7 +58,10 @@ target_link_libraries(evolution-alarm-notify
+ 	${GTK_LDFLAGS}
+ )
+ 
+-if(WIN32)
++if(MSVC)
++	# CMake compiles .rc sources with rc.exe
++	target_sources(evolution-alarm-notify PRIVATE evolution-alarm-notify-icon.rc)
++elseif(WIN32)
+ 	find_program(WINDRES windres)
+ 	if(WINDRES)
+ 		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/evolution-alarm-notify-icon.o

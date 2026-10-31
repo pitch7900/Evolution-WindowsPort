@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Minimal replacement for MozillaBuild's nsinstall, used by NSPR's makefiles.
+#   nsinstall -D dir                 create directory
+#   nsinstall [-m mode] [-t] [-l|-L dir|-R] files... destdir
+set -e
+
+mode=
+mkdir_only=0
+while getopts "Dm:tlL:Ro:g:" opt; do
+	case "$opt" in
+	D) mkdir_only=1 ;;
+	m) mode="$OPTARG" ;;
+	*) ;; # -t (keep times), -l/-L/-R (links): plain copies on Windows
+	esac
+done
+shift $((OPTIND - 1))
+
+if [ "$mkdir_only" = 1 ]; then
+	mkdir -p "$@"
+	exit 0
+fi
+
+[ $# -ge 2 ] || { echo "nsinstall: missing operands" >&2; exit 1; }
+
+dest="${!#}"
+mkdir -p "$dest"
+for ((i = 1; i < $#; i++)); do
+	src="${!i}"
+	if [ -d "$src" ]; then
+		cp -rp "$src" "$dest/"
+	else
+		cp -p "$src" "$dest/"
+		[ -z "$mode" ] || chmod "$mode" "$dest/$(basename "$src")"
+	fi
+done
