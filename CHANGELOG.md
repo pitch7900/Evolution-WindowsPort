@@ -10,6 +10,8 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
+## [0.9.3] — en cours
+
 ## [0.9.2] — 2026-10-31
 
 ### Ajouté
@@ -90,6 +92,7 @@ Première version distribuée sous forme d'installeur.
     Windows, dialogue de certificats TLS ;
   - S/MIME et OpenPGP (Gpg4win) à la lecture et à l'envoi.
 
+[0.9.3]: https://github.com/pitch7900/Evolution-WindowsPort/compare/v0.9.2...HEAD
 [0.9.2]: https://github.com/pitch7900/Evolution-WindowsPort/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/pitch7900/Evolution-WindowsPort/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/pitch7900/Evolution-WindowsPort/compare/v0.8.0...v0.9.0
