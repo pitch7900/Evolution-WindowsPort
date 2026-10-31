@@ -31,7 +31,8 @@
             PaneDisplayMode="LeftCompact"
             IsBackButtonVisible="Collapsed"
             IsSettingsVisible="True"
-            SelectionChanged="OnNavigationSelectionChanged">
+            SelectionChanged="OnNavigationSelectionChanged"
+            ItemInvoked="OnNavigationItemInvoked">
 
             <NavigationView.MenuItems>
                 <NavigationViewItem x:Name="MailItem" Content="Courrier" Tag="mail" IsSelected="True">
@@ -50,6 +51,16 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.MenuItems>
+
+            <NavigationView.FooterMenuItems>
+                <!-- ouvre une boîte de dialogue : la vue affichée ne change pas -->
+                <NavigationViewItem Content="À propos" Tag="about" SelectsOnInvoked="False"
+                                    ToolTipService.ToolTip="À propos d'Evolution">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE946;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.FooterMenuItems>
 
             <Grid>
             <Grid x:Name="MailView">

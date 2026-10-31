@@ -5729,3 +5729,36 @@ evo_core_respond_tls_trust (EvoCore *core,
 	g_cond_broadcast (&session->trust_cond);
 	g_mutex_unlock (&session->trust_lock);
 }
+
+const char *
+evo_core_version_info (void)
+{
+	static gchar *json = NULL;
+
+	if (g_once_init_enter (&json)) {
+		JsonBuilder *builder = json_builder_new ();
+		gchar *eds, *glib, *soup;
+
+		eds = g_strdup_printf ("%d.%d.%d", EDS_MAJOR_VERSION, EDS_MINOR_VERSION, EDS_MICRO_VERSION);
+		glib = g_strdup_printf ("%u.%u.%u", glib_major_version, glib_minor_version, glib_micro_version);
+		soup = g_strdup_printf ("%u.%u.%u", soup_get_major_version (), soup_get_minor_version (), soup_get_micro_version ());
+
+		json_builder_begin_object (builder);
+		builder_add_string (builder, "evolution_data_server", eds);
+		/* only when installed: its Camel provider is found */
+		builder_add_string (builder, "evolution_ews",
+			camel_provider_get ("microsoft365", NULL) ? EVO_CORE_EWS_VERSION : "");
+		builder_add_string (builder, "glib", glib);
+		builder_add_string (builder, "libsoup", soup);
+		json_builder_end_object (builder);
+
+		g_once_init_leave (&json, json_from_builder (builder));
+
+		g_object_unref (builder);
+		g_free (eds);
+		g_free (glib);
+		g_free (soup);
+	}
+
+	return json;
+}

@@ -24,8 +24,18 @@ add_library(evo-core SHARED
 	evo-core.c
 )
 
+# evolution-ews is loaded at run time (Camel provider, registry modules),
+# not linked: its version comes from its sources, for the "About" dialog
+set(EWS_VERSION "")
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../evolution-ews/CMakeLists.txt")
+	file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../../evolution-ews/CMakeLists.txt" _ews_cmake)
+	string(REGEX MATCH "project\\(evolution-ews[ \t\r\n]+VERSION ([0-9.]+)" _ews_match "${_ews_cmake}")
+	set(EWS_VERSION "${CMAKE_MATCH_1}")
+endif()
+
 target_compile_definitions(evo-core PRIVATE
 	-DG_LOG_DOMAIN=\"evo-core\"
+	-DEVO_CORE_EWS_VERSION=\"${EWS_VERSION}\"
 )
 
 target_include_directories(evo-core PRIVATE ${CORE_DEPS_INCLUDE_DIRS})

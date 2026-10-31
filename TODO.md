@@ -33,6 +33,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 | 16 | Tâches | 🟠 |
 | 17 | Catégories et codes couleur | 🟡 |
 | 18 | Import / Export | 🟡 |
+| 19 | Configuration de l'application | 🟡 |
 
 ### Briques préalables (débloquent plusieurs fonctionnalités)
 
@@ -53,9 +54,9 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] Raccourci du menu Démarrer (installeur MSI)
   - [x] *Paramètres › Applications installées* (propriété `ARPPRODUCTICON` du MSI)
 - [x] 🟢 **Mise à jour du MSI : erreur 1618** « Une autre installation est en cours d'exécution » à l'installation de la 0.9.1 par-dessus la 0.9.0 — cause : dialogue « fichiers en cours d'utilisation » caché (EvolutionWin et services EDS ouverts), une seconde installation lancée entre-temps échouait ; le MSI ferme désormais ces programmes (`util:CloseApplication`)
-- [ ] 🟢 **Menu « À propos »** (menu *Aide* / *Fichier*, ou entrée en bas de la barre latérale) : boîte de dialogue avec icône, nom, version en cours, licence (GPL), lien vers le dépôt GitHub et le [CHANGELOG.md](CHANGELOG.md)
-  - [ ] Version tirée du fichier [VERSION](VERSION) à la compilation (macro / ressource `VERSIONINFO` générée par MSBuild, comme le fait déjà `build-msi.ps1` pour le MSI), pour que l'exécutable, le MSI et la boîte « À propos » affichent toujours la même version
-  - [ ] Versions des composants (EDS, evolution-ews, Windows App SDK, WebView2) et bouton « Copier les informations » pour les rapports de bug
+- [x] 🟢 **Menu « À propos »** (menu *Aide* / *Fichier*, ou entrée en bas de la barre latérale) : boîte de dialogue avec icône, nom, version en cours, licence (LGPL 2.1 ou ultérieure), lien vers le dépôt GitHub et le [CHANGELOG.md](CHANGELOG.md)
+  - [x] Version tirée du fichier [VERSION](VERSION) à la compilation (macro / ressource `VERSIONINFO` générée par MSBuild, comme le fait déjà `build-msi.ps1` pour le MSI), pour que l'exécutable, le MSI et la boîte « À propos » affichent toujours la même version
+  - [x] Versions des composants (EDS, evolution-ews, Windows App SDK, WebView2) et bouton « Copier les informations » pour les rapports de bug
 
 ## 2. Interface générale et disposition — 🟡
 
@@ -136,7 +137,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 ### Informations du compte (onglet Fichier)
 
 - [ ] 🟡 Paramètres du compte, quota (`camel_folder_get_quota_info_sync`), outils de nettoyage de la boîte aux lettres
-- [ ] 🟡 Options générales de l'application
+- [ ] 🟡 Options générales de l'application — cf. §19
 
 ## 4. Synchronisation et mode hors connexion — 🟠
 
@@ -215,6 +216,23 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
 - [ ] 🟢 **Option globale** : jamais / expéditeurs de confiance seulement / toujours charger le contenu externe
 - [ ] 🟢 **Enregistrer sous** (`.eml`, fonction `evo-core` existante), **Enregistrer toutes les pièces jointes**
 - [ ] 🟡 **Impression** : aperçu et styles mémo / tableau (l'impression simple existe déjà)
+- [ ] 🟠 **Aperçu des pièces jointes** directement dans le volet de lecture (et dans la fenêtre indépendante), sans les enregistrer ni les ouvrir dans une application externe ; même fonction pour les pièces jointes des événements du calendrier (§13) et des tâches (§16)
+  - [ ] Clic sur une pièce jointe → aperçu à la place du corps du message, bouton *Retour au message*, navigation entre pièces jointes
+  - [ ] **Rendu sécurisé, sans exécution de code actif** :
+    - [ ] 🟢 Images (PNG, JPEG, GIF, BMP, WebP, SVG converti en image fixe) : décodage natif (`BitmapImage` / WIC), SVG sans scripts
+    - [ ] 🟢 Texte, CSV, JSON, XML, code : affichage en texte brut (jamais interprété)
+    - [ ] 🟡 PDF : rendu page par page en images avec `Windows.Data.Pdf` (aucun JavaScript, formulaire, lien de lancement ni pièce jointe imbriquée exécutés), zoom et défilement
+    - [ ] 🟡 HTML / EML / MSG joint : WebView2 isolé avec scripts désactivés et contenu distant bloqué (même règles que le lecteur, §6)
+    - [ ] 🟠 Office (Word, Excel, PowerPoint, OpenDocument) : rendu en lecture seule **sans macros ni contenu actif** — conversion en PDF / image hors processus, ou gestionnaires d'aperçu Windows (`IPreviewHandler`) exécutés dans un processus isolé à faibles privilèges ; macros VBA, objets OLE / ActiveX, liens externes et DDE jamais exécutés
+    - [ ] 🟢 Types non pris en charge ou à risque (`.exe`, `.js`, `.vbs`, `.ps1`, `.lnk`, `.hta`, archives…) : pas d'aperçu, simple fiche (nom, type, taille) avec avertissement
+  - [ ] 🟡 Fichiers d'aperçu temporaires dans un dossier privé, supprimés à la fermeture ; taille maximale configurable pour l'aperçu
+  - [ ] 🟢 Boutons *Enregistrer* et *Ouvrir avec l'application* (avec avertissement si le fichier vient d'Internet : marque *Mark of the Web* `Zone.Identifier` posée à l'enregistrement)
+- [ ] 🟡 **Double-clic sur un mail : ouverture dans une fenêtre indépendante** (aussi avec Entrée et *Ouvrir* du menu contextuel)
+  - [ ] Fenêtre de lecture avec en-têtes, pièces jointes, bandeau de sécurité / contenu externe et barre d'actions (Répondre, Répondre à tous, Transférer, Supprimer, Déplacer, Lu / Non lu, Imprimer)
+  - [ ] Navigation message précédent / suivant dans la fenêtre
+  - [ ] Plusieurs fenêtres ouvertes simultanément ; taille et position mémorisées
+  - [ ] Brouillon (dossier Brouillons) : double-clic ouvre la fenêtre de rédaction pour reprendre le message
+  - [ ] Message marqué comme lu à l'ouverture
 
 ## 7. Mail – Actions sur les messages — 🟠
 
@@ -433,3 +451,48 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 - [ ] 🟢 **Calendriers et tâches** : iCalendar (`.ics`, un fichier par calendrier)
 - [ ] 🟡 **Options** : filtre par plage de dates, export en arrière-plan avec progression (dépend de §4), rapport de fin
 - [ ] 🟠 **Import** : mbox / EML, vCard, iCalendar (*Fichier › Ouvrir et exporter*)
+
+## 19. Configuration de l'application — 🟡
+
+Page *Paramètres* regroupant les préférences générales (les réglages propres à un compte restent au §3). Préférences enregistrées dans un fichier de configuration utilisateur (`%LOCALAPPDATA%\EvolutionWin`), l'application n'étant pas empaquetée.
+
+### Notifications
+
+- [ ] 🟢 **Activer / désactiver les notifications Windows** (toasts) de nouveau courrier, globalement et par compte / dossier
+- [ ] 🟢 **Mode confidentiel des notifications** : remplacer l'expéditeur, l'objet et l'extrait par un message générique (« Nouveau message », « 3 nouveaux messages ») — utile en présentation ou en partage d'écran
+  - [ ] Bascule rapide depuis la barre d'état / le menu de l'icône, sans passer par les Paramètres
+  - [ ] 🟡 Activation automatique quand Windows est en mode *Ne pas déranger* / partage d'écran détecté (optionnel)
+  - [ ] S'applique aussi aux rappels de rendez-vous et de tâches (titre et lieu masqués)
+- [ ] 🟢 Son de notification (aucun / son Windows / personnalisé), badge de non-lus sur l'icône de la barre des tâches
+- [ ] 🟢 Notifications des rappels de calendrier et de tâches (activer / désactiver, durée d'affichage)
+
+### Général
+
+- [ ] 🟢 Langue de l'interface, thème (clair / sombre / système), taille du texte
+- [ ] 🟢 Démarrage avec Windows, réduction dans la zone de notification à la fermeture
+- [ ] 🟢 Module affiché au démarrage (Mail, Calendrier, Contacts, Tâches)
+- [ ] 🟡 Raccourcis clavier (afficher la liste, profil Outlook / Evolution)
+
+### Mail
+
+- [ ] 🟢 Intervalle de relève automatique (5 minutes actuellement), relève au démarrage
+- [ ] 🟢 Marquer comme lu : immédiatement / après N secondes / jamais à l'affichage dans le volet de lecture
+- [ ] 🟢 Format de rédaction par défaut (HTML / texte brut), police et taille par défaut, correcteur orthographique (langue)
+- [ ] 🟢 Confirmations : avant suppression définitive, avant d'envoyer sans objet, pièce jointe mentionnée mais absente
+- [ ] 🟢 Vider la Corbeille à la fermeture
+- [ ] 🟢 Contenu externe : cf. §6 ; signatures : cf. §3
+
+### Calendrier
+
+- [ ] 🟢 Heures et jours de travail, premier jour de la semaine, fuseau horaire, numéros de semaine — cf. §12
+- [ ] 🟢 Rappel par défaut des nouveaux événements, durée par défaut des réunions
+
+### Confidentialité et sécurité
+
+- [ ] 🟢 Masquer l'aperçu du message dans la liste (lignes d'extrait, §5) en même temps que le mode confidentiel des notifications
+- [ ] 🟡 Verrouiller l'application après inactivité (Windows Hello)
+- [ ] 🟢 Effacer les caches (WebView2, aperçus de pièces jointes)
+
+### Sauvegarde des préférences
+
+- [ ] 🟡 Exporter / importer la configuration (préférences, signatures, règles, catégories) pour la reprendre sur un autre poste
