@@ -1,288 +1,432 @@
 # TODO
 
-## Interface – Disposition des panneaux
+## Légende des difficultés
 
-- [ ] **Panneaux redimensionnables** : permettre de redimensionner à la souris les séparateurs entre les panneaux (liste des dossiers, liste des messages, volet de lecture), et mémoriser les tailles entre deux sessions.
-- [ ] **Position du volet de lecture (comme dans Outlook)** : ajouter une option (menu *Affichage › Volet de lecture*) pour choisir l'emplacement de l'aperçu des emails :
-  - [ ] À droite (liste des messages à gauche, aperçu à droite)
-  - [ ] En bas (liste des messages en haut, aperçu en dessous)
-  - [ ] Désactivé (pas de volet de lecture, ouverture des messages en fenêtre séparée)
-  - [ ] Mémoriser le choix dans les préférences utilisateur
+| Niveau | Signification |
+| --- | --- |
+| 🟢 Facile | Interface seule ou appel direct d'une fonction EDS / Camel existante — de quelques heures à 1 jour |
+| 🟡 Moyenne | Nouvelle fonction dans `evo-core` + interface, sans difficulté technique particulière — quelques jours |
+| 🟠 Difficile | Nouveau composant, protocole spécifique (EWS, Graph, Sieve…) ou logique non triviale — 1 à 2 semaines |
+| 🔴 Très difficile | Nouvelle brique majeure (contrôle personnalisé complexe, moteur de règles, flux d'invitations…) — plusieurs semaines |
 
-## Liste des messages – Tri
+La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md), phase 6b) : recherche dans le dossier courant, blocage du contenu distant dans WebView2, export `.eml`, sélection multiple, déplacement, drapeau, impression, vue calendrier mensuelle simple et liste de contacts sont déjà réalisés.
 
-- [ ] **Trier les emails** : permettre de trier la liste des messages via un clic sur l'en-tête de colonne et via un menu *Affichage › Trier par* :
-  - [ ] Date (croissante / décroissante)
-  - [ ] Expéditeur
-  - [ ] Destinataire
-  - [ ] Objet
-  - [ ] Taille
-  - [ ] Pièces jointes
-  - [ ] Importance / indicateur
-  - [ ] Lu / non lu
-  - [ ] Inverser l'ordre du tri (ascendant / descendant) pour chaque critère
-  - [ ] Mémoriser le tri par dossier
+## Vue d'ensemble
 
-## Liste des messages – Filtres rapides et discussions
+| # | Fonctionnalité | Difficulté globale |
+| --- | --- | --- |
+| 1 | Application et installation | 🟢 |
+| 2 | Interface générale et disposition | 🟡 |
+| 3 | Comptes | 🟠 |
+| 4 | Synchronisation et mode hors connexion | 🟠 |
+| 5 | Mail – Liste des messages | 🟠 |
+| 6 | Mail – Lecture des messages | 🟢 |
+| 7 | Mail – Actions sur les messages | 🟠 |
+| 8 | Mail – Règles et courrier indésirable | 🔴 |
+| 9 | Mail – Gestion des dossiers | 🟠 |
+| 10 | Recherche | 🟡 |
+| 11 | Vues unifiées multi-comptes | 🟠 |
+| 12 | Calendrier – Vues et navigation | 🔴 |
+| 13 | Calendrier – Rendez-vous, réunions et ressources | 🔴 |
+| 14 | Calendrier – Calendriers partagés et externes | 🟠 |
+| 15 | Contacts | 🟡 |
+| 16 | Tâches | 🟠 |
+| 17 | Catégories et codes couleur | 🟡 |
+| 18 | Import / Export | 🟡 |
 
-- [ ] **Filtres rapides** au-dessus de la liste des messages (boutons bascule, comme « Tous / Non lus » dans Outlook) :
-  - [ ] Tous / Non lus / Lus
-  - [ ] Avec indicateur, avec pièces jointes (optionnel)
-  - [ ] Combinables avec la recherche et fonctionnels dans les vues unifiées
-- [ ] **Grouper par discussion** : option (menu *Affichage › Afficher sous forme de conversations*) pour regrouper les messages d'un même fil :
-  - [ ] Regroupement basé sur les en-têtes `Message-ID` / `In-Reply-To` / `References` (repli sur l'objet normalisé « RE: / TR: »)
-  - [ ] Fil réductible / développable, avec nombre de messages et de non lus
-  - [ ] Inclure les réponses envoyées (dossier Envoyés) dans la discussion
-  - [ ] Mémoriser le choix par dossier
+### Briques préalables (débloquent plusieurs fonctionnalités)
 
-## Recherche
+- **Barre d'outils à onglets façon ruban** (§2) : point d'entrée de la plupart des commandes Mail et Calendrier.
+- **Progression et annulation des opérations** (§4) : réutilisées par la synchronisation, l'export, la recherche globale.
+- **Dossiers virtuels Camel (`CamelVeeFolder`)** (§9) : dossiers de recherche, recherches enregistrées, boîte de réception unifiée, conversations multi-dossiers.
+- **Grille calendrier Jour / Semaine / Mois** (§12) : préalable à toutes les vues calendrier avancées.
+- **Éditeur d'événement complet** (§13) : préalable aux réunions, ressources, réunions en ligne.
+- **Infrastructure de rappels** (§2, fenêtre des rappels) : utilisée par les rendez-vous, les tâches et le suivi des messages.
+- **Catégories communes** (§17) : codes couleur partagés par les mails, les contacts, les événements et les tâches.
 
-- [ ] **Recherche simple dans la barre principale** : ajouter un champ de recherche dans la barre d'outils principale de la fenêtre :
-  - [ ] Recherche plein texte (expéditeur, destinataires, objet, corps) dans le dossier courant
-  - [ ] Filtrage de la liste des messages au fil de la frappe (ou validation par Entrée)
-  - [ ] Choix de la portée : dossier courant / sous-dossiers / compte courant / tous les comptes
-  - [ ] Bouton pour effacer la recherche et revenir à la liste complète
-  - [ ] Raccourci clavier pour activer le champ (Ctrl+E, comme dans Outlook)
-- [ ] **Recherche avancée** (accessible depuis le champ de recherche simple) :
-  - [ ] Critères combinables : expéditeur, destinataire, objet, corps, plage de dates, taille, pièces jointes, lu / non lu, indicateur
-  - [ ] Opérateurs ET / OU entre les critères
-  - [ ] Enregistrer une recherche comme dossier de recherche (vFolder)
+---
 
-## Affichage des messages – Contenu externe
+## 1. Application et installation — 🟢
 
-- [ ] **Afficher les images / contenus externes** : par défaut, bloquer le chargement des ressources distantes (images, pixels de suivi) et afficher un bandeau au-dessus du message :
-  - [ ] « Afficher les images pour ce message » (une seule fois)
-  - [ ] « Toujours faire confiance à l'expéditeur » (adresse email)
-  - [ ] « Toujours faire confiance au domaine » (ex. `@exemple.ch`)
-- [ ] **Liste des expéditeurs / domaines de confiance** : gérer la liste dans les préférences (ajout, suppression)
-- [ ] **Option globale** : jamais / seulement pour les expéditeurs de confiance / toujours charger le contenu externe
+- [ ] 🟢 **Icône de l'exécutable** : fichier `.ico` multi-résolution (16, 24, 32, 48, 64, 256 px) intégré comme ressource dans `EvolutionWin.exe`
+  - [ ] Explorateur, barre des tâches, Alt+Tab, barre de titre (`AppWindow.SetIcon`)
+  - [ ] Raccourci du menu Démarrer (installeur MSI)
+  - [ ] *Paramètres › Applications installées* (propriété `ARPPRODUCTICON` du MSI)
+- [ ] 🟢 **Mise à jour du MSI : erreur 1618** « Une autre installation est en cours d'exécution » à l'installation de la 0.9.1 par-dessus la 0.9.0 (cause non identifiée : le MSI ne contient ni action personnalisée ni installation imbriquée ; vérifier un `msiexec` résiduel et le journal `MsiInstaller`)
 
-## Comptes – Ajout unifié avec détection automatique
+## 2. Interface générale et disposition — 🟡
 
-- [ ] **Remplacer « Ajouter un compte IMAP/SMTP »** par un bouton générique « Ajouter un compte » dans la liste des comptes du menu Réglages
-- [ ] **Détection automatique du type de compte** à partir de l'adresse email / du domaine saisi :
-  - [ ] Microsoft 365 / Exchange Online (domaine hébergé chez Microsoft, OAuth2 + Graph / EWS)
+### Structure de la fenêtre
+
+- [ ] 🟡 **Barre d'outils à onglets façon ruban** pour les vues Mail et Calendrier : *Fichier*, *Accueil*, *Envoi/réception*, *Dossier*, *Affichage* (WinUI n'a pas de ruban : `TabView` / `SelectorBar` + `CommandBar`). Hors périmètre : intégrations tierces (Teams, OneNote, TeamViewer, Rainbow, Copilot)
+- [ ] 🟡 **Barre d'accès rapide** personnalisable dans la barre de titre (Envoyer/Recevoir, Annuler, etc.)
+- [ ] 🟢 **Barre latérale gauche** de navigation entre modules (Mail, Calendrier, Contacts, Tâches) — `NavigationView` déjà en place, à restyler en barre d'icônes
+- [ ] 🟢 **Bandeau d'information** sous la barre d'outils (`InfoBar`), affiché dans les vues Mail et Calendrier (ex. réponses automatiques actives + bouton *Désactiver*)
+
+### Disposition des panneaux
+
+- [ ] 🟢 **Panneaux redimensionnables** : séparateurs déplaçables entre dossiers, liste des messages et volet de lecture ; tailles mémorisées entre deux sessions
+- [ ] 🟡 **Position du volet de lecture** (menu *Affichage › Volet de lecture*), en Mail comme en Calendrier :
+  - [ ] 🟢 À droite
+  - [ ] 🟢 En bas
+  - [ ] 🟡 Désactivé (ouverture des messages / événements dans une fenêtre séparée)
+  - [ ] 🟢 Choix mémorisé dans les préférences
+- [ ] 🟢 **Volet des dossiers** : normal / réduit / désactivé
+- [ ] 🟢 **Espacement plus étroit** (mode compact) des listes
+- [ ] 🟠 **Barre des tâches (To-Do bar)** à droite : mini-calendrier, rendez-vous à venir, personnes, tâches
+
+### Fenêtres et lecture
+
+- [ ] 🟡 **Ouvrir dans une nouvelle fenêtre** (message, événement, dossier) ; 🟢 **Fermer tous les éléments ouverts**
+- [ ] 🟠 **Fenêtre des rappels** : rappels des rendez-vous (alarmes EDS) et des messages en suivi, avec Reporter / Ignorer
+- [ ] 🟡 **Lecteur immersif** : vue de lecture plein écran épurée (taille du texte, espacement)
+- [ ] 🟢 **Lecture à voix haute** du message (`Windows.Media.SpeechSynthesis`)
+
+## 3. Comptes — 🟠
+
+### Ajout unifié avec détection automatique
+
+- [ ] 🟢 **Bouton générique « Ajouter un compte »** à la place de « Ajouter un compte IMAP/SMTP » (menu Réglages)
+- [ ] 🟠 **Détection automatique du type de compte** à partir de l'adresse email / du domaine :
+  - [ ] Microsoft 365 / Exchange Online (OAuth2 + Graph / EWS)
   - [ ] Exchange on-premise (Autodiscover → EWS)
   - [ ] Gmail / Google Workspace (OAuth2, IMAP/SMTP Google)
   - [ ] IMAP/SMTP générique (repli par défaut)
 - [ ] **Mécanismes de détection** (dans l'ordre) :
-  - [ ] Fournisseurs connus (gmail.com, outlook.com, etc.)
-  - [ ] Enregistrements MX du domaine (ex. `*.mail.protection.outlook.com`, `*.google.com`)
-  - [ ] Autodiscover Exchange / Microsoft 365
-  - [ ] Autoconfig Thunderbird (`autoconfig.<domaine>`, base ISPDB)
-  - [ ] Enregistrements DNS SRV (`_imaps._tcp`, `_submission._tcp`)
-- [ ] **Confirmation / correction manuelle** : afficher le type détecté et les paramètres serveur proposés, avec possibilité de forcer un autre type ou de passer en configuration manuelle
+  - [ ] 🟢 Fournisseurs connus (gmail.com, outlook.com, etc.)
+  - [ ] 🟡 Enregistrements MX du domaine (`*.mail.protection.outlook.com`, `*.google.com`), via `DnsQuery`
+  - [ ] 🟡 Autodiscover Exchange / Microsoft 365
+  - [ ] 🟡 Autoconfig Thunderbird (`autoconfig.<domaine>`, base ISPDB)
+  - [ ] 🟢 Enregistrements DNS SRV (`_imaps._tcp`, `_submission._tcp`)
+- [ ] 🟡 **Confirmation / correction manuelle** : type détecté et paramètres proposés, possibilité de forcer un autre type ou de passer en configuration manuelle
 
-## Comptes – Compte par défaut et signatures
+### Compte par défaut
 
-- [ ] **Compte par défaut** : dans la liste des comptes (menu Réglages), pouvoir désigner le compte utilisé par défaut :
-  - [ ] Pour l'envoi d'un nouveau message (et les liens `mailto:`)
-  - [ ] Pour la création d'événements et de contacts (calendrier et carnet d'adresses par défaut)
-  - [ ] Pour une réponse / un transfert : utiliser le compte qui a reçu le message (repli sur le compte par défaut)
-  - [ ] Indication visuelle du compte par défaut dans la liste
-- [ ] **Gestion des signatures** : éditeur de signatures (texte et HTML avec mise en forme, images, liens) dans les Réglages :
-  - [ ] Créer / modifier / supprimer plusieurs signatures nommées
-  - [ ] Pour chaque compte : signature par défaut pour les nouveaux messages et signature pour les réponses / transferts (ou aucune)
-  - [ ] Changement de signature à la volée dans la fenêtre de rédaction, et mise à jour automatique quand on change le compte expéditeur
-  - [ ] Placement de la signature (au-dessus / en dessous du texte cité dans les réponses)
+- [ ] 🟢 **Désigner le compte par défaut** dans la liste des comptes, avec indication visuelle (`e_source_registry_set_default_mail_account`)
+- [ ] 🟢 Utilisé pour les nouveaux messages ; pour une réponse / un transfert, compte ayant reçu le message (repli sur le compte par défaut)
+- [ ] 🟢 Calendrier et carnet d'adresses par défaut pour les nouveaux événements et contacts
+- [ ] 🟡 Gestionnaire des liens `mailto:` (inscription d'EvolutionWin comme application de messagerie Windows)
 
-## Comptes – Réponses automatiques (Out of Office)
+### Signatures — 🟡
 
-- [ ] **Gestion des réponses automatiques** pour les comptes qui le permettent, accessible depuis *Fichier › Réponses automatiques* et le menu contextuel du compte :
-  - [ ] Exchange on-premise (EWS `GetUserOofSettings` / `SetUserOofSettings`)
-  - [ ] Microsoft 365 / Exchange Online (Graph `mailboxSettings/automaticRepliesSetting`)
-  - [ ] Gmail / Google Workspace (API Gmail *vacation settings*)
-  - [ ] IMAP avec Sieve / ManageSieve (extension `vacation`)
-  - [ ] Masquer ou griser l'option pour les comptes qui ne la supportent pas
+- [ ] 🟡 **Éditeur de signatures** (texte et HTML : mise en forme, images, liens) dans les Réglages — réutilise l'éditeur WebView2 de la rédaction ; sources EDS `ESourceMailSignature`
+- [ ] 🟢 Créer / modifier / supprimer plusieurs signatures nommées
+- [ ] 🟢 Par compte : signature des nouveaux messages et signature des réponses / transferts (ou aucune)
+- [ ] 🟡 Changement de signature dans la fenêtre de rédaction, mise à jour automatique au changement de compte expéditeur
+- [ ] 🟢 Placement (au-dessus / en dessous du texte cité)
+
+### Réponses automatiques (Out of Office) — 🟠
+
+- [ ] **Gestion des réponses automatiques** (*Fichier › Réponses automatiques* et menu contextuel du compte) :
+  - [ ] 🟡 Exchange on-premise (EWS `GetUserOofSettings` / `SetUserOofSettings`, déjà présents dans evolution-ews)
+  - [ ] 🟡 Microsoft 365 (Graph `mailboxSettings/automaticRepliesSetting`)
+  - [ ] 🟠 Gmail / Google Workspace (API Gmail *vacation settings*, nouvelle portée OAuth2)
+  - [ ] 🟠 IMAP avec Sieve / ManageSieve (extension `vacation` ; client ManageSieve à écrire)
+  - [ ] 🟢 Option grisée pour les comptes qui ne la supportent pas
 - [ ] **Options** :
-  - [ ] Activer / désactiver
-  - [ ] Plage de dates (début / fin) ou durée indéterminée
-  - [ ] Message distinct pour l'interne (organisation) et l'externe, avec éditeur HTML
-  - [ ] Pour l'externe : répondre à tous les expéditeurs ou seulement aux contacts
-  - [ ] Exchange / M365 : bloquer le calendrier, refuser automatiquement les nouvelles invitations / annuler les réunions sur la période
-- [ ] **Indicateur visible** : bandeau « Réponses automatiques activées pour ce compte » avec bouton *Désactiver* (cf. onglet Fichier / barre d'accès rapide), et rappel à l'ouverture si la période est expirée
+  - [ ] 🟢 Activer / désactiver ; plage de dates ou durée indéterminée
+  - [ ] 🟢 Messages distincts interne / externe (éditeur HTML)
+  - [ ] 🟢 Externe : tous les expéditeurs ou seulement les contacts
+  - [ ] 🟡 Exchange / M365 : bloquer le calendrier, refuser les nouvelles invitations, annuler les réunions de la période
+- [ ] 🟢 **Indicateur visible** : bandeau « Réponses automatiques activées pour ce compte » + *Désactiver* ; rappel à l'ouverture si la période est expirée
 
-## Synchronisation – Progression du rafraîchissement
+### Informations du compte (onglet Fichier)
 
-- [ ] **Barre de progression dans la barre d'état** (en bas de la fenêtre) lors d'un rafraîchissement :
-  - [ ] Texte décrivant l'opération en cours (ex. « Compte X – Boîte de réception : chargement des en-têtes 120 / 850 »)
-  - [ ] Progression déterminée (pourcentage) quand le nombre total est connu, indéterminée sinon
-  - [ ] Progression globale lorsque plusieurs comptes / dossiers sont rafraîchis en parallèle
-  - [ ] Bouton pour annuler l'opération en cours
-  - [ ] Masquer la barre automatiquement à la fin, avec un message bref en cas d'erreur
-- [ ] **Progression dans la barre des tâches Windows** : afficher l'avancement sur l'icône de l'application (ITaskbarList3, état erreur en rouge)
+- [ ] 🟡 Paramètres du compte, quota (`camel_folder_get_quota_info_sync`), outils de nettoyage de la boîte aux lettres
+- [ ] 🟡 Options générales de l'application
 
-## Vues unifiées multi-comptes
+## 4. Synchronisation et mode hors connexion — 🟠
 
-- [ ] **Mails** : une « Boîte de réception unifiée » (et Envoyés, Brouillons, Corbeille unifiés) regroupant les dossiers équivalents de tous les comptes, avec indication du compte d'origine (colonne ou pastille de couleur)
-- [ ] **Calendriers** : une vue affichant les événements de tous les calendriers de tous les comptes, avec une couleur par calendrier et la possibilité d'en masquer/afficher chacun
-- [ ] **Contacts** : un carnet d'adresses unifié regroupant les contacts de tous les comptes, avec détection et regroupement des doublons (même email)
-- [ ] **Recherche dans les vues unifiées** : la recherche simple et la recherche avancée doivent fonctionner sur l'ensemble des comptes affichés dans la vue unifiée, pour chaque type de contenu (mails, événements, contacts), avec le compte d'origine visible dans les résultats
-- [ ] **Choix des comptes inclus** : permettre d'exclure certains comptes de la vue unifiée (préférences)
+### Progression
 
-## Calendriers – Affichage multiple et calendriers partagés
+- [ ] 🟡 **Barre de progression dans la barre d'état** lors d'un rafraîchissement (messages de progression `CamelOperation` relayés par `evo-core`) :
+  - [ ] Texte de l'opération en cours (« Compte X – Boîte de réception : chargement des en-têtes 120 / 850 »)
+  - [ ] Pourcentage quand le total est connu, indéterminée sinon
+  - [ ] Progression globale pour plusieurs comptes / dossiers en parallèle
+  - [ ] 🟡 Bouton *Annuler* / *Annuler tout* (`GCancellable`)
+  - [ ] Masquage automatique à la fin, message bref en cas d'erreur
+- [ ] 🟢 **Progression sur l'icône de la barre des tâches Windows** (`ITaskbarList3`, rouge en cas d'erreur)
 
-- [ ] **Modes d'affichage de plusieurs calendriers** :
-  - [ ] **Superposé (vue globale)** : tous les calendriers sélectionnés fusionnés dans une même grille, une couleur par calendrier
-  - [ ] **Côte à côte** : une colonne / un volet par calendrier, synchronisés sur la même période (jour, semaine de travail, semaine, mois), avec défilement commun
-  - [ ] **Planification** (vue « Scheduling Assistant » d'Outlook) : une ligne par calendrier / personne / ressource, axe horizontal des heures, affichage des créneaux occupés / libres / provisoires / absent, pour trouver un créneau commun
-  - [ ] Bascule rapide entre les modes et mémorisation du dernier mode et des calendriers affichés
-- [ ] **Ouvrir des calendriers externes** (en particulier Exchange / Microsoft 365) :
-  - [ ] Ouvrir le calendrier d'un autre utilisateur (recherche dans le carnet d'adresses global / GAL) selon les droits accordés (disponibilités seules, détails limités, lecture complète, délégué)
-  - [ ] Ouvrir plusieurs calendriers partagés simultanément et les conserver dans la liste (groupe « Calendriers partagés »)
-  - [ ] Ouvrir des calendriers ICS / CalDAV / webcal par URL
+### Envoi et réception
+
+- [ ] 🟢 **Envoyer/Recevoir tous les dossiers** (F9 ; F5 existe déjà) et **Mettre à jour le dossier courant** (Maj+F9)
+- [ ] 🟠 **Boîte d'envoi et Envoyer tout** : messages mis en file d'attente au lieu d'être envoyés directement (prérequis du mode hors connexion)
+- [ ] 🟠 **Groupes d'envoi/réception** : groupes de comptes / dossiers avec planification (intervalle, à la fermeture, hors connexion)
+
+### Hors connexion et téléchargement
+
+- [ ] 🟠 **Travailler en mode hors connexion** : bascule globale (`CamelOfflineStore`), envois mis en file d'attente
+- [ ] 🟡 **Préférences de téléchargement** : en-têtes seuls / message complet, limite de taille, synchronisation hors connexion des dossiers
+- [ ] 🟠 **Mode en-têtes seuls** : télécharger les en-têtes, marquer pour téléchargement (message / copie), annuler les marques, traiter les en-têtes marqués
+
+## 5. Mail – Liste des messages — 🟠
+
+### Tri et colonnes
+
+- [ ] 🟡 **Trier les emails** par clic sur l'en-tête de colonne et via *Affichage › Trier par* (la `ListView` actuelle n'a pas d'en-têtes de colonnes) :
+  - [ ] Date, Expéditeur, Destinataire, Objet, Taille, Pièces jointes, Importance, Indicateur (état / date de début / d'échéance), Catégories, Lu / non lu, Compte, Type
+  - [ ] 🟢 Inverser l'ordre du tri pour chaque critère
+  - [ ] 🟢 Mémoriser le tri par dossier
+- [ ] 🟡 **Regroupement** par critère de tri (Aujourd'hui, Hier, La semaine dernière…), avec Développer / Réduire les groupes
+- [ ] 🟡 **Ajouter / retirer des colonnes**
+- [ ] 🟡 **Changer l'affichage** : Compact, Unique, Aperçu ; 🟢 Rétablir l'affichage par défaut
+- [ ] 🟠 **Paramètres d'affichage avancés** : polices, mise en forme conditionnelle (couleur selon expéditeur, catégorie…)
+- [ ] 🟡 **Aperçu du message** : désactivé, 1, 2 ou 3 lignes sous l'objet (extrait du corps à stocker dans le résumé)
+
+### Barre de lecture rapide
+
+- [ ] 🟢 **Barre verticale à gauche de chaque message** (comme Outlook) : affichée en couleur d'accent pour les messages non lus, invisible pour les lus
+  - [ ] Clic sur la barre : bascule Lu / Non lu sans ouvrir ni sélectionner le message (fonction `evo-core` existante)
+  - [ ] Survol : barre mise en évidence et info-bulle « Marquer comme lu » / « Marquer comme non lu »
+  - [ ] Fonctionne aussi sur un en-tête de conversation (marque tout le fil) et dans les vues unifiées
+
+### Filtres rapides
+
+- [ ] 🟢 **Filtres rapides** au-dessus de la liste (boutons bascule, comme dans Outlook) :
+  - [ ] Tous / Non lus / Lus
+  - [ ] Avec indicateur, avec pièces jointes, cette semaine, importants, mentionné
+  - [ ] Combinables avec la recherche et fonctionnels dans les vues unifiées
+
+### Conversations
+
+- [ ] 🟠 **Grouper par discussion** (*Affichage › Afficher sous forme de conversations*) :
+  - [ ] Regroupement par `Message-ID` / `In-Reply-To` / `References` (`CamelFolderThread`), repli sur l'objet normalisé « RE: / TR: »
+  - [ ] Fil réductible / développable, nombre de messages et de non lus
+  - [ ] 🟠 Inclure les messages d'autres dossiers (réponses envoyées)
+  - [ ] 🟢 Choix mémorisé par dossier
+- [ ] 🟡 **Paramètres de conversation** : expéditeurs au-dessus de l'objet, toujours développer la conversation sélectionnée, retrait classique
+
+### Boîte de réception Prioritaire
+
+- [ ] 🟠 **Onglets *Prioritaire* / *Autres*** (classement Exchange Online `inferenceClassification` via Graph ; sans objet pour les autres comptes)
+
+## 6. Mail – Lecture des messages — 🟢
+
+Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceRequested` → 403).
+
+- [ ] 🟢 **Bandeau « contenu externe bloqué »** au-dessus du message :
+  - [ ] « Afficher les images pour ce message » (une seule fois)
+  - [ ] « Toujours faire confiance à l'expéditeur »
+  - [ ] « Toujours faire confiance au domaine » (ex. `@exemple.ch`)
+- [ ] 🟢 **Liste des expéditeurs / domaines de confiance** gérée dans les préférences
+- [ ] 🟢 **Option globale** : jamais / expéditeurs de confiance seulement / toujours charger le contenu externe
+- [ ] 🟢 **Enregistrer sous** (`.eml`, fonction `evo-core` existante), **Enregistrer toutes les pièces jointes**
+- [ ] 🟡 **Impression** : aperçu et styles mémo / tableau (l'impression simple existe déjà)
+
+## 7. Mail – Actions sur les messages — 🟠
+
+### Créer et répondre
+
+- [ ] 🟢 **Nouveaux éléments** (menu) : courrier, rendez-vous, réunion, contact, tâche
+- [ ] 🟡 **Répondre par une réunion** (réunion pré-remplie avec les participants) — dépend de §13
+- [ ] 🟢 **Transférer en pièce jointe** pour un message seul (déjà fait en sélection multiple)
+
+### Supprimer, archiver, déplacer
+
+- [ ] 🟢 **Archiver** : déplacer vers le dossier d'archive du compte (réglage `archive-folder` d'EDS), touche Retour arrière
+- [ ] 🟢 **Copier vers un dossier** ; liste des derniers dossiers utilisés dans *Déplacer*
+- [ ] 🟠 **Ignorer la conversation** : les nouveaux messages du fil vont directement à la Corbeille
+- [ ] 🟠 **Nettoyer la conversation** : supprimer les messages redondants (entièrement cités dans un message plus récent)
+
+### Indicateurs et catégories
+
+- [ ] 🟡 **Marquer un mail comme « Urgent » ou « À traiter »** (en complément du drapeau simple existant) :
+  - [ ] Choix de l'état depuis le menu contextuel, le ruban et des raccourcis clavier ; plusieurs libellés prédéfinis (Urgent, À traiter, À répondre, Pour information, En attente) et libellés personnalisés
+  - [ ] Icône et couleur distinctes dans la liste des messages (ex. rouge pour Urgent, orange pour À traiter) et libellé dans l'en-tête du volet de lecture
+  - [ ] Stockage dans les indicateurs Camel (`follow-up` + étiquette dédiée), synchronisé avec le serveur (mots-clés IMAP, `flag` / importance Exchange)
+  - [ ] Filtres rapides « Urgents » et « À traiter » (§5) et dossiers de recherche correspondants (§9)
+  - [ ] Passage à « Terminé » en un clic, avec date de fin
+- [ ] 🟡 **Catégoriser** le message (codes couleur) — cf. §17
+- [ ] 🟡 **Créer une tâche à partir du message** — cf. §16
+- [ ] 🟡 **Assurer un suivi** : aujourd'hui, demain, cette semaine, semaine prochaine, sans date, personnalisé, marquer comme terminé, effacer (le drapeau simple existe déjà)
+  - [ ] 🟠 Ajouter un rappel — dépend de la fenêtre des rappels (§2)
+- [ ] 🟡 **Importance** (haute / basse) affichée et modifiable
+
+### Actions rapides
+
+- [ ] 🟠 **Actions rapides** en un clic, personnalisables (déplacer + marquer comme lu, transférer à un responsable, message d'équipe…), avec éditeur d'actions
+
+### Groupes Microsoft 365
+
+- [ ] 🟠 **Nouveau groupe, Parcourir les groupes** (Graph, comptes M365)
+
+## 8. Mail – Règles et courrier indésirable — 🔴
+
+- [ ] 🔴 **Règles côté client** : éditeur de règles (conditions / actions), exécution à la réception (`CamelFilterDriver`)
+  - [ ] 🟡 Créer une règle à partir du message sélectionné (une fois l'éditeur en place)
+  - [ ] 🟡 Exécuter les règles maintenant sur un dossier
+- [ ] 🔴 **Règles côté serveur** : Exchange (EWS / Graph `messageRules`), Sieve (ManageSieve)
+- [ ] 🟡 **Courrier indésirable** : marquer comme indésirable / non indésirable (déplacement vers / depuis le dossier Indésirables)
+- [ ] 🟡 **Listes d'expéditeurs** bloqués / approuvés (expéditeur ou domaine), options du filtre ; 🟠 synchronisées avec Exchange
+- [ ] 🟡 **Signaler** un message comme hameçonnage / spam (transfert en pièce jointe vers une adresse configurable, ou API du fournisseur)
+
+## 9. Mail – Gestion des dossiers — 🟠
+
+- [ ] 🟡 **Nouveau dossier, Renommer, Copier, Déplacer, Supprimer** (`camel_store_create_folder_sync`, etc.), glisser-déposer dans l'arborescence
+- [ ] 🟢 **Marquer tout comme lu**
+- [ ] 🟢 **Supprimer tout** : vider le dossier, la Corbeille, les Indésirables
+- [ ] 🟢 **Afficher tous les dossiers de A à Z**
+- [ ] 🟠 **Nettoyer le dossier** (et sous-dossiers) des messages redondants — même logique que §7
+- [ ] **Récupérer les éléments supprimés** :
+  - [ ] 🟡 IMAP : messages marqués supprimés non purgés
+  - [ ] 🟠 Exchange : *Recoverable Items*
+- [ ] 🟡 **Favoris** : section *Favoris* en haut du volet des dossiers, réordonnable
+- [ ] 🟢 **Afficher dans le navigateur** (OWA / webmail du fournisseur)
+- [ ] 🟠 **Dossiers de recherche** (dossiers virtuels `CamelVeeFolder`, aujourd'hui ignorés par `evo-core`), avec modèles prédéfinis : non lus, marqués, de personnes spécifiques, gros messages…
+- [ ] **Propriétés du dossier** :
+  - [ ] 🟡 Taille, nombre d'éléments, afficher le total ou les non-lus, quota du compte
+  - [ ] 🟠 Autorisations du dossier (partage / délégation Exchange, ACL IMAP)
+  - [ ] 🟠 Paramètres d'archivage automatique (âge, déplacement vers un dossier / fichier d'archive, suppression)
+  - [ ] 🟠 Stratégie de rétention (Exchange)
+
+## 10. Recherche — 🟡
+
+La recherche dans le dossier courant existe déjà (filtrage instantané + recherche en-têtes et corps via `evo-core`).
+
+### Recherche simple
+
+- [ ] 🟢 **Champ de recherche dans la barre de titre** de la fenêtre (au lieu de la vue Mail seule)
+- [ ] 🟢 Bouton pour effacer la recherche ; raccourci Ctrl+E
+- [ ] 🟡 **Portée** : dossier courant / sous-dossiers / compte courant / tous les comptes
+- [ ] 🟢 **Recherche rapide de contacts** (champ dédié dans le ruban, comme Outlook) et accès au Carnet d'adresses
+- [ ] 🟡 **Recherche dans le calendrier** (titre, lieu, description, participants)
+
+### Recherche avancée
+
+- [ ] 🟡 Accessible depuis le champ de recherche simple ; critères combinables : expéditeur, destinataire, objet, corps, plage de dates, taille, pièces jointes, lu / non lu, indicateur, catégorie
+- [ ] 🟡 Opérateurs ET / OU entre les critères (expressions de recherche Camel)
+- [ ] 🟠 Enregistrer une recherche comme dossier de recherche — dépend de §9
+
+## 11. Vues unifiées multi-comptes — 🟠
+
+- [ ] 🟠 **Mails** : Boîte de réception unifiée (et Envoyés, Brouillons, Corbeille), compte d'origine indiqué (colonne ou pastille de couleur) — dossiers virtuels Camel
+- [ ] 🟡 **Calendriers** : événements de tous les calendriers de tous les comptes, une couleur par calendrier, chacun masquable
+- [ ] 🟡 **Contacts** : carnet d'adresses unifié, détection et regroupement des doublons (même email)
+- [ ] 🟠 **Recherche dans les vues unifiées** (simple et avancée) pour mails, événements et contacts, compte d'origine visible dans les résultats
+- [ ] 🟢 **Choix des comptes inclus** dans les vues unifiées (préférences)
+
+## 12. Calendrier – Vues et navigation — 🔴
+
+La vue actuelle se limite à un `CalendarView` mensuel et une liste d'événements.
+
+### Grille calendrier (brique préalable)
+
+- [ ] 🔴 **Contrôle grille Jour / Semaine de travail / Semaine** (WinUI n'en fournit pas) : créneaux horaires, événements positionnés et chevauchements, journée entière en haut, défilement vertical
+- [ ] 🟠 **Vue Mois** (détails faibles / moyens / élevés)
+- [ ] 🟢 Raccourcis Ctrl+Alt+1…5 entre les vues
+- [ ] 🟢 **Échelle de temps** : 5, 6, 10, 15, 30, 60 minutes
+- [ ] 🟢 **Heures de travail** : jours ouvrés, heures de début / fin, premier jour de la semaine (options)
+- [ ] 🟡 **Second fuseau horaire** dans la grille
+- [ ] 🟠 **Glisser-déposer** d'un événement vers un autre créneau / jour / calendrier (déplacer, copier, redimensionner la durée)
+
+### Navigation
+
+- [ ] 🟢 **Barre de navigation** : *Aujourd'hui*, précédent / suivant, plage affichée (« 26 – 30 octobre 2026 »)
+- [ ] 🟢 **Atteindre** : Aujourd'hui, 7 prochains jours, aller à une date (Ctrl+G)
+- [ ] 🟡 **Mini-calendrier** dans le volet des dossiers (jours avec événements en gras)
+- [ ] 🟡 Météo (optionnelle)
+
+### Plusieurs calendriers
+
+- [ ] 🟢 **Couleur par calendrier** (couleur EDS `ESourceSelectable`), dans la liste et dans la grille
+- [ ] 🟠 **Superposé (vue globale)** : calendriers sélectionnés fusionnés dans une même grille
+- [ ] 🟠 **Côte à côte** : une colonne par calendrier, même période, défilement commun
+- [ ] 🟢 Bascule superposé / côte à côte ; mémorisation du mode et des calendriers affichés
+- [ ] 🟡 **Groupes de calendriers** nommés (« Équipe », « Salles 2e étage ») pour en ouvrir plusieurs d'un coup
+
+### Autres affichages
+
+- [ ] 🟡 **Vues Liste / Actif** : liste filtrable des événements (à venir, périodiques…)
+- [ ] 🟠 **Paramètres d'affichage** : champs, tri, filtre, mise en forme conditionnelle (catégorie / organisateur) ; 🟢 Rétablir l'affichage
+- [ ] 🟡 **Volet de lecture** de l'événement sélectionné
+- [ ] 🟠 **Liste des tâches quotidiennes** sous les vues Jour / Semaine (tâches EDS et messages en suivi par date d'échéance — dépend de §16)
+- [ ] 🟢 Espacement plus étroit ; volet des dossiers normal / réduit (avec mini-calendrier) / désactivé
+
+## 13. Calendrier – Rendez-vous, réunions et ressources — 🔴
+
+- [ ] 🟠 **Éditeur d'événement complet** (brique préalable) : journée entière, périodicité (règles RRULE, exceptions), rappels, disponibilité (libre / occupé / provisoire / absent), catégories, privé, pièces jointes, description HTML
+- [ ] 🟢 **Ajouter du temps de travail individuel** (bloc « focus » marqué occupé, sans participants)
+- [ ] 🔴 **Nouvelle réunion** : participants (obligatoires / facultatifs), envoi des invitations, suivi des réponses (accepté / provisoire / refusé), mise à jour et annulation (iTIP / iMIP ; géré par le serveur pour Exchange)
+- [ ] 🟡 **Répondre aux invitations reçues** depuis le volet de lecture du Mail (Accepter / Provisoire / Refuser / Proposer un nouvel horaire)
+- [ ] 🔴 **Affichage Planification** (Scheduling Assistant) : une ligne par personne / ressource, heures en abscisse, créneaux libres / occupés / provisoires / absent (EWS `GetUserAvailability`, Graph `getSchedule`, CalDAV free-busy), suggestion de créneau commun
 - [ ] **Calendriers de ressources** (salles, équipements) :
-  - [ ] Parcourir / rechercher les listes de salles et de ressources Exchange (room lists)
-  - [ ] Afficher leur disponibilité en vue Planification
-  - [ ] Réserver une ressource lors de la création d'une réunion (ajout comme participant ressource, gestion de l'acceptation / du refus automatique)
-- [ ] **Groupes de calendriers** : créer des groupes nommés (ex. « Équipe », « Salles 2e étage ») pour ouvrir plusieurs calendriers d'un coup
+  - [ ] 🟠 Parcourir / rechercher les listes de salles Exchange (*room lists*)
+  - [ ] 🟡 Disponibilité en vue Planification
+  - [ ] 🟡 Réserver une ressource à la création d'une réunion (participant ressource, acceptation / refus automatique)
+- [ ] 🟠 **Réunion en ligne** : bouton « Réunion instantanée » / lien de visioconférence, générique et extensible par fournisseur (Teams via Graph en priorité pour M365)
+- [ ] 🟡 **Glisser-déposer d'un email vers le calendrier** pour créer un rendez-vous
+- [ ] 🟠 **Emplacement de travail** par jour / créneau (bureau, télétravail, hors ligne), synchronisé avec Exchange Online si disponible, visible en vue Planification
 
-## Calendrier – Parité fonctionnelle avec Outlook (ruban)
+## 14. Calendrier – Calendriers partagés et externes — 🟠
 
-Mêmes principes que pour la vue Mail : onglets *Accueil*, *Envoi/réception*, *Dossier*, *Affichage*. Hors périmètre : intégrations tierces (Teams, TeamViewer, Rainbow, Copilot).
+- [ ] **Ajouter un calendrier** :
+  - [ ] 🟢 Nouveau calendrier vide (local ou sur le serveur du compte)
+  - [ ] 🟢 À partir d'Internet : URL ICS / webcal (backend EDS `webcal` existant)
+  - [ ] 🟡 CalDAV par URL
+  - [ ] 🟡 À partir d'un fichier `.ics`
+  - [ ] 🟠 À partir du carnet d'adresses / de l'annuaire : calendrier d'un autre utilisateur Exchange / M365 selon les droits accordés (disponibilités, détails limités, lecture complète, délégué)
+  - [ ] 🟠 À partir d'une liste de salles
+- [ ] 🟡 Plusieurs calendriers partagés ouverts simultanément et conservés (groupe « Calendriers partagés »)
+- [ ] **Partager le calendrier** :
+  - [ ] 🟠 Invitation de partage avec niveaux de droits (disponibilités, titres et lieux, tous les détails, édition, délégué) — Exchange / M365
+  - [ ] 🟡 Envoyer un extrait par email (plage de dates, niveau de détail)
+  - [ ] 🔴 Publication en ligne (URL ICS publique)
+- [ ] 🟠 **Calendriers de groupes Microsoft 365** (Nouveau groupe, Parcourir les groupes)
 
-### Onglet Accueil (Calendrier)
+## 15. Contacts — 🟡
 
-- [ ] **Nouveau** :
-  - [ ] Nouveau rendez-vous, Nouvelle réunion (avec participants, salle, vue Planification intégrée)
-  - [ ] Ajouter du temps de travail individuel (bloc « focus » marqué occupé, sans participants)
-  - [ ] Nouveaux éléments (événement d'une journée entière, événement périodique, tâche, email…)
-- [ ] **Réunion en ligne** : bouton générique « Réunion instantanée » / lien de visioconférence, extensible par fournisseur (Teams via Graph pour les comptes M365 en priorité)
-- [ ] **Atteindre** : Aujourd'hui, 7 prochains jours, aller à une date (mini-calendrier, Ctrl+G)
-- [ ] **Organiser** : Jour, Semaine de travail, Semaine, Mois, Affichage Planification (cf. section Calendriers – Affichage multiple) ; raccourcis Ctrl+Alt+1…5
-- [ ] **Emplacement de travail** : indiquer pour chaque jour / créneau le lieu de travail (bureau, télétravail, hors ligne), synchronisé avec Exchange Online si disponible, et visible dans la vue Planification
-- [ ] **Gérer les calendriers** :
-  - [ ] Ajouter un calendrier : à partir du carnet d'adresses / de l'annuaire, à partir d'une liste de salles, à partir d'Internet (URL ICS / webcal), nouveau calendrier vide, à partir d'un fichier `.ics`
-  - [ ] Partager le calendrier : invitation de partage avec niveaux de droits (disponibilités, titres et lieux, tous les détails, édition, délégué), publication en ligne (URL ICS), envoi par email d'un extrait (plage de dates, niveau de détail)
-- [ ] **Groupes** : Nouveau groupe, Parcourir les groupes (calendriers de groupes M365)
-- [ ] **Rechercher** : recherche rapide de contacts, Carnet d'adresses ; recherche d'événements (cf. section Recherche)
+- [ ] 🟡 **Carnet d'adresses global** (GAL) Exchange / M365 : recherche et sélection des destinataires (backend evolution-ews)
+- [ ] 🟡 **Contacts unifiés** et regroupement des doublons — cf. §11
+- [ ] 🟢 **Recherche rapide de contacts** depuis la barre d'outils — cf. §10
 
-### Onglet Affichage (Calendrier)
+## 16. Tâches — 🟠
 
-- [ ] **Affichage actuel** : Changer l'affichage (Calendrier, Prévisualisation, Liste, Actif — vue liste filtrable des événements à venir), Paramètres d'affichage (champs, tri, filtre, mise en forme conditionnelle par catégorie / organisateur), Rétablir l'affichage
-- [ ] **Réorganisation** :
-  - [ ] Jour, Semaine de travail, Semaine, Mois (options mois : détails faibles / moyens / élevés), Affichage Planification
-  - [ ] Échelle de temps : 5, 6, 10, 15, 30, 60 minutes
-  - [ ] Superposition : basculer entre côte à côte et superposé lorsque plusieurs calendriers sont affichés
-  - [ ] Heures de travail : n'afficher que les heures / jours de travail (définis dans les options : jours ouvrés, heure de début / fin, premier jour de la semaine, fuseau horaire)
-- [ ] **Couleur** : couleur par calendrier (palette), affichée dans la liste et dans la grille
-- [ ] **Disposition** :
-  - [ ] Utiliser un espacement plus étroit
-  - [ ] Liste des tâches quotidiennes (sous la vue Jour / Semaine : tâches et éléments marqués par jour d'échéance)
-  - [ ] Volet des dossiers : normal / réduit (avec mini-calendrier de navigation) / désactivé
-  - [ ] Volet de lecture : droite / bas / désactivé (aperçu de l'événement sélectionné)
-  - [ ] Barre des tâches (To-Do bar) : calendrier, personnes, tâches
-- [ ] **Fenêtre** : Fenêtre des rappels, Ouvrir dans une nouvelle fenêtre, Fermer tous les éléments
-- [ ] **Lecteur immersif** (pour le corps des invitations)
+Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) ne sont pas encore exploitées par `evo-core` ; evolution-ews les synchronise déjà pour Exchange (et Microsoft To Do via Graph à prévoir).
 
-### Fonctions associées
+### Module Tâches
 
-- [ ] Bandeau « Réponses automatiques » également visible dans la vue Calendrier
-- [ ] Barre de navigation de la vue : bouton *Aujourd'hui*, flèches précédent / suivant, plage de dates affichée (ex. « 26 – 30 octobre 2026 »), météo optionnelle
-- [ ] Mini-calendrier dans le volet des dossiers (navigation rapide, jours avec événements en gras)
-- [ ] Glisser-déposer d'un email vers le calendrier pour créer un rendez-vous ; d'un événement vers un autre jour / calendrier pour le déplacer / copier
-- [ ] Fuseaux horaires : afficher un second fuseau horaire dans la grille
+- [ ] 🟡 **Accès aux tâches dans `evo-core`** : lister, créer, modifier, supprimer (`E_CAL_CLIENT_SOURCE_TYPE_TASKS`)
+- [ ] 🟡 **Vue Tâches** (entrée *Tâches* de la barre latérale) : liste des tâches par liste / compte, avec colonnes objet, échéance, priorité, état, catégorie
+- [ ] 🟡 **Éditeur de tâche** : objet, description, date de début, échéance, priorité, état (non commencée, en cours, terminée, en attente, différée), pourcentage d'achèvement, catégories
+- [ ] 🟠 Tâches périodiques
+- [ ] 🟠 Rappel sur une tâche — dépend de la fenêtre des rappels (§2)
+- [ ] 🟢 **Marquer comme terminée** (case à cocher dans la liste), masquer / afficher les tâches terminées
+- [ ] 🟢 **Filtres et tri** : aujourd'hui, en retard, cette semaine, sans date, par priorité / échéance
+- [ ] 🟢 **Nouvelle tâche** depuis le menu *Nouveaux éléments* et raccourci (Ctrl+Maj+K)
+- [ ] 🟡 Plusieurs listes de tâches (créer, renommer, supprimer)
+- [ ] 🟠 Tâches Microsoft To Do (Graph) pour les comptes M365
 
-## Mail – Parité fonctionnelle avec Outlook (ruban)
+### Lien entre mails et tâches
 
-Organisation de la barre d'outils / des menus de la vue Mail en onglets inspirés du ruban Outlook : *Accueil*, *Envoi/réception*, *Dossier*, *Affichage*. Hors périmètre : intégrations tierces (Teams, OneNote, TeamViewer, Copilot).
+- [ ] 🟡 **Créer une tâche à partir d'un mail** (menu contextuel, bouton du ruban, glisser-déposer du message sur *Tâches*) : objet et corps repris, message joint ou lié
+- [ ] 🟠 **Attribuer un mail à une tâche existante** : sélection de la tâche dans une liste, plusieurs mails possibles par tâche
+  - [ ] Lien conservé par l'en-tête `Message-ID` (propriété `X-` / `ATTACH` dans le `VTODO`), ouverture du mail d'origine depuis la tâche
+  - [ ] Indicateur sur le mail (icône « lié à une tâche ») et accès à la tâche depuis le volet de lecture
+- [ ] 🟡 **Liste des tâches dans la barre des tâches (To-Do bar)** et sous les vues Jour / Semaine du calendrier — cf. §2 et §12
+- [ ] 🟢 Recherche dans les tâches — cf. §10
 
-### Barre de titre / accès rapide
+## 17. Catégories et codes couleur — 🟡
 
-- [ ] Barre d'accès rapide personnalisable (Envoyer/Recevoir, Annuler, etc.)
-- [ ] Barre latérale gauche de navigation entre modules (Mail, Calendrier, Contacts, Tâches)
-- [ ] Bandeau d'information sous la barre d'outils (ex. « Réponses automatiques activées pour ce compte » + bouton *Désactiver*)
+- [ ] 🟡 **Catégories communes** à tous les types d'éléments : nom + couleur (palette d'une vingtaine de couleurs), gérées dans les Réglages (créer, renommer, changer la couleur, supprimer)
+  - [ ] Stockage : étiquettes Camel pour les mails, propriété `CATEGORIES` pour les contacts (vCard), les événements et les tâches (iCalendar)
+  - [ ] 🟠 Synchronisation avec la liste de catégories principale Exchange / M365 (couleurs comprises)
+- [ ] 🟡 **Catégoriser** un élément (plusieurs catégories possibles) : menu contextuel, bouton *Catégoriser* du ruban, catégories récentes ; raccourci vers une catégorie (Ctrl+F2…F12)
+- [ ] **Affichage des codes couleur** :
+  - [ ] 🟡 **Mails** : pastilles de couleur dans la liste des messages et dans l'en-tête du volet de lecture
+  - [ ] 🟡 **Contacts** : pastilles dans la liste et sur la fiche
+  - [ ] 🟡 **Événements** : couleur de la catégorie dans la grille du calendrier (à la place ou en complément de la couleur du calendrier, au choix)
+  - [ ] 🟡 **Tâches** : pastilles dans la liste des tâches
+- [ ] 🟠 **Mise en forme conditionnelle** : couleur automatique selon des règles (expéditeur, domaine, mots de l'objet, importance…) — cf. §5 et §12
+- [ ] 🟢 **Filtrer / trier / regrouper par catégorie** dans toutes les vues ; recherche par catégorie (§10)
 
-### Onglet Accueil
+## 18. Import / Export — 🟡
 
-- [ ] **Nouveau** : Nouveau courrier ; Nouveaux éléments (rendez-vous, réunion, contact, tâche, email avec pièce jointe…)
-- [ ] **Supprimer** :
-  - [ ] Ignorer la conversation (les nouveaux messages du fil vont directement à la Corbeille)
-  - [ ] Nettoyer (supprimer les messages redondants d'une conversation / d'un dossier)
-  - [ ] Courrier indésirable : bloquer l'expéditeur, jamais bloquer l'expéditeur / le domaine, marquer comme non indésirable, options du filtre
-  - [ ] Supprimer, Archiver (déplacer vers le dossier d'archive du compte, touche Retour arrière)
-- [ ] **Signaler** : signaler un message comme hameçonnage / spam (rapport à l'administrateur ou au fournisseur)
-- [ ] **Répondre** : Répondre, Répondre à tous, Transférer ; Répondre par une réunion ; Transférer en pièce jointe ; Répondre par messagerie instantanée (optionnel)
-- [ ] **Actions rapides** : actions personnalisables en un clic (déplacer vers un dossier + marquer comme lu, transférer à un responsable, message d'équipe, etc.), éditeur d'actions rapides
-- [ ] **Déplacer** : Déplacer vers un dossier (liste des derniers dossiers utilisés), Copier vers un dossier
-- [ ] **Règles** : créer une règle à partir du message sélectionné, gérer les règles et alertes (règles côté serveur pour Exchange / Sieve si disponible, côté client sinon)
-- [ ] **Indicateurs / Catégories** :
-  - [ ] Lu / Non lu
-  - [ ] Catégoriser (catégories en couleur, partagées avec Exchange si possible)
-  - [ ] Assurer un suivi (aujourd'hui, demain, cette semaine, semaine prochaine, sans date, personnalisé, ajouter un rappel, marquer comme terminé, effacer l'indicateur)
-- [ ] **Groupes** : Nouveau groupe, parcourir les groupes (groupes Microsoft 365, si compte M365)
-- [ ] **Rechercher** : recherche rapide de contacts (champ dans la barre), Carnet d'adresses, *Filtre de courrier* (non lus, avec pièces jointes, cette semaine, marqués, importants, mentionné…) — cf. sections Recherche et Filtres rapides
-- [ ] **Fonction vocale** : Lecture à voix haute du message (synthèse vocale Windows SAPI / WinRT)
-
-### Onglet Envoi/réception
-
-- [ ] **Envoyer et recevoir** : Envoyer/Recevoir tous les dossiers (F9), Mettre à jour le dossier courant (Maj+F9), Envoyer tout (boîte d'envoi)
-- [ ] **Groupes d'envoi/réception** : définir des groupes de comptes / dossiers avec planification de synchronisation (intervalle, à la fermeture, en mode hors connexion)
-- [ ] **Télécharger** : Afficher la progression (cf. section Progression), Annuler tout
-- [ ] **Serveur** (comptes IMAP / Exchange en mode en-têtes seuls) :
-  - [ ] Télécharger les en-têtes
-  - [ ] Marquer pour téléchargement (message / copie), annuler les marques, traiter les en-têtes marqués
-- [ ] **Préférences** :
-  - [ ] Préférences de téléchargement (en-têtes seuls / message complet, limite de taille, uniquement en connexion lente)
-  - [ ] Travailler en mode hors connexion (bascule globale, envois mis en file d'attente)
-
-### Onglet Dossier
-
-- [ ] **Nouveau** : Nouveau dossier, Nouveau dossier de recherche (modèles prédéfinis : non lus, marqués, de personnes spécifiques, gros messages…)
-- [ ] **Actions** : Renommer, Copier, Déplacer, Supprimer le dossier (drag & drop dans l'arborescence)
-- [ ] **Nettoyer** :
-  - [ ] Marquer tout comme lu
-  - [ ] Exécuter les règles maintenant sur le dossier
-  - [ ] Afficher tous les dossiers de A à Z (tri alphabétique de l'arborescence)
-  - [ ] Nettoyer le dossier (et sous-dossiers) des messages redondants
-  - [ ] Supprimer tout (vider le dossier, vider la Corbeille / les indésirables)
-  - [ ] Récupérer les éléments supprimés (Exchange : *Recoverable Items* ; IMAP : messages marqués supprimés non purgés)
-- [ ] **Favoris** : Ajouter aux favoris (section *Favoris* en haut du volet des dossiers, réordonnable)
-- [ ] **Affichage en ligne** : Afficher dans le navigateur (OWA / webmail du fournisseur)
-- [ ] **Propriétés** :
-  - [ ] Stratégie de rétention (Exchange)
-  - [ ] Paramètres d'archivage automatique (âge des éléments, déplacement vers un dossier / fichier d'archive, suppression)
-  - [ ] Autorisations du dossier (partage / délégation Exchange, ACL IMAP)
-  - [ ] Propriétés du dossier (taille, nombre d'éléments, afficher le nombre total / non lus, quota du compte)
-
-### Onglet Affichage
-
-- [ ] **Affichage actuel** : Changer l'affichage (Compact, Unique, Aperçu), Paramètres d'affichage (colonnes, tri, regroupement, filtre, polices, mise en forme conditionnelle), Rétablir l'affichage par défaut
-- [ ] **Messages** : Afficher en tant que conversations, Paramètres de conversation (afficher les messages d'autres dossiers, afficher les expéditeurs au-dessus de l'objet, toujours développer la conversation sélectionnée, retrait classique) — cf. section Discussions
-- [ ] **Boîte de réception Prioritaire** : onglets *Prioritaire* / *Autres* (utilise le classement Exchange Online si disponible)
-- [ ] **Réorganisation** :
-  - [ ] Aperçu du message (désactivé, 1, 2 ou 3 lignes sous l'objet)
-  - [ ] Organiser par : Date (conversations), De, À, Catégories, État de l'indicateur, Indicateur (date de début / d'échéance), Taille, Objet, Type, Pièces jointes, Compte, Importance
-  - [ ] Inverser le tri, Ajouter des colonnes, Développer / Réduire les groupes — cf. section Tri
-- [ ] **Disposition** :
-  - [ ] Utiliser un espacement plus étroit (mode compact)
-  - [ ] Volet des dossiers : normal / réduit / désactivé
-  - [ ] Volet de lecture : droite / bas / désactivé — cf. section Disposition des panneaux
-  - [ ] Barre des tâches (To-Do bar) : calendrier, personnes, tâches à venir, affichée à droite
-- [ ] **Fenêtre** : Fenêtre des rappels, Ouvrir dans une nouvelle fenêtre, Fermer tous les éléments ouverts
-- [ ] **Lecteur immersif** : vue de lecture plein écran épurée (taille du texte, espacement, lecture à voix haute)
-
-### Onglet Fichier (Backstage)
-
-- [ ] Informations du compte : paramètres du compte, réponses automatiques (cf. section Réponses automatiques), outils de nettoyage de la boîte aux lettres, quota
-- [ ] Ouvrir et exporter : ouvrir un calendrier / fichier de données, importer / exporter (cf. section Export)
-- [ ] Enregistrer sous, Enregistrer les pièces jointes, Imprimer (aperçu, styles mémo / tableau)
-- [ ] Options (préférences générales de l'application)
-
-## Application – Icône
-
-- [ ] **Icône de l'exécutable** : créer un fichier `.ico` multi-résolution (16, 24, 32, 48, 64, 256 px) et l'intégrer comme ressource dans `EvolutionWin.exe`
-  - [ ] Utilisée par l'Explorateur, la barre des tâches, Alt+Tab et la barre de titre de la fenêtre (`AppWindow.SetIcon`)
-  - [ ] Raccourci du menu Démarrer (installeur MSI)
-  - [ ] Icône dans *Paramètres › Applications installées* (propriété `ARPPRODUCTICON` du MSI)
-
-## Export des données d'un compte (formats ouverts)
-
-- [ ] **Assistant d'export** (menu *Fichier › Exporter*) : choisir le compte, puis les éléments à exporter (emails, contacts, calendriers, tâches) et le dossier de destination
+- [ ] 🟡 **Assistant d'export** (*Fichier › Exporter*) : compte, éléments (emails, contacts, calendriers, tâches), dossier de destination
 - [ ] **Emails** :
-  - [ ] Format mbox (un fichier par dossier, arborescence conservée)
-  - [ ] Format EML (un fichier `.eml` par message, arborescence de dossiers conservée)
-  - [ ] Choix des dossiers à exporter (tous / sélection / dossier courant)
-- [ ] **Contacts** : format vCard (`.vcf`, un fichier unique ou un fichier par contact) ; CSV en option
-- [ ] **Calendriers et tâches** : format iCalendar (`.ics`, un fichier par calendrier)
-- [ ] **Options** : filtre par plage de dates, export en arrière-plan avec progression dans la barre d'état, rapport de fin (nombre d'éléments exportés, erreurs)
+  - [ ] 🟡 Format mbox (un fichier par dossier, arborescence conservée)
+  - [ ] 🟢 Format EML (un fichier `.eml` par message, arborescence conservée ; export `.eml` existant dans `evo-core`)
+  - [ ] 🟢 Choix des dossiers (tous / sélection / dossier courant)
+- [ ] 🟢 **Contacts** : vCard (`.vcf`, fichier unique ou un par contact) ; 🟡 CSV en option
+- [ ] 🟢 **Calendriers et tâches** : iCalendar (`.ics`, un fichier par calendrier)
+- [ ] 🟡 **Options** : filtre par plage de dates, export en arrière-plan avec progression (dépend de §4), rapport de fin
+- [ ] 🟠 **Import** : mbox / EML, vCard, iCalendar (*Fichier › Ouvrir et exporter*)
