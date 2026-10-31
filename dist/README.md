@@ -10,20 +10,21 @@ dossier est versionné.
 
 | Version | Date | Installeur | SHA-256 | Notes |
 | --- | --- | --- | --- | --- |
+| 0.9.2 | 2026-10-31 | [Evolution-0.9.2-x64.msi](https://github.com/pitch7900/Evolution-WindowsPort/raw/main/dist/Evolution-0.9.2-x64.msi) | `3e2f6173704e3783140bd731695b70479eaa8818a2d7e3112acc75cdcb975be2` | [Changements](../CHANGELOG.md#092--2026-10-31) |
 | 0.9.1 | 2026-10-31 | [Evolution-0.9.1-x64.msi](https://github.com/pitch7900/Evolution-WindowsPort/raw/main/dist/Evolution-0.9.1-x64.msi) | `98267172992e92359a419719bc5d12e0141de95644b0ca37e528451c2ffd1fef` | [Changements](../CHANGELOG.md#091--2026-10-31) |
 
-La version 0.9.2 est en cours de développement (voir
+La version suivante (0.9.3) est en cours de développement (voir
 [`CHANGELOG.md`](../CHANGELOG.md)) et n'a pas encore d'installeur publié.
 
 ## Installation
 
 ```bat
-msiexec /i Evolution-0.9.1-x64.msi          :: installation interactive
-msiexec /i Evolution-0.9.1-x64.msi /qn      :: installation silencieuse (par machine)
+msiexec /i Evolution-0.9.2-x64.msi          :: installation interactive
+msiexec /i Evolution-0.9.2-x64.msi /qn      :: installation silencieuse (par machine)
 ```
 
 Vérifier l'empreinte du fichier téléchargé (PowerShell) :
 
 ```powershell
-Get-FileHash .\Evolution-0.9.1-x64.msi -Algorithm SHA256
+Get-FileHash .\Evolution-0.9.2-x64.msi -Algorithm SHA256
 ```

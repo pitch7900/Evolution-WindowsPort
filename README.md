@@ -3,7 +3,7 @@
 
 Ce dépôt contient le portage **100 % natif sous Windows 11** du client de messagerie, calendrier et carnet d'adresses open source **GNOME Evolution**, compilé avec **Microsoft Visual C++ (MSVC)** (sans MinGW, sans WSL et sans Cygwin) et doté d'une **interface utilisateur native WinUI 3 (`EvolutionWin`)**.
 
-**Télécharger :** les installeurs MSI prêts à l'emploi (Windows 11 x64) sont dans [**`dist/`**](./dist) — liste des versions et empreintes SHA-256 dans [`dist/README.md`](./dist/README.md). Dernière version : [**Evolution-0.9.1-x64.msi**](https://github.com/pitch7900/Evolution-WindowsPort/raw/main/dist/Evolution-0.9.1-x64.msi).
+**Télécharger :** les installeurs MSI prêts à l'emploi (Windows 11 x64) sont dans [**`dist/`**](./dist) — liste des versions et empreintes SHA-256 dans [`dist/README.md`](./dist/README.md). Dernière version : [**Evolution-0.9.2-x64.msi**](https://github.com/pitch7900/Evolution-WindowsPort/raw/main/dist/Evolution-0.9.2-x64.msi).
 
 Pour le journal technique détaillé, l'historique des correctifs CMake/MSVC et le suivi des phases, consultez [**WINDOWS-PORT.md**](./WINDOWS-PORT.md).
 
@@ -93,7 +93,7 @@ tools\run-winui-debug.bat    :: Lance EvolutionWin.exe avec journaux de débogag
 
 ```bat
 tools\build-msi.bat          :: dist\Evolution-<version>-x64.msi (WiX v5, autonome)
-msiexec /i dist\Evolution-0.9.1-x64.msi /qn   :: installation silencieuse (par machine)
+msiexec /i dist\Evolution-0.9.2-x64.msi /qn   :: installation silencieuse (par machine)
 ```
 
 ---
