@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
 #include "WindowIcon.h"
+#include "Settings.h"
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
 #endif
@@ -12,10 +13,14 @@
 #include <winrt/Windows.Security.Cryptography.Core.h>
 #include <winrt/Windows.Web.Http.h>
 #include <winrt/Windows.Web.Http.Headers.h>
+#include <winrt/Microsoft.UI.Input.h>
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
+#include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <utility>
 
 /* version de l'application, depuis le fichier VERSION (généré par MSBuild) */
 #include "evo-version.h"
@@ -55,6 +60,22 @@ namespace
 
         return std::wstring{ display } + L" (build " + build + L"." + std::to_wstring(ubr) + L")";
     }
+
+    /* Panneaux redimensionnables de la vue Courrier : clé de la largeur
+     * mémorisée, largeur par défaut et largeur minimale (pixels). */
+    struct PaneLayout
+    {
+        wchar_t const* key;
+        double default_width;
+        double min_width;
+    };
+
+    constexpr PaneLayout FoldersPane{ L"layout.folders-width", 260, 180 };
+    constexpr PaneLayout ListPane{ L"layout.list-width", 420, 280 };
+    /* le volet de lecture prend la place restante, au moins cette largeur */
+    constexpr double ReaderMinWidth = 320;
+    /* borne d'une largeur relue, contre un fichier de préférences aberrant */
+    constexpr double RestoredMaxWidth = 1200;
 
     /* Segoe Fluent Icons glyphs */
     hstring FolderGlyph(hstring const& type)
@@ -125,6 +146,7 @@ namespace winrt::EvolutionWin::implementation
         SetTitleBar(AppTitleBar());
         AppWindow().Resize({ 1500, 950 });
         ::EvolutionWin::SetWindowIcon(AppWindow());
+        RestorePaneWidths();
 
         /* menu contextuel des dossiers (clic droit, touche Menu) */
         FolderTree().ContextRequested([this](UIElement const& sender, Input::ContextRequestedEventArgs const& args)
@@ -143,6 +165,119 @@ namespace winrt::EvolutionWin::implementation
             /* stops the engine before the window goes away */
             m_core.reset();
         });
+    }
+
+    /* Rétablit les largeurs des dossiers et de la liste de messages
+     * mémorisées lors d'une session précédente (layout.folders-width,
+     * layout.list-width). */
+    void MainWindow::RestorePaneWidths()
+    {
+        auto& settings = ::EvolutionWin::Settings::Instance();
+
+        for (auto [column, pane] : { std::pair{ FoldersColumn(), &FoldersPane }, std::pair{ ListColumn(), &ListPane } })
+        {
+            double width = settings.GetNumber(pane->key, pane->default_width);
+            width = std::clamp(width, pane->min_width, RestoredMaxWidth);
+            column.Width(GridLengthHelper::FromPixels(width));
+        }
+    }
+
+    /* Colonne redimensionnée par un séparateur.
+     * Paramètres :
+     *   splitter : FoldersSplitter ou ListSplitter */
+    ColumnDefinition MainWindow::SplitterColumn(IInspectable const& splitter)
+    {
+        return splitter == FoldersSplitter() ? FoldersColumn() : ListColumn();
+    }
+
+    /* Début du glisser : capture le pointeur pour suivre le mouvement même
+     * hors du séparateur (au-dessus de la liste ou du volet de lecture). */
+    void MainWindow::OnSplitterPointerPressed(IInspectable const& sender, Input::PointerRoutedEventArgs const& args)
+    {
+        auto splitter = sender.as<UIElement>();
+
+        if (!args.GetCurrentPoint(splitter).Properties().IsLeftButtonPressed())
+            return;
+        if (!splitter.CapturePointer(args.Pointer()))
+            return;
+
+        m_drag_column = SplitterColumn(sender);
+        m_drag_origin = args.GetCurrentPoint(MailView()).Position().X;
+        m_drag_start_width = m_drag_column.ActualWidth();
+    }
+
+    /* Pendant le glisser : nouvelle largeur de la colonne, bornée par son
+     * minimum et par la place à laisser aux autres colonnes et au volet de
+     * lecture. Les positions sont lues dans MailView, qui ne bouge pas. */
+    void MainWindow::OnSplitterPointerMoved(IInspectable const& sender, Input::PointerRoutedEventArgs const& args)
+    {
+        if (!m_drag_column || SplitterColumn(sender) != m_drag_column)
+            return;
+
+        PaneLayout const& pane = m_drag_column == FoldersColumn() ? FoldersPane : ListPane;
+        auto columns = MailView().ColumnDefinitions();
+
+        /* largeur occupée par les autres colonnes fixes (autre panneau et
+           séparateurs) ; la dernière est le volet de lecture */
+        double others = 0;
+        for (uint32_t i = 0; i + 1 < columns.Size(); ++i)
+        {
+            if (columns.GetAt(i) != m_drag_column)
+                others += columns.GetAt(i).ActualWidth();
+        }
+
+        double max_width = (std::max)(pane.min_width, MailView().ActualWidth() - others - ReaderMinWidth);
+        double x = args.GetCurrentPoint(MailView()).Position().X;
+        double width = std::clamp(m_drag_start_width + x - m_drag_origin, pane.min_width, max_width);
+
+        m_drag_column.Width(GridLengthHelper::FromPixels(std::round(width)));
+    }
+
+    void MainWindow::OnSplitterPointerReleased(IInspectable const& sender, Input::PointerRoutedEventArgs const& args)
+    {
+        if (!m_drag_column)
+            return;
+
+        EndSplitterDrag();
+        sender.as<UIElement>().ReleasePointerCapture(args.Pointer());
+    }
+
+    /* capture perdue (Échap, perte du focus de la fenêtre…) : la largeur
+       atteinte est conservée */
+    void MainWindow::OnSplitterPointerCaptureLost(IInspectable const&, Input::PointerRoutedEventArgs const&)
+    {
+        EndSplitterDrag();
+    }
+
+    /* Fin du glisser : mémorise la largeur de la colonne pour la prochaine
+     * session. */
+    void MainWindow::EndSplitterDrag()
+    {
+        if (!m_drag_column)
+            return;
+
+        auto column = m_drag_column;
+        m_drag_column = nullptr;
+
+        PaneLayout const& pane = column == FoldersColumn() ? FoldersPane : ListPane;
+        ::EvolutionWin::Settings::Instance().SetNumber(pane.key, column.Width().Value);
+    }
+
+    /* Double-clic sur un séparateur : rétablit la largeur par défaut du
+     * panneau. Le glisser éventuellement commencé par le second appui est
+     * abandonné, sans quoi le prochain mouvement remettrait l'ancienne
+     * largeur. */
+    void MainWindow::OnSplitterDoubleTapped(IInspectable const& sender, Input::DoubleTappedRoutedEventArgs const& args)
+    {
+        auto column = SplitterColumn(sender);
+        PaneLayout const& pane = column == FoldersColumn() ? FoldersPane : ListPane;
+
+        m_drag_column = nullptr;
+        sender.as<UIElement>().ReleasePointerCaptures();
+
+        column.Width(GridLengthHelper::FromPixels(pane.default_width));
+        ::EvolutionWin::Settings::Instance().SetNumber(pane.key, pane.default_width);
+        args.Handled(true);
     }
 
     std::wstring MainWindow::NodeKey(hstring const& account, hstring const& folder)

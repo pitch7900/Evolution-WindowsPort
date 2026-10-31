@@ -29,6 +29,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 - **Compte par défaut** : badge « Par défaut » et bouton *Définir par
   défaut* dans Paramètres › Comptes ; les nouveaux messages partent de ce
   compte, les réponses et transferts du compte qui a reçu le message.
+- **Panneaux redimensionnables** dans la vue Courrier : séparateurs
+  déplaçables entre les dossiers, la liste des messages et le volet de
+  lecture (curseur de redimensionnement, double-clic pour la largeur par
+  défaut) ; largeurs mémorisées d'une session à l'autre.
 
 ### Corrigé
 
