@@ -18,11 +18,16 @@
   4. MSI construit par WiX v5 dans dist\.
 #>
 param(
-	[string] $Version = $(if ($env:EVO_MSI_VERSION) { $env:EVO_MSI_VERSION } else { '0.8.0' }),
+	[string] $Version = $env:EVO_MSI_VERSION,
 	[switch] $SkipAppBuild
 )
 
 $ErrorActionPreference = 'Stop'
+
+# version par défaut : fichier VERSION à la racine du dépôt (cf. CHANGELOG.md)
+if (-not $Version) {
+	$Version = (Get-Content (Join-Path $env:EVO_WORKSPACE 'VERSION') -TotalCount 1).Trim()
+}
 
 $Prefix    = $env:PREFIX
 $Workspace = $env:EVO_WORKSPACE

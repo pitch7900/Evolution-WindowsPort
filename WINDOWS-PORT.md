@@ -635,7 +635,7 @@ le poste en dehors de Windows 11.
 
 ```bat
 tools\build-msi.bat                    :: recompile EvolutionWin dans l'arborescence, puis le MSI
-tools\build-msi.bat -Version 0.9.0     :: version du paquet (défaut 0.8.0, ou EVO_MSI_VERSION)
+tools\build-msi.bat -Version 1.0.0     :: version forcée (défaut : fichier VERSION, ou EVO_MSI_VERSION)
 tools\build-msi.bat -SkipAppBuild      :: reprend .\build\ (sortie de build-winui-app.bat)
 ```
 
