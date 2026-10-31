@@ -205,10 +205,10 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 
 ### Filtres rapides
 
-- [ ] 🟢 **Filtres rapides** au-dessus de la liste (boutons bascule, comme dans Outlook) :
-  - [ ] Tous / Non lus / Lus
-  - [ ] Avec indicateur, avec pièces jointes, cette semaine, importants, mentionné
-  - [ ] Combinables avec la recherche et fonctionnels dans les vues unifiées
+- [x] 🟢 **Filtres rapides** au-dessus de la liste (boutons bascule, comme dans Outlook) :
+  - [x] Tous / Non lus / Lus
+  - [ ] Avec indicateur, avec pièces jointes, cette semaine, importants, mentionné — *fait : indicateur, pièces jointes, cette semaine ; reste : importants et mentionné (importance et destinataires absents des résumés transmis par `evo-core`)*
+  - [ ] Combinables avec la recherche et fonctionnels dans les vues unifiées — *fait : combinés avec la recherche ; reste : vues unifiées (§11)*
 
 ### Conversations
 

@@ -30,6 +30,10 @@ namespace winrt::EvolutionWin::implementation
         void OnRefreshSplitClick(
             Microsoft::UI::Xaml::Controls::SplitButton const& sender,
             Microsoft::UI::Xaml::Controls::SplitButtonClickEventArgs const& args);
+        void OnQuickFilterChanged(
+            Microsoft::UI::Xaml::Controls::SelectorBar const& sender,
+            Microsoft::UI::Xaml::Controls::SelectorBarSelectionChangedEventArgs const& args);
+        void OnQuickFilterToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRefreshAllClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRefreshFolderClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRefreshAccelerator(
@@ -100,6 +104,8 @@ namespace winrt::EvolutionWin::implementation
                         hstring const& account);
         void ShowMessages(Windows::Data::Json::JsonArray const& messages);
         void FilterLocalMessages(hstring const& query);
+        bool MatchesQuickFilters(Windows::Data::Json::JsonObject const& message);
+        void ReapplyMessageFilters();
         hstring SelectedMessageUid();
         std::vector<hstring> SelectedMessageUids();
         std::vector<hstring> TargetMessageUids(hstring const& context_uid = L"");

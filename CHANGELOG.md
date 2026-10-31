@@ -17,6 +17,9 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 - **Barre de lecture rapide** à gauche de chaque message (comme Outlook) :
   couleur d'accent pour les non-lus ; un clic bascule lu / non lu sans
   ouvrir ni sélectionner le message, info-bulle au survol.
+- **Filtres rapides** au-dessus de la liste : Tous / Non lus / Lus, avec
+  indicateur, avec pièces jointes, cette semaine ; combinables entre eux et
+  avec la recherche.
 
 ## [0.9.2] — 2026-10-31
 
