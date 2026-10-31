@@ -283,6 +283,8 @@ namespace winrt::EvolutionWin::implementation
         SetTitleBar(AppTitleBar());
         AppWindow().Resize({ 1500, 950 });
         ::EvolutionWin::SetWindowIcon(AppWindow());
+        RebuildQuickAccess();
+        AppTitleBar().SizeChanged([this](IInspectable const&, SizeChangedEventArgs const&) { UpdateTitleBarPassthrough(); });
         RestorePaneWidths();
         ApplyFolderPaneVisibility(::EvolutionWin::Settings::Instance().GetBoolean(L"layout.folders-visible", true));
 
@@ -3840,6 +3842,137 @@ namespace winrt::EvolutionWin::implementation
     void MainWindow::OnRibbonNextDaysClick(IInspectable const&, RoutedEventArgs const&)
     {
         MonthCalendar().SelectedDates().Clear();
+    }
+
+    /* Commandes proposées dans la barre d'accès rapide (identifiant mémorisé,
+     * libellé, glyphe, action) */
+    struct QuickAccessCommand
+    {
+        wchar_t const* id;
+        wchar_t const* label;
+        wchar_t const* glyph;
+        void (MainWindow::*handler)(IInspectable const&, RoutedEventArgs const&);
+    };
+
+    static QuickAccessCommand const QuickAccessCommands[] = {
+        { L"sendreceive", L"Envoyer/Recevoir (F5)", L"\xE72C", &MainWindow::OnRefreshClick },
+        { L"sendreceive-all", L"Envoyer/Recevoir tous les dossiers (F9)", L"\xE895", &MainWindow::OnRefreshAllClick },
+        { L"new-message", L"Nouveau message", L"\xE710", &MainWindow::OnNewMessageClick },
+        { L"reply", L"Répondre", L"\xE97A", &MainWindow::OnReplyClick },
+        { L"delete", L"Supprimer", L"\xE74D", &MainWindow::OnDeleteClick },
+        { L"print", L"Imprimer", L"\xE749", &MainWindow::OnPrintClick },
+        { L"new-event", L"Nouvel événement", L"\xE787", &MainWindow::OnNewEventClick },
+        { L"new-task", L"Nouvelle tâche", L"\xE9D5", &MainWindow::OnNewTaskClick },
+    };
+
+    /* Commande présente dans la barre d'accès rapide (préférence
+     * "quick-access.commands" ; par défaut Envoyer/Recevoir et Nouveau message). */
+    static bool IsQuickAccessChosen(hstring const& id)
+    {
+        auto& settings = ::EvolutionWin::Settings::Instance();
+        if (!settings.GetBoolean(L"quick-access.customized", false))
+            return id == L"sendreceive" || id == L"new-message";
+
+        for (auto const& value : settings.GetArray(L"quick-access.commands"))
+            if (value.ValueType() == JsonValueType::String && value.GetString() == id)
+                return true;
+        return false;
+    }
+
+    /* Barre d'accès rapide de la barre de titre : boutons des commandes
+     * choisies puis bouton de personnalisation (menu à cocher). */
+    void MainWindow::RebuildQuickAccess()
+    {
+        auto is_chosen = [](wchar_t const* id) { return IsQuickAccessChosen(id); };
+
+        auto panel = QuickAccessBar().Children();
+        panel.Clear();
+
+        auto small_button = [](Controls::Primitives::ButtonBase const& button, wchar_t const* glyph, hstring const& tip)
+        {
+            FontIcon icon;
+            icon.Glyph(glyph);
+            icon.FontSize(13);
+            button.Content(icon);
+            button.Width(32);
+            button.Height(28);
+            button.Padding(ThicknessHelper::FromUniformLength(0));
+            button.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+            button.BorderThickness(ThicknessHelper::FromUniformLength(0));
+            ToolTipService::SetToolTip(button, box_value(tip));
+        };
+
+        /* dans l'ordre de la liste des commandes */
+        for (auto const& command : QuickAccessCommands)
+        {
+            if (!is_chosen(command.id))
+                continue;
+            Button button;
+            small_button(button, command.glyph, command.label);
+            auto handler = command.handler;
+            button.Click([this, handler](IInspectable const&, RoutedEventArgs const&) { (this->*handler)(nullptr, nullptr); });
+            panel.Append(button);
+        }
+
+        /* personnalisation : commandes à cocher */
+        DropDownButton customize;
+        small_button(customize, L"\xE70D", L"Personnaliser la barre d'accès rapide");
+        /* le DropDownButton dessine déjà son chevron */
+        customize.Content(nullptr);
+        customize.Width(28);
+        MenuFlyout menu;
+        for (auto const& command : QuickAccessCommands)
+        {
+            ToggleMenuFlyoutItem entry;
+            entry.Text(command.label);
+            entry.IsChecked(is_chosen(command.id));
+            hstring id = command.id;
+            entry.Click([this, id](IInspectable const& sender, RoutedEventArgs const&)
+            {
+                /* la commande cochée / décochée, les autres inchangées */
+                bool checked = sender.as<ToggleMenuFlyoutItem>().IsChecked();
+                JsonArray current;
+                for (auto const& candidate : QuickAccessCommands)
+                {
+                    if (candidate.id == id ? checked : IsQuickAccessChosen(candidate.id))
+                        current.Append(JsonValue::CreateStringValue(candidate.id));
+                }
+                auto& prefs = ::EvolutionWin::Settings::Instance();
+                prefs.Set(L"quick-access.commands", current);
+                prefs.SetBoolean(L"quick-access.customized", true);
+                RebuildQuickAccess();
+            });
+            menu.Items().Append(entry);
+        }
+        customize.Flyout(menu);
+        panel.Append(customize);
+
+        UpdateTitleBarPassthrough();
+    }
+
+    void MainWindow::OnQuickAccessSizeChanged(IInspectable const&, SizeChangedEventArgs const&)
+    {
+        UpdateTitleBarPassthrough();
+    }
+
+    /* La barre de titre (SetTitleBar) sert à déplacer la fenêtre : la zone de
+     * la barre d'accès rapide y est déclarée « passthrough » pour que ses
+     * boutons reçoivent les clics (pixels physiques, relatifs à la fenêtre). */
+    void MainWindow::UpdateTitleBarPassthrough()
+    {
+        if (!QuickAccessBar().XamlRoot() || QuickAccessBar().ActualWidth() <= 0)
+            return;
+
+        double scale = QuickAccessBar().XamlRoot().RasterizationScale();
+        auto bounds = QuickAccessBar().TransformToVisual(nullptr).TransformBounds(
+            Rect{ 0, 0, static_cast<float>(QuickAccessBar().ActualWidth()), static_cast<float>(QuickAccessBar().ActualHeight()) });
+
+        Windows::Graphics::RectInt32 rect{
+            static_cast<int32_t>(bounds.X * scale), static_cast<int32_t>(bounds.Y * scale),
+            static_cast<int32_t>(bounds.Width * scale), static_cast<int32_t>(bounds.Height * scale) };
+
+        auto source = Microsoft::UI::Input::InputNonClientPointerSource::GetForWindowId(AppWindow().Id());
+        source.SetRegionRects(Microsoft::UI::Input::NonClientRegionKind::Passthrough, { rect });
     }
 
     /* Croix du bandeau : l'avis affiché est retiré, le suivant apparaît. */

@@ -34,6 +34,7 @@ namespace winrt::EvolutionWin::implementation
         void OnRibbonResetLayoutClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRibbonTodayClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRibbonNextDaysClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnQuickAccessSizeChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::SizeChangedEventArgs const& args);
         void OnInfoBannerClosed(
             Microsoft::UI::Xaml::Controls::InfoBar const& sender,
             Microsoft::UI::Xaml::Controls::InfoBarClosedEventArgs const& args);
@@ -333,6 +334,8 @@ namespace winrt::EvolutionWin::implementation
         void ClearBanner(std::wstring const& id);
         void RefreshBanner();
         void UpdateRibbon();
+        void RebuildQuickAccess();
+        void UpdateTitleBarPassthrough();
         EvolutionWin::FolderItem CurrentFolderItem();
         void ApplyFolderPaneVisibility(bool visible);
         int64_t m_selected_day_start{ 0 };
