@@ -62,21 +62,21 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [ ] **Vérification de version** : lecture du fichier [VERSION](VERSION) de la branche `main` (`https://raw.githubusercontent.com/pitch7900/Evolution-WindowsPort/main/VERSION`) et comparaison avec la version compilée dans l'exécutable (comparaison numérique `x.y.z`, pas textuelle)
   - [ ] Fréquence : au démarrage (après quelques minutes, pour ne pas ralentir la relève) puis une fois par jour ; bouton *Rechercher les mises à jour* dans la boîte « À propos »
   - [ ] **Notification** de la nouvelle version (bandeau / toast) avec les nouveautés extraites du [CHANGELOG.md](CHANGELOG.md), boutons *Installer maintenant*, *Plus tard*, *Ignorer cette version*
-  - [ ] **Téléchargement automatique** du MSI depuis `dist/` (`dist/Evolution-<version>-x64.msi`) en arrière-plan, avec progression dans la barre d'état (§4), dans `%LOCALAPPDATA%\EvolutionWin\Updates`
+  - [ ] **Téléchargement automatique** du MSI joint à la Release GitHub (`Evolution-<version>-x64.msi`) en arrière-plan, avec progression dans la barre d'état (§4), dans `%LOCALAPPDATA%\EvolutionWin\Updates`
   - [ ] **Vérification d'intégrité avant installation** : empreinte SHA-256 publiée à côté du MSI (`.sha256`) et signature Authenticode du MSI (`WinVerifyTrust`, éditeur attendu) ; refus d'installer si la vérification échoue
   - [ ] **Installation** : fermeture propre de l'application (boîte d'envoi vidée, synchronisation terminée), lancement de `msiexec /i … /passive` (élévation UAC, installation par machine), redémarrage automatique d'EvolutionWin à la fin
   - [ ] Nettoyage des MSI téléchargés après installation réussie
   - [ ] **Paramètres** (§19) : mise à jour automatique / notification seulement / désactivée ; canal (versions stables, préversions)
   - [ ] **Politique d'entreprise** : désactivation par clé de registre machine ou propriété MSI (`AUTOUPDATE=0`) pour les déploiements gérés (GPO / Intune)
-  - [ ] Évolution : passer aux *Releases* GitHub (cf. point suivant) plutôt que `dist/` dans le dépôt
-- [ ] 🟡 **Publication des versions par les Releases GitHub** (au lieu de versionner les MSI dans `dist/`, ce qui alourdit l'historique Git à chaque version)
-  - [ ] Une *Release* par version, avec l'étiquette Git `v<version>` (ex. `v0.9.3`) créée à partir du fichier [VERSION](VERSION)
-  - [ ] Fichiers joints à la Release : `Evolution-<version>-x64.msi` et son empreinte `.sha256`
-  - [ ] Notes de version reprises automatiquement de la section correspondante du [CHANGELOG.md](CHANGELOG.md)
-  - [ ] Script de publication (`tools\publish-release.ps1`, avec `gh release create`) lancé après `build-msi.bat` : vérifie que la version n'existe pas déjà, que le CHANGELOG contient la version, puis crée l'étiquette et la Release
-  - [ ] Préversions marquées *Pre-release* (canal « préversions » de la mise à jour automatique)
+  - [x] Évolution : passer aux *Releases* GitHub (cf. point suivant) plutôt que `dist/` dans le dépôt
+- [x] 🟡 **Publication des versions par les Releases GitHub** (au lieu de versionner les MSI dans `dist/`, ce qui alourdit l'historique Git à chaque version)
+  - [x] Une *Release* par version, avec l'étiquette Git `v<version>` (ex. `v0.9.3`) créée à partir du fichier [VERSION](VERSION)
+  - [x] Fichiers joints à la Release : `Evolution-<version>-x64.msi` et son empreinte `.sha256`
+  - [x] Notes de version reprises automatiquement de la section correspondante du [CHANGELOG.md](CHANGELOG.md)
+  - [x] Script de publication (`tools\publish-release.ps1`, par l'API REST GitHub plutôt que `gh`, non installé ; jeton des identifiants de Git) lancé après `build-msi.bat` : vérifie que la version n'existe pas déjà, que le CHANGELOG contient la version, puis crée l'étiquette et la Release
+  - [x] Préversions marquées *Pre-release* (canal « préversions » de la mise à jour automatique)
   - [ ] Mise à jour automatique : version et URL du MSI lues par l'API `https://api.github.com/repos/pitch7900/Evolution-WindowsPort/releases/latest` (champ `tag_name` et `assets`) au lieu du fichier `VERSION` et de `dist/`
-  - [ ] Retirer `dist/` du dépôt (et l'ajouter au `.gitignore`), mettre à jour la documentation ([WINDOWS-PORT.md](WINDOWS-PORT.md), README)
+  - [x] Retirer `dist/` du dépôt (et l'ajouter au `.gitignore`), mettre à jour la documentation ([WINDOWS-PORT.md](WINDOWS-PORT.md), README)
   - [ ] 🟠 Optionnel : construction et publication automatiques par GitHub Actions à chaque étiquette (nécessite un runner Windows avec toute la chaîne MSVC / gvsbuild, ou un runner auto-hébergé)
 
 ## 2. Interface générale et disposition — 🟡
