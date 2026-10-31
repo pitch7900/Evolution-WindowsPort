@@ -24,6 +24,13 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   *Supprimer tout* (vers la Corbeille), *Vider la Corbeille* et *Vider les
   Indésirables* (suppression définitive), avec confirmation.
 
+### Corrigé
+
+- Aperçu vidé (« Sélectionnez un message pour le lire ») juste après la
+  suppression d'un message, alors que le message suivant venait de s'y
+  afficher : le rechargement de la liste désélectionnait le message ;
+  idem en changeant de filtre rapide.
+
 ## [0.9.2] — 2026-10-31
 
 ### Ajouté
