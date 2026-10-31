@@ -20,6 +20,9 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 - **Filtres rapides** au-dessus de la liste : Tous / Non lus / Lus, avec
   indicateur, avec pièces jointes, cette semaine ; combinables entre eux et
   avec la recherche.
+- **Menu contextuel des dossiers** (clic droit) : *Marquer tout comme lu* ;
+  *Supprimer tout* (vers la Corbeille), *Vider la Corbeille* et *Vider les
+  Indésirables* (suppression définitive), avec confirmation.
 
 ## [0.9.2] — 2026-10-31
 

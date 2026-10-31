@@ -126,6 +126,12 @@ namespace winrt::EvolutionWin::implementation
         AppWindow().Resize({ 1500, 950 });
         ::EvolutionWin::SetWindowIcon(AppWindow());
 
+        /* menu contextuel des dossiers (clic droit, touche Menu) */
+        FolderTree().ContextRequested([this](UIElement const& sender, Input::ContextRequestedEventArgs const& args)
+        {
+            ShowFolderContextMenu(sender, args);
+        });
+
         InitializeReaderAsync();
 
         m_core = std::make_shared<::EvolutionWin::CoreBridge>(
@@ -475,6 +481,115 @@ namespace winrt::EvolutionWin::implementation
         dialog.Content(panel);
         co_await dialog.ShowAsync();
         m_dialog_open = false;
+    }
+
+    /* Menu contextuel d'un dossier de l'arborescence : Marquer tout comme lu,
+     * Vider la Corbeille / les Indésirables, Supprimer tout. */
+    void MainWindow::ShowFolderContextMenu(UIElement const&, Input::ContextRequestedEventArgs const& args)
+    {
+        /* élément de l'arborescence sous le pointeur (ou ayant le focus) */
+        DependencyObject element = args.OriginalSource().try_as<DependencyObject>();
+        while (element && !element.try_as<TreeViewItem>())
+            element = VisualTreeHelper::GetParent(element);
+        auto container = element ? element.try_as<TreeViewItem>() : nullptr;
+        auto node = container ? FolderTree().NodeFromContainer(container) : nullptr;
+        auto item = node ? node.Content().try_as<EvolutionWin::FolderItem>() : nullptr;
+
+        if (!item || item.IsAccount() || item.Folder().empty())
+            return;
+        args.Handled(true);
+
+        bool trash = item.Glyph() == FolderGlyph(L"trash");
+        bool junk = item.Glyph() == FolderGlyph(L"junk");
+
+        MenuFlyout menu;
+        MenuFlyoutItem mark_read;
+        mark_read.Text(L"Marquer tout comme lu");
+        mark_read.Icon(FontIcon{});
+        mark_read.Icon().as<FontIcon>().Glyph(L"\xE8C3");
+        mark_read.Click([this, item](IInspectable const&, RoutedEventArgs const&)
+        {
+            RunFolderActionAsync(item, L"mark-all-read");
+        });
+        menu.Items().Append(mark_read);
+        menu.Items().Append(MenuFlyoutSeparator{});
+
+        MenuFlyoutItem empty;
+        empty.Text(trash ? L"Vider la Corbeille" : junk ? L"Vider les Indésirables" : L"Supprimer tout");
+        empty.Icon(FontIcon{});
+        empty.Icon().as<FontIcon>().Glyph(L"\xE74D");
+        empty.Click([this, item](IInspectable const&, RoutedEventArgs const&)
+        {
+            RunFolderActionAsync(item, L"empty");
+        });
+        menu.Items().Append(empty);
+
+        Microsoft::UI::Xaml::Controls::Primitives::FlyoutShowOptions options;
+        Point position;
+        if (args.TryGetPosition(container, position))
+            options.Position(position);
+        menu.ShowAt(container, options);
+    }
+
+    /* Exécute une action sur tout un dossier, avec confirmation pour
+     * « empty » (définitif pour la Corbeille et les Indésirables).
+     * Paramètres :
+     *   item   : dossier visé
+     *   action : "mark-all-read" ou "empty" */
+    fire_and_forget MainWindow::RunFolderActionAsync(EvolutionWin::FolderItem item, hstring action)
+    {
+        auto strong = get_strong();
+
+        if (action == L"empty")
+        {
+            if (m_dialog_open || !Content() || !Content().XamlRoot())
+                co_return;
+            bool permanent = item.Glyph() == FolderGlyph(L"trash") || item.Glyph() == FolderGlyph(L"junk");
+
+            ContentDialog confirm;
+            confirm.XamlRoot(Content().XamlRoot());
+            confirm.Title(box_value(permanent ? L"Supprimer définitivement ?" : L"Supprimer tout ?"));
+            TextBlock text;
+            text.TextWrapping(TextWrapping::Wrap);
+            text.Text(permanent
+                ? L"Tous les messages de « " + item.Name() + L" » seront supprimés définitivement. Cette action est irréversible."
+                : L"Tous les messages de « " + item.Name() + L" » seront déplacés vers la Corbeille.");
+            confirm.Content(text);
+            confirm.PrimaryButtonText(L"Supprimer");
+            confirm.CloseButtonText(L"Annuler");
+            confirm.DefaultButton(ContentDialogButton::Close);
+
+            m_dialog_open = true;
+            auto result = co_await confirm.ShowAsync();
+            m_dialog_open = false;
+            if (result != ContentDialogResult::Primary)
+                co_return;
+        }
+
+        hstring account = item.Account();
+        hstring folder = item.Folder();
+        hstring name = item.Name();
+        ShowStatus((action == L"empty" ? L"Suppression des messages de « " : L"Marquage comme lus dans « ") + name + L" »…",
+            InfoBarSeverity::Informational);
+
+        m_core->FolderAction(account, folder, action, [this, account, folder, name, action](hstring const& json, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                ShowStatus(L"« " + name + L" » : " + error, InfoBarSeverity::Error);
+                return;
+            }
+
+            JsonObject result;
+            uint32_t count = JsonObject::TryParse(json, result) ? static_cast<uint32_t>(result.GetNamedNumber(L"count", 0)) : 0;
+            ShowStatus(action == L"empty"
+                ? hstring{ std::to_wstring(count) + L" message(s) supprimé(s) de « " } + name + L" »."
+                : hstring{ std::to_wstring(count) + L" message(s) marqué(s) comme lu(s) dans « " } + name + L" ».",
+                InfoBarSeverity::Success);
+
+            if (account == m_account && folder == m_folder)
+                LoadMessages(false);
+        });
     }
 
     void MainWindow::OnFolderInvoked(TreeView const&, TreeViewItemInvokedEventArgs const& args)

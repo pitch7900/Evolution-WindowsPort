@@ -148,6 +148,10 @@ namespace winrt::EvolutionWin::implementation
         void RefreshAccountsView();
         fire_and_forget ShowAddAccountDialogAsync();
         fire_and_forget ShowAboutDialogAsync();
+        void ShowFolderContextMenu(
+            Microsoft::UI::Xaml::UIElement const& target,
+            Microsoft::UI::Xaml::Input::ContextRequestedEventArgs const& args);
+        fire_and_forget RunFolderActionAsync(EvolutionWin::FolderItem item, hstring action);
 
         /* Étape 3 : Calendrier et Contacts */
         void LoadEvents();

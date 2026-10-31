@@ -2164,6 +2164,125 @@ core_delete_message_run (EvoCore *core,
 	return g_strdup (trashed ? "{\"trashed\":true}" : "{\"trashed\":false}");
 }
 
+/* Type (CAMEL_FOLDER_TYPE_*) of a folder, from the folder tree. */
+static guint32
+find_folder_type (CamelFolderInfo *fi,
+		  const gchar *full_name)
+{
+	for (; fi; fi = fi->next) {
+		guint32 type;
+
+		if (g_strcmp0 (fi->full_name, full_name) == 0)
+			return fi->flags & CAMEL_FOLDER_TYPE_MASK;
+
+		type = find_folder_type (fi->child, full_name);
+		if (type != CAMEL_FOLDER_TYPE_NORMAL)
+			return type;
+	}
+
+	return CAMEL_FOLDER_TYPE_NORMAL;
+}
+
+/* Actions sur tout un dossier.
+ * "mark-all-read" : tous les messages marqués lus.
+ * "empty" : dossier Corbeille ou Indésirables (ou compte sans corbeille) :
+ * messages supprimés définitivement ; autre dossier : messages déplacés
+ * vers la corbeille du compte.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] account_uid, [1] folder_full_name, [2] action
+ *   error : emplacement d'erreur GError
+ * Retourne : {"count": n, "permanent": true|false}, ou NULL en cas d'erreur. */
+static gchar *
+core_folder_action_run (EvoCore *core,
+			gchar **args,
+			GError **error)
+{
+	CamelFolder *folder, *trash = NULL;
+	CamelStore *store;
+	GPtrArray *uids;
+	gboolean permanent = FALSE, success = TRUE;
+	guint ii, count = 0;
+	gchar *json;
+
+	folder = core_ref_folder (core, args[0], args[1], error);
+	if (!folder)
+		return NULL;
+
+	uids = camel_folder_dup_uids (folder);
+	if (!uids)
+		uids = g_ptr_array_new_with_free_func (g_free);
+
+	if (g_str_equal (args[2], "mark-all-read")) {
+		camel_folder_freeze (folder);
+		for (ii = 0; ii < uids->len; ii++) {
+			if (!(camel_folder_get_message_flags (folder, uids->pdata[ii]) & CAMEL_MESSAGE_SEEN)) {
+				camel_folder_set_message_flags (folder, uids->pdata[ii], CAMEL_MESSAGE_SEEN, CAMEL_MESSAGE_SEEN);
+				count++;
+			}
+		}
+		camel_folder_thaw (folder);
+		success = camel_folder_synchronize_sync (folder, FALSE, core->cancellable, error);
+	} else if (g_str_equal (args[2], "empty")) {
+		CamelFolderInfo *fi;
+		gchar *trash_name = NULL;
+		guint32 type = CAMEL_FOLDER_TYPE_NORMAL;
+
+		store = camel_folder_get_parent_store (folder);
+		fi = camel_store_get_folder_info_sync (store, NULL,
+			CAMEL_STORE_FOLDER_INFO_RECURSIVE | CAMEL_STORE_FOLDER_INFO_FAST, core->cancellable, NULL);
+		if (fi) {
+			trash_name = find_trash_folder_name (fi);
+			type = find_folder_type (fi, args[1]);
+			camel_folder_info_free (fi);
+		}
+
+		permanent = type == CAMEL_FOLDER_TYPE_TRASH || type == CAMEL_FOLDER_TYPE_JUNK ||
+			!trash_name || g_strcmp0 (trash_name, args[1]) == 0;
+		if (!permanent)
+			trash = core_ref_folder (core, args[0], trash_name, NULL);
+		permanent = permanent || !trash;
+		count = uids->len;
+
+		if (count > 0 && permanent) {
+			camel_folder_freeze (folder);
+			for (ii = 0; ii < uids->len; ii++)
+				camel_folder_set_message_flags (folder, uids->pdata[ii],
+					CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_SEEN,
+					CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_SEEN);
+			camel_folder_thaw (folder);
+			success = camel_folder_synchronize_sync (folder, TRUE, core->cancellable, error);
+		} else if (count > 0) {
+			success = camel_folder_transfer_messages_to_sync (folder, uids, trash, TRUE, NULL, core->cancellable, error) &&
+				camel_folder_synchronize_sync (folder, TRUE, core->cancellable, error);
+			camel_folder_synchronize_sync (trash, FALSE, core->cancellable, NULL);
+		}
+
+		g_free (trash_name);
+	} else {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Action inconnue : « %s »", args[2]);
+		success = FALSE;
+	}
+
+	g_ptr_array_unref (uids);
+	g_clear_object (&trash);
+	g_object_unref (folder);
+
+	if (!success)
+		return NULL;
+
+	{
+		JsonBuilder *builder = core_event_builder ();
+
+		builder_add_string (builder, "account", args[0]);
+		core_emit_builder (core, "folders-updated", builder);
+	}
+
+	json = g_strdup_printf ("{\"count\":%u,\"permanent\":%s}", count, permanent ? "true" : "false");
+
+	return json;
+}
+
 /* Déplace un message d'un dossier source vers un dossier de destination, puis
  * synchronise les deux dossiers et notifie l'interface.
  * Paramètres :
@@ -5376,6 +5495,23 @@ evo_core_set_message_flags (EvoCore *core,
 	g_return_if_fail (flag_name != NULL);
 
 	core_submit (core, core_set_message_flags_run, g_strdupv (args), func, user_data);
+}
+
+void
+evo_core_folder_action (EvoCore *core,
+			const char *account_uid,
+			const char *folder_full_name,
+			const char *action,
+			EvoCoreResultFunc func,
+			void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, (gchar *) folder_full_name, (gchar *) action, NULL };
+
+	g_return_if_fail (account_uid != NULL);
+	g_return_if_fail (folder_full_name != NULL);
+	g_return_if_fail (action != NULL);
+
+	core_submit (core, core_folder_action_run, g_strdupv (args), func, user_data);
 }
 
 /* Soumet une requête de suppression d'un message (vers la corbeille ou
