@@ -134,7 +134,7 @@ if ($DryRun) {
 
 if (-not $TagExists) {
 	$TagMessage = "Evolution $Version`n`n$Notes"
-	$TagMessage | git -C $Workspace tag -a $Tag -F -
+	$TagMessage | git -C $Workspace tag -a $Tag --cleanup=verbatim -F -
 	if ($LASTEXITCODE -ne 0) { throw "Création de l'étiquette $Tag impossible" }
 }
 git -C $Workspace push origin "refs/tags/$Tag"

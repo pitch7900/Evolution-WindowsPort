@@ -10,6 +10,13 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
+## [0.9.4] — en cours
+
+### Corrigé
+
+- `publish-release.bat` : les titres du CHANGELOG (« ### Ajouté »…) sont
+  conservés dans le message de l'étiquette Git.
+
 ## [0.9.3] — 2026-10-31
 
 ### Ajouté
