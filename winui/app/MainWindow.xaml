@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    xmlns:local="using:EvolutionWin"
     Title="Evolution">
 
     <Window.SystemBackdrop>
@@ -64,9 +65,13 @@
 
             <Grid>
             <Grid x:Name="MailView">
+                <!-- largeurs des dossiers et de la liste : réglées par les
+                     séparateurs et mémorisées (MainWindow::RestorePaneWidths) -->
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="260" />
-                    <ColumnDefinition Width="420" />
+                    <ColumnDefinition x:Name="FoldersColumn" Width="260" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition x:Name="ListColumn" Width="420" />
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
@@ -110,10 +115,22 @@
                     </TreeView>
                 </Grid>
 
+                <!-- séparateurs déplaçables (double-clic : largeur par défaut) -->
+                <local:PaneSplitter x:Name="FoldersSplitter" Grid.Column="1" Width="6" Background="Transparent"
+                                    PointerPressed="OnSplitterPointerPressed" PointerMoved="OnSplitterPointerMoved"
+                                    PointerReleased="OnSplitterPointerReleased" PointerCaptureLost="OnSplitterPointerCaptureLost"
+                                    DoubleTapped="OnSplitterDoubleTapped">
+                    <Rectangle Width="1" HorizontalAlignment="Center" Fill="{ThemeResource CardStrokeColorDefaultBrush}" />
+                </local:PaneSplitter>
+                <local:PaneSplitter x:Name="ListSplitter" Grid.Column="3" Width="6" Background="Transparent"
+                                    PointerPressed="OnSplitterPointerPressed" PointerMoved="OnSplitterPointerMoved"
+                                    PointerReleased="OnSplitterPointerReleased" PointerCaptureLost="OnSplitterPointerCaptureLost"
+                                    DoubleTapped="OnSplitterDoubleTapped">
+                    <Rectangle Width="1" HorizontalAlignment="Center" Fill="{ThemeResource CardStrokeColorDefaultBrush}" />
+                </local:PaneSplitter>
+
                 <!-- messages of the selected folder -->
-                <Grid Grid.Column="1" Padding="0,8,0,0"
-                      BorderThickness="1,0,1,0"
-                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                <Grid Grid.Column="2" Padding="0,8,0,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
@@ -181,7 +198,7 @@
                 </Grid>
 
                 <!-- reading pane -->
-                <Grid Grid.Column="2">
+                <Grid Grid.Column="4">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />

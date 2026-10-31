@@ -1,0 +1,12 @@
+namespace EvolutionWin
+{
+    /* Séparateur vertical entre deux panneaux : une grille transparente qui
+     * affiche le curseur de redimensionnement horizontal au survol
+     * (UIElement.ProtectedCursor n'est accessible qu'à une classe dérivée).
+     * Le glisser est traité par la fenêtre qui l'héberge. */
+    [default_interface]
+    runtimeclass PaneSplitter : Microsoft.UI.Xaml.Controls.Grid
+    {
+        PaneSplitter();
+    }
+}

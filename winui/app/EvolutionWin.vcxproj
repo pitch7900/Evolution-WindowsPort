@@ -149,6 +149,9 @@
     <ClInclude Include="FolderItem.h">
       <DependentUpon>FolderItem.idl</DependentUpon>
     </ClInclude>
+    <ClInclude Include="PaneSplitter.h">
+      <DependentUpon>PaneSplitter.idl</DependentUpon>
+    </ClInclude>
     <ClInclude Include="App.xaml.h">
       <DependentUpon>App.xaml</DependentUpon>
     </ClInclude>
@@ -180,10 +183,14 @@
     <ClCompile Include="FolderItem.cpp">
       <DependentUpon>FolderItem.idl</DependentUpon>
     </ClCompile>
+    <ClCompile Include="PaneSplitter.cpp">
+      <DependentUpon>PaneSplitter.idl</DependentUpon>
+    </ClCompile>
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="FolderItem.idl" />
+    <Midl Include="PaneSplitter.idl" />
     <Midl Include="ComposeWindow.idl">
       <SubType>Code</SubType>
       <DependentUpon>ComposeWindow.xaml</DependentUpon>

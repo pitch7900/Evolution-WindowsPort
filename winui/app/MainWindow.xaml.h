@@ -55,6 +55,13 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::AutoSuggestBox const& sender,
             Microsoft::UI::Xaml::Controls::AutoSuggestBoxQuerySubmittedEventArgs const& args);
 
+        /* Séparateurs déplaçables entre dossiers, liste et volet de lecture */
+        void OnSplitterPointerPressed(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
+        void OnSplitterPointerMoved(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
+        void OnSplitterPointerReleased(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
+        void OnSplitterPointerCaptureLost(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
+        void OnSplitterDoubleTapped(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::DoubleTappedRoutedEventArgs const& args);
+
         /* Gestionnaires du calendrier */
         void OnCalendarDateSelected(
             Microsoft::UI::Xaml::Controls::CalendarView const& sender,
@@ -98,6 +105,9 @@ namespace winrt::EvolutionWin::implementation
         void UpdateFolderCounts(hstring const& account, Windows::Data::Json::JsonArray const& folders);
         static std::wstring NodeKey(hstring const& account, hstring const& folder);
         void Initialize();
+        void RestorePaneWidths();
+        Microsoft::UI::Xaml::Controls::ColumnDefinition SplitterColumn(Windows::Foundation::IInspectable const& splitter);
+        void EndSplitterDrag();
         void OnCoreEvent(hstring const& event, hstring const& json);
         void LoadAccounts();
         void AddFolders(Microsoft::UI::Xaml::Controls::TreeViewNode const& parent,
@@ -191,6 +201,11 @@ namespace winrt::EvolutionWin::implementation
         uint64_t m_search_request{ 0 };
         /* the list was reloaded and its selection restored: keep the reader */
         bool m_reselecting{ false };
+        /* glisser d'un séparateur en cours : colonne redimensionnée, abscisse
+           du pointeur (dans MailView) et largeur de la colonne au départ */
+        Microsoft::UI::Xaml::Controls::ColumnDefinition m_drag_column{ nullptr };
+        double m_drag_origin{ 0 };
+        double m_drag_start_width{ 0 };
         event_token m_activated_token;
     };
 }
