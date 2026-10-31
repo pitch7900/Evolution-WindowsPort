@@ -8,11 +8,38 @@
 #include <glib/gstdio.h>
 #include <camel/camel.h>
 #include <json-glib/json-glib.h>
+#include <libsoup/soup.h>
 #include <libedataserver/libedataserver.h>
 #include <libecal/libecal.h>
 #include <libebook/libebook.h>
 
 #include "evo-core.h"
+
+struct _EvoCore {
+	EvoCoreEventFunc event_func;
+	gpointer event_data;
+
+	GThread *thread;
+	GMainContext *context;
+	GMainLoop *loop;
+	GThreadPool *pool;
+	GCancellable *cancellable;
+
+	ESourceRegistry *registry;
+	CamelSession *session;
+
+	/* opened folders, "<account>\x1F<full name>" ~> CamelFolder *;
+	 * their "changed" signal becomes the "folder-changed" event */
+	GHashTable *folders;
+	GMutex folders_lock;
+	GSource *refresh_source;
+
+	/* startup state, protected by lock */
+	GMutex lock;
+	GCond cond;
+	gboolean started;
+	gchar *start_error;
+};
 
 static JsonBuilder *	core_event_builder	(void);
 static void		builder_add_string	(JsonBuilder *builder,
@@ -41,6 +68,13 @@ struct _EvoCoreSession {
 	ESourceCredentialsProvider *credentials_provider;
 	GHashTable *prompted_sources;
 	GMutex prompted_lock;
+
+	/* Gestion des certificats TLS approuvés ou en attente de décision */
+	GHashTable *trusted_certs;
+	GHashTable *pending_trust;
+	GMutex trust_lock;
+	GCond trust_cond;
+	gchar *trust_file;
 };
 
 G_DEFINE_TYPE (EvoCoreSession, evo_core_session, CAMEL_TYPE_SESSION)
@@ -312,13 +346,370 @@ evo_core_session_authenticate_sync (CamelSession *session,
 	return result == CAMEL_AUTHENTICATION_ACCEPTED;
 }
 
+/* Fournit le jeton d'accès OAuth2 (XOAUTH2) d'un service Camel à partir du
+ * Gestionnaire d'identifiants Windows. Le secret stocké peut être soit le
+ * jeton d'accès brut, soit un objet JSON {"access_token": "..."}.
+ * Paramètres :
+ *   session          : session Camel courante
+ *   service          : service IMAP ou SMTP demandant le jeton OAuth2
+ *   out_access_token : reçoit le jeton d'accès alloué
+ *   out_expires_in   : reçoit la durée de validité en secondes
+ *   cancellable      : objet d'annulation
+ *   error            : emplacement pour une éventuelle erreur
+ * Retourne : TRUE si un jeton d'accès valide a été obtenu. */
+static gboolean
+evo_core_session_get_oauth2_access_token_sync (CamelSession *session,
+					       CamelService *service,
+					       gchar **out_access_token,
+					       gint *out_expires_in,
+					       GCancellable *cancellable,
+					       GError **error)
+{
+	EvoCoreSession *self = EVO_CORE_SESSION (session);
+	gchar *stored;
+
+	stored = evo_core_session_lookup_password (self, service, cancellable, error);
+	if (!stored || !*stored) {
+		g_free (stored);
+		evo_core_session_emit_auth_required (self, service, FALSE);
+		if (error && !*error)
+			g_set_error (error, CAMEL_SERVICE_ERROR, CAMEL_SERVICE_ERROR_CANT_AUTHENTICATE,
+				"Aucun jeton OAuth2 enregistré pour « %s »", camel_service_get_display_name (service));
+		return FALSE;
+	}
+
+	if (stored[0] == '{') {
+		JsonNode *root = json_from_string (stored, NULL);
+		if (root && JSON_NODE_HOLDS_OBJECT (root)) {
+			JsonObject *obj = json_node_get_object (root);
+			const gchar *token = json_object_get_string_member_with_default (obj, "access_token", "");
+			const gchar *refresh_token = json_object_get_string_member_with_default (obj, "refresh_token", "");
+			const gchar *token_endpoint = json_object_get_string_member_with_default (obj, "token_endpoint", "");
+			const gchar *client_id = json_object_get_string_member_with_default (obj, "client_id", "");
+			gint64 expires_in = json_object_get_int_member_with_default (obj, "expires_in", 3600);
+			gint64 expires_at = json_object_get_int_member_with_default (obj, "expires_at", 0);
+			gint64 now_sec = g_get_real_time () / G_USEC_PER_SEC;
+
+			/* Renouvellement automatique du jeton OAuth2 via refresh_token lorsqu'il a expiré */
+			if (refresh_token && *refresh_token && token_endpoint && *token_endpoint &&
+			    client_id && *client_id && (!token || !*token || (expires_at > 0 && now_sec + 60 >= expires_at))) {
+				SoupSession *soup = soup_session_new ();
+				SoupMessage *msg = soup_message_new ("POST", token_endpoint);
+
+				if (msg) {
+					gchar *esc_cid = g_uri_escape_string (client_id, NULL, FALSE);
+					gchar *esc_rt = g_uri_escape_string (refresh_token, NULL, FALSE);
+					gchar *form = g_strdup_printf (
+						"client_id=%s&grant_type=refresh_token&refresh_token=%s",
+						esc_cid, esc_rt);
+					GBytes *req_bytes = g_bytes_new_take (form, strlen (form));
+					GBytes *resp_bytes;
+
+					soup_message_set_request_body_from_bytes (
+						msg, "application/x-www-form-urlencoded", req_bytes);
+					g_bytes_unref (req_bytes);
+					g_free (esc_cid);
+					g_free (esc_rt);
+
+					resp_bytes = soup_session_send_and_read (soup, msg, cancellable, NULL);
+					if (resp_bytes) {
+						gsize resp_len = 0;
+						const gchar *resp_str = g_bytes_get_data (resp_bytes, &resp_len);
+						JsonNode *resp_node = json_from_string (resp_str, NULL);
+
+						if (resp_node && JSON_NODE_HOLDS_OBJECT (resp_node)) {
+							JsonObject *resp_obj = json_node_get_object (resp_node);
+							const gchar *new_token = json_object_get_string_member_with_default (resp_obj, "access_token", "");
+							const gchar *new_refresh = json_object_get_string_member_with_default (resp_obj, "refresh_token", "");
+							gint64 new_exp = json_object_get_int_member_with_default (resp_obj, "expires_in", 3600);
+
+							if (new_token && *new_token) {
+								ESource *src;
+
+								json_object_set_string_member (obj, "access_token", new_token);
+								if (new_refresh && *new_refresh)
+									json_object_set_string_member (obj, "refresh_token", new_refresh);
+								json_object_set_int_member (obj, "expires_in", new_exp > 0 ? new_exp : 3600);
+								json_object_set_int_member (obj, "expires_at", now_sec + (new_exp > 0 ? new_exp : 3600));
+
+								src = e_source_registry_ref_source (self->registry, camel_service_get_uid (service));
+								if (src) {
+									gchar *updated_json = json_to_string (root, FALSE);
+									ENamedParameters *creds = e_named_parameters_new ();
+									e_named_parameters_set (creds, E_SOURCE_CREDENTIAL_PASSWORD, updated_json);
+									e_source_credentials_provider_store_sync (
+										self->credentials_provider, src, creds, TRUE, cancellable, NULL);
+									e_named_parameters_free (creds);
+									g_free (updated_json);
+									g_object_unref (src);
+								}
+
+								token = json_object_get_string_member_with_default (obj, "access_token", "");
+								expires_in = new_exp > 0 ? new_exp : 3600;
+							}
+						}
+						if (resp_node)
+							json_node_unref (resp_node);
+						g_bytes_unref (resp_bytes);
+					}
+					g_object_unref (msg);
+				}
+				g_object_unref (soup);
+			}
+
+			if (token && *token) {
+				*out_access_token = g_strdup (token);
+				*out_expires_in = (gint) (expires_in > 0 ? expires_in : 3600);
+				json_node_unref (root);
+				e_util_safe_free_string (stored);
+				return TRUE;
+			}
+		}
+		if (root)
+			json_node_unref (root);
+	}
+
+	*out_access_token = stored;
+	*out_expires_in = 3600;
+	return TRUE;
+}
+
+/* Charge la liste des certificats TLS approuvés de façon permanente depuis
+ * le fichier trusted-certs.ini du dossier de données utilisateur.
+ * Paramètres :
+ *   self : instance EvoCoreSession */
+static void
+evo_core_session_load_trusted_certs (EvoCoreSession *self)
+{
+	GKeyFile *keyfile;
+	gchar **keys = NULL;
+	gsize n_keys = 0, ii;
+
+	if (!self->trust_file || !g_file_test (self->trust_file, G_FILE_TEST_IS_REGULAR))
+		return;
+
+	keyfile = g_key_file_new ();
+	if (g_key_file_load_from_file (keyfile, self->trust_file, G_KEY_FILE_NONE, NULL)) {
+		keys = g_key_file_get_keys (keyfile, "trusted", &n_keys, NULL);
+		for (ii = 0; ii < n_keys && keys && keys[ii]; ii++) {
+			gint val = g_key_file_get_integer (keyfile, "trusted", keys[ii], NULL);
+			if (val == (gint) CAMEL_CERT_TRUST_FULLY) {
+				g_hash_table_insert (self->trusted_certs,
+					g_strdup (keys[ii]),
+					GINT_TO_POINTER ((gint) CAMEL_CERT_TRUST_FULLY));
+			}
+		}
+		g_strfreev (keys);
+	}
+	g_key_file_free (keyfile);
+}
+
+/* Enregistre sur le disque les certificats TLS approuvés de façon permanente.
+ * Doit être appelée avec self->trust_lock verrouillé.
+ * Paramètres :
+ *   self : instance EvoCoreSession */
+static void
+evo_core_session_save_trusted_certs_locked (EvoCoreSession *self)
+{
+	GKeyFile *keyfile;
+	GHashTableIter iter;
+	gpointer key, value;
+	gchar *data = NULL, *dir;
+	gsize len = 0;
+
+	if (!self->trust_file)
+		return;
+
+	keyfile = g_key_file_new ();
+	g_hash_table_iter_init (&iter, self->trusted_certs);
+	while (g_hash_table_iter_next (&iter, &key, &value)) {
+		if (GPOINTER_TO_INT (value) == (gint) CAMEL_CERT_TRUST_FULLY)
+			g_key_file_set_integer (keyfile, "trusted", (const gchar *) key, (gint) CAMEL_CERT_TRUST_FULLY);
+	}
+
+	data = g_key_file_to_data (keyfile, &len, NULL);
+	if (data) {
+		dir = g_path_get_dirname (self->trust_file);
+		g_mkdir_with_parents (dir, 0700);
+		g_file_set_contents (self->trust_file, data, (gssize) len, NULL);
+		g_free (dir);
+		g_free (data);
+	}
+	g_key_file_free (keyfile);
+}
+
+/* Calcule l'empreinte SHA-256 formatée (AA:BB:CC:...) d'un certificat TLS.
+ * Paramètres :
+ *   certificate : certificat GTlsCertificate
+ * Retourne : chaîne nouvellement allouée contenant l'empreinte SHA-256. */
+static gchar *
+certificate_dup_sha256_fingerprint (GTlsCertificate *certificate)
+{
+	GByteArray *der = NULL;
+	gchar *raw_hex, *formatted;
+	GString *str;
+	gsize ii, len;
+
+	g_object_get (certificate, "certificate", &der, NULL);
+	if (!der || !der->data || der->len == 0) {
+		if (der)
+			g_byte_array_unref (der);
+		return g_strdup ("(inconnue)");
+	}
+
+	raw_hex = g_compute_checksum_for_data (G_CHECKSUM_SHA256, der->data, der->len);
+	g_byte_array_unref (der);
+
+	if (!raw_hex)
+		return g_strdup ("(inconnue)");
+
+	len = strlen (raw_hex);
+	str = g_string_sized_new (len + len / 2 + 2);
+	for (ii = 0; ii < len; ii += 2) {
+		if (ii > 0)
+			g_string_append_c (str, ':');
+		g_string_append_c (str, g_ascii_toupper (raw_hex[ii]));
+		if (ii + 1 < len)
+			g_string_append_c (str, g_ascii_toupper (raw_hex[ii + 1]));
+	}
+	g_free (raw_hex);
+	formatted = g_string_free (str, FALSE);
+
+	return formatted;
+}
+
+/* Construit une description lisible en français des anomalies détectées sur
+ * un certificat TLS (GTlsCertificateFlags).
+ * Paramètres :
+ *   errors : masque d'erreurs GTlsCertificateFlags
+ * Retourne : chaîne nouvellement allouée décrivant les erreurs. */
+static gchar *
+format_tls_errors_fr (GTlsCertificateFlags errors)
+{
+	GString *desc = g_string_new ("");
+
+	if (errors & G_TLS_CERTIFICATE_UNKNOWN_CA)
+		g_string_append (desc, "• Autorité de certification inconnue ou certificat auto-signé\n");
+	if (errors & G_TLS_CERTIFICATE_BAD_IDENTITY)
+		g_string_append (desc, "• Le nom du serveur ne correspond pas au certificat\n");
+	if (errors & G_TLS_CERTIFICATE_EXPIRED)
+		g_string_append (desc, "• Le certificat a expiré\n");
+	if (errors & G_TLS_CERTIFICATE_NOT_ACTIVATED)
+		g_string_append (desc, "• Le certificat n'est pas encore activé\n");
+	if (errors & G_TLS_CERTIFICATE_REVOKED)
+		g_string_append (desc, "• Le certificat a été révoqué\n");
+	if (errors & G_TLS_CERTIFICATE_INSECURE)
+		g_string_append (desc, "• Algorithme cryptographique faible\n");
+	if (desc->len == 0)
+		g_string_append (desc, "• Certificat TLS non vérifié\n");
+
+	if (desc->len > 0 && desc->str[desc->len - 1] == '\n')
+		g_string_truncate (desc, desc->len - 1);
+
+	return g_string_free (desc, FALSE);
+}
+
+/* Demande à l'interface utilisateur si un certificat TLS présentant des erreurs
+ * de validation doit être refusé, accepté pour la session ou approuvé de façon
+ * permanente.
+ * Paramètres :
+ *   session     : session Camel courante
+ *   service     : service réseau concerné
+ *   certificate : certificat TLS présenté par le serveur
+ *   errors      : erreurs de validation TLS
+ * Retourne : la décision CamelCertTrust choisie par l'utilisateur. */
 static CamelCertTrust
 evo_core_session_trust_prompt (CamelSession *session,
 			       CamelService *service,
 			       GTlsCertificate *certificate,
 			       GTlsCertificateFlags errors)
 {
-	/* TODO: ask the user; invalid certificates are refused for now */
+	EvoCoreSession *self = EVO_CORE_SESSION (session);
+	CamelSettings *settings;
+	gchar *host = NULL, *fingerprint, *trust_id, *errors_desc;
+	gchar *subject = NULL, *issuer = NULL;
+	gpointer cached;
+	gint decision = 0;
+
+	if (!self->core || !certificate)
+		return CAMEL_CERT_TRUST_NEVER;
+
+	settings = service ? camel_service_ref_settings (service) : NULL;
+	if (CAMEL_IS_NETWORK_SETTINGS (settings))
+		host = camel_network_settings_dup_host (CAMEL_NETWORK_SETTINGS (settings));
+	g_clear_object (&settings);
+
+	if (!host || !*host) {
+		g_free (host);
+		host = g_strdup (service ? camel_service_get_display_name (service) : "serveur");
+	}
+
+	fingerprint = certificate_dup_sha256_fingerprint (certificate);
+	trust_id = g_strdup_printf ("%s|%s", host, fingerprint);
+
+	g_mutex_lock (&self->trust_lock);
+	cached = g_hash_table_lookup (self->trusted_certs, trust_id);
+	if (cached) {
+		CamelCertTrust trust = (CamelCertTrust) GPOINTER_TO_INT (cached);
+		g_mutex_unlock (&self->trust_lock);
+		g_free (trust_id);
+		g_free (fingerprint);
+		g_free (host);
+		return trust;
+	}
+
+	/* Si aucune demande n'est déjà affichée pour ce certificat, émet l'événement */
+	if (!g_hash_table_contains (self->pending_trust, trust_id)) {
+		JsonBuilder *builder;
+
+		g_hash_table_insert (self->pending_trust, g_strdup (trust_id), GINT_TO_POINTER (0));
+		g_mutex_unlock (&self->trust_lock);
+
+		g_object_get (certificate,
+			"subject-name", &subject,
+			"issuer-name", &issuer,
+			NULL);
+		errors_desc = format_tls_errors_fr (errors);
+
+		builder = core_event_builder ();
+		builder_add_string (builder, "id", trust_id);
+		builder_add_string (builder, "source_uid", service ? camel_service_get_uid (service) : "");
+		builder_add_string (builder, "name", service ? camel_service_get_display_name (service) : host);
+		builder_add_string (builder, "host", host);
+		builder_add_string (builder, "fingerprint", fingerprint);
+		builder_add_string (builder, "subject", subject ? subject : host);
+		builder_add_string (builder, "issuer", issuer ? issuer : "(inconnu)");
+		builder_add_string (builder, "errors", errors_desc);
+		core_emit_builder (self->core, "tls-trust-required", builder);
+
+		g_free (errors_desc);
+		g_free (subject);
+		g_free (issuer);
+
+		g_mutex_lock (&self->trust_lock);
+	}
+
+	/* Attend la réponse de l'utilisateur (evo_core_respond_tls_trust) */
+	while (!g_cancellable_is_cancelled (self->core->cancellable)) {
+		decision = GPOINTER_TO_INT (g_hash_table_lookup (self->pending_trust, trust_id));
+		if (decision != 0)
+			break;
+		g_cond_wait_until (&self->trust_cond, &self->trust_lock,
+			g_get_monotonic_time () + 250 * G_TIME_SPAN_MILLISECOND);
+	}
+
+	g_hash_table_remove (self->pending_trust, trust_id);
+	g_mutex_unlock (&self->trust_lock);
+
+	g_free (trust_id);
+	g_free (fingerprint);
+	g_free (host);
+
+	if (decision == 1)
+		return CAMEL_CERT_TRUST_TEMPORARY;
+	if (decision >= 2)
+		return CAMEL_CERT_TRUST_FULLY;
+
 	return CAMEL_CERT_TRUST_NEVER;
 }
 
@@ -345,6 +736,17 @@ evo_core_session_dispose (GObject *object)
 		self->prompted_sources = NULL;
 		g_mutex_clear (&self->prompted_lock);
 	}
+	if (self->trusted_certs) {
+		g_hash_table_destroy (self->trusted_certs);
+		self->trusted_certs = NULL;
+	}
+	if (self->pending_trust) {
+		g_hash_table_destroy (self->pending_trust);
+		self->pending_trust = NULL;
+		g_mutex_clear (&self->trust_lock);
+		g_cond_clear (&self->trust_cond);
+	}
+	g_clear_pointer (&self->trust_file, g_free);
 
 	G_OBJECT_CLASS (evo_core_session_parent_class)->dispose (object);
 }
@@ -360,6 +762,7 @@ evo_core_session_class_init (EvoCoreSessionClass *klass)
 	session_class->add_service = evo_core_session_add_service;
 	session_class->get_password = evo_core_session_get_password;
 	session_class->authenticate_sync = evo_core_session_authenticate_sync;
+	session_class->get_oauth2_access_token_sync = evo_core_session_get_oauth2_access_token_sync;
 	session_class->trust_prompt = evo_core_session_trust_prompt;
 	session_class->get_filter_driver = evo_core_session_get_filter_driver;
 }
@@ -369,6 +772,10 @@ evo_core_session_init (EvoCoreSession *self)
 {
 	g_mutex_init (&self->prompted_lock);
 	self->prompted_sources = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+	g_mutex_init (&self->trust_lock);
+	g_cond_init (&self->trust_cond);
+	self->trusted_certs = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+	self->pending_trust = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
 }
 
 static CamelSession *
@@ -392,6 +799,8 @@ evo_core_session_new (EvoCore *core,
 	self->core = core;
 	self->registry = g_object_ref (registry);
 	self->credentials_provider = e_source_credentials_provider_new (registry);
+	self->trust_file = g_build_filename (data_dir, "trusted-certs.ini", NULL);
+	evo_core_session_load_trusted_certs (self);
 
 	g_free (data_dir);
 	g_free (cache_dir);
@@ -497,32 +906,6 @@ core_log_open (void)
 /* ------------------------------------------------------------------------ */
 /* Core                                                                     */
 /* ------------------------------------------------------------------------ */
-
-struct _EvoCore {
-	EvoCoreEventFunc event_func;
-	gpointer event_data;
-
-	GThread *thread;
-	GMainContext *context;
-	GMainLoop *loop;
-	GThreadPool *pool;
-	GCancellable *cancellable;
-
-	ESourceRegistry *registry;
-	CamelSession *session;
-
-	/* opened folders, "<account>\x1F<full name>" ~> CamelFolder *;
-	 * their "changed" signal becomes the "folder-changed" event */
-	GHashTable *folders;
-	GMutex folders_lock;
-	GSource *refresh_source;
-
-	/* startup state, protected by lock */
-	GMutex lock;
-	GCond cond;
-	gboolean started;
-	gchar *start_error;
-};
 
 static gchar *
 json_from_builder (JsonBuilder *builder)
@@ -1976,6 +2359,264 @@ format_recipients (CamelMimeMessage *message,
 	return formatted ? formatted : g_strdup ("");
 }
 
+/* Vérifie la signature cryptographique ou déchiffre un message MIME (OpenPGP
+ * via GnuPG/Gpg4win ou S/MIME via NSS) et écrit l'objet "security" dans le
+ * constructeur JSON du message. Si le message était chiffré et que le
+ * déchiffrement réussit, remplace son contenu en mémoire par la partie
+ * déchiffrée afin que l'extraction du corps et des pièces jointes opère sur
+ * le texte en clair.
+ * Paramètres :
+ *   core    : instance du moteur evo-core
+ *   message : message MIME à inspecter / déchiffrer
+ *   builder : constructeur JSON dans lequel écrire le membre "security" */
+static void
+verify_or_decrypt_message (EvoCore *core,
+			   CamelMimeMessage *message,
+			   JsonBuilder *builder)
+{
+	CamelDataWrapper *content;
+	CamelContentType *ct;
+	gboolean is_encrypted = FALSE;
+	gboolean is_signed = FALSE;
+	gboolean is_valid = FALSE;
+	const gchar *protocol = "";
+	GString *signer_str = g_string_new ("");
+	GString *desc_str = g_string_new ("");
+
+	content = camel_medium_get_content (CAMEL_MEDIUM (message));
+	ct = content ? camel_data_wrapper_get_mime_type_field (content) : NULL;
+	if (!ct)
+		ct = camel_mime_part_get_content_type (CAMEL_MIME_PART (message));
+
+	/* 1. Déchiffrement éventuel (OpenPGP multipart/encrypted ou S/MIME pkcs7-mime) */
+	if (ct && camel_content_type_is (ct, "multipart", "encrypted")) {
+		const gchar *proto = camel_content_type_param (ct, "protocol");
+
+		if (proto && g_ascii_strcasecmp (proto, "application/pgp-encrypted") == 0) {
+			CamelCipherContext *ctx = camel_gpg_context_new (core->session);
+			CamelMimePart *decrypted_part = camel_mime_part_new ();
+			GError *local_error = NULL;
+			CamelCipherValidity *validity;
+
+			is_encrypted = TRUE;
+			protocol = "OpenPGP";
+			camel_gpg_context_set_always_trust (CAMEL_GPG_CONTEXT (ctx), TRUE);
+
+			validity = camel_cipher_context_decrypt_sync (
+				ctx, CAMEL_MIME_PART (message), decrypted_part,
+				core->cancellable, &local_error);
+			if (validity) {
+				CamelDataWrapper *dec_content = camel_medium_get_content (CAMEL_MEDIUM (decrypted_part));
+
+				if (dec_content)
+					camel_medium_set_content (CAMEL_MEDIUM (message), dec_content);
+
+				if (validity->sign.status != CAMEL_CIPHER_VALIDITY_SIGN_NONE) {
+					GList *link;
+
+					is_signed = TRUE;
+					is_valid = (validity->sign.status == CAMEL_CIPHER_VALIDITY_SIGN_GOOD);
+					for (link = g_queue_peek_head_link (&validity->sign.signers); link; link = link->next) {
+						CamelCipherCertInfo *info = link->data;
+						if (!info)
+							continue;
+						if (signer_str->len > 0)
+							g_string_append (signer_str, ", ");
+						if (info->name && *info->name && info->email && *info->email)
+							g_string_append_printf (signer_str, "%s <%s>", info->name, info->email);
+						else if (info->email && *info->email)
+							g_string_append (signer_str, info->email);
+						else if (info->name && *info->name)
+							g_string_append (signer_str, info->name);
+					}
+				} else {
+					is_valid = (validity->encrypt.status != CAMEL_CIPHER_VALIDITY_ENCRYPT_NONE);
+				}
+
+				if (validity->sign.description && *validity->sign.description)
+					g_string_append (desc_str, validity->sign.description);
+				else if (validity->encrypt.description && *validity->encrypt.description)
+					g_string_append (desc_str, validity->encrypt.description);
+				else
+					g_string_append (desc_str, "Message déchiffré avec OpenPGP (GnuPG).");
+
+				camel_cipher_validity_free (validity);
+			} else {
+				is_valid = FALSE;
+				g_string_append_printf (desc_str,
+					"Échec du déchiffrement OpenPGP : %s",
+					local_error ? local_error->message : "clé privée indisponible ou Gpg4win absent");
+				g_clear_error (&local_error);
+			}
+
+			g_object_unref (decrypted_part);
+			g_object_unref (ctx);
+		}
+	} else if (ct && (camel_content_type_is (ct, "application", "pkcs7-mime") ||
+			  camel_content_type_is (ct, "application", "x-pkcs7-mime"))) {
+		const gchar *smime_type = camel_content_type_param (ct, "smime-type");
+		CamelCipherContext *ctx = camel_smime_context_new (core->session);
+		GError *local_error = NULL;
+		CamelCipherValidity *validity = NULL;
+
+		protocol = "S/MIME";
+		if (smime_type && g_ascii_strcasecmp (smime_type, "signed-data") == 0) {
+			is_signed = TRUE;
+			validity = camel_cipher_context_verify_sync (
+				ctx, CAMEL_MIME_PART (message), core->cancellable, &local_error);
+		} else {
+			CamelMimePart *decrypted_part = camel_mime_part_new ();
+
+			is_encrypted = TRUE;
+			validity = camel_cipher_context_decrypt_sync (
+				ctx, CAMEL_MIME_PART (message), decrypted_part,
+				core->cancellable, &local_error);
+			if (validity) {
+				CamelDataWrapper *dec_content = camel_medium_get_content (CAMEL_MEDIUM (decrypted_part));
+				if (dec_content)
+					camel_medium_set_content (CAMEL_MEDIUM (message), dec_content);
+			}
+			g_object_unref (decrypted_part);
+		}
+
+		if (validity) {
+			GList *link;
+
+			if (validity->sign.status != CAMEL_CIPHER_VALIDITY_SIGN_NONE) {
+				is_signed = TRUE;
+				is_valid = (validity->sign.status == CAMEL_CIPHER_VALIDITY_SIGN_GOOD);
+			} else {
+				is_valid = (validity->encrypt.status != CAMEL_CIPHER_VALIDITY_ENCRYPT_NONE);
+			}
+
+			for (link = g_queue_peek_head_link (&validity->sign.signers); link; link = link->next) {
+				CamelCipherCertInfo *info = link->data;
+				if (!info)
+					continue;
+				if (signer_str->len > 0)
+					g_string_append (signer_str, ", ");
+				if (info->name && *info->name && info->email && *info->email)
+					g_string_append_printf (signer_str, "%s <%s>", info->name, info->email);
+				else if (info->email && *info->email)
+					g_string_append (signer_str, info->email);
+				else if (info->name && *info->name)
+					g_string_append (signer_str, info->name);
+			}
+
+			if (validity->sign.description && *validity->sign.description)
+				g_string_append (desc_str, validity->sign.description);
+			else if (validity->encrypt.description && *validity->encrypt.description)
+				g_string_append (desc_str, validity->encrypt.description);
+			else
+				g_string_append (desc_str, "Opération cryptographique S/MIME réussie.");
+
+			camel_cipher_validity_free (validity);
+		} else {
+			is_valid = FALSE;
+			g_string_append_printf (desc_str,
+				"Erreur S/MIME : %s",
+				local_error ? local_error->message : "certificat ou clé introuvable");
+			g_clear_error (&local_error);
+		}
+
+		g_object_unref (ctx);
+	}
+
+	/* 2. Vérification de signature multipart/signed (y compris après déchiffrement) */
+	content = camel_medium_get_content (CAMEL_MEDIUM (message));
+	ct = content ? camel_data_wrapper_get_mime_type_field (content) : NULL;
+	if (!ct)
+		ct = camel_mime_part_get_content_type (CAMEL_MIME_PART (message));
+
+	if (ct && camel_content_type_is (ct, "multipart", "signed")) {
+		const gchar *proto = camel_content_type_param (ct, "protocol");
+		CamelCipherContext *ctx = NULL;
+
+		if (proto && g_ascii_strcasecmp (proto, "application/pgp-signature") == 0) {
+			ctx = camel_gpg_context_new (core->session);
+			protocol = "OpenPGP";
+		} else if (proto && (g_ascii_strcasecmp (proto, "application/pkcs7-signature") == 0 ||
+				     g_ascii_strcasecmp (proto, "application/x-pkcs7-signature") == 0)) {
+			ctx = camel_smime_context_new (core->session);
+			protocol = "S/MIME";
+		}
+
+		if (ctx) {
+			GError *local_error = NULL;
+			CamelCipherValidity *validity;
+			CamelMimePart *sig_part = CAMEL_MIME_PART (message);
+
+			/* Si le contenu déchiffré a remplacé le corps du message mais que
+			 * l'en-tête Content-Type de message est encore multipart/encrypted,
+			 * construit une partie temporaire portant le multipart/signed. */
+			if (is_encrypted && content) {
+				sig_part = camel_mime_part_new ();
+				camel_medium_set_content (CAMEL_MEDIUM (sig_part), content);
+			}
+
+			is_signed = TRUE;
+			validity = camel_cipher_context_verify_sync (
+				ctx, sig_part, core->cancellable, &local_error);
+			if (validity) {
+				GList *link;
+
+				is_valid = (validity->sign.status == CAMEL_CIPHER_VALIDITY_SIGN_GOOD);
+				g_string_truncate (signer_str, 0);
+				for (link = g_queue_peek_head_link (&validity->sign.signers); link; link = link->next) {
+					CamelCipherCertInfo *info = link->data;
+					if (!info)
+						continue;
+					if (signer_str->len > 0)
+						g_string_append (signer_str, ", ");
+					if (info->name && *info->name && info->email && *info->email)
+						g_string_append_printf (signer_str, "%s <%s>", info->name, info->email);
+					else if (info->email && *info->email)
+						g_string_append (signer_str, info->email);
+					else if (info->name && *info->name)
+						g_string_append (signer_str, info->name);
+				}
+
+				if (validity->sign.description && *validity->sign.description) {
+					if (desc_str->len > 0)
+						g_string_append (desc_str, "\n");
+					g_string_append (desc_str, validity->sign.description);
+				}
+
+				camel_cipher_validity_free (validity);
+			} else {
+				is_valid = FALSE;
+				if (desc_str->len > 0)
+					g_string_append (desc_str, "\n");
+				g_string_append_printf (desc_str,
+					"Vérification de signature %s impossible : %s",
+					protocol,
+					local_error ? local_error->message : "erreur inconnue");
+				g_clear_error (&local_error);
+			}
+
+			if (sig_part != CAMEL_MIME_PART (message))
+				g_object_unref (sig_part);
+			g_object_unref (ctx);
+		}
+	}
+
+	json_builder_set_member_name (builder, "security");
+	json_builder_begin_object (builder);
+	json_builder_set_member_name (builder, "encrypted");
+	json_builder_add_boolean_value (builder, is_encrypted);
+	json_builder_set_member_name (builder, "signed");
+	json_builder_add_boolean_value (builder, is_signed);
+	json_builder_set_member_name (builder, "valid");
+	json_builder_add_boolean_value (builder, is_valid);
+	builder_add_string (builder, "protocol", protocol);
+	builder_add_string (builder, "signer", signer_str->str);
+	builder_add_string (builder, "description", desc_str->str);
+	json_builder_end_object (builder);
+
+	g_string_free (signer_str, TRUE);
+	g_string_free (desc_str, TRUE);
+}
+
 static gchar *
 core_get_message_run (EvoCore *core,
 		      gchar **args,
@@ -2039,6 +2680,8 @@ core_get_message_run (EvoCore *core,
 
 	builder_add_string (builder, "message_id", camel_medium_get_header (CAMEL_MEDIUM (message), "Message-ID"));
 	builder_add_string (builder, "references", camel_medium_get_header (CAMEL_MEDIUM (message), "References"));
+
+	verify_or_decrypt_message (core, message, builder);
 
 	attachments = g_ptr_array_new ();
 	{
@@ -2139,6 +2782,161 @@ core_save_attachment_run (EvoCore *core,
 	g_ptr_array_unref (parts.attachments);
 	g_object_unref (message);
 	g_object_unref (folder);
+
+	return json;
+}
+
+/* Nettoie une chaîne (comme l'objet d'un courriel) pour en faire un nom de
+ * fichier Windows valide sans caractères interdits.
+ * Paramètres :
+ *   raw : chaîne source en UTF-8
+ * Retourne : chaîne nettoyée nouvellement allouée (à libérer avec g_free). */
+static gchar *
+sanitize_eml_filename (const gchar *raw)
+{
+	GString *out = g_string_new ("");
+	const gchar *p;
+
+	if (raw && *raw) {
+		for (p = raw; *p; p = g_utf8_next_char (p)) {
+			gunichar c = g_utf8_get_char (p);
+
+			if (c < 0x20 || c == '\\' || c == '/' || c == ':' || c == '*' ||
+			    c == '?' || c == '"' || c == '<' || c == '>' || c == '|')
+				g_string_append_c (out, '_');
+			else
+				g_string_append_unichar (out, c);
+
+			if (out->len >= 96)
+				break;
+		}
+	}
+
+	g_strstrip (out->str);
+	out->len = strlen (out->str);
+	while (out->len > 0 && (out->str[out->len - 1] == '.' || out->str[out->len - 1] == ' '))
+		g_string_truncate (out, out->len - 1);
+
+	if (out->len == 0)
+		g_string_assign (out, "Message");
+
+	return g_string_free (out, FALSE);
+}
+
+/* Exporte une liste de messages d'un dossier sous forme de fichiers .eml dans
+ * un sous-répertoire temporaire afin de les joindre à un autre courriel.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] JSON {"account": "...", "folder": "...", "uids": [...]}
+ *   error : emplacement d'erreur GError
+ * Retourne : tableau JSON ["C:\\...\\Objet.eml", ...], ou NULL en cas d'erreur. */
+static gchar *
+core_export_messages_eml_run (EvoCore *core,
+			      gchar **args,
+			      GError **error)
+{
+	JsonNode *root;
+	JsonObject *object;
+	JsonArray *uids;
+	const gchar *account_uid, *folder_name;
+	CamelFolder *folder = NULL;
+	JsonBuilder *builder = NULL;
+	gchar *batch_dir = NULL, *json = NULL;
+	guint ii, len;
+
+	root = json_from_string (args[0], error);
+	if (!root)
+		return NULL;
+
+	object = JSON_NODE_HOLDS_OBJECT (root) ? json_node_get_object (root) : NULL;
+	account_uid = object ? json_object_get_string_member_with_default (object, "account", NULL) : NULL;
+	folder_name = object ? json_object_get_string_member_with_default (object, "folder", NULL) : NULL;
+	uids = (object && json_object_has_member (object, "uids")) ? json_object_get_array_member (object, "uids") : NULL;
+
+	if (!account_uid || !folder_name || !uids) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
+			"Invalid export_messages_eml request");
+		json_node_unref (root);
+		return NULL;
+	}
+
+	folder = core_ref_folder (core, account_uid, folder_name, error);
+	if (!folder) {
+		json_node_unref (root);
+		return NULL;
+	}
+
+	batch_dir = g_strdup_printf ("%s\\EvolutionWin-eml-%" G_GINT64_FORMAT,
+		g_get_tmp_dir (), g_get_monotonic_time ());
+	g_mkdir_with_parents (batch_dir, 0700);
+
+	builder = json_builder_new ();
+	json_builder_begin_array (builder);
+
+	len = json_array_get_length (uids);
+	for (ii = 0; ii < len; ii++) {
+		const gchar *uid = json_array_get_string_element (uids, ii);
+		CamelMimeMessage *message;
+		GOutputStream *output;
+		const gchar *subject;
+		gchar *clean_name, *filename, *full_path, *data;
+		gsize size;
+		guint suffix = 1;
+
+		if (!uid || !*uid)
+			continue;
+
+		message = camel_folder_get_message_sync (folder, uid, core->cancellable, error);
+		if (!message)
+			goto cleanup;
+
+		subject = camel_mime_message_get_subject (message);
+		clean_name = sanitize_eml_filename (subject);
+		filename = g_strdup_printf ("%s.eml", clean_name);
+		full_path = g_build_filename (batch_dir, filename, NULL);
+
+		while (g_file_test (full_path, G_FILE_TEST_EXISTS)) {
+			g_free (filename);
+			g_free (full_path);
+			filename = g_strdup_printf ("%s (%u).eml", clean_name, ++suffix);
+			full_path = g_build_filename (batch_dir, filename, NULL);
+		}
+
+		output = g_memory_output_stream_new_resizable ();
+		camel_data_wrapper_write_to_output_stream_sync (
+			CAMEL_DATA_WRAPPER (message), output, core->cancellable, NULL);
+		g_output_stream_close (output, NULL, NULL);
+
+		size = g_memory_output_stream_get_data_size (G_MEMORY_OUTPUT_STREAM (output));
+		data = g_memory_output_stream_steal_data (G_MEMORY_OUTPUT_STREAM (output));
+		g_object_unref (output);
+		g_object_unref (message);
+
+		if (!g_file_set_contents (full_path, data ? data : "", (gssize) size, error)) {
+			g_free (data);
+			g_free (clean_name);
+			g_free (filename);
+			g_free (full_path);
+			goto cleanup;
+		}
+
+		json_builder_add_string_value (builder, full_path);
+
+		g_free (data);
+		g_free (clean_name);
+		g_free (filename);
+		g_free (full_path);
+	}
+
+	json_builder_end_array (builder);
+	json = json_from_builder (builder);
+
+cleanup:
+	if (builder)
+		g_object_unref (builder);
+	g_free (batch_dir);
+	g_object_unref (folder);
+	json_node_unref (root);
 
 	return json;
 }
@@ -2477,8 +3275,12 @@ core_send_message_run (EvoCore *core,
 				}
 
 				basename = g_path_get_basename (path);
-				guessed = g_content_type_guess (basename, (const guchar *) contents, length, NULL);
-				mime_type = guessed ? g_content_type_get_mime_type (guessed) : NULL;
+				if (g_ascii_strcasecmp (basename + MAX ((gssize) strlen (basename) - 4, 0), ".eml") == 0) {
+					mime_type = g_strdup ("message/rfc822");
+				} else {
+					guessed = g_content_type_guess (basename, (const guchar *) contents, length, NULL);
+					mime_type = guessed ? g_content_type_get_mime_type (guessed) : NULL;
+				}
 
 				att_part = camel_mime_part_new ();
 				camel_mime_part_set_content (att_part, contents, length,
@@ -2502,6 +3304,154 @@ core_send_message_run (EvoCore *core,
 		}
 	} else {
 		set_message_or_part_body (CAMEL_MEDIUM (message), text, html);
+	}
+
+	/* Signature et/ou chiffrement cryptographique OpenPGP (Gpg4win) ou S/MIME (NSS) */
+	{
+		gboolean pgp_sign = json_object_get_boolean_member_with_default (object, "pgp_sign", FALSE);
+		gboolean pgp_encrypt = json_object_get_boolean_member_with_default (object, "pgp_encrypt", FALSE);
+		gboolean smime_sign = json_object_get_boolean_member_with_default (object, "smime_sign", FALSE);
+		gboolean smime_encrypt = json_object_get_boolean_member_with_default (object, "smime_encrypt", FALSE);
+		const gchar *sender_addr = e_source_mail_identity_get_address (identity_extension);
+		const gchar *pgp_key_id = json_object_get_string_member_with_default (object, "pgp_key_id", NULL);
+		const gchar *smime_key_id = json_object_get_string_member_with_default (object, "smime_key_id", NULL);
+
+		if (pgp_sign || pgp_encrypt || smime_sign || smime_encrypt) {
+			CamelMimePart *work_part = camel_mime_part_new ();
+			CamelDataWrapper *orig_dw = camel_medium_get_content (CAMEL_MEDIUM (message));
+			CamelContentType *orig_ct = camel_mime_part_get_content_type (CAMEL_MIME_PART (message));
+			const gchar *userid_pgp = (pgp_key_id && *pgp_key_id) ? pgp_key_id : sender_addr;
+			const gchar *userid_smime = (smime_key_id && *smime_key_id) ? smime_key_id : sender_addr;
+
+			if (orig_ct) {
+				gchar *ct_str = camel_content_type_format (orig_ct);
+				camel_mime_part_set_content_type (work_part, ct_str);
+				g_free (ct_str);
+			}
+			camel_mime_part_set_encoding (work_part,
+				camel_mime_part_get_encoding (CAMEL_MIME_PART (message)));
+			if (orig_dw)
+				camel_medium_set_content (CAMEL_MEDIUM (work_part), orig_dw);
+
+			/* 1. Signature OpenPGP */
+			if (pgp_sign) {
+				CamelCipherContext *ctx = camel_gpg_context_new (core->session);
+				CamelMimePart *signed_part = camel_mime_part_new ();
+
+				camel_gpg_context_set_always_trust (CAMEL_GPG_CONTEXT (ctx), TRUE);
+				if (!camel_cipher_context_sign_sync (
+					ctx, userid_pgp, CAMEL_CIPHER_HASH_SHA256,
+					work_part, signed_part, core->cancellable, error)) {
+					g_object_unref (signed_part);
+					g_object_unref (ctx);
+					g_object_unref (work_part);
+					goto exit;
+				}
+				g_object_unref (work_part);
+				work_part = signed_part;
+				g_object_unref (ctx);
+			}
+
+			/* 2. Chiffrement OpenPGP */
+			if (pgp_encrypt) {
+				CamelCipherContext *ctx = camel_gpg_context_new (core->session);
+				CamelMimePart *encrypted_part = camel_mime_part_new ();
+				GPtrArray *rcpt_keys = g_ptr_array_new_with_free_func (g_free);
+				gint n_rcpt = camel_address_length (CAMEL_ADDRESS (recipients));
+				gint r_idx;
+
+				camel_gpg_context_set_always_trust (CAMEL_GPG_CONTEXT (ctx), TRUE);
+				for (r_idx = 0; r_idx < n_rcpt; r_idx++) {
+					const gchar *r_addr = NULL;
+					if (camel_internet_address_get (recipients, r_idx, NULL, &r_addr) && r_addr && *r_addr)
+						g_ptr_array_add (rcpt_keys, g_strdup (r_addr));
+				}
+				if (userid_pgp && *userid_pgp)
+					g_ptr_array_add (rcpt_keys, g_strdup (userid_pgp));
+
+				if (!camel_cipher_context_encrypt_sync (
+					ctx, userid_pgp, rcpt_keys,
+					work_part, encrypted_part, core->cancellable, error)) {
+					g_ptr_array_unref (rcpt_keys);
+					g_object_unref (encrypted_part);
+					g_object_unref (ctx);
+					g_object_unref (work_part);
+					goto exit;
+				}
+				g_ptr_array_unref (rcpt_keys);
+				g_object_unref (work_part);
+				work_part = encrypted_part;
+				g_object_unref (ctx);
+			}
+
+			/* 3. Signature S/MIME */
+			if (smime_sign) {
+				CamelCipherContext *ctx = camel_smime_context_new (core->session);
+				CamelMimePart *signed_part = camel_mime_part_new ();
+
+				camel_smime_context_set_sign_mode (CAMEL_SMIME_CONTEXT (ctx), CAMEL_SMIME_SIGN_CLEARSIGN);
+				if (!camel_cipher_context_sign_sync (
+					ctx, userid_smime, CAMEL_CIPHER_HASH_SHA256,
+					work_part, signed_part, core->cancellable, error)) {
+					g_object_unref (signed_part);
+					g_object_unref (ctx);
+					g_object_unref (work_part);
+					goto exit;
+				}
+				g_object_unref (work_part);
+				work_part = signed_part;
+				g_object_unref (ctx);
+			}
+
+			/* 4. Chiffrement S/MIME */
+			if (smime_encrypt) {
+				CamelCipherContext *ctx = camel_smime_context_new (core->session);
+				CamelMimePart *encrypted_part = camel_mime_part_new ();
+				GPtrArray *rcpt_keys = g_ptr_array_new_with_free_func (g_free);
+				gint n_rcpt = camel_address_length (CAMEL_ADDRESS (recipients));
+				gint r_idx;
+
+				for (r_idx = 0; r_idx < n_rcpt; r_idx++) {
+					const gchar *r_addr = NULL;
+					if (camel_internet_address_get (recipients, r_idx, NULL, &r_addr) && r_addr && *r_addr)
+						g_ptr_array_add (rcpt_keys, g_strdup (r_addr));
+				}
+				if (userid_smime && *userid_smime)
+					g_ptr_array_add (rcpt_keys, g_strdup (userid_smime));
+
+				if (!camel_cipher_context_encrypt_sync (
+					ctx, userid_smime, rcpt_keys,
+					work_part, encrypted_part, core->cancellable, error)) {
+					g_ptr_array_unref (rcpt_keys);
+					g_object_unref (encrypted_part);
+					g_object_unref (ctx);
+					g_object_unref (work_part);
+					goto exit;
+				}
+				g_ptr_array_unref (rcpt_keys);
+				g_object_unref (work_part);
+				work_part = encrypted_part;
+				g_object_unref (ctx);
+			}
+
+			/* Transfère le contenu signé/chiffré sur le CamelMimeMessage */
+			{
+				CamelDataWrapper *final_dw = camel_medium_get_content (CAMEL_MEDIUM (work_part));
+				CamelContentType *final_ct = camel_mime_part_get_content_type (work_part);
+
+				if (final_dw)
+					camel_medium_set_content (CAMEL_MEDIUM (message), final_dw);
+				if (final_ct) {
+					gchar *ct_str = camel_content_type_format (final_ct);
+					camel_mime_part_set_content_type (CAMEL_MIME_PART (message), ct_str);
+					g_free (ct_str);
+				}
+				camel_mime_part_set_encoding (CAMEL_MIME_PART (message),
+					camel_mime_part_get_encoding (work_part));
+			}
+
+			g_object_unref (work_part);
+		}
 	}
 
 	{
@@ -2709,16 +3659,24 @@ core_add_account_run (EvoCore *core,
 	}
 
 	address = json_object_get_string_member_with_default (object, "address", "");
+	if (!address || !*address)
+		address = json_object_get_string_member_with_default (object, "email", "");
 	name = json_object_get_string_member_with_default (object, "name", "");
+	if (!name || !*name)
+		name = json_object_get_string_member_with_default (object, "display_name", "");
 	if (!name || !*name)
 		name = address;
 	real_name = json_object_get_string_member_with_default (object, "real_name", "");
+	if (!real_name || !*real_name)
+		real_name = json_object_get_string_member_with_default (object, "full_name", "");
 	if (!real_name || !*real_name)
 		real_name = name;
 
 	imap_host = json_object_get_string_member_with_default (object, "imap_host", "");
 	imap_port = json_object_get_int_member_with_default (object, "imap_port", 993);
 	imap_user = json_object_get_string_member_with_default (object, "imap_user", "");
+	if (!imap_user || !*imap_user)
+		imap_user = json_object_get_string_member_with_default (object, "user", "");
 	if (!imap_user || !*imap_user)
 		imap_user = address;
 	imap_security = json_object_get_string_member_with_default (object, "imap_security", "tls");
@@ -2762,6 +3720,11 @@ core_add_account_run (EvoCore *core,
 	camel_network_settings_set_user (CAMEL_NETWORK_SETTINGS (imap_settings), imap_user);
 	camel_network_settings_set_security_method (CAMEL_NETWORK_SETTINGS (imap_settings),
 		parse_security_method (imap_security));
+	{
+		const gchar *auth_mech = json_object_get_string_member_with_default (object, "auth_mechanism", "");
+		if (auth_mech && *auth_mech)
+			camel_network_settings_set_auth_mechanism (CAMEL_NETWORK_SETTINGS (imap_settings), auth_mech);
+	}
 
 	/* Configuration de l'identité d'expéditeur et de la soumission */
 	mail_identity = e_source_get_extension (identity_source, E_SOURCE_EXTENSION_MAIL_IDENTITY);
@@ -2784,8 +3747,13 @@ core_add_account_run (EvoCore *core,
 	camel_network_settings_set_user (CAMEL_NETWORK_SETTINGS (smtp_settings), smtp_user);
 	camel_network_settings_set_security_method (CAMEL_NETWORK_SETTINGS (smtp_settings),
 		parse_security_method (smtp_security));
-	if (smtp_user && *smtp_user)
-		camel_network_settings_set_auth_mechanism (CAMEL_NETWORK_SETTINGS (smtp_settings), "LOGIN");
+	{
+		const gchar *auth_mech = json_object_get_string_member_with_default (object, "auth_mechanism", "");
+		if (auth_mech && *auth_mech)
+			camel_network_settings_set_auth_mechanism (CAMEL_NETWORK_SETTINGS (smtp_settings), auth_mech);
+		else if (smtp_user && *smtp_user)
+			camel_network_settings_set_auth_mechanism (CAMEL_NETWORK_SETTINGS (smtp_settings), "LOGIN");
+	}
 
 	sources = g_list_append (sources, account_source);
 	sources = g_list_append (sources, identity_source);
@@ -3845,6 +4813,26 @@ evo_core_save_attachment (EvoCore *core,
 	core_submit (core, core_save_attachment_run, g_strdupv (args), func, user_data);
 }
 
+/* Soumet une requête d'exportation d'un ou plusieurs messages sous forme de
+ * fichiers .eml temporaires.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   request_json : JSON contenant {"account": "...", "folder": "...", "uids": [...]}
+ *   func         : rappel recevant le tableau JSON des chemins .eml créés
+ *   user_data    : données utilisateur transmises au rappel */
+void
+evo_core_export_messages_eml (EvoCore *core,
+			      const char *request_json,
+			      EvoCoreResultFunc func,
+			      void *user_data)
+{
+	gchar *args[] = { (gchar *) request_json, NULL };
+
+	g_return_if_fail (request_json != NULL);
+
+	core_submit (core, core_export_messages_eml_run, g_strdupv (args), func, user_data);
+}
+
 /* Soumet une requête d'enregistrement du mot de passe d'un compte ou serveur.
  * Paramètres :
  *   core       : instance du moteur evo-core
@@ -4022,4 +5010,37 @@ evo_core_delete_contact (EvoCore *core,
 	g_return_if_fail (contact_uid != NULL);
 
 	core_submit (core, core_delete_contact_run, g_strdupv (args), func, user_data);
+}
+
+/* Transmet la décision de l'utilisateur pour une demande de confiance TLS en
+ * attente (événement "tls-trust-required").
+ * Paramètres :
+ *   core           : instance du moteur evo-core
+ *   trust_id       : identifiant de la demande ("host:port|sha256")
+ *   trust_decision : 0 = refuser, 1 = accepter temporairement, 2 = toujours faire confiance */
+void
+evo_core_respond_tls_trust (EvoCore *core,
+			    const char *trust_id,
+			    int trust_decision)
+{
+	EvoCoreSession *session;
+
+	g_return_if_fail (core != NULL);
+	g_return_if_fail (trust_id != NULL && *trust_id != '\0');
+
+	session = EVO_CORE_SESSION (core->session);
+
+	g_mutex_lock (&session->trust_lock);
+	if (trust_decision == 1) {
+		g_hash_table_insert (session->trusted_certs, g_strdup (trust_id), GINT_TO_POINTER ((gint) CAMEL_CERT_TRUST_TEMPORARY));
+		g_hash_table_insert (session->pending_trust, g_strdup (trust_id), GINT_TO_POINTER (1));
+	} else if (trust_decision >= 2) {
+		g_hash_table_insert (session->trusted_certs, g_strdup (trust_id), GINT_TO_POINTER ((gint) CAMEL_CERT_TRUST_FULLY));
+		g_hash_table_insert (session->pending_trust, g_strdup (trust_id), GINT_TO_POINTER (2));
+		evo_core_session_save_trusted_certs_locked (session);
+	} else {
+		g_hash_table_insert (session->pending_trust, g_strdup (trust_id), GINT_TO_POINTER (-1));
+	}
+	g_cond_broadcast (&session->trust_cond);
+	g_mutex_unlock (&session->trust_lock);
 }

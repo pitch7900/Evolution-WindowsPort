@@ -1,0 +1,10 @@
+# cmd.exe lit mal les scripts batch en LF (étiquettes, lignes tronquées) :
+# CRLF imposé quel que soit core.autocrlf.
+/tools/**/*.bat text eol=crlf
+/tools/**/*.cmd text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Scripts exécutés par bash (MSYS2) : LF obligatoire.
+/tools/**/*.sh text eol=lf
+/tools/tools/nsinstall text eol=lf

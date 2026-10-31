@@ -142,6 +142,17 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Exporte un ou plusieurs messages d'un dossier sous forme de fichiers .eml
+         * temporaires pour les joindre à un courriel.
+         * Paramètres :
+         *   request_json : JSON {"account": "...", "folder": "...", "uids": [...]}
+         *   handler      : rappel recevant le tableau JSON des chemins .eml */
+        void ExportMessagesEml(winrt::hstring const& request_json, CoreHandler handler)
+        {
+            evo_core_export_messages_eml(m_core, winrt::to_string(request_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Enregistre le mot de passe d'un compte ou serveur d'envoi dans le
          * gestionnaire d'identifiants Windows.
          * Paramètres :
@@ -235,6 +246,15 @@ namespace EvolutionWin
         {
             evo_core_delete_contact(m_core, winrt::to_string(book_uid).c_str(), winrt::to_string(contact_uid).c_str(),
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Transmet la décision de confiance TLS de l'utilisateur au moteur.
+         * Paramètres :
+         *   trust_id       : identifiant de la demande ("host|sha256")
+         *   trust_decision : 0 = refuser, 1 = accepter pour la session, 2 = toujours approuver */
+        void RespondTlsTrust(winrt::hstring const& trust_id, int trust_decision)
+        {
+            evo_core_respond_tls_trust(m_core, winrt::to_string(trust_id).c_str(), trust_decision);
         }
 
     private:

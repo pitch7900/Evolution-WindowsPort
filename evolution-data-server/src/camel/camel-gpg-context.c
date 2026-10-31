@@ -32,6 +32,9 @@
 #include <sys/ioctl.h>
 #include <sys/wait.h>
 #include <termios.h>
+#else
+#include <windows.h>
+#include <io.h>
 #endif
 
 #include "camel-debug.h"
@@ -299,6 +302,12 @@ struct _GpgCtx {
 	gint stderr_fd;
 	gint status_fd;
 	gint command_fd;  /* only needed for sign/decrypt/edit-key */
+#ifdef G_OS_WIN32
+	/* feeds istream into gpg's stdin: Windows anonymous pipes have no
+	 * non-blocking writes, writing from gpg_ctx_op_step() could deadlock
+	 * with gpg blocked on a full stdout pipe */
+	GThread *stdin_writer;
+#endif
 
 	/* status-fd buffer */
 	guchar *statusbuf;
@@ -379,7 +388,7 @@ gpg_ctx_new (CamelCipherContext *context,
 	gpg->complete = FALSE;
 	gpg->seen_eof1 = TRUE;
 	gpg->seen_eof2 = FALSE;
-	gpg->pid = (pid_t) -1;
+	gpg->pid = (GPid) -1;
 	gpg->exit_status = 0;
 	gpg->exited = FALSE;
 
@@ -686,6 +695,21 @@ gpg_ctx_free (struct _GpgCtx *gpg)
 	if (gpg->command_fd != -1)
 		close (gpg->command_fd);
 
+#ifdef G_OS_WIN32
+	/* Ferme le descripteur de processus Windows s'il est encore ouvert ;
+	 * un gpg.exe encore actif est terminé pour débloquer le thread
+	 * d'écriture (écriture en échec sur un tube rompu) avant de l'attendre */
+	if (gpg->pid != NULL && gpg->pid != (GPid) -1) {
+		if (!gpg->exited)
+			TerminateProcess ((HANDLE) gpg->pid, 1);
+		g_spawn_close_pid (gpg->pid);
+		gpg->pid = (GPid) -1;
+	}
+
+	if (gpg->stdin_writer)
+		g_thread_join (gpg->stdin_writer);
+#endif
+
 	g_free (gpg->statusbuf);
 
 	g_free (gpg->need_id);
@@ -764,14 +788,35 @@ gpg_ctx_get_executable_name (void)
 			}
 		}
 
-		if (!names[index])
+		if (!names[index]) {
+#ifdef G_OS_WIN32
+			/* Recherche dans les répertoires d'installation par défaut de Gpg4win / GnuPG sous Windows */
+			const gchar *win32_paths[] = {
+				"C:\\Program Files (x86)\\GnuPG\\bin\\gpg.exe",
+				"C:\\Program Files\\GnuPG\\bin\\gpg.exe",
+				"C:\\Program Files (x86)\\Gpg4win\\bin\\gpg.exe",
+				"C:\\Program Files\\Gpg4win\\bin\\gpg.exe",
+				NULL
+			};
+			gint w;
+
+			for (w = 0; win32_paths[w]; w++) {
+				if (g_file_test (win32_paths[w], G_FILE_TEST_IS_REGULAR)) {
+					strcpy (preset_binary, win32_paths[w]);
+					index = 0;
+					break;
+				}
+			}
+			if (!names[index])
+				index = 2; /* "gpg" sous Windows */
+#else
 			index = 1;
+#endif
+		}
 	}
 
 	return names[index];
 }
-
-#ifndef G_OS_WIN32
 
 static const gchar *
 gpg_hash_str (CamelCipherHash hash)
@@ -1039,8 +1084,6 @@ gpg_ctx_get_argv (struct _GpgCtx *gpg,
 	return argv;
 }
 
-#endif
-
 static void
 camel_gpg_ctx_close_pipe (gint pp[2])
 {
@@ -1053,6 +1096,43 @@ camel_gpg_ctx_close_pipe (gint pp[2])
 		pp[1] = -1;
 	}
 }
+
+#ifdef G_OS_WIN32
+typedef struct _GpgStdinWriter {
+	gint fd;
+	CamelStream *istream;
+} GpgStdinWriter;
+
+/* Copie le flux d'entrée vers l'entrée standard de gpg.exe puis la ferme
+ * (fin de données pour gpg). S'arrête sur une erreur d'écriture, par
+ * exemple quand gpg.exe s'est terminé ou a été tué. */
+static gpointer
+gpg_ctx_stdin_writer_thread (gpointer user_data)
+{
+	GpgStdinWriter *writer = user_data;
+	gchar buffer[4096];
+	gssize nread;
+
+	while ((nread = camel_stream_read (writer->istream, buffer, sizeof (buffer), NULL, NULL)) > 0) {
+		gssize nwritten = 0;
+
+		while (nwritten < nread) {
+			gint w = _write (writer->fd, buffer + nwritten, (guint) (nread - nwritten));
+
+			if (w <= 0)
+				goto done;
+			nwritten += w;
+		}
+	}
+
+ done:
+	close (writer->fd);
+	g_object_unref (writer->istream);
+	g_free (writer);
+
+	return NULL;
+}
+#endif
 
 static gboolean
 gpg_ctx_op_start (struct _GpgCtx *gpg,
@@ -1138,12 +1218,57 @@ exception:
 
 	errno = errnosave;
 #else
-	/* FIXME: Port me */
+	/* Lancement de gpg.exe sous Windows via g_spawn_async_with_pipes()
+	 * avec --status-fd=2 (les lignes [GNUPG:] sont émises sur stderr
+	 * et séparées des diagnostics par gpg_ctx_parse_status). */
+	gchar *status_fd = NULL, *command_fd = NULL;
+	GPtrArray *argv;
 	GError *local_error = NULL;
+	gboolean success;
 
-	g_warning ("%s: Not implemented", G_STRFUNC);
+	argv = gpg_ctx_get_argv (gpg, 2, &status_fd, -1, &command_fd);
 
-	errno = EINVAL;
+	if (camel_debug_start ("gpg")) {
+		guint ii;
+
+		printf ("[GPG] going to execute:");
+		for (ii = 0; ii < argv->len; ii++) {
+			if (!argv->pdata[ii])
+				break;
+
+			printf (" %s", (const gchar *) argv->pdata[ii]);
+		}
+		printf ("\n");
+		camel_debug_end ();
+	}
+
+	success = g_spawn_async_with_pipes (
+		NULL, (gchar **) argv->pdata, NULL,
+		G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_SEARCH_PATH,
+		NULL, NULL,
+		&gpg->pid,
+		gpg->istream ? &gpg->stdin_fd : NULL,
+		gpg->ostream ? &gpg->stdout_fd : NULL,
+		&gpg->stderr_fd,
+		&local_error);
+
+	g_ptr_array_free (argv, TRUE);
+	g_free (status_fd);
+	g_free (command_fd);
+
+	if (success) {
+		if (gpg->stdin_fd != -1) {
+			GpgStdinWriter *writer = g_new0 (GpgStdinWriter, 1);
+
+			/* the thread owns the descriptor from now on */
+			writer->fd = gpg->stdin_fd;
+			writer->istream = g_object_ref (gpg->istream);
+			gpg->stdin_fd = -1;
+			gpg->stdin_writer = g_thread_new ("camel-gpg-stdin", gpg_ctx_stdin_writer_thread, writer);
+		}
+
+		return TRUE;
+	}
 #endif
 
 	if (local_error)
@@ -1161,8 +1286,6 @@ exception:
 
 	return FALSE;
 }
-
-#ifndef G_OS_WIN32
 
 static const gchar *
 next_token (const gchar *in,
@@ -1257,12 +1380,27 @@ gpg_ctx_parse_status (struct _GpgCtx *gpg,
 	}
 
 	*inptr++ = '\0';
+#ifdef G_OS_WIN32
+	/* Supprime le retour chariot \r éventuel des fins de ligne CRLF sous Windows */
+	if (inptr >= gpg->statusbuf + 2 && inptr[-2] == '\r')
+		inptr[-2] = '\0';
+#endif
 	status = gpg->statusbuf;
 
 	if (camel_debug ("gpg:status"))
 		printf ("status: %s\n", status);
 
 	if (strncmp ((const gchar *) status, "[GNUPG:] ", 9) != 0) {
+#ifdef G_OS_WIN32
+		/* Sous Windows (--status-fd=2), stderr transporte à la fois les
+		 * lignes de statut [GNUPG:] et les messages de diagnostic de gpg. */
+		if (*status && gpg->diagnostics) {
+			camel_stream_write (gpg->diagnostics, (const gchar *) status,
+				strlen ((const gchar *) status), NULL, NULL);
+			camel_stream_write (gpg->diagnostics, "\n", 1, NULL, NULL);
+		}
+		goto recycle;
+#else
 		gchar *message;
 
 		message = g_locale_to_utf8 (
@@ -1274,6 +1412,7 @@ gpg_ctx_parse_status (struct _GpgCtx *gpg,
 		g_free (message);
 
 		return -1;
+#endif
 	}
 
 	status += 9;
@@ -1756,8 +1895,6 @@ gpg_ctx_parse_status (struct _GpgCtx *gpg,
 	return 0;
 }
 
-#endif
-
 #define status_backup(gpg, start, len) G_STMT_START { \
 	if (gpg->statusleft <= len) { \
 		guint slen, soff; \
@@ -1798,6 +1935,17 @@ gpg_ctx_op_cancel (struct _GpgCtx *gpg)
 		sleep (1);
 		waitpid (gpg->pid, &status, WNOHANG);
 	}
+#else
+	/* Termine proprement le sous-processus gpg.exe sous Windows */
+	if (gpg->exited || gpg->pid == NULL || gpg->pid == (GPid) -1)
+		return;
+
+	TerminateProcess ((HANDLE) gpg->pid, 1);
+	WaitForSingleObject ((HANDLE) gpg->pid, 1000);
+	g_spawn_close_pid (gpg->pid);
+	gpg->pid = (GPid) -1;
+	gpg->exited = TRUE;
+	gpg->exit_status = -1;
 #endif
 }
 
@@ -2038,6 +2186,98 @@ gpg_ctx_op_step (struct _GpgCtx *gpg,
 		g_io_error_from_errno (errno),
 		_("Failed to execute gpg: %s"), g_strerror (errno));
 	gpg_ctx_op_cancel (gpg);
+#else
+	/* Boucle d'entrées/sorties non bloquante pour les tubes Windows de gpg.exe :
+	 * l'entrée standard est alimentée par gpg->stdin_writer, stdout_fd et
+	 * stderr_fd ne sont lus que lorsque PeekNamedPipe signale des données. */
+	gboolean did_work = FALSE;
+
+	if (g_cancellable_set_error_if_cancelled (cancellable, error)) {
+		gpg_ctx_op_cancel (gpg);
+		return -1;
+	}
+
+	/* Lecture non bloquante de la sortie standard (stdout) */
+	if (!gpg->seen_eof1) {
+		if (gpg->stdout_fd == -1 || !gpg->ostream) {
+			gpg->seen_eof1 = TRUE;
+		} else {
+			HANDLE hpipe = (HANDLE) _get_osfhandle (gpg->stdout_fd);
+			DWORD avail = 0;
+
+			if (!PeekNamedPipe (hpipe, NULL, 0, NULL, &avail, NULL)) {
+				gpg->seen_eof1 = TRUE;
+				close (gpg->stdout_fd);
+				gpg->stdout_fd = -1;
+				did_work = TRUE;
+			} else if (avail > 0) {
+				gchar buffer[4096];
+				unsigned int to_read = avail < sizeof (buffer) ? (unsigned int) avail : (unsigned int) sizeof (buffer);
+				int nread = _read (gpg->stdout_fd, buffer, to_read);
+
+				if (nread > 0) {
+					if (camel_stream_write (gpg->ostream, buffer, (gsize) nread, cancellable, error) != (gsize) nread) {
+						gpg_ctx_op_cancel (gpg);
+						return -1;
+					}
+					did_work = TRUE;
+				} else if (nread == 0) {
+					gpg->seen_eof1 = TRUE;
+					close (gpg->stdout_fd);
+					gpg->stdout_fd = -1;
+				}
+			}
+		}
+	}
+
+	/* Lecture non bloquante de la sortie d'erreur et de statut (stderr, --status-fd=2) */
+	if (!gpg->seen_eof2 || !gpg->complete) {
+		if (gpg->stderr_fd == -1) {
+			gpg->seen_eof2 = TRUE;
+			gpg->complete = TRUE;
+		} else {
+			HANDLE hpipe = (HANDLE) _get_osfhandle (gpg->stderr_fd);
+			DWORD avail = 0;
+
+			if (!PeekNamedPipe (hpipe, NULL, 0, NULL, &avail, NULL)) {
+				if (gpg->statusptr > gpg->statusbuf) {
+					status_backup (gpg, "\n", 1);
+					if (gpg_ctx_parse_status (gpg, error) == -1) {
+						gpg_ctx_op_cancel (gpg);
+						return -1;
+					}
+				}
+				gpg->seen_eof2 = TRUE;
+				gpg->complete = TRUE;
+				close (gpg->stderr_fd);
+				gpg->stderr_fd = -1;
+				did_work = TRUE;
+			} else if (avail > 0) {
+				gchar buffer[4096];
+				unsigned int to_read = avail < sizeof (buffer) ? (unsigned int) avail : (unsigned int) sizeof (buffer);
+				int nread = _read (gpg->stderr_fd, buffer, to_read);
+
+				if (nread > 0) {
+					status_backup (gpg, buffer, nread);
+					if (gpg_ctx_parse_status (gpg, error) == -1) {
+						gpg_ctx_op_cancel (gpg);
+						return -1;
+					}
+					did_work = TRUE;
+				} else if (nread == 0) {
+					gpg->seen_eof2 = TRUE;
+					gpg->complete = TRUE;
+					close (gpg->stderr_fd);
+					gpg->stderr_fd = -1;
+				}
+			}
+		}
+	}
+
+	if (!did_work && !gpg_ctx_op_complete (gpg))
+		g_usleep (5000);
+
+	return 0;
 #endif
 	return -1;
 }
@@ -2107,7 +2347,26 @@ gpg_ctx_op_wait (struct _GpgCtx *gpg)
 	else
 		return -1;
 #else
-	return -1;
+	/* Attend la terminaison de gpg.exe sous Windows et récupère son code de sortie */
+	DWORD exit_code = STILL_ACTIVE;
+
+	if (gpg->pid != NULL && gpg->pid != (GPid) -1) {
+		if (!gpg->exited) {
+			WaitForSingleObject ((HANDLE) gpg->pid, 10000);
+			if (GetExitCodeProcess ((HANDLE) gpg->pid, &exit_code) && exit_code != STILL_ACTIVE) {
+				gpg->exit_status = (gint) exit_code;
+			} else {
+				TerminateProcess ((HANDLE) gpg->pid, 1);
+				gpg->exit_status = -1;
+			}
+			gpg->exited = TRUE;
+		}
+		g_spawn_close_pid (gpg->pid);
+		gpg->pid = (GPid) -1;
+		return gpg->exit_status;
+	}
+
+	return gpg->exited ? gpg->exit_status : -1;
 #endif
 }
 

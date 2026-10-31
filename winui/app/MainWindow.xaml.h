@@ -75,6 +75,9 @@ namespace winrt::EvolutionWin::implementation
 
         void OpenCompose(::EvolutionWin::ComposeData const& data);
         void Reply(ReplyKind kind);
+        void ReplyToMessages(ReplyKind kind, std::vector<hstring> const& uids);
+        void ForwardMessagesAsAttachments(std::vector<hstring> const& uids);
+        ::EvolutionWin::ComposeData BuildReplyComposeData(ReplyKind kind, Windows::Data::Json::JsonObject const& message);
         void LoadMessages(bool keep_selection);
         void UpdateFolderCounts(hstring const& account, Windows::Data::Json::JsonArray const& folders);
         static std::wstring NodeKey(hstring const& account, hstring const& folder);
@@ -87,23 +90,28 @@ namespace winrt::EvolutionWin::implementation
         void ShowMessages(Windows::Data::Json::JsonArray const& messages);
         void FilterLocalMessages(hstring const& query);
         hstring SelectedMessageUid();
+        std::vector<hstring> SelectedMessageUids();
+        std::vector<hstring> TargetMessageUids(hstring const& context_uid = L"");
         Microsoft::UI::Xaml::Controls::Grid FindMessageItem(hstring const& uid);
         void UpdateMessageItemVisual(Microsoft::UI::Xaml::Controls::Grid const& item, bool seen, bool flagged);
         void UpdateActionButtons(hstring const& uid);
         void SetMessageFlag(hstring const& uid, hstring const& flag, bool value);
+        void SetMessagesFlag(std::vector<hstring> const& uids, hstring const& flag, bool value);
         void DeleteMessageByUid(hstring const& uid);
+        void DeleteMessagesByUids(std::vector<hstring> const& uids);
         void MoveMessageByUid(hstring const& uid, hstring const& dest_account, hstring const& dest_folder);
+        void MoveMessagesByUids(std::vector<hstring> const& uids, hstring const& dest_account, hstring const& dest_folder);
         void RemoveMessageFromList(hstring const& uid);
         void ClearReader();
         void PopulateMoveMenuItems(
             Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items,
-            hstring const& uid);
+            std::vector<hstring> const& uids);
         void AppendFolderMoveItems(
             Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items,
             Windows::Data::Json::JsonArray const& folders,
             hstring const& account,
             hstring const& prefix,
-            hstring const& uid);
+            std::vector<hstring> const& uids);
         void ShowStatus(hstring const& message, Microsoft::UI::Xaml::Controls::InfoBarSeverity severity);
         fire_and_forget InitializeReaderAsync();
         void ShowInReader(hstring const& html);
@@ -111,10 +119,14 @@ namespace winrt::EvolutionWin::implementation
         /* Étape 1 : Notifications Windows et pièces jointes */
         void ShowNewMailNotification(Windows::Data::Json::JsonObject const& object);
         void PopulateAttachments(Windows::Data::Json::JsonArray const& attachments);
+        void UpdateSecurityBanner(Windows::Data::Json::JsonObject const& security);
         fire_and_forget SaveAttachmentAsync(uint32_t index, hstring filename);
 
-        /* Étape 2 : Gestion des comptes et authentification */
+        /* Étape 2 : Gestion des comptes, certificats TLS et authentification OAuth2 */
         fire_and_forget PromptPasswordAsync(hstring source_uid, hstring name, hstring user, bool rejected);
+        fire_and_forget PromptTlsCertificateAsync(Windows::Data::Json::JsonObject object);
+        Windows::Foundation::IAsyncOperation<hstring> StartOAuth2SignInAsync(
+            int provider_index, hstring client_id, hstring tenant_id, hstring login_hint);
         void RefreshAccountsView();
         fire_and_forget ShowAddAccountDialogAsync();
 
@@ -131,6 +143,7 @@ namespace winrt::EvolutionWin::implementation
         Windows::Data::Json::JsonArray m_all_messages{ nullptr };
         /* message shown in the reader, for replies */
         Windows::Data::Json::JsonObject m_current_message{ nullptr };
+        hstring m_current_message_uid;
         /* contact sélectionné dans la vue Contacts */
         Windows::Data::Json::JsonObject m_selected_contact{ nullptr };
         /* folder tree nodes by NodeKey() */

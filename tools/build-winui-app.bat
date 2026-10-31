@@ -19,6 +19,8 @@ if not exist "%WINUI_SRC%\packages\Microsoft.WindowsAppSDK.1.7.260224002" (
 )
 
 rem OutDir/IntDir se terminent par "\" : non entourés de guillemets pour MSBuild
+if exist "%BUILD_DIR%\EvolutionWin.exe" move /y "%BUILD_DIR%\EvolutionWin.exe" "%BUILD_DIR%\EvolutionWin.exe.old" >nul 2>&1
+if exist "%BUILD_DIR%\EvolutionWin.exe.old" del /f /q "%BUILD_DIR%\EvolutionWin.exe.old" >nul 2>&1
 msbuild "%APP%\EvolutionWin.vcxproj" -nologo -m -v:minimal ^
 	-p:Configuration=Release -p:Platform=x64 ^
 	-p:GtkPrefix="%PREFIX%" ^

@@ -73,7 +73,7 @@ unset(_msvc_compat_include)
 # which cmd.exe cannot run. find_program() keeps an already set cache
 # variable, so preset them as "<python> <script>" (a two-element list that
 # add_custom_command() expands into the interpreter and its argument).
-find_program(_msvc_compat_python NAMES python3 python REQUIRED)
+find_program(_msvc_compat_python NAMES python python3 REQUIRED)
 foreach(_msvc_tool IN ITEMS GLIB_MKENUMS:glib-mkenums GLIB_GENMARSHAL:glib-genmarshal GDBUS_CODEGEN:gdbus-codegen)
 	string(REPLACE ":" ";" _msvc_tool "${_msvc_tool}")
 	list(GET _msvc_tool 0 _msvc_var)

@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 584de2746..79cfac7c0 100644
+index 584de27..79cfac7 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -437,7 +437,10 @@ endif(ENABLE_GTK4)
@@ -123,7 +123,7 @@ index 584de2746..79cfac7c0 100644
  set(DATA_SERVER_LDFLAGS ${DATA_SERVER_LDFLAGS} ${MANUAL_NSPR_LIBS} ${MANUAL_NSS_LIBS})
  
 diff --git a/config.h.in b/config.h.in
-index 922e99716..8558dec37 100644
+index 922e997..8558dec 100644
 --- a/config.h.in
 +++ b/config.h.in
 @@ -135,6 +135,9 @@
@@ -137,7 +137,7 @@ index 922e99716..8558dec37 100644
  #cmakedefine HAVE_LOCALTIME_R
  
 diff --git a/data/CMakeLists.txt b/data/CMakeLists.txt
-index 5cdd46720..1900b7c9d 100644
+index 5cdd467..1900b7c 100644
 --- a/data/CMakeLists.txt
 +++ b/data/CMakeLists.txt
 @@ -36,7 +36,8 @@ if(NOT WITH_GOOGLE_CLIENT_ID STREQUAL "")
@@ -151,7 +151,7 @@ index 5cdd46720..1900b7c9d 100644
  			     #define DECODE_TO_FILE \"${_binary_dir_to_file}\"
  			     #define DECODE_REVERSED 1
 diff --git a/src/addressbook/backends/carddav/e-book-backend-carddav-factory.c b/src/addressbook/backends/carddav/e-book-backend-carddav-factory.c
-index e38ea1494..0266eacf4 100644
+index e38ea14..0266eac 100644
 --- a/src/addressbook/backends/carddav/e-book-backend-carddav-factory.c
 +++ b/src/addressbook/backends/carddav/e-book-backend-carddav-factory.c
 @@ -16,8 +16,8 @@ typedef EBookBackendFactoryClass EBookBackendCardDAVFactoryClass;
@@ -166,7 +166,7 @@ index e38ea1494..0266eacf4 100644
  /* Forward Declarations */
  GType e_book_backend_carddav_factory_get_type (void);
 diff --git a/src/addressbook/backends/file/e-book-backend-file-factory.c b/src/addressbook/backends/file/e-book-backend-file-factory.c
-index 957f6ab57..d56fbb7d3 100644
+index 957f6ab..d56fbb7 100644
 --- a/src/addressbook/backends/file/e-book-backend-file-factory.c
 +++ b/src/addressbook/backends/file/e-book-backend-file-factory.c
 @@ -16,8 +16,8 @@ typedef EBookBackendFactoryClass EBookBackendFileFactoryClass;
@@ -181,7 +181,7 @@ index 957f6ab57..d56fbb7d3 100644
  /* Forward Declarations */
  GType e_book_backend_file_factory_get_type (void);
 diff --git a/src/addressbook/backends/ldap/e-book-backend-ldap-factory.c b/src/addressbook/backends/ldap/e-book-backend-ldap-factory.c
-index b8e2a0204..dcb1dd578 100644
+index b8e2a02..dcb1dd5 100644
 --- a/src/addressbook/backends/ldap/e-book-backend-ldap-factory.c
 +++ b/src/addressbook/backends/ldap/e-book-backend-ldap-factory.c
 @@ -16,8 +16,8 @@ typedef EBookBackendFactoryClass EBookBackendLDAPFactoryClass;
@@ -196,7 +196,7 @@ index b8e2a0204..dcb1dd578 100644
  /* Forward Declarations */
  GType e_book_backend_ldap_factory_get_type (void);
 diff --git a/src/addressbook/libebook-contacts/gen-western-table.c b/src/addressbook/libebook-contacts/gen-western-table.c
-index 96a02b3de..5ee7834f3 100644
+index 96a02b3..5ee7834 100644
 --- a/src/addressbook/libebook-contacts/gen-western-table.c
 +++ b/src/addressbook/libebook-contacts/gen-western-table.c
 @@ -60,6 +60,11 @@ process_content (const gchar *content)
@@ -212,7 +212,7 @@ index 96a02b3de..5ee7834f3 100644
  		if (!*line) {
  			strings = g_slist_reverse (strings);
 diff --git a/src/addressbook/libebook/e-book-client.c b/src/addressbook/libebook/e-book-client.c
-index 9a9910b01..7d9470329 100644
+index 9a9910b..7d94703 100644
 --- a/src/addressbook/libebook/e-book-client.c
 +++ b/src/addressbook/libebook/e-book-client.c
 @@ -1071,6 +1071,12 @@ book_client_init_in_dbus_thread (GTask *task,
@@ -229,7 +229,7 @@ index 9a9910b01..7d9470329 100644
  		connection,
  		G_DBUS_PROXY_FLAGS_NONE,
 diff --git a/src/addressbook/libedata-book/e-book-sqlite.c b/src/addressbook/libedata-book/e-book-sqlite.c
-index b10a309cf..02a0a2bbc 100644
+index b10a309..02a0a2b 100644
 --- a/src/addressbook/libedata-book/e-book-sqlite.c
 +++ b/src/addressbook/libedata-book/e-book-sqlite.c
 @@ -178,16 +178,16 @@ ebsql_origin_str (EbSqlCursorOrigin origin)
@@ -253,7 +253,7 @@ index b10a309cf..02a0a2bbc 100644
  
  #define EBSQL_SET_ERROR_LITERAL(error, code, detail) \
 diff --git a/src/calendar/backends/caldav/e-cal-backend-caldav-factory.c b/src/calendar/backends/caldav/e-cal-backend-caldav-factory.c
-index 9748e236d..1e3b96160 100644
+index 9748e23..1e3b961 100644
 --- a/src/calendar/backends/caldav/e-cal-backend-caldav-factory.c
 +++ b/src/calendar/backends/caldav/e-cal-backend-caldav-factory.c
 @@ -22,8 +22,8 @@ typedef ECalBackendFactoryClass ECalBackendCalDAVTodosFactoryClass;
@@ -268,7 +268,7 @@ index 9748e236d..1e3b96160 100644
  /* Forward Declarations */
  GType e_cal_backend_caldav_events_factory_get_type (void);
 diff --git a/src/calendar/backends/contacts/e-cal-backend-contacts-factory.c b/src/calendar/backends/contacts/e-cal-backend-contacts-factory.c
-index 3d9f951f7..ed2e2ab50 100644
+index 3d9f951..ed2e2ab 100644
 --- a/src/calendar/backends/contacts/e-cal-backend-contacts-factory.c
 +++ b/src/calendar/backends/contacts/e-cal-backend-contacts-factory.c
 @@ -16,8 +16,8 @@ typedef ECalBackendFactoryClass ECalBackendContactsEventsFactoryClass;
@@ -283,7 +283,7 @@ index 3d9f951f7..ed2e2ab50 100644
  /* Forward Declarations */
  GType e_cal_backend_contacts_events_factory_get_type (void);
 diff --git a/src/calendar/backends/file/e-cal-backend-file-factory.c b/src/calendar/backends/file/e-cal-backend-file-factory.c
-index fb0625f6a..d0e591a30 100644
+index fb0625f..d0e591a 100644
 --- a/src/calendar/backends/file/e-cal-backend-file-factory.c
 +++ b/src/calendar/backends/file/e-cal-backend-file-factory.c
 @@ -24,8 +24,8 @@ typedef ECalBackendFactoryClass ECalBackendFileTodosFactoryClass;
@@ -298,7 +298,7 @@ index fb0625f6a..d0e591a30 100644
  /* Forward Declarations */
  GType e_cal_backend_file_events_factory_get_type (void);
 diff --git a/src/calendar/backends/gtasks/e-cal-backend-gtasks-factory.c b/src/calendar/backends/gtasks/e-cal-backend-gtasks-factory.c
-index 31e4aff64..bfbc62f57 100644
+index 31e4aff..bfbc62f 100644
 --- a/src/calendar/backends/gtasks/e-cal-backend-gtasks-factory.c
 +++ b/src/calendar/backends/gtasks/e-cal-backend-gtasks-factory.c
 @@ -16,8 +16,8 @@ typedef ECalBackendFactoryClass ECalBackendGTasksFactoryClass;
@@ -313,7 +313,7 @@ index 31e4aff64..bfbc62f57 100644
  /* Forward Declarations */
  GType e_cal_backend_gtasks_factory_get_type (void);
 diff --git a/src/calendar/backends/http/e-cal-backend-http-factory.c b/src/calendar/backends/http/e-cal-backend-http-factory.c
-index 0d4f192eb..5332650b9 100644
+index 0d4f192..5332650 100644
 --- a/src/calendar/backends/http/e-cal-backend-http-factory.c
 +++ b/src/calendar/backends/http/e-cal-backend-http-factory.c
 @@ -22,8 +22,8 @@ typedef ECalBackendFactoryClass ECalBackendHttpTodosFactoryClass;
@@ -328,7 +328,7 @@ index 0d4f192eb..5332650b9 100644
  /* Forward Declarations */
  GType e_cal_backend_http_events_factory_get_type (void);
 diff --git a/src/calendar/backends/weather/e-cal-backend-weather-factory.c b/src/calendar/backends/weather/e-cal-backend-weather-factory.c
-index fc486a338..a37d6b2d4 100644
+index fc486a3..a37d6b2 100644
 --- a/src/calendar/backends/weather/e-cal-backend-weather-factory.c
 +++ b/src/calendar/backends/weather/e-cal-backend-weather-factory.c
 @@ -16,8 +16,8 @@ typedef ECalBackendFactoryClass ECalBackendWeatherEventsFactoryClass;
@@ -343,7 +343,7 @@ index fc486a338..a37d6b2d4 100644
  /* Forward Declarations */
  GType e_cal_backend_weather_events_factory_get_type (void);
 diff --git a/src/calendar/backends/webdav-notes/e-cal-backend-webdav-notes-factory.c b/src/calendar/backends/webdav-notes/e-cal-backend-webdav-notes-factory.c
-index 478fd36b1..8d9aa2fc5 100644
+index 478fd36..8d9aa2f 100644
 --- a/src/calendar/backends/webdav-notes/e-cal-backend-webdav-notes-factory.c
 +++ b/src/calendar/backends/webdav-notes/e-cal-backend-webdav-notes-factory.c
 @@ -13,8 +13,8 @@ typedef ECalBackendFactoryClass ECalBackendWebDAVNotesFactoryClass;
@@ -358,7 +358,7 @@ index 478fd36b1..8d9aa2fc5 100644
  /* Forward Declarations */
  GType e_cal_backend_webdav_notes_factory_get_type (void);
 diff --git a/src/calendar/libecal/e-cal-client.c b/src/calendar/libecal/e-cal-client.c
-index ff934fab0..c892dd48f 100644
+index ff934fa..c892dd4 100644
 --- a/src/calendar/libecal/e-cal-client.c
 +++ b/src/calendar/libecal/e-cal-client.c
 @@ -1174,6 +1174,12 @@ cal_client_init_in_dbus_thread (GTask *task,
@@ -375,7 +375,7 @@ index ff934fab0..c892dd48f 100644
  		connection,
  		G_DBUS_PROXY_FLAGS_NONE,
 diff --git a/src/camel/camel-debug.c b/src/camel/camel-debug.c
-index a9bfd4f2d..e4a9485f5 100644
+index a9bfd4f..e4a9485 100644
 --- a/src/camel/camel-debug.c
 +++ b/src/camel/camel-debug.c
 @@ -23,7 +23,9 @@
@@ -390,7 +390,7 @@ index a9bfd4f2d..e4a9485f5 100644
  static GHashTable *debug_table = NULL;
  
 diff --git a/src/camel/camel-debug.h b/src/camel/camel-debug.h
-index cddce94eb..0335fc766 100644
+index cddce94..0335fc7 100644
 --- a/src/camel/camel-debug.h
 +++ b/src/camel/camel-debug.h
 @@ -12,6 +12,7 @@
@@ -411,7 +411,7 @@ index cddce94eb..0335fc766 100644
  gboolean camel_debug (const gchar *mode);
  
 diff --git a/src/camel/camel-enums.h b/src/camel/camel-enums.h
-index 06567a88f..4f6c85eda 100644
+index 06567a8..4f6c85e 100644
 --- a/src/camel/camel-enums.h
 +++ b/src/camel/camel-enums.h
 @@ -9,6 +9,16 @@
@@ -432,20 +432,418 @@ index 06567a88f..4f6c85eda 100644
   * CamelAuthenticationResult:
   * @CAMEL_AUTHENTICATION_ERROR:
 diff --git a/src/camel/camel-gpg-context.c b/src/camel/camel-gpg-context.c
-index 71741bca9..b776021a0 100644
+index 71741bc..2feaa83 100644
 --- a/src/camel/camel-gpg-context.c
 +++ b/src/camel/camel-gpg-context.c
-@@ -1139,6 +1139,8 @@ exception:
+@@ -32,6 +32,9 @@
+ #include <sys/ioctl.h>
+ #include <sys/wait.h>
+ #include <termios.h>
++#else
++#include <windows.h>
++#include <io.h>
+ #endif
+ 
+ #include "camel-debug.h"
+@@ -299,6 +302,12 @@ struct _GpgCtx {
+ 	gint stderr_fd;
+ 	gint status_fd;
+ 	gint command_fd;  /* only needed for sign/decrypt/edit-key */
++#ifdef G_OS_WIN32
++	/* feeds istream into gpg's stdin: Windows anonymous pipes have no
++	 * non-blocking writes, writing from gpg_ctx_op_step() could deadlock
++	 * with gpg blocked on a full stdout pipe */
++	GThread *stdin_writer;
++#endif
+ 
+ 	/* status-fd buffer */
+ 	guchar *statusbuf;
+@@ -379,7 +388,7 @@ gpg_ctx_new (CamelCipherContext *context,
+ 	gpg->complete = FALSE;
+ 	gpg->seen_eof1 = TRUE;
+ 	gpg->seen_eof2 = FALSE;
+-	gpg->pid = (pid_t) -1;
++	gpg->pid = (GPid) -1;
+ 	gpg->exit_status = 0;
+ 	gpg->exited = FALSE;
+ 
+@@ -686,6 +695,21 @@ gpg_ctx_free (struct _GpgCtx *gpg)
+ 	if (gpg->command_fd != -1)
+ 		close (gpg->command_fd);
+ 
++#ifdef G_OS_WIN32
++	/* Ferme le descripteur de processus Windows s'il est encore ouvert ;
++	 * un gpg.exe encore actif est terminé pour débloquer le thread
++	 * d'écriture (écriture en échec sur un tube rompu) avant de l'attendre */
++	if (gpg->pid != NULL && gpg->pid != (GPid) -1) {
++		if (!gpg->exited)
++			TerminateProcess ((HANDLE) gpg->pid, 1);
++		g_spawn_close_pid (gpg->pid);
++		gpg->pid = (GPid) -1;
++	}
++
++	if (gpg->stdin_writer)
++		g_thread_join (gpg->stdin_writer);
++#endif
++
+ 	g_free (gpg->statusbuf);
+ 
+ 	g_free (gpg->need_id);
+@@ -764,15 +788,36 @@ gpg_ctx_get_executable_name (void)
+ 			}
+ 		}
+ 
+-		if (!names[index])
++		if (!names[index]) {
++#ifdef G_OS_WIN32
++			/* Recherche dans les répertoires d'installation par défaut de Gpg4win / GnuPG sous Windows */
++			const gchar *win32_paths[] = {
++				"C:\\Program Files (x86)\\GnuPG\\bin\\gpg.exe",
++				"C:\\Program Files\\GnuPG\\bin\\gpg.exe",
++				"C:\\Program Files (x86)\\Gpg4win\\bin\\gpg.exe",
++				"C:\\Program Files\\Gpg4win\\bin\\gpg.exe",
++				NULL
++			};
++			gint w;
++
++			for (w = 0; win32_paths[w]; w++) {
++				if (g_file_test (win32_paths[w], G_FILE_TEST_IS_REGULAR)) {
++					strcpy (preset_binary, win32_paths[w]);
++					index = 0;
++					break;
++				}
++			}
++			if (!names[index])
++				index = 2; /* "gpg" sous Windows */
++#else
+ 			index = 1;
++#endif
++		}
+ 	}
+ 
+ 	return names[index];
+ }
+ 
+-#ifndef G_OS_WIN32
+-
+ static const gchar *
+ gpg_hash_str (CamelCipherHash hash)
+ {
+@@ -1039,8 +1084,6 @@ gpg_ctx_get_argv (struct _GpgCtx *gpg,
+ 	return argv;
+ }
+ 
+-#endif
+-
+ static void
+ camel_gpg_ctx_close_pipe (gint pp[2])
+ {
+@@ -1054,6 +1097,43 @@ camel_gpg_ctx_close_pipe (gint pp[2])
+ 	}
+ }
+ 
++#ifdef G_OS_WIN32
++typedef struct _GpgStdinWriter {
++	gint fd;
++	CamelStream *istream;
++} GpgStdinWriter;
++
++/* Copie le flux d'entrée vers l'entrée standard de gpg.exe puis la ferme
++ * (fin de données pour gpg). S'arrête sur une erreur d'écriture, par
++ * exemple quand gpg.exe s'est terminé ou a été tué. */
++static gpointer
++gpg_ctx_stdin_writer_thread (gpointer user_data)
++{
++	GpgStdinWriter *writer = user_data;
++	gchar buffer[4096];
++	gssize nread;
++
++	while ((nread = camel_stream_read (writer->istream, buffer, sizeof (buffer), NULL, NULL)) > 0) {
++		gssize nwritten = 0;
++
++		while (nwritten < nread) {
++			gint w = _write (writer->fd, buffer + nwritten, (guint) (nread - nwritten));
++
++			if (w <= 0)
++				goto done;
++			nwritten += w;
++		}
++	}
++
++ done:
++	close (writer->fd);
++	g_object_unref (writer->istream);
++	g_free (writer);
++
++	return NULL;
++}
++#endif
++
+ static gboolean
+ gpg_ctx_op_start (struct _GpgCtx *gpg,
+                   GError **error)
+@@ -1138,10 +1218,57 @@ exception:
+ 
  	errno = errnosave;
  #else
- 	/* FIXME: Port me */
+-	/* FIXME: Port me */
+-	g_warning ("%s: Not implemented", G_STRFUNC);
++	/* Lancement de gpg.exe sous Windows via g_spawn_async_with_pipes()
++	 * avec --status-fd=2 (les lignes [GNUPG:] sont émises sur stderr
++	 * et séparées des diagnostics par gpg_ctx_parse_status). */
++	gchar *status_fd = NULL, *command_fd = NULL;
++	GPtrArray *argv;
 +	GError *local_error = NULL;
++	gboolean success;
 +
- 	g_warning ("%s: Not implemented", G_STRFUNC);
++	argv = gpg_ctx_get_argv (gpg, 2, &status_fd, -1, &command_fd);
++
++	if (camel_debug_start ("gpg")) {
++		guint ii;
++
++		printf ("[GPG] going to execute:");
++		for (ii = 0; ii < argv->len; ii++) {
++			if (!argv->pdata[ii])
++				break;
++
++			printf (" %s", (const gchar *) argv->pdata[ii]);
++		}
++		printf ("\n");
++		camel_debug_end ();
++	}
++
++	success = g_spawn_async_with_pipes (
++		NULL, (gchar **) argv->pdata, NULL,
++		G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_SEARCH_PATH,
++		NULL, NULL,
++		&gpg->pid,
++		gpg->istream ? &gpg->stdin_fd : NULL,
++		gpg->ostream ? &gpg->stdout_fd : NULL,
++		&gpg->stderr_fd,
++		&local_error);
++
++	g_ptr_array_free (argv, TRUE);
++	g_free (status_fd);
++	g_free (command_fd);
  
- 	errno = EINVAL;
+-	errno = EINVAL;
++	if (success) {
++		if (gpg->stdin_fd != -1) {
++			GpgStdinWriter *writer = g_new0 (GpgStdinWriter, 1);
++
++			/* the thread owns the descriptor from now on */
++			writer->fd = gpg->stdin_fd;
++			writer->istream = g_object_ref (gpg->istream);
++			gpg->stdin_fd = -1;
++			gpg->stdin_writer = g_thread_new ("camel-gpg-stdin", gpg_ctx_stdin_writer_thread, writer);
++		}
++
++		return TRUE;
++	}
+ #endif
+ 
+ 	if (local_error)
+@@ -1160,8 +1287,6 @@ exception:
+ 	return FALSE;
+ }
+ 
+-#ifndef G_OS_WIN32
+-
+ static const gchar *
+ next_token (const gchar *in,
+             gchar **token)
+@@ -1255,12 +1380,27 @@ gpg_ctx_parse_status (struct _GpgCtx *gpg,
+ 	}
+ 
+ 	*inptr++ = '\0';
++#ifdef G_OS_WIN32
++	/* Supprime le retour chariot \r éventuel des fins de ligne CRLF sous Windows */
++	if (inptr >= gpg->statusbuf + 2 && inptr[-2] == '\r')
++		inptr[-2] = '\0';
++#endif
+ 	status = gpg->statusbuf;
+ 
+ 	if (camel_debug ("gpg:status"))
+ 		printf ("status: %s\n", status);
+ 
+ 	if (strncmp ((const gchar *) status, "[GNUPG:] ", 9) != 0) {
++#ifdef G_OS_WIN32
++		/* Sous Windows (--status-fd=2), stderr transporte à la fois les
++		 * lignes de statut [GNUPG:] et les messages de diagnostic de gpg. */
++		if (*status && gpg->diagnostics) {
++			camel_stream_write (gpg->diagnostics, (const gchar *) status,
++				strlen ((const gchar *) status), NULL, NULL);
++			camel_stream_write (gpg->diagnostics, "\n", 1, NULL, NULL);
++		}
++		goto recycle;
++#else
+ 		gchar *message;
+ 
+ 		message = g_locale_to_utf8 (
+@@ -1272,6 +1412,7 @@ gpg_ctx_parse_status (struct _GpgCtx *gpg,
+ 		g_free (message);
+ 
+ 		return -1;
++#endif
+ 	}
+ 
+ 	status += 9;
+@@ -1754,8 +1895,6 @@ gpg_ctx_parse_status (struct _GpgCtx *gpg,
+ 	return 0;
+ }
+ 
+-#endif
+-
+ #define status_backup(gpg, start, len) G_STMT_START { \
+ 	if (gpg->statusleft <= len) { \
+ 		guint slen, soff; \
+@@ -1796,6 +1935,17 @@ gpg_ctx_op_cancel (struct _GpgCtx *gpg)
+ 		sleep (1);
+ 		waitpid (gpg->pid, &status, WNOHANG);
+ 	}
++#else
++	/* Termine proprement le sous-processus gpg.exe sous Windows */
++	if (gpg->exited || gpg->pid == NULL || gpg->pid == (GPid) -1)
++		return;
++
++	TerminateProcess ((HANDLE) gpg->pid, 1);
++	WaitForSingleObject ((HANDLE) gpg->pid, 1000);
++	g_spawn_close_pid (gpg->pid);
++	gpg->pid = (GPid) -1;
++	gpg->exited = TRUE;
++	gpg->exit_status = -1;
+ #endif
+ }
+ 
+@@ -2036,6 +2186,98 @@ gpg_ctx_op_step (struct _GpgCtx *gpg,
+ 		g_io_error_from_errno (errno),
+ 		_("Failed to execute gpg: %s"), g_strerror (errno));
+ 	gpg_ctx_op_cancel (gpg);
++#else
++	/* Boucle d'entrées/sorties non bloquante pour les tubes Windows de gpg.exe :
++	 * l'entrée standard est alimentée par gpg->stdin_writer, stdout_fd et
++	 * stderr_fd ne sont lus que lorsque PeekNamedPipe signale des données. */
++	gboolean did_work = FALSE;
++
++	if (g_cancellable_set_error_if_cancelled (cancellable, error)) {
++		gpg_ctx_op_cancel (gpg);
++		return -1;
++	}
++
++	/* Lecture non bloquante de la sortie standard (stdout) */
++	if (!gpg->seen_eof1) {
++		if (gpg->stdout_fd == -1 || !gpg->ostream) {
++			gpg->seen_eof1 = TRUE;
++		} else {
++			HANDLE hpipe = (HANDLE) _get_osfhandle (gpg->stdout_fd);
++			DWORD avail = 0;
++
++			if (!PeekNamedPipe (hpipe, NULL, 0, NULL, &avail, NULL)) {
++				gpg->seen_eof1 = TRUE;
++				close (gpg->stdout_fd);
++				gpg->stdout_fd = -1;
++				did_work = TRUE;
++			} else if (avail > 0) {
++				gchar buffer[4096];
++				unsigned int to_read = avail < sizeof (buffer) ? (unsigned int) avail : (unsigned int) sizeof (buffer);
++				int nread = _read (gpg->stdout_fd, buffer, to_read);
++
++				if (nread > 0) {
++					if (camel_stream_write (gpg->ostream, buffer, (gsize) nread, cancellable, error) != (gsize) nread) {
++						gpg_ctx_op_cancel (gpg);
++						return -1;
++					}
++					did_work = TRUE;
++				} else if (nread == 0) {
++					gpg->seen_eof1 = TRUE;
++					close (gpg->stdout_fd);
++					gpg->stdout_fd = -1;
++				}
++			}
++		}
++	}
++
++	/* Lecture non bloquante de la sortie d'erreur et de statut (stderr, --status-fd=2) */
++	if (!gpg->seen_eof2 || !gpg->complete) {
++		if (gpg->stderr_fd == -1) {
++			gpg->seen_eof2 = TRUE;
++			gpg->complete = TRUE;
++		} else {
++			HANDLE hpipe = (HANDLE) _get_osfhandle (gpg->stderr_fd);
++			DWORD avail = 0;
++
++			if (!PeekNamedPipe (hpipe, NULL, 0, NULL, &avail, NULL)) {
++				if (gpg->statusptr > gpg->statusbuf) {
++					status_backup (gpg, "\n", 1);
++					if (gpg_ctx_parse_status (gpg, error) == -1) {
++						gpg_ctx_op_cancel (gpg);
++						return -1;
++					}
++				}
++				gpg->seen_eof2 = TRUE;
++				gpg->complete = TRUE;
++				close (gpg->stderr_fd);
++				gpg->stderr_fd = -1;
++				did_work = TRUE;
++			} else if (avail > 0) {
++				gchar buffer[4096];
++				unsigned int to_read = avail < sizeof (buffer) ? (unsigned int) avail : (unsigned int) sizeof (buffer);
++				int nread = _read (gpg->stderr_fd, buffer, to_read);
++
++				if (nread > 0) {
++					status_backup (gpg, buffer, nread);
++					if (gpg_ctx_parse_status (gpg, error) == -1) {
++						gpg_ctx_op_cancel (gpg);
++						return -1;
++					}
++					did_work = TRUE;
++				} else if (nread == 0) {
++					gpg->seen_eof2 = TRUE;
++					gpg->complete = TRUE;
++					close (gpg->stderr_fd);
++					gpg->stderr_fd = -1;
++				}
++			}
++		}
++	}
++
++	if (!did_work && !gpg_ctx_op_complete (gpg))
++		g_usleep (5000);
++
++	return 0;
+ #endif
+ 	return -1;
+ }
+@@ -2105,7 +2347,26 @@ gpg_ctx_op_wait (struct _GpgCtx *gpg)
+ 	else
+ 		return -1;
+ #else
+-	return -1;
++	/* Attend la terminaison de gpg.exe sous Windows et récupère son code de sortie */
++	DWORD exit_code = STILL_ACTIVE;
++
++	if (gpg->pid != NULL && gpg->pid != (GPid) -1) {
++		if (!gpg->exited) {
++			WaitForSingleObject ((HANDLE) gpg->pid, 10000);
++			if (GetExitCodeProcess ((HANDLE) gpg->pid, &exit_code) && exit_code != STILL_ACTIVE) {
++				gpg->exit_status = (gint) exit_code;
++			} else {
++				TerminateProcess ((HANDLE) gpg->pid, 1);
++				gpg->exit_status = -1;
++			}
++			gpg->exited = TRUE;
++		}
++		g_spawn_close_pid (gpg->pid);
++		gpg->pid = (GPid) -1;
++		return gpg->exit_status;
++	}
++
++	return gpg->exited ? gpg->exit_status : -1;
+ #endif
+ }
+ 
 diff --git a/src/camel/camel-mime-utils.c b/src/camel/camel-mime-utils.c
-index 48fdd5469..916ffb883 100644
+index 48fdd54..916ffb8 100644
 --- a/src/camel/camel-mime-utils.c
 +++ b/src/camel/camel-mime-utils.c
 @@ -38,6 +38,12 @@
@@ -506,7 +904,7 @@ index 48fdd5469..916ffb883 100644
  
  	add_str (domain, "localhost");
 diff --git a/src/camel/camel-mime-utils.h b/src/camel/camel-mime-utils.h
-index b5df5b5f8..4571b00b8 100644
+index b5df5b5..4571b00 100644
 --- a/src/camel/camel-mime-utils.h
 +++ b/src/camel/camel-mime-utils.h
 @@ -213,7 +213,8 @@ enum {
@@ -520,7 +918,7 @@ index b5df5b5f8..4571b00b8 100644
  #define camel_mime_is_ctrl(x) ((camel_mime_special_table[(guchar)(x)] & CAMEL_MIME_IS_CTRL) != 0)
  #define camel_mime_is_lwsp(x) ((camel_mime_special_table[(guchar)(x)] & CAMEL_MIME_IS_LWSP) != 0)
 diff --git a/src/camel/camel-msgport.c b/src/camel/camel-msgport.c
-index 65bd088e3..839428e55 100644
+index 65bd088..839428e 100644
 --- a/src/camel/camel-msgport.c
 +++ b/src/camel/camel-msgport.c
 @@ -10,7 +10,8 @@
@@ -534,7 +932,7 @@ index 65bd088e3..839428e55 100644
  #include <winsock2.h>
  #endif
 diff --git a/src/camel/camel-provider.h b/src/camel/camel-provider.h
-index 910cbaac4..5ed4dd692 100644
+index 910cbaa..5ed4dd6 100644
 --- a/src/camel/camel-provider.h
 +++ b/src/camel/camel-provider.h
 @@ -32,7 +32,7 @@
@@ -547,7 +945,7 @@ index 910cbaac4..5ed4dd692 100644
  /* Flags for url_flags. "ALLOW" means the config dialog will let the
   * user configure it. "NEED" implies "ALLOW" but means the user must
 diff --git a/src/camel/camel-stream-process.c b/src/camel/camel-stream-process.c
-index 133c4c15c..a3071f902 100644
+index 133c4c1..a3071f9 100644
 --- a/src/camel/camel-stream-process.c
 +++ b/src/camel/camel-stream-process.c
 @@ -24,7 +24,7 @@
@@ -560,7 +958,7 @@ index 133c4c15c..a3071f902 100644
  struct _CamelStreamProcessPrivate {
  	gint sockfd;
 diff --git a/src/camel/camel.h b/src/camel/camel.h
-index d907be024..11d311a2a 100644
+index d907be0..11d311a 100644
 --- a/src/camel/camel.h
 +++ b/src/camel/camel.h
 @@ -141,7 +141,7 @@
@@ -573,7 +971,7 @@ index d907be024..11d311a2a 100644
  gint camel_init (const gchar *certdb_dir, gboolean nss_init);
  void camel_shutdown (void);
 diff --git a/src/camel/providers/imapx/camel-imapx-utils.c b/src/camel/providers/imapx/camel-imapx-utils.c
-index dbb6eb96a..ee779be9f 100644
+index dbb6eb9..ee779be 100644
 --- a/src/camel/providers/imapx/camel-imapx-utils.c
 +++ b/src/camel/providers/imapx/camel-imapx-utils.c
 @@ -24,7 +24,6 @@
@@ -585,7 +983,7 @@ index dbb6eb96a..ee779be9f 100644
  #define debug_set_flag(flag) do { \
  	if ((CAMEL_IMAPX_DEBUG_ALL & CAMEL_IMAPX_DEBUG_ ## flag) && \
 diff --git a/src/libebackend/e-source-registry-server.c b/src/libebackend/e-source-registry-server.c
-index 9dbd77e19..979fbba1a 100644
+index 9dbd77e..979fbba 100644
 --- a/src/libebackend/e-source-registry-server.c
 +++ b/src/libebackend/e-source-registry-server.c
 @@ -1707,6 +1707,12 @@ e_source_registry_server_load_resource (ESourceRegistryServer *server,
@@ -602,7 +1000,7 @@ index 9dbd77e19..979fbba1a 100644
  		resource_uri = g_strconcat ("resource://", child_path, NULL);
  		file = g_file_new_for_uri (resource_uri);
 diff --git a/src/libebackend/e-user-prompter.c b/src/libebackend/e-user-prompter.c
-index c8661c855..308163e29 100644
+index c8661c8..308163e 100644
 --- a/src/libebackend/e-user-prompter.c
 +++ b/src/libebackend/e-user-prompter.c
 @@ -220,6 +220,12 @@ user_prompter_prompt_thread (GTask *task,
@@ -619,7 +1017,7 @@ index c8661c855..308163e29 100644
  		G_BUS_TYPE_SESSION,
  		G_DBUS_PROXY_FLAGS_NONE,
 diff --git a/src/libedataserver/CMakeLists.txt b/src/libedataserver/CMakeLists.txt
-index d6be937bd..1338d873c 100644
+index d6be937..1338d87 100644
 --- a/src/libedataserver/CMakeLists.txt
 +++ b/src/libedataserver/CMakeLists.txt
 @@ -257,6 +257,7 @@ target_compile_definitions(edataserver PRIVATE
@@ -631,7 +1029,7 @@ index d6be937bd..1338d873c 100644
  	-DE_DATA_SERVER_CREDENTIALMODULEDIR=\"${credentialmoduledir}\"
  	-DE_DATA_SERVER_UIMODULEDIR=\"${uimoduledir}\"
 diff --git a/src/libedataserver/e-data-server-util.c b/src/libedataserver/e-data-server-util.c
-index 15574879c..7ca3d1e33 100644
+index 1557487..7ca3d1e 100644
 --- a/src/libedataserver/e-data-server-util.c
 +++ b/src/libedataserver/e-data-server-util.c
 @@ -1934,6 +1934,7 @@ static const gchar *prefix = NULL;
@@ -857,7 +1255,7 @@ index 15574879c..7ca3d1e33 100644
  
  	add_str (g_get_host_name (), "localhost");
 diff --git a/src/libedataserver/e-data-server-util.h b/src/libedataserver/e-data-server-util.h
-index bbfb62548..a6063bfaa 100644
+index bbfb625..a6063bf 100644
 --- a/src/libedataserver/e-data-server-util.h
 +++ b/src/libedataserver/e-data-server-util.h
 @@ -151,6 +151,10 @@ gchar *		e_util_replace_prefix		(const gchar *configure_time_prefix,
@@ -872,7 +1270,7 @@ index bbfb62548..a6063bfaa 100644
  
  #define e_named_timeout_add(interval, function, data) \
 diff --git a/src/libedataserver/e-ms-oapxbc.c b/src/libedataserver/e-ms-oapxbc.c
-index 32b0fe5a3..7079ccb64 100644
+index 32b0fe5..7079ccb 100644
 --- a/src/libedataserver/e-ms-oapxbc.c
 +++ b/src/libedataserver/e-ms-oapxbc.c
 @@ -31,7 +31,13 @@
@@ -908,7 +1306,7 @@ index 32b0fe5a3..7079ccb64 100644
  
  /**
 diff --git a/src/libedataserver/e-secret-store.c b/src/libedataserver/e-secret-store.c
-index ad2cccf6a..69495cbff 100644
+index ad2cccf..69495cb 100644
 --- a/src/libedataserver/e-secret-store.c
 +++ b/src/libedataserver/e-secret-store.c
 @@ -18,6 +18,9 @@
@@ -1227,7 +1625,7 @@ index ad2cccf6a..69495cbff 100644
  
  #define KEYRING_ITEM_ATTRIBUTE_UID	"e-source-uid"
 diff --git a/src/libedataserver/e-source-registry.c b/src/libedataserver/e-source-registry.c
-index 91c92f173..dca52380e 100644
+index 91c92f1..dca5238 100644
 --- a/src/libedataserver/e-source-registry.c
 +++ b/src/libedataserver/e-source-registry.c
 @@ -1070,6 +1070,12 @@ source_registry_object_manager_thread (gpointer data)
@@ -1244,7 +1642,7 @@ index 91c92f173..dca52380e 100644
  		G_BUS_TYPE_SESSION,
  		G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
 diff --git a/src/libedataserver/e-time-utils.c b/src/libedataserver/e-time-utils.c
-index 56cdccb82..689ee639d 100644
+index 56cdccb..689ee63 100644
 --- a/src/libedataserver/e-time-utils.c
 +++ b/src/libedataserver/e-time-utils.c
 @@ -2099,6 +2099,16 @@ e_mktime_utc (struct tm *tm)
@@ -1281,7 +1679,7 @@ index 56cdccb82..689ee639d 100644
  }
  
 diff --git a/src/libedataserver/libedataserver.pc.in b/src/libedataserver/libedataserver.pc.in
-index 683d343a2..344dffe80 100644
+index 683d343..344dffe 100644
 --- a/src/libedataserver/libedataserver.pc.in
 +++ b/src/libedataserver/libedataserver.pc.in
 @@ -13,6 +13,6 @@ Name: libedataserver
@@ -1293,7 +1691,7 @@ index 683d343a2..344dffe80 100644
  Libs: -L${libdir} -ledataserver-@API_VERSION@
  Cflags: -I${privincludedir}
 diff --git a/src/modules/cache-reaper/module-cache-reaper.c b/src/modules/cache-reaper/module-cache-reaper.c
-index a255863db..744f383a5 100644
+index a255863..744f383 100644
 --- a/src/modules/cache-reaper/module-cache-reaper.c
 +++ b/src/modules/cache-reaper/module-cache-reaper.c
 @@ -7,8 +7,8 @@
@@ -1308,7 +1706,7 @@ index a255863db..744f383a5 100644
  G_MODULE_EXPORT void
  e_module_load (GTypeModule *type_module)
 diff --git a/src/modules/gnome-online-accounts/module-credentials-goa.c b/src/modules/gnome-online-accounts/module-credentials-goa.c
-index c1edb6ffb..9327acded 100644
+index c1edb6f..9327acd 100644
 --- a/src/modules/gnome-online-accounts/module-credentials-goa.c
 +++ b/src/modules/gnome-online-accounts/module-credentials-goa.c
 @@ -7,8 +7,8 @@
@@ -1323,7 +1721,7 @@ index c1edb6ffb..9327acded 100644
  G_MODULE_EXPORT void
  e_module_load (GTypeModule *type_module)
 diff --git a/src/modules/gnome-online-accounts/module-gnome-online-accounts.c b/src/modules/gnome-online-accounts/module-gnome-online-accounts.c
-index 2a5e27c04..629af56a8 100644
+index 2a5e27c..629af56 100644
 --- a/src/modules/gnome-online-accounts/module-gnome-online-accounts.c
 +++ b/src/modules/gnome-online-accounts/module-gnome-online-accounts.c
 @@ -85,8 +85,8 @@ struct _EGnomeOnlineAccountsClass {
@@ -1338,7 +1736,7 @@ index 2a5e27c04..629af56a8 100644
  /* Forward Declarations */
  GType e_gnome_online_accounts_get_type (void);
 diff --git a/src/modules/google-backend/module-google-backend.c b/src/modules/google-backend/module-google-backend.c
-index a609033d5..efc728e4c 100644
+index a609033..efc728e 100644
 --- a/src/modules/google-backend/module-google-backend.c
 +++ b/src/modules/google-backend/module-google-backend.c
 @@ -59,8 +59,8 @@ struct _EGoogleBackendFactoryClass {
@@ -1353,7 +1751,7 @@ index a609033d5..efc728e4c 100644
  /* Forward Declarations */
  GType e_google_backend_get_type (void);
 diff --git a/src/modules/oauth2-services/module-oauth2-services.c b/src/modules/oauth2-services/module-oauth2-services.c
-index a898299a1..920318b02 100644
+index a898299..920318b 100644
 --- a/src/modules/oauth2-services/module-oauth2-services.c
 +++ b/src/modules/oauth2-services/module-oauth2-services.c
 @@ -271,8 +271,8 @@ e_oauth2_source_monitor_init (EOAuth2SourceMonitor *extension)
@@ -1368,7 +1766,7 @@ index a898299a1..920318b02 100644
  G_MODULE_EXPORT void
  e_module_load (GTypeModule *type_module)
 diff --git a/src/modules/outlook-backend/module-outlook-backend.c b/src/modules/outlook-backend/module-outlook-backend.c
-index 086316bdf..82f4015d1 100644
+index 086316b..82f4015 100644
 --- a/src/modules/outlook-backend/module-outlook-backend.c
 +++ b/src/modules/outlook-backend/module-outlook-backend.c
 @@ -59,8 +59,8 @@ struct _EOutlookBackendFactoryClass {
@@ -1383,7 +1781,7 @@ index 086316bdf..82f4015d1 100644
  /* Forward Declarations */
  GType e_outlook_backend_get_type (void);
 diff --git a/src/modules/secret-monitor/module-secret-monitor.c b/src/modules/secret-monitor/module-secret-monitor.c
-index d78b1aa5e..b60da600d 100644
+index d78b1aa..b60da60 100644
 --- a/src/modules/secret-monitor/module-secret-monitor.c
 +++ b/src/modules/secret-monitor/module-secret-monitor.c
 @@ -61,8 +61,8 @@ static SecretSchema password_schema = {
@@ -1398,7 +1796,7 @@ index d78b1aa5e..b60da600d 100644
  /* Forward Declarations */
  GType e_secret_monitor_get_type (void);
 diff --git a/src/modules/trust-prompt/module-trust-prompt.c b/src/modules/trust-prompt/module-trust-prompt.c
-index 9f4891328..8d09e73d7 100644
+index 9f48913..8d09e73 100644
 --- a/src/modules/trust-prompt/module-trust-prompt.c
 +++ b/src/modules/trust-prompt/module-trust-prompt.c
 @@ -25,8 +25,8 @@ struct _ETrustPromptClass {
@@ -1413,7 +1811,7 @@ index 9f4891328..8d09e73d7 100644
  /* Forward Declarations */
  GType e_trust_prompt_get_type (void);
 diff --git a/src/modules/webdav-backend/module-webdav-backend.c b/src/modules/webdav-backend/module-webdav-backend.c
-index d613f0d67..ad6ced6ef 100644
+index d613f0d..ad6ced6 100644
 --- a/src/modules/webdav-backend/module-webdav-backend.c
 +++ b/src/modules/webdav-backend/module-webdav-backend.c
 @@ -40,8 +40,8 @@ struct _EWebDAVBackendFactoryClass {
@@ -1428,7 +1826,7 @@ index d613f0d67..ad6ced6ef 100644
  /* Forward Declarations */
  GType e_webdav_backend_get_type (void);
 diff --git a/src/modules/yahoo-backend/module-yahoo-backend.c b/src/modules/yahoo-backend/module-yahoo-backend.c
-index a50cb3349..9740ccf63 100644
+index a50cb33..9740ccf 100644
 --- a/src/modules/yahoo-backend/module-yahoo-backend.c
 +++ b/src/modules/yahoo-backend/module-yahoo-backend.c
 @@ -58,8 +58,8 @@ struct _EYahooBackendFactoryClass {
@@ -1443,7 +1841,7 @@ index a50cb3349..9740ccf63 100644
  /* Forward Declarations */
  GType e_yahoo_backend_get_type (void);
 diff --git a/src/services/evolution-alarm-notify/CMakeLists.txt b/src/services/evolution-alarm-notify/CMakeLists.txt
-index 593999089..398d70865 100644
+index 5939990..398d708 100644
 --- a/src/services/evolution-alarm-notify/CMakeLists.txt
 +++ b/src/services/evolution-alarm-notify/CMakeLists.txt
 @@ -58,7 +58,10 @@ target_link_libraries(evolution-alarm-notify

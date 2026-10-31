@@ -93,6 +93,9 @@ namespace winrt::EvolutionWin::implementation
         SubjectBox().Text(data.subject);
         BodyBox().Text(data.body);
 
+        m_attachments = data.attachments;
+        RebuildAttachmentPanel();
+
         m_pending_editor_html = !data.html_body.empty() ? data.html_body : PlainTextToHtml(data.body);
         m_focus_editor_on_ready = !data.to.empty();
 
@@ -500,6 +503,16 @@ namespace winrt::EvolutionWin::implementation
             message.SetNamedValue(L"html", JsonValue::CreateStringValue(html_document));
         message.SetNamedValue(L"in_reply_to", JsonValue::CreateStringValue(m_data.in_reply_to));
         message.SetNamedValue(L"references", JsonValue::CreateStringValue(m_data.references));
+
+        /* Options cryptographiques OpenPGP / S/MIME */
+        bool pgp_sign = PgpSignButton().IsChecked() && PgpSignButton().IsChecked().Value();
+        bool pgp_encrypt = PgpEncryptButton().IsChecked() && PgpEncryptButton().IsChecked().Value();
+        bool smime_sign = SmimeSignButton().IsChecked() && SmimeSignButton().IsChecked().Value();
+        bool smime_encrypt = SmimeEncryptButton().IsChecked() && SmimeEncryptButton().IsChecked().Value();
+        message.SetNamedValue(L"pgp_sign", JsonValue::CreateBooleanValue(pgp_sign));
+        message.SetNamedValue(L"pgp_encrypt", JsonValue::CreateBooleanValue(pgp_encrypt));
+        message.SetNamedValue(L"smime_sign", JsonValue::CreateBooleanValue(smime_sign));
+        message.SetNamedValue(L"smime_encrypt", JsonValue::CreateBooleanValue(smime_encrypt));
 
         if (!m_attachments.empty())
         {

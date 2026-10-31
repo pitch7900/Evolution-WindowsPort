@@ -6,7 +6,13 @@
 
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
+#include <winrt/Windows.Storage.Streams.h>
+#include <winrt/Windows.Security.Cryptography.h>
+#include <winrt/Windows.Security.Cryptography.Core.h>
+#include <winrt/Windows.Web.Http.h>
+#include <winrt/Windows.Web.Http.Headers.h>
 #include <winrt/Microsoft.UI.Xaml.Input.h>
+#include <chrono>
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
@@ -176,6 +182,10 @@ namespace winrt::EvolutionWin::implementation
                 object.GetNamedString(L"name", L""),
                 object.GetNamedString(L"user", L""),
                 object.GetNamedBoolean(L"rejected", false));
+        }
+        else if (event == L"tls-trust-required")
+        {
+            PromptTlsCertificateAsync(object);
         }
     }
 
@@ -470,7 +480,7 @@ namespace winrt::EvolutionWin::implementation
             Grid::SetRowSpan(delete_button, 2);
             delete_button.Click([this, uid](IInspectable const&, RoutedEventArgs const&)
             {
-                DeleteMessageByUid(uid);
+                DeleteMessagesByUids(TargetMessageUids(uid));
             });
             item.Children().Append(delete_button);
 
@@ -485,53 +495,108 @@ namespace winrt::EvolutionWin::implementation
 
             UpdateMessageItemVisual(item, seen, flagged);
 
-            /* Menu contextuel par clic droit sur chaque message */
+            /* Menu contextuel par clic droit sur chaque message (gère un ou plusieurs messages sélectionnés) */
             MenuFlyout context_menu;
             context_menu.Opening([this, uid, context_menu](IInspectable const&, IInspectable const&)
             {
                 auto menu_items = context_menu.Items();
                 menu_items.Clear();
 
-                auto state_it = m_message_states.find(std::wstring{ uid });
+                auto target_uids = TargetMessageUids(uid);
+                bool multi = target_uids.size() > 1;
+                std::wstring count_suffix = multi ? L" (" + std::to_wstring(target_uids.size()) + L" messages)" : L"";
+
+                MenuFlyoutItem reply_item;
+                reply_item.Text(multi
+                    ? hstring{ L"Répondre (1er mail + " + std::to_wstring(target_uids.size() - 1) + L" en PJ)" }
+                    : L"Répondre");
+                reply_item.Icon(FontIcon{});
+                reply_item.Icon().as<FontIcon>().Glyph(L"\xE97A");
+                reply_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
+                {
+                    ReplyToMessages(ReplyKind::Sender, target_uids);
+                });
+                menu_items.Append(reply_item);
+
+                MenuFlyoutItem reply_all_item;
+                reply_all_item.Text(multi
+                    ? hstring{ L"Répondre à tous (1er mail + " + std::to_wstring(target_uids.size() - 1) + L" en PJ)" }
+                    : L"Répondre à tous");
+                reply_all_item.Icon(FontIcon{});
+                reply_all_item.Icon().as<FontIcon>().Glyph(L"\xEE35");
+                reply_all_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
+                {
+                    ReplyToMessages(ReplyKind::All, target_uids);
+                });
+                menu_items.Append(reply_all_item);
+
+                MenuFlyoutItem forward_item;
+                forward_item.Text(multi
+                    ? hstring{ L"Transférer en pièces jointes" + count_suffix }
+                    : L"Transférer");
+                forward_item.Icon(FontIcon{});
+                forward_item.Icon().as<FontIcon>().Glyph(L"\xE72D");
+                forward_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
+                {
+                    ReplyToMessages(ReplyKind::Forward, target_uids);
+                });
+                menu_items.Append(forward_item);
+
+                if (!multi)
+                {
+                    MenuFlyoutItem forward_att_item;
+                    forward_att_item.Text(L"Transférer en pièce jointe (.eml)");
+                    forward_att_item.Icon(FontIcon{});
+                    forward_att_item.Icon().as<FontIcon>().Glyph(L"\xE723");
+                    forward_att_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
+                    {
+                        ForwardMessagesAsAttachments(target_uids);
+                    });
+                    menu_items.Append(forward_att_item);
+                }
+
+                menu_items.Append(MenuFlyoutSeparator{});
+
+                auto state_it = m_message_states.find(std::wstring{ target_uids.front() });
                 bool is_seen = state_it != m_message_states.end() ? state_it->second.seen : true;
                 bool is_flagged = state_it != m_message_states.end() ? state_it->second.flagged : false;
 
                 MenuFlyoutItem read_item;
-                read_item.Text(is_seen ? L"Marquer comme non lu" : L"Marquer comme lu");
+                read_item.Text(hstring{ (is_seen ? L"Marquer comme non lu" : L"Marquer comme lu") + count_suffix });
                 read_item.Icon(FontIcon{});
                 read_item.Icon().as<FontIcon>().Glyph(is_seen ? L"\xE715" : L"\xE8C3");
-                read_item.Click([this, uid, is_seen](IInspectable const&, RoutedEventArgs const&)
+                read_item.Click([this, target_uids, is_seen](IInspectable const&, RoutedEventArgs const&)
                 {
-                    SetMessageFlag(uid, L"seen", !is_seen);
+                    SetMessagesFlag(target_uids, L"seen", !is_seen);
                 });
                 menu_items.Append(read_item);
 
                 MenuFlyoutItem flag_item;
-                flag_item.Text(is_flagged ? L"Retirer le drapeau" : L"Ajouter un drapeau");
+                flag_item.Text(hstring{ (is_flagged ? L"Retirer le drapeau" : L"Ajouter un drapeau") + count_suffix });
                 flag_item.Icon(FontIcon{});
                 flag_item.Icon().as<FontIcon>().Glyph(L"\xE7C1");
-                flag_item.Click([this, uid, is_flagged](IInspectable const&, RoutedEventArgs const&)
+                flag_item.Click([this, target_uids, is_flagged](IInspectable const&, RoutedEventArgs const&)
                 {
-                    SetMessageFlag(uid, L"flagged", !is_flagged);
+                    SetMessagesFlag(target_uids, L"flagged", !is_flagged);
                 });
                 menu_items.Append(flag_item);
 
                 MenuFlyoutSubItem move_sub;
-                move_sub.Text(L"Déplacer vers");
+                move_sub.Text(hstring{ L"Déplacer vers" + count_suffix });
                 move_sub.Icon(FontIcon{});
                 move_sub.Icon().as<FontIcon>().Glyph(L"\xE8DE");
-                PopulateMoveMenuItems(move_sub.Items(), uid);
+                PopulateMoveMenuItems(move_sub.Items(), target_uids);
                 menu_items.Append(move_sub);
 
                 menu_items.Append(MenuFlyoutSeparator{});
 
                 MenuFlyoutItem delete_item;
-                delete_item.Text(L"Supprimer");
+                delete_item.Text(hstring{ L"Supprimer" + count_suffix });
                 delete_item.Icon(FontIcon{});
                 delete_item.Icon().as<FontIcon>().Glyph(L"\xE74D");
-                delete_item.Click([this, uid](IInspectable const&, RoutedEventArgs const&)
+                delete_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
                 {
-                    DeleteMessageByUid(uid);
+                    DeleteMessagesByUids(target_uids);
                 });
                 menu_items.Append(delete_item);
             });
@@ -551,11 +616,23 @@ namespace winrt::EvolutionWin::implementation
 
     void MainWindow::OnMessageSelectionChanged(IInspectable const&, SelectionChangedEventArgs const&)
     {
-        auto item = MessageList().SelectedItem().try_as<Grid>();
-        if (!item || m_reselecting)
+        if (m_reselecting)
             return;
 
+        auto item = MessageList().SelectedItem().try_as<Grid>();
+        if (!item)
+        {
+            ClearReader();
+            return;
+        }
+
         hstring uid = unbox_value<hstring>(item.Tag());
+        if (uid == m_current_message_uid && m_current_message)
+        {
+            UpdateActionButtons(uid);
+            return;
+        }
+
         uint64_t request = ++m_message_request;
 
         auto state_it = m_message_states.find(std::wstring{ uid });
@@ -577,6 +654,7 @@ namespace winrt::EvolutionWin::implementation
 
             auto message = JsonObject::Parse(json);
             m_current_message = message;
+            m_current_message_uid = uid;
             hstring to = message.GetNamedString(L"to", L"");
             hstring cc = message.GetNamedString(L"cc", L"");
 
@@ -584,6 +662,7 @@ namespace winrt::EvolutionWin::implementation
             MessageFrom().Text(message.GetNamedString(L"from", L""));
             MessageTo().Text(L"À : " + to + (cc.empty() ? hstring{} : L"   Cc : " + cc));
             MessageDate().Text(FormatDate(message.GetNamedNumber(L"date", 0)));
+            UpdateSecurityBanner(message.GetNamedObject(L"security", JsonObject{}));
             PopulateAttachments(message.GetNamedArray(L"attachments", JsonArray{}));
             MessageHeader().Visibility(Visibility::Visible);
             ReaderPlaceholder().Visibility(Visibility::Collapsed);
@@ -805,12 +884,14 @@ namespace winrt::EvolutionWin::implementation
         }
     }
 
-    void MainWindow::Reply(ReplyKind kind)
+    /* Construit la structure ComposeData (destinataires, objet, corps cité) à
+     * partir d'un objet JSON de message pour une réponse ou un transfert simple.
+     * Paramètres :
+     *   kind    : type d'action (Sender, All ou Forward)
+     *   message : objet JSON complet du message source
+     * Retourne : la structure ComposeData prête pour OpenCompose. */
+    ::EvolutionWin::ComposeData MainWindow::BuildReplyComposeData(ReplyKind kind, JsonObject const& message)
     {
-        if (!m_current_message)
-            return;
-
-        auto const& message = m_current_message;
         hstring subject = message.GetNamedString(L"subject", L"");
         hstring from = message.GetNamedString(L"from", L"");
         hstring to = message.GetNamedString(L"to", L"");
@@ -876,16 +957,217 @@ namespace winrt::EvolutionWin::implementation
                 L"<blockquote>" + EscapeHtml(text) + L"</blockquote>" };
         }
 
-        OpenCompose(data);
+        return data;
     }
 
-    /* Retourne l'UID du message actuellement sélectionné dans la liste, ou ""
+    /* Transfère un ou plusieurs messages en les exportant sous forme de pièces
+     * jointes .eml attachées à un nouveau courriel.
+     * Paramètres :
+     *   uids : identifiants des messages à joindre en .eml */
+    void MainWindow::ForwardMessagesAsAttachments(std::vector<hstring> const& uids)
+    {
+        if (uids.empty() || m_account.empty() || m_folder.empty())
+            return;
+
+        hstring first_subject;
+        if (m_current_message && m_current_message_uid == uids.front())
+        {
+            first_subject = m_current_message.GetNamedString(L"subject", L"");
+        }
+        else if (m_all_messages)
+        {
+            for (auto const& entry : m_all_messages)
+            {
+                auto obj = entry.GetObject();
+                if (obj.GetNamedString(L"uid", L"") == uids.front())
+                {
+                    first_subject = obj.GetNamedString(L"subject", L"");
+                    break;
+                }
+            }
+        }
+
+        JsonObject req;
+        req.SetNamedValue(L"account", JsonValue::CreateStringValue(m_account));
+        req.SetNamedValue(L"folder", JsonValue::CreateStringValue(m_folder));
+        JsonArray uid_array;
+        for (auto const& u : uids)
+            uid_array.Append(JsonValue::CreateStringValue(u));
+        req.SetNamedValue(L"uids", uid_array);
+
+        hstring account = m_account;
+        ShowStatus(L"Préparation des courriels en pièces jointes…", InfoBarSeverity::Informational);
+
+        m_core->ExportMessagesEml(req.Stringify(),
+            [this, account, first_subject](hstring const& json, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                ShowStatus(L"Transfert : " + error, InfoBarSeverity::Error);
+                return;
+            }
+
+            JsonArray paths;
+            if (!JsonArray::TryParse(json, paths))
+                return;
+
+            ::EvolutionWin::ComposeData data;
+            data.account = account;
+            if (!first_subject.empty())
+            {
+                data.subject = StartsWithNoCase(first_subject, L"TR:") || StartsWithNoCase(first_subject, L"Fwd:")
+                    ? first_subject
+                    : L"TR: " + first_subject;
+            }
+            else
+            {
+                data.subject = L"TR: Messages transférés";
+            }
+
+            for (auto const& val : paths)
+                data.attachments.push_back(val.GetString());
+
+            StatusBar().IsOpen(false);
+            OpenCompose(data);
+        });
+    }
+
+    /* Répond ou transfère un ou plusieurs messages :
+     * - Pour un transfert (Forward), joint tous les courriels sélectionnés en
+     *   pièces jointes (.eml) à un nouveau message ;
+     * - Pour une réponse (Sender / All), répond au premier courriel sélectionné
+     *   et joint tous les autres courriels sélectionnés en pièces jointes (.eml).
+     * Paramètres :
+     *   kind : type d'action (Sender, All ou Forward)
+     *   uids : liste ordonnée des identifiants des messages sélectionnés */
+    void MainWindow::ReplyToMessages(ReplyKind kind, std::vector<hstring> const& uids)
+    {
+        if (uids.empty() || m_account.empty() || m_folder.empty())
+            return;
+
+        /* Pour le transfert, on joint le ou les mails sélectionnés en pièces jointes (.eml) */
+        if (kind == ReplyKind::Forward)
+        {
+            ForwardMessagesAsAttachments(uids);
+            return;
+        }
+
+        hstring first_uid = uids.front();
+        std::vector<hstring> extra_uids(uids.begin() + 1, uids.end());
+
+        auto proceed_with_first = [this, kind, extra_uids](JsonObject const& first_msg)
+        {
+            auto data = BuildReplyComposeData(kind, first_msg);
+
+            if (extra_uids.empty())
+            {
+                OpenCompose(data);
+                return;
+            }
+
+            JsonObject req;
+            req.SetNamedValue(L"account", JsonValue::CreateStringValue(m_account));
+            req.SetNamedValue(L"folder", JsonValue::CreateStringValue(m_folder));
+            JsonArray uid_array;
+            for (auto const& u : extra_uids)
+                uid_array.Append(JsonValue::CreateStringValue(u));
+            req.SetNamedValue(L"uids", uid_array);
+
+            ShowStatus(L"Ajout des autres courriels sélectionnés en pièces jointes…", InfoBarSeverity::Informational);
+
+            m_core->ExportMessagesEml(req.Stringify(),
+                [this, data](hstring const& json, hstring const& error) mutable
+            {
+                if (!error.empty())
+                {
+                    ShowStatus(L"Pièces jointes : " + error, InfoBarSeverity::Error);
+                    return;
+                }
+
+                JsonArray paths;
+                if (JsonArray::TryParse(json, paths))
+                {
+                    for (auto const& val : paths)
+                        data.attachments.push_back(val.GetString());
+                }
+
+                StatusBar().IsOpen(false);
+                OpenCompose(data);
+            });
+        };
+
+        if (m_current_message && m_current_message_uid == first_uid)
+        {
+            proceed_with_first(m_current_message);
+        }
+        else
+        {
+            m_core->FetchMessage(m_account, m_folder, first_uid,
+                [this, proceed_with_first](hstring const& json, hstring const& error)
+            {
+                if (!error.empty())
+                {
+                    ShowStatus(L"Message : " + error, InfoBarSeverity::Error);
+                    return;
+                }
+
+                JsonObject msg;
+                if (JsonObject::TryParse(json, msg))
+                    proceed_with_first(msg);
+            });
+        }
+    }
+
+    void MainWindow::Reply(ReplyKind kind)
+    {
+        auto uids = SelectedMessageUids();
+        if (uids.empty() && !m_current_message_uid.empty())
+            uids.push_back(m_current_message_uid);
+
+        ReplyToMessages(kind, uids);
+    }
+
+    /* Retourne l'UID du premier message sélectionné dans la liste, ou ""
      * s'il n'y a aucune sélection. */
     hstring MainWindow::SelectedMessageUid()
     {
         if (auto item = MessageList().SelectedItem().try_as<Grid>())
             return unbox_value_or<hstring>(item.Tag(), L"");
         return L"";
+    }
+
+    /* Retourne la liste ordonnée des UID de tous les messages actuellement
+     * sélectionnés dans MessageList. */
+    std::vector<hstring> MainWindow::SelectedMessageUids()
+    {
+        std::vector<hstring> result;
+        for (auto const& obj : MessageList().SelectedItems())
+        {
+            if (auto grid = obj.try_as<Grid>())
+            {
+                hstring u = unbox_value_or<hstring>(grid.Tag(), L"");
+                if (!u.empty())
+                    result.push_back(u);
+            }
+        }
+        return result;
+    }
+
+    /* Détermine la liste des UID ciblés par une action (barre d'outils ou menu
+     * contextuel) : si context_uid fait partie de la sélection courante (ou est
+     * vide), retourne toute la sélection ; sinon retourne uniquement context_uid. */
+    std::vector<hstring> MainWindow::TargetMessageUids(hstring const& context_uid)
+    {
+        auto selected = SelectedMessageUids();
+        if (context_uid.empty())
+            return selected;
+
+        for (auto const& u : selected)
+        {
+            if (u == context_uid)
+                return selected;
+        }
+        return { context_uid };
     }
 
     /* Recherche dans la liste affichée l'élément Grid correspondant à un UID.
@@ -1022,11 +1304,24 @@ namespace winrt::EvolutionWin::implementation
         });
     }
 
+    /* Modifie un indicateur ("seen" ou "flagged") sur une liste de messages.
+     * Paramètres :
+     *   uids  : identifiants des messages
+     *   flag  : nom de l'indicateur ("seen" ou "flagged")
+     *   value : nouvelle valeur booléenne */
+    void MainWindow::SetMessagesFlag(std::vector<hstring> const& uids, hstring const& flag, bool value)
+    {
+        for (auto const& u : uids)
+            SetMessageFlag(u, flag, value);
+    }
+
     /* Vide le volet de lecture lorsqu'aucun message n'est sélectionné. */
     void MainWindow::ClearReader()
     {
         ++m_message_request;
         m_current_message = nullptr;
+        m_current_message_uid = L"";
+        SecurityBar().IsOpen(false);
         AttachmentBar().Children().Clear();
         AttachmentBar().Visibility(Visibility::Collapsed);
         MessageHeader().Visibility(Visibility::Collapsed);
@@ -1072,7 +1367,7 @@ namespace winrt::EvolutionWin::implementation
             }
         }
 
-        if (was_selected)
+        if (was_selected && MessageList().SelectedItems().Size() == 0)
         {
             if (found && items.Size() > 0)
             {
@@ -1110,6 +1405,15 @@ namespace winrt::EvolutionWin::implementation
         });
     }
 
+    /* Supprime un ensemble de messages identifiés par leurs UID.
+     * Paramètres :
+     *   uids : liste des identifiants des messages à supprimer */
+    void MainWindow::DeleteMessagesByUids(std::vector<hstring> const& uids)
+    {
+        for (auto const& u : uids)
+            DeleteMessageByUid(u);
+    }
+
     /* Déplace un message identifié par son UID vers un autre dossier.
      * Paramètres :
      *   uid          : identifiant du message à déplacer
@@ -1142,19 +1446,30 @@ namespace winrt::EvolutionWin::implementation
         });
     }
 
+    /* Déplace un ensemble de messages identifiés par leurs UID vers un autre dossier.
+     * Paramètres :
+     *   uids         : liste des identifiants des messages à déplacer
+     *   dest_account : identifiant du compte de destination
+     *   dest_folder  : chemin complet du dossier de destination */
+    void MainWindow::MoveMessagesByUids(std::vector<hstring> const& uids, hstring const& dest_account, hstring const& dest_folder)
+    {
+        for (auto const& u : uids)
+            MoveMessageByUid(u, dest_account, dest_folder);
+    }
+
     /* Ajoute récursivement les dossiers d'un compte dans un menu « Déplacer vers ».
      * Paramètres :
      *   items   : collection d'éléments du menu à remplir
      *   folders : tableau JSON des dossiers à parcourir
      *   account : identifiant du compte propriétaire des dossiers
      *   prefix  : préfixe d'affichage pour les sous-dossiers
-     *   uid     : identifiant du message à déplacer */
+     *   uids    : identifiants des messages à déplacer */
     void MainWindow::AppendFolderMoveItems(
         Collections::IVector<MenuFlyoutItemBase> const& items,
         JsonArray const& folders,
         hstring const& account,
         hstring const& prefix,
-        hstring const& uid)
+        std::vector<hstring> const& uids)
     {
         for (auto const& value : folders)
         {
@@ -1170,28 +1485,28 @@ namespace winrt::EvolutionWin::implementation
                 item.Text(label);
                 item.Icon(FontIcon{});
                 item.Icon().as<FontIcon>().Glyph(FolderGlyph(folder.GetNamedString(L"type", L"")));
-                item.Click([this, uid, account, full_name](IInspectable const&, RoutedEventArgs const&)
+                item.Click([this, uids, account, full_name](IInspectable const&, RoutedEventArgs const&)
                 {
-                    MoveMessageByUid(uid, account, full_name);
+                    MoveMessagesByUids(uids, account, full_name);
                 });
                 items.Append(item);
             }
 
-            AppendFolderMoveItems(items, folder.GetNamedArray(L"children", JsonArray{}), account, label, uid);
+            AppendFolderMoveItems(items, folder.GetNamedArray(L"children", JsonArray{}), account, label, uids);
         }
     }
 
     /* Remplit un menu « Déplacer vers » avec les dossiers du compte courant.
      * Paramètres :
      *   items : collection d'éléments du menu à remplir
-     *   uid   : identifiant du message à déplacer */
-    void MainWindow::PopulateMoveMenuItems(Collections::IVector<MenuFlyoutItemBase> const& items, hstring const& uid)
+     *   uids  : identifiants des messages à déplacer */
+    void MainWindow::PopulateMoveMenuItems(Collections::IVector<MenuFlyoutItemBase> const& items, std::vector<hstring> const& uids)
     {
         items.Clear();
 
         auto it = m_account_folders.find(std::wstring{ m_account });
         if (it != m_account_folders.end() && it->second)
-            AppendFolderMoveItems(items, it->second, m_account, L"", uid);
+            AppendFolderMoveItems(items, it->second, m_account, L"", uids);
 
         if (items.Size() == 0)
         {
@@ -1205,31 +1520,31 @@ namespace winrt::EvolutionWin::implementation
     /* Gestionnaire du bouton « Lu / Non lu » du volet de lecture. */
     void MainWindow::OnToggleReadClick(IInspectable const&, RoutedEventArgs const&)
     {
-        hstring uid = SelectedMessageUid();
-        if (uid.empty())
+        auto uids = SelectedMessageUids();
+        if (uids.empty())
             return;
 
-        auto it = m_message_states.find(std::wstring{ uid });
+        auto it = m_message_states.find(std::wstring{ uids.front() });
         bool seen = it != m_message_states.end() ? it->second.seen : true;
-        SetMessageFlag(uid, L"seen", !seen);
+        SetMessagesFlag(uids, L"seen", !seen);
     }
 
     /* Gestionnaire du bouton « Suivi » (drapeau) du volet de lecture. */
     void MainWindow::OnToggleFlagClick(IInspectable const&, RoutedEventArgs const&)
     {
-        hstring uid = SelectedMessageUid();
-        if (uid.empty())
+        auto uids = SelectedMessageUids();
+        if (uids.empty())
             return;
 
-        auto it = m_message_states.find(std::wstring{ uid });
+        auto it = m_message_states.find(std::wstring{ uids.front() });
         bool flagged = it != m_message_states.end() ? it->second.flagged : false;
-        SetMessageFlag(uid, L"flagged", !flagged);
+        SetMessagesFlag(uids, L"flagged", !flagged);
     }
 
     /* Gestionnaire du bouton « Supprimer » du volet de lecture. */
     void MainWindow::OnDeleteClick(IInspectable const&, RoutedEventArgs const&)
     {
-        DeleteMessageByUid(SelectedMessageUid());
+        DeleteMessagesByUids(SelectedMessageUids());
     }
 
     /* Gestionnaire du bouton « Imprimer » (Ctrl+P) du volet de lecture :
@@ -1256,7 +1571,7 @@ namespace winrt::EvolutionWin::implementation
     /* Gestionnaire d'ouverture du menu « Déplacer » du volet de lecture. */
     void MainWindow::OnMoveMenuOpening(IInspectable const&, IInspectable const&)
     {
-        PopulateMoveMenuItems(MoveMenu().Items(), SelectedMessageUid());
+        PopulateMoveMenuItems(MoveMenu().Items(), SelectedMessageUids());
     }
 
     /* Filtre instantanément en mémoire les messages chargés du dossier selon
@@ -1433,6 +1748,50 @@ namespace winrt::EvolutionWin::implementation
         AttachmentBar().Visibility(Visibility::Visible);
     }
 
+    /* Met à jour le bandeau de sécurité cryptographique (OpenPGP / S/MIME) du
+     * volet de lecture selon l'objet JSON "security" renvoyé par evo-core.
+     * Paramètres :
+     *   security : objet JSON ("encrypted", "signed", "valid", "protocol", "signer", "description") */
+    void MainWindow::UpdateSecurityBanner(JsonObject const& security)
+    {
+        bool encrypted = security.GetNamedBoolean(L"encrypted", false);
+        bool signed_msg = security.GetNamedBoolean(L"signed", false);
+
+        if (!encrypted && !signed_msg)
+        {
+            SecurityBar().IsOpen(false);
+            return;
+        }
+
+        bool valid = security.GetNamedBoolean(L"valid", false);
+        hstring protocol = security.GetNamedString(L"protocol", L"");
+        hstring signer = security.GetNamedString(L"signer", L"");
+        hstring desc = security.GetNamedString(L"description", L"");
+
+        std::wstring title = protocol.empty() ? L"Sécurité" : std::wstring{ protocol } + L" : ";
+        if (encrypted && signed_msg)
+            title += valid ? L"Message déchiffré et signature vérifiée" : L"Message chiffré / signé (vérification incomplète)";
+        else if (encrypted)
+            title += valid ? L"Message déchiffré" : L"Échec du déchiffrement";
+        else
+            title += valid ? L"Signature numérique valide" : L"Signature numérique non vérifiée ou invalide";
+
+        std::wstring msg;
+        if (!signer.empty())
+            msg = L"Signataire : " + std::wstring{ signer };
+        if (!desc.empty())
+        {
+            if (!msg.empty())
+                msg += L" — ";
+            msg += desc;
+        }
+
+        SecurityBar().Title(hstring{ title });
+        SecurityBar().Message(hstring{ msg });
+        SecurityBar().Severity(valid ? InfoBarSeverity::Success : InfoBarSeverity::Warning);
+        SecurityBar().IsOpen(true);
+    }
+
     /* Ouvre un sélecteur d'enregistrement de fichier Windows et sauvegarde la
      * pièce jointe sélectionnée sur le disque via evo-core.
      * Paramètres :
@@ -1547,6 +1906,287 @@ namespace winrt::EvolutionWin::implementation
         }
     }
 
+    /* Affiche une boîte de dialogue modale permettant d'inspecter et d'accepter
+     * (pour la session ou de façon permanente) ou de refuser un certificat TLS
+     * présentant des erreurs de validation.
+     * Paramètres :
+     *   object : objet JSON de l'événement "tls-trust-required" */
+    fire_and_forget MainWindow::PromptTlsCertificateAsync(JsonObject object)
+    {
+        auto strong = get_strong();
+        winrt::apartment_context ui_thread;
+        hstring trust_id = object.GetNamedString(L"id", L"");
+        if (trust_id.empty())
+            co_return;
+
+        /* Si une autre boîte de dialogue est ouverte, attend sa fermeture sans perdre la demande */
+        while (m_dialog_open)
+        {
+            co_await winrt::resume_after(std::chrono::milliseconds(150));
+            co_await ui_thread;
+        }
+
+        if (!Content() || !Content().XamlRoot() || !m_core)
+        {
+            if (m_core)
+                m_core->RespondTlsTrust(trust_id, 0);
+            co_return;
+        }
+
+        m_dialog_open = true;
+
+        hstring name = object.GetNamedString(L"name", L"Serveur");
+        hstring host = object.GetNamedString(L"host", L"");
+        hstring subject = object.GetNamedString(L"subject", host);
+        hstring issuer = object.GetNamedString(L"issuer", L"(inconnu)");
+        hstring fingerprint = object.GetNamedString(L"fingerprint", L"");
+        hstring errors = object.GetNamedString(L"errors", L"");
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(L"Certificat TLS non vérifié"));
+        dialog.PrimaryButtonText(L"Toujours approuver");
+        dialog.SecondaryButtonText(L"Accepter (session)");
+        dialog.CloseButtonText(L"Refuser");
+        dialog.DefaultButton(ContentDialogButton::Close);
+
+        StackPanel panel;
+        panel.Spacing(8);
+        panel.MaxWidth(480);
+
+        TextBlock intro;
+        intro.TextWrapping(TextWrapping::Wrap);
+        intro.Text(L"Le serveur « " + host + L" » (" + name + L") a présenté un certificat TLS qui n'a pas pu être validé automatiquement :");
+        panel.Children().Append(intro);
+
+        TextBlock err_block;
+        err_block.TextWrapping(TextWrapping::Wrap);
+        err_block.Text(errors);
+        err_block.Style(Application::Current().Resources().Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>());
+        panel.Children().Append(err_block);
+
+        TextBlock details;
+        details.TextWrapping(TextWrapping::Wrap);
+        details.IsTextSelectionEnabled(true);
+        details.Text(
+            L"Objet : " + subject + L"\n" +
+            L"Émetteur : " + issuer + L"\n" +
+            L"Empreinte SHA-256 :\n" + fingerprint);
+        details.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{ L"Cascadia Mono, Consolas" });
+        details.FontSize(12);
+        panel.Children().Append(details);
+
+        dialog.Content(panel);
+
+        auto result = co_await dialog.ShowAsync();
+        m_dialog_open = false;
+
+        if (!m_core)
+            co_return;
+
+        if (result == ContentDialogResult::Primary)
+        {
+            m_core->RespondTlsTrust(trust_id, 2);
+            ShowStatus(L"Certificat TLS approuvé de façon permanente pour « " + host + L" ».", InfoBarSeverity::Success);
+            m_core->Refresh();
+        }
+        else if (result == ContentDialogResult::Secondary)
+        {
+            m_core->RespondTlsTrust(trust_id, 1);
+            ShowStatus(L"Certificat TLS accepté pour cette session (« " + host + L" »).", InfoBarSeverity::Informational);
+            m_core->Refresh();
+        }
+        else
+        {
+            m_core->RespondTlsTrust(trust_id, 0);
+            ShowStatus(L"Certificat TLS refusé pour « " + host + L" ».", InfoBarSeverity::Warning);
+        }
+    }
+
+    /* Exécute un flux d'authentification OAuth2 interactif avec PKCE dans un
+     * contrôle WebView2 intégré pour Microsoft 365 / Outlook.com ou Google / Gmail,
+     * puis échange le code d'autorisation contre un jeton d'accès et un jeton de
+     * rafraîchissement.
+     * Paramètres :
+     *   provider_index : 1 = Microsoft 365 / Outlook.com, 2 = Google / Gmail
+     *   client_id      : identifiant d'application OAuth2
+     *   tenant_id      : locataire Entra ID ("common" par défaut)
+     *   login_hint     : adresse électronique de l'utilisateur
+     * Retourne : chaîne JSON contenant access_token, refresh_token, etc., ou "" si annulé. */
+    IAsyncOperation<hstring> MainWindow::StartOAuth2SignInAsync(
+        int provider_index, hstring client_id, hstring tenant_id, hstring login_hint)
+    {
+        auto strong = get_strong();
+        winrt::apartment_context ui_thread;
+
+        if (!Content() || !Content().XamlRoot() || client_id.empty())
+            co_return L"";
+
+        /* Génération du code_verifier et du code_challenge PKCE (S256) */
+        auto rnd_buf = Windows::Security::Cryptography::CryptographicBuffer::GenerateRandom(32);
+        std::wstring verifier{ Windows::Security::Cryptography::CryptographicBuffer::EncodeToBase64String(rnd_buf) };
+        for (auto& c : verifier)
+        {
+            if (c == L'+') c = L'-';
+            else if (c == L'/') c = L'_';
+        }
+        verifier.erase(std::remove(verifier.begin(), verifier.end(), L'='), verifier.end());
+
+        auto utf8_ver = Windows::Security::Cryptography::CryptographicBuffer::ConvertStringToBinary(
+            verifier, Windows::Security::Cryptography::BinaryStringEncoding::Utf8);
+        auto sha256 = Windows::Security::Cryptography::Core::HashAlgorithmProvider::OpenAlgorithm(
+            Windows::Security::Cryptography::Core::HashAlgorithmNames::Sha256());
+        auto hash_buf = sha256.HashData(utf8_ver);
+        std::wstring challenge{ Windows::Security::Cryptography::CryptographicBuffer::EncodeToBase64String(hash_buf) };
+        for (auto& c : challenge)
+        {
+            if (c == L'+') c = L'-';
+            else if (c == L'/') c = L'_';
+        }
+        challenge.erase(std::remove(challenge.begin(), challenge.end(), L'='), challenge.end());
+
+        std::wstring redirect_uri = L"http://localhost/oauth2callback";
+        std::wstring tenant = tenant_id.empty() ? L"common" : std::wstring{ tenant_id };
+        std::wstring auth_url;
+        std::wstring token_endpoint;
+        std::wstring scope;
+
+        if (provider_index == 1)
+        {
+            /* Microsoft 365 / Outlook.com */
+            scope = L"https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access";
+            auth_url = L"https://login.microsoftonline.com/" + tenant + L"/oauth2/v2.0/authorize"
+                L"?client_id=" + std::wstring{ Uri::EscapeComponent(client_id) } +
+                L"&response_type=code"
+                L"&redirect_uri=" + std::wstring{ Uri::EscapeComponent(redirect_uri) } +
+                L"&response_mode=query"
+                L"&scope=" + std::wstring{ Uri::EscapeComponent(scope) } +
+                L"&code_challenge=" + challenge +
+                L"&code_challenge_method=S256" +
+                (login_hint.empty() ? L"" : L"&login_hint=" + std::wstring{ Uri::EscapeComponent(login_hint) });
+            token_endpoint = L"https://login.microsoftonline.com/" + tenant + L"/oauth2/v2.0/token";
+        }
+        else
+        {
+            /* Google / Gmail */
+            scope = L"https://mail.google.com/";
+            auth_url = L"https://accounts.google.com/o/oauth2/v2/auth"
+                L"?client_id=" + std::wstring{ Uri::EscapeComponent(client_id) } +
+                L"&response_type=code"
+                L"&redirect_uri=" + std::wstring{ Uri::EscapeComponent(redirect_uri) } +
+                L"&access_type=offline&prompt=consent"
+                L"&scope=" + std::wstring{ Uri::EscapeComponent(scope) } +
+                L"&code_challenge=" + challenge +
+                L"&code_challenge_method=S256" +
+                (login_hint.empty() ? L"" : L"&login_hint=" + std::wstring{ Uri::EscapeComponent(login_hint) });
+            token_endpoint = L"https://oauth2.googleapis.com/token";
+        }
+
+        m_dialog_open = true;
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(provider_index == 1
+            ? L"Connexion OAuth2 — Microsoft 365"
+            : L"Connexion OAuth2 — Google / Gmail"));
+        dialog.CloseButtonText(L"Annuler");
+
+        WebView2 oauth_web;
+        oauth_web.MinWidth(480);
+        oauth_web.MinHeight(540);
+        dialog.Content(oauth_web);
+
+        auto captured_code = std::make_shared<std::wstring>();
+        auto captured_err = std::make_shared<std::wstring>();
+
+        co_await oauth_web.EnsureCoreWebView2Async();
+        auto core_wv = oauth_web.CoreWebView2();
+
+        core_wv.NavigationStarting([dialog, captured_code, captured_err, redirect_uri](
+            auto const&, Microsoft::Web::WebView2::Core::CoreWebView2NavigationStartingEventArgs const& args)
+        {
+            std::wstring uri{ args.Uri() };
+            if (uri.rfind(redirect_uri, 0) == 0)
+            {
+                args.Cancel(true);
+                try
+                {
+                    Uri parsed{ uri };
+                    auto decoder = parsed.QueryParsed();
+                    for (uint32_t i = 0; i < decoder.Size(); ++i)
+                    {
+                        auto entry = decoder.GetAt(i);
+                        if (entry.Name() == L"code")
+                            *captured_code = entry.Value();
+                        else if (entry.Name() == L"error_description" || entry.Name() == L"error")
+                            *captured_err = entry.Value();
+                    }
+                }
+                catch (...) {}
+                dialog.Hide();
+            }
+        });
+
+        oauth_web.Source(Uri{ auth_url });
+        co_await dialog.ShowAsync();
+        m_dialog_open = false;
+
+        if (captured_code->empty())
+        {
+            if (!captured_err->empty())
+                ShowStatus(L"Authentification OAuth2 refusée : " + hstring{ *captured_err }, InfoBarSeverity::Error);
+            co_return L"";
+        }
+
+        /* Échange du code d'autorisation contre access_token + refresh_token
+         * (co_await interdit dans un catch : l'erreur est affichée après) */
+        hstring network_error;
+        try
+        {
+            Windows::Web::Http::HttpClient http;
+            std::map<hstring, hstring> form_fields{
+                { L"client_id", client_id },
+                { L"grant_type", L"authorization_code" },
+                { L"code", hstring{ *captured_code } },
+                { L"redirect_uri", hstring{ redirect_uri } },
+                { L"code_verifier", hstring{ verifier } }
+            };
+            Windows::Web::Http::HttpFormUrlEncodedContent form_content{ form_fields };
+            auto response = co_await http.PostAsync(Uri{ token_endpoint }, form_content);
+            hstring body = co_await response.Content().ReadAsStringAsync();
+            co_await ui_thread;
+
+            JsonObject tok_obj;
+            if (JsonObject::TryParse(body, tok_obj))
+            {
+                hstring access_tok = tok_obj.GetNamedString(L"access_token", L"");
+                if (!access_tok.empty())
+                {
+                    int64_t exp_in = static_cast<int64_t>(tok_obj.GetNamedNumber(L"expires_in", 3600));
+                    int64_t now_s = static_cast<int64_t>(std::time(nullptr));
+                    tok_obj.SetNamedValue(L"expires_at", JsonValue::CreateNumberValue(static_cast<double>(now_s + exp_in)));
+                    tok_obj.SetNamedValue(L"client_id", JsonValue::CreateStringValue(client_id));
+                    tok_obj.SetNamedValue(L"token_endpoint", JsonValue::CreateStringValue(token_endpoint));
+                    co_return tok_obj.Stringify();
+                }
+                hstring err_desc = tok_obj.GetNamedString(L"error_description", tok_obj.GetNamedString(L"error", L"Jeton invalide"));
+                ShowStatus(L"Échange du jeton OAuth2 : " + err_desc, InfoBarSeverity::Error);
+            }
+        }
+        catch (hresult_error const& e)
+        {
+            network_error = e.message();
+        }
+
+        if (!network_error.empty())
+        {
+            co_await ui_thread;
+            ShowStatus(L"Erreur réseau OAuth2 : " + network_error, InfoBarSeverity::Error);
+        }
+
+        co_return L"";
+    }
+
     /* Met à jour la liste des comptes affichée dans la vue Paramètres. */
     void MainWindow::RefreshAccountsView()
     {
@@ -1639,7 +2279,16 @@ namespace winrt::EvolutionWin::implementation
 
         StackPanel panel;
         panel.Spacing(8);
-        panel.MinWidth(420);
+        panel.MinWidth(440);
+
+        ComboBox provider_box;
+        provider_box.Header(box_value(L"Type de compte"));
+        provider_box.HorizontalAlignment(HorizontalAlignment::Stretch);
+        provider_box.Items().Append(box_value(L"IMAP / SMTP standard (mot de passe)"));
+        provider_box.Items().Append(box_value(L"Microsoft 365 / Outlook.com (OAuth2 XOAUTH2)"));
+        provider_box.Items().Append(box_value(L"Google / Gmail (OAuth2 XOAUTH2)"));
+        provider_box.SelectedIndex(0);
+        panel.Children().Append(provider_box);
 
         TextBox display_name_box;
         display_name_box.Header(box_value(L"Nom du compte"));
@@ -1662,7 +2311,7 @@ namespace winrt::EvolutionWin::implementation
         panel.Children().Append(imap_host_box);
 
         TextBox imap_port_box;
-        imap_port_box.Header(box_value(L"Port IMAP (TLS)"));
+        imap_port_box.Header(box_value(L"Port IMAP (993 = TLS, 143 = STARTTLS)"));
         imap_port_box.Text(L"993");
         panel.Children().Append(imap_port_box);
 
@@ -1672,17 +2321,70 @@ namespace winrt::EvolutionWin::implementation
         panel.Children().Append(smtp_host_box);
 
         TextBox smtp_port_box;
-        smtp_port_box.Header(box_value(L"Port SMTP (TLS)"));
+        smtp_port_box.Header(box_value(L"Port SMTP (465 = TLS, 587 = STARTTLS)"));
         smtp_port_box.Text(L"465");
         panel.Children().Append(smtp_port_box);
 
+        StackPanel oauth_panel;
+        oauth_panel.Spacing(8);
+        oauth_panel.Visibility(Visibility::Collapsed);
+
+        wchar_t env_cid[256]{};
+        wchar_t env_tid[256]{};
+        GetEnvironmentVariableW(L"EVO_OAUTH2_CLIENT_ID", env_cid, 256);
+        GetEnvironmentVariableW(L"EVO_OAUTH2_TENANT_ID", env_tid, 256);
+
+        TextBox client_id_box;
+        client_id_box.Header(box_value(L"Client ID OAuth2 (Application ID)"));
+        client_id_box.PlaceholderText(L"Identifiant d'application Entra ID ou Google Cloud");
+        client_id_box.Text(env_cid);
+        oauth_panel.Children().Append(client_id_box);
+
+        TextBox tenant_id_box;
+        tenant_id_box.Header(box_value(L"Tenant ID Microsoft 365 (ex. common ou ID d'organisation)"));
+        tenant_id_box.Text(env_tid[0] ? env_tid : L"common");
+        oauth_panel.Children().Append(tenant_id_box);
+
+        panel.Children().Append(oauth_panel);
+
         PasswordBox password_box;
-        password_box.Header(box_value(L"Mot de passe"));
+        password_box.Header(box_value(L"Mot de passe (ou jeton d'accès OAuth2 si déjà obtenu)"));
         panel.Children().Append(password_box);
+
+        provider_box.SelectionChanged([imap_host_box, imap_port_box, smtp_host_box, smtp_port_box, oauth_panel, tenant_id_box, password_box](
+            IInspectable const& sender, SelectionChangedEventArgs const&)
+        {
+            int idx = sender.as<ComboBox>().SelectedIndex();
+            if (idx == 1)
+            {
+                imap_host_box.Text(L"outlook.office365.com");
+                imap_port_box.Text(L"993");
+                smtp_host_box.Text(L"smtp.office365.com");
+                smtp_port_box.Text(L"587");
+                oauth_panel.Visibility(Visibility::Visible);
+                tenant_id_box.Visibility(Visibility::Visible);
+                password_box.PlaceholderText(L"Laisser vide pour ouvrir la fenêtre OAuth2 WebView2");
+            }
+            else if (idx == 2)
+            {
+                imap_host_box.Text(L"imap.gmail.com");
+                imap_port_box.Text(L"993");
+                smtp_host_box.Text(L"smtp.gmail.com");
+                smtp_port_box.Text(L"465");
+                oauth_panel.Visibility(Visibility::Visible);
+                tenant_id_box.Visibility(Visibility::Collapsed);
+                password_box.PlaceholderText(L"Laisser vide pour ouvrir la fenêtre OAuth2 WebView2");
+            }
+            else
+            {
+                oauth_panel.Visibility(Visibility::Collapsed);
+                password_box.PlaceholderText(L"Mot de passe du compte");
+            }
+        });
 
         ScrollViewer scroll;
         scroll.Content(panel);
-        scroll.MaxHeight(520);
+        scroll.MaxHeight(540);
         dialog.Content(scroll);
 
         auto result = co_await dialog.ShowAsync();
@@ -1691,6 +2393,7 @@ namespace winrt::EvolutionWin::implementation
         if (result != ContentDialogResult::Primary)
             co_return;
 
+        int provider_idx = provider_box.SelectedIndex();
         hstring email = email_box.Text();
         hstring imap_host = imap_host_box.Text();
         hstring smtp_host = smtp_host_box.Text();
@@ -1699,6 +2402,19 @@ namespace winrt::EvolutionWin::implementation
         {
             ShowStatus(L"Veuillez renseigner l'adresse électronique et les serveurs IMAP / SMTP.", InfoBarSeverity::Warning);
             co_return;
+        }
+
+        hstring secret = password_box.Password();
+        if ((provider_idx == 1 || provider_idx == 2) && secret.empty())
+        {
+            if (client_id_box.Text().empty())
+            {
+                ShowStatus(L"Veuillez renseigner le Client ID OAuth2 (ou saisir un jeton d'accès).", InfoBarSeverity::Warning);
+                co_return;
+            }
+            secret = co_await StartOAuth2SignInAsync(provider_idx, client_id_box.Text(), tenant_id_box.Text(), email);
+            if (secret.empty())
+                co_return;
         }
 
         int imap_port = _wtoi(imap_port_box.Text().c_str());
@@ -1721,7 +2437,9 @@ namespace winrt::EvolutionWin::implementation
         payload.SetNamedValue(L"smtp_port", JsonValue::CreateNumberValue(smtp_port));
         payload.SetNamedValue(L"smtp_security", JsonValue::CreateStringValue(
             smtp_port == 587 ? L"STARTTLS-on-standard-port" : L"tls"));
-        payload.SetNamedValue(L"password", JsonValue::CreateStringValue(password_box.Password()));
+        if (provider_idx == 1 || provider_idx == 2)
+            payload.SetNamedValue(L"auth_mechanism", JsonValue::CreateStringValue(L"XOAUTH2"));
+        payload.SetNamedValue(L"password", JsonValue::CreateStringValue(secret));
 
         m_core->AddAccount(payload.Stringify(), [this, email](hstring const&, hstring const& error)
         {

@@ -203,6 +203,20 @@ void		evo_core_save_attachment	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Exporte un ou plusieurs messages d'un dossier sous forme de fichiers .eml
+ * (RFC 822) dans un répertoire temporaire afin de les joindre à un courriel.
+ * Format attendu pour request_json :
+ * {"account": "...", "folder": "...", "uids": ["uid1", "uid2", ...]}
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   request_json : requête JSON UTF-8 contenant le compte, le dossier et les UID
+ *   func         : rappel recevant ["C:\\...\\Message1.eml", ...]
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_export_messages_eml	(EvoCore *core,
+						 const char *request_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Enregistre le mot de passe d'un compte ou serveur dans le gestionnaire
  * d'identifiants Windows via evolution-data-server.
  * Paramètres :
@@ -330,6 +344,16 @@ void		evo_core_delete_contact		(EvoCore *core,
 						 const char *contact_uid,
 						 EvoCoreResultFunc func,
 						 void *user_data);
+
+/* Répond à une demande interactive d'approbation de certificat TLS émise via
+ * l'événement "tls-trust-required".
+ * Paramètres :
+ *   core           : instance du moteur evo-core
+ *   trust_id       : identifiant unique de la demande ("host|fingerprint")
+ *   trust_decision : 0 = refuser, 1 = accepter pour la session, 2 = toujours faire confiance */
+void		evo_core_respond_tls_trust	(EvoCore *core,
+						 const char *trust_id,
+						 int trust_decision);
 
 #ifdef __cplusplus
 }

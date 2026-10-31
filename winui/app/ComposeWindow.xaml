@@ -48,6 +48,27 @@
                 </AppBarToggleButton.Icon>
             </AppBarToggleButton>
             <AppBarSeparator />
+            <AppBarToggleButton x:Name="PgpSignButton" Label="Signer (PGP)" ToolTipService.ToolTip="Signer le message avec OpenPGP (GnuPG / Gpg4win)">
+                <AppBarToggleButton.Icon>
+                    <FontIcon Glyph="&#xE8D7;" />
+                </AppBarToggleButton.Icon>
+            </AppBarToggleButton>
+            <AppBarToggleButton x:Name="PgpEncryptButton" Label="Chiffrer (PGP)" ToolTipService.ToolTip="Chiffrer le message avec OpenPGP (GnuPG / Gpg4win)">
+                <AppBarToggleButton.Icon>
+                    <FontIcon Glyph="&#xE72E;" />
+                </AppBarToggleButton.Icon>
+            </AppBarToggleButton>
+            <AppBarToggleButton x:Name="SmimeSignButton" Label="Signer (S/MIME)" ToolTipService.ToolTip="Signer le message avec un certificat S/MIME (NSS)">
+                <AppBarToggleButton.Icon>
+                    <FontIcon Glyph="&#xEB95;" />
+                </AppBarToggleButton.Icon>
+            </AppBarToggleButton>
+            <AppBarToggleButton x:Name="SmimeEncryptButton" Label="Chiffrer (S/MIME)" ToolTipService.ToolTip="Chiffrer le message avec un certificat S/MIME (NSS)">
+                <AppBarToggleButton.Icon>
+                    <FontIcon Glyph="&#xE72E;" />
+                </AppBarToggleButton.Icon>
+            </AppBarToggleButton>
+            <AppBarSeparator />
             <AppBarButton Label="Abandonner" Click="OnDiscardClick">
                 <AppBarButton.Icon>
                     <FontIcon Glyph="&#xE74D;" />

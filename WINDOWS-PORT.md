@@ -541,9 +541,9 @@ passe par OAuth2. Points à traiter :
 ### OpenPGP (GPG)
 
 `camel-gpg-context.c` lance `gpg` avec `fork()`/`pipe()`/`fcntl()` ; la
-branche Windows est un simple `FIXME: Port me` (le chiffrement/signature
-OpenPGP échoue proprement). À porter sur `g_spawn_async_with_pipes()` avec
-Gpg4win (`gpg.exe`). S/MIME, qui passe par NSS, n'est pas concerné.
+branche Windows n'était qu'un `FIXME: Port me`. Elle est désormais portée sur
+`g_spawn_async_with_pipes()` avec Gpg4win (`gpg.exe`) : voir le huitième
+jalon du client natif. S/MIME, qui passe par NSS, n'est pas concerné.
 
 ### Étapes
 
@@ -928,6 +928,82 @@ EvolutionWin :
   - Citations HTML structurées (`<blockquote>` stylé pour les réponses, en-tête formaté pour les transferts) préparées par `MainWindow::Reply`.
 - **Impression native des messages** (`MainWindow`) : bouton **Imprimer** (`Ctrl+P`) dans la barre de commandes du volet de lecture ouvrant l'interface d'impression native de WebView2 (`CoreWebView2::ShowPrintUI`).
 
+### Huitième jalon — certificats TLS, OAuth2, S/MIME, OpenPGP, sélection multiple (2026-10-31)
+
+evo-core :
+
+- **Certificats TLS** : `EvoCoreSession::trust_prompt` émet `tls-trust-required`
+  (hôte, empreinte SHA-256, émetteur, validité, anomalies décrites en français)
+  et attend la réponse (`evo_core_respond_tls_trust` : refuser, accepter pour la
+  session, toujours faire confiance). Les certificats approuvés de façon
+  permanente sont enregistrés dans `…\evolution-windows\mail\trusted-certs.ini`.
+- **OAuth2 (XOAUTH2) pour IMAP/SMTP** : `get_oauth2_access_token_sync` lit le
+  jeton dans le Gestionnaire d'identifiants (JSON `access_token`,
+  `refresh_token`, `expires_at`, `client_id`, `token_endpoint`) et le
+  renouvelle avec le `refresh_token` (libsoup) une minute avant expiration.
+  `evo_core_add_account` accepte `auth_mechanism` (`XOAUTH2`).
+- **S/MIME et OpenPGP à la lecture** : déchiffrement (`multipart/encrypted`,
+  `application/pkcs7-mime`) puis vérification de signature (`multipart/signed`),
+  résultat dans l'objet `security` du message.
+- **S/MIME et OpenPGP à l'envoi** : options `pgp_sign`, `pgp_encrypt`,
+  `smime_sign`, `smime_encrypt` (et `smime_key_id`) de `evo_core_send_message`.
+- **Export `.eml`** (`evo_core_export_messages_eml`) : messages écrits en
+  RFC 822 dans un dossier temporaire, pour un transfert en pièces jointes.
+
+EDS (`camel-gpg-context.c`, phase 4c) :
+
+- `gpg.exe` recherché dans le PATH puis dans les dossiers d'installation de
+  GnuPG / Gpg4win ; lancé par `g_spawn_async_with_pipes()` (utilitaire
+  `gspawn-win64-helper.exe`), lignes de statut sur `--status-fd=2`, mêlées aux
+  diagnostics de gpg et triées à l'analyse (CRLF retiré).
+- Sorties lues sans blocage (`PeekNamedPipe`). L'entrée standard est écrite par
+  un **thread dédié** : les tubes anonymes Windows n'ont pas d'écriture non
+  bloquante, et écrire depuis la boucle provoquerait un interblocage dès que
+  gpg remplit sa sortie (message de quelques Ko).
+- Phrase secrète : gpg tourne en `--batch`, c'est gpg-agent qui l'obtient par
+  sa fenêtre pinentry (celle de Gpg4win).
+- **Test** (2026-10-31, `gpg` 2.4.9 de Git for Windows, clé de test) :
+  signature, vérification (« bonne signature »), chiffrement et déchiffrement
+  d'un message de 1 Mo en 0,1 à 0,3 s ; contenu identique (Camel met le texte
+  en forme canonique CRLF avant signature/chiffrement, comme sous Linux).
+
+EvolutionWin :
+
+- Dialogue **certificat TLS** (`PromptTlsCertificateAsync`) : détails du
+  certificat, Refuser / Accepter pour cette session / Toujours faire confiance.
+- Assistant d'ajout de compte : authentification **OAuth2** Microsoft 365 ou
+  Google (PKCE S256, page de connexion dans un WebView2, redirection
+  `http://localhost/oauth2callback`). Identifiant d'application et tenant
+  préremplis par `EVO_OAUTH2_CLIENT_ID` / `EVO_OAUTH2_TENANT_ID`.
+- **Bandeau de sécurité** du volet de lecture (signature valide ou non,
+  message chiffré) ; boutons **Signer / Chiffrer (PGP)** et **Signer / Chiffrer
+  (S/MIME)** dans la fenêtre de rédaction.
+- **Sélection multiple** dans la liste : lu/non lu, drapeau, déplacement,
+  suppression, réponse et transfert de plusieurs messages (transfert en
+  pièces jointes `.eml`).
+
+Problèmes rencontrés :
+
+1. **Scripts `.bat` illisibles par `cmd.exe`** (`'ot' n'est pas reconnu…`) :
+   fichiers en fins de ligne LF. `.gitattributes` impose désormais CRLF aux
+   `.bat`/`.cmd` (et LF aux scripts bash), quel que soit `core.autocrlf`.
+2. **`co_await` dans un bloc `catch`** (C2304, échange du jeton OAuth2) :
+   message d'erreur mémorisé, affiché après le bloc.
+3. **Aucun compte au démarrage** (« No provider available for protocol imapx ») :
+   une ancienne copie de `camel-1.2.dll` dans `build\` était chargée en
+   priorité ; Camel calcule ses chemins depuis l'emplacement de sa DLL et
+   cherchait ses fournisseurs dans `build\lib\…`. **Ne pas copier de DLL d'EDS
+   dans `build\`** : elles doivent être chargées depuis le préfixe (PATH, comme
+   le fait `run-winui.bat`) tant que l'installeur (phase 5) n'a pas construit
+   une arborescence complète. Un ancien `evolution-source-registry` lancé depuis
+   `C:\gtk-build` (avant la réorganisation) occupait aussi le bus D-Bus.
+
+**Validé** : `evo-core-test` (lecture seule) avec le compte IMAP réel :
+comptes, dossiers, 56 messages, lecture d'un message. Reste à valider dans
+l'interface : dialogue TLS, connexion OAuth2 (inscription d'application
+Entra ID ou Google requise), S/MIME (certificat personnel dans NSS) et
+OpenPGP avec Gpg4win.
+
 ### Prochaines étapes du client natif
 
 1. ~~Rafraîchissement automatique~~ ; ~~rédaction et envoi~~ (texte brut, HTML `multipart/alternative` et pièces jointes).
@@ -937,7 +1013,10 @@ EvolutionWin :
    ~~Configurables directement dans l'application.~~
 5. ~~Calendrier et contacts (EDS) : `CalendarView`, listes et fiches de contacts.~~
 6. ~~Éditeur HTML de composition (WebView2) et impression native des messages (`Ctrl+P`).~~
-7. Dialogue de certificats TLS, OAuth2 Microsoft 365 (phase 4b), S/MIME, OpenPGP (phase 4c) et installeur MSI (phase 5).
+7. ~~Dialogue de certificats TLS, OAuth2 IMAP/SMTP, S/MIME, OpenPGP~~ (validation
+   dans l'interface à faire).
+8. Microsoft 365 par Microsoft Graph (evolution-ews, phase 4b) et installeur
+   MSI (phase 5).
 
 ## Suivi des phases
 
@@ -955,9 +1034,9 @@ EvolutionWin :
   version GTK transitoire (2026-10-31)
 - [x] Phase 4 (WinUI 3) — éditeur HTML WebView2 et impression native réalisés dans `EvolutionWin` (S/MIME à venir)
 - [ ] Phase 4b — evolution-ews : Exchange Online via Microsoft Graph + OAuth2
-- [ ] Phase 4c — OpenPGP : porter `camel-gpg-context.c` (lancement de `gpg`)
-  sur `g_spawn_async_with_pipes()` avec Gpg4win ; Gpg4win à intégrer comme
-  prérequis optionnel de l'installeur MSI
+- [x] Phase 4c — OpenPGP : `camel-gpg-context.c` porté sur
+  `g_spawn_async_with_pipes()` (testé le 2026-10-31) ; reste à intégrer
+  Gpg4win comme prérequis optionnel de l'installeur MSI
 - [ ] Phase 5 — installeur MSI (WiX) avec toutes les dépendances
 - [—] Phase 6a — abandonnée (la version GTK reste transitoire)
 - [x] Phase 6b — **choisie** : interface réécrite en WinUI 3 / C++/WinRT (jalons 1 à 7 réalisés : courrier, lecture WebView2, rédaction HTML/texte et envoi, impression, actions, recherche, notifications toasts, pièces jointes, gestion des comptes et mots de passe, calendrier et contacts EDS)

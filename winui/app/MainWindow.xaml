@@ -121,7 +121,7 @@
                         <AutoSuggestBox x:Name="SearchBox" PlaceholderText="Rechercher dans ce dossier" QueryIcon="Find"
                                         TextChanged="OnSearchTextChanged" QuerySubmitted="OnSearchQuerySubmitted" />
                     </StackPanel>
-                    <ListView x:Name="MessageList" Grid.Row="1" SelectionMode="Single"
+                    <ListView x:Name="MessageList" Grid.Row="1" SelectionMode="Extended"
                               SelectionChanged="OnMessageSelectionChanged">
                         <ListView.ItemContainerStyle>
                             <Style TargetType="ListViewItem">
@@ -209,6 +209,7 @@
                         <TextBlock x:Name="MessageFrom" Style="{StaticResource BodyStrongTextBlockStyle}" IsTextSelectionEnabled="True" />
                         <TextBlock x:Name="MessageTo" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                         <TextBlock x:Name="MessageDate" Style="{StaticResource CaptionTextBlockStyle}" />
+                        <InfoBar x:Name="SecurityBar" IsOpen="False" IsClosable="True" Margin="0,4,0,0" />
                         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,4,0,0">
                             <StackPanel x:Name="AttachmentBar" Orientation="Horizontal" Spacing="8" Visibility="Collapsed" />
                         </ScrollViewer>

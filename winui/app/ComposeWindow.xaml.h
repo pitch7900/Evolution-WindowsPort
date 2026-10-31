@@ -16,6 +16,7 @@ namespace EvolutionWin
         winrt::hstring html_body;
         winrt::hstring in_reply_to;
         winrt::hstring references;
+        std::vector<winrt::hstring> attachments;
     };
 }
 
