@@ -1,0 +1,2144 @@
+# Russian translation for evolution-ews.
+# Copyright (C) 2021 evolution-ews's COPYRIGHT HOLDER
+# This file is distributed under the same license as the evolution-ews package.
+# Alexey Rubtsov <rushills@gmail.com>, 2021.
+# Павел Куликов (Pavel Koulikov) <koulikov403@gmail.com>, 2023.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: evolution-ews master\n"
+"Report-Msgid-Bugs-To: https://gitlab.gnome.org/GNOME/evolution-ews/issues/\n"
+"POT-Creation-Date: 2025-10-17 06:00+0000\n"
+"PO-Revision-Date: 2025-10-27 12:53+0300\n"
+"Last-Translator: Гашигуллин Данил <gashigullin44@gmail.com>\n"
+"Language-Team: Russian <>\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"X-Generator: Poedit 3.8\n"
+
+#: ../org.gnome.Evolution-ews.metainfo.xml.in.h:1
+#: ../src/EWS/camel/camel-ews-provider.c:66
+#: ../src/EWS/evolution/e-ews-config-lookup.c:221
+#: ../src/EWS/evolution/e-mail-config-ews-autodiscover.c:118
+msgid "Exchange Web Services"
+msgstr "Веб-службы Exchange (EWS)"
+
+#: ../org.gnome.Evolution-ews.metainfo.xml.in.h:2
+#: ../src/EWS/camel/camel-ews-provider.c:67
+msgid "For accessing Exchange servers using Web Services"
+msgstr "Для доступа к серверам Exchange с помощью веб-служб"
+
+#: ../src/common/e-ews-common-utils.c:116
+#, c-format
+msgid "Invalid folder URI “%s”"
+msgstr "Некорректный URI папки: «%s»"
+
+# GAL= Global Address List
+# Глобальный список адресов
+#: ../src/common/e-ms-oapxbc-util.c:43
+msgid "Failed to create MS OAPXBC app: "
+msgstr "Не удалось создать приложение MS OAPXBC: "
+
+#: ../src/common/e-ms-oapxbc-util.c:51
+msgid "Failed to get accounts: "
+msgstr "Не удалось получить учётные записи: "
+
+#: ../src/common/e-ms-oapxbc-util.c:78
+#, c-format
+msgid "No account found for user '%s'"
+msgstr "Не найдено учётной записи для пользователя '%s'"
+
+#: ../src/EWS/addressbook/e-book-backend-ews.c:2883
+msgid "Fetching contact photos…"
+msgstr "Получение фотографий контактов…"
+
+# GAL= Global Address List
+# Глобальный список адресов
+#: ../src/EWS/addressbook/e-book-backend-ews.c:4068
+msgid "Failed to update GAL:"
+msgstr "Не удалось обновить глобальный список адресов (GAL):"
+
+#: ../src/EWS/addressbook/e-book-backend-ews.c:4235
+msgid ""
+"Cannot save contact list, it’s only supported on EWS Server 2010 or later"
+msgstr ""
+"Невозможно сохранить список контактов, он поддерживается только на EWS "
+"Server 2010 или более поздней версии"
+
+#: ../src/EWS/addressbook/e-book-backend-ews.c:4333
+msgid "Failed to set contact photo:"
+msgstr "Не удалось установить фотографию контакта:"
+
+#: ../src/EWS/calendar/e-cal-backend-ews.c:2042
+msgctxt "FreeBusyType"
+msgid "Free"
+msgstr "Свободен"
+
+#: ../src/EWS/calendar/e-cal-backend-ews.c:2045
+msgctxt "FreeBusyType"
+msgid "Busy"
+msgstr "Занят"
+
+#: ../src/EWS/calendar/e-cal-backend-ews.c:2047
+msgctxt "FreeBusyType"
+msgid "Out of Office"
+msgstr "Не на работе"
+
+# Запрос отправленный кем-либо на ваш адрес о проведении встречи будет отображается в вашем календаре как Tentative (Зарезервировано) до тех пор пока время встречи не будет отклонено (Свободен) либо подтверждено (Занят).
+#: ../src/EWS/calendar/e-cal-backend-ews.c:2049
+msgctxt "FreeBusyType"
+msgid "Tentative"
+msgstr "Зарезервировано"
+
+# Смотри ссылку:
+# https://learn.microsoft.com/ru-ru/exchange/client-developer/exchange-web-services/ews-identifiers-in-exchange
+#: ../src/EWS/calendar/e-cal-backend-ews.c:2630
+#: ../src/EWS/calendar/e-cal-backend-ews.c:2904
+msgid "Cannot determine EWS ItemId"
+msgstr "Невозможно определить идентификатор элемента EWS"
+
+# Речь идет о том что данное событие в календаре уже существует и его создал кто-то другой (либо это вы сами создали, но под другим E-mail).
+# EWS можно опустить для краткости.
+#: ../src/EWS/calendar/e-cal-backend-ews.c:3201
+#: ../src/EWS/calendar/e-cal-backend-ews.c:3875
+msgid ""
+"Cannot create meetings organized by other users in an Exchange Web Services "
+"calendar."
+msgstr ""
+"Невозможно создать встречу (собрание), созданное в календаре другим "
+"пользователем."
+
+#: ../src/EWS/calendar/e-cal-backend-ews.c:3238
+msgid "Online meeting can be created only in the main user Calendar."
+msgstr ""
+"Онлайн встречу возможно создать только в основном календаре пользователя."
+
+#: ../src/EWS/calendar/e-cal-backend-ews.c:3863
+#: ../src/Microsoft365/calendar/e-cal-backend-m365.c:1633
+#, c-format
+msgid "Cannot find user “%s” between attendees"
+msgstr "Не удается отыскать пользователя «%s» среди участников"
+
+#: ../src/EWS/calendar/e-cal-backend-ews-m365.c:39
+msgid ""
+"Cannot connect to the server, repeat the action once you login to the server."
+msgstr ""
+"Не удается подключиться к серверу, повторите попытку после авторизации на "
+"сервере."
+
+#. Translators: The '%s' is replaced with a UID of the collection source
+#: ../src/EWS/calendar/e-cal-backend-ews-m365.c:147
+#, c-format
+msgid "Cannot find Microsoft365 helper source for calendar “%s”"
+msgstr ""
+"Не удается найти вспомогательный источник Microsoft365 для календаря «%s»"
+
+# Occurence... очень сложно подобрать перевод одним словом. Событие не подходит поскольку оно может быть единичным случаем. В данном контексте это один из одинаковых элементов некого множества (серии повторяющихся элементов) событий (в календаре) EWS.
+#: ../src/EWS/calendar/e-cal-backend-ews-utils.c:2348
+msgid "Invalid occurrence ID"
+msgstr "Неверный идентификатор элемента календаря"
+
+#: ../src/EWS/camel/camel-ews-folder.c:363
+#, c-format
+msgid "Unable to open mimecontent temporary file!"
+msgstr "Невозможно открыть временный файл MIME данных!"
+
+#: ../src/EWS/camel/camel-ews-folder.c:371
+#, c-format
+msgid "Unable to generate parser from mimecontent!"
+msgstr "Невозможно сненерировать обработчик MIME данных!"
+
+#: ../src/EWS/camel/camel-ews-folder.c:380
+#, c-format
+msgid "Unable to parse meeting request mimecontent!"
+msgstr "Невозможно обработать MIME данные запроса на встречу!"
+
+#: ../src/EWS/camel/camel-ews-folder.c:493
+#: ../src/EWS/camel/camel-ews-folder.c:706
+#, c-format
+msgid "Unable to create cache file"
+msgstr "Невозможно создать файл кэша"
+
+#: ../src/EWS/camel/camel-ews-folder.c:823
+#: ../src/EWS/camel/camel-ews-folder.c:967
+#, c-format
+msgid "Unable to create cache path “%s”: %s"
+msgstr "Невозможно создать путь к файлу кэша «%s»: %s"
+
+#. Translators: The first %s consists of the source file name,
+#. the second %s of the destination file name and
+#. the third %s of the error message.
+#: ../src/EWS/camel/camel-ews-folder.c:981
+#, c-format
+msgid "Failed to move message cache file from “%s” to “%s”: %s"
+msgstr "Не удалось переместить кэш-файл сообщения из «%s» to «%s»: %s"
+
+#: ../src/EWS/camel/camel-ews-folder.c:1822
+#, c-format
+msgid "Could not load summary for %s"
+msgstr "Не удалось загрузить сводку для %s"
+
+#: ../src/EWS/camel/camel-ews-folder.c:2317
+#, c-format
+msgid "Refreshing folder “%s”"
+msgstr "Обновление папки «%s»"
+
+#: ../src/EWS/camel/camel-ews-folder.c:2510
+#, c-format
+msgid "Cannot perform actions on the folder while in offline mode"
+msgstr "Невозможно выполнить действия над папкой в автономном режиме"
+
+#: ../src/EWS/camel/camel-ews-folder.c:3294
+#: ../src/Microsoft365/camel/camel-m365-folder.c:1778
+msgid "Apply message _filters to this folder"
+msgstr "Применить _фильтры сообщений к этой папке"
+
+#: ../src/EWS/camel/camel-ews-folder.c:3306
+#: ../src/Microsoft365/camel/camel-m365-folder.c:1790
+msgid "Always check for _new mail in this folder"
+msgstr "Проверять наличие _новой почты в этой папке"
+
+#: ../src/EWS/camel/camel-ews-provider.c:26
+#: ../src/Microsoft365/camel/camel-m365-provider.c:20
+msgid "Checking for new mail"
+msgstr "Проверка наличия новых сообщений"
+
+#: ../src/EWS/camel/camel-ews-provider.c:28
+#: ../src/Microsoft365/camel/camel-m365-provider.c:22
+msgid "C_heck for new messages in all folders"
+msgstr "П_роверять новые сообщения во всех папках"
+
+#: ../src/EWS/camel/camel-ews-provider.c:30
+msgid "_Listen for server change notifications"
+msgstr "_Следить за уведомлениями сервера об изменениях"
+
+#: ../src/EWS/camel/camel-ews-provider.c:33
+#: ../src/Microsoft365/camel/camel-m365-provider.c:25
+msgid "Options"
+msgstr "Параметры"
+
+#: ../src/EWS/camel/camel-ews-provider.c:35
+#: ../src/Microsoft365/camel/camel-m365-provider.c:27
+msgid "_Apply filters to new messages in Inbox on this server"
+msgstr ""
+"Применять _фильтры к новым сообщениям в папке «Входящие» на этом сервере"
+
+#: ../src/EWS/camel/camel-ews-provider.c:37
+#: ../src/Microsoft365/camel/camel-m365-provider.c:29
+msgid "Check new messages for _Junk contents"
+msgstr "Проверять новые сообщения на наличие _спама"
+
+#: ../src/EWS/camel/camel-ews-provider.c:39
+#: ../src/Microsoft365/camel/camel-m365-provider.c:31
+msgid "Only check for Junk messages in the IN_BOX folder"
+msgstr "Проверять новые сообщения на наличие спама, только в папке «_Входящие»"
+
+#: ../src/EWS/camel/camel-ews-provider.c:41
+#: ../src/Microsoft365/camel/camel-m365-provider.c:33
+msgid "Synchroni_ze remote mail locally in all folders"
+msgstr ""
+"Автоматически _синхронизировать удалённую почту локально во всех папках"
+
+#: ../src/EWS/camel/camel-ews-provider.c:44
+msgid "Show _Public Folders beside user folders"
+msgstr "Показывать _Общие папки рядом с папками пользователя"
+
+#: ../src/EWS/camel/camel-ews-provider.c:47
+#: ../src/Microsoft365/camel/camel-m365-provider.c:37
+msgid "Connection"
+msgstr "Подключение"
+
+#. Translators: '%s' is preplaced with a widget, where "
+#. * user can select how long the timeout should be.
+#: ../src/EWS/camel/camel-ews-provider.c:51
+#: ../src/Microsoft365/camel/camel-m365-provider.c:41
+#, c-format
+msgid "Connection _timeout (in seconds) %s"
+msgstr "_Таймаут соединения (в секундах) %s"
+
+#: ../src/EWS/camel/camel-ews-provider.c:53
+#: ../src/Microsoft365/camel/camel-m365-provider.c:43
+msgid "Numbe_r of concurrent connections to use"
+msgstr "Коли_чество одновременно используемых соединений"
+
+#: ../src/EWS/camel/camel-ews-provider.c:55
+msgid "Override _User-Agent header value"
+msgstr "Переопределить значение _заголовка User-Agent"
+
+#: ../src/EWS/camel/camel-ews-provider.c:58
+msgid "Al_ways connect with HTTP/1"
+msgstr "_Всегда подключаться по HTTP/1"
+
+#: ../src/EWS/camel/camel-ews-provider.c:75
+msgid "NTLM"
+msgstr "NTLM"
+
+#: ../src/EWS/camel/camel-ews-provider.c:76
+msgid ""
+"This option will connect to the Exchange server using a plaintext password "
+"with NTLM authentication."
+msgstr ""
+"Этот параметр позволит подключиться к серверу Exchange, используя обычный "
+"пароль с NTLM-аутентификацией."
+
+#: ../src/EWS/camel/camel-ews-provider.c:83
+msgid "Basic"
+msgstr "Базовый"
+
+#: ../src/EWS/camel/camel-ews-provider.c:84
+msgid ""
+"This option will connect to the Exchange server using a plaintext password "
+"with Basic authentication."
+msgstr ""
+"Этот параметр позволит подключиться к серверу Exchange, используя обычный "
+"пароль с базовой аутентификацией."
+
+#: ../src/EWS/camel/camel-ews-provider.c:91
+msgid "Kerberos"
+msgstr "Kerberos"
+
+#: ../src/EWS/camel/camel-ews-provider.c:92
+msgid ""
+"This option will connect to the Exchange server using a Kerberos/GSSAPI "
+"authentication."
+msgstr ""
+"Этот параметр позволит подключиться к серверу Exchange, используя "
+"аутентификацию Kerberos/GSSAPI."
+
+#: ../src/EWS/camel/camel-ews-store.c:313
+#: ../src/Microsoft365/camel/camel-m365-store.c:79
+#, c-format
+msgid "Session has no storage path"
+msgstr "Сессия не имеет пути хранения"
+
+#. Translators: This composes a "Public Folders" folder name for case when
+#. * user has such in his store already. The %s is replaced with "Public Folders",
+#. * the %d with counter, thus it composes name like "Public Folders_1"
+#.
+#: ../src/EWS/camel/camel-ews-store.c:350
+#, c-format
+msgctxt "PublicFolders"
+msgid "%s_%d"
+msgstr "%s_%d"
+
+#. Translators: This composes a "Foreign Folders" folder name for case when
+#. * user has such in his store already. The %s is replaced with "Foreign Folders",
+#. * the %d with counter, thus it composes name like "Foreign Folders_1"
+#.
+#: ../src/EWS/camel/camel-ews-store.c:503
+#, c-format
+msgctxt "ForeignFolders"
+msgid "%s_%d"
+msgstr "%s_%d"
+
+#: ../src/EWS/camel/camel-ews-store.c:645
+#: ../src/EWS/camel/camel-ews-store.c:1469
+#: ../src/Microsoft365/camel/camel-m365-store.c:516
+#: ../src/Microsoft365/camel/camel-m365-store.c:572
+msgid "Checking “Out of Office” settings"
+msgstr "Проверка настроек «Не на работе»"
+
+#: ../src/EWS/camel/camel-ews-store.c:1475
+msgid "Look up Exchange server categories"
+msgstr "Поиск категорий на сервере Exchange"
+
+#. Translators: The "%s" is a service URL, provided by the server
+#: ../src/EWS/camel/camel-ews-store.c:1551
+#, c-format
+msgid "Password will expire in %d day. Open “%s” to change it."
+msgid_plural "Password will expire in %d days. Open “%s” to change it."
+msgstr[0] ""
+"Срок действия пароля истекает через %d день. Перейдите по адресу «%s», чтобы "
+"изменить его."
+msgstr[1] ""
+"Срок действия пароля истекает через %d дня. Откройте “%s”, чтобы изменить "
+"его."
+msgstr[2] ""
+"Срок действия пароля истекает через %d дней. Откройте “%s”, чтобы изменить "
+"его."
+
+#: ../src/EWS/camel/camel-ews-store.c:1557
+#, c-format
+msgid "Password will expire in one day."
+msgid_plural "Password will expire in %d days."
+msgstr[0] "Срок действия пароля истекает через %d день."
+msgstr[1] "Срок действия пароля истекает через %d дня."
+msgstr[2] "Срок действия пароля истекает через %d дней."
+
+#: ../src/EWS/camel/camel-ews-store.c:1783
+msgid "Updating foreign folder structure"
+msgstr "Обновление структуры внешних папок"
+
+#: ../src/EWS/camel/camel-ews-store.c:1921
+msgid "Updating foreign folders"
+msgstr "Обновление внешних папок"
+
+#: ../src/EWS/camel/camel-ews-store.c:2337
+#: ../src/Microsoft365/camel/camel-m365-store.c:676
+#, c-format
+msgid "No such folder: %s"
+msgstr "Нет такой папки: %s"
+
+#: ../src/EWS/camel/camel-ews-store.c:2683
+msgid "Cannot list EWS public folders in offline mode"
+msgstr "Невозможно составить список общих папок EWS в автономном режиме"
+
+#: ../src/EWS/camel/camel-ews-store.c:2756
+msgid "Cannot find any EWS public folders"
+msgstr "Не удается найти общие папки EWS"
+
+#: ../src/EWS/camel/camel-ews-store.c:2869
+#: ../src/Microsoft365/camel/camel-m365-store.c:739
+#, c-format
+msgid "Cannot create folder “%s”, folder already exists"
+msgstr "Невозможно создать папку «%s», папка уже существует"
+
+#: ../src/EWS/camel/camel-ews-store.c:2884
+#, c-format
+msgid "Parent folder %s does not exist"
+msgstr "Родительская папка %s не существует"
+
+#: ../src/EWS/camel/camel-ews-store.c:2894
+#, c-format
+msgid ""
+"Cannot create folder under “%s”, it is used for folders of other users only"
+msgstr ""
+"Невозможно создать папку под «%s», она используется только для общих папок"
+
+#: ../src/EWS/camel/camel-ews-store.c:2904
+#, c-format
+msgid "Cannot create folder under “%s”, it is used for public folders only"
+msgstr ""
+"Невозможно создать папку под «%s», она используется только для общих папок"
+
+#: ../src/EWS/camel/camel-ews-store.c:3011
+#: ../src/Microsoft365/camel/camel-m365-store.c:924
+#, c-format
+msgid "Folder does not exist"
+msgstr "Папка не существует"
+
+#: ../src/EWS/camel/camel-ews-store.c:3021
+#, c-format
+msgid "Cannot remove folder “%s”, it is used for folders of other users only"
+msgstr "Невозможно удалить папку «%s», она используется другими пользователями"
+
+#: ../src/EWS/camel/camel-ews-store.c:3032
+#, c-format
+msgid "Cannot remove folder “%s”, it is used for public folders only"
+msgstr ""
+"Невозможно удалить общую папку «%s», она используется другими пользователями"
+
+#: ../src/EWS/camel/camel-ews-store.c:3187
+#: ../src/EWS/camel/camel-ews-store.c:3314
+#, c-format
+msgid "Folder %s does not exist"
+msgstr "Папка %s не существует"
+
+#: ../src/EWS/camel/camel-ews-store.c:3223
+msgid "Cannot move a foreign folder"
+msgstr "Невозможно переместить внешнюю папку"
+
+#: ../src/EWS/camel/camel-ews-store.c:3240
+#, c-format
+msgid "No change key record for folder %s"
+msgstr "Запись ключа без изменений для папки %s"
+
+#: ../src/EWS/camel/camel-ews-store.c:3270
+#, c-format
+msgid "Cannot both rename and move a folder at the same time"
+msgstr "Невозможно одновременно переименовать и переместить папку"
+
+#: ../src/EWS/camel/camel-ews-store.c:3301
+#: ../src/EWS/camel/camel-ews-store.c:3324
+#, c-format
+msgid "Cannot find folder ID for parent folder %s"
+msgstr "Не удается найти идентификатор папки для родительской папки %s"
+
+#. convert well-known names to their non-localized form
+#: ../src/EWS/camel/camel-ews-store.c:3314
+#: ../src/EWS/camel/camel-ews-store.c:3324
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:474
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:758
+msgid "Inbox"
+msgstr "Входящие"
+
+# Имя собственное. Зарегистрированный и защищенный патентом торговый знак Microsoft. Не переводится.
+#: ../src/EWS/camel/camel-ews-store.c:3373
+#: ../src/EWS/camel/camel-ews-transport.c:292
+#, c-format
+msgid "Exchange server %s"
+msgstr "Exchange сервер %s"
+
+# Имя собственное. Зарегистрированный и защищенный патентом торговый знак Microsoft. Не переводится.
+#: ../src/EWS/camel/camel-ews-store.c:3376
+#, c-format
+msgid "Exchange service for %s on %s"
+msgstr "Exchange служба  для %s на %s"
+
+#: ../src/EWS/camel/camel-ews-store.c:3420
+#: ../src/Microsoft365/camel/camel-m365-store.c:1469
+#, c-format
+msgid "Could not locate Trash folder"
+msgstr "Не удалось обнаружить папку Корзина"
+
+#: ../src/EWS/camel/camel-ews-store.c:3480
+#: ../src/Microsoft365/camel/camel-m365-store.c:1527
+#, c-format
+msgid "Could not locate Junk folder"
+msgstr "Не удалось обнаружить папку Нежелательные"
+
+#: ../src/EWS/camel/camel-ews-store.c:3685
+#: ../src/EWS/evolution/e-mail-part-ews-sharing-metadata.c:60
+msgid "Cannot subscribe EWS folders in offline mode"
+msgstr "Невозможно подписаться на папки EWS в автономном режиме"
+
+#: ../src/EWS/camel/camel-ews-store.c:3708
+#, c-format
+msgid "Cannot subscribe folder “%s”, no public folder available"
+msgstr "Невозможно подписаться на папку «%s», нет доступной общей папки"
+
+#: ../src/EWS/camel/camel-ews-store.c:3718
+#, c-format
+msgid "Cannot subscribe folder “%s”, folder not found"
+msgstr "Невозможно подписаться на папку «%s», папка не найдена"
+
+#: ../src/EWS/camel/camel-ews-store.c:3727
+#, c-format
+msgid "Cannot subscribe folder “%s”, folder ID not found"
+msgstr "Невозможно подписаться на папку «%s», ID папки не найден"
+
+#: ../src/EWS/camel/camel-ews-store.c:3738
+#, c-format
+msgid "Cannot subscribe folder “%s”, public folder root not found"
+msgstr ""
+"Невозможно подписаться на папку «%s», корневой общедоступной папки не найдено"
+
+#: ../src/EWS/camel/camel-ews-store.c:3814
+msgid "Cannot unsubscribe EWS folders in offline mode"
+msgstr "Невозможно отменить подписку на папки EWS в автономном режиме"
+
+#: ../src/EWS/camel/camel-ews-store.c:3925
+#: ../src/Microsoft365/camel/camel-m365-store.c:1846
+#: ../src/Microsoft365/camel/camel-m365-store.c:1859
+#, c-format
+msgid "You must be working online to complete this operation"
+msgstr "Для завершения данной операции необходимо подключение к сети"
+
+#: ../src/EWS/camel/camel-ews-store.c:3997
+#: ../src/EWS/camel/camel-ews-store.c:4034
+#: ../src/Microsoft365/camel/camel-m365-store.c:1982
+#: ../src/Microsoft365/camel/camel-m365-store.c:2023
+msgid "Unsetting the “Out of Office” status"
+msgstr "Снятие статуса «Не на работе»"
+
+#: ../src/EWS/camel/camel-ews-store.h:39
+msgid "Foreign Folders"
+msgstr "Внешние папки"
+
+#: ../src/EWS/camel/camel-ews-store.h:41
+msgid "Public Folders"
+msgstr "Общие папки"
+
+#: ../src/EWS/camel/camel-ews-transport.c:295
+#, c-format
+msgid "Exchange mail delivery via %s"
+msgstr "Доставка почты Exchange через %s"
+
+#: ../src/EWS/camel/camel-ews-transport.c:344
+#: ../src/Microsoft365/camel/camel-m365-transport.c:282
+msgid "Cannot send message with no From address"
+msgstr "Невозможно отправить сообщение, не указан адрес отправителя"
+
+#: ../src/EWS/camel/camel-ews-transport.c:350
+msgid "Exchange server cannot send message with multiple From addresses"
+msgstr ""
+"Сервер Exchange не может отправить сообщение с несколькими адресами "
+"отправителя"
+
+#: ../src/EWS/camel/camel-ews-transport.c:360
+#: ../src/Microsoft365/camel/camel-m365-transport.c:297
+msgid "Failed to read From address"
+msgstr "Не удалось прочитать адрес отправителя"
+
+#: ../src/EWS/camel/camel-ews-transport.c:370
+#: ../src/Microsoft365/camel/camel-m365-transport.c:307
+#, c-format
+msgid "Service not connected"
+msgstr "Услуга не подключена"
+
+#: ../src/EWS/common/camel-sasl-xoauth2-office365.c:13
+msgid "OAuth2 (Office365)"
+msgstr "OAuth2 (Office365)"
+
+#: ../src/EWS/common/camel-sasl-xoauth2-office365.c:14
+msgid ""
+"This option will use an OAuth 2.0 access token to connect to the "
+"Office365.com server"
+msgstr ""
+"Этот вариант будет использовать токен доступа OAuth 2.0 для подключения к "
+"серверу Office365.com"
+
+#: ../src/EWS/common/e-ews-calendar-utils.c:1311
+#, c-format
+msgid ""
+"Cannot store this recurrence. Change it to simple single daily, weekly, "
+"monthly or yearly recurrence without exceptions and with start date."
+msgstr ""
+"Невозможно сохранить этот повтор. Измените его на простой однократный "
+"ежедневный, еженедельный, ежемесячный или ежегодный повтор без исключений и "
+"с датой начала."
+
+#: ../src/EWS/common/e-ews-camel-common.c:386
+#, c-format
+msgid "CreateItem call failed to return ID for new message"
+msgstr "Вызов CreateItem не смог вернуть идентификатор для нового сообщения"
+
+#: ../src/EWS/common/e-ews-connection.c:348
+#, c-format
+msgid "No response: %s"
+msgstr "Нет ответа: %s"
+
+#: ../src/EWS/common/e-ews-connection.c:515
+#, c-format
+msgid "Exchange server is busy, waiting to retry (%d:%02d minute)"
+msgid_plural "Exchange server is busy, waiting to retry (%d:%02d minutes)"
+msgstr[0] "Сервер Exchange занят, ожидает повторной попытки (%d:%02d минуту)"
+msgstr[1] "Сервер Exchange занят, ожидает повторной попытки (%d:%02d минуты)"
+msgstr[2] "Сервер Exchange занят, ожидает повторной попытки (%d:%02d минут)"
+
+#: ../src/EWS/common/e-ews-connection.c:521
+#, c-format
+msgid "Exchange server is busy, waiting to retry (%d second)"
+msgid_plural "Exchange server is busy, waiting to retry (%d seconds)"
+msgstr[0] "Сервер Exchange занят, ожидает повторной попытки (%d секунду)"
+msgstr[1] "Сервер Exchange занят, ожидает повторной попытки (%d секунды)"
+msgstr[2] "Сервер Exchange занят, ожидает повторной попытки (%d секунд)"
+
+#: ../src/EWS/common/e-ews-connection.c:650
+msgid "Authentication failed"
+msgstr "Сбой проверки подлинности"
+
+#: ../src/EWS/common/e-ews-connection.c:2452
+msgid "Failed to parse autodiscover response XML"
+msgstr "Не удалось разобрать XML ответа автообнаружения"
+
+#: ../src/EWS/common/e-ews-connection.c:2458
+msgid "Failed to find <Autodiscover> element"
+msgstr "Не удалось найти элемент <Autodiscover>"
+
+#: ../src/EWS/common/e-ews-connection.c:2468
+msgid "Failed to find <Response> element"
+msgstr "Не удалось найти элемент <Response>"
+
+#: ../src/EWS/common/e-ews-connection.c:2478
+msgid "Failed to find <Account> element"
+msgstr "Не удалось найти элемент <Account>"
+
+#: ../src/EWS/common/e-ews-connection.c:2523
+msgid "Failed to find <ASUrl> in autodiscover response"
+msgstr "Не удалось найти <ASUrl> в ответе автообнаружения"
+
+#: ../src/EWS/common/e-ews-connection.c:2599
+msgid "URL cannot be NULL"
+msgstr "URL не может быть NULL"
+
+#: ../src/EWS/common/e-ews-connection.c:3024
+msgid "Email address is missing a domain part"
+msgstr "В адресе электронной почты отсутствует часть домена"
+
+#: ../src/EWS/common/e-ews-connection.c:3233
+msgid "Failed to parse oab XML"
+msgstr "Не удалось разобрать oab XML"
+
+#: ../src/EWS/common/e-ews-connection.c:3271
+msgid "Failed to find <OAB> element\n"
+msgstr "Не удалось найти элемент <OAB>\n"
+
+#: ../src/EWS/common/e-ews-connection.c:8827
+msgid "Requires at least Microsoft Exchange 2010 SP1 server"
+msgstr "Требуется как минимум сервер Microsoft Exchange 2010 SP1"
+
+#: ../src/EWS/common/e-ews-connection.c:8928
+msgid "Requires at least Microsoft Exchange 2013 server"
+msgstr "Требуется как минимум сервер Microsoft Exchange 2013"
+
+#: ../src/EWS/common/e-ews-connection.c:9081
+msgid "Requires at least Microsoft Exchange 2010 server"
+msgstr "Требуется как минимум сервер Microsoft Exchange 2010"
+
+#: ../src/EWS/common/e-ews-connection.c:9221
+msgid "Requires at least Microsoft Exchange 2007 SP1 server"
+msgstr "Требуется как минимум сервер Microsoft Exchange 2007 SP1"
+
+#: ../src/EWS/common/e-ews-connection-utils.c:205
+#, c-format
+msgid "Password expired. Change password at “%s”."
+msgstr "Срок действия пароля истек. Смените пароль по адресу «%s»."
+
+#: ../src/EWS/common/e-ews-connection-utils.c:208
+msgid "Password expired."
+msgstr "Срок действия пароля истек."
+
+#: ../src/EWS/common/e-ews-folder.c:780
+msgid "Cannot add folder, unsupported folder type"
+msgstr "Невозможно добавить папку, неподдерживаемый тип папки"
+
+#: ../src/EWS/common/e-ews-folder.c:785
+msgid "Cannot add folder, master source not found"
+msgstr "Невозможно добавить папку, основной источник не найден"
+
+#: ../src/EWS/common/e-ews-folder.c:825
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:85
+#, c-format
+msgid "Cannot add folder, folder already exists as “%s”"
+msgstr "Невозможно добавить папку, папка уже существует под именем «%s»"
+
+#. Translators: This is a user-visible string, display name of an OAuth2 service.
+#: ../src/EWS/common/e-oauth2-service-office365.c:157
+msgctxt "OAuth2Service"
+msgid "Office365"
+msgstr "Office365"
+
+#: ../src/EWS/common/e-oauth2-service-office365.c:480
+#, c-format
+msgid "Failed to acquire PRT SSO cookie: %s"
+msgstr "Не удалось получить файл куки PRT SSO: %s"
+
+#: ../src/EWS/evolution/e-book-config-ews.c:87
+msgid "Use only _primary contact email address"
+msgstr "Используйте только _основной контактный адрес электронной почты"
+
+#: ../src/EWS/evolution/e-book-config-ews.c:88
+msgid ""
+"When checked, the contacts looked up in the online Global Address List will "
+"contain only the primary email address"
+msgstr ""
+"Если флажок установлен, контакты, просматриваемые в онлайн-списке глобальных "
+"адресов, будут содержать только основной адрес электронной почты"
+
+#: ../src/EWS/evolution/e-book-config-ews.c:100
+msgid "_Fetch contact photos"
+msgstr "Получение фотографий контактов"
+
+#: ../src/EWS/evolution/e-book-config-ews.c:101
+msgid "Tries to look up for user photo"
+msgstr "Пытается найти фотографию пользователя"
+
+#: ../src/EWS/evolution/e-ews-comp-editor-extension.c:246
+#: ../src/Microsoft365/evolution/e-m365-comp-editor-extension.c:209
+msgid "Online Meeting"
+msgstr "Онлайн-встреча"
+
+#: ../src/EWS/evolution/e-ews-comp-editor-extension.c:248
+#: ../src/Microsoft365/evolution/e-m365-comp-editor-extension.c:211
+msgid "Create the meeting as an online meeting in the main user calendar"
+msgstr "Создать онлайн-встречу в основном календаре пользователя"
+
+#: ../src/EWS/evolution/e-ews-config-lookup.c:181
+msgid "Exchange Web Services autodiscovery"
+msgstr "Автообнаружение веб-служб Exchange"
+
+#: ../src/EWS/evolution/e-ews-config-lookup.c:206
+#, c-format
+msgid "User: %s"
+msgstr "Пользователь: %s"
+
+#: ../src/EWS/evolution/e-ews-config-lookup.c:211
+#, c-format
+msgid "Host URL: %s"
+msgstr "URL хоста: %s"
+
+#: ../src/EWS/evolution/e-ews-config-lookup.c:215
+#, c-format
+msgid "OAB URL: %s"
+msgstr "OAB URL: %s"
+
+#: ../src/EWS/evolution/e-ews-config-lookup.c:312
+#, c-format
+msgid "Requires password to continue."
+msgstr "Для продолжения требуется пароль."
+
+#: ../src/EWS/evolution/e-ews-config-utils.c:558
+#: ../src/EWS/evolution/e-mail-part-ews-sharing-metadata.c:87
+msgid "Folder"
+msgstr "Папка"
+
+#: ../src/EWS/evolution/e-ews-config-utils.c:568
+msgid "Size"
+msgstr "Размер"
+
+#: ../src/EWS/evolution/e-ews-config-utils.c:606
+#: ../src/EWS/evolution/e-ews-config-utils.c:611
+msgid "Unable to retrieve folder size information"
+msgstr "Невозможно получить информацию о размере папки"
+
+#: ../src/EWS/evolution/e-ews-config-utils.c:740
+msgid "Folder Sizes"
+msgstr "Размеры папки"
+
+#: ../src/EWS/evolution/e-ews-config-utils.c:743
+msgid "_Close"
+msgstr "_Закрыть"
+
+#: ../src/EWS/evolution/e-ews-config-utils.c:757
+msgid "Fetching folder list…"
+msgstr "Получение списка папок…"
+
+#: ../src/EWS/evolution/e-ews-config-utils.c:822
+#: ../src/EWS/evolution/e-ews-config-utils.c:831
+#: ../src/EWS/evolution/e-ews-config-utils.c:840
+#: ../src/EWS/evolution/e-ews-config-utils.c:849
+#: ../src/EWS/evolution/e-ews-config-utils.c:858
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:657
+msgid "Subscribe to folder of other EWS user…"
+msgstr "Подписаться на папку другого пользователя EWS…"
+
+#: ../src/EWS/evolution/e-ews-config-utils.c:1051
+#, c-format
+msgid "Cannot edit permissions of folder “%s”, choose other folder."
+msgstr "Невозможно изменить разрешения папки «%s», выберите другую папку."
+
+#: ../src/EWS/evolution/e-ews-config-utils.c:1132
+msgid "Folder Sizes…"
+msgstr "Размеры папок…"
+
+#: ../src/EWS/evolution/e-ews-config-utils.c:1139
+msgid "Subscribe to folder of other user…"
+msgstr "Подписаться на папку другого пользователя…"
+
+#: ../src/EWS/evolution/e-ews-config-utils.c:1148
+#: ../src/EWS/evolution/e-ews-config-utils.c:1501
+#: ../src/EWS/evolution/e-ews-config-utils.c:1532
+#: ../src/EWS/evolution/e-ews-config-utils.c:1563
+#: ../src/EWS/evolution/e-ews-config-utils.c:1594
+#: ../src/Microsoft365/evolution/e-m365-config-ui-extension.c:187
+msgid "Permissions…"
+msgstr "Разрешения…"
+
+#: ../src/EWS/evolution/e-ews-config-utils.c:1150
+msgid "Edit EWS folder permissions"
+msgstr "Редактирование разрешений папки EWS"
+
+#: ../src/EWS/evolution/e-ews-config-utils.c:1503
+msgid "Edit EWS calendar permissions"
+msgstr "Редактирование разрешений календаря EWS"
+
+#: ../src/EWS/evolution/e-ews-config-utils.c:1534
+msgid "Edit EWS tasks permissions"
+msgstr "Редактирование разрешений на выполнение задач EWS"
+
+#: ../src/EWS/evolution/e-ews-config-utils.c:1565
+msgid "Edit EWS memos permissions"
+msgstr "Редактирование разрешений на заметки EWS"
+
+#: ../src/EWS/evolution/e-ews-config-utils.c:1596
+msgid "Edit EWS contacts permissions"
+msgstr "Редактирование разрешений для контактов EWS"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:67
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:388
+msgctxt "PermissionsLevel"
+msgid "None"
+msgstr "Нет"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:68
+msgctxt "PermissionsLevel"
+msgid "Owner"
+msgstr "Владелец"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:78
+msgctxt "PermissionsLevel"
+msgid "Publishing Editor"
+msgstr "Выпускающий редактор"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:87
+msgctxt "PermissionsLevel"
+msgid "Editor"
+msgstr "Редактор"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:95
+msgctxt "PermissionsLevel"
+msgid "Publishing Author"
+msgstr "Автор публикации"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:102
+msgctxt "PermissionsLevel"
+msgid "Author"
+msgstr "Автор"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:108
+msgctxt "PermissionsLevel"
+msgid "Nonediting Author"
+msgstr "Автор, не являющийся редактором"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:113
+msgctxt "PermissionsLevel"
+msgid "Reviewer"
+msgstr "Рецензент"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:116
+msgctxt "PermissionsLevel"
+msgid "Contributor"
+msgstr "Участник"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:119
+msgctxt "PermissionsLevel"
+msgid "Free/Busy time"
+msgstr "Свободное/занятое время"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:121
+msgctxt "PermissionsLevel"
+msgid "Free/Busy time, subject, location"
+msgstr "Свободное/занятое время, тема, местоположение"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:123
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:411
+msgctxt "PermissionsLevel"
+msgid "Custom"
+msgstr "Пользовательский"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:247
+msgid "Writing folder permissions, please wait…"
+msgstr "Запись разрешений на папку, пожалуйста, подождите…"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:761
+msgctxt "User"
+msgid "Anonymous"
+msgstr "Анонимный"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:764
+msgctxt "User"
+msgid "Default"
+msgstr "По умолчанию"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:770
+msgctxt "User"
+msgid "Unknown"
+msgstr "Неизвестно"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:853
+#: ../src/EWS/evolution/e-ews-search-user.c:424
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:967
+msgid "Name"
+msgstr "Название"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:859
+msgid "Permission level"
+msgstr "Уровень разрешения"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:911
+msgid "Edit EWS folder permissions…"
+msgstr "Изменить разрешения папки EWS…"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:936
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:678
+msgid "Account:"
+msgstr "Учётная запись:"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:964
+msgid "Folder name:"
+msgstr "Имя папки:"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:988
+msgid "Folder ID:"
+msgstr "Идентификатор папки:"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1053
+msgid "Permissions"
+msgstr "Разрешения"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1075
+msgid "Permi_ssion level:"
+msgstr "Уровень _доступа:"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1109
+msgctxt "Permissions"
+msgid "Read"
+msgstr "Чтение"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1121
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1188
+msgctxt "Permissions"
+msgid "None"
+msgstr "Нет"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1127
+msgctxt "Permissions"
+msgid "Free/Busy time"
+msgstr "Свободное/занятое время"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1132
+msgctxt "Permissions"
+msgid "Free/Busy time, subject, location"
+msgstr "Свободное/занятое время, тема, местоположение"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1138
+msgctxt "Permissions"
+msgid "Full Details"
+msgstr "Полная информация"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1144
+msgctxt "Permissions"
+msgid "Write"
+msgstr "Запись"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1156
+msgctxt "Permissions"
+msgid "Create items"
+msgstr "Создание элементов"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1160
+msgctxt "Permissions"
+msgid "Create subfolders"
+msgstr "Создание подпапок"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1164
+msgctxt "Permissions"
+msgid "Edit own"
+msgstr "Редактировать собственные"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1168
+msgctxt "Permissions"
+msgid "Edit all"
+msgstr "Редактировать все"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1176
+msgctxt "Permissions"
+msgid "Delete items"
+msgstr "Удалить элементы"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1193
+msgctxt "Permissions"
+msgid "Own"
+msgstr "Собственные"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1198
+msgctxt "Permissions"
+msgid "All"
+msgstr "Все"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1204
+msgctxt "Permissions"
+msgid "Other"
+msgstr "Другое"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1216
+msgctxt "Permissions"
+msgid "Folder owner"
+msgstr "Владелец папки"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1220
+msgctxt "Permissions"
+msgid "Folder contact"
+msgstr "Контакт с папкой"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1224
+msgctxt "Permissions"
+msgid "Folder visible"
+msgstr "Видимая папка"
+
+#: ../src/EWS/evolution/e-ews-edit-folder-permissions.c:1297
+msgid "Reading folder permissions, please wait…"
+msgstr "Чтение разрешений папки, пожалуйста, подождите…"
+
+#: ../src/EWS/evolution/e-ews-ooo-notificator.c:149
+#: ../src/Microsoft365/evolution/e-m365-ooo-notificator.c:133
+msgid "Unset on Server"
+msgstr "Не установлено на сервере"
+
+#: ../src/EWS/evolution/e-ews-ooo-notificator.c:150
+#: ../src/Microsoft365/evolution/e-m365-ooo-notificator.c:134
+msgid "Unset the “Out of Office” status"
+msgstr "Снять статус «Не на работе\""
+
+#: ../src/EWS/evolution/e-ews-search-user.c:197
+#, c-format
+msgid "No users found, only one contact"
+msgid_plural "No users found, only %d contacts"
+msgstr[0] "Пользователи не найдены, только %d контакт"
+msgstr[1] "Пользователи не найдены, только %d контакта"
+msgstr[2] "Пользователи не найдены, только %d контактов"
+
+#: ../src/EWS/evolution/e-ews-search-user.c:202
+msgid "No users found"
+msgstr "Пользователи не найдены"
+
+#: ../src/EWS/evolution/e-ews-search-user.c:206
+#, c-format
+msgid "Found one user"
+msgid_plural "Found %d users"
+msgstr[0] "Найден %d пользователь"
+msgstr[1] "Найден %d пользователя"
+msgstr[2] "Найден %d пользователей"
+
+#: ../src/EWS/evolution/e-ews-search-user.c:212
+#, c-format
+msgid "Found more than 100 users, but showing only first %d"
+msgid_plural "Found more than 100 users, but showing only first %d"
+msgstr[0] "Найдено более 100 пользователей, но показаны только первые %d"
+msgstr[1] "Найдено более 100 пользователей, но показаны только первые %d"
+msgstr[2] "Найдено более 100 пользователей, но показаны только первые %d"
+
+#: ../src/EWS/evolution/e-ews-search-user.c:346
+#: ../src/EWS/evolution/e-ews-search-user.c:533
+msgid "Search for a user"
+msgstr "Поиск пользователя"
+
+#: ../src/EWS/evolution/e-ews-search-user.c:355
+msgid "Searching…"
+msgstr "Идет поиск…"
+
+#: ../src/EWS/evolution/e-ews-search-user.c:430
+msgid "E-mail"
+msgstr "E-mail"
+
+#: ../src/EWS/evolution/e-ews-search-user.c:467
+msgid "Choose EWS user…"
+msgstr "Выберите пользователя EWS…"
+
+#: ../src/EWS/evolution/e-ews-search-user.c:490
+msgid "_Search:"
+msgstr "_Поиск:"
+
+#. Translators: The '%s' is replaced with user name, to whom the foreign mailbox belongs.
+#. * Example result: "Mailbox — John Smith"
+#.
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:95
+#, c-format
+msgctxt "ForeignFolder"
+msgid "Mailbox — %s"
+msgstr "Почтовый ящик - %s"
+
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:263
+msgid "Cannot test foreign folder availability when the account is offline"
+msgstr ""
+"Невозможно проверить доступность внешней папки, когда учетная запись "
+"находится в автономном режиме"
+
+#. Translators: This is used as a calendar name; it constructs "User Name - Availability" string shown in UI
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:325
+msgid "Availability"
+msgstr "Доступность"
+
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:343
+#: ../src/EWS/evolution/e-mail-part-ews-sharing-metadata.c:95
+#, c-format
+msgid ""
+"Folder “%s” not found. Either it does not exist or you do not have "
+"permission to access it."
+msgstr ""
+"Папка «%s» не найдена. Либо она не существует, либо у вас нет разрешения на "
+"доступ к ней."
+
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:362
+#: ../src/EWS/evolution/e-mail-part-ews-sharing-metadata.c:79
+msgid "Cannot add folder, cannot determine folder’s type"
+msgstr "Невозможно добавить папку, невозможно определить тип папки"
+
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:476
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:759
+msgid "Contacts"
+msgstr "Контакты"
+
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:478
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:760
+msgid "Calendar"
+msgstr "Календарь"
+
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:480
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:761
+msgid "Free/Busy as Calendar"
+msgstr "Свободен/занят как календарь"
+
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:482
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:762
+msgid "Memos"
+msgstr "Заметки"
+
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:484
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:763
+msgid "Tasks"
+msgstr "Задачи"
+
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:501
+#, c-format
+msgid "Testing availability of folder “%s” of user “%s”, please wait…"
+msgstr ""
+"Проверка доступности папки «%s» пользователя «%s», пожалуйста, подождите…"
+
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:540
+msgid "Cannot search for user when the account is offline"
+msgstr ""
+"Невозможно выполнить поиск пользователя, когда учетная запись находится в "
+"автономном режиме"
+
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:703
+msgid "User"
+msgstr "Пользователь"
+
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:710
+msgid "_User:"
+msgstr "_Пользователь:"
+
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:725
+msgid "C_hoose…"
+msgstr "_Выбрать…"
+
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:741
+msgid "_Folder name:"
+msgstr "_Имя папки:"
+
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:772
+msgid "Include _subfolders"
+msgstr "Включить _вложенные папки"
+
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:863
+#, c-format
+msgid "User name “%s” is ambiguous, specify it more precisely, please"
+msgstr ""
+"Имя пользователя «%s» неоднозначно, укажите его более точно, пожалуйста"
+
+#. Translators: This is used to name foreign folder.
+#. * The first '%s' is replaced with user name to whom the folder belongs,
+#. * the second '%s' is replaced with folder name.
+#. * Example result: "John Smith — Calendar"
+#.
+#: ../src/EWS/evolution/e-ews-subscribe-foreign-folder.c:943
+#, c-format
+msgctxt "ForeignFolder"
+msgid "%s — %s"
+msgstr "%s - %s"
+
+#: ../src/EWS/evolution/e-mail-config-ews-autodiscover.c:260
+msgid "Querying Autodiscover service"
+msgstr "Запрос службы Autodiscover"
+
+#: ../src/EWS/evolution/e-mail-config-ews-autodiscover.c:353
+msgid "Fetch _URL"
+msgstr "Получить _URL"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:193
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:112
+msgid "Configuration"
+msgstr "Настройка"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:211
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:130
+msgid "User_name:"
+msgstr "_Имя пользователя:"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:225
+msgid "_Host URL:"
+msgstr "_Host URL:"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:244
+msgid "OAB U_RL:"
+msgstr "OAB U_RL:"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:258
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:144
+msgid "Open _Mailbox of other user"
+msgstr "Открыть _почтовый ящик другого пользователя"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:302
+msgid "S_earch…"
+msgstr "_Поиск…"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:313
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:188
+msgid "Authentication"
+msgstr "Аутентификация"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:337
+msgid "Use _protocol version 2.0 (for school and organization accounts)"
+msgstr ""
+"Использовать _протокол версии 2.0 (для учётных записей школ и учреждений)"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:344
+msgid "_Override Office365 OAuth2 settings"
+msgstr "OAuth2 (Office365)"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:348
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:426
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:213
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:291
+msgid "Help…"
+msgstr "Справка…"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:355
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:220
+msgid "Application I_D:"
+msgstr "I_D приложения:"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:378
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:243
+msgid "There is not set any default application ID"
+msgstr "Не установлено идентификатора приложения по-умолчанию"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:379
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:244
+#, c-format
+msgid "Default application ID is “%s”"
+msgstr "Идентификатор приложения по умолчанию - «%s»"
+
+#. Translators: 'Tenant ID' here means a term used by Microsoft to identify a company or organization in an Office 365 world.
+#. You probably do not want to translate it. More for example here: https://powerbi.microsoft.com/en-us/blog/what-is-a-tenant/
+#. Translators: 'Tenant ID' here means a term used by Microsoft to identify a company or organization in a Microsoft 365 world.
+#. You probably do not want to translate it. More for example here: https://powerbi.microsoft.com/en-us/blog/what-is-a-tenant/
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:383
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:248
+msgid "_Tenant ID:"
+msgstr "ID тенанта:"
+
+#. Translators: 'Tenant' here means a term used by Microsoft to identify a company or organization in an Office 365 world. Same for 'common', it's a default URL path.
+#. You probably do not want to translate it. More for example here: https://powerbi.microsoft.com/en-us/blog/what-is-a-tenant/
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:408
+msgid "Default tenant ID is “common“"
+msgstr "ID тенанта по умолчанию - «общий»"
+
+#. Translators: 'Tenant' here means a term used by Microsoft to identify a company or organization in an Office 365 world.
+#. You probably do not want to translate it. More for example here: https://powerbi.microsoft.com/en-us/blog/what-is-a-tenant/
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:411
+#, c-format
+msgid "Default tenant ID is “%s”"
+msgstr "ID тенанта по умолчанию - «%s»"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:416
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:281
+msgid "_Advanced Settings"
+msgstr "_Расширенные настройки"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:434
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:299
+msgid "_Endpoint host:"
+msgstr "Хост конечной точки:"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:457
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:460
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:322
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:325
+#, c-format
+msgid "Default endpoint host is “%s”"
+msgstr "Хост конечной точки по умолчанию - «%s»"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:463
+msgid "Red_irect URI:"
+msgstr "URI перенаправления:"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:486
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:489
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:351
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:354
+#, c-format
+msgid "Default redirect URI is “%s”"
+msgstr "URI перенаправления по умолчанию - «%s»"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:492
+msgid "Re_source URI:"
+msgstr "URI ресурса:"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:515
+#, c-format
+msgid ""
+"Default resource URI is derived from the Host URL, or it can eventually fall "
+"back to “%s”."
+msgstr ""
+"URI ресурса по умолчанию берется из URL хоста, или в конечном итоге может "
+"вернуться к «%s»."
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:771
+msgid "Host URL is not valid"
+msgstr "URL-адрес хоста не действителен"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:775
+msgid "Host URL cannot be empty"
+msgstr "URL-адрес хоста не может быть пустым"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:786
+msgid "OAB URL is not valid"
+msgstr "OAB URL: %s"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:796
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:516
+msgid "User name cannot be empty"
+msgstr "Имя пользователя не может быть пустым"
+
+#: ../src/EWS/evolution/e-mail-config-ews-backend.c:810
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:535
+msgid "Application ID cannot be empty"
+msgstr "Идентификатор приложения не может быть пустым"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:389
+msgctxt "PermissionsLevel"
+msgid "Reviewer (can read items)"
+msgstr "Рецензент (может читать элементы)"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:390
+msgctxt "PermissionsLevel"
+msgid "Author (can read and create items)"
+msgstr "Автор (может читать и создавать элементы)"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:391
+msgctxt "PermissionsLevel"
+msgid "Editor (can read, create and modify items)"
+msgstr "Редактор (может читать, создавать и изменять элементы)"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:496
+msgid "Delegate permissions"
+msgstr "Делегировать полномочия"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:514
+msgid "C_alendar"
+msgstr "К_алендарь"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:517
+msgid "_Delegate receives copies of meeting-related messages sent to me"
+msgstr ""
+"_Делегат получает копии сообщений, связанных с собранием, направленных в мой "
+"адрес"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:522
+msgid "_Tasks"
+msgstr "_Задачи"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:525
+msgid "_Inbox"
+msgstr "_Входящие"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:528
+msgid "C_ontacts"
+msgstr "_Контакты"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:531
+msgid "_Notes"
+msgstr "_Заметки"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:534
+msgid "_Journal"
+msgstr "_Журнал"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:537
+#, c-format
+msgid "Delegate “%s” has the following permissions"
+msgstr "Делегат «%s» имеет следующие полномочия"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:555
+msgid "Delegate can see my _private items"
+msgstr "Делегат может видеть мои _приватные элементы"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:877
+msgid "Retrieving current user permissions, please wait…"
+msgstr "Получение текущих разрешений пользователя, пожалуйста, подождите…"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:1000
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:1547
+msgid "Delegates"
+msgstr "Делегаты"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:1024
+msgid ""
+"Delegates can send items on your behalf, including creating and responding "
+"to meeting requests. If you want to grant folder permissions without giving "
+"send-on-behalf-of permissions, close this dialog box, right-click the "
+"folder, click Permissions and change the options there."
+msgstr ""
+"Делегаты могут отправлять элементы от вашего имени, в том числе создавать "
+"запросы на проведение собраний и отвечать на них. Если вы хотите "
+"предоставить права на папку без предоставления прав на отправку, закройте "
+"это диалоговое окно, щелкните папку правой кнопкой мыши, выберите Разрешения "
+"и измените параметры."
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:1075
+msgid ""
+"Deliver meeting requests addressed to me and responses to meeting requests "
+"where I am the organizer to:"
+msgstr ""
+"Доставлять адресованные мне запросы на проведение встреч и ответы на запросы "
+"на проведение встреч, организатором которых являюсь я:"
+
+#. new-line break, because GtkRadioButton doesn't allow wrapping of the inner label
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:1086
+msgid ""
+"My delegates only, but _send a copy of meeting requests\n"
+"and responses to me (recommended)"
+msgstr ""
+"Только мои делегаты, но _присылайте копии запросов на встречи\n"
+"и ответов мне (рекомендуется)"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:1093
+msgid "My d_elegates only"
+msgstr "Только мои делегаты"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:1100
+msgid "My delegates a_nd me"
+msgstr "Мои делегаты и я"
+
+#: ../src/EWS/evolution/e-mail-config-ews-delegates-page.c:1619
+msgid "Retrieving “Delegates” settings"
+msgstr "Получение настроек «Делегаты»"
+
+#: ../src/EWS/evolution/e-mail-config-ews-folder-sizes-page.c:216
+#: ../src/EWS/evolution/e-mail-config-ews-folder-sizes-page.c:330
+msgid "EWS Settings"
+msgstr "Настройки EWS"
+
+#: ../src/EWS/evolution/e-mail-config-ews-folder-sizes-page.c:223
+msgid "Folder _Sizes"
+msgstr "Размеры папки"
+
+#: ../src/EWS/evolution/e-mail-config-ews-folder-sizes-page.c:234
+msgid "View the size of all Exchange folders"
+msgstr "Просмотр размера всех папок Exchange"
+
+#: ../src/EWS/evolution/e-mail-config-ews-folder-sizes-page.c:245
+msgid "_Reset Synchronization Tags"
+msgstr "_Сброс тегов синхронизации"
+
+#: ../src/EWS/evolution/e-mail-config-ews-folder-sizes-page.c:256
+msgid ""
+"Folders can sometimes get out of synchronization, for example after a long "
+"time not being connected to the server. By resetting the synchronization "
+"tags the folders are updated completely. This does not cause download of any "
+"already locally stored messages. The change will take effect the next time "
+"the folders are refreshed."
+msgstr ""
+"Иногда папки могут выходить из синхронизации, например, после длительного "
+"отсутствия подключения к серверу. При сбросе тегов синхронизации папки "
+"обновляются полностью. Это не приводит к загрузке уже сохраненных локально "
+"сообщений. Изменение вступит в силу при следующем обновлении папок."
+
+#: ../src/EWS/evolution/e-mail-config-ews-gal.c:203
+msgid "Locating offline address books"
+msgstr "Нахождение автономных адресных книг"
+
+#: ../src/EWS/evolution/e-mail-config-ews-gal.c:255
+#: ../src/EWS/registry/e-ews-backend.c:504
+msgid "Global Address List"
+msgstr "Глобальный список адресов"
+
+#: ../src/EWS/evolution/e-mail-config-ews-gal.c:282
+msgid "Cache o_ffline address book"
+msgstr "Локальный кэш адресной книги"
+
+#: ../src/EWS/evolution/e-mail-config-ews-gal.c:308
+msgid "Select ad_dress list:"
+msgstr "Выберите список адресов объявлений:"
+
+#: ../src/EWS/evolution/e-mail-config-ews-gal.c:332
+msgid "Fetch List"
+msgstr "Список загрузки"
+
+#: ../src/EWS/evolution/e-mail-config-ews-ooo-page.c:368
+#: ../src/EWS/evolution/e-mail-config-ews-ooo-page.c:903
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:384
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:804
+msgid "Out of Office"
+msgstr "Не на работе"
+
+#: ../src/EWS/evolution/e-mail-config-ews-ooo-page.c:384
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:400
+msgid ""
+"The messages specified below will be automatically sent to each internal and "
+"external person who sends a mail to you."
+msgstr ""
+"Указанные ниже сообщения будут автоматически отправлены каждому внутреннему "
+"и внешнему лицу, отправившему вам письмо."
+
+#: ../src/EWS/evolution/e-mail-config-ews-ooo-page.c:394
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:410
+msgid "Do _not send Out of Office replies"
+msgstr "Не отправляйте ответы «Не на работе»"
+
+#: ../src/EWS/evolution/e-mail-config-ews-ooo-page.c:402
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:418
+msgid "_Send Out of Office replies"
+msgstr "_Отправлять сообщение, что вы не на работе"
+
+#: ../src/EWS/evolution/e-mail-config-ews-ooo-page.c:410
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:426
+msgid "Send Out of Office replies only _during this time period:"
+msgstr "Отправлять автоответы только _в течение этого периода времени:"
+
+#: ../src/EWS/evolution/e-mail-config-ews-ooo-page.c:430
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:446
+msgid "_From:"
+msgstr "_От:"
+
+#: ../src/EWS/evolution/e-mail-config-ews-ooo-page.c:455
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:471
+msgid "_To:"
+msgstr "_До:"
+
+#: ../src/EWS/evolution/e-mail-config-ews-ooo-page.c:480
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:496
+msgid "I_nternal:"
+msgstr "Только _внутри организации:"
+
+#: ../src/EWS/evolution/e-mail-config-ews-ooo-page.c:489
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:505
+msgid "Message to be sent within the organization"
+msgstr "Сообщение, отправляемое внутри организации"
+
+#: ../src/EWS/evolution/e-mail-config-ews-ooo-page.c:517
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:533
+msgid "E_xternal:"
+msgstr "За пре_делы организации:"
+
+#: ../src/EWS/evolution/e-mail-config-ews-ooo-page.c:525
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:541
+msgid "Message to be sent outside the organization"
+msgstr "Сообщение, отправляемое за пределы организации"
+
+#: ../src/EWS/evolution/e-mail-config-ews-ooo-page.c:535
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:549
+msgid "Do not reply to senders outside the organization"
+msgstr "Не отвечать отправителям за пределами организации"
+
+#: ../src/EWS/evolution/e-mail-config-ews-ooo-page.c:538
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:552
+msgid "Reply only to known senders outside the organization"
+msgstr "Отвечать только известным отправителям за пределами организации"
+
+#: ../src/EWS/evolution/e-mail-config-ews-ooo-page.c:541
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:555
+msgid "Reply to any sender outside the organization"
+msgstr "Отвечать любому отправителю за пределами организации"
+
+#: ../src/EWS/evolution/e-mail-config-ews-ooo-page.c:975
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:872
+msgid "Retrieving “Out of Office” settings"
+msgstr "Извлечение настроек «Не на работе»"
+
+#. Translators: the first %s is replaced with a user name, the second %s is replaced with an email address of that user
+#: ../src/EWS/evolution/e-mail-formatter-ews-sharing-metadata.c:109
+#, c-format
+msgid "%s (%s) has invited you to view his or her Microsoft Exchange calendar."
+msgstr ""
+"%s (%s) пригласил вас просмотреть его или её календарь Microsoft Exchange."
+
+#. Translators: the first %s is replaced with a user name, the second %s is replaced with an email address of that user
+#: ../src/EWS/evolution/e-mail-formatter-ews-sharing-metadata.c:112
+#, c-format
+msgid "%s (%s) has invited you to view his or her Microsoft Exchange folder."
+msgstr "%s (%s) пригласил вас просмотреть его или её папку Microsoft Exchange."
+
+#: ../src/EWS/evolution/e-mail-formatter-ews-sharing-metadata.c:122
+msgid "Click the Subscribe button to add it to Evolution."
+msgstr "Нажмите кнопку «Подписаться», чтобы добавить его в Evolution."
+
+#: ../src/EWS/evolution/e-mail-formatter-ews-sharing-metadata.c:124
+msgid "Subscribe"
+msgstr "Подписаться"
+
+#: ../src/EWS/evolution/e-mail-formatter-ews-sharing-metadata.c:133
+msgid "Failed to extract sharing information from provided data."
+msgstr ""
+"Не удалось извлечь информацию о совместном использовании из предоставленных "
+"данных."
+
+#: ../src/EWS/evolution/e-mail-formatter-ews-sharing-metadata.c:202
+msgid "EWS Sharing Metadata"
+msgstr "EWS Совместное использование метаданных"
+
+#: ../src/EWS/evolution/e-mail-formatter-ews-sharing-metadata.c:203
+msgid "Display part as EWS sharing metadata"
+msgstr "Отображение части в виде метаданных совместного использования EWS"
+
+#: ../src/EWS/evolution/e-mail-part-ews-sharing-metadata.c:159
+msgid "Subscribing EWS folder…"
+msgstr "Подписка на папку EWS…"
+
+#: ../src/EWS/evolution/module-ews-configuration.error.xml.h:1
+msgid "Autodiscovery query failed."
+msgstr "Запрос автообнаружения не удался."
+
+#: ../src/EWS/evolution/module-ews-configuration.error.xml.h:2
+msgid "The reported error was “{0}”."
+msgstr "Ошибка «{0}»."
+
+#: ../src/EWS/evolution/module-ews-configuration.error.xml.h:3
+msgid "Failed to locate offline address books."
+msgstr "Не удалось обнаружить автономные адресные книги."
+
+#: ../src/EWS/evolution/module-ews-configuration.error.xml.h:4
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:736
+msgid "Failed to retrieve “Out of Office” settings."
+msgstr "Не удалось получить настройки «Не на работе»."
+
+#: ../src/EWS/evolution/module-ews-configuration.error.xml.h:5
+msgid "Failed to retrieve “Delegates” settings."
+msgstr "Не удалось получить настройки «Делегаты»."
+
+#: ../src/EWS/evolution/module-ews-configuration.error.xml.h:6
+msgid "Your Exchange account “{0}” has the status set as “Out of Office”."
+msgstr "Ваша учетная запись Exchange «{0}» имеет статус «Не на работе»."
+
+#: ../src/EWS/evolution/module-ews-configuration.error.xml.h:7
+msgid "Failed to subscribe user folder."
+msgstr "Не удалось подписаться на папку пользователя."
+
+#: ../src/EWS/evolution/module-ews-configuration.error.xml.h:8
+msgid "Folder had been subscribed."
+msgstr "Подписка на папку состоялось."
+
+#: ../src/EWS/evolution/module-ews-configuration.error.xml.h:9
+msgid "Folder of user “{0}” had been subscribed successfully."
+msgstr "Папка пользователя \"{0}\" была успешно подписана."
+
+#: ../src/EWS/registry/e-ews-backend.c:1044
+#: ../src/Microsoft365/registry/e-m365-backend.c:728
+#, c-format
+msgid "Could not determine a suitable folder class for a new folder named “%s”"
+msgstr ""
+"Не удалось определить подходящий класс папки для новой папки с именем «%s»"
+
+#: ../src/EWS/registry/e-ews-backend.c:1132
+#, c-format
+msgid "Data source “%s” does not represent an Exchange Web Services folder"
+msgstr "Источник данных «%s» не представляет папку веб-служб Exchange"
+
+#: ../src/Microsoft365/addressbook/e-book-backend-m365.c:2092
+#: ../src/Microsoft365/calendar/e-cal-backend-m365.c:394
+msgid "Folder ID is not set"
+msgstr "Идентификатор папки не установлен"
+
+#: ../src/Microsoft365/addressbook/e-book-backend-m365.c:2393
+msgid "Cannot save contact list into a Microsoft 365 address book"
+msgstr "Невозможно сохранить список контактов в адресной книге Microsoft 365"
+
+#: ../src/Microsoft365/addressbook/e-book-backend-m365.c:2405
+msgid "Cannot modify organizational contact"
+msgstr "Невозможно изменить контактные данные Организационного подразделения"
+
+#: ../src/Microsoft365/addressbook/e-book-backend-m365.c:2407
+msgid "Cannot modify user contact"
+msgstr "Невозможно изменить контактные данные пользователя"
+
+#: ../src/Microsoft365/addressbook/e-book-backend-m365.c:2409
+msgid "Cannot modify recent contact"
+msgstr "Невозможно изменить недавний контакт"
+
+#: ../src/Microsoft365/addressbook/e-book-backend-m365.c:2520
+msgid "Cannot remove organizational contact"
+msgstr "Невозможно удалить контактные данные Организационного подразделения"
+
+#: ../src/Microsoft365/addressbook/e-book-backend-m365.c:2522
+msgid "Cannot remove user contact"
+msgstr "Невозможно удалить контактные данные пользователя"
+
+#: ../src/Microsoft365/addressbook/e-book-backend-m365.c:2524
+msgid "Cannot remove recent contact"
+msgstr "Невозможно удалить недавний контакт"
+
+#: ../src/Microsoft365/calendar/e-cal-backend-m365.c:857
+#: ../src/Microsoft365/calendar/e-cal-backend-m365.c:956
+msgid "Cannot store detached instances, because not supported in Microsoft 365"
+msgstr ""
+"Невозможно сохранить отдельные экземпляры, поскольку они не поддерживаются в "
+"Microsoft 365"
+
+#: ../src/Microsoft365/calendar/e-cal-backend-m365.c:1115
+msgid "Can store only simple events into Microsoft 365 calendar"
+msgstr "В календарь Microsoft 365 можно сохранять только простые события"
+
+#: ../src/Microsoft365/calendar/e-cal-backend-m365.c:1128
+msgid "Can store only simple tasks into Microsoft 365 task folder"
+msgstr "Можно хранить только простые задачи в папке задач Microsoft 365"
+
+# Речь идет о том что данное событие в календаре уже существует и его создал кто-то другой (либо это вы сами создали, но под другим E-mail).
+# EWS можно опустить для краткости.
+#: ../src/Microsoft365/calendar/e-cal-backend-m365.c:1179
+#: ../src/Microsoft365/calendar/e-cal-backend-m365.c:1646
+msgid ""
+"Cannot create meetings organized by other users in a Microsoft 365 calendar."
+msgstr ""
+"Невозможно создать встречу, созданную другими пользователями в календаре "
+"Microsoft 365."
+
+#: ../src/Microsoft365/calendar/e-cal-backend-m365-utils.c:1763
+msgid "Microsoft 365 calendar cannot store more than one recurrence"
+msgstr "Календарь Microsoft 365 не может хранить более одного повторения"
+
+#: ../src/Microsoft365/calendar/e-cal-backend-m365-utils.c:1771
+msgid ""
+"Microsoft 365 calendar cannot store component with RDATE or EXRULE properties"
+msgstr ""
+"Календарь Microsoft 365 не может хранить компонент со свойствами RDATE или "
+"EXRULE"
+
+#: ../src/Microsoft365/calendar/e-cal-backend-m365-utils.c:1911
+#, c-format
+msgid "Unknown recurrence frequency (%d)"
+msgstr "Неизвестная частота повторов (%d)"
+
+#: ../src/Microsoft365/calendar/e-cal-backend-m365-utils.c:2065
+msgid "Microsoft 365 calendar cannot store more than one event reminder"
+msgstr ""
+"Календарь Microsoft 365 не может хранить более одного напоминания о событии"
+
+#: ../src/Microsoft365/calendar/e-cal-backend-m365-utils.c:2098
+msgid "Microsoft 365 event can have only a reminder before event start"
+msgstr ""
+"Событие Microsoft 365 может иметь только напоминание перед началом события"
+
+#: ../src/Microsoft365/calendar/e-cal-backend-m365-utils.c:2111
+msgid "Microsoft 365 task can have only a reminder with absolute time"
+msgstr ""
+"Задача Microsoft 365 может иметь только напоминание с абсолютным временем"
+
+#: ../src/Microsoft365/calendar/e-cal-backend-m365-utils.c:2463
+#, c-format
+msgid "Microsoft 365 task cannot have attachments."
+msgstr "Задача Microsoft 365 может иметь включений."
+
+#: ../src/Microsoft365/calendar/e-cal-backend-m365-utils.c:2566
+#, c-format
+msgid "Cannot store attachment with URI “%s”"
+msgstr "Невозможно сохранить вложение с URI «%s»"
+
+#: ../src/Microsoft365/calendar/e-cal-backend-m365-utils.c:2568
+msgid "Failed to read attachment URI"
+msgstr "Не удалось прочитать URI вложения"
+
+#: ../src/Microsoft365/calendar/e-cal-backend-m365-utils.c:2582
+msgid "Failed to get inline attachment data"
+msgstr "Не удалось получить данные о вложениях"
+
+#: ../src/Microsoft365/camel/camel-m365-folder.c:285
+#: ../src/Microsoft365/camel/camel-m365-folder.c:386
+#: ../src/Microsoft365/camel/camel-m365-folder.c:888
+#: ../src/Microsoft365/camel/camel-m365-folder.c:1290
+#: ../src/Microsoft365/camel/camel-m365-folder.c:1421
+#: ../src/Microsoft365/camel/camel-m365-folder.c:1488
+#: ../src/Microsoft365/camel/camel-m365-folder.c:1570
+msgid "Invalid folder state (missing parent store)"
+msgstr "Неверное состояние папки (отсутствует родительское хранилище)"
+
+#: ../src/Microsoft365/camel/camel-m365-folder.c:554
+msgid "Follow-up"
+msgstr "Продолжить"
+
+#: ../src/Microsoft365/camel/camel-m365-folder.c:1867
+#, c-format
+msgid "Folder “%s” doesn't correspond to any known folder"
+msgstr "Папка «%s» не соответствует ни одной известной папке"
+
+#: ../src/Microsoft365/camel/camel-m365-folder.c:1886
+#, c-format
+msgid "Could not load summary for “%s”"
+msgstr "Не удалось загрузить сводку для «%s»"
+
+#: ../src/Microsoft365/camel/camel-m365-provider.c:51
+msgid "Microsoft 365"
+msgstr "Microsoft 365"
+
+#: ../src/Microsoft365/camel/camel-m365-provider.c:52
+msgid "For accessing Microsoft 365 server"
+msgstr "Для доступа к серверу Microsoft 365"
+
+#: ../src/Microsoft365/camel/camel-m365-store.c:147
+#: ../src/Microsoft365/camel/camel-m365-transport.c:249
+msgid "Microsoft 365 server"
+msgstr "Сервер Microsoft 365"
+
+#: ../src/Microsoft365/camel/camel-m365-store.c:149
+msgid "Mail receive via Microsoft 365"
+msgstr "Получение почты через Microsoft 365"
+
+#: ../src/Microsoft365/camel/camel-m365-store.c:204
+#: ../src/Microsoft365/common/e-m365-connection.c:1470
+#, c-format
+msgid "Malformed URI: “%s”"
+msgstr "Некорректный URI: «%s»"
+
+#: ../src/Microsoft365/camel/camel-m365-store.c:579
+msgid "Look up Microsoft 365 categories"
+msgstr "Поиск категорий Microsoft 365"
+
+#: ../src/Microsoft365/camel/camel-m365-store.c:588
+#: ../src/Microsoft365/camel/camel-m365-transport.c:175
+msgid "Failed to create connection"
+msgstr "Не удалось создать соединение"
+
+#: ../src/Microsoft365/camel/camel-m365-store.c:753
+#, c-format
+msgid "Parent folder “%s” does not exist"
+msgstr "Родительская папка «%s» не существует"
+
+#: ../src/Microsoft365/camel/camel-m365-store.c:996
+#: ../src/Microsoft365/camel/camel-m365-store.c:1034
+#, c-format
+msgid "Folder “%s” does not exist"
+msgstr "Папка «%s» не существует"
+
+#: ../src/Microsoft365/camel/camel-m365-transport.c:251
+msgid "Mail delivery via Microsoft 365"
+msgstr "Доставка почты через Microsoft 365"
+
+#: ../src/Microsoft365/camel/camel-m365-transport.c:288
+msgid "Microsoft 365 server cannot send message with multiple From addresses"
+msgstr ""
+"Сервер Microsoft 365 не может отправить сообщение с несколькими адресами From"
+
+#: ../src/Microsoft365/camel/camel-m365-transport.c:315
+#: ../src/Microsoft365/camel/camel-m365-utils.c:994
+msgid "Failed to re-encode parts to base64: "
+msgstr "Не удалось перекодировать части в кодировку base64: "
+
+#: ../src/Microsoft365/common/camel-sasl-xoauth2-microsoft365.c:13
+msgid "OAuth2 (Microsoft 365)"
+msgstr "OAuth2 (Microsoft 365)"
+
+#: ../src/Microsoft365/common/camel-sasl-xoauth2-microsoft365.c:14
+msgid ""
+"This option will use an OAuth 2.0 access token to connect to the Microsoft "
+"365 server"
+msgstr ""
+"Этот вариант будет использовать токен доступа OAuth 2.0 для подключения к "
+"серверу Microsoft 365"
+
+#. Translators: This is a user-visible string, display name of an OAuth2 service.
+#: ../src/Microsoft365/common/e-oauth2-service-microsoft365.c:167
+msgctxt "OAuth2Service"
+msgid "Microsoft365"
+msgstr "Microsoft365"
+
+#: ../src/Microsoft365/common/e-m365-connection.c:1111
+#, c-format
+msgid "Microsoft 365 server is busy, waiting to retry (%d:%02d minute)"
+msgid_plural "Microsoft 365 server is busy, waiting to retry (%d:%02d minutes)"
+msgstr[0] "Сервер Exchange занят, ожидает повторной попытки (%d:%02d минута)"
+msgstr[1] ""
+"Сервер Microsoft 365 занят, ожидает повторной попытки (%d:%02d минуты)"
+msgstr[2] ""
+"Сервер Microsoft 365 занят, ожидает повторной попытки (%d:%02d минут)"
+
+#: ../src/Microsoft365/common/e-m365-connection.c:1117
+#, c-format
+msgid "Microsoft 365 server is busy, waiting to retry (%d second)"
+msgid_plural "Microsoft 365 server is busy, waiting to retry (%d seconds)"
+msgstr[0] "Сервер Microsoft 365 занят, ожидает повторной попытки (%d секунда)"
+msgstr[1] "Сервер Microsoft 365 занят, ожидает повторной попытки (%d секунды)"
+msgstr[2] "Сервер Microsoft 365 занят, ожидает повторной попытки (%d секунд)"
+
+#: ../src/Microsoft365/common/e-m365-connection.c:1242
+#: ../src/Microsoft365/common/e-m365-connection.c:1269
+msgid "Invalid data"
+msgstr "Неверные данные"
+
+#: ../src/Microsoft365/common/e-m365-connection.c:1267
+msgid "Operation was cancelled"
+msgstr "Операция была отменена"
+
+#: ../src/Microsoft365/common/e-m365-connection.c:1964
+msgid "Failed to parse own Json data"
+msgstr "Не удалось разобрать собственные данные Json"
+
+#. Translators: the '%s' is replaced with the date/time, which the instance was looked up for
+#: ../src/Microsoft365/common/e-m365-connection.c:5493
+#, c-format
+msgid "Cannot find instance at '%s'"
+msgstr "Невозможно найти экземпляр в '%s'"
+
+#: ../src/Microsoft365/evolution/e-book-config-m365.c:64
+msgid "Maximum contacts to download"
+msgstr "Максимальное число контактов для скачивания"
+
+#: ../src/Microsoft365/evolution/e-m365-config-ui-extension.c:189
+msgid "Edit Microsoft 365 calendar permissions"
+msgstr "Редактирование разрешений календаря Microsoft 365"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:251
+msgid "Not shared"
+msgstr "Не является общим"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:252
+msgid "Can view when I’m busy"
+msgstr "Можно просматривать, когда я занят"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:253
+msgid "Can view titles and locations"
+msgstr "Можно просматривать заголовки и местоположения"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:254
+msgid "Can view all details"
+msgstr "Можно просматривать все детали"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:255
+msgid "Can edit"
+msgstr "Можно редактировать"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:256
+msgid "Delegate without private events"
+msgstr "Делегировать без приватных событий"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:257
+msgid "Delegate with private events"
+msgstr "Делегировать с приватными событиями"
+
+#. Translators: It's for custom permission setting, like some not known what it is precisely
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:259
+msgid "Custom"
+msgstr "Пользовательский"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:283
+msgid "Unknown permission"
+msgstr "Неизвестное разрешение"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:353
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:418
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:655
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:755
+msgid "Cannot create connection object."
+msgstr "Не удалось создать соединение."
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:382
+msgid "Updating permission, please wait…"
+msgstr "Обновление разрешений, пожалуйста, подождите…"
+
+# GAL= Global Address List
+# Глобальный список адресов
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:383
+msgid "Failed to update permission: "
+msgstr "Не удалось обновить разрешение: "
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:474
+msgid "Removing permission, please wait…"
+msgstr "Удаление разрешений, пожалуйста, подождите…"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:475
+msgid "Failed to remove permission: "
+msgstr "Не удалось удалить разрешение: "
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:575
+msgid "People in the Organization"
+msgstr "Люди в организации"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:609
+msgid "Remove permission"
+msgstr "Удалить разрешение"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:668
+msgid "No valid email address found."
+msgstr "Не найден действительный адрес электронной почты."
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:724
+msgid "Saving new permission, please wait…"
+msgstr "Сохранение разрешений, пожалуйста, подождите…"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:725
+msgid "Failed to save permission: "
+msgstr "Не удалось сохранить разрешения: "
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:890
+msgid "Edit calendar permissions…"
+msgstr "Редактирование разрешений календаря…"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:893
+msgid "Cl_ose"
+msgstr "З_акрыть"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:942
+msgid "_Cancel"
+msgstr "_Отменить"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:982
+msgid "Calendar:"
+msgstr "Календарь:"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:1016
+msgid ""
+"Choose sharing permissions for this calendar. You can add people from within "
+"the organization or outside of it. It can be changed any time."
+msgstr ""
+"Выберите права доступа к этому календарю. Вы можете добавлять пользователей "
+"как внутри организации, так и за ее пределами. Это можно изменить в любое "
+"время."
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:1055
+msgid "_Share"
+msgstr "_Поделиться"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:1091
+msgid "Inside the organization"
+msgstr "Внутри организации"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:1116
+msgid "Outside the organization"
+msgstr "За пределами организации"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:1145
+msgid "Reading calendar permissions, please wait…"
+msgstr "Чтение разрешений календаря, пожалуйста, подождите…"
+
+#: ../src/Microsoft365/evolution/e-m365-edit-calendar-permissions.c:1146
+msgid "Failed to read permissions: "
+msgstr "Не удалось прочитать разрешения: "
+
+#: ../src/Microsoft365/evolution/e-m365-ooo-notificator.c:125
+#, c-format
+msgid "Your Microsoft 365 account “%s” has the status set as “Out of Office”."
+msgstr "Ваша учетная запись Microsoft 365 \"%s\" имеет статус «Не на работе»."
+
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:209
+msgid "_Override Microsoft 365 OAuth2 settings"
+msgstr "_Определить параметры Microsoft 365 OAuth2"
+
+#. Translators: 'Tenant' here means a term used by Microsoft to identify a company or organization in a Microsoft 365 world. Same for 'common', it's a default URL path.
+#. You probably do not want to translate it. More for example here: https://powerbi.microsoft.com/en-us/blog/what-is-a-tenant/
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:273
+msgid "Default tenant is “common“"
+msgstr "Тенант по умолчанию - \"общий\""
+
+#. Translators: 'Tenant' here means a term used by Microsoft to identify a company or organization in a Microsoft 365 world.
+#. You probably do not want to translate it. More for example here: https://powerbi.microsoft.com/en-us/blog/what-is-a-tenant/
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:276
+#, c-format
+msgid "Default tenant is “%s”"
+msgstr "Тенант по умолчанию - \"%s\""
+
+#: ../src/Microsoft365/evolution/e-mail-config-m365-backend.c:328
+msgid "_Redirect URI:"
+msgstr "URI _перенаправления:"
+
+#: ../src/Microsoft365/evolution/e-mail-config-m365-ooo-page.c:732
+#, c-format
+msgid "The reported error was “%s”."
+msgstr "Отправлена ошибка \"%s\"."
+
+#: ../src/Microsoft365/registry/e-m365-backend.c:411
+msgid "Organizational Contacts"
+msgstr "Контакты Организационного подразделения"
+
+#: ../src/Microsoft365/registry/e-m365-backend.c:418
+msgid "Organizational Users"
+msgstr "Пользователи Организационного подразделения"
+
+#: ../src/Microsoft365/registry/e-m365-backend.c:425
+msgid "Recent Contacts"
+msgstr "Недавние контакты"
+
+#: ../src/Microsoft365/registry/e-m365-backend.c:819
+#, c-format
+msgid "Data source “%s” does not represent a Microsoft 365 folder"
+msgstr "Источник данных «%s» не представляет папку Microsoft 365"
+
+#~ msgid "Cannot find “Deleted Items” folder"
+#~ msgstr "Не удается найти папку «Удаленные»"
+
+#~ msgid ""
+#~ "Cannot add messages into a Microsoft 365 account from another account. "
+#~ "Only messages from the same account can be moved/copied between the "
+#~ "Microsoft 365 folders."
+#~ msgstr ""
+#~ "Невозможно добавить сообщения в учетную запись Microsoft 365 из другой "
+#~ "учетной записи. Между папками Microsoft 365 можно перемещать/копировать "
+#~ "только сообщения из одной и той же учетной записи."
+
+#, c-format
+#~ msgid "URL “%s” is not valid"
+#~ msgstr "URL «%s» не действителен"
