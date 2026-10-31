@@ -33,6 +33,18 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   déplaçables entre les dossiers, la liste des messages et le volet de
   lecture (curseur de redimensionnement, double-clic pour la largeur par
   défaut) ; largeurs mémorisées d'une session à l'autre.
+- Bandeau **« Contenu externe bloqué »** au-dessus du message lorsque des
+  images, styles ou pixels de suivi distants ont été bloqués : *Afficher les
+  images pour ce message*, *Toujours faire confiance à l'expéditeur*, *Toujours
+  faire confiance au domaine*.
+- **Paramètres › Confidentialité** : chargement du contenu externe (jamais /
+  expéditeurs et domaines de confiance seulement / toujours) et liste des
+  expéditeurs et domaines de confiance.
+- Lecteur : chaque message est chargé à une adresse interne unique (plus de
+  limite de 2 Mo), redirections automatiques bloquées, pas de Referer.
+- **Export des contacts** en vCard 3.0 (un fichier ou un par contact, un
+  carnet ou tous) et **des agendas et listes de tâches** en iCalendar avec
+  leurs fuseaux horaires (vues Contacts et Calendrier).
 
 ### Corrigé
 
