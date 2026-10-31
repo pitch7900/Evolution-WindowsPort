@@ -7,6 +7,7 @@
  */
 
 #include "evo-core.h"
+#include "ErrorLog.h"
 
 namespace EvolutionWin
 {
@@ -520,8 +521,16 @@ namespace EvolutionWin
             /* runs on a core thread: hand over to the UI thread */
             call->queue.TryEnqueue([call, json_text, error_text]()
             {
-                if (*call->alive)
-                    call->handler(json_text, error_text);
+                /* an exception escaping a work item stops the application */
+                try
+                {
+                    if (*call->alive)
+                        call->handler(json_text, error_text);
+                }
+                catch (...)
+                {
+                    LogCurrentException(L"evo-core result");
+                }
                 delete call;
             });
         }
@@ -535,8 +544,15 @@ namespace EvolutionWin
 
             self->m_queue.TryEnqueue([self, alive, event_text, json_text]()
             {
-                if (*alive && self->m_on_event)
-                    self->m_on_event(event_text, json_text);
+                try
+                {
+                    if (*alive && self->m_on_event)
+                        self->m_on_event(event_text, json_text);
+                }
+                catch (...)
+                {
+                    LogCurrentException(L"evo-core event");
+                }
             });
         }
 

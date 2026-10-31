@@ -14,6 +14,15 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Corrigé
 
+- Ajout d'un compte Microsoft 365 professionnel : la connexion échouait
+  (« CredWrite: Le relais a reçu des données incorrectes ») car les jetons
+  OAuth2 dépassaient la taille maximale d'un identifiant Windows (2 560
+  octets) ; les secrets longs sont désormais répartis sur plusieurs
+  identifiants du Gestionnaire d'identifiants.
+- Une erreur inattendue dans un rappel du moteur ou un gestionnaire
+  d'événement n'arrête plus l'application : elle est consignée dans
+  `%LOCALAPPDATA%\EvolutionWin\errors.log` (plantage à l'ajout d'un compte
+  Microsoft 365 sur une installation neuve).
 - `publish-release.bat` : les titres du CHANGELOG (« ### Ajouté »…) sont
   conservés dans le message de l'étiquette Git.
 

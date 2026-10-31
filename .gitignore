@@ -49,4 +49,4 @@ Desktop.ini
 *.tmp
 *.bak
 *~
-
+logs/

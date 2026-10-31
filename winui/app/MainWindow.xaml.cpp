@@ -4872,7 +4872,15 @@ namespace winrt::EvolutionWin::implementation
                 JsonObject result;
                 if (error.empty() && JsonObject::TryParse(json, result))
                     *detected = result;
-                deferral.Complete();
+                /* boîte déjà fermée entre-temps : rien à terminer */
+                try
+                {
+                    deferral.Complete();
+                }
+                catch (...)
+                {
+                    ::EvolutionWin::LogCurrentException(L"détection du compte");
+                }
             });
         });
 

@@ -22,6 +22,7 @@
 #include <wincred.h>
 #include <gio/gio.h>
 #include <errno.h>
+#include <stdlib.h>
 #else
 #include <libsecret/secret.h>
 #endif
@@ -34,20 +35,31 @@
 /* Permanent secrets are kept in the Windows Credential Manager (DPAPI
  * protected, per user), session secrets only in memory. The old base64
  * "secrets" key file, used by previous Win32 builds, is read as a fallback
- * and its entries are migrated to the Credential Manager on lookup. */
+ * and its entries are migrated to the Credential Manager on lookup.
+ *
+ * A credential blob holds at most CRED_MAX_CREDENTIAL_BLOB_SIZE (2560)
+ * bytes, less than the OAuth2 tokens of Microsoft 365 work accounts:
+ * longer secrets are split in "<target>#1".."#n" credentials and the main
+ * one holds CHUNKS_MARKER followed by n. */
+#define CHUNKS_MARKER "\001EDS-CHUNKS:"
 
 G_LOCK_DEFINE_STATIC (secrets_file);
 static GHashTable *session_secrets = NULL;
 #define SECRETS_SECTION "Secrets"
 #define CREDENTIAL_TARGET_PREFIX "Evolution-Data-Server:"
 
+/* index 0: main credential, 1..n: chunks of a long secret */
 static gunichar2 *
-win32_credential_target (const gchar *uid)
+win32_credential_target (const gchar *uid,
+			 guint index)
 {
 	gchar *target;
 	gunichar2 *wtarget;
 
-	target = g_strconcat (CREDENTIAL_TARGET_PREFIX, uid, NULL);
+	if (index)
+		target = g_strdup_printf (CREDENTIAL_TARGET_PREFIX "%s#%u", uid, index);
+	else
+		target = g_strconcat (CREDENTIAL_TARGET_PREFIX, uid, NULL);
 	wtarget = g_utf8_to_utf16 (target, -1, NULL, NULL, NULL);
 	g_free (target);
 
@@ -126,22 +138,24 @@ legacy_secrets_file_take (const gchar *uid,
 }
 
 static gboolean
-win32_credential_write (const gchar *uid,
-			const gchar *secret,
-			GError **error)
+win32_credential_write_blob (const gchar *uid,
+			     guint index,
+			     const gchar *data,
+			     gsize length,
+			     GError **error)
 {
 	CREDENTIALW cred = { 0 };
 	gunichar2 *target, *user;
 	gboolean success;
 
-	target = win32_credential_target (uid);
+	target = win32_credential_target (uid, index);
 	user = g_utf8_to_utf16 (uid, -1, NULL, NULL, NULL);
 
 	cred.Type = CRED_TYPE_GENERIC;
 	cred.TargetName = (LPWSTR) target;
 	cred.UserName = (LPWSTR) user;
-	cred.CredentialBlobSize = (DWORD) strlen (secret);
-	cred.CredentialBlob = (LPBYTE) secret;
+	cred.CredentialBlobSize = (DWORD) length;
+	cred.CredentialBlob = (LPBYTE) data;
 	cred.Persist = CRED_PERSIST_LOCAL_MACHINE;
 
 	success = CredWriteW (&cred, 0) != FALSE;
@@ -152,6 +166,118 @@ win32_credential_write (const gchar *uid,
 	g_free (user);
 
 	return success;
+}
+
+/* Returns the blob of a credential, or NULL (error left unset when it
+ * does not exist). */
+static gchar *
+win32_credential_read_blob (const gchar *uid,
+			    guint index,
+			    GError **error)
+{
+	PCREDENTIALW cred = NULL;
+	gunichar2 *target;
+	gchar *blob = NULL;
+
+	target = win32_credential_target (uid, index);
+
+	if (CredReadW ((LPCWSTR) target, CRED_TYPE_GENERIC, 0, &cred)) {
+		blob = g_strndup ((const gchar *) cred->CredentialBlob, cred->CredentialBlobSize);
+		SecureZeroMemory (cred->CredentialBlob, cred->CredentialBlobSize);
+		CredFree (cred);
+	} else if (GetLastError () != ERROR_NOT_FOUND) {
+		win32_set_error_from_last_error (error, "CredRead");
+	}
+
+	g_free (target);
+
+	return blob;
+}
+
+/* Deletes the chunks from "#first" on, up to the first missing one. */
+static void
+win32_credential_delete_chunks (const gchar *uid,
+				guint first)
+{
+	gboolean deleted = TRUE;
+	guint index;
+
+	for (index = first; deleted; index++) {
+		gunichar2 *target = win32_credential_target (uid, index);
+
+		deleted = CredDeleteW ((LPCWSTR) target, CRED_TYPE_GENERIC, 0) != FALSE;
+		g_free (target);
+	}
+}
+
+static gboolean
+win32_credential_write (const gchar *uid,
+			const gchar *secret,
+			GError **error)
+{
+	gsize length = strlen (secret), n_chunks, index;
+	gchar *header;
+	gboolean success;
+
+	if (length <= CRED_MAX_CREDENTIAL_BLOB_SIZE && !g_str_has_prefix (secret, CHUNKS_MARKER)) {
+		success = win32_credential_write_blob (uid, 0, secret, length, error);
+		if (success)
+			win32_credential_delete_chunks (uid, 1);
+		return success;
+	}
+
+	n_chunks = (length + CRED_MAX_CREDENTIAL_BLOB_SIZE - 1) / CRED_MAX_CREDENTIAL_BLOB_SIZE;
+
+	for (index = 1; index <= n_chunks; index++) {
+		gsize offset = (index - 1) * CRED_MAX_CREDENTIAL_BLOB_SIZE;
+
+		if (!win32_credential_write_blob (uid, (guint) index, secret + offset,
+			MIN (CRED_MAX_CREDENTIAL_BLOB_SIZE, length - offset), error))
+			return FALSE;
+	}
+
+	win32_credential_delete_chunks (uid, (guint) n_chunks + 1);
+
+	header = g_strdup_printf (CHUNKS_MARKER "%u", (guint) n_chunks);
+	success = win32_credential_write_blob (uid, 0, header, strlen (header), error);
+	g_free (header);
+
+	return success;
+}
+
+/* Returns the secret of uid, reassembling its chunks, or NULL (error left
+ * unset when there is none). */
+static gchar *
+win32_credential_read (const gchar *uid,
+		       GError **error)
+{
+	GString *secret;
+	gchar *blob;
+	guint n_chunks, index;
+
+	blob = win32_credential_read_blob (uid, 0, error);
+	if (!blob || !g_str_has_prefix (blob, CHUNKS_MARKER))
+		return blob;
+
+	n_chunks = (guint) strtoul (blob + strlen (CHUNKS_MARKER), NULL, 10);
+	g_free (blob);
+
+	secret = g_string_new (NULL);
+
+	for (index = 1; index <= n_chunks; index++) {
+		blob = win32_credential_read_blob (uid, index, error);
+		if (!blob) {
+			if (error && !*error)
+				g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+					"CredRead: part %u of %u of the secret is missing", index, n_chunks);
+			e_util_safe_free_string (g_string_free (secret, FALSE));
+			return NULL;
+		}
+		g_string_append (secret, blob);
+		e_util_safe_free_string (blob);
+	}
+
+	return g_string_free (secret, FALSE);
 }
 
 static gboolean
@@ -197,22 +323,8 @@ e_win32_secret_lookup_secret_sync (const gchar *uid,
 	if (session_secrets)
 		secret = g_strdup (g_hash_table_lookup (session_secrets, uid));
 
-	if (!secret) {
-		PCREDENTIALW cred = NULL;
-		gunichar2 *target;
-
-		target = win32_credential_target (uid);
-
-		if (CredReadW ((LPCWSTR) target, CRED_TYPE_GENERIC, 0, &cred)) {
-			secret = g_strndup ((const gchar *) cred->CredentialBlob, cred->CredentialBlobSize);
-			SecureZeroMemory (cred->CredentialBlob, cred->CredentialBlobSize);
-			CredFree (cred);
-		} else if (GetLastError () != ERROR_NOT_FOUND) {
-			win32_set_error_from_last_error (error, "CredRead");
-		}
-
-		g_free (target);
-	}
+	if (!secret)
+		secret = win32_credential_read (uid, error);
 
 	if (!secret && !(error && *error)) {
 		/* Migrate from the legacy plain key file */
@@ -240,7 +352,7 @@ e_win32_secret_delete_secret_sync (const gchar *uid,
 	if (session_secrets)
 		g_hash_table_remove (session_secrets, uid);
 
-	target = win32_credential_target (uid);
+	target = win32_credential_target (uid, 0);
 
 	if (!CredDeleteW ((LPCWSTR) target, CRED_TYPE_GENERIC, 0) && GetLastError () != ERROR_NOT_FOUND) {
 		win32_set_error_from_last_error (error, "CredDelete");
@@ -248,6 +360,8 @@ e_win32_secret_delete_secret_sync (const gchar *uid,
 	}
 
 	g_free (target);
+
+	win32_credential_delete_chunks (uid, 1);
 
 	e_util_safe_free_string (legacy_secrets_file_take (uid, TRUE));
 
