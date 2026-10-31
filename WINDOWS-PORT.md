@@ -154,6 +154,24 @@ la racine du dépôt. Le dossier `evolution/win32/` contenait un ancien portage
 | `nspr-config.site`, `tools/nsinstall`, `tools/patch-nspr.py`, `tools/nuget.exe` | Aides au build de NSPR et restauration NuGet |
 | `webkit-api-usage.txt` | Inventaire des appels WebKit/JSC utilisés par Evolution (phase 3) |
 
+### Copies de travail en parallèle (worktrees Git)
+
+Plusieurs copies du dépôt peuvent compiler le client WinUI en même temps
+(`git worktree add`, branches de travail en parallèle) :
+
+- `evo-core` n'est plus installé dans le préfixe commun : il est compilé dans
+  `build\intermediate\evo-core` de chaque copie, et `EvolutionWin` s'y lie
+  (`EvoCoreLibDir`) ; `evo-core.dll` est copié dans `build\` ;
+- dans un worktree secondaire, `env.bat` reprend la pile GTK (`gtk-build`)
+  et les paquets NuGet (`WINUI_PACKAGES`) du dépôt principal
+  (`git rev-parse --git-common-dir`), volumineux et hors Git ;
+- les préférences de l'interface sont dans
+  `%LOCALAPPDATA%\EvolutionWin\settings.json` (`winui\app\Settings.h`).
+
+Pour tester le moteur depuis plusieurs copies à la fois sans partager le
+cache Camel du compte, définir `XDG_DATA_HOME` et `XDG_CACHE_HOME` vers des
+dossiers propres à chaque copie.
+
 ### Couche de compatibilité CMake
 
 Les projets GNOME passent les `*_LDFLAGS` bruts de pkg-config

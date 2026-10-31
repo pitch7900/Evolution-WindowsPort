@@ -10,7 +10,10 @@
 -->
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <PackagesDir>$(MSBuildThisFileDirectory)..\packages\</PackagesDir>
+    <!-- surchargeables (build-winui-app.bat) : paquets NuGet partagés entre
+         worktrees, evo-core compilé dans le build\ de cette copie -->
+    <PackagesDir Condition="'$(PackagesDir)' == ''">$(MSBuildThisFileDirectory)..\packages\</PackagesDir>
+    <EvoCoreLibDir Condition="'$(EvoCoreLibDir)' == ''">$(MSBuildThisFileDirectory)..\..\build\intermediate\evo-core\</EvoCoreLibDir>
     <CppWinRTDir>$(PackagesDir)Microsoft.Windows.CppWinRT.2.0.250303.1\</CppWinRTDir>
     <AppSdkDir>$(PackagesDir)Microsoft.WindowsAppSDK.1.7.260224002\</AppSdkDir>
     <SdkBuildToolsDir>$(PackagesDir)Microsoft.Windows.SDK.BuildTools.10.0.26100.9457\</SdkBuildToolsDir>
@@ -83,7 +86,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>$(GtkPrefix)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(EvoCoreLibDir);$(GtkPrefix)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>evo-core.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -107,6 +110,7 @@
   <ItemGroup>
     <ResourceCompile Include="EvolutionWin.rc" />
     <ClInclude Include="WindowIcon.h" />
+    <ClInclude Include="Settings.h" />
     <None Include="Assets\EvolutionWin.ico" />
     <!-- image de la boîte « À propos », à côté de l'exécutable -->
     <CopyFileToFolders Include="Assets\EvolutionWin.png">
