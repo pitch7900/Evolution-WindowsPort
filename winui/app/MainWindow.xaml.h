@@ -155,6 +155,7 @@ namespace winrt::EvolutionWin::implementation
                         hstring const& account);
         void ShowMessages(Windows::Data::Json::JsonArray const& messages);
         void FilterLocalMessages(hstring const& query);
+        void UpdateMailBadge();
         bool MatchesQuickFilters(Windows::Data::Json::JsonObject const& message);
         void ReapplyMessageFilters();
         hstring SelectedMessageUid();

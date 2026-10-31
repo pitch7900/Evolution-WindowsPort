@@ -58,6 +58,9 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   compte pour les nouveaux messages et pour les réponses / transferts,
   position au-dessus ou en dessous du texte cité, sélecteur dans la fenêtre
   de rédaction ; images des signatures envoyées en parties liées (cid:).
+- **Barre latérale** : barre d'icônes fixe entre Courrier, Calendrier,
+  Contacts et Tâches (sans bouton de dépliage, noms en info-bulle) ; badge des
+  messages non lus des boîtes de réception sur Courrier.
 
 ### Corrigé
 

@@ -30,32 +30,36 @@
             </StackPanel>
         </Grid>
 
+        <!-- barre d'icônes fixe entre les modules (comme Outlook) : pas de
+             bouton de dépliage, noms en info-bulle, non-lus en badge -->
         <NavigationView
             x:Name="Navigation"
             Grid.Row="1"
             PaneDisplayMode="LeftCompact"
+            IsPaneToggleButtonVisible="False"
             IsBackButtonVisible="Collapsed"
             IsSettingsVisible="True"
             SelectionChanged="OnNavigationSelectionChanged"
             ItemInvoked="OnNavigationItemInvoked">
 
             <NavigationView.MenuItems>
-                <NavigationViewItem x:Name="MailItem" Content="Courrier" Tag="mail" IsSelected="True">
+                <NavigationViewItem x:Name="MailItem" Content="Courrier" Tag="mail" IsSelected="True"
+                                    ToolTipService.ToolTip="Courrier">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE715;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Calendrier" Tag="calendar">
+                <NavigationViewItem Content="Calendrier" Tag="calendar" ToolTipService.ToolTip="Calendrier">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE787;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Contacts" Tag="contacts">
+                <NavigationViewItem Content="Contacts" Tag="contacts" ToolTipService.ToolTip="Contacts">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE77B;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Tâches" Tag="tasks">
+                <NavigationViewItem Content="Tâches" Tag="tasks" ToolTipService.ToolTip="Tâches">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE9D5;" />
                     </NavigationViewItem.Icon>
