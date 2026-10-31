@@ -34,6 +34,7 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::SelectorBar const& sender,
             Microsoft::UI::Xaml::Controls::SelectorBarSelectionChangedEventArgs const& args);
         void OnQuickFilterToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnSaveMessageClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRefreshAllClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRefreshFolderClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRefreshAccelerator(
@@ -148,6 +149,9 @@ namespace winrt::EvolutionWin::implementation
         void RefreshAccountsView();
         fire_and_forget ShowAddAccountDialogAsync();
         fire_and_forget ShowAboutDialogAsync();
+        fire_and_forget SaveMessageAsAsync();
+        fire_and_forget SaveAllAttachmentsAsync(Windows::Data::Json::JsonArray attachments);
+        void InitializePicker(Windows::Foundation::IInspectable const& picker);
         void ShowFolderContextMenu(
             Microsoft::UI::Xaml::UIElement const& target,
             Microsoft::UI::Xaml::Input::ContextRequestedEventArgs const& args);

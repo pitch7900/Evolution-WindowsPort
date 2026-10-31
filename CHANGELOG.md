@@ -23,6 +23,9 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 - **Menu contextuel des dossiers** (clic droit) : *Marquer tout comme lu* ;
   *Supprimer tout* (vers la Corbeille), *Vider la Corbeille* et *Vider les
   Indésirables* (suppression définitive), avec confirmation.
+- **Enregistrer sous** (Ctrl+S) : message au format `.eml` ; **Tout
+  enregistrer** dans la barre des pièces jointes (dossier au choix, noms en
+  double numérotés).
 
 ### Corrigé
 
