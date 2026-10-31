@@ -26,6 +26,9 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   rapports de bug.
 - Version de l'exécutable (propriétés du fichier) tirée de `VERSION`, comme
   l'installeur et la boîte À propos.
+- **Envoyer/Recevoir tous les dossiers** (F9), avec la progression dans la
+  barre d'état, et **Mettre à jour le dossier courant** (Maj+F9) ; menu
+  déroulant sur le bouton d'actualisation.
 
 ### Corrigé
 

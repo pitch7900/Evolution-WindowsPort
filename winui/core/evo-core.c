@@ -3161,6 +3161,46 @@ core_dup_inbox_name (EvoCore *core,
 	return name ? name : g_strdup ("INBOX");
 }
 
+/* F9: every folder of the store besides the opened ones (already
+ * refreshed), each opened for its refresh only, so that later periodic
+ * refreshes stay limited to the inbox and the folders shown */
+static void
+core_refresh_folder_infos (EvoCore *core,
+			   CamelStore *store,
+			   CamelFolderInfo *fi,
+			   GPtrArray *opened)
+{
+	for (; fi && !g_cancellable_is_cancelled (core->cancellable); fi = fi->next) {
+		gboolean done = (fi->flags & (CAMEL_FOLDER_NOSELECT | CAMEL_FOLDER_VIRTUAL)) != 0;
+		guint ii;
+
+		for (ii = 0; !done && ii < opened->len; ii++)
+			done = g_strcmp0 (camel_folder_get_full_name (opened->pdata[ii]), fi->full_name) == 0;
+
+		if (!done) {
+			CamelFolder *folder;
+			GError *local_error = NULL;
+			gchar *status;
+
+			status = g_strdup_printf ("Relève de « %s » : %s",
+				camel_service_get_display_name (CAMEL_SERVICE (store)), fi->display_name);
+			core_emit (core, "status", status);
+			g_free (status);
+
+			folder = camel_store_get_folder_sync (store, fi->full_name, 0, core->cancellable, &local_error);
+			if (folder && camel_folder_refresh_info_sync (folder, core->cancellable, &local_error))
+				g_message ("  “%s” refreshed: %d messages", fi->full_name, camel_folder_get_message_count (folder));
+			if (local_error) {
+				g_warning ("Cannot refresh “%s”: %s", fi->full_name, local_error->message);
+				g_clear_error (&local_error);
+			}
+			g_clear_object (&folder);
+		}
+
+		core_refresh_folder_infos (core, store, fi->child, opened);
+	}
+}
+
 static gchar *
 core_refresh_run (EvoCore *core,
 		  gchar **args,
@@ -3223,6 +3263,17 @@ core_refresh_run (EvoCore *core,
 					camel_folder_get_message_count (folder));
 			}
 			g_object_set_data (G_OBJECT (folder), "evo-initial-sync-done", GINT_TO_POINTER (1));
+		}
+
+		/* args[0] = "all" (evo_core_refresh_all): every other folder too */
+		if (args[0] && g_str_equal (args[0], "all")) {
+			CamelFolderInfo *fi;
+
+			fi = camel_store_get_folder_info_sync (CAMEL_STORE (service), NULL,
+				CAMEL_STORE_FOLDER_INFO_RECURSIVE, core->cancellable, NULL);
+			core_refresh_folder_infos (core, CAMEL_STORE (service), fi, opened);
+			camel_folder_info_free (fi);
+			core_emit (core, "status", "");
 		}
 
 		g_ptr_array_unref (opened);
@@ -5249,6 +5300,14 @@ void
 evo_core_refresh (EvoCore *core)
 {
 	core_submit (core, core_refresh_run, g_new0 (gchar *, 1), core_ignore_result, NULL);
+}
+
+void
+evo_core_refresh_all (EvoCore *core)
+{
+	gchar *args[] = { (gchar *) "all", NULL };
+
+	core_submit (core, core_refresh_run, g_strdupv (args), core_ignore_result, NULL);
 }
 
 void

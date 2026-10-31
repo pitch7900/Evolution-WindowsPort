@@ -61,6 +61,12 @@ namespace EvolutionWin
             evo_core_refresh(m_core);
         }
 
+        /* Envoyer/Recevoir tous les dossiers de tous les comptes (F9) */
+        void RefreshAll()
+        {
+            evo_core_refresh_all(m_core);
+        }
+
         /* not SendMessage: a Win32 macro */
         void SendMail(winrt::hstring const& message_json, CoreHandler handler)
         {
