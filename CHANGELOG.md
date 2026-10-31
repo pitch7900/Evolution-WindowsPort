@@ -10,10 +10,13 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
-## [0.9.3] — en cours
+## [0.9.3] — 2026-10-31
 
 ### Ajouté
 
+- **Releases GitHub** : chaque version est publiée dans les Releases du
+  dépôt (installeur MSI, empreinte `.sha256`, notes de ce journal) par
+  `tools\publish-release.bat` ; `dist/` n'est plus versionné.
 - **Barre de lecture rapide** à gauche de chaque message (comme Outlook) :
   couleur d'accent pour les non-lus ; un clic bascule lu / non lu sans
   ouvrir ni sélectionner le message, info-bulle au survol.

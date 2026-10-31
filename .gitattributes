@@ -9,5 +9,5 @@
 /tools/**/*.sh text eol=lf
 /tools/tools/nsinstall text eol=lf
 
-# Paquets distribués (dist/) : binaires, jamais de conversion de fins de ligne.
+# Installeurs : binaires, jamais de conversion de fins de ligne.
 *.msi binary

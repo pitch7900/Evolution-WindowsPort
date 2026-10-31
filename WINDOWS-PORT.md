@@ -658,7 +658,8 @@ tools\build-msi.bat -SkipAppBuild      :: reprend .\build\ (sortie de build-winu
 ```
 
 Résultat : `dist\Evolution-<version>-x64.msi` (≈ 42 Mo, 1 199 fichiers,
-149 Mo installés). Fichiers : `tools\build-msi.bat` (environnement),
+149 Mo installés ; `dist\` est ignoré par Git, les versions sont publiées
+dans les Releases GitHub par `tools\publish-release.bat`). Fichiers : `tools\build-msi.bat` (environnement),
 `tools\build-msi.ps1` (arborescence, dépendances, signature, WiX),
 `tools\msi\Evolution.wxs` (source WiX).
 

@@ -3,7 +3,7 @@
 
 Ce dépôt contient le portage **100 % natif sous Windows 11** du client de messagerie, calendrier et carnet d'adresses open source **GNOME Evolution**, compilé avec **Microsoft Visual C++ (MSVC)** (sans MinGW, sans WSL et sans Cygwin) et doté d'une **interface utilisateur native WinUI 3 (`EvolutionWin`)**.
 
-**Télécharger :** les installeurs MSI prêts à l'emploi (Windows 11 x64) sont dans [**`dist/`**](./dist) — liste des versions et empreintes SHA-256 dans [`dist/README.md`](./dist/README.md). Dernière version : [**Evolution-0.9.2-x64.msi**](https://github.com/pitch7900/Evolution-WindowsPort/raw/main/dist/Evolution-0.9.2-x64.msi).
+**Télécharger :** les installeurs MSI prêts à l'emploi (Windows 11 x64) sont publiés dans les [**Releases GitHub**](https://github.com/pitch7900/Evolution-WindowsPort/releases) — une Release par version, avec l'installeur `Evolution-<version>-x64.msi`, son empreinte SHA-256 (`.sha256`) et les notes du [CHANGELOG](./CHANGELOG.md). [**Dernière version**](https://github.com/pitch7900/Evolution-WindowsPort/releases/latest).
 
 Pour le journal technique détaillé, l'historique des correctifs CMake/MSVC et le suivi des phases, consultez [**WINDOWS-PORT.md**](./WINDOWS-PORT.md).
 
@@ -48,7 +48,7 @@ Le projet s'articule autour de deux couches principales :
 | [`winui/`](./winui) | Client natif Windows 11 : `winui/core` (`evo-core.dll`) et `winui/app` (`EvolutionWin.exe`) |
 | [`tools/`](./tools) | Scripts de compilation MSVC (`build-*.bat`, `env.bat`, `check-prereqs.ps1`), couche CMake (`cmake/msvc-compat.cmake`), en-têtes POSIX de compatibilité (`compat/`), shim WebKit2 (`webkit-shim/`) et utilitaires (`tools/nuget.exe`) |
 | `build/` | Sorties de compilation (`EvolutionWin.exe`, `evo-core.dll`, `evolution.exe`, `libexec/*.exe`, `build/intermediate/`), ignoré par Git |
-| [`dist/`](./dist) | Binaires packagés pour la distribution (MSI, `.exe`, DLL) |
+| `dist/` | Installeurs MSI construits localement par `build-msi.bat`, ignoré par Git (versions publiées dans les [Releases](https://github.com/pitch7900/Evolution-WindowsPort/releases)) |
 | [`evolution/`](./evolution) | Code source d'Evolution adapté pour MSVC |
 | [`evolution-data-server/`](./evolution-data-server) | Code source d'Evolution Data Server adapté pour Windows 11 / MSVC |
 | [`evolution-ews/`](./evolution-ews) | Code source d'evolution-ews (Microsoft 365 via Microsoft Graph, Exchange Web Services) compilé avec MSVC |
@@ -93,8 +93,17 @@ tools\run-winui-debug.bat    :: Lance EvolutionWin.exe avec journaux de débogag
 
 ```bat
 tools\build-msi.bat          :: dist\Evolution-<version>-x64.msi (WiX v5, autonome)
-msiexec /i dist\Evolution-0.9.2-x64.msi /qn   :: installation silencieuse (par machine)
+msiexec /i dist\Evolution-<version>-x64.msi /qn   :: installation silencieuse (par machine)
 ```
+
+### 5. Publier une version
+
+```bat
+tools\publish-release.bat -DryRun   :: vérifications et notes, sans rien publier
+tools\publish-release.bat           :: étiquette vX.Y.Z + Release GitHub (MSI et .sha256 joints)
+```
+
+Le script vérifie que le MSI existe, que la section du [CHANGELOG](./CHANGELOG.md) est datée et que la Release n'existe pas encore ; `-PreRelease` (ou une version `x.y.z-suffixe`) publie une préversion. Jeton GitHub : `GH_TOKEN`, sinon les identifiants de Git.
 
 ---
 

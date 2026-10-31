@@ -15,8 +15,11 @@ deps/build/
 deps/.vscode/
 
 # --- Sorties de compilation (régénérées par tools\build-*.bat) ---
-# Les binaires à distribuer (MSI, .exe, DLL packagés) vont dans dist/.
 /build/
+
+# --- Installeurs MSI (tools\build-msi.bat) : publiés dans les Releases GitHub
+#     (tools\publish-release.bat), pas versionnés ---
+/dist/
 
 # --- Historique Git amont (GNOME) conservé localement pour suivre l'amont ---
 evolution/.git-upstream/
