@@ -1342,29 +1342,32 @@ namespace winrt::EvolutionWin::implementation
         {
             std::wstring_view uri{ args.Uri() };
 
+            /* le document demandé par ShowInReader (CoreWebView2::Navigate) :
+               à tester en premier, WebView2 considère les navigations lancées
+               par l'application comme « initiées par l'utilisateur » */
+            if (uri == std::wstring_view{ m_reader_uri })
+            {
+                m_reader_navigation_id = args.NavigationId();
+                m_reader_navigation_known = true;
+                return;
+            }
+
             if (args.IsUserInitiated())
             {
                 if (uri.rfind(L"data:", 0) == 0 || uri.rfind(L"about:", 0) == 0)
                     return;
-                /* liens relatifs d'un message : rien à ouvrir */
+                /* lien cliqué : ouvert dans le navigateur ; liens relatifs
+                   d'un message : rien à ouvrir */
                 args.Cancel(true);
                 if (!StartsWith(uri, ReaderOrigin))
                     Windows::System::Launcher::LaunchUriAsync(Uri{ args.Uri() });
                 return;
             }
 
-            /* navigations non demandées par l'utilisateur : seul le document
-               demandé par ShowInReader est accepté (pas de <meta refresh>
-               vers un site distant) */
-            if (uri == std::wstring_view{ m_reader_uri })
-            {
-                m_reader_navigation_id = args.NavigationId();
-                m_reader_navigation_known = true;
-            }
-            else if (uri != L"about:blank")
-            {
+            /* autres navigations non demandées par l'utilisateur : refusées
+               (pas de <meta refresh> vers un site distant) */
+            if (uri != L"about:blank")
                 args.Cancel(true);
-            }
         });
 
         /* le document demandé remplace le précédent : ses requêtes seules
