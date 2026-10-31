@@ -1354,9 +1354,12 @@ namespace winrt::EvolutionWin::implementation
                     ++it;
             }
 
+            /* vider les enfants replie le nœud du compte : son état est rétabli */
             TreeViewNode root = account_node->second;
+            bool root_expanded = root.IsExpanded();
             root.Children().Clear();
             AddFolders(root, parsed, account);
+            root.IsExpanded(root_expanded);
 
             for (auto const& path : expanded)
             {
