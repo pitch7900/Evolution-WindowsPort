@@ -233,7 +233,8 @@ namespace winrt::EvolutionWin::implementation
         Windows::Foundation::IAsyncOperation<hstring> StartOAuth2SignInAsync(
             int provider_index, hstring client_id, hstring tenant_id, hstring login_hint);
         void RefreshAccountsView();
-        fire_and_forget ShowAddAccountDialogAsync();
+        fire_and_forget ShowAccountDetectionDialogAsync();
+        fire_and_forget ShowAddAccountDialogAsync(Windows::Data::Json::JsonObject prefill);
         fire_and_forget ShowAboutDialogAsync();
         fire_and_forget SaveMessageAsAsync();
         fire_and_forget SaveAllAttachmentsAsync(Windows::Data::Json::JsonArray attachments);

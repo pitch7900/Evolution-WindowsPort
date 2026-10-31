@@ -4776,15 +4776,145 @@ namespace winrt::EvolutionWin::implementation
         }
     }
 
-    /* Gestionnaire du bouton « Ajouter un compte IMAP / SMTP ». */
+    /* Gestionnaire du bouton « Ajouter un compte ». */
     void MainWindow::OnAddAccountClick(IInspectable const&, RoutedEventArgs const&)
     {
-        ShowAddAccountDialogAsync();
+        ShowAccountDetectionDialogAsync();
     }
 
-    /* Affiche l'assistant d'ajout d'un compte IMAP / SMTP sous forme de boîte
-     * de dialogue et crée les sources EDS correspondantes via evo-core. */
-    fire_and_forget MainWindow::ShowAddAccountDialogAsync()
+    /* Première étape de l'ajout d'un compte : adresse et nom, puis détection
+     * du type de compte et des serveurs par evo-core (fournisseurs connus,
+     * MX, Autodiscover, autoconfig, SRV) pendant que la boîte reste ouverte.
+     * « Configuration manuelle » passe directement au formulaire. */
+    fire_and_forget MainWindow::ShowAccountDetectionDialogAsync()
+    {
+        auto strong = get_strong();
+        if (m_dialog_open || !Content() || !Content().XamlRoot())
+            co_return;
+
+        m_dialog_open = true;
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(L"Ajouter un compte"));
+        dialog.PrimaryButtonText(L"Suivant");
+        dialog.SecondaryButtonText(L"Configuration manuelle");
+        dialog.CloseButtonText(L"Annuler");
+        dialog.DefaultButton(ContentDialogButton::Primary);
+
+        StackPanel panel;
+        panel.Spacing(8);
+        panel.MinWidth(440);
+
+        TextBlock intro;
+        intro.Text(L"Le type de compte (Microsoft 365, Exchange, Gmail, IMAP / SMTP) et les serveurs "
+                   L"sont détectés à partir de votre adresse ; vous pourrez les vérifier ensuite.");
+        intro.TextWrapping(TextWrapping::Wrap);
+        panel.Children().Append(intro);
+
+        TextBox email_box;
+        email_box.Header(box_value(L"Adresse électronique"));
+        email_box.PlaceholderText(L"pierre@exemple.fr");
+        panel.Children().Append(email_box);
+
+        TextBox full_name_box;
+        full_name_box.Header(box_value(L"Votre nom complet"));
+        full_name_box.PlaceholderText(L"Pierre Dupont");
+        panel.Children().Append(full_name_box);
+
+        TextBlock invalid;
+        invalid.Text(L"Saisissez une adresse électronique complète (nom@domaine).");
+        invalid.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Microsoft::UI::Xaml::Media::Brush>());
+        invalid.Visibility(Visibility::Collapsed);
+        panel.Children().Append(invalid);
+
+        StackPanel progress;
+        progress.Orientation(Orientation::Horizontal);
+        progress.Spacing(8);
+        progress.Visibility(Visibility::Collapsed);
+        ProgressRing ring;
+        ring.IsActive(true);
+        ring.Width(16);
+        ring.Height(16);
+        progress.Children().Append(ring);
+        TextBlock progress_text;
+        progress_text.Text(L"Détection du type de compte…");
+        progress.Children().Append(progress_text);
+        panel.Children().Append(progress);
+
+        dialog.Content(panel);
+
+        /* détection pendant que la boîte reste ouverte (report du clic) */
+        auto detected = std::make_shared<JsonObject>(nullptr);
+        dialog.PrimaryButtonClick([this, email_box, full_name_box, invalid, progress, detected](
+            ContentDialog const& sender, ContentDialogButtonClickEventArgs const& args)
+        {
+            std::wstring email{ Trim(email_box.Text()) };
+            auto at = email.find(L'@');
+            if (at == std::wstring::npos || at == 0 || email.find(L'.', at) == std::wstring::npos)
+            {
+                invalid.Visibility(Visibility::Visible);
+                email_box.Focus(FocusState::Programmatic);
+                args.Cancel(true);
+                return;
+            }
+
+            invalid.Visibility(Visibility::Collapsed);
+            progress.Visibility(Visibility::Visible);
+            email_box.IsEnabled(false);
+            full_name_box.IsEnabled(false);
+            sender.IsPrimaryButtonEnabled(false);
+            sender.IsSecondaryButtonEnabled(false);
+
+            auto deferral = args.GetDeferral();
+            m_core->DetectAccount(hstring{ email }, [deferral, detected](hstring const& json, hstring const& error)
+            {
+                JsonObject result;
+                if (error.empty() && JsonObject::TryParse(json, result))
+                    *detected = result;
+                deferral.Complete();
+            });
+        });
+
+        auto result = co_await dialog.ShowAsync();
+        m_dialog_open = false;
+
+        if (result == ContentDialogResult::None)
+            co_return;
+
+        JsonObject prefill = result == ContentDialogResult::Primary && *detected ? *detected : JsonObject{};
+        prefill.SetNamedValue(L"email", JsonValue::CreateStringValue(hstring{ Trim(email_box.Text()) }));
+        prefill.SetNamedValue(L"full_name", JsonValue::CreateStringValue(full_name_box.Text()));
+        ShowAddAccountDialogAsync(prefill);
+    }
+
+    /* Libellés de la détection (evo_core_detect_account) */
+    static hstring DetectedTypeLabel(hstring const& type)
+    {
+        if (type == L"m365") return L"Microsoft 365 / Outlook.com";
+        if (type == L"exchange") return L"Exchange (serveur de l'entreprise)";
+        if (type == L"google") return L"Google / Gmail";
+        return L"IMAP / SMTP";
+    }
+
+    static hstring DetectedSourceLabel(hstring const& source)
+    {
+        if (source == L"known") return L"base des fournisseurs connus (ISPDB de Thunderbird)";
+        if (source == L"mx") return L"serveurs de messagerie (MX) du domaine";
+        if (source == L"autodiscover") return L"Autodiscover Exchange / Microsoft 365";
+        if (source == L"autoconfig") return L"fichier autoconfig publié par le domaine";
+        if (source == L"ispdb") return L"base ISPDB en ligne de Thunderbird";
+        if (source == L"srv") return L"enregistrements DNS SRV du domaine";
+        return source;
+    }
+
+    /* Formulaire d'ajout d'un compte, prérempli par la détection : type
+     * proposé (modifiable) et paramètres à confirmer ; crée ensuite les
+     * sources EDS correspondantes via evo-core.
+     * Paramètres :
+     *   prefill : {"email", "full_name"} et le résultat de la détection
+     *             (evo_core_detect_account), vide en configuration manuelle */
+    fire_and_forget MainWindow::ShowAddAccountDialogAsync(JsonObject prefill)
     {
         auto strong = get_strong();
         if (m_dialog_open || !Content() || !Content().XamlRoot())
@@ -4803,6 +4933,32 @@ namespace winrt::EvolutionWin::implementation
         panel.Spacing(8);
         panel.MinWidth(440);
 
+        hstring detected_type = prefill.GetNamedString(L"type", L"");
+        if (!detected_type.empty())
+        {
+            hstring source = prefill.GetNamedString(L"source", L"");
+            hstring provider = prefill.GetNamedString(L"provider", L"");
+            InfoBar detection;
+            detection.IsOpen(true);
+            detection.IsClosable(false);
+            if (source == L"guess")
+            {
+                detection.Severity(InfoBarSeverity::Warning);
+                detection.Title(L"Aucune configuration trouvée");
+                detection.Message(L"Ce domaine ne publie pas sa configuration : les serveurs proposés "
+                                  L"sont supposés. Vérifiez-les auprès de votre fournisseur.");
+            }
+            else
+            {
+                detection.Severity(InfoBarSeverity::Success);
+                detection.Title(L"Type détecté : " + DetectedTypeLabel(detected_type));
+                detection.Message((provider.empty() ? hstring{} : provider + L" — ") + L"d'après : " +
+                                  DetectedSourceLabel(source) + L". Vérifiez les paramètres proposés ou "
+                                  L"choisissez un autre type de compte.");
+            }
+            panel.Children().Append(detection);
+        }
+
         ComboBox provider_box;
         provider_box.Header(box_value(L"Type de compte"));
         provider_box.HorizontalAlignment(HorizontalAlignment::Stretch);
@@ -4811,6 +4967,8 @@ namespace winrt::EvolutionWin::implementation
         provider_box.Items().Append(box_value(L"Google / Gmail (OAuth2 XOAUTH2)"));
         /* index 3 : compte evolution-ews (Microsoft Graph), sans IMAP/SMTP */
         provider_box.Items().Append(box_value(L"Microsoft 365 / Exchange Online (courrier, agenda, contacts)"));
+        /* index 4 : compte evolution-ews (EWS) d'un serveur Exchange de l'entreprise */
+        provider_box.Items().Append(box_value(L"Exchange de l'entreprise (EWS, mot de passe)"));
         provider_box.SelectedIndex(0);
         panel.Children().Append(provider_box);
 
@@ -4822,12 +4980,27 @@ namespace winrt::EvolutionWin::implementation
         TextBox full_name_box;
         full_name_box.Header(box_value(L"Votre nom complet"));
         full_name_box.PlaceholderText(L"Pierre Dupont");
+        full_name_box.Text(prefill.GetNamedString(L"full_name", L""));
         panel.Children().Append(full_name_box);
 
         TextBox email_box;
         email_box.Header(box_value(L"Adresse électronique"));
         email_box.PlaceholderText(L"pierre@exemple.fr");
+        email_box.Text(prefill.GetNamedString(L"email", L""));
         panel.Children().Append(email_box);
+
+        TextBox user_box;
+        user_box.Header(box_value(L"Nom d'utilisateur"));
+        user_box.PlaceholderText(L"Adresse électronique par défaut");
+        user_box.Text(prefill.GetNamedString(L"user", L""));
+        panel.Children().Append(user_box);
+
+        TextBox ews_url_box;
+        ews_url_box.Header(box_value(L"Adresse du serveur EWS"));
+        ews_url_box.PlaceholderText(L"https://mail.exemple.fr/EWS/Exchange.asmx");
+        ews_url_box.Text(prefill.GetNamedString(L"ews_url", L""));
+        ews_url_box.Visibility(Visibility::Collapsed);
+        panel.Children().Append(ews_url_box);
 
         TextBox imap_host_box;
         imap_host_box.Header(box_value(L"Serveur entrant (IMAP)"));
@@ -4875,18 +5048,21 @@ namespace winrt::EvolutionWin::implementation
         password_box.Header(box_value(L"Mot de passe (ou jeton d'accès OAuth2 si déjà obtenu)"));
         panel.Children().Append(password_box);
 
-        provider_box.SelectionChanged([imap_host_box, imap_port_box, smtp_host_box, smtp_port_box, oauth_panel, tenant_id_box, client_id_box, password_box](
-            IInspectable const& sender, SelectionChangedEventArgs const&)
+        provider_box.SelectionChanged([imap_host_box, imap_port_box, smtp_host_box, smtp_port_box, oauth_panel, tenant_id_box, client_id_box,
+            password_box, user_box, ews_url_box](IInspectable const& sender, SelectionChangedEventArgs const&)
         {
             int idx = sender.as<ComboBox>().SelectedIndex();
 
-            /* Microsoft Graph : ni serveurs ni mot de passe, connexion OAuth2 ensuite */
-            auto server_visibility = idx == 3 ? Visibility::Collapsed : Visibility::Visible;
+            /* Microsoft Graph : ni serveurs ni mot de passe, connexion OAuth2 ensuite ;
+             * Exchange : adresse EWS et mot de passe */
+            auto server_visibility = idx == 3 || idx == 4 ? Visibility::Collapsed : Visibility::Visible;
             imap_host_box.Visibility(server_visibility);
             imap_port_box.Visibility(server_visibility);
             smtp_host_box.Visibility(server_visibility);
             smtp_port_box.Visibility(server_visibility);
-            password_box.Visibility(server_visibility);
+            password_box.Visibility(idx == 3 ? Visibility::Collapsed : Visibility::Visible);
+            user_box.Visibility(idx == 3 ? Visibility::Collapsed : Visibility::Visible);
+            ews_url_box.Visibility(idx == 4 ? Visibility::Visible : Visibility::Collapsed);
             client_id_box.PlaceholderText(idx == 3
                 ? L"Facultatif : application d'Evolution par défaut"
                 : L"Identifiant d'application Entra ID ou Google Cloud");
@@ -4919,9 +5095,21 @@ namespace winrt::EvolutionWin::implementation
             else
             {
                 oauth_panel.Visibility(Visibility::Collapsed);
-                password_box.PlaceholderText(L"Mot de passe du compte");
+                password_box.PlaceholderText(idx == 4 ? L"Mot de passe du compte Windows / Exchange" : L"Mot de passe du compte");
             }
         });
+
+        /* type et serveurs détectés */
+        provider_box.SelectedIndex(detected_type == L"m365" ? 3
+            : detected_type == L"google" ? 2
+            : detected_type == L"exchange" ? 4 : 0);
+        if (!prefill.GetNamedString(L"imap_host", L"").empty())
+        {
+            imap_host_box.Text(prefill.GetNamedString(L"imap_host"));
+            imap_port_box.Text(to_hstring(static_cast<int>(prefill.GetNamedNumber(L"imap_port", 993))));
+            smtp_host_box.Text(prefill.GetNamedString(L"smtp_host", L""));
+            smtp_port_box.Text(to_hstring(static_cast<int>(prefill.GetNamedNumber(L"smtp_port", 465))));
+        }
 
         ScrollViewer scroll;
         scroll.Content(panel);
@@ -4935,9 +5123,11 @@ namespace winrt::EvolutionWin::implementation
             co_return;
 
         int provider_idx = provider_box.SelectedIndex();
-        hstring email = email_box.Text();
-        hstring imap_host = imap_host_box.Text();
-        hstring smtp_host = smtp_host_box.Text();
+        hstring email{ Trim(email_box.Text()) };
+        hstring user = user_box.Text().empty() ? email : hstring{ Trim(user_box.Text()) };
+        hstring imap_host{ Trim(imap_host_box.Text()) };
+        hstring smtp_host{ Trim(smtp_host_box.Text()) };
+        hstring account_name = display_name_box.Text().empty() ? email : display_name_box.Text();
 
         if (provider_idx == 3)
         {
@@ -4947,7 +5137,6 @@ namespace winrt::EvolutionWin::implementation
                 co_return;
             }
 
-            hstring account_name = display_name_box.Text().empty() ? email : display_name_box.Text();
             JsonObject m365;
             m365.SetNamedValue(L"email", JsonValue::CreateStringValue(email));
             m365.SetNamedValue(L"display_name", JsonValue::CreateStringValue(account_name));
@@ -4968,6 +5157,38 @@ namespace winrt::EvolutionWin::implementation
                 }
                 LoadAccounts();
                 SignInOAuth2Async(created.GetNamedString(L"collection_uid", L""), account_name);
+            });
+            co_return;
+        }
+
+        if (provider_idx == 4)
+        {
+            hstring ews_url{ Trim(ews_url_box.Text()) };
+            if (email.empty() || ews_url.empty())
+            {
+                ShowStatus(L"Veuillez renseigner l'adresse électronique et l'adresse du serveur EWS.", InfoBarSeverity::Warning);
+                co_return;
+            }
+
+            JsonObject ews;
+            ews.SetNamedValue(L"backend", JsonValue::CreateStringValue(L"ews"));
+            ews.SetNamedValue(L"email", JsonValue::CreateStringValue(email));
+            ews.SetNamedValue(L"display_name", JsonValue::CreateStringValue(account_name));
+            ews.SetNamedValue(L"full_name", JsonValue::CreateStringValue(
+                full_name_box.Text().empty() ? email : full_name_box.Text()));
+            ews.SetNamedValue(L"hosturl", JsonValue::CreateStringValue(ews_url));
+            ews.SetNamedValue(L"user", JsonValue::CreateStringValue(user));
+            ews.SetNamedValue(L"password", JsonValue::CreateStringValue(password_box.Password()));
+
+            m_core->AddMicrosoft365Account(ews.Stringify(), [this, account_name](hstring const&, hstring const& error)
+            {
+                if (!error.empty())
+                {
+                    ShowStatus(L"Ajout du compte : " + error, InfoBarSeverity::Error);
+                    return;
+                }
+                ShowStatus(L"Compte « " + account_name + L" » ajouté.", InfoBarSeverity::Success);
+                LoadAccounts();
             });
             co_return;
         }
@@ -4996,21 +5217,29 @@ namespace winrt::EvolutionWin::implementation
         int smtp_port = _wtoi(smtp_port_box.Text().c_str());
         if (smtp_port <= 0) smtp_port = 465;
 
+        /* chiffrement détecté tant que le port proposé n'a pas changé, sinon
+         * déduit du port */
+        auto security = [&prefill](int port, wchar_t const* port_key, wchar_t const* security_key, int starttls_port) -> hstring
+        {
+            if (prefill.HasKey(port_key) && static_cast<int>(prefill.GetNamedNumber(port_key)) == port)
+                return prefill.GetNamedString(security_key, L"tls");
+            return port == starttls_port ? L"starttls" : L"tls";
+        };
+
         JsonObject payload;
-        payload.SetNamedValue(L"display_name", JsonValue::CreateStringValue(
-            display_name_box.Text().empty() ? email : display_name_box.Text()));
+        payload.SetNamedValue(L"display_name", JsonValue::CreateStringValue(account_name));
         payload.SetNamedValue(L"full_name", JsonValue::CreateStringValue(
             full_name_box.Text().empty() ? email : full_name_box.Text()));
         payload.SetNamedValue(L"email", JsonValue::CreateStringValue(email));
-        payload.SetNamedValue(L"user", JsonValue::CreateStringValue(email));
+        payload.SetNamedValue(L"user", JsonValue::CreateStringValue(user));
         payload.SetNamedValue(L"imap_host", JsonValue::CreateStringValue(imap_host));
         payload.SetNamedValue(L"imap_port", JsonValue::CreateNumberValue(imap_port));
         payload.SetNamedValue(L"imap_security", JsonValue::CreateStringValue(
-            imap_port == 143 ? L"STARTTLS-on-standard-port" : L"tls"));
+            security(imap_port, L"imap_port", L"imap_security", 143)));
         payload.SetNamedValue(L"smtp_host", JsonValue::CreateStringValue(smtp_host));
         payload.SetNamedValue(L"smtp_port", JsonValue::CreateNumberValue(smtp_port));
         payload.SetNamedValue(L"smtp_security", JsonValue::CreateStringValue(
-            smtp_port == 587 ? L"STARTTLS-on-standard-port" : L"tls"));
+            security(smtp_port, L"smtp_port", L"smtp_security", 587)));
         if (provider_idx == 1 || provider_idx == 2)
             payload.SetNamedValue(L"auth_mechanism", JsonValue::CreateStringValue(L"XOAUTH2"));
         payload.SetNamedValue(L"password", JsonValue::CreateStringValue(secret));

@@ -712,7 +712,7 @@
                 <Grid Grid.Row="0">
                     <StackPanel Spacing="4">
                         <TextBlock Text="Comptes de messagerie" Style="{StaticResource SubtitleTextBlockStyle}" />
-                        <TextBlock Text="Gérez vos comptes IMAP / SMTP et l'authentification Evolution Data Server."
+                        <TextBlock Text="Gérez vos comptes Microsoft 365, Exchange, Gmail et IMAP / SMTP."
                                    Style="{StaticResource CaptionTextBlockStyle}"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
@@ -720,7 +720,7 @@
                             Style="{StaticResource AccentButtonStyle}" Click="OnAddAccountClick">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon Glyph="&#xE710;" FontSize="14" />
-                            <TextBlock Text="Ajouter un compte IMAP / SMTP" />
+                            <TextBlock Text="Ajouter un compte" />
                         </StackPanel>
                     </Button>
                 </Grid>
