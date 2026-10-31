@@ -20,6 +20,13 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 - Fichiers `VERSION` et `CHANGELOG.md` ; `build-msi.bat` prend sa version
   dans `VERSION` par défaut.
 
+### Corrigé
+
+- Mise à jour ou désinstallation pendant qu'Evolution est ouvert :
+  l'installeur ferme EvolutionWin et les services evolution-data-server au
+  lieu d'afficher un dialogue « fichiers en cours d'utilisation » (souvent
+  caché, d'où l'erreur 1618 si l'installation était relancée).
+
 ## [0.9.1] — 2026-10-31
 
 ### Corrigé

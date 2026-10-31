@@ -675,6 +675,15 @@ Choix et problèmes rencontrés :
    - ICE61 : réinstallation à version égale autorisée (compilations de test).
 4. **Condition de lancement** : runtime WebView2 présent (clé EdgeUpdate,
    version différente de `0.0.0.0`).
+5. **Mise à jour pendant qu'Evolution tourne** (0.9.1 sur 0.9.0, VM) : le
+   dialogue « fichiers en cours d'utilisation » restait caché derrière
+   l'Explorateur, et le MSI relancé échouait avec l'erreur 1618 (« une autre
+   installation est en cours »). Depuis la 0.9.2, `util:CloseApplication`
+   (extension `WixToolset.Util.wixext`) ferme EvolutionWin (message de
+   fermeture, puis arrêt après 5 s) et arrête les services EDS et `gdbus.exe`
+   avant le remplacement des fichiers. Sur un poste de développement, cela
+   arrête aussi les services EDS lancés depuis le préfixe (même nom de
+   processus) ; EvolutionWin les relance au besoin.
 
 **Validé** : extraction du MSI (`msiexec /a`) et exécution depuis
 l'arborescence extraite, avec un `PATH` réduit au système : bus D-Bus et

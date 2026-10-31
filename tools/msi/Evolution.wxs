@@ -6,7 +6,8 @@
   Installation par machine dans %ProgramFiles%\Evolution ; déploiement
   silencieux : msiexec /i Evolution-<version>-x64.msi /qn
 -->
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
   <Package Name="Evolution"
            Manufacturer="Evolution-WindowsPort"
            Version="$(var.Version)"
@@ -22,6 +23,29 @@
     <MajorUpgrade AllowSameVersionUpgrades="yes"
                   DowngradeErrorMessage="Une version plus récente d'Evolution est déjà installée." />
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!-- Mise à jour / désinstallation pendant qu'Evolution tourne : sans cela,
+         Windows Installer affiche « fichiers en cours d'utilisation » (souvent
+         caché derrière l'Explorateur ; une seconde installation lancée entre-temps
+         échoue alors avec l'erreur 1618). EvolutionWin est invité à se fermer,
+         puis arrêté ; les services EDS (sans fenêtre) sont arrêtés, EvolutionWin
+         les redémarre au besoin. -->
+    <util:CloseApplication Id="CloseEvolutionWin" Target="EvolutionWin.exe"
+                           Description="Fermeture d'Evolution"
+                           CloseMessage="yes" ElevatedCloseMessage="yes"
+                           Timeout="5" TerminateProcess="1" RebootPrompt="no" />
+    <util:CloseApplication Id="CloseSourceRegistry" Target="evolution-source-registry.exe"
+                           TerminateProcess="1" RebootPrompt="no" />
+    <util:CloseApplication Id="CloseAddressBookFactory" Target="evolution-addressbook-factory.exe"
+                           TerminateProcess="1" RebootPrompt="no" />
+    <util:CloseApplication Id="CloseAddressBookSubprocess" Target="evolution-addressbook-factory-subprocess.exe"
+                           TerminateProcess="1" RebootPrompt="no" />
+    <util:CloseApplication Id="CloseCalendarFactory" Target="evolution-calendar-factory.exe"
+                           TerminateProcess="1" RebootPrompt="no" />
+    <util:CloseApplication Id="CloseCalendarSubprocess" Target="evolution-calendar-factory-subprocess.exe"
+                           TerminateProcess="1" RebootPrompt="no" />
+    <util:CloseApplication Id="CloseSessionBus" Target="gdbus.exe"
+                           TerminateProcess="1" RebootPrompt="no" />
 
     <!-- Runtime Edge WebView2 (inclus dans Windows 11) : lecture et
          rédaction des messages -->
