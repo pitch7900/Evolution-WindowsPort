@@ -155,11 +155,29 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 
 - [x] 🟢 **Envoyer/Recevoir tous les dossiers** (F9 ; F5 existe déjà) et **Mettre à jour le dossier courant** (Maj+F9)
 - [ ] 🟠 **Boîte d'envoi et Envoyer tout** : messages mis en file d'attente au lieu d'être envoyés directement (prérequis du mode hors connexion)
+  - [ ] Dossier local *Boîte d'envoi* (stockage local Camel), visible dans l'arborescence avec le nombre de messages en attente
+  - [ ] Envoi automatique de la file dès que le réseau revient (et à chaque relève), dans l'ordre de création
+  - [ ] Message en attente modifiable ou supprimable tant qu'il n'est pas parti ; envoi différé (« Envoyer à… ») optionnel
+  - [ ] Erreurs d'envoi : message conservé dans la boîte d'envoi avec l'erreur affichée, nouvelle tentative automatique avec délai croissant
 - [ ] 🟠 **Groupes d'envoi/réception** : groupes de comptes / dossiers avec planification (intervalle, à la fermeture, hors connexion)
 
 ### Hors connexion et téléchargement
 
-- [ ] 🟠 **Travailler en mode hors connexion** : bascule globale (`CamelOfflineStore`), envois mis en file d'attente
+- [ ] 🟠 **Cache local complet pour le mode hors connexion** : messages (en-têtes, corps et pièces jointes), contacts, calendriers et tâches disponibles sans réseau
+  - [ ] Synchronisation hors connexion des dossiers (réglage IMAP `stay-synchronized` / `sync-offline` de Camel), par compte et par dossier, avec limite d'ancienneté (ex. 3 derniers mois) et de taille
+  - [ ] Caches EDS des carnets d'adresses et calendriers (backends en cache local : EWS, CalDAV, CardDAV) consultables hors ligne
+  - [ ] Recherche, lecture, aperçu des pièces jointes et rédaction fonctionnels hors ligne
+  - [ ] Actions faites hors ligne (lu / non lu, drapeau, déplacement, suppression, événements, contacts) journalisées et rejouées au retour du réseau ; résolution des conflits
+- [ ] 🟠 **Travailler en mode hors connexion** : bascule manuelle globale (`CamelOfflineStore`) ; envois mis en file d'attente dans la boîte d'envoi
+- [ ] 🟡 **Détection automatique de l'état du réseau** : surveillance de la connectivité (`GNetworkMonitor` / `NetworkInformation.NetworkStatusChanged`) et vérification régulière de l'accès aux serveurs des comptes (ex. toutes les 30 s hors ligne) ; passage automatique hors ligne / en ligne, puis relève et envoi de la boîte d'envoi au retour
+- [ ] 🟢 **Indicateur du mode hors connexion dans la barre d'état** (en bas) : icône et message « Hors connexion — N messages en attente d'envoi », état par compte (serveur injoignable, authentification requise), bouton *Réessayer maintenant* / *Travailler en ligne*
+- [ ] 🟡 **Icône d'état des connexions** dans la barre d'état (verte : tout est connecté ; orange : connexion en cours / partielle ; rouge : erreur ; grise : hors connexion)
+  - [ ] Clic : panneau listant chaque compte et chacun de ses services (IMAP, SMTP, Exchange / EWS, Microsoft Graph, Gmail, CalDAV / CardDAV…) avec état, serveur, dernière synchronisation réussie
+  - [ ] Message d'erreur explicite en cas d'échec : serveur injoignable, certificat refusé, délai dépassé, quota, **authentification requise**
+  - [ ] **Réauthentification** mise en évidence (mot de passe changé, jeton OAuth2 expiré ou révoqué, changement de compte / de tenant, MFA) : bouton *Se reconnecter* qui relance la saisie du mot de passe ou la connexion OAuth2 sans passer par les Paramètres
+  - [ ] Bouton *Réessayer* par compte ; lien vers les paramètres du compte
+  - [ ] Pastille d'erreur sur le compte concerné dans l'arborescence des dossiers et notification Windows (une seule fois par erreur) quand une réauthentification est nécessaire
+  - [ ] État fourni par `evo-core` (événement `connection-status` par service, à partir de `CamelService:connection-status`, des erreurs de relève et de l'état des sources EDS)
 - [ ] 🟡 **Préférences de téléchargement** : en-têtes seuls / message complet, limite de taille, synchronisation hors connexion des dossiers
 - [ ] 🟠 **Mode en-têtes seuls** : télécharger les en-têtes, marquer pour téléchargement (message / copie), annuler les marques, traiter les en-têtes marqués
 
