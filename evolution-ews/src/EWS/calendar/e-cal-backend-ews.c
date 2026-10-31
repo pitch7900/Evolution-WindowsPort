@@ -4802,7 +4802,7 @@ e_cal_backend_ews_class_init (ECalBackendEwsClass *klass)
 	object_class->finalize = ecb_ews_finalize;
 }
 
-GType e_cal_backend_ews_get_type_for_testing_sources (void);
+G_MODULE_EXPORT GType e_cal_backend_ews_get_type_for_testing_sources (void);
 
 G_MODULE_EXPORT GType
 e_cal_backend_ews_get_type_for_testing_sources (void)

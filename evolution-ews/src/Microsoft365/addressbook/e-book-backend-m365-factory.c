@@ -20,8 +20,8 @@ typedef EBookBackendFactoryClass EBookBackendM365FactoryClass;
 static EModule *e_module;
 
 /* Module Entry Points */
-void e_module_load (GTypeModule *type_module);
-void e_module_unload (GTypeModule *type_module);
+G_MODULE_EXPORT void e_module_load (GTypeModule *type_module);
+G_MODULE_EXPORT void e_module_unload (GTypeModule *type_module);
 
 /* Forward Declarations */
 GType e_book_backend_m365_factory_get_type (void);

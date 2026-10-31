@@ -49,12 +49,12 @@ void ews_set_alarm (ESoapRequest *request, ECalComponent *comp, ETimezoneCache *
 gint ews_get_alarm (ECalComponent *comp);
 void e_ews_clean_icomponent (ICalComponent *icomp);
 
-const gchar *e_cal_backend_ews_tz_util_get_msdn_equivalent (const gchar *ical_tz_location);
+G_MODULE_EXPORT const gchar *e_cal_backend_ews_tz_util_get_msdn_equivalent (const gchar *ical_tz_location);
 const gchar *e_cal_backend_ews_tz_util_get_ical_equivalent (const gchar *msdn_tz_location);
-void e_cal_backend_ews_populate_windows_zones (void);
+G_MODULE_EXPORT void e_cal_backend_ews_populate_windows_zones (void);
 void e_cal_backend_ews_unref_windows_zones (void);
 
-gboolean e_cal_backend_ews_convert_calcomp_to_xml (ESoapRequest *request, gpointer user_data, GError **error);
+G_MODULE_EXPORT gboolean e_cal_backend_ews_convert_calcomp_to_xml (ESoapRequest *request, gpointer user_data, GError **error);
 gboolean e_cal_backend_ews_convert_component_to_updatexml (ESoapRequest *request, gpointer user_data, GError **error);
 gboolean e_cal_backend_ews_clear_reminder_is_set (ESoapRequest *request, gpointer user_data, GError **error);
 gboolean e_cal_backend_ews_prepare_set_free_busy_status (ESoapRequest *request,gpointer user_data, GError **error);
