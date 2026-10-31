@@ -65,6 +65,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   avec bouton d'action, par exemple un compte en attente de connexion
   (fenêtre de mot de passe ou de connexion Microsoft fermée) avec *Saisir le
   mot de passe* / *Se connecter*.
+- **Ruban** des vues Courrier et Calendrier (onglets *Fichier*, *Accueil*,
+  *Envoi/réception*, *Dossier*, *Affichage*) : enregistrer, imprimer,
+  paramètres, quitter ; nouveaux éléments, répondre, transférer, lu / non
+  lu, suivi ; relève F5 / F9 / Maj+F9 ; gestion du dossier affiché ;
+  filtres, volet des dossiers masquable et disposition par défaut ;
+  Calendrier : nouvel événement, exporter, aujourd'hui / 30 prochains jours.
 
 ### Corrigé
 

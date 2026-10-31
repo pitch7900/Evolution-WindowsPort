@@ -63,7 +63,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 
 ### Structure de la fenêtre
 
-- [ ] 🟡 **Barre d'outils à onglets façon ruban** pour les vues Mail et Calendrier : *Fichier*, *Accueil*, *Envoi/réception*, *Dossier*, *Affichage* (WinUI n'a pas de ruban : `TabView` / `SelectorBar` + `CommandBar`). Hors périmètre : intégrations tierces (Teams, OneNote, TeamViewer, Rainbow, Copilot)
+- [x] 🟡 **Barre d'outils à onglets façon ruban** pour les vues Mail et Calendrier : *Fichier*, *Accueil*, *Envoi/réception*, *Dossier*, *Affichage* (WinUI n'a pas de ruban : `TabView` / `SelectorBar` + `CommandBar`). Hors périmètre : intégrations tierces (Teams, OneNote, TeamViewer, Rainbow, Copilot)
 - [ ] 🟡 **Barre d'accès rapide** personnalisable dans la barre de titre (Envoyer/Recevoir, Annuler, etc.)
 - [x] 🟢 **Barre latérale gauche** de navigation entre modules (Mail, Calendrier, Contacts, Tâches) — `NavigationView` déjà en place, à restyler en barre d'icônes
 - [x] 🟢 **Bandeau d'information** sous la barre d'outils (`InfoBar`), affiché dans les vues Mail et Calendrier (ex. réponses automatiques actives + bouton *Désactiver*)

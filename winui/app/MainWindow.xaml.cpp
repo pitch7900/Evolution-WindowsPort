@@ -284,6 +284,7 @@ namespace winrt::EvolutionWin::implementation
         AppWindow().Resize({ 1500, 950 });
         ::EvolutionWin::SetWindowIcon(AppWindow());
         RestorePaneWidths();
+        ApplyFolderPaneVisibility(::EvolutionWin::Settings::Instance().GetBoolean(L"layout.folders-visible", true));
 
         /* menu contextuel des dossiers (clic droit, touche Menu) */
         FolderTree().ContextRequested([this](UIElement const& sender, Input::ContextRequestedEventArgs const& args)
@@ -629,6 +630,7 @@ namespace winrt::EvolutionWin::implementation
         {
             m_view_tag = L"settings";
             RefreshBanner();
+            UpdateRibbon();
             MailView().Visibility(Visibility::Collapsed);
             CalendarViewPane().Visibility(Visibility::Collapsed);
             ContactsViewPane().Visibility(Visibility::Collapsed);
@@ -644,6 +646,7 @@ namespace winrt::EvolutionWin::implementation
         hstring tag = item ? unbox_value_or<hstring>(item.Tag(), L"") : hstring{};
         m_view_tag = tag;
         RefreshBanner();
+        UpdateRibbon();
 
         MailView().Visibility(tag == L"mail" ? Visibility::Visible : Visibility::Collapsed);
         CalendarViewPane().Visibility(tag == L"calendar" ? Visibility::Visible : Visibility::Collapsed);
@@ -1441,6 +1444,7 @@ namespace winrt::EvolutionWin::implementation
         ++m_search_request;
 
         FolderTitle().Text(item.Name());
+        UpdateRibbon();
         SearchBox().Text(L"");
 
         LoadMessages(false);
@@ -3648,6 +3652,194 @@ namespace winrt::EvolutionWin::implementation
         }
 
         InfoBanner().IsOpen(true);
+    }
+
+    /* Ruban des vues Courrier et Calendrier : onglets visibles selon la vue,
+     * barre de commandes de l'onglet choisi, commandes de l'onglet Dossier
+     * activées selon le dossier affiché (dossiers spéciaux protégés). */
+    void MainWindow::UpdateRibbon()
+    {
+        bool mail = m_view_tag == L"mail";
+        bool calendar = m_view_tag == L"calendar";
+
+        Ribbon().Visibility(mail || calendar ? Visibility::Visible : Visibility::Collapsed);
+        if (!mail && !calendar)
+            return;
+
+        RibbonSendReceiveTab().Visibility(mail ? Visibility::Visible : Visibility::Collapsed);
+        RibbonFolderTab().Visibility(mail ? Visibility::Visible : Visibility::Collapsed);
+
+        hstring tab = L"home";
+        if (auto selected = RibbonTabs().SelectedItem())
+            tab = unbox_value_or<hstring>(selected.Tag(), L"home");
+        if (calendar && (tab == L"sendreceive" || tab == L"folder"))
+        {
+            tab = L"home";
+            for (auto const& item : RibbonTabs().Items())
+                if (unbox_value_or<hstring>(item.Tag(), L"") == L"home")
+                    RibbonTabs().SelectedItem(item);
+        }
+
+        auto show = [](CommandBar const& bar, bool visible)
+        {
+            bar.Visibility(visible ? Visibility::Visible : Visibility::Collapsed);
+        };
+        show(RibbonMailFile(), mail && tab == L"file");
+        show(RibbonMailHome(), mail && tab == L"home");
+        show(RibbonSendReceive(), mail && tab == L"sendreceive");
+        show(RibbonFolder(), mail && tab == L"folder");
+        show(RibbonMailView(), mail && tab == L"view");
+        show(RibbonCalendarFile(), calendar && tab == L"file");
+        show(RibbonCalendarHome(), calendar && tab == L"home");
+        show(RibbonCalendarView(), calendar && tab == L"view");
+
+        /* onglet Dossier : selon le dossier affiché */
+        auto item = CurrentFolderItem();
+        JsonObject folder{ nullptr };
+        if (item)
+        {
+            if (auto folders = m_account_folders.find(std::wstring{ m_account }); folders != m_account_folders.end() && folders->second)
+                folder = FindFolderJson(folders->second, m_folder);
+        }
+        hstring type = folder ? folder.GetNamedString(L"type", L"") : hstring{};
+        bool special = !type.empty() && type != L"archive";
+        bool has_children = folder && folder.GetNamedArray(L"children", JsonArray{}).Size() > 0;
+
+        RibbonRenameFolder().IsEnabled(item && !special);
+        RibbonFolderMore().IsEnabled(item != nullptr);
+        RibbonEmptyFolder().IsEnabled(item != nullptr);
+        RibbonEmptyFolder().Label(type == L"trash" ? L"Vider la Corbeille" : type == L"junk" ? L"Vider les Indésirables" : L"Vider le dossier");
+        RibbonDeleteFolder().IsEnabled(item && !special && !has_children);
+    }
+
+    /* Élément de l'arborescence du dossier affiché (nullptr sans dossier). */
+    EvolutionWin::FolderItem MainWindow::CurrentFolderItem()
+    {
+        if (m_account.empty() || m_folder.empty())
+            return nullptr;
+        auto node = m_nodes.find(NodeKey(m_account, m_folder));
+        return node != m_nodes.end() ? node->second.Content().try_as<EvolutionWin::FolderItem>() : nullptr;
+    }
+
+    void MainWindow::OnRibbonTabChanged(SelectorBar const&, SelectorBarSelectionChangedEventArgs const&)
+    {
+        UpdateRibbon();
+    }
+
+    void MainWindow::OnRibbonSettingsClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        Navigation().SelectedItem(Navigation().SettingsItem());
+    }
+
+    void MainWindow::OnRibbonAboutClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ShowAboutDialogAsync();
+    }
+
+    void MainWindow::OnRibbonQuitClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        Close();
+    }
+
+    /* onglet Dossier : commandes sur le dossier affiché (ou au premier niveau
+     * du compte affiché pour Nouveau dossier sans dossier) */
+    void MainWindow::OnRibbonNewFolderClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (auto item = CurrentFolderItem())
+            CreateFolderAsync(m_account, m_folder, item.Name());
+        else if (!m_account.empty())
+            CreateFolderAsync(m_account, L"", L"");
+    }
+
+    void MainWindow::OnRibbonRenameFolderClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (auto item = CurrentFolderItem())
+            RenameFolderAsync(m_account, m_folder, item.Name());
+    }
+
+    /* Déplacer / Copier : mêmes entrées que le menu contextuel du dossier */
+    void MainWindow::OnRibbonFolderMenuOpening(IInspectable const&, IInspectable const&)
+    {
+        RibbonFolderMenu().Items().Clear();
+        if (auto item = CurrentFolderItem())
+            AppendFolderManagementItems(RibbonFolderMenu(), item, m_folder);
+    }
+
+    void MainWindow::OnRibbonMarkAllReadClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (auto item = CurrentFolderItem())
+            RunFolderActionAsync(item, L"mark-all-read");
+    }
+
+    void MainWindow::OnRibbonEmptyFolderClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (auto item = CurrentFolderItem())
+            RunFolderActionAsync(item, L"empty");
+    }
+
+    void MainWindow::OnRibbonDeleteFolderClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        auto item = CurrentFolderItem();
+        if (!item)
+            return;
+        JsonObject folder{ nullptr };
+        if (auto folders = m_account_folders.find(std::wstring{ m_account }); folders != m_account_folders.end() && folders->second)
+            folder = FindFolderJson(folders->second, m_folder);
+        DeleteFolderAsync(m_account, m_folder, item.Name(),
+            folder ? static_cast<int32_t>(folder.GetNamedNumber(L"total", 0)) : 0);
+    }
+
+    /* onglet Affichage (Courrier) : mêmes filtres que la barre au-dessus de la liste */
+    void MainWindow::OnRibbonReadFilterClick(IInspectable const& sender, RoutedEventArgs const&)
+    {
+        hstring tag = unbox_value_or<hstring>(sender.as<FrameworkElement>().Tag(), L"all");
+        for (auto const& item : ReadFilterBar().Items())
+        {
+            if (unbox_value_or<hstring>(item.Tag(), L"") == tag)
+                ReadFilterBar().SelectedItem(item);
+        }
+    }
+
+    void MainWindow::OnRibbonFolderPaneToggled(IInspectable const&, RoutedEventArgs const&)
+    {
+        bool visible = RibbonFolderPaneToggle().IsChecked().GetBoolean();
+        ::EvolutionWin::Settings::Instance().SetBoolean(L"layout.folders-visible", visible);
+        ApplyFolderPaneVisibility(visible);
+    }
+
+    /* Volet des dossiers affiché ou masqué (largeur mémorisée conservée).
+     * Paramètres :
+     *   visible : true pour afficher le volet */
+    void MainWindow::ApplyFolderPaneVisibility(bool visible)
+    {
+        RibbonFolderPaneToggle().IsChecked(visible);
+        FoldersSplitter().Visibility(visible ? Visibility::Visible : Visibility::Collapsed);
+        if (visible)
+            RestorePaneWidths();
+        else
+            FoldersColumn().Width(GridLengthHelper::FromPixels(0));
+    }
+
+    /* largeurs par défaut des panneaux, volet des dossiers réaffiché */
+    void MainWindow::OnRibbonResetLayoutClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        for (PaneLayout const* pane : { &FoldersPane, &ListPane })
+            ::EvolutionWin::Settings::Instance().SetNumber(pane->key, pane->default_width);
+        ::EvolutionWin::Settings::Instance().SetBoolean(L"layout.folders-visible", true);
+        ApplyFolderPaneVisibility(true);
+    }
+
+    /* onglet Affichage (Calendrier) */
+    void MainWindow::OnRibbonTodayClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        MonthCalendar().SelectedDates().Clear();
+        MonthCalendar().SelectedDates().Append(winrt::clock::now());
+        MonthCalendar().SetDisplayDate(winrt::clock::now());
+    }
+
+    void MainWindow::OnRibbonNextDaysClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        MonthCalendar().SelectedDates().Clear();
     }
 
     /* Croix du bandeau : l'avis affiché est retiré, le suivant apparaît. */
