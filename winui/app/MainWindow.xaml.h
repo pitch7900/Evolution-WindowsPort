@@ -16,6 +16,24 @@ namespace winrt::EvolutionWin::implementation
         void OnNavigationSelectionChanged(
             Microsoft::UI::Xaml::Controls::NavigationView const& sender,
             Microsoft::UI::Xaml::Controls::NavigationViewSelectionChangedEventArgs const& args);
+        /* ruban */
+        void OnRibbonTabChanged(
+            Microsoft::UI::Xaml::Controls::SelectorBar const& sender,
+            Microsoft::UI::Xaml::Controls::SelectorBarSelectionChangedEventArgs const& args);
+        void OnRibbonSettingsClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnRibbonAboutClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnRibbonQuitClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnRibbonNewFolderClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnRibbonRenameFolderClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnRibbonFolderMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
+        void OnRibbonMarkAllReadClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnRibbonEmptyFolderClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnRibbonDeleteFolderClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnRibbonReadFilterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnRibbonFolderPaneToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnRibbonResetLayoutClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnRibbonTodayClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnRibbonNextDaysClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnInfoBannerClosed(
             Microsoft::UI::Xaml::Controls::InfoBar const& sender,
             Microsoft::UI::Xaml::Controls::InfoBarClosedEventArgs const& args);
@@ -314,6 +332,9 @@ namespace winrt::EvolutionWin::implementation
             hstring const& action_label, std::function<void()> action);
         void ClearBanner(std::wstring const& id);
         void RefreshBanner();
+        void UpdateRibbon();
+        EvolutionWin::FolderItem CurrentFolderItem();
+        void ApplyFolderPaneVisibility(bool visible);
         int64_t m_selected_day_start{ 0 };
         /* vue Tâches : listes de tâches [{"uid", "name", "kind"}], toutes les
            tâches chargées (avant filtres) et liste affichée ("" = toutes) */

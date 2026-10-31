@@ -79,15 +79,186 @@
             <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
+            <!-- ruban (vues Courrier et Calendrier) : onglets (SelectorBar) et
+                 barre de commandes de l'onglet choisi ; voir MainWindow::UpdateRibbon -->
+            <StackPanel x:Name="Ribbon" Grid.Row="0" Margin="12,4,12,0">
+                <SelectorBar x:Name="RibbonTabs" SelectionChanged="OnRibbonTabChanged">
+                    <SelectorBarItem Text="Fichier" Tag="file" />
+                    <SelectorBarItem Text="Accueil" Tag="home" IsSelected="True" />
+                    <SelectorBarItem x:Name="RibbonSendReceiveTab" Text="Envoi/réception" Tag="sendreceive" />
+                    <SelectorBarItem x:Name="RibbonFolderTab" Text="Dossier" Tag="folder" />
+                    <SelectorBarItem Text="Affichage" Tag="view" />
+                </SelectorBar>
+                <Border CornerRadius="6" BorderThickness="1" Padding="4,0"
+                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                <Grid>
+                    <CommandBar x:Name="RibbonMailFile" Visibility="Collapsed" DefaultLabelPosition="Right"
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+                        <AppBarButton Label="Enregistrer sous" Click="OnSaveMessageClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE792;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Imprimer" Click="OnPrintClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE749;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarSeparator />
+                        <AppBarButton Label="Paramètres" Click="OnRibbonSettingsClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE713;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="À propos" Click="OnRibbonAboutClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Quitter" Click="OnRibbonQuitClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE7E8;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                    </CommandBar>
+                    <CommandBar x:Name="RibbonMailHome" Visibility="Visible" DefaultLabelPosition="Right"
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+                        <AppBarButton Label="Nouveau message" Click="OnNewMessageClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE710;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Nouvel élément">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8F4;" /></AppBarButton.Icon>
+                            <AppBarButton.Flyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem Text="Message" Click="OnNewMessageClick"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE715;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Événement" Click="OnNewEventClick"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE787;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Tâche" Click="OnNewTaskClick" KeyboardAcceleratorTextOverride="Ctrl+Maj+K"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE9D5;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Contact" Click="OnNewContactClick"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE77B;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                                </MenuFlyout>
+                            </AppBarButton.Flyout>
+                        </AppBarButton>
+                        <AppBarSeparator />
+                        <AppBarButton Label="Supprimer" Click="OnDeleteClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE74D;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarSeparator />
+                        <AppBarButton Label="Répondre" Click="OnReplyClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE97A;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Répondre à tous" Click="OnReplyAllClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xEE35;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Transférer" Click="OnForwardClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE72D;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarSeparator />
+                        <AppBarButton Label="Lu / Non lu" Click="OnToggleReadClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8C3;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Suivi" Click="OnToggleFlagClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE7C1;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                    </CommandBar>
+                    <CommandBar x:Name="RibbonSendReceive" Visibility="Collapsed" DefaultLabelPosition="Right"
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+                        <AppBarButton Label="Envoyer/Recevoir" Click="OnRefreshClick" ToolTipService.ToolTip="Envoyer/Recevoir (F5)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE72C;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Tous les dossiers" Click="OnRefreshAllClick" ToolTipService.ToolTip="Envoyer/Recevoir tous les dossiers (F9)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE895;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Dossier courant" Click="OnRefreshFolderClick" ToolTipService.ToolTip="Mettre à jour le dossier courant (Maj+F9)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8B7;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                    </CommandBar>
+                    <CommandBar x:Name="RibbonFolder" Visibility="Collapsed" DefaultLabelPosition="Right"
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+                        <AppBarButton Label="Nouveau dossier" Click="OnRibbonNewFolderClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8F4;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton x:Name="RibbonRenameFolder" Label="Renommer" Click="OnRibbonRenameFolderClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8AC;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton x:Name="RibbonFolderMore" Label="Déplacer / Copier">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8DE;" /></AppBarButton.Icon>
+                            <AppBarButton.Flyout>
+                                <MenuFlyout x:Name="RibbonFolderMenu" Opening="OnRibbonFolderMenuOpening" />
+                            </AppBarButton.Flyout>
+                        </AppBarButton>
+                        <AppBarSeparator />
+                        <AppBarButton Label="Marquer tout comme lu" Click="OnRibbonMarkAllReadClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8C3;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton x:Name="RibbonEmptyFolder" Label="Vider le dossier" Click="OnRibbonEmptyFolderClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE74D;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton x:Name="RibbonDeleteFolder" Label="Supprimer le dossier" Click="OnRibbonDeleteFolderClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8F6;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                    </CommandBar>
+                    <CommandBar x:Name="RibbonMailView" Visibility="Collapsed" DefaultLabelPosition="Right"
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+                        <AppBarButton Label="Tous les messages" Click="OnRibbonReadFilterClick" Tag="all">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8BD;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Non lus" Click="OnRibbonReadFilterClick" Tag="unread">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE715;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Lus" Click="OnRibbonReadFilterClick" Tag="read">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8C3;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarSeparator />
+                        <AppBarToggleButton x:Name="RibbonFolderPaneToggle" Label="Volet des dossiers" IsChecked="True"
+                                            Click="OnRibbonFolderPaneToggled">
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE8A0;" /></AppBarToggleButton.Icon>
+                        </AppBarToggleButton>
+                        <AppBarButton Label="Rétablir la disposition" Click="OnRibbonResetLayoutClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE72C;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                    </CommandBar>
+                    <CommandBar x:Name="RibbonCalendarFile" Visibility="Collapsed" DefaultLabelPosition="Right"
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+                        <AppBarButton Label="Exporter" Click="OnExportCalendarClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xEDE1;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarSeparator />
+                        <AppBarButton Label="Paramètres" Click="OnRibbonSettingsClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE713;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="À propos" Click="OnRibbonAboutClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Quitter" Click="OnRibbonQuitClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE7E8;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                    </CommandBar>
+                    <CommandBar x:Name="RibbonCalendarHome" Visibility="Collapsed" DefaultLabelPosition="Right"
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+                        <AppBarButton Label="Nouvel événement" Click="OnNewEventClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE710;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Actualiser" Click="OnRefreshCalendarClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE72C;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Exporter" Click="OnExportCalendarClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xEDE1;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                    </CommandBar>
+                    <CommandBar x:Name="RibbonCalendarView" Visibility="Collapsed" DefaultLabelPosition="Right"
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+                        <AppBarButton Label="Aujourd'hui" Click="OnRibbonTodayClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8D1;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="30 prochains jours" Click="OnRibbonNextDaysClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE787;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                    </CommandBar>
+                </Grid>
+                </Border>
+            </StackPanel>
+
+
             <!-- bandeau d'information des vues Courrier et Calendrier (compte à
                  reconnecter, réponses automatiques…) : MainWindow::ShowBanner -->
-            <InfoBar x:Name="InfoBanner" Grid.Row="0" IsOpen="False" IsClosable="True"
+            <InfoBar x:Name="InfoBanner" Grid.Row="1" IsOpen="False" IsClosable="True"
                      Margin="12,8,12,0" Closed="OnInfoBannerClosed" />
 
-            <Grid x:Name="MailView" Grid.Row="1">
+            <Grid x:Name="MailView" Grid.Row="2">
                 <!-- largeurs des dossiers et de la liste : réglées par les
                      séparateurs et mémorisées (MainWindow::RestorePaneWidths) -->
                 <Grid.ColumnDefinitions>
@@ -331,7 +502,7 @@
             </Grid>
 
             <!-- Vue Calendrier -->
-            <Grid x:Name="CalendarViewPane" Grid.Row="1" Visibility="Collapsed" Padding="24,16,24,16" ColumnSpacing="24">
+            <Grid x:Name="CalendarViewPane" Grid.Row="2" Visibility="Collapsed" Padding="24,16,24,16" ColumnSpacing="24">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
@@ -371,7 +542,7 @@
             </Grid>
 
             <!-- Vue Contacts -->
-            <Grid x:Name="ContactsViewPane" Grid.Row="1" Visibility="Collapsed">
+            <Grid x:Name="ContactsViewPane" Grid.Row="2" Visibility="Collapsed">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="380" />
                     <ColumnDefinition Width="*" />
@@ -443,7 +614,7 @@
             </Grid>
 
             <!-- Vue Tâches -->
-            <Grid x:Name="TasksViewPane" Grid.Row="1" Visibility="Collapsed" Padding="24,16,24,16" RowSpacing="12">
+            <Grid x:Name="TasksViewPane" Grid.Row="2" Visibility="Collapsed" Padding="24,16,24,16" RowSpacing="12">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -504,7 +675,7 @@
             </Grid>
 
             <!-- Vue Paramètres / Comptes -->
-            <ScrollViewer x:Name="SettingsViewPane" Grid.Row="1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer x:Name="SettingsViewPane" Grid.Row="2" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
             <Grid Padding="32,24,32,24" RowSpacing="16">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
