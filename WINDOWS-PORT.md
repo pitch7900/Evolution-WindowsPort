@@ -893,6 +893,20 @@ marqué comme lu).
   défaut, dossier de données `%LOCALAPPDATA%\EvolutionWin\WebView2`
   (`WEBVIEW2_USER_DATA_FOLDER`, le dossier de l'exécutable n'étant pas
   inscriptible sous Program Files), fond blanc.
+- Contenu externe : chaque message est servi à une adresse unique
+  `http://reader.evolution.invalid/message-<pid>-<n>` (réponse fournie par
+  `WebResourceRequested`, plus de limite de 2 Mo de `NavigateToString`) ;
+  l'autorisation du contenu distant ne s'applique qu'au `ContentLoading` de
+  cette navigation précise, si bien qu'une requête tardive du message
+  précédent ne peut ni charger de contenu ni ouvrir le bandeau. Les requêtes
+  distantes bloquées (http, https, ws, wss, ftp : images, CSS, polices,
+  cadres, pixels de suivi) sont comptées et ouvrent le bandeau « Contenu
+  externe bloqué » (afficher pour ce message, faire confiance à l'expéditeur
+  ou au domaine). Les navigations non demandées par l'utilisateur
+  (`<meta refresh>`) sont annulées. Préférences (`Settings.h`) :
+  `privacy.remote-content` = `never` | `trusted` (défaut) | `always`,
+  `privacy.trusted-senders` et `privacy.trusted-domains` (tableaux JSON en
+  minuscules, correspondance exacte de l'adresse From ou de son domaine).
 
 Validé avec le compte IMAP réel de l'utilisateur : arborescence avec
 compteurs de non-lus, liste des messages (non lus en gras), lecture des

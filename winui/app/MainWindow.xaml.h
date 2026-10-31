@@ -85,6 +85,14 @@ namespace winrt::EvolutionWin::implementation
 
         /* Gestionnaires des paramètres / comptes */
         void OnAddAccountClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnRemoteContentModeChanged(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+
+        /* Bandeau « Contenu externe bloqué » */
+        void OnShowRemoteContentClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTrustSenderClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTrustDomainClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
     private:
         enum class ReplyKind { Sender, All, Forward };
@@ -142,7 +150,18 @@ namespace winrt::EvolutionWin::implementation
             std::vector<hstring> const& uids);
         void ShowStatus(hstring const& message, Microsoft::UI::Xaml::Controls::InfoBarSeverity severity);
         fire_and_forget InitializeReaderAsync();
-        void ShowInReader(hstring const& html);
+        void ShowInReader(hstring const& html, bool allow_remote = false);
+        void ShowCurrentMessageInReader(bool force_remote);
+        void OnReaderResourceRequested(
+            Microsoft::Web::WebView2::Core::CoreWebView2 const& sender,
+            Microsoft::Web::WebView2::Core::CoreWebView2WebResourceRequestedEventArgs const& args);
+        fire_and_forget ServeReaderDocumentAsync(
+            Microsoft::Web::WebView2::Core::CoreWebView2 sender,
+            Microsoft::Web::WebView2::Core::CoreWebView2WebResourceRequestedEventArgs args,
+            hstring html);
+        void UpdateRemoteContentBanner();
+        void TrustCurrentSender(hstring const& key, std::wstring const& entry, hstring const& label);
+        void RefreshPrivacyView();
 
         /* Étape 1 : Notifications Windows et pièces jointes */
         void ShowNewMailNotification(Windows::Data::Json::JsonObject const& object);
@@ -193,7 +212,25 @@ namespace winrt::EvolutionWin::implementation
         bool m_reader_ready{ false };
         bool m_dialog_open{ false };
         int64_t m_selected_day_start{ 0 };
-        hstring m_pending_html;
+        /* Document du lecteur : chaque affichage reçoit une adresse unique
+         * (http://reader.evolution.invalid/…) servie par WebResourceRequested,
+         * ce qui identifie sans ambiguïté le document chargé ; le contenu
+         * distant n'est autorisé qu'une fois CE document chargé (ContentLoading). */
+        hstring m_reader_uri;
+        hstring m_reader_html;
+        uint64_t m_reader_generation{ 0 };
+        uint64_t m_reader_navigation_id{ 0 };
+        bool m_reader_navigation_known{ false };
+        /* décision de confiance pour le document demandé */
+        bool m_reader_pending_allow{ false };
+        /* le document demandé est chargé (les requêtes viennent de lui) */
+        bool m_reader_document_active{ false };
+        /* contenu distant autorisé pour le document chargé */
+        bool m_reader_remote_allowed{ false };
+        /* requêtes distantes bloquées pour le document chargé */
+        uint32_t m_reader_blocked_count{ 0 };
+        /* RadioButtons des préférences mis à jour par le code */
+        bool m_updating_privacy_view{ false };
         hstring m_account;
         hstring m_folder;
         /* only the latest message request is shown */
