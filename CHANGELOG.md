@@ -26,6 +26,9 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 - **Enregistrer sous** (Ctrl+S) : message au format `.eml` ; **Tout
   enregistrer** dans la barre des pièces jointes (dossier au choix, noms en
   double numérotés).
+- **Compte par défaut** : badge « Par défaut » et bouton *Définir par
+  défaut* dans Paramètres › Comptes ; les nouveaux messages partent de ce
+  compte, les réponses et transferts du compte qui a reçu le message.
 
 ### Corrigé
 

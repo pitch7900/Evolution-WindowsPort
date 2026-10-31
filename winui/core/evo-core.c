@@ -1451,11 +1451,13 @@ core_list_accounts_run (EvoCore *core,
 	GList *services, *link;
 	GPtrArray *stores;
 	JsonBuilder *builder;
+	ESource *default_account;
 	gchar *json;
 	guint ii;
 
 	services = camel_session_list_services (core->session);
 	stores = g_ptr_array_new ();
+	default_account = e_source_registry_ref_default_mail_account (core->registry);
 
 	for (link = services; link; link = g_list_next (link)) {
 		if (CAMEL_IS_STORE (link->data))
@@ -1483,6 +1485,9 @@ core_list_accounts_run (EvoCore *core,
 		json_builder_add_string_value (builder, provider ? provider->protocol : "");
 		json_builder_set_member_name (builder, "local");
 		json_builder_add_boolean_value (builder, !CAMEL_IS_NETWORK_SERVICE (service));
+		json_builder_set_member_name (builder, "default");
+		json_builder_add_boolean_value (builder, default_account &&
+			g_strcmp0 (e_source_get_uid (default_account), camel_service_get_uid (service)) == 0);
 		json_builder_end_object (builder);
 
 		g_free (address);
@@ -1491,6 +1496,7 @@ core_list_accounts_run (EvoCore *core,
 	json_builder_end_array (builder);
 	json = json_from_builder (builder);
 
+	g_clear_object (&default_account);
 	g_object_unref (builder);
 	g_ptr_array_unref (stores);
 	g_list_free_full (services, g_object_unref);
@@ -4569,6 +4575,46 @@ core_oauth2_finish_run (EvoCore *core,
 	return success ? g_strdup ("{}") : NULL;
 }
 
+/* Désigne le compte de messagerie par défaut (nouveaux messages), avec son
+ * identité d'expédition comme identité par défaut d'EDS.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = uid du compte
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : "{}" en cas de succès, NULL sinon. */
+static gchar *
+core_set_default_account_run (EvoCore *core,
+			      gchar **args,
+			      GError **error)
+{
+	ESource *account, *identity = NULL;
+
+	account = e_source_registry_ref_source (core->registry, args[0]);
+	if (!account || !e_source_has_extension (account, E_SOURCE_EXTENSION_MAIL_ACCOUNT)) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "Compte introuvable : « %s »", args[0]);
+		g_clear_object (&account);
+		return NULL;
+	}
+
+	e_source_registry_set_default_mail_account (core->registry, account);
+
+	{
+		gchar *identity_uid = e_source_mail_account_dup_identity_uid (
+			e_source_get_extension (account, E_SOURCE_EXTENSION_MAIL_ACCOUNT));
+
+		if (identity_uid)
+			identity = e_source_registry_ref_source (core->registry, identity_uid);
+		g_free (identity_uid);
+	}
+	if (identity)
+		e_source_registry_set_default_mail_identity (core->registry, identity);
+
+	g_clear_object (&identity);
+	g_object_unref (account);
+
+	return g_strdup ("{}");
+}
+
 /* Supprime un compte de messagerie, son identité et son serveur d'envoi SMTP
  * d'evolution-data-server ainsi que de la session Camel active.
  * Paramètres :
@@ -5710,6 +5756,19 @@ evo_core_add_account (EvoCore *core,
 	g_return_if_fail (account_json != NULL);
 
 	core_submit (core, core_add_account_run, g_strdupv (args), func, user_data);
+}
+
+void
+evo_core_set_default_account (EvoCore *core,
+			      const char *account_uid,
+			      EvoCoreResultFunc func,
+			      void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, NULL };
+
+	g_return_if_fail (account_uid != NULL);
+
+	core_submit (core, core_set_default_account_run, g_strdupv (args), func, user_data);
 }
 
 void

@@ -229,6 +229,16 @@ namespace EvolutionWin
          * Paramètres :
          *   account_uid : identifiant du compte à supprimer
          *   handler     : rappel sur le thread de l'interface */
+        /* Désigne le compte par défaut des nouveaux messages.
+         * Paramètres :
+         *   account_uid : uid du compte
+         *   handler     : rappel recevant {} */
+        void SetDefaultAccount(winrt::hstring const& account_uid, CoreHandler handler)
+        {
+            evo_core_set_default_account(m_core, winrt::to_string(account_uid).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         void RemoveAccount(winrt::hstring const& account_uid, CoreHandler handler)
         {
             evo_core_remove_account(m_core, winrt::to_string(account_uid).c_str(),
