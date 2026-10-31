@@ -95,6 +95,18 @@ namespace EvolutionWin
          *   folder  : chemin complet du dossier
          *   uid     : identifiant du message à supprimer
          *   handler : rappel sur le thread de l'interface */
+        /* Action sur tout un dossier : "mark-all-read" ou "empty".
+         * Paramètres :
+         *   account, folder : dossier visé
+         *   action          : "mark-all-read" ou "empty"
+         *   handler         : rappel recevant {"count": n, "permanent": true|false} */
+        void FolderAction(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& action,
+                          CoreHandler handler)
+        {
+            evo_core_folder_action(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                winrt::to_string(action).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         void DeleteMessage(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& uid,
                            CoreHandler handler)
         {

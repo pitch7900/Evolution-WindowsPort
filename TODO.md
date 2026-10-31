@@ -303,8 +303,8 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
 ## 9. Mail – Gestion des dossiers — 🟠
 
 - [ ] 🟡 **Nouveau dossier, Renommer, Copier, Déplacer, Supprimer** (`camel_store_create_folder_sync`, etc.), glisser-déposer dans l'arborescence
-- [ ] 🟢 **Marquer tout comme lu**
-- [ ] 🟢 **Supprimer tout** : vider le dossier, la Corbeille, les Indésirables
+- [x] 🟢 **Marquer tout comme lu**
+- [x] 🟢 **Supprimer tout** : vider le dossier, la Corbeille, les Indésirables
 - [ ] 🟢 **Afficher tous les dossiers de A à Z**
 - [ ] 🟠 **Nettoyer le dossier** (et sous-dossiers) des messages redondants — même logique que §7
 - [ ] **Récupérer les éléments supprimés** :

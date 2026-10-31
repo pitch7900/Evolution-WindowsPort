@@ -135,6 +135,25 @@ void		evo_core_set_message_flags	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Action sur tout un dossier :
+ *   "mark-all-read" : marquer tous les messages comme lus ;
+ *   "empty"         : Corbeille / Indésirables : suppression définitive de
+ *                     tous les messages ; autre dossier : messages déplacés
+ *                     vers la corbeille du compte.
+ * Paramètres :
+ *   core             : instance du moteur evo-core
+ *   account_uid      : identifiant du compte
+ *   folder_full_name : chemin complet du dossier
+ *   action           : "mark-all-read" ou "empty"
+ *   func             : rappel recevant {"count": n, "permanent": true|false}
+ *   user_data        : données utilisateur transmises au rappel */
+void		evo_core_folder_action		(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *action,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Supprime un message : le déplace vers la corbeille du compte si elle existe
  * et que le message ne s'y trouve pas déjà, sinon le marque comme supprimé et
  * purge le dossier.
