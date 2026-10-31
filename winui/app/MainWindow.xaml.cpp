@@ -666,6 +666,53 @@ namespace winrt::EvolutionWin::implementation
                 delete_button.Visibility(Visibility::Collapsed);
             });
 
+            /* Barre de lecture rapide (style Outlook) dans la marge gauche :
+             * couleur d'accent si non lu ; un clic bascule lu / non lu sans
+             * ouvrir ni sélectionner le message */
+            Grid read_bar;
+            read_bar.Tag(box_value(L"read-bar"));
+            read_bar.Width(8);
+            read_bar.Margin(ThicknessHelper::FromLengths(-8, -8, 0, -8));
+            read_bar.HorizontalAlignment(HorizontalAlignment::Left);
+            read_bar.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+            Grid::SetRowSpan(read_bar, 2);
+            Border read_mark;
+            read_mark.Width(4);
+            read_mark.CornerRadius(CornerRadiusHelper::FromUniformRadius(2));
+            read_mark.Margin(ThicknessHelper::FromLengths(0, 6, 0, 6));
+            read_mark.HorizontalAlignment(HorizontalAlignment::Center);
+            read_bar.Children().Append(read_mark);
+            read_bar.PointerEntered([this, uid, read_mark](IInspectable const&, Input::PointerRoutedEventArgs const&)
+            {
+                auto it = m_message_states.find(std::wstring{ uid });
+                bool is_seen = it == m_message_states.end() || it->second.seen;
+                read_mark.Width(6);
+                if (is_seen)
+                    read_mark.Background(Application::Current().Resources()
+                        .Lookup(box_value(L"ControlStrongStrokeColorDefaultBrush")).as<Brush>());
+            });
+            read_bar.PointerExited([this, uid, read_mark](IInspectable const&, Input::PointerRoutedEventArgs const&)
+            {
+                auto it = m_message_states.find(std::wstring{ uid });
+                bool is_seen = it == m_message_states.end() || it->second.seen;
+                read_mark.Width(4);
+                if (is_seen)
+                    read_mark.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+            });
+            /* ni sélection ni ouverture : l'appui est consommé ici */
+            read_bar.PointerPressed([](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+            {
+                args.Handled(true);
+            });
+            read_bar.Tapped([this, uid](IInspectable const&, Input::TappedRoutedEventArgs const& args)
+            {
+                args.Handled(true);
+                auto it = m_message_states.find(std::wstring{ uid });
+                bool is_seen = it == m_message_states.end() || it->second.seen;
+                SetMessageFlag(uid, L"seen", !is_seen);
+            });
+            item.Children().Append(read_bar);
+
             UpdateMessageItemVisual(item, seen, flagged);
 
             /* Menu contextuel par clic droit sur chaque message (gère un ou plusieurs messages sélectionnés) */
@@ -1407,7 +1454,16 @@ namespace winrt::EvolutionWin::implementation
 
         for (auto const& child : item.Children())
         {
-            if (auto text = child.try_as<TextBlock>(); text && Grid::GetColumn(text) == 0)
+            /* barre de lecture rapide : accent si non lu, info-bulle de l'action */
+            if (auto bar = child.try_as<Grid>(); bar && unbox_value_or<hstring>(bar.Tag(), L"") == L"read-bar")
+            {
+                if (auto mark = bar.Children().GetAt(0).try_as<Border>())
+                    mark.Background(seen
+                        ? Brush{ SolidColorBrush{ Microsoft::UI::Colors::Transparent() } }
+                        : Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
+                ToolTipService::SetToolTip(bar, box_value(seen ? L"Marquer comme non lu" : L"Marquer comme lu"));
+            }
+            else if (auto text = child.try_as<TextBlock>(); text && Grid::GetColumn(text) == 0)
             {
                 text.FontWeight(weight);
                 if (!seen && Grid::GetRow(text) == 1)

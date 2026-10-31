@@ -34,6 +34,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 | 17 | Catégories et codes couleur | 🟡 |
 | 18 | Import / Export | 🟡 |
 | 19 | Configuration de l'application | 🟡 |
+| 20 | Traductions de l'interface | 🟠 |
 
 ### Briques préalables (débloquent plusieurs fonctionnalités)
 
@@ -197,9 +198,9 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 
 ### Barre de lecture rapide
 
-- [ ] 🟢 **Barre verticale à gauche de chaque message** (comme Outlook) : affichée en couleur d'accent pour les messages non lus, invisible pour les lus
-  - [ ] Clic sur la barre : bascule Lu / Non lu sans ouvrir ni sélectionner le message (fonction `evo-core` existante)
-  - [ ] Survol : barre mise en évidence et info-bulle « Marquer comme lu » / « Marquer comme non lu »
+- [x] 🟢 **Barre verticale à gauche de chaque message** (comme Outlook) : affichée en couleur d'accent pour les messages non lus, invisible pour les lus
+  - [x] Clic sur la barre : bascule Lu / Non lu sans ouvrir ni sélectionner le message (fonction `evo-core` existante)
+  - [x] Survol : barre mise en évidence et info-bulle « Marquer comme lu » / « Marquer comme non lu »
   - [ ] Fonctionne aussi sur un en-tête de conversation (marque tout le fil) et dans les vues unifiées
 
 ### Filtres rapides
@@ -486,7 +487,7 @@ Page *Paramètres* regroupant les préférences générales (les réglages propr
 
 ### Général
 
-- [ ] 🟢 Langue de l'interface, thème (clair / sombre / système), taille du texte
+- [ ] 🟢 Langue de l'interface (cf. §20), thème (clair / sombre / système), taille du texte
 - [ ] 🟢 Démarrage avec Windows, réduction dans la zone de notification à la fermeture
 - [ ] 🟢 Module affiché au démarrage (Mail, Calendrier, Contacts, Tâches)
 - [ ] 🟡 Raccourcis clavier (afficher la liste, profil Outlook / Evolution)
@@ -514,3 +515,35 @@ Page *Paramètres* regroupant les préférences générales (les réglages propr
 ### Sauvegarde des préférences
 
 - [ ] 🟡 Exporter / importer la configuration (préférences, signatures, règles, catégories) pour la reprendre sur un autre poste
+
+## 20. Traductions de l'interface — 🟠
+
+Les textes d'EvolutionWin sont aujourd'hui écrits en dur en français dans le code et le XAML. Les traductions d'EDS, evolution-ews, GLib, etc. (`.mo`) sont déjà installées par le MSI.
+
+### Internationalisation de l'application
+
+- [ ] 🟠 **Extraire tous les textes** du XAML et du C++ dans des fichiers de ressources (`Resources.resw` par langue, `x:Uid` dans le XAML, `ResourceLoader` / MRT Core dans le code) — prérequis à toute traduction
+- [ ] 🟡 Textes construits dynamiquement : pluriels (« 1 message » / « 3 messages »), paramètres insérés dans les phrases (« Compte {0} : {1} non lus »)
+- [ ] 🟢 Dates, heures, nombres et tailles formatés selon la langue (`Windows.Globalization`)
+- [ ] 🟡 Messages d'erreur d'`evo-core` traduits (chaînes C passées par gettext avec un domaine `evo-core`, ou codes d'erreur traduits côté interface)
+- [ ] 🟢 Préfixes de réponse / transfert selon la langue (« RE: » / « TR: », « AW: » / « WG: », « R: » / « I: »…) et en-tête de citation traduit
+
+### Langues
+
+- [ ] 🟢 Français (langue source actuelle)
+- [ ] 🟡 Anglais
+- [ ] 🟡 Allemand
+- [ ] 🟡 Italien
+- [ ] 🟡 Espagnol, portugais, néerlandais (autres langues selon les besoins ; s'appuyer sur les traductions existantes d'Evolution pour la terminologie)
+- [ ] 🟢 Processus de traduction : fichiers `.resw` (ou `.po` convertis) relus par des locuteurs natifs, vérification des clés manquantes à la compilation
+
+### Choix de la langue
+
+- [ ] 🟢 **Par défaut** : langue d'affichage de Windows, repli sur l'anglais si elle n'est pas traduite
+- [ ] 🟢 **Dans les Paramètres** (§19) : choix manuel de la langue, appliqué au redémarrage (`ApplicationLanguages.PrimaryLanguageOverride`)
+- [ ] 🟡 **Dans le MSI** : choix de la langue par défaut à l'installation
+  - [ ] Liste déroulante dans l'interface d'installation (boîte de dialogue WiX `WixUI` personnalisée), préremplie avec la langue de Windows
+  - [ ] Propriété publique `UILANGUAGE` pour le déploiement silencieux (`msiexec /i Evolution-<version>-x64.msi /qn UILANGUAGE=de-DE`, GPO / Intune)
+  - [ ] Valeur écrite dans le registre machine (`HKLM\Software\Evolution-WindowsPort\UILanguage`), utilisée tant que l'utilisateur n'a pas choisi une autre langue dans les Paramètres
+  - [ ] Option : installer toutes les langues ou seulement la langue choisie (fonctionnalités MSI par langue)
+- [ ] 🟡 **Interface du MSI elle-même traduite** (MSI multilingue par transformations de langue, ou un MSI par langue)
