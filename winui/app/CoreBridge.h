@@ -246,9 +246,22 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Détecte le type d'un compte et ses serveurs à partir de l'adresse.
+         * Paramètres :
+         *   email   : adresse électronique
+         *   handler : rappel recevant {"type", "source", "provider", "user",
+         *             "imap_host", "imap_port", "imap_security", "smtp_host",
+         *             "smtp_port", "smtp_security", "oauth2", "ews_url"} */
+        void DetectAccount(winrt::hstring const& email, CoreHandler handler)
+        {
+            evo_core_detect_account(m_core, winrt::to_string(email).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Crée un compte Microsoft 365 / Exchange Online (Microsoft Graph).
          * Paramètres :
-         *   account_json : JSON {"email", "display_name", "full_name", "client_id"?, "tenant"?}
+         *   account_json : JSON {"email", "display_name", "full_name", "client_id"?, "tenant"?},
+         *                  ou compte Exchange : {"backend": "ews", "hosturl", "user"?, "password"?, ...}
          *   handler      : rappel recevant {"uid", "collection_uid"} */
         void AddMicrosoft365Account(winrt::hstring const& account_json, CoreHandler handler)
         {

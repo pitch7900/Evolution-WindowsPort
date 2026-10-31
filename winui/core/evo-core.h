@@ -381,6 +381,9 @@ void		evo_core_set_default_account	(EvoCore *core,
  * {"email": "...", "display_name": "...", "full_name": "...",
  *  "client_id": "..." (facultatif : application Entra ID propre),
  *  "tenant": "..." (facultatif : "common" par défaut)}
+ * Avec "backend": "ews", compte Exchange de l'entreprise : "hosturl" (URL
+ * EWS), "user" (facultatif : l'adresse) et "password" (NTLM). Pas de
+ * connexion OAuth2 ensuite.
  * Paramètres :
  *   core         : instance du moteur evo-core
  *   account_json : configuration du compte au format JSON UTF-8
@@ -389,6 +392,25 @@ void		evo_core_set_default_account	(EvoCore *core,
 void		evo_core_add_microsoft365_account
 						(EvoCore *core,
 						 const char *account_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Détecte le type d'un compte et ses serveurs à partir de l'adresse :
+ * fournisseurs connus (base ISPDB de Thunderbird embarquée), serveurs MX du
+ * domaine, Autodiscover Exchange / Microsoft 365, autoconfig du domaine et
+ * ISPDB en ligne, enregistrements SRV ; à défaut, imap.<domaine> et
+ * smtp.<domaine>. Avec "type": "exchange", créer le compte par
+ * evo_core_add_microsoft365_account () avec "backend": "ews".
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   email     : adresse électronique du compte
+ *   func      : rappel recevant {"type": "m365"|"exchange"|"google"|"imap",
+ *               "source": "known"|"mx"|"autodiscover"|"autoconfig"|"ispdb"|"srv"|"guess",
+ *               "provider", "user", "imap_host", "imap_port", "imap_security",
+ *               "smtp_host", "smtp_port", "smtp_security", "oauth2", "ews_url"}
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_detect_account		(EvoCore *core,
+						 const char *email,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 

@@ -78,6 +78,14 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   *Affichage › Trier par* ; date, expéditeur, destinataire, objet (sans
   « Re: » / « TR: »), taille, pièces jointes, indicateur, lu / non lu,
   catégories ; ordre inversable, tri mémorisé pour chaque dossier.
+- **Ajout de compte unifié** : bouton *Ajouter un compte* ; à partir de
+  l'adresse, détection du type (Microsoft 365 / Outlook.com, Exchange de
+  l'entreprise, Gmail, IMAP / SMTP) et des serveurs : fournisseurs connus
+  (base ISPDB de Thunderbird embarquée, MPL 2.0), serveurs MX du domaine,
+  Autodiscover, autoconfig du domaine et ISPDB en ligne, enregistrements
+  SRV ; paramètres proposés à confirmer ou corriger, type modifiable,
+  configuration manuelle possible. Nouveau type de compte *Exchange de
+  l'entreprise* (EWS, mot de passe).
 
 ### Corrigé
 

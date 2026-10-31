@@ -58,6 +58,26 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 - [x] 🟢 **Menu « À propos »** (menu *Aide* / *Fichier*, ou entrée en bas de la barre latérale) : boîte de dialogue avec icône, nom, version en cours, licence (LGPL 2.1 ou ultérieure), lien vers le dépôt GitHub et le [CHANGELOG.md](CHANGELOG.md)
   - [x] Version tirée du fichier [VERSION](VERSION) à la compilation (macro / ressource `VERSIONINFO` générée par MSBuild, comme le fait déjà `build-msi.ps1` pour le MSI), pour que l'exécutable, le MSI et la boîte « À propos » affichent toujours la même version
   - [x] Versions des composants (EDS, evolution-ews, Windows App SDK, WebView2) et bouton « Copier les informations » pour les rapports de bug
+- [ ] 🟡 **Mise à jour automatique depuis GitHub** ([pitch7900/Evolution-WindowsPort](https://github.com/pitch7900/Evolution-WindowsPort))
+  - [ ] **Vérification de version** : lecture du fichier [VERSION](VERSION) de la branche `main` (`https://raw.githubusercontent.com/pitch7900/Evolution-WindowsPort/main/VERSION`) et comparaison avec la version compilée dans l'exécutable (comparaison numérique `x.y.z`, pas textuelle)
+  - [ ] Fréquence : au démarrage (après quelques minutes, pour ne pas ralentir la relève) puis une fois par jour ; bouton *Rechercher les mises à jour* dans la boîte « À propos »
+  - [ ] **Notification** de la nouvelle version (bandeau / toast) avec les nouveautés extraites du [CHANGELOG.md](CHANGELOG.md), boutons *Installer maintenant*, *Plus tard*, *Ignorer cette version*
+  - [ ] **Téléchargement automatique** du MSI depuis `dist/` (`dist/Evolution-<version>-x64.msi`) en arrière-plan, avec progression dans la barre d'état (§4), dans `%LOCALAPPDATA%\EvolutionWin\Updates`
+  - [ ] **Vérification d'intégrité avant installation** : empreinte SHA-256 publiée à côté du MSI (`.sha256`) et signature Authenticode du MSI (`WinVerifyTrust`, éditeur attendu) ; refus d'installer si la vérification échoue
+  - [ ] **Installation** : fermeture propre de l'application (boîte d'envoi vidée, synchronisation terminée), lancement de `msiexec /i … /passive` (élévation UAC, installation par machine), redémarrage automatique d'EvolutionWin à la fin
+  - [ ] Nettoyage des MSI téléchargés après installation réussie
+  - [ ] **Paramètres** (§19) : mise à jour automatique / notification seulement / désactivée ; canal (versions stables, préversions)
+  - [ ] **Politique d'entreprise** : désactivation par clé de registre machine ou propriété MSI (`AUTOUPDATE=0`) pour les déploiements gérés (GPO / Intune)
+  - [ ] Évolution : passer aux *Releases* GitHub (cf. point suivant) plutôt que `dist/` dans le dépôt
+- [ ] 🟡 **Publication des versions par les Releases GitHub** (au lieu de versionner les MSI dans `dist/`, ce qui alourdit l'historique Git à chaque version)
+  - [ ] Une *Release* par version, avec l'étiquette Git `v<version>` (ex. `v0.9.3`) créée à partir du fichier [VERSION](VERSION)
+  - [ ] Fichiers joints à la Release : `Evolution-<version>-x64.msi` et son empreinte `.sha256`
+  - [ ] Notes de version reprises automatiquement de la section correspondante du [CHANGELOG.md](CHANGELOG.md)
+  - [ ] Script de publication (`tools\publish-release.ps1`, avec `gh release create`) lancé après `build-msi.bat` : vérifie que la version n'existe pas déjà, que le CHANGELOG contient la version, puis crée l'étiquette et la Release
+  - [ ] Préversions marquées *Pre-release* (canal « préversions » de la mise à jour automatique)
+  - [ ] Mise à jour automatique : version et URL du MSI lues par l'API `https://api.github.com/repos/pitch7900/Evolution-WindowsPort/releases/latest` (champ `tag_name` et `assets`) au lieu du fichier `VERSION` et de `dist/`
+  - [ ] Retirer `dist/` du dépôt (et l'ajouter au `.gitignore`), mettre à jour la documentation ([WINDOWS-PORT.md](WINDOWS-PORT.md), README)
+  - [ ] 🟠 Optionnel : construction et publication automatiques par GitHub Actions à chaque étiquette (nécessite un runner Windows avec toute la chaîne MSVC / gvsbuild, ou un runner auto-hébergé)
 
 ## 2. Interface générale et disposition — 🟡
 
@@ -91,23 +111,23 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 
 ### Ajout unifié avec détection automatique
 
-- [ ] 🟢 **Bouton générique « Ajouter un compte »** à la place de « Ajouter un compte IMAP/SMTP » (menu Réglages)
-- [ ] 🟠 **Détection automatique du type de compte** à partir de l'adresse email / du domaine :
-  - [ ] Microsoft 365 / Exchange Online (OAuth2 + Graph / EWS)
-  - [ ] Exchange on-premise (Autodiscover → EWS)
-  - [ ] Gmail / Google Workspace (OAuth2, IMAP/SMTP Google)
-  - [ ] IMAP/SMTP générique (repli par défaut)
-- [ ] **Mécanismes de détection** (dans l'ordre) :
-  - [ ] 🟢 Fournisseurs connus (gmail.com, outlook.com, etc.)
-  - [ ] 🟡 Enregistrements MX du domaine (`*.mail.protection.outlook.com`, `*.google.com`), via `DnsQuery`
-  - [ ] 🟡 Autodiscover Exchange / Microsoft 365
-  - [ ] 🟡 Autoconfig Thunderbird (`autoconfig.<domaine>`, base ISPDB)
-  - [ ] 🟢 Enregistrements DNS SRV (`_imaps._tcp`, `_submission._tcp`)
-- [ ] 🟢 **S'inspirer du dépôt Thunderbird [thunderbird/autoconfig](https://github.com/thunderbird/autoconfig)** pour aller plus vite : base ISPDB (fichiers XML de configuration par fournisseur : serveurs, ports, chiffrement, méthode d'authentification, OAuth2) et format `clientConfig` des fichiers autoconfig
-  - [ ] Réutiliser le format XML et le parseur pour les trois sources : fichiers embarqués, `autoconfig.<domaine>` / `.well-known/autoconfig`, ISPDB en ligne (`https://autoconfig.thunderbird.net/v1.1/<domaine>`)
-  - [ ] Embarquer une copie des fournisseurs les plus courants (détection hors ligne, remplace la liste « Fournisseurs connus »), mise à jour à chaque version
-  - [ ] Vérifier la licence du dépôt avant d'embarquer les fichiers et mentionner la provenance
-- [ ] 🟡 **Confirmation / correction manuelle** : type détecté et paramètres proposés, possibilité de forcer un autre type ou de passer en configuration manuelle
+- [x] 🟢 **Bouton générique « Ajouter un compte »** à la place de « Ajouter un compte IMAP/SMTP » (menu Réglages)
+- [x] 🟠 **Détection automatique du type de compte** à partir de l'adresse email / du domaine :
+  - [x] Microsoft 365 / Exchange Online (OAuth2 + Graph / EWS)
+  - [x] Exchange on-premise (Autodiscover → EWS) — compte EWS (NTLM) créé, non testé faute de serveur
+  - [x] Gmail / Google Workspace (OAuth2, IMAP/SMTP Google)
+  - [x] IMAP/SMTP générique (repli par défaut : `imap.<domaine>` / `smtp.<domaine>`, signalés comme supposés)
+- [x] **Mécanismes de détection** (dans l'ordre) :
+  - [x] 🟢 Fournisseurs connus (gmail.com, outlook.com, etc.)
+  - [x] 🟡 Enregistrements MX du domaine (`*.mail.protection.outlook.com`, `*.google.com`), via `DnsQuery`
+  - [x] 🟡 Autodiscover Exchange / Microsoft 365
+  - [x] 🟡 Autoconfig Thunderbird (`autoconfig.<domaine>`, base ISPDB)
+  - [x] 🟢 Enregistrements DNS SRV (`_imaps._tcp`, `_submission._tcp`)
+- [x] 🟢 **S'inspirer du dépôt Thunderbird [thunderbird/autoconfig](https://github.com/thunderbird/autoconfig)** pour aller plus vite : base ISPDB (fichiers XML de configuration par fournisseur : serveurs, ports, chiffrement, méthode d'authentification, OAuth2) et format `clientConfig` des fichiers autoconfig
+  - [x] Réutiliser le format XML et le parseur pour les trois sources : fichiers embarqués, `autoconfig.<domaine>` / `.well-known/autoconfig`, ISPDB en ligne (`https://autoconfig.thunderbird.net/v1.1/<domaine>`)
+  - [x] Embarquer une copie des fournisseurs les plus courants (détection hors ligne, remplace la liste « Fournisseurs connus »), mise à jour à chaque version
+  - [x] Vérifier la licence du dépôt avant d'embarquer les fichiers et mentionner la provenance (MPL 2.0, `winui/core/ispdb/README.md`)
+- [x] 🟡 **Confirmation / correction manuelle** : type détecté et paramètres proposés, possibilité de forcer un autre type ou de passer en configuration manuelle
 
 ### Compte par défaut
 
