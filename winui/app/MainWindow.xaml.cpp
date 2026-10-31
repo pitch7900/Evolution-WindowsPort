@@ -627,6 +627,8 @@ namespace winrt::EvolutionWin::implementation
     {
         if (args.IsSettingsSelected())
         {
+            m_view_tag = L"settings";
+            RefreshBanner();
             MailView().Visibility(Visibility::Collapsed);
             CalendarViewPane().Visibility(Visibility::Collapsed);
             ContactsViewPane().Visibility(Visibility::Collapsed);
@@ -640,6 +642,8 @@ namespace winrt::EvolutionWin::implementation
 
         auto item = args.SelectedItem().try_as<NavigationViewItem>();
         hstring tag = item ? unbox_value_or<hstring>(item.Tag(), L"") : hstring{};
+        m_view_tag = tag;
+        RefreshBanner();
 
         MailView().Visibility(tag == L"mail" ? Visibility::Visible : Visibility::Collapsed);
         CalendarViewPane().Visibility(tag == L"calendar" ? Visibility::Visible : Visibility::Collapsed);
@@ -3519,8 +3523,21 @@ namespace winrt::EvolutionWin::implementation
     fire_and_forget MainWindow::PromptPasswordAsync(hstring source_uid, hstring name, hstring user, bool rejected)
     {
         auto strong = get_strong();
+        std::wstring banner_id = L"auth:" + std::wstring{ source_uid };
+        auto remind = [this, banner_id, source_uid, name, user]()
+        {
+            /* fenêtre fermée ou déjà une autre boîte ouverte : rappel dans le bandeau */
+            ShowBanner(banner_id, L"Connexion requise",
+                L"Le compte « " + name + L" » attend son mot de passe.",
+                InfoBarSeverity::Warning, L"Saisir le mot de passe",
+                [this, source_uid, name, user]() { PromptPasswordAsync(source_uid, name, user, false); });
+        };
+
         if (m_dialog_open || !Content() || !Content().XamlRoot())
+        {
+            remind();
             co_return;
+        }
 
         m_dialog_open = true;
 
@@ -3551,23 +3568,94 @@ namespace winrt::EvolutionWin::implementation
         auto result = co_await dialog.ShowAsync();
         m_dialog_open = false;
 
-        if (result == ContentDialogResult::Primary)
+        hstring password = password_box.Password();
+        if (result != ContentDialogResult::Primary || password.empty())
         {
-            hstring password = password_box.Password();
-            if (!password.empty())
-            {
-                m_core->SavePassword(source_uid, password, [this, name](hstring const&, hstring const& error)
-                {
-                    if (!error.empty())
-                    {
-                        ShowStatus(L"Mot de passe : " + error, InfoBarSeverity::Error);
-                        return;
-                    }
-                    ShowStatus(L"Mot de passe enregistré pour « " + name + L" ».", InfoBarSeverity::Success);
-                    m_core->Refresh();
-                });
-            }
+            remind();
+            co_return;
         }
+
+        m_core->SavePassword(source_uid, password, [this, name, banner_id](hstring const&, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                ShowStatus(L"Mot de passe : " + error, InfoBarSeverity::Error);
+                return;
+            }
+            ClearBanner(banner_id);
+            ShowStatus(L"Mot de passe enregistré pour « " + name + L" ».", InfoBarSeverity::Success);
+            m_core->Refresh();
+        });
+    }
+
+    /* Affiche ou remplace un avis du bandeau d'information (vues Courrier et
+     * Calendrier). Le dernier avis est visible ; la croix le masque.
+     * Paramètres :
+     *   id           : identifiant de l'avis (ex. "auth:<uid de la source>")
+     *   title        : titre en gras
+     *   message      : texte de l'avis
+     *   severity     : gravité (couleur et icône)
+     *   action_label : libellé du bouton d'action ("" : aucun bouton)
+     *   action       : action du bouton (l'avis reste affiché jusqu'à ClearBanner) */
+    void MainWindow::ShowBanner(std::wstring const& id, hstring const& title, hstring const& message,
+        InfoBarSeverity severity, hstring const& action_label, std::function<void()> action)
+    {
+        ClearBanner(id);
+        m_banners.push_back(Banner{ id, title, message, severity, action_label, std::move(action) });
+        RefreshBanner();
+    }
+
+    /* Retire un avis du bandeau (problème réglé ou avis fermé).
+     * Paramètres :
+     *   id : identifiant de l'avis */
+    void MainWindow::ClearBanner(std::wstring const& id)
+    {
+        auto it = std::remove_if(m_banners.begin(), m_banners.end(),
+            [&id](Banner const& banner) { return banner.id == id; });
+        if (it == m_banners.end())
+            return;
+        m_banners.erase(it, m_banners.end());
+        RefreshBanner();
+    }
+
+    /* Affiche le dernier avis, seulement dans les vues Courrier et Calendrier. */
+    void MainWindow::RefreshBanner()
+    {
+        bool visible_view = m_view_tag == L"mail" || m_view_tag == L"calendar";
+        if (m_banners.empty() || !visible_view)
+        {
+            InfoBanner().IsOpen(false);
+            return;
+        }
+
+        Banner const& banner = m_banners.back();
+        InfoBanner().Title(banner.title);
+        InfoBanner().Message(banner.message);
+        InfoBanner().Severity(banner.severity);
+        InfoBanner().Tag(box_value(hstring{ banner.id }));
+
+        if (!banner.action_label.empty() && banner.action)
+        {
+            Button action;
+            action.Content(box_value(banner.action_label));
+            auto run = banner.action;
+            action.Click([run](IInspectable const&, RoutedEventArgs const&) { run(); });
+            InfoBanner().ActionButton(action);
+        }
+        else
+        {
+            InfoBanner().ActionButton(nullptr);
+        }
+
+        InfoBanner().IsOpen(true);
+    }
+
+    /* Croix du bandeau : l'avis affiché est retiré, le suivant apparaît. */
+    void MainWindow::OnInfoBannerClosed(InfoBar const& sender, InfoBarClosedEventArgs const&)
+    {
+        hstring id = unbox_value_or<hstring>(sender.Tag(), L"");
+        if (!id.empty())
+            ClearBanner(std::wstring{ id });
     }
 
     /* Affiche une boîte de dialogue modale permettant d'inspecter et d'accepter
@@ -3936,21 +4024,31 @@ namespace winrt::EvolutionWin::implementation
         co_await dialog.ShowAsync();
         m_dialog_open = false;
 
+        std::wstring banner_id = L"auth:" + std::wstring{ source_uid };
         if (reached->empty())
         {
             ShowStatus(L"Connexion à « " + name + L" » annulée.", InfoBarSeverity::Warning);
+            ShowBanner(banner_id, L"Connexion requise",
+                L"Le compte « " + name + L" » n'est pas connecté.",
+                InfoBarSeverity::Warning, L"Se connecter",
+                [this, source_uid, name]() { SignInOAuth2Async(source_uid, name); });
             co_return;
         }
 
         /* étape 2 : échange du code et enregistrement des jetons */
         ShowStatus(L"Connexion à « " + name + L" »…", InfoBarSeverity::Informational);
-        m_core->OAuth2Finish(credentials_uid, *reached, [this, name](hstring const&, hstring const& error)
+        m_core->OAuth2Finish(credentials_uid, *reached, [this, name, banner_id, source_uid](hstring const&, hstring const& error)
         {
             if (!error.empty())
             {
                 ShowStatus(L"Connexion à « " + name + L" » : " + error, InfoBarSeverity::Error);
+                ShowBanner(banner_id, L"Connexion requise",
+                    L"La connexion au compte « " + name + L" » a échoué : " + error,
+                    InfoBarSeverity::Error, L"Réessayer",
+                    [this, source_uid, name]() { SignInOAuth2Async(source_uid, name); });
                 return;
             }
+            ClearBanner(banner_id);
             ShowStatus(L"Connecté à « " + name + L" ».", InfoBarSeverity::Success);
             LoadAccounts();
         });

@@ -61,6 +61,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 - **Barre latérale** : barre d'icônes fixe entre Courrier, Calendrier,
   Contacts et Tâches (sans bouton de dépliage, noms en info-bulle) ; badge des
   messages non lus des boîtes de réception sur Courrier.
+- **Bandeau d'information** dans les vues Courrier et Calendrier : avis
+  avec bouton d'action, par exemple un compte en attente de connexion
+  (fenêtre de mot de passe ou de connexion Microsoft fermée) avec *Saisir le
+  mot de passe* / *Se connecter*.
 
 ### Corrigé
 
