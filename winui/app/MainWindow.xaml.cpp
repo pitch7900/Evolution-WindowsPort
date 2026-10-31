@@ -447,6 +447,7 @@ namespace winrt::EvolutionWin::implementation
                 if (auto item = node->second.Content().try_as<EvolutionWin::FolderItem>())
                     item.Unread(static_cast<int32_t>(object.GetNamedNumber(L"unread", 0)));
             }
+            UpdateMailBadge();
 
             /* new or removed messages in the folder on screen */
             if (account == m_account && folder == m_folder &&
@@ -464,6 +465,7 @@ namespace winrt::EvolutionWin::implementation
                     auto parsed = JsonArray::Parse(folders);
                     m_account_folders[std::wstring{ account }] = parsed;
                     UpdateFolderCounts(account, parsed);
+                    UpdateMailBadge();
                 }
             });
         }
@@ -552,6 +554,7 @@ namespace winrt::EvolutionWin::implementation
                     auto parsed = JsonArray::Parse(folders);
                     m_account_folders[std::wstring{ uid }] = parsed;
                     AddFolders(node, parsed, uid);
+                    UpdateMailBadge();
                 });
             }
         });
@@ -592,6 +595,32 @@ namespace winrt::EvolutionWin::implementation
 
             UpdateFolderCounts(account, folder.GetNamedArray(L"children", JsonArray{}));
         }
+    }
+
+    /* Badge de la barre latérale sur « Courrier » : total des non-lus des
+     * boîtes de réception de tous les comptes (masqué à zéro). */
+    void MainWindow::UpdateMailBadge()
+    {
+        int32_t unread = 0;
+        hstring inbox_glyph = FolderGlyph(L"inbox");
+
+        for (auto const& [key, node] : m_nodes)
+        {
+            if (auto item = node.Content().try_as<EvolutionWin::FolderItem>(); item && !item.IsAccount() && item.Glyph() == inbox_glyph)
+                unread += item.Unread();
+        }
+
+        if (unread <= 0)
+        {
+            MailItem().InfoBadge(nullptr);
+            ToolTipService::SetToolTip(MailItem(), box_value(L"Courrier"));
+            return;
+        }
+
+        InfoBadge badge;
+        badge.Value(unread);
+        MailItem().InfoBadge(badge);
+        ToolTipService::SetToolTip(MailItem(), box_value(L"Courrier (" + to_hstring(unread) + L" non lus)"));
     }
 
     void MainWindow::OnNavigationSelectionChanged(NavigationView const&, NavigationViewSelectionChangedEventArgs const& args)
@@ -1359,6 +1388,7 @@ namespace winrt::EvolutionWin::implementation
             bool root_expanded = root.IsExpanded();
             root.Children().Clear();
             AddFolders(root, parsed, account);
+            UpdateMailBadge();
             root.IsExpanded(root_expanded);
 
             for (auto const& path : expanded)
