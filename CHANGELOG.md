@@ -45,6 +45,19 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 - **Export des contacts** en vCard 3.0 (un fichier ou un par contact, un
   carnet ou tous) et **des agendas et listes de tâches** en iCalendar avec
   leurs fuseaux horaires (vues Contacts et Calendrier).
+- **Module Tâches** (barre latérale) : liste par liste de tâches avec objet,
+  échéance (en rouge si en retard), priorité, état, pourcentage et
+  catégories ; case « terminée », masquage des tâches terminées, filtres
+  Aujourd'hui / En retard / Cette semaine / Sans date, tri par échéance ou
+  priorité ; éditeur de tâche ; nouvelle tâche avec Ctrl+Maj+K.
+- **Gestion des dossiers** (clic droit dans l'arborescence) : nouveau
+  dossier (aussi sur un compte), renommer, déplacer vers, copier vers,
+  supprimer le dossier (avec confirmation) ; dossiers spéciaux protégés.
+- **Signatures** : éditeur dans les Paramètres (texte ou HTML avec
+  mise en forme, liens et images), plusieurs signatures nommées, choix par
+  compte pour les nouveaux messages et pour les réponses / transferts,
+  position au-dessus ou en dessous du texte cité, sélecteur dans la fenêtre
+  de rédaction ; images des signatures envoyées en parties liées (cid:).
 
 ### Corrigé
 
@@ -52,6 +65,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   suppression d'un message, alors que le message suivant venait de s'y
   afficher : le rechargement de la liste désélectionnait le message ;
   idem en changeant de filtre rapide.
+- Plantage au renommage d'un dossier IMAP fermé (evolution-data-server) :
+  le dossier est gardé ouvert pendant le renommage.
+- Signatures illisibles sous Windows (evolution-data-server tentait de les
+  exécuter comme scripts) : fichier lu directement.
+- Le compte se repliait dans l'arborescence après une opération sur un
+  dossier.
 
 ## [0.9.2] — 2026-10-31
 

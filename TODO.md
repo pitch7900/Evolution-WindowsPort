@@ -114,11 +114,11 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 
 ### Signatures — 🟡
 
-- [ ] 🟡 **Éditeur de signatures** (texte et HTML : mise en forme, images, liens) dans les Réglages — réutilise l'éditeur WebView2 de la rédaction ; sources EDS `ESourceMailSignature`
-- [ ] 🟢 Créer / modifier / supprimer plusieurs signatures nommées
-- [ ] 🟢 Par compte : signature des nouveaux messages et signature des réponses / transferts (ou aucune)
-- [ ] 🟡 Changement de signature dans la fenêtre de rédaction, mise à jour automatique au changement de compte expéditeur
-- [ ] 🟢 Placement (au-dessus / en dessous du texte cité)
+- [x] 🟡 **Éditeur de signatures** (texte et HTML : mise en forme, images, liens) dans les Réglages — réutilise l'éditeur WebView2 de la rédaction ; sources EDS `ESourceMailSignature`
+- [x] 🟢 Créer / modifier / supprimer plusieurs signatures nommées
+- [x] 🟢 Par compte : signature des nouveaux messages et signature des réponses / transferts (ou aucune)
+- [x] 🟡 Changement de signature dans la fenêtre de rédaction, mise à jour automatique au changement de compte expéditeur
+- [x] 🟢 Placement (au-dessus / en dessous du texte cité)
 
 ### Réponses automatiques (Out of Office) — 🟠
 
@@ -302,7 +302,7 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
 
 ## 9. Mail – Gestion des dossiers — 🟠
 
-- [ ] 🟡 **Nouveau dossier, Renommer, Copier, Déplacer, Supprimer** (`camel_store_create_folder_sync`, etc.), glisser-déposer dans l'arborescence
+- [ ] 🟡 **Nouveau dossier, Renommer, Copier, Déplacer, Supprimer** (`camel_store_create_folder_sync`, etc.), glisser-déposer dans l'arborescence — *fait : menu contextuel (nouveau, renommer, déplacer, copier, supprimer) ; reste : glisser-déposer*
 - [x] 🟢 **Marquer tout comme lu**
 - [x] 🟢 **Vider le dossier** : vider le dossier (vers la Corbeille), la Corbeille, les Indésirables
 - [ ] 🟢 **Afficher tous les dossiers de A à Z**
@@ -433,14 +433,14 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 
 ### Module Tâches
 
-- [ ] 🟡 **Accès aux tâches dans `evo-core`** : lister, créer, modifier, supprimer (`E_CAL_CLIENT_SOURCE_TYPE_TASKS`)
-- [ ] 🟡 **Vue Tâches** (entrée *Tâches* de la barre latérale) : liste des tâches par liste / compte, avec colonnes objet, échéance, priorité, état, catégorie
-- [ ] 🟡 **Éditeur de tâche** : objet, description, date de début, échéance, priorité, état (non commencée, en cours, terminée, en attente, différée), pourcentage d'achèvement, catégories
+- [x] 🟡 **Accès aux tâches dans `evo-core`** : lister, créer, modifier, supprimer (`E_CAL_CLIENT_SOURCE_TYPE_TASKS`)
+- [x] 🟡 **Vue Tâches** (entrée *Tâches* de la barre latérale) : liste des tâches par liste / compte, avec colonnes objet, échéance, priorité, état, catégorie
+- [x] 🟡 **Éditeur de tâche** : objet, description, date de début, échéance, priorité, état (non commencée, en cours, terminée, en attente, différée), pourcentage d'achèvement, catégories
 - [ ] 🟠 Tâches périodiques
 - [ ] 🟠 Rappel sur une tâche — dépend de la fenêtre des rappels (§2)
-- [ ] 🟢 **Marquer comme terminée** (case à cocher dans la liste), masquer / afficher les tâches terminées
-- [ ] 🟢 **Filtres et tri** : aujourd'hui, en retard, cette semaine, sans date, par priorité / échéance
-- [ ] 🟢 **Nouvelle tâche** depuis le menu *Nouveaux éléments* et raccourci (Ctrl+Maj+K)
+- [x] 🟢 **Marquer comme terminée** (case à cocher dans la liste), masquer / afficher les tâches terminées
+- [x] 🟢 **Filtres et tri** : aujourd'hui, en retard, cette semaine, sans date, par priorité / échéance
+- [x] 🟢 **Nouvelle tâche** depuis le menu *Nouveaux éléments* et raccourci (Ctrl+Maj+K)
 - [ ] 🟡 Plusieurs listes de tâches (créer, renommer, supprimer)
 - [ ] 🟠 Tâches Microsoft To Do (Graph) pour les comptes M365
 
