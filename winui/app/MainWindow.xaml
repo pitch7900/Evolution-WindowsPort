@@ -145,6 +145,28 @@
                         </Grid>
                         <AutoSuggestBox x:Name="SearchBox" PlaceholderText="Rechercher dans ce dossier" QueryIcon="Find"
                                         TextChanged="OnSearchTextChanged" QuerySubmitted="OnSearchQuerySubmitted" />
+                        <!-- filtres rapides, combinés avec la recherche (appliqués par ShowMessages) -->
+                        <Grid>
+                            <SelectorBar x:Name="ReadFilterBar" SelectionChanged="OnQuickFilterChanged">
+                                <SelectorBarItem Text="Tous" Tag="all" IsSelected="True" />
+                                <SelectorBarItem Text="Non lus" Tag="unread" />
+                                <SelectorBarItem Text="Lus" Tag="read" />
+                            </SelectorBar>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4">
+                                <ToggleButton x:Name="FlaggedFilterButton" Click="OnQuickFilterToggled"
+                                              Padding="8,4" ToolTipService.ToolTip="Avec indicateur">
+                                    <FontIcon Glyph="&#xE7C1;" FontSize="13" />
+                                </ToggleButton>
+                                <ToggleButton x:Name="AttachmentFilterButton" Click="OnQuickFilterToggled"
+                                              Padding="8,4" ToolTipService.ToolTip="Avec pièces jointes">
+                                    <FontIcon Glyph="&#xE723;" FontSize="13" />
+                                </ToggleButton>
+                                <ToggleButton x:Name="ThisWeekFilterButton" Click="OnQuickFilterToggled"
+                                              Padding="8,4" ToolTipService.ToolTip="Cette semaine">
+                                    <FontIcon Glyph="&#xE787;" FontSize="13" />
+                                </ToggleButton>
+                            </StackPanel>
+                        </Grid>
                     </StackPanel>
                     <ListView x:Name="MessageList" Grid.Row="1" SelectionMode="Extended"
                               SelectionChanged="OnMessageSelectionChanged">

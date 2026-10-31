@@ -572,6 +572,8 @@ namespace winrt::EvolutionWin::implementation
         for (auto const& value : messages)
         {
             auto message = value.GetObject();
+            if (!MatchesQuickFilters(message))
+                continue;
             hstring uid = message.GetNamedString(L"uid");
             bool seen = message.GetNamedBoolean(L"seen", true);
             bool flagged = message.GetNamedBoolean(L"flagged", false);
@@ -1868,6 +1870,65 @@ namespace winrt::EvolutionWin::implementation
         }
 
         ShowMessages(filtered);
+    }
+
+    /* Filtres rapides au-dessus de la liste (Tous / Non lus / Lus, indicateur,
+     * pièces jointes, cette semaine), appliqués par ShowMessages à toute liste
+     * affichée, donc combinés avec la recherche.
+     * Paramètres :
+     *   message : résumé JSON d'un message
+     * Retourne : true si le message passe tous les filtres actifs. */
+    bool MainWindow::MatchesQuickFilters(JsonObject const& message)
+    {
+        bool seen = message.GetNamedBoolean(L"seen", true);
+
+        if (auto item = ReadFilterBar().SelectedItem())
+        {
+            hstring read_filter = unbox_value_or<hstring>(item.Tag(), L"all");
+            if ((read_filter == L"unread" && seen) || (read_filter == L"read" && !seen))
+                return false;
+        }
+
+        if (FlaggedFilterButton().IsChecked().GetBoolean() && !message.GetNamedBoolean(L"flagged", false))
+            return false;
+        if (AttachmentFilterButton().IsChecked().GetBoolean() && !message.GetNamedBoolean(L"attachments", false))
+            return false;
+
+        if (ThisWeekFilterButton().IsChecked().GetBoolean())
+        {
+            /* depuis lundi 0 h (heure locale) */
+            std::time_t now = std::time(nullptr);
+            std::tm local{};
+            localtime_s(&local, &now);
+            local.tm_mday -= (local.tm_wday + 6) % 7;
+            local.tm_hour = local.tm_min = local.tm_sec = 0;
+            local.tm_isdst = -1;
+            if (message.GetNamedNumber(L"date", 0) < static_cast<double>(std::mktime(&local)))
+                return false;
+        }
+
+        return true;
+    }
+
+    /* Réaffiche la liste courante avec les filtres rapides et la recherche locale. */
+    void MainWindow::ReapplyMessageFilters()
+    {
+        if (!m_all_messages)
+            return;
+        if (!SearchBox().Text().empty())
+            FilterLocalMessages(SearchBox().Text());
+        else
+            ShowMessages(m_all_messages);
+    }
+
+    void MainWindow::OnQuickFilterChanged(SelectorBar const&, SelectorBarSelectionChangedEventArgs const&)
+    {
+        ReapplyMessageFilters();
+    }
+
+    void MainWindow::OnQuickFilterToggled(IInspectable const&, RoutedEventArgs const&)
+    {
+        ReapplyMessageFilters();
     }
 
     /* Gestionnaire de modification du texte de recherche : filtre la liste en
