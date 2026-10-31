@@ -681,6 +681,13 @@ namespace winrt::EvolutionWin::implementation
     {
         auto items = MessageList().Items();
 
+        /* Rechargement (nouveau message, suppression, filtre) : vider la
+         * liste désélectionne et effacerait l'aperçu ; la sélection est
+         * rétablie en silence à la fin si le message est encore affiché */
+        hstring selected = SelectedMessageUid();
+        bool was_reselecting = m_reselecting;
+        m_reselecting = true;
+
         items.Clear();
         m_message_states.clear();
 
@@ -941,6 +948,15 @@ namespace winrt::EvolutionWin::implementation
 
             items.Append(item);
         }
+
+        /* message affiché encore présent : resélectionné, l'aperçu reste ;
+         * sinon (supprimé, filtré) : aperçu vidé */
+        auto still_shown = selected.empty() ? nullptr : FindMessageItem(selected);
+        if (still_shown)
+            MessageList().SelectedItem(still_shown);
+        m_reselecting = was_reselecting;
+        if (!selected.empty() && !still_shown && !m_reselecting)
+            ClearReader();
 
         if (messages.Size() == 0)
         {
