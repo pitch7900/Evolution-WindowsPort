@@ -3,6 +3,8 @@
 
 Ce dépôt contient le portage **100 % natif sous Windows 11** du client de messagerie, calendrier et carnet d'adresses open source **GNOME Evolution**, compilé avec **Microsoft Visual C++ (MSVC)** (sans MinGW, sans WSL et sans Cygwin) et doté d'une **interface utilisateur native WinUI 3 (`EvolutionWin`)**.
 
+**Télécharger :** les installeurs MSI prêts à l'emploi (Windows 11 x64) sont dans [**`dist/`**](./dist) — liste des versions et empreintes SHA-256 dans [`dist/README.md`](./dist/README.md). Dernière version : [**Evolution-0.9.1-x64.msi**](https://github.com/pitch7900/Evolution-WindowsPort/raw/main/dist/Evolution-0.9.1-x64.msi).
+
 Pour le journal technique détaillé, l'historique des correctifs CMake/MSVC et le suivi des phases, consultez [**WINDOWS-PORT.md**](./WINDOWS-PORT.md).
 
 ---
@@ -41,6 +43,8 @@ Le projet s'articule autour de deux couches principales :
 | Répertoire / Fichier | Rôle |
 | --- | --- |
 | [`WINDOWS-PORT.md`](./WINDOWS-PORT.md) | Documentation technique complète et suivi d'avancement du portage |
+| [`CHANGELOG.md`](./CHANGELOG.md), [`VERSION`](./VERSION) | Évolutions par version ; version en cours (utilisée par l'installeur) |
+| [`TODO.md`](./TODO.md) | Fonctionnalités restant à réaliser |
 | [`winui/`](./winui) | Client natif Windows 11 : `winui/core` (`evo-core.dll`) et `winui/app` (`EvolutionWin.exe`) |
 | [`tools/`](./tools) | Scripts de compilation MSVC (`build-*.bat`, `env.bat`, `check-prereqs.ps1`), couche CMake (`cmake/msvc-compat.cmake`), en-têtes POSIX de compatibilité (`compat/`), shim WebKit2 (`webkit-shim/`) et utilitaires (`tools/nuget.exe`) |
 | `build/` | Sorties de compilation (`EvolutionWin.exe`, `evo-core.dll`, `evolution.exe`, `libexec/*.exe`, `build/intermediate/`), ignoré par Git |
