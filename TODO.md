@@ -114,11 +114,11 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 
 ### Signatures — 🟡
 
-- [ ] 🟡 **Éditeur de signatures** (texte et HTML : mise en forme, images, liens) dans les Réglages — réutilise l'éditeur WebView2 de la rédaction ; sources EDS `ESourceMailSignature`
-- [ ] 🟢 Créer / modifier / supprimer plusieurs signatures nommées
-- [ ] 🟢 Par compte : signature des nouveaux messages et signature des réponses / transferts (ou aucune)
-- [ ] 🟡 Changement de signature dans la fenêtre de rédaction, mise à jour automatique au changement de compte expéditeur
-- [ ] 🟢 Placement (au-dessus / en dessous du texte cité)
+- [x] 🟡 **Éditeur de signatures** (texte et HTML : mise en forme, images, liens) dans les Réglages — réutilise l'éditeur WebView2 de la rédaction ; sources EDS `ESourceMailSignature`
+- [x] 🟢 Créer / modifier / supprimer plusieurs signatures nommées
+- [x] 🟢 Par compte : signature des nouveaux messages et signature des réponses / transferts (ou aucune)
+- [x] 🟡 Changement de signature dans la fenêtre de rédaction, mise à jour automatique au changement de compte expéditeur
+- [x] 🟢 Placement (au-dessus / en dessous du texte cité)
 
 ### Réponses automatiques (Out of Office) — 🟠
 
@@ -302,9 +302,9 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
 
 ## 9. Mail – Gestion des dossiers — 🟠
 
-- [ ] 🟡 **Nouveau dossier, Renommer, Copier, Déplacer, Supprimer** (`camel_store_create_folder_sync`, etc.), glisser-déposer dans l'arborescence
+- [ ] 🟡 **Nouveau dossier, Renommer, Copier, Déplacer, Supprimer** (`camel_store_create_folder_sync`, etc.), glisser-déposer dans l'arborescence — *fait : menu contextuel (nouveau, renommer, déplacer, copier, supprimer) ; reste : glisser-déposer*
 - [x] 🟢 **Marquer tout comme lu**
-- [x] 🟢 **Supprimer tout** : vider le dossier, la Corbeille, les Indésirables
+- [x] 🟢 **Vider le dossier** : vider le dossier (vers la Corbeille), la Corbeille, les Indésirables
 - [ ] 🟢 **Afficher tous les dossiers de A à Z**
 - [ ] 🟠 **Nettoyer le dossier** (et sous-dossiers) des messages redondants — même logique que §7
 - [ ] **Récupérer les éléments supprimés** :
@@ -433,24 +433,41 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 
 ### Module Tâches
 
-- [ ] 🟡 **Accès aux tâches dans `evo-core`** : lister, créer, modifier, supprimer (`E_CAL_CLIENT_SOURCE_TYPE_TASKS`)
-- [ ] 🟡 **Vue Tâches** (entrée *Tâches* de la barre latérale) : liste des tâches par liste / compte, avec colonnes objet, échéance, priorité, état, catégorie
-- [ ] 🟡 **Éditeur de tâche** : objet, description, date de début, échéance, priorité, état (non commencée, en cours, terminée, en attente, différée), pourcentage d'achèvement, catégories
+- [x] 🟡 **Accès aux tâches dans `evo-core`** : lister, créer, modifier, supprimer (`E_CAL_CLIENT_SOURCE_TYPE_TASKS`)
+- [x] 🟡 **Vue Tâches** (entrée *Tâches* de la barre latérale) : liste des tâches par liste / compte, avec colonnes objet, échéance, priorité, état, catégorie
+- [x] 🟡 **Éditeur de tâche** : objet, description, date de début, échéance, priorité, état (non commencée, en cours, terminée, en attente, différée), pourcentage d'achèvement, catégories
 - [ ] 🟠 Tâches périodiques
 - [ ] 🟠 Rappel sur une tâche — dépend de la fenêtre des rappels (§2)
-- [ ] 🟢 **Marquer comme terminée** (case à cocher dans la liste), masquer / afficher les tâches terminées
-- [ ] 🟢 **Filtres et tri** : aujourd'hui, en retard, cette semaine, sans date, par priorité / échéance
-- [ ] 🟢 **Nouvelle tâche** depuis le menu *Nouveaux éléments* et raccourci (Ctrl+Maj+K)
+- [x] 🟢 **Marquer comme terminée** (case à cocher dans la liste), masquer / afficher les tâches terminées
+- [x] 🟢 **Filtres et tri** : aujourd'hui, en retard, cette semaine, sans date, par priorité / échéance
+- [x] 🟢 **Nouvelle tâche** depuis le menu *Nouveaux éléments* et raccourci (Ctrl+Maj+K)
 - [ ] 🟡 Plusieurs listes de tâches (créer, renommer, supprimer)
 - [ ] 🟠 Tâches Microsoft To Do (Graph) pour les comptes M365
 
-### Lien entre mails et tâches
+### Lien entre mails, événements et tâches
 
-- [ ] 🟡 **Créer une tâche à partir d'un mail** (menu contextuel, bouton du ruban, glisser-déposer du message sur *Tâches*) : objet et corps repris, message joint ou lié
+- [ ] 🟡 **Action « Créer une tâche »** directement depuis un mail ou un événement du calendrier :
+  - [ ] Accès : bouton du ruban et de la fenêtre de lecture, menu contextuel, raccourci clavier, glisser-déposer du mail / de l'événement sur la barre des tâches latérale ou sur *Tâches*
+  - [ ] Depuis un mail : objet → titre, corps → description, message lié (`Message-ID`) pour le rouvrir depuis la tâche, catégories et indicateur Urgent / À traiter (§7) repris
+  - [ ] Depuis un événement : titre, description et participants repris, échéance proposée = date de l'événement, lien vers l'événement
+  - [ ] Création rapide (saisie de l'échéance et de la priorité dans un petit menu, sans ouvrir l'éditeur) ou ouverture de l'éditeur complet
+  - [ ] Indicateur « tâche créée » sur le mail / l'événement d'origine
 - [ ] 🟠 **Attribuer un mail à une tâche existante** : sélection de la tâche dans une liste, plusieurs mails possibles par tâche
   - [ ] Lien conservé par l'en-tête `Message-ID` (propriété `X-` / `ATTACH` dans le `VTODO`), ouverture du mail d'origine depuis la tâche
   - [ ] Indicateur sur le mail (icône « lié à une tâche ») et accès à la tâche depuis le volet de lecture
-- [ ] 🟡 **Liste des tâches dans la barre des tâches (To-Do bar)** et sous les vues Jour / Semaine du calendrier — cf. §2 et §12
+- [ ] 🟡 **Liste des tâches sous les vues Jour / Semaine** du calendrier — cf. §12
+
+### Barre latérale des tâches (à droite)
+
+- [ ] 🟡 **Volet latéral droit** affichant une liste courte des tâches ouvertes, disponible dans les vues Mail, Calendrier et Contacts (cf. To-Do bar, §2)
+  - [ ] Ordre : tâches en retard en haut, puis par **échéance la plus proche** ; à échéance égale, par **priorité décroissante** (haute → basse) ; tâches sans échéance en bas
+  - [ ] Ligne compacte : case *Terminé*, titre, échéance (relative : « Aujourd'hui », « Demain », « Ven. 6 nov. », en rouge si dépassée), icône de priorité, pastille de catégorie, icône si liée à un mail / événement
+  - [ ] Regroupement optionnel : En retard / Aujourd'hui / Demain / Cette semaine / Plus tard / Sans date
+  - [ ] Champ « Nouvelle tâche » en haut (saisie rapide + Entrée)
+  - [ ] Clic : ouvre la tâche ; double-clic sur l'icône de lien : ouvre le mail / l'événement d'origine
+  - [ ] Glisser-déposer d'un mail / événement dans le volet pour créer une tâche
+  - [ ] Volet affichable / masquable (menu *Affichage*, raccourci), largeur redimensionnable et mémorisée ; nombre de tâches affichées limité (ex. 15) avec lien *Voir toutes les tâches*
+  - [ ] Mise à jour en direct (création, modification, synchronisation serveur)
 - [ ] 🟢 Recherche dans les tâches — cf. §10
 
 ## 17. Catégories et codes couleur — 🟡

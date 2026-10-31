@@ -85,11 +85,41 @@ namespace winrt::EvolutionWin::implementation
         void OnComposeToContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnDeleteContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
+        /* Gestionnaires des tâches */
+        void OnNewTaskClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnNewTaskAccelerator(
+            Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender,
+            Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
+        void OnRefreshTasksClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTaskListChanged(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+        void OnTaskFilterChanged(
+            Microsoft::UI::Xaml::Controls::SelectorBar const& sender,
+            Microsoft::UI::Xaml::Controls::SelectorBarSelectionChangedEventArgs const& args);
+        void OnTaskSortChanged(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+        void OnShowCompletedTasksClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTaskItemClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& args);
+
         /* Gestionnaires des paramètres / comptes */
         void OnAddAccountClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRemoteContentModeChanged(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+
+        /* Signatures (Paramètres) */
+        void OnNewSignatureClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnSignatureFormatChanged(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+        void OnSignatureToolClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        fire_and_forget OnSignatureLinkClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        fire_and_forget OnSignatureImageClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnSignatureEditorCancel(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        fire_and_forget OnSignatureEditorSave(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnSignaturePlacementToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
         /* Bandeau « Contenu externe bloqué » */
         void OnShowRemoteContentClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -188,6 +218,29 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Input::ContextRequestedEventArgs const& args);
         fire_and_forget RunFolderActionAsync(EvolutionWin::FolderItem item, hstring action);
 
+        /* Gestion des dossiers : créer, renommer, déplacer, copier, supprimer */
+        hstring NodeFolderName(Microsoft::UI::Xaml::Controls::TreeViewNode const& node);
+        Windows::Data::Json::JsonObject FindFolderJson(Windows::Data::Json::JsonArray const& folders, hstring const& full_name);
+        void AppendFolderManagementItems(
+            Microsoft::UI::Xaml::Controls::MenuFlyout const& menu,
+            EvolutionWin::FolderItem const& item,
+            hstring const& full_name);
+        void AppendFolderTargetItems(
+            Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items,
+            Windows::Data::Json::JsonArray const& folders,
+            hstring const& prefix,
+            hstring const& excluded,
+            hstring const& skipped,
+            bool selectable_only,
+            std::function<void(hstring const&)> const& on_pick);
+        Windows::Foundation::IAsyncOperation<hstring> PromptFolderNameAsync(hstring title, hstring label, hstring initial);
+        fire_and_forget CreateFolderAsync(hstring account, hstring parent, hstring parent_name);
+        fire_and_forget RenameFolderAsync(hstring account, hstring full_name, hstring name);
+        void MoveOrCopyFolder(hstring const& account, hstring const& full_name, hstring const& name,
+                              hstring const& parent, bool copy);
+        fire_and_forget DeleteFolderAsync(hstring account, hstring full_name, hstring name, int32_t total);
+        void ReloadAccountFolders(hstring const& account, hstring const& old_name, hstring const& new_name);
+
         /* Étape 3 : Calendrier et Contacts */
         void LoadEvents();
         fire_and_forget ShowNewEventDialogAsync();
@@ -197,6 +250,27 @@ namespace winrt::EvolutionWin::implementation
         /* Exportation vCard / iCalendar */
         fire_and_forget ExportCalendarAsync(Windows::Data::Json::JsonArray sources);
         fire_and_forget ExportContactsAsync(Windows::Data::Json::JsonArray books);
+
+        /* Tâches (VTODO) */
+        void LoadTasks();
+        void RestoreTaskViewSettings();
+        void ShowTasks();
+        bool MatchesTaskFilter(Windows::Data::Json::JsonObject const& task, hstring const& filter);
+        Microsoft::UI::Xaml::UIElement BuildTaskRow(Windows::Data::Json::JsonObject const& task, bool show_list);
+        void SetTaskCompleted(Windows::Data::Json::JsonObject const& task, bool completed);
+        void DeleteTaskItem(Windows::Data::Json::JsonObject const& task);
+        fire_and_forget ShowTaskEditorAsync(Windows::Data::Json::JsonObject task);
+
+        /* Signatures (MainWindow.Signatures.cpp) */
+        void RefreshSignaturesView();
+        void RebuildSignatureLists();
+        void OpenSignatureEditor(Windows::Data::Json::JsonObject const& signature);
+        fire_and_forget EnsureSignatureEditorAsync();
+        fire_and_forget SwitchSignatureFormatAsync(bool html);
+        void SetSignatureEditorHtml(hstring const& html);
+        Windows::Foundation::IAsyncOperation<hstring> SignatureEditorHtmlAsync();
+        fire_and_forget ExecuteSignatureCommandAsync(hstring command, hstring argument);
+        fire_and_forget ConfirmDeleteSignatureAsync(hstring uid, hstring name);
 
         /* shared with the compose windows */
         std::shared_ptr<::EvolutionWin::CoreBridge> m_core;
@@ -218,6 +292,15 @@ namespace winrt::EvolutionWin::implementation
         bool m_reader_ready{ false };
         bool m_dialog_open{ false };
         int64_t m_selected_day_start{ 0 };
+        /* vue Tâches : listes de tâches [{"uid", "name", "kind"}], toutes les
+           tâches chargées (avant filtres) et liste affichée ("" = toutes) */
+        Windows::Data::Json::JsonArray m_task_lists{ nullptr };
+        Windows::Data::Json::JsonArray m_all_tasks{ nullptr };
+        hstring m_task_list_uid;
+        /* préférences de la vue relues ; contrôles mis à jour par le code */
+        bool m_task_view_restored{ false };
+        bool m_updating_task_view{ false };
+        uint64_t m_task_request{ 0 };
         /* Document du lecteur : chaque affichage reçoit une adresse unique
          * (http://reader.evolution.invalid/…) servie par WebResourceRequested,
          * ce qui identifie sans ambiguïté le document chargé ; le contenu
@@ -237,6 +320,15 @@ namespace winrt::EvolutionWin::implementation
         uint32_t m_reader_blocked_count{ 0 };
         /* RadioButtons des préférences mis à jour par le code */
         bool m_updating_privacy_view{ false };
+        /* signatures (evo_core_list_signatures), uid de la signature éditée
+           ("" pour une nouvelle), éditeur HTML prêt, contrôles mis à jour par le code */
+        Windows::Data::Json::JsonArray m_signatures{ nullptr };
+        hstring m_editing_signature_uid;
+        bool m_signature_editor_started{ false };
+        bool m_signature_editor_ready{ false };
+        bool m_updating_signature_view{ false };
+        /* contenu à afficher dès que l'éditeur HTML est prêt */
+        hstring m_signature_pending_html;
         hstring m_account;
         hstring m_folder;
         /* only the latest message request is shown */

@@ -130,6 +130,59 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Crée un dossier.
+         * Paramètres :
+         *   account : identifiant du compte
+         *   parent  : chemin complet du parent ("" : premier niveau du compte)
+         *   name    : nom du nouveau dossier
+         *   handler : rappel recevant {"full_name": "..."} */
+        void CreateFolder(winrt::hstring const& account, winrt::hstring const& parent, winrt::hstring const& name,
+                          CoreHandler handler)
+        {
+            evo_core_create_folder(m_core, winrt::to_string(account).c_str(), winrt::to_string(parent).c_str(),
+                winrt::to_string(name).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Renomme un dossier (il garde son parent).
+         * Paramètres :
+         *   account  : identifiant du compte
+         *   folder   : chemin complet du dossier
+         *   new_name : nouveau nom (sans chemin)
+         *   handler  : rappel recevant {"full_name": "..."} */
+        void RenameFolder(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& new_name,
+                          CoreHandler handler)
+        {
+            evo_core_rename_folder(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                winrt::to_string(new_name).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Déplace (copy = false) ou copie (copy = true) un dossier sous un
+         * autre parent du même compte.
+         * Paramètres :
+         *   account : identifiant du compte
+         *   folder  : chemin complet du dossier
+         *   parent  : chemin complet du nouveau parent ("" : premier niveau)
+         *   copy    : copier les messages au lieu de déplacer le dossier
+         *   handler : rappel recevant {"full_name": "..."} (et "count" pour une copie) */
+        void MoveOrCopyFolder(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& parent,
+                              bool copy, CoreHandler handler)
+        {
+            (copy ? evo_core_copy_folder : evo_core_move_folder)(m_core, winrt::to_string(account).c_str(),
+                winrt::to_string(folder).c_str(), winrt::to_string(parent).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Supprime un dossier sans sous-dossiers, et définitivement ses messages.
+         * Paramètres :
+         *   account : identifiant du compte
+         *   folder  : chemin complet du dossier
+         *   handler : rappel recevant {"count": n} */
+        void DeleteFolder(winrt::hstring const& account, winrt::hstring const& folder, CoreHandler handler)
+        {
+            evo_core_delete_folder(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Recherche les messages d'un dossier correspondant à une requête.
          * Paramètres :
          *   account   : identifiant du compte
@@ -277,6 +330,47 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Liste les tâches des listes de tâches activées.
+         * Paramètres :
+         *   list_uid : identifiant de la liste de tâches (vide pour toutes)
+         *   handler  : rappel recevant le tableau JSON des tâches */
+        void ListTasks(winrt::hstring const& list_uid, CoreHandler handler)
+        {
+            evo_core_list_tasks(m_core, winrt::to_string(list_uid).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Crée une tâche.
+         * Paramètres :
+         *   task_json : description JSON de la tâche (voir evo_core_create_task)
+         *   handler   : rappel recevant {"uid", "list_uid"} */
+        void CreateTask(winrt::hstring const& task_json, CoreHandler handler)
+        {
+            evo_core_create_task(m_core, winrt::to_string(task_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Modifie les champs indiqués d'une tâche.
+         * Paramètres :
+         *   task_json : JSON {"list_uid", "uid", champs modifiés...}
+         *   handler   : rappel recevant {} */
+        void ModifyTask(winrt::hstring const& task_json, CoreHandler handler)
+        {
+            evo_core_modify_task(m_core, winrt::to_string(task_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Supprime une tâche.
+         * Paramètres :
+         *   list_uid : identifiant de la liste de tâches
+         *   task_uid : identifiant de la tâche
+         *   handler  : rappel recevant {} */
+        void DeleteTask(winrt::hstring const& list_uid, winrt::hstring const& task_uid, CoreHandler handler)
+        {
+            evo_core_delete_task(m_core, winrt::to_string(list_uid).c_str(), winrt::to_string(task_uid).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Liste ou recherche les contacts des carnets d'adresses activés.
          * Paramètres :
          *   query   : texte recherché (ou chaîne vide pour tous)
@@ -336,6 +430,45 @@ namespace EvolutionWin
         {
             evo_core_export_calendar(m_core, winrt::to_string(request_json).c_str(),
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Liste les signatures de courrier.
+         * Paramètres :
+         *   handler : rappel recevant [{"uid", "name", "mime_type", "content"}, ...] */
+        void ListSignatures(CoreHandler handler)
+        {
+            evo_core_list_signatures(m_core, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Crée (uid vide) ou modifie une signature.
+         * Paramètres :
+         *   signature_json : JSON {"uid", "name", "mime_type", "content"}
+         *   handler        : rappel recevant {"uid": "..."} */
+        void SaveSignature(winrt::hstring const& signature_json, CoreHandler handler)
+        {
+            evo_core_save_signature(m_core, winrt::to_string(signature_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Supprime une signature.
+         * Paramètres :
+         *   signature_uid : uid de la signature
+         *   handler       : rappel recevant {} */
+        void DeleteSignature(winrt::hstring const& signature_uid, CoreHandler handler)
+        {
+            evo_core_delete_signature(m_core, winrt::to_string(signature_uid).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Choisit la signature des nouveaux messages d'un compte.
+         * Paramètres :
+         *   account_uid   : uid du compte
+         *   signature_uid : "none", "autogenerated" ou uid d'une signature
+         *   handler       : rappel recevant {} */
+        void SetAccountSignature(winrt::hstring const& account_uid, winrt::hstring const& signature_uid, CoreHandler handler)
+        {
+            evo_core_set_account_signature(m_core, winrt::to_string(account_uid).c_str(),
+                winrt::to_string(signature_uid).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
         /* Transmet la décision de confiance TLS de l'utilisateur au moteur.

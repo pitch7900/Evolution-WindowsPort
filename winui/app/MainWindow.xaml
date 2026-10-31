@@ -12,6 +12,10 @@
     </Window.SystemBackdrop>
 
     <Grid>
+        <!-- raccourcis actifs dans toute la fenêtre, quelle que soit la vue -->
+        <Grid.KeyboardAccelerators>
+            <KeyboardAccelerator Modifiers="Control,Shift" Key="K" Invoked="OnNewTaskAccelerator" />
+        </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
             <RowDefinition Height="32" />
             <RowDefinition Height="*" />
@@ -49,6 +53,11 @@
                 <NavigationViewItem Content="Contacts" Tag="contacts">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE77B;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Tâches" Tag="tasks">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE9D5;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.MenuItems>
@@ -419,10 +428,72 @@
                 </Grid>
             </Grid>
 
+            <!-- Vue Tâches -->
+            <Grid x:Name="TasksViewPane" Visibility="Collapsed" Padding="24,16,24,16" RowSpacing="12">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Tâches" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+                    <ComboBox x:Name="TaskListChoice" Grid.Column="1" MinWidth="240" VerticalAlignment="Center"
+                              SelectionChanged="OnTaskListChanged" ToolTipService.ToolTip="Liste de tâches" />
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                        <Button Click="OnRefreshTasksClick" ToolTipService.ToolTip="Actualiser les tâches">
+                            <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                        </Button>
+                        <Button Style="{StaticResource AccentButtonStyle}" Click="OnNewTaskClick"
+                                ToolTipService.ToolTip="Nouvelle tâche (Ctrl+Maj+K)">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE710;" FontSize="14" />
+                                <TextBlock Text="Nouvelle tâche" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+                <!-- filtres et tri, appliqués localement (ShowTasks) et mémorisés -->
+                <Grid Grid.Row="1" ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <SelectorBar x:Name="TaskFilterBar" SelectionChanged="OnTaskFilterChanged">
+                        <SelectorBarItem Text="Toutes" Tag="all" IsSelected="True" />
+                        <SelectorBarItem Text="Aujourd'hui" Tag="today" />
+                        <SelectorBarItem Text="En retard" Tag="overdue" />
+                        <SelectorBarItem Text="Cette semaine" Tag="week" />
+                        <SelectorBarItem Text="Sans date" Tag="nodate" />
+                    </SelectorBar>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                        <ComboBox x:Name="TaskSortChoice" SelectionChanged="OnTaskSortChanged" ToolTipService.ToolTip="Ordre des tâches">
+                            <x:String>Trier par échéance</x:String>
+                            <x:String>Trier par priorité</x:String>
+                        </ComboBox>
+                        <CheckBox x:Name="ShowCompletedTasksBox" Content="Afficher les tâches terminées"
+                                  IsChecked="True" Click="OnShowCompletedTasksClick" />
+                    </StackPanel>
+                </Grid>
+                <ListView x:Name="TaskList" Grid.Row="2" SelectionMode="None" IsItemClickEnabled="True" ItemClick="OnTaskItemClick">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                </ListView>
+                <ProgressRing x:Name="TaskProgress" Grid.Row="2" IsActive="False" Width="32" Height="32" />
+            </Grid>
+
             <!-- Vue Paramètres / Comptes -->
             <ScrollViewer x:Name="SettingsViewPane" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
             <Grid Padding="32,24,32,24" RowSpacing="16">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -462,6 +533,82 @@
                                Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <ListView x:Name="TrustedSenderList" SelectionMode="None" />
+                </StackPanel>
+
+                <!-- Signatures : éditeur, choix par compte, position -->
+                <StackPanel Grid.Row="3" Spacing="8" Margin="0,16,0,0">
+                    <Grid>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Signatures" Style="{StaticResource SubtitleTextBlockStyle}" />
+                            <TextBlock Text="Signatures texte ou HTML (mise en forme, liens, images) ajoutées aux messages selon le compte expéditeur."
+                                       Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <Button HorizontalAlignment="Right" VerticalAlignment="Center" Click="OnNewSignatureClick">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE710;" FontSize="14" />
+                                <TextBlock Text="Nouvelle signature" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                    <TextBlock x:Name="SignaturesEmpty" Visibility="Collapsed"
+                               Text="Aucune signature. La signature automatique (nom, organisation et adresse du compte) reste disponible."
+                               Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <ListView x:Name="SignatureList" SelectionMode="None" />
+
+                    <!-- éditeur de la signature créée ou modifiée -->
+                    <Border x:Name="SignatureEditorPanel" Visibility="Collapsed" Padding="16" CornerRadius="8" BorderThickness="1"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                        <StackPanel Spacing="8">
+                            <TextBlock x:Name="SignatureEditorTitle" Text="Nouvelle signature" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBox x:Name="SignatureNameBox" Header="Nom" PlaceholderText="Professionnelle, Personnelle…" />
+                            <RadioButtons x:Name="SignatureFormatChoice" Header="Format" MaxColumns="2"
+                                          SelectionChanged="OnSignatureFormatChanged">
+                                <x:String>HTML (mise en forme)</x:String>
+                                <x:String>Texte brut</x:String>
+                            </RadioButtons>
+                            <StackPanel x:Name="SignatureToolbar" Orientation="Horizontal" Spacing="4">
+                                <Button Tag="bold" Click="OnSignatureToolClick" ToolTipService.ToolTip="Gras">
+                                    <FontIcon Glyph="&#xE8DD;" FontSize="14" />
+                                </Button>
+                                <Button Tag="italic" Click="OnSignatureToolClick" ToolTipService.ToolTip="Italique">
+                                    <FontIcon Glyph="&#xE8DB;" FontSize="14" />
+                                </Button>
+                                <Button Tag="underline" Click="OnSignatureToolClick" ToolTipService.ToolTip="Souligné">
+                                    <FontIcon Glyph="&#xE8DC;" FontSize="14" />
+                                </Button>
+                                <AppBarSeparator />
+                                <Button Click="OnSignatureLinkClick" ToolTipService.ToolTip="Insérer un lien hypertexte">
+                                    <FontIcon Glyph="&#xE71B;" FontSize="14" />
+                                </Button>
+                                <Button Click="OnSignatureImageClick" ToolTipService.ToolTip="Insérer une image (intégrée au message)">
+                                    <FontIcon Glyph="&#xE8B9;" FontSize="14" />
+                                </Button>
+                                <Button Tag="removeFormat" Click="OnSignatureToolClick" ToolTipService.ToolTip="Effacer la mise en forme">
+                                    <FontIcon Glyph="&#xE8E6;" FontSize="14" />
+                                </Button>
+                            </StackPanel>
+                            <Border x:Name="SignatureHtmlContainer" Height="200" Background="White" RequestedTheme="Light"
+                                    CornerRadius="4" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                <controls:WebView2 x:Name="SignatureHtmlEditor" RequestedTheme="Light" DefaultBackgroundColor="White" />
+                            </Border>
+                            <TextBox x:Name="SignatureTextBox" Visibility="Collapsed" Height="200"
+                                     AcceptsReturn="True" TextWrapping="Wrap" IsSpellCheckEnabled="True"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                <Button Content="Annuler" Click="OnSignatureEditorCancel" />
+                                <Button Content="Enregistrer" Style="{StaticResource AccentButtonStyle}" Click="OnSignatureEditorSave" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <ToggleSwitch x:Name="SignatureAboveQuoteSwitch" Header="Position dans les réponses et transferts"
+                                  OnContent="Au-dessus du texte cité" OffContent="En dessous du texte cité"
+                                  Toggled="OnSignaturePlacementToggled" />
+                    <TextBlock Text="Signature par compte" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
+                    <ListView x:Name="SignatureAccountList" SelectionMode="None" />
                 </StackPanel>
             </Grid>
             </ScrollViewer>

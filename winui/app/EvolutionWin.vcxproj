@@ -111,6 +111,7 @@
     <ResourceCompile Include="EvolutionWin.rc" />
     <ClInclude Include="WindowIcon.h" />
     <ClInclude Include="Settings.h" />
+    <ClInclude Include="Signatures.h" />
     <None Include="Assets\EvolutionWin.ico" />
     <!-- image de la boîte « À propos », à côté de l'exécutable -->
     <CopyFileToFolders Include="Assets\EvolutionWin.png">
@@ -175,6 +176,9 @@
       <DependentUpon>App.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="MainWindow.xaml.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="MainWindow.Signatures.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="ComposeWindow.xaml.cpp">

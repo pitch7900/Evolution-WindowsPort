@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "ComposeWindow.xaml.h"
 #include "WindowIcon.h"
+#include "Signatures.h"
 #if __has_include("ComposeWindow.g.cpp")
 #include "ComposeWindow.g.cpp"
 #endif
@@ -62,6 +63,7 @@ namespace winrt::EvolutionWin::implementation
     {
         m_core = core;
         m_data = data;
+        m_accounts = accounts;
 
         ExtendsContentIntoTitleBar(true);
         SetTitleBar(AppTitleBar());
@@ -102,6 +104,7 @@ namespace winrt::EvolutionWin::implementation
         m_focus_editor_on_ready = !data.to.empty();
 
         InitializeEditorAsync();
+        LoadSignatures();
 
         if (data.to.empty())
             ToBox().Focus(FocusState::Programmatic);
@@ -151,6 +154,8 @@ namespace winrt::EvolutionWin::implementation
                     self->HtmlEditor().CoreWebView2().ExecuteScriptAsync(L"window.evoInit(" + payload.Stringify() + L")");
                     self->m_pending_editor_html = L"";
                 }
+                /* signature chargée avant l'éditeur */
+                self->ApplySignatureAsync();
             }
             else if (msg == L"send")
             {
@@ -175,6 +180,19 @@ namespace winrt::EvolutionWin::implementation
             L"  if (cfg.focus) { ed.focus(); const sel = window.getSelection(); sel.collapse(ed, 0); }"
             L"};"
             L"window.evoSetHtml = function(cfg) { ed.innerHTML = cfg.html || '<div><br></div>'; };"
+            /* signature : bloc #evo-signature remplacé ou retiré à chaque changement ;
+               créé après la première ligne (au-dessus du texte cité) ou à la fin */
+            L"window.evoSetSignature = function(cfg) {"
+            L"  let sig = document.getElementById('evo-signature');"
+            L"  if (!cfg.html) { if (sig) sig.remove(); return; }"
+            L"  if (!sig) {"
+            L"    sig = document.createElement('div');"
+            L"    sig.id = 'evo-signature';"
+            L"    if (cfg.top && ed.firstChild) ed.insertBefore(sig, ed.firstChild.nextSibling);"
+            L"    else ed.appendChild(sig);"
+            L"  }"
+            L"  sig.innerHTML = cfg.html;"
+            L"};"
             L"window.evoExec = function(cfg) {"
             L"  ed.focus();"
             L"  document.execCommand(cfg.cmd, false, cfg.arg || null);"
@@ -225,6 +243,8 @@ namespace winrt::EvolutionWin::implementation
             /* Passage de HTML vers texte brut : récupère le texte brut de l'éditeur WebView2 */
             if (m_editor_ready && HtmlEditor().CoreWebView2())
             {
+                /* la signature HTML est retirée, puis réinsérée en texte brut */
+                co_await HtmlEditor().CoreWebView2().ExecuteScriptAsync(L"window.evoSetSignature({})");
                 hstring raw = co_await HtmlEditor().CoreWebView2().ExecuteScriptAsync(L"window.evoGetPayload()");
                 JsonObject obj;
                 if (JsonObject::TryParse(raw, obj))
@@ -238,15 +258,18 @@ namespace winrt::EvolutionWin::implementation
             }
 
             m_html_mode = false;
+            m_plain_signature.clear();
             FormatToolbar().Visibility(Visibility::Collapsed);
             HtmlEditorContainer().Visibility(Visibility::Collapsed);
             BodyBox().Visibility(Visibility::Visible);
             BodyBox().Focus(FocusState::Programmatic);
+            ApplySignatureAsync();
         }
         else
         {
-            /* Passage de texte brut vers HTML : convertit le texte brut en HTML */
-            hstring converted = PlainTextToHtml(BodyBox().Text());
+            /* Passage de texte brut vers HTML : convertit le texte brut en HTML
+             * (sans la signature, réinsérée en HTML) */
+            hstring converted = PlainTextToHtml(RemovePlainSignature(std::wstring{ BodyBox().Text() }));
             m_html_mode = true;
             FormatToolbar().Visibility(Visibility::Visible);
             BodyBox().Visibility(Visibility::Collapsed);
@@ -262,6 +285,7 @@ namespace winrt::EvolutionWin::implementation
             {
                 m_pending_editor_html = converted;
             }
+            ApplySignatureAsync();
         }
     }
 
@@ -337,6 +361,205 @@ namespace winrt::EvolutionWin::implementation
     void ComposeWindow::OnClearFormatClick(IInspectable const&, RoutedEventArgs const&)
     {
         ExecuteEditorCommandAsync(L"removeFormat");
+    }
+
+    /* Charge les signatures depuis evo-core et remplit le sélecteur :
+     * « Aucune », « Automatique », puis les signatures par nom ; sélectionne
+     * ensuite celle du compte expéditeur. */
+    void ComposeWindow::LoadSignatures()
+    {
+        auto core = m_core.lock();
+        if (!core)
+            return;
+
+        auto weak = get_weak();
+        core->ListSignatures([weak](hstring const& json, hstring const& error)
+        {
+            auto self = weak.get();
+            if (!self)
+                return;
+
+            JsonArray signatures;
+            if (!error.empty() || !JsonArray::TryParse(json, signatures))
+                signatures = JsonArray{};
+            self->m_signatures = signatures;
+
+            self->m_updating_signature = true;
+            auto items = self->SignatureBox().Items();
+            items.Clear();
+            self->m_signature_choices.clear();
+            items.Append(box_value(L"Aucune"));
+            self->m_signature_choices.push_back(::EvolutionWin::Signatures::None);
+            items.Append(box_value(L"Automatique (nom et adresse)"));
+            self->m_signature_choices.push_back(::EvolutionWin::Signatures::Autogenerated);
+            for (auto const& value : signatures)
+            {
+                auto signature = value.GetObject();
+                items.Append(box_value(signature.GetNamedString(L"name", L"")));
+                self->m_signature_choices.push_back(signature.GetNamedString(L"uid", L""));
+            }
+            self->m_updating_signature = false;
+
+            self->SignatureBox().IsEnabled(true);
+            self->SelectAccountSignature();
+        });
+    }
+
+    /* Compte expéditeur sélectionné (objet JSON de evo_core_list_accounts),
+     * nullptr si aucun. */
+    JsonObject ComposeWindow::SelectedAccount()
+    {
+        int index = FromBox().SelectedIndex();
+        if (!m_accounts || index < 0 || index >= static_cast<int>(m_account_uids.size()))
+            return nullptr;
+
+        for (auto const& value : m_accounts)
+        {
+            auto account = value.GetObject();
+            if (account.GetNamedString(L"uid", L"") == m_account_uids[index])
+                return account;
+        }
+        return nullptr;
+    }
+
+    /* Sélectionne la signature du compte expéditeur (nouveaux messages, ou
+     * réponses et transferts) ; le changement de sélection l'insère. */
+    void ComposeWindow::SelectAccountSignature()
+    {
+        if (!m_signatures)
+            return;
+
+        auto account = SelectedAccount();
+        hstring uid = account ? ::EvolutionWin::Signatures::ForAccount(account, m_data.reply)
+                              : hstring{ ::EvolutionWin::Signatures::None };
+        auto found = std::find(m_signature_choices.begin(), m_signature_choices.end(), uid);
+        int index = found == m_signature_choices.end() ? 0 : static_cast<int>(found - m_signature_choices.begin());
+
+        if (SignatureBox().SelectedIndex() == index)
+            ApplySignatureAsync();  /* même choix : la signature automatique dépend du compte */
+        else
+            SignatureBox().SelectedIndex(index);
+    }
+
+    /* Changement de compte expéditeur : signature de ce compte. */
+    void ComposeWindow::OnFromChanged(IInspectable const&, SelectionChangedEventArgs const&)
+    {
+        SelectAccountSignature();
+    }
+
+    /* Changement de signature dans le sélecteur : remplacement dans le message. */
+    void ComposeWindow::OnSignatureChanged(IInspectable const&, SelectionChangedEventArgs const&)
+    {
+        if (!m_updating_signature)
+            ApplySignatureAsync();
+    }
+
+    /* Contenu de la signature choisie.
+     * Paramètres :
+     *   html : true pour un fragment HTML, false pour du texte brut (\n)
+     * Retourne : contenu, vide pour « Aucune ». */
+    std::wstring ComposeWindow::SignatureContent(bool html)
+    {
+        int index = SignatureBox().SelectedIndex();
+        if (index < 0 || index >= static_cast<int>(m_signature_choices.size()))
+            return {};
+
+        hstring uid = m_signature_choices[index];
+        if (uid == ::EvolutionWin::Signatures::None)
+            return {};
+
+        if (uid == ::EvolutionWin::Signatures::Autogenerated)
+        {
+            auto account = SelectedAccount();
+            return account ? ::EvolutionWin::Signatures::Autogenerate(account, html) : std::wstring{};
+        }
+
+        for (auto const& value : m_signatures)
+        {
+            auto signature = value.GetObject();
+            if (signature.GetNamedString(L"uid", L"") != uid)
+                continue;
+
+            std::wstring content{ signature.GetNamedString(L"content", L"") };
+            bool is_html = signature.GetNamedString(L"mime_type", L"") == L"text/html";
+            if (html)
+                return is_html ? content : ::EvolutionWin::Signatures::EscapeHtml(content);
+            if (is_html)
+                return ::EvolutionWin::Signatures::HtmlToText(content);
+            content.erase(std::remove(content.begin(), content.end(), L'\r'), content.end());
+            return content;
+        }
+        return {};
+    }
+
+    /* Retire du texte brut le bloc de signature inséré précédemment.
+     * Paramètres :
+     *   text : texte du message (sauts de ligne \r)
+     * Retourne : texte sans la signature. */
+    std::wstring ComposeWindow::RemovePlainSignature(std::wstring text)
+    {
+        if (!m_plain_signature.empty())
+        {
+            size_t pos = text.find(m_plain_signature);
+            if (pos != std::wstring::npos)
+                text.erase(pos, m_plain_signature.size());
+            m_plain_signature.clear();
+        }
+        return text;
+    }
+
+    /* Insère ou remplace la signature choisie dans le message (bloc
+     * #evo-signature de l'éditeur HTML, ou bloc « -- » du texte brut), au-dessus
+     * du texte cité ou à la fin selon la préférence. */
+    fire_and_forget ComposeWindow::ApplySignatureAsync()
+    {
+        auto strong = get_strong();
+        if (!m_signatures || SignatureBox().SelectedIndex() < 0)
+            co_return;
+
+        bool top = m_data.reply &&
+            ::EvolutionWin::Settings::Instance().GetBoolean(::EvolutionWin::Signatures::AboveQuoteKey, false);
+
+        if (m_html_mode)
+        {
+            /* éditeur pas encore prêt : appliquée à son message "ready" */
+            if (!m_editor_ready || !HtmlEditor().CoreWebView2())
+                co_return;
+
+            std::wstring content = SignatureContent(true);
+            std::wstring html;
+            if (!content.empty())
+            {
+                /* séparateur usuel « -- » (espace final conservé), sauf s'il y est déjà */
+                bool delimited = ::EvolutionWin::Signatures::HtmlToText(content).rfind(L"--", 0) == 0;
+                html = (delimited ? std::wstring{} : std::wstring{ L"<div style=\"white-space:pre\">-- </div>" }) + content;
+            }
+
+            JsonObject cfg;
+            cfg.SetNamedValue(L"html", JsonValue::CreateStringValue(html));
+            cfg.SetNamedValue(L"top", JsonValue::CreateBooleanValue(top));
+            co_await HtmlEditor().CoreWebView2().ExecuteScriptAsync(L"window.evoSetSignature(" + cfg.Stringify() + L")");
+        }
+        else
+        {
+            std::wstring text = RemovePlainSignature(std::wstring{ BodyBox().Text() });
+            std::wstring content = SignatureContent(false);
+
+            if (!content.empty())
+            {
+                for (auto& c : content)
+                    if (c == L'\n')
+                        c = L'\r';
+
+                std::wstring block = (content.rfind(L"--", 0) == 0 ? L"\r" : L"\r-- \r") + content;
+                /* au-dessus du texte cité : après la première ligne (saisie) */
+                size_t pos = top ? text.find(L'\r') : std::wstring::npos;
+                text.insert(pos == std::wstring::npos ? text.size() : pos, block);
+                m_plain_signature = block;
+            }
+
+            BodyBox().Text(hstring{ text });
+        }
     }
 
     /* Affiche un message d'information ou d'erreur dans la barre d'état de la
