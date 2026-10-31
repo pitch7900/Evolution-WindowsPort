@@ -82,6 +82,13 @@ tools\run-winui.bat          :: Lance .\build\EvolutionWin.exe avec le préfixe 
 tools\run-winui-debug.bat    :: Lance EvolutionWin.exe avec journaux de débogage IMAP/evo-core
 ```
 
+### 4. Construire l'installeur MSI
+
+```bat
+tools\build-msi.bat          :: dist\Evolution-<version>-x64.msi (WiX v5, autonome)
+msiexec /i dist\Evolution-0.8.0-x64.msi /qn   :: installation silencieuse (par machine)
+```
+
 ---
 
 ## Licence

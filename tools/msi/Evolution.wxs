@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Installeur MSI d'EvolutionWin (WiX v5), construit par tools\build-msi.bat.
+  Variables : StageDir (arborescence préparée par build-msi.ps1), Version.
+
+  Installation par machine dans %ProgramFiles%\Evolution ; déploiement
+  silencieux : msiexec /i Evolution-<version>-x64.msi /qn
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Evolution"
+           Manufacturer="Evolution-WindowsPort"
+           Version="$(var.Version)"
+           UpgradeCode="265A2473-73C6-4E13-85B8-D3B54853A588"
+           Scope="perMachine"
+           Language="1036"
+           Codepage="1252"
+           Compressed="yes">
+    <SummaryInformation Description="Evolution pour Windows (client natif WinUI 3)" />
+
+    <!-- UpgradeCode fixe : une nouvelle version remplace la précédente ;
+         même version autorisée pour réinstaller une compilation de test -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="Une version plus récente d'Evolution est déjà installée." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!-- Runtime Edge WebView2 (inclus dans Windows 11) : lecture et
+         rédaction des messages -->
+    <Property Id="WEBVIEW2_MACHINE">
+      <RegistrySearch Root="HKLM" Bitness="always32" Type="raw" Name="pv"
+                      Key="SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" />
+    </Property>
+    <Property Id="WEBVIEW2_USER">
+      <RegistrySearch Root="HKCU" Type="raw" Name="pv"
+                      Key="Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" />
+    </Property>
+    <!-- "0.0.0.0" : runtime désinstallé -->
+    <Launch Condition='Installed OR (WEBVIEW2_MACHINE AND WEBVIEW2_MACHINE &lt;&gt; "0.0.0.0") OR (WEBVIEW2_USER AND WEBVIEW2_USER &lt;&gt; "0.0.0.0")'
+            Message="Evolution nécessite le runtime Microsoft Edge WebView2 (https://go.microsoft.com/fwlink/p/?LinkId=2124703)." />
+
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/pitch7900/Evolution-WindowsPort" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Evolution">
+        <Directory Id="BINFOLDER" Name="bin" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <Feature Id="Main" Title="Evolution" Level="1">
+      <ComponentGroupRef Id="ApplicationFiles" />
+      <ComponentRef Id="EvolutionWinExe" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <!-- tout le contenu de l'arborescence préparée, sous-dossiers compris,
+         sauf l'exécutable principal déclaré ci-dessous -->
+    <ComponentGroup Id="ApplicationFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(var.StageDir)\**">
+        <Exclude Files="$(var.StageDir)\bin\EvolutionWin.exe" />
+      </Files>
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <!-- raccourci du menu Démarrer (tous les utilisateurs) porté par le
+         fichier lui-même : clé du composant = l'exécutable, par machine -->
+    <DirectoryRef Id="BINFOLDER">
+      <Component Id="EvolutionWinExe">
+        <File Id="EvolutionWinExe" Source="$(var.StageDir)\bin\EvolutionWin.exe" KeyPath="yes">
+          <Shortcut Id="EvolutionShortcut"
+                    Directory="ProgramMenuFolder"
+                    Name="Evolution"
+                    Description="Courrier, calendrier et contacts"
+                    WorkingDirectory="BINFOLDER"
+                    Advertise="no" />
+        </File>
+      </Component>
+    </DirectoryRef>
+  </Fragment>
+</Wix>

@@ -3,7 +3,9 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <windows.h>
 
 #include <glib/gstdio.h>
 #include <camel/camel.h>
@@ -906,6 +908,49 @@ core_log_open (void)
 /* ------------------------------------------------------------------------ */
 /* Core                                                                     */
 /* ------------------------------------------------------------------------ */
+
+/* The EDS services (libexec\*.exe), started by evo-core, inherit its
+ * environment: put the folder of evo-core.dll, where the installed
+ * application keeps every DLL (bin\), first in PATH so that they find
+ * their DLLs without any system-wide PATH change. */
+static void
+core_add_module_dir_to_path (void)
+{
+	HMODULE module = NULL;
+	wchar_t wpath[MAX_PATH], *slash;
+	const wchar_t *old_path;
+	gsize dir_len;
+
+	if (!GetModuleHandleExW (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+				 GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+				 (LPCWSTR) core_add_module_dir_to_path, &module) ||
+	    !GetModuleFileNameW (module, wpath, G_N_ELEMENTS (wpath)))
+		return;
+
+	slash = wcsrchr (wpath, L'\\');
+	if (!slash)
+		return;
+	*slash = L'\0';
+	dir_len = wcslen (wpath);
+
+	old_path = _wgetenv (L"PATH");
+
+	/* already first: nothing to do */
+	if (old_path && _wcsnicmp (old_path, wpath, dir_len) == 0 &&
+	    (old_path[dir_len] == L';' || old_path[dir_len] == L'\0'))
+		return;
+
+	{
+		gsize len = dir_len + 2 + (old_path ? wcslen (old_path) : 0);
+		wchar_t *new_path = g_new (wchar_t, len);
+
+		_snwprintf_s (new_path, len, _TRUNCATE, L"%s;%s", wpath, old_path ? old_path : L"");
+		/* both the CRT copy (getenv, GLib) and the process block (CreateProcessW) */
+		_wputenv_s (L"PATH", new_path);
+		SetEnvironmentVariableW (L"PATH", new_path);
+		g_free (new_path);
+	}
+}
 
 static gchar *
 json_from_builder (JsonBuilder *builder)
@@ -4500,6 +4545,7 @@ evo_core_new (EvoCoreEventFunc event_func,
 
 	core_log_open ();
 	g_message ("evo-core starting");
+	core_add_module_dir_to_path ();
 
 	core->event_func = event_func;
 	core->event_data = user_data;

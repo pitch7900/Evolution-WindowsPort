@@ -236,6 +236,22 @@ Test-Prerequisite -Name 'Edge WebView2 runtime' -Check {
     }
 } -Installer { Install-WithWinget 'Microsoft.EdgeWebView2Runtime' } -Hint 'shipped with Windows 11; otherwise install the Evergreen runtime'
 
+# MSI installer only (tools\build-msi.bat)
+Test-Prerequisite -Name 'WiX Toolset v5 (MSI installer)' -Optional -Check {
+    $wix = Join-Path $env:USERPROFILE '.dotnet\tools\wix.exe'
+    if (-not (Test-Path $wix) -and (Test-Command 'wix')) { $wix = (Get-Command wix).Source }
+    if (Test-Path $wix) {
+        $v = (& $wix --version) -replace '\+.*', ''
+        if ([version] $v -ge [version] '5.0') { "wix $v" }
+    }
+} -Installer {
+    if (-not (Test-Command 'dotnet') -or -not (& dotnet --list-sdks)) {
+        Install-WithWinget 'Microsoft.DotNet.SDK.9'
+        Update-SessionPath
+    }
+    Invoke-Native 'dotnet' @('tool', 'install', '--global', 'wix', '--version', '5.0.2')
+} -Hint 'dotnet tool install --global wix --version 5.0.2 (needs the .NET SDK)'
+
 # ---------------------------------------------------------------------------
 # Sources
 # ---------------------------------------------------------------------------

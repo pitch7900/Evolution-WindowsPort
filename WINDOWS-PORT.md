@@ -62,6 +62,7 @@ tools\build-evolution.bat   :: Evolution (version GTK transitoire)
 tools\build-winui-core.bat  :: evo-core.dll (moteur C pour le client WinUI 3)
 tools\build-winui-app.bat   :: EvolutionWin.exe (client natif WinUI 3, généré dans .\build)
 tools\run-winui.bat         :: lance .\build\EvolutionWin.exe avec le bon PATH
+tools\build-msi.bat         :: installeur dist\Evolution-<version>-x64.msi (phase 5)
 ```
 
 ## Arborescence
@@ -142,6 +143,7 @@ la racine du dépôt. Le dossier `evolution/win32/` contenait un ancien portage
 | `build-winui-core.bat` | `evo-core.dll` + `evo-core-test.exe` |
 | `build-winui-app.bat` | `EvolutionWin.exe` (client natif WinUI 3 dans `.\build`) |
 | `run-winui.bat` / `run-winui-debug.bat` | Lancement de `.\build\EvolutionWin.exe` (normal ou avec traces de débogage) |
+| `build-msi.bat` + `build-msi.ps1`, `msi/Evolution.wxs` | Installeur MSI autonome dans `dist\` (WiX v5) |
 | `cmake/msvc-compat.cmake` | Couche CMake injectée dans tous les projets |
 | `patches/evolution-data-server.patch` | Modifications Windows d'EDS |
 | `pkgconfig/*.pc.in` | Modèles pkg-config pour NSS/NSPR/ICU/sqlite3 (`@PREFIX@` remplacé à l'installation) |
@@ -361,9 +363,9 @@ le registre puis la fabrique carnet d'adresses, sans fenêtre console ; un
 compte IMAP réel configuré par l'utilisateur synchronise ses dossiers et
 affiche la liste des messages. L'affichage du contenu HTML attend la phase 3.
 
-Note pour l'installeur : les services héritent du `PATH` d'Evolution (qui y
-ajoute son dossier `bin`) pour trouver les DLL ; à revoir en phase 5 (DLL à
-côté des exécutables de `libexec`, ou manifeste).
+Les services héritent du `PATH` du client pour trouver leurs DLL. Pour
+EvolutionWin, `evo-core` place lui-même le dossier de `evo-core.dll` (`bin\`)
+en tête du `PATH` au démarrage (phase 5) : aucun réglage système requis.
 
 ## Phase 3 — préparation : shim WebKit sur WebView2
 
@@ -551,18 +553,76 @@ jalon du client natif. S/MIME, qui passe par NSS, n'est pas concerné.
 - [ ] Fenêtre OAuth2 sur WebView2
 - [ ] Test de bout en bout sur un tenant Exchange Online : courrier, agenda, contacts
 
-## Phase 5 — Installeur MSI (prévu)
+## Phase 5 — Installeur MSI
 
 Objectif : un paquet `.msi` autonome, déployable silencieusement sur un poste
 (`msiexec /i Evolution-x64.msi /qn`), par GPO, Intune ou SCCM, contenant
-EvolutionWin / Evolution, EDS et **toutes** leurs dépendances. Rien ne doit être requis sur
+EvolutionWin, EDS et **toutes** leurs dépendances. Rien ne doit être requis sur
 le poste en dehors de Windows 11.
+
+### Réalisation (2026-10-31)
+
+```bat
+tools\build-msi.bat                    :: recompile EvolutionWin dans l'arborescence, puis le MSI
+tools\build-msi.bat -Version 0.9.0     :: version du paquet (défaut 0.8.0, ou EVO_MSI_VERSION)
+tools\build-msi.bat -SkipAppBuild      :: reprend .\build\ (sortie de build-winui-app.bat)
+```
+
+Résultat : `dist\Evolution-<version>-x64.msi` (≈ 42 Mo, 1 199 fichiers,
+149 Mo installés). Fichiers : `tools\build-msi.bat` (environnement),
+`tools\build-msi.ps1` (arborescence, dépendances, signature, WiX),
+`tools\msi\Evolution.wxs` (source WiX).
+
+Arborescence installée (`%ProgramFiles%\Evolution`), au format d'un préfixe :
+EDS et Camel calculent leurs chemins depuis leurs DLL, GLib trouve ses modules
+GIO et ses schémas depuis la sienne, libical ses fuseaux depuis l'exécutable.
+
+| Dossier | Contenu |
+| --- | --- |
+| `bin\` | `EvolutionWin.exe` et le Windows App SDK autonome, `evo-core.dll`, 43 DLL du préfixe (imports PE), NSS chargé dynamiquement (`softokn3`, `freebl3`, `nssckbi`), `gdbus.exe`, `gspawn-win64-helper*.exe`, runtime Visual C++ (copie locale) |
+| `libexec\` | `evolution-source-registry`, fabriques carnet d'adresses et agenda (et leurs sous-processus), `camel-index-control`, `camel-gpg-photo-saver` |
+| `lib\evolution-data-server\` | fournisseurs Camel, backends carnet/agenda, modules du registre |
+| `lib\gio\modules\` | `gioopenssl` (TLS : IMAPS/SMTPS), `giognomeproxy` |
+| `share\` | `gschemas.compiled`, fuseaux libical, traductions (EDS, GLib, glib-networking, libsoup) |
+
+Choix et problèmes rencontrés :
+
+1. **GTK exclu** (65 → 43 DLL, 47 → 42 Mo) : seuls `evolution-user-prompter`
+   et `module-trust-prompt` (dialogues GTK d'EDS) et le fournisseur RSS
+   (greffon d'Evolution) l'importaient. EvolutionWin demande lui-même mots de
+   passe et certificats ; limite : une confirmation demandée par un backend
+   carnet/agenda en ligne (CalDAV, CardDAV) échoue au lieu d'afficher un
+   dialogue. La version GTK transitoire (`evolution.exe`) n'est pas dans le MSI.
+2. **Services EDS sans DLL à côté** : `evo-core` ajoute son dossier en tête du
+   `PATH` au démarrage ; les services lancés depuis `libexec\` en héritent.
+3. **Validation ICE** (`wix msi validate`, exécutée par le script) :
+   - ICE03 : les `.mui` du Windows App SDK portent des langues récentes
+     (1152, 1153, 1169) inconnues des tables ICE ; sans effet, ignorée ;
+   - ICE43/ICE57 : raccourci du menu Démarrer d'un paquet par machine
+     (`ALLUSERS=1`) supposé par utilisateur ; ignorées. Le raccourci est porté
+     par le fichier `EvolutionWin.exe` (supprimé avec lui) ;
+   - ICE61 : réinstallation à version égale autorisée (compilations de test).
+4. **Condition de lancement** : runtime WebView2 présent (clé EdgeUpdate,
+   version différente de `0.0.0.0`).
+
+**Validé** : extraction du MSI (`msiexec /a`) et exécution depuis
+l'arborescence extraite, avec un `PATH` réduit au système : bus D-Bus et
+registre EDS démarrés depuis le paquet, connexion IMAPS, compte, dossiers et
+messages de l'utilisateur listés ; `EvolutionWin.exe` ouvre sa fenêtre et
+démarre les fabriques carnet d'adresses et agenda du paquet. L'installation
+réelle (`msiexec /i`, élévation UAC) reste à faire par l'utilisateur.
+
+Reste à faire : icône de l'application, enregistrement comme client de
+messagerie et associations `.eml`/`.ics`/`.vcf` (quand EvolutionWin saura
+ouvrir un fichier ou une URL `mailto:` passés en argument), choix des langues,
+Gpg4win en prérequis optionnel.
 
 ### Outil
 
 **WiX Toolset v5** (outil de référence pour les MSI, sources XML
-versionnables, construction en ligne de commande) : `dotnet tool install --global wix`.
-Il sera ajouté à `check-prereqs.ps1`. Script prévu : `tools\build-msi.bat`.
+versionnables, construction en ligne de commande) :
+`dotnet tool install --global wix --version 5.0.2`, vérifié et installé par
+`check-prereqs.ps1` (prérequis facultatif).
 
 ### Contenu du paquet
 
@@ -1015,8 +1075,8 @@ OpenPGP avec Gpg4win.
 6. ~~Éditeur HTML de composition (WebView2) et impression native des messages (`Ctrl+P`).~~
 7. ~~Dialogue de certificats TLS, OAuth2 IMAP/SMTP, S/MIME, OpenPGP~~ (validation
    dans l'interface à faire).
-8. Microsoft 365 par Microsoft Graph (evolution-ews, phase 4b) et installeur
-   MSI (phase 5).
+8. ~~Installeur MSI (phase 5).~~
+9. Microsoft 365 par Microsoft Graph (evolution-ews, phase 4b).
 
 ## Suivi des phases
 
@@ -1037,6 +1097,7 @@ OpenPGP avec Gpg4win.
 - [x] Phase 4c — OpenPGP : `camel-gpg-context.c` porté sur
   `g_spawn_async_with_pipes()` (testé le 2026-10-31) ; reste à intégrer
   Gpg4win comme prérequis optionnel de l'installeur MSI
-- [ ] Phase 5 — installeur MSI (WiX) avec toutes les dépendances
+- [x] Phase 5 — installeur MSI (WiX v5) autonome, validé par extraction
+  (2026-10-31) ; icône, associations et `mailto:` à venir
 - [—] Phase 6a — abandonnée (la version GTK reste transitoire)
 - [x] Phase 6b — **choisie** : interface réécrite en WinUI 3 / C++/WinRT (jalons 1 à 7 réalisés : courrier, lecture WebView2, rédaction HTML/texte et envoi, impression, actions, recherche, notifications toasts, pièces jointes, gestion des comptes et mots de passe, calendrier et contacts EDS)
