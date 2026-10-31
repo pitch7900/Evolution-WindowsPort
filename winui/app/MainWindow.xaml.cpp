@@ -1157,7 +1157,21 @@ namespace winrt::EvolutionWin::implementation
     {
         ::EvolutionWin::ComposeData data;
 
+        /* nouveau message : compte par défaut, sinon celui du dossier affiché
+         * (les réponses et transferts gardent le compte du message) */
         data.account = m_account;
+        if (m_accounts)
+        {
+            for (auto const& value : m_accounts)
+            {
+                auto account = value.GetObject();
+                if (account.GetNamedBoolean(L"default", false))
+                {
+                    data.account = account.GetNamedString(L"uid", m_account);
+                    break;
+                }
+            }
+        }
         OpenCompose(data);
     }
 
@@ -2922,6 +2936,7 @@ namespace winrt::EvolutionWin::implementation
             hstring address = account.GetNamedString(L"address", L"");
             hstring backend = account.GetNamedString(L"backend", L"");
             bool local = account.GetNamedBoolean(L"local", false);
+            bool is_default = account.GetNamedBoolean(L"default", false);
 
             Grid row;
             row.Padding(ThicknessHelper::FromLengths(12, 10, 12, 10));
@@ -2933,10 +2948,29 @@ namespace winrt::EvolutionWin::implementation
             StackPanel info;
             info.Spacing(2);
 
+            StackPanel title_line;
+            title_line.Orientation(Orientation::Horizontal);
+            title_line.Spacing(8);
             TextBlock title;
             title.Text(name);
             title.Style(Application::Current().Resources().Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>());
-            info.Children().Append(title);
+            title_line.Children().Append(title);
+            if (is_default)
+            {
+                /* badge du compte par défaut */
+                Border badge;
+                badge.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));
+                badge.Padding(ThicknessHelper::FromLengths(6, 1, 6, 1));
+                badge.VerticalAlignment(VerticalAlignment::Center);
+                badge.Background(Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
+                TextBlock badge_text;
+                badge_text.Text(L"Par défaut");
+                badge_text.FontSize(11);
+                badge_text.Foreground(Application::Current().Resources().Lookup(box_value(L"TextOnAccentFillColorPrimaryBrush")).as<Brush>());
+                badge.Child(badge_text);
+                title_line.Children().Append(badge);
+            }
+            info.Children().Append(title_line);
 
             TextBlock subtitle;
             subtitle.Text((address.empty() ? L"Compte local" : address) +
@@ -2948,10 +2982,35 @@ namespace winrt::EvolutionWin::implementation
 
             if (!local)
             {
+                StackPanel actions;
+                actions.Orientation(Orientation::Horizontal);
+                actions.Spacing(8);
+                actions.VerticalAlignment(VerticalAlignment::Center);
+                Grid::SetColumn(actions, 1);
+
+                if (!is_default)
+                {
+                    Button default_btn;
+                    default_btn.Content(box_value(L"Définir par défaut"));
+                    ToolTipService::SetToolTip(default_btn, box_value(L"Compte utilisé pour les nouveaux messages"));
+                    default_btn.Click([this, uid, name](IInspectable const&, RoutedEventArgs const&)
+                    {
+                        m_core->SetDefaultAccount(uid, [this, name](hstring const&, hstring const& error)
+                        {
+                            if (!error.empty())
+                            {
+                                ShowStatus(L"Compte par défaut : " + error, InfoBarSeverity::Error);
+                                return;
+                            }
+                            ShowStatus(L"« " + name + L" » est le compte par défaut.", InfoBarSeverity::Success);
+                            LoadAccounts();
+                        });
+                    });
+                    actions.Children().Append(default_btn);
+                }
+
                 Button remove_btn;
                 remove_btn.Content(box_value(L"Supprimer"));
-                remove_btn.VerticalAlignment(VerticalAlignment::Center);
-                Grid::SetColumn(remove_btn, 1);
                 remove_btn.Click([this, uid, name](IInspectable const&, RoutedEventArgs const&)
                 {
                     m_core->RemoveAccount(uid, [this, name](hstring const&, hstring const& error)
@@ -2965,7 +3024,8 @@ namespace winrt::EvolutionWin::implementation
                         LoadAccounts();
                     });
                 });
-                row.Children().Append(remove_btn);
+                actions.Children().Append(remove_btn);
+                row.Children().Append(actions);
             }
 
             items.Append(row);

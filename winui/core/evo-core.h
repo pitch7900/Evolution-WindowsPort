@@ -54,7 +54,8 @@ EvoCore *	evo_core_new			(EvoCoreEventFunc event_func,
 void		evo_core_free			(EvoCore *core);
 
 /* [{"uid": "...", "name": "Display name", "address": "user@example.com",
- *   "protocol": "imapx", "local": false}, ...] */
+ *   "protocol": "imapx", "local": false,
+ *   "default": true (compte par défaut des nouveaux messages)}, ...] */
 void		evo_core_list_accounts		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
@@ -272,6 +273,18 @@ void		evo_core_save_password		(EvoCore *core,
  *   user_data    : données utilisateur transmises au rappel */
 void		evo_core_add_account		(EvoCore *core,
 						 const char *account_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Désigne le compte par défaut (nouveaux messages) et son identité
+ * d'expédition comme identité par défaut d'evolution-data-server.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : uid du compte
+ *   func        : rappel recevant {}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_set_default_account	(EvoCore *core,
+						 const char *account_uid,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
