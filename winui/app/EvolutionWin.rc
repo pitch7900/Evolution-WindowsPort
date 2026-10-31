@@ -1,0 +1,8 @@
+// Ressources Win32 d'EvolutionWin.exe : icône de l'application (Explorateur,
+// raccourcis, barre des tâches ; la première icône du fichier est celle de
+// l'exécutable). Assets\EvolutionWin.ico : icône d'Evolution (GNOME),
+// 16 à 256 px, générée depuis evolution/data/icons/hicolor_apps_scalable_evolution.svg.
+
+#include "WindowIcon.h"
+
+IDI_EVOLUTIONWIN ICON "Assets\\EvolutionWin.ico"

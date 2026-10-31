@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
+#include "WindowIcon.h"
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
 #endif
@@ -91,6 +92,7 @@ namespace winrt::EvolutionWin::implementation
         ExtendsContentIntoTitleBar(true);
         SetTitleBar(AppTitleBar());
         AppWindow().Resize({ 1500, 950 });
+        ::EvolutionWin::SetWindowIcon(AppWindow());
 
         InitializeReaderAsync();
 

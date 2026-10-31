@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "ComposeWindow.xaml.h"
+#include "WindowIcon.h"
 #if __has_include("ComposeWindow.g.cpp")
 #include "ComposeWindow.g.cpp"
 #endif
@@ -65,6 +66,7 @@ namespace winrt::EvolutionWin::implementation
         ExtendsContentIntoTitleBar(true);
         SetTitleBar(AppTitleBar());
         AppWindow().Resize({ 920, 780 });
+        ::EvolutionWin::SetWindowIcon(AppWindow());
 
         /* Comptes d'expédition : uniquement les comptes réseau (dotés d'une identité et d'un serveur SMTP) */
         int selected = 0;

@@ -48,9 +48,9 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 
 ## 1. Application et installation — 🟢
 
-- [ ] 🟢 **Icône de l'exécutable** : fichier `.ico` multi-résolution (16, 24, 32, 48, 64, 256 px) intégré comme ressource dans `EvolutionWin.exe`
-  - [ ] Explorateur, barre des tâches, Alt+Tab, barre de titre (`AppWindow.SetIcon`)
-  - [ ] Raccourci du menu Démarrer (installeur MSI)
+- [x] 🟢 **Icône de l'exécutable** : fichier `.ico` multi-résolution (16, 24, 32, 48, 64, 256 px) intégré comme ressource dans `EvolutionWin.exe`
+  - [x] Explorateur, barre des tâches, Alt+Tab, barre de titre (`AppWindow.SetIcon`)
+  - [x] Raccourci du menu Démarrer (installeur MSI)
   - [ ] *Paramètres › Applications installées* (propriété `ARPPRODUCTICON` du MSI)
 - [ ] 🟢 **Mise à jour du MSI : erreur 1618** « Une autre installation est en cours d'exécution » à l'installation de la 0.9.1 par-dessus la 0.9.0 (cause non identifiée : le MSI ne contient ni action personnalisée ni installation imbriquée ; vérifier un `msiexec` résiduel et le journal `MsiInstaller`)
 

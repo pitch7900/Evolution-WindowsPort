@@ -105,6 +105,11 @@
     <Manifest Include="app.manifest" />
   </ItemGroup>
   <ItemGroup>
+    <ResourceCompile Include="EvolutionWin.rc" />
+    <ClInclude Include="WindowIcon.h" />
+    <None Include="Assets\EvolutionWin.ico" />
+  </ItemGroup>
+  <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="CoreBridge.h" />
     <ClInclude Include="FolderItem.h">

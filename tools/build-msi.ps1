@@ -181,6 +181,7 @@ New-Item -ItemType Directory -Force $Dist | Out-Null
 $Msi = Join-Path $Dist "Evolution-$Version-x64.msi"
 & $WixExe build (Join-Path $Tools 'msi\Evolution.wxs') -arch x64 `
 	-d "StageDir=$Stage" -d "Version=$Version" `
+	-d "IconFile=$(Join-Path $env:WINUI_SRC 'app\Assets\EvolutionWin.ico')" `
 	-intermediatefolder (Join-Path $env:BUILD_INTERMEDIATE 'msi-obj') -o $Msi
 if ($LASTEXITCODE) { throw 'wix build a échoué' }
 Remove-Item -Force -ErrorAction SilentlyContinue ([System.IO.Path]::ChangeExtension($Msi, '.wixpdb'))

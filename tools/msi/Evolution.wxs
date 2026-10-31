@@ -37,6 +37,9 @@
     <Launch Condition='Installed OR (WEBVIEW2_MACHINE AND WEBVIEW2_MACHINE &lt;&gt; "0.0.0.0") OR (WEBVIEW2_USER AND WEBVIEW2_USER &lt;&gt; "0.0.0.0")'
             Message="Evolution nécessite le runtime Microsoft Edge WebView2 (https://go.microsoft.com/fwlink/p/?LinkId=2124703)." />
 
+    <!-- icône dans « Applications installées » (celle des raccourcis vient de l'exécutable) -->
+    <Icon Id="EvolutionWin.ico" SourceFile="$(var.IconFile)" />
+    <Property Id="ARPPRODUCTICON" Value="EvolutionWin.ico" />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/pitch7900/Evolution-WindowsPort" />
     <Property Id="ARPNOMODIFY" Value="1" />
 
