@@ -425,6 +425,49 @@ void		evo_core_delete_contact		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Liste les sources activées d'un ou plusieurs types, triées par nom.
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   kinds     : types séparés par des virgules parmi "calendar", "tasks",
+ *               "memos" et "contacts" ("" ou NULL pour tous)
+ *   func      : rappel recevant [{"uid": "...", "name": "...",
+ *               "kind": "calendar"|"tasks"|"memos"|"contacts"}, ...]
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_list_sources		(EvoCore *core,
+						 const char *kinds,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Exporte des contacts au format vCard 3.0. Format attendu pour request_json :
+ * {"book_uid": "..." ("" pour tous les carnets d'adresses activés),
+ *  "path": "C:\\...\\contacts.vcf", "per_contact": false}
+ * Avec "per_contact": true, "path" est un dossier (créé au besoin) qui reçoit
+ * un fichier par contact, nommé d'après son nom complet (« Nom (2).vcf » en
+ * cas de doublon).
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   request_json : requête au format JSON UTF-8
+ *   func         : rappel recevant {"count": n, "files": ["C:\\...", ...]}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_export_contacts	(EvoCore *core,
+						 const char *request_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Exporte tous les composants d'un agenda (VEVENT), d'une liste de tâches
+ * (VTODO) ou de mémos (VJOURNAL) dans un fichier iCalendar (VCALENDAR 2.0
+ * avec les VTIMEZONE des fuseaux horaires référencés). Format attendu pour
+ * request_json : {"source_uid": "...", "path": "C:\\...\\agenda.ics"}
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   request_json : requête au format JSON UTF-8
+ *   func         : rappel recevant {"count": n}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_export_calendar	(EvoCore *core,
+						 const char *request_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Répond à une demande interactive d'approbation de certificat TLS émise via
  * l'événement "tls-trust-required".
  * Paramètres :

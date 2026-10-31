@@ -20,7 +20,9 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cwctype>
 #include <utility>
+#include <vector>
 
 /* version de l'application, depuis le fichier VERSION (généré par MSBuild) */
 #include "evo-version.h"
@@ -116,6 +118,141 @@ namespace
         }
 
         return from;
+    }
+
+    /* Origine des documents du lecteur : nom réservé (.invalid), jamais
+     * résolu, toutes ses requêtes étant servies par WebResourceRequested.
+     * En http (et non https) pour que les images http autorisées ne soient
+     * pas bloquées comme contenu mixte. */
+    constexpr std::wstring_view ReaderOrigin = L"http://reader.evolution.invalid/";
+
+    /* clés des préférences de confidentialité (voir Settings.h) */
+    constexpr wchar_t RemoteContentKey[] = L"privacy.remote-content";
+    constexpr wchar_t TrustedSendersKey[] = L"privacy.trusted-senders";
+    constexpr wchar_t TrustedDomainsKey[] = L"privacy.trusted-domains";
+
+    bool StartsWith(std::wstring_view text, std::wstring_view prefix)
+    {
+        return text.size() >= prefix.size() && text.compare(0, prefix.size(), prefix) == 0;
+    }
+
+    std::wstring ToLower(std::wstring_view text)
+    {
+        std::wstring lower{ text };
+        for (auto& c : lower)
+            c = static_cast<wchar_t>(std::towlower(c));
+        return lower;
+    }
+
+    std::wstring_view Trim(std::wstring_view text)
+    {
+        while (!text.empty() && std::iswspace(text.front()))
+            text.remove_prefix(1);
+        while (!text.empty() && std::iswspace(text.back()))
+            text.remove_suffix(1);
+        return text;
+    }
+
+    /* Requête vers un serveur distant (images, CSS, polices, cadres, pixels
+     * de suivi…), par opposition aux data:, about:, blob: du document. */
+    bool IsRemoteUri(std::wstring_view uri)
+    {
+        auto lower = ToLower(uri.substr(0, 8));
+        return StartsWith(lower, L"http:") || StartsWith(lower, L"https:") ||
+               StartsWith(lower, L"ws:") || StartsWith(lower, L"wss:") || StartsWith(lower, L"ftp:");
+    }
+
+    /* Adresse électronique en minuscules d'un expéditeur « Nom <adresse> »
+     * ou « adresse » (la première s'il y en a plusieurs) ; vide si aucune.
+     * Paramètres :
+     *   from : champ From tel que fourni par le moteur */
+    std::wstring SenderAddress(hstring const& from)
+    {
+        std::wstring_view view{ from };
+        std::wstring_view address;
+
+        auto open = view.find(L'<');
+        if (open != std::wstring_view::npos)
+        {
+            auto close = view.find(L'>', open);
+            address = view.substr(open + 1, close == std::wstring_view::npos ? std::wstring_view::npos : close - open - 1);
+        }
+        else
+        {
+            address = view.substr(0, view.find(L','));
+        }
+
+        address = Trim(address);
+        auto at = address.rfind(L'@');
+        if (at == std::wstring_view::npos || at == 0 || at + 1 >= address.size() ||
+            address.find_first_of(L" \t\"<>,;") != std::wstring_view::npos)
+            return {};
+
+        return ToLower(address);
+    }
+
+    /* domaine d'une adresse (« exemple.ch » pour « a@exemple.ch ») */
+    std::wstring AddressDomain(std::wstring const& address)
+    {
+        auto at = address.rfind(L'@');
+        return at == std::wstring::npos ? std::wstring{} : address.substr(at + 1);
+    }
+
+    /* Liste de confiance (tableau JSON de chaînes) lue dans les préférences.
+     * Paramètres :
+     *   key : TrustedSendersKey ou TrustedDomainsKey */
+    std::vector<std::wstring> ReadTrustList(wchar_t const* key)
+    {
+        std::vector<std::wstring> list;
+        for (auto const& value : ::EvolutionWin::Settings::Instance().GetArray(key))
+        {
+            if (value.ValueType() == JsonValueType::String)
+            {
+                auto entry = ToLower(Trim(value.GetString()));
+                if (!entry.empty() && std::find(list.begin(), list.end(), entry) == list.end())
+                    list.push_back(entry);
+            }
+        }
+        return list;
+    }
+
+    void WriteTrustList(wchar_t const* key, std::vector<std::wstring> const& list)
+    {
+        JsonArray array;
+        for (auto const& entry : list)
+            array.Append(JsonValue::CreateStringValue(entry));
+        ::EvolutionWin::Settings::Instance().Set(key, array);
+    }
+
+    /* "never", "trusted" (par défaut) ou "always" */
+    std::wstring RemoteContentMode()
+    {
+        std::wstring mode{ ::EvolutionWin::Settings::Instance().GetString(RemoteContentKey, L"trusted") };
+        return mode == L"never" || mode == L"always" ? mode : L"trusted";
+    }
+
+    /* Le contenu distant d'un message de cet expéditeur peut-il être chargé
+     * sans demande ? « Jamais » l'emporte sur les listes de confiance.
+     * Paramètres :
+     *   from : champ From du message */
+    bool IsRemoteContentTrusted(hstring const& from)
+    {
+        auto mode = RemoteContentMode();
+        if (mode == L"always")
+            return true;
+        if (mode == L"never")
+            return false;
+
+        auto address = SenderAddress(from);
+        if (address.empty())
+            return false;
+
+        auto senders = ReadTrustList(TrustedSendersKey);
+        if (std::find(senders.begin(), senders.end(), address) != senders.end())
+            return true;
+
+        auto domains = ReadTrustList(TrustedDomainsKey);
+        return std::find(domains.begin(), domains.end(), AddressDomain(address)) != domains.end();
     }
 }
 
@@ -466,6 +603,7 @@ namespace winrt::EvolutionWin::implementation
             ContactsViewPane().Visibility(Visibility::Collapsed);
             SettingsViewPane().Visibility(Visibility::Visible);
             RefreshAccountsView();
+            RefreshPrivacyView();
             return;
         }
 
@@ -1157,7 +1295,7 @@ namespace winrt::EvolutionWin::implementation
             ReaderContainer().Visibility(Visibility::Visible);
             UpdateActionButtons(uid);
 
-            ShowInReader(message.GetNamedString(L"html", L""));
+            ShowCurrentMessageInReader(false);
         });
     }
 
@@ -1195,23 +1333,54 @@ namespace winrt::EvolutionWin::implementation
         settings.IsStatusBarEnabled(true);
 
         core.AddWebResourceRequestedFilter(L"*", Microsoft::Web::WebView2::Core::CoreWebView2WebResourceContext::All);
-        core.WebResourceRequested([](auto const& sender, Microsoft::Web::WebView2::Core::CoreWebView2WebResourceRequestedEventArgs const& args)
+        core.WebResourceRequested([this](auto const& sender, Microsoft::Web::WebView2::Core::CoreWebView2WebResourceRequestedEventArgs const& args)
         {
-            std::wstring_view uri{ args.Request().Uri() };
-
-            if (uri.rfind(L"http:", 0) == 0 || uri.rfind(L"https:", 0) == 0)
-                args.Response(sender.Environment().CreateWebResourceResponse(nullptr, 403, L"Blocked", L""));
+            OnReaderResourceRequested(sender, args);
         });
 
-        core.NavigationStarting([](auto const&, Microsoft::Web::WebView2::Core::CoreWebView2NavigationStartingEventArgs const& args)
+        core.NavigationStarting([this](auto const&, Microsoft::Web::WebView2::Core::CoreWebView2NavigationStartingEventArgs const& args)
         {
             std::wstring_view uri{ args.Uri() };
 
-            if (args.IsUserInitiated() && uri.rfind(L"data:", 0) != 0 && uri.rfind(L"about:", 0) != 0)
+            /* le document demandé par ShowInReader (CoreWebView2::Navigate) :
+               à tester en premier, WebView2 considère les navigations lancées
+               par l'application comme « initiées par l'utilisateur » */
+            if (uri == std::wstring_view{ m_reader_uri })
             {
-                args.Cancel(true);
-                Windows::System::Launcher::LaunchUriAsync(Uri{ args.Uri() });
+                m_reader_navigation_id = args.NavigationId();
+                m_reader_navigation_known = true;
+                return;
             }
+
+            if (args.IsUserInitiated())
+            {
+                if (uri.rfind(L"data:", 0) == 0 || uri.rfind(L"about:", 0) == 0)
+                    return;
+                /* lien cliqué : ouvert dans le navigateur ; liens relatifs
+                   d'un message : rien à ouvrir */
+                args.Cancel(true);
+                if (!StartsWith(uri, ReaderOrigin))
+                    Windows::System::Launcher::LaunchUriAsync(Uri{ args.Uri() });
+                return;
+            }
+
+            /* autres navigations non demandées par l'utilisateur : refusées
+               (pas de <meta refresh> vers un site distant) */
+            if (uri != L"about:blank")
+                args.Cancel(true);
+        });
+
+        /* le document demandé remplace le précédent : ses requêtes seules
+           arrivent désormais, la décision de confiance s'applique */
+        core.ContentLoading([this](auto const&, Microsoft::Web::WebView2::Core::CoreWebView2ContentLoadingEventArgs const& args)
+        {
+            if (!m_reader_navigation_known || args.NavigationId() != m_reader_navigation_id)
+                return;
+
+            m_reader_navigation_known = false;
+            m_reader_document_active = true;
+            m_reader_remote_allowed = m_reader_pending_allow;
+            m_reader_blocked_count = 0;
         });
 
         core.NewWindowRequested([](auto const&, Microsoft::Web::WebView2::Core::CoreWebView2NewWindowRequestedEventArgs const& args)
@@ -1222,30 +1391,211 @@ namespace winrt::EvolutionWin::implementation
 
         m_reader_ready = true;
 
-        if (!m_pending_html.empty())
-        {
-            ShowInReader(m_pending_html);
-            m_pending_html = L"";
-        }
+        /* document demandé avant la fin de l'initialisation */
+        if (!m_reader_uri.empty())
+            core.Navigate(m_reader_uri);
     }
 
-    void MainWindow::ShowInReader(hstring const& html)
+    /* Affiche un document HTML dans le lecteur. Le document reçoit une
+     * adresse unique ; tant qu'il n'est pas chargé, aucune requête distante
+     * n'est autorisée ni comptée (une requête tardive du message précédent
+     * ne peut donc ni charger de contenu ni afficher le bandeau).
+     * Paramètres :
+     *   html         : document à afficher
+     *   allow_remote : autoriser le chargement du contenu distant */
+    void MainWindow::ShowInReader(hstring const& html, bool allow_remote)
     {
+        ++m_reader_generation;
+        m_reader_uri = hstring{ std::wstring{ ReaderOrigin } + L"message-" +
+            std::to_wstring(GetCurrentProcessId()) + L"-" + std::to_wstring(m_reader_generation) };
+        m_reader_html = html;
+        m_reader_pending_allow = allow_remote;
+        m_reader_navigation_known = false;
+        m_reader_document_active = false;
+        m_reader_remote_allowed = false;
+        m_reader_blocked_count = 0;
+        RemoteContentBar().IsOpen(false);
+
         if (!m_reader_ready)
-        {
-            m_pending_html = html;
             return;
-        }
 
         try
         {
-            Reader().NavigateToString(html);
+            Reader().CoreWebView2().Navigate(m_reader_uri);
         }
         catch (hresult_error const& e)
         {
-            /* NavigateToString is limited to 2 MB */
-            ShowStatus(L"Ce message est trop volumineux pour l'aperçu : " + e.message(), InfoBarSeverity::Warning);
+            ShowStatus(L"Impossible d'afficher le message : " + e.message(), InfoBarSeverity::Warning);
         }
+    }
+
+    /* Affiche le message courant (m_current_message) dans le lecteur, avec
+     * le contenu distant si l'expéditeur est de confiance ou si demandé.
+     * Paramètres :
+     *   force_remote : « Afficher les images pour ce message » (cette fois
+     *                  seulement, même si l'option globale est « Jamais ») */
+    void MainWindow::ShowCurrentMessageInReader(bool force_remote)
+    {
+        if (!m_current_message)
+            return;
+
+        bool allow = force_remote || IsRemoteContentTrusted(m_current_message.GetNamedString(L"from", L""));
+        ShowInReader(m_current_message.GetNamedString(L"html", L""), allow);
+    }
+
+    /* Toutes les requêtes du lecteur : sert le document courant, bloque
+     * (403) le contenu distant non autorisé et compte les blocages pour le
+     * bandeau « Contenu externe bloqué ».
+     * Paramètres :
+     *   sender : moteur WebView2 du lecteur
+     *   args   : requête interceptée */
+    void MainWindow::OnReaderResourceRequested(
+        Microsoft::Web::WebView2::Core::CoreWebView2 const& sender,
+        Microsoft::Web::WebView2::Core::CoreWebView2WebResourceRequestedEventArgs const& args)
+    {
+        hstring request_uri = args.Request().Uri();
+        std::wstring_view uri{ request_uri };
+
+        if (StartsWith(ToLower(uri.substr(0, ReaderOrigin.size())), ReaderOrigin))
+        {
+            if (request_uri == m_reader_uri)
+                ServeReaderDocumentAsync(sender, args, m_reader_html);
+            else
+                args.Response(sender.Environment().CreateWebResourceResponse(nullptr, 404, L"Not Found", L""));
+            return;
+        }
+
+        if (!IsRemoteUri(uri))
+            return;
+
+        if (m_reader_document_active && m_reader_remote_allowed)
+            return;
+
+        args.Response(sender.Environment().CreateWebResourceResponse(nullptr, 403, L"Blocked", L""));
+
+        if (m_reader_document_active)
+        {
+            ++m_reader_blocked_count;
+            UpdateRemoteContentBanner();
+        }
+    }
+
+    /* Répond à la requête du document du lecteur avec son HTML (UTF-8).
+     * Paramètres :
+     *   sender : moteur WebView2 du lecteur
+     *   args   : requête du document
+     *   html   : contenu à servir */
+    fire_and_forget MainWindow::ServeReaderDocumentAsync(
+        Microsoft::Web::WebView2::Core::CoreWebView2 sender,
+        Microsoft::Web::WebView2::Core::CoreWebView2WebResourceRequestedEventArgs args,
+        hstring html)
+    {
+        auto strong = get_strong();
+        auto deferral = args.GetDeferral();
+
+        try
+        {
+            Windows::Storage::Streams::InMemoryRandomAccessStream stream;
+            Windows::Storage::Streams::DataWriter writer{ stream };
+            writer.UnicodeEncoding(Windows::Storage::Streams::UnicodeEncoding::Utf8);
+            writer.WriteString(html);
+            co_await writer.StoreAsync();
+            writer.DetachStream();
+            stream.Seek(0);
+
+            args.Response(sender.Environment().CreateWebResourceResponse(stream, 200, L"OK",
+                L"Content-Type: text/html; charset=utf-8\r\n"
+                L"Cache-Control: no-store\r\n"
+                L"Referrer-Policy: no-referrer"));
+        }
+        catch (hresult_error const& e)
+        {
+            ShowStatus(L"Impossible d'afficher le message : " + e.message(), InfoBarSeverity::Warning);
+        }
+
+        deferral.Complete();
+    }
+
+    /* Ouvre ou met à jour le bandeau « Contenu externe bloqué » pour le
+     * message affiché (boutons de confiance selon l'expéditeur et l'option
+     * globale). */
+    void MainWindow::UpdateRemoteContentBanner()
+    {
+        if (!m_current_message || m_reader_blocked_count == 0)
+        {
+            RemoteContentBar().IsOpen(false);
+            return;
+        }
+
+        auto address = SenderAddress(m_current_message.GetNamedString(L"from", L""));
+        bool never = RemoteContentMode() == L"never";
+
+        std::wstring msg = m_reader_blocked_count == 1
+            ? L"1 élément distant (image, style, pixel de suivi…) n'a pas été chargé pour protéger votre vie privée."
+            : std::to_wstring(m_reader_blocked_count) +
+              L" éléments distants (images, styles, pixels de suivi…) n'ont pas été chargés pour protéger votre vie privée.";
+        if (never)
+            msg += L" Le chargement est désactivé pour tous les messages (Paramètres › Confidentialité).";
+        RemoteContentBar().Message(hstring{ msg });
+
+        bool can_trust = !never && !address.empty();
+        TrustSenderButton().Visibility(can_trust ? Visibility::Visible : Visibility::Collapsed);
+        TrustDomainButton().Visibility(can_trust ? Visibility::Visible : Visibility::Collapsed);
+        if (can_trust)
+        {
+            TrustSenderButton().Content(box_value(hstring{ L"Toujours faire confiance à " + address }));
+            TrustDomainButton().Content(box_value(hstring{ L"Toujours faire confiance au domaine @" + AddressDomain(address) }));
+        }
+
+        /* ouvert au premier blocage seulement : une image chargée plus tard
+           ne rouvre pas un bandeau fermé par l'utilisateur */
+        if (m_reader_blocked_count == 1)
+            RemoteContentBar().IsOpen(true);
+    }
+
+    /* « Afficher les images pour ce message » : recharge le message courant
+     * avec le contenu distant, cette fois seulement. */
+    void MainWindow::OnShowRemoteContentClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ShowCurrentMessageInReader(true);
+    }
+
+    void MainWindow::OnTrustSenderClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (!m_current_message)
+            return;
+        auto address = SenderAddress(m_current_message.GetNamedString(L"from", L""));
+        TrustCurrentSender(TrustedSendersKey, address, hstring{ address });
+    }
+
+    void MainWindow::OnTrustDomainClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (!m_current_message)
+            return;
+        auto domain = AddressDomain(SenderAddress(m_current_message.GetNamedString(L"from", L"")));
+        TrustCurrentSender(TrustedDomainsKey, domain, hstring{ L"@" + domain });
+    }
+
+    /* Ajoute une entrée à une liste de confiance puis recharge le message
+     * courant avec son contenu distant.
+     * Paramètres :
+     *   key   : TrustedSendersKey ou TrustedDomainsKey
+     *   entry : adresse ou domaine en minuscules
+     *   label : texte affiché dans la barre d'état */
+    void MainWindow::TrustCurrentSender(hstring const& key, std::wstring const& entry, hstring const& label)
+    {
+        if (entry.empty())
+            return;
+
+        auto list = ReadTrustList(key.c_str());
+        if (std::find(list.begin(), list.end(), entry) == list.end())
+        {
+            list.push_back(entry);
+            WriteTrustList(key.c_str(), list);
+        }
+
+        ShowStatus(L"Le contenu externe des messages de « " + label + L" » sera chargé.", InfoBarSeverity::Success);
+        ShowCurrentMessageInReader(false);
     }
 
     void MainWindow::OnRefreshClick(IInspectable const&, RoutedEventArgs const&)
@@ -3054,6 +3404,84 @@ namespace winrt::EvolutionWin::implementation
         });
     }
 
+    /* Met à jour la section « Confidentialité » de la vue Paramètres :
+     * option globale de contenu externe et listes de confiance. */
+    void MainWindow::RefreshPrivacyView()
+    {
+        auto mode = RemoteContentMode();
+        m_updating_privacy_view = true;
+        RemoteContentModeChoice().SelectedIndex(mode == L"never" ? 0 : mode == L"always" ? 2 : 1);
+        m_updating_privacy_view = false;
+
+        auto items = TrustedSenderList().Items();
+        items.Clear();
+
+        auto add_rows = [&](wchar_t const* key, bool domains)
+        {
+            for (auto const& entry : ReadTrustList(key))
+            {
+                Grid row;
+                row.Padding(ThicknessHelper::FromLengths(12, 6, 12, 6));
+                row.ColumnDefinitions().Append(ColumnDefinition{});
+                ColumnDefinition action_col;
+                action_col.Width(GridLengthHelper::Auto());
+                row.ColumnDefinitions().Append(action_col);
+
+                StackPanel info;
+                info.Spacing(2);
+                info.VerticalAlignment(VerticalAlignment::Center);
+                TextBlock title;
+                title.Text(hstring{ domains ? L"@" + entry : entry });
+                title.IsTextSelectionEnabled(true);
+                info.Children().Append(title);
+                TextBlock kind;
+                kind.Text(domains ? L"Domaine" : L"Expéditeur");
+                kind.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+                info.Children().Append(kind);
+                row.Children().Append(info);
+
+                Button remove_btn;
+                remove_btn.Content(box_value(L"Retirer"));
+                remove_btn.VerticalAlignment(VerticalAlignment::Center);
+                Grid::SetColumn(remove_btn, 1);
+                remove_btn.Click([this, key, entry](IInspectable const&, RoutedEventArgs const&)
+                {
+                    auto list = ReadTrustList(key);
+                    list.erase(std::remove(list.begin(), list.end(), entry), list.end());
+                    WriteTrustList(key, list);
+                    RefreshPrivacyView();
+                    /* le message affiché perd la confiance immédiatement */
+                    ShowCurrentMessageInReader(false);
+                });
+                row.Children().Append(remove_btn);
+
+                items.Append(row);
+            }
+        };
+        add_rows(TrustedSendersKey, false);
+        add_rows(TrustedDomainsKey, true);
+
+        bool empty = items.Size() == 0;
+        TrustedSendersEmpty().Visibility(empty ? Visibility::Visible : Visibility::Collapsed);
+        TrustedSenderList().Visibility(empty ? Visibility::Collapsed : Visibility::Visible);
+    }
+
+    /* Option globale « Charger le contenu externe des messages ». */
+    void MainWindow::OnRemoteContentModeChanged(IInspectable const&, SelectionChangedEventArgs const&)
+    {
+        int32_t index = RemoteContentModeChoice().SelectedIndex();
+        if (m_updating_privacy_view || index < 0)
+            return;
+
+        hstring mode = index == 0 ? L"never" : index == 2 ? L"always" : L"trusted";
+        if (std::wstring_view{ mode } == RemoteContentMode())
+            return;
+
+        ::EvolutionWin::Settings::Instance().SetString(RemoteContentKey, mode);
+        /* le message affiché suit la nouvelle option */
+        ShowCurrentMessageInReader(false);
+    }
+
     /* Met à jour la liste des comptes affichée dans la vue Paramètres. */
     void MainWindow::RefreshAccountsView()
     {
@@ -3662,6 +4090,124 @@ namespace winrt::EvolutionWin::implementation
         });
     }
 
+    /* Remplace les caractères interdits dans un nom de fichier Windows.
+     * Paramètres :
+     *   name     : nom proposé (nom d'agenda, de carnet d'adresses…)
+     *   fallback : nom utilisé si le résultat est vide */
+    static hstring SanitizeFileName(hstring const& name, hstring const& fallback)
+    {
+        std::wstring clean{ name };
+        for (auto& c : clean)
+            if (wcschr(L"\\/:*?\"<>|", c) || c < 32)
+                c = L'_';
+        return clean.empty() ? fallback : hstring{ clean };
+    }
+
+    /* Gestionnaire du bouton « Exporter » du calendrier : liste les agendas et
+     * listes de tâches, puis propose l'exportation de l'un d'eux. */
+    void MainWindow::OnExportCalendarClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        m_core->ListSources(L"calendar,tasks", [this](hstring const& json, hstring const& error)
+        {
+            JsonArray sources;
+            if (!error.empty() || !JsonArray::TryParse(json, sources))
+            {
+                ShowStatus(L"Exportation : " + error, InfoBarSeverity::Error);
+                return;
+            }
+            if (sources.Size() == 0)
+            {
+                ShowStatus(L"Aucun agenda ni liste de tâches à exporter.", InfoBarSeverity::Warning);
+                return;
+            }
+            ExportCalendarAsync(sources);
+        });
+    }
+
+    /* Demande l'agenda ou la liste de tâches à exporter, puis le fichier .ics
+     * de destination, et lance l'exportation iCalendar par evo-core.
+     * Paramètres :
+     *   sources : tableau JSON [{"uid", "name", "kind"}] des agendas et listes de tâches */
+    fire_and_forget MainWindow::ExportCalendarAsync(JsonArray sources)
+    {
+        auto strong = get_strong();
+        if (m_dialog_open || !Content() || !Content().XamlRoot())
+            co_return;
+
+        m_dialog_open = true;
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(L"Exporter au format iCalendar"));
+        dialog.PrimaryButtonText(L"Exporter");
+        dialog.CloseButtonText(L"Annuler");
+        dialog.DefaultButton(ContentDialogButton::Primary);
+
+        StackPanel panel;
+        panel.Spacing(10);
+        panel.MinWidth(380);
+
+        ComboBox source_box;
+        source_box.Header(box_value(L"Agenda ou liste de tâches"));
+        source_box.HorizontalAlignment(HorizontalAlignment::Stretch);
+        for (auto const& value : sources)
+        {
+            auto source = value.GetObject();
+            hstring label = source.GetNamedString(L"kind", L"") == L"tasks" ? L"Tâches" : L"Agenda";
+            source_box.Items().Append(box_value(label + L" : " + source.GetNamedString(L"name", L"")));
+        }
+        source_box.SelectedIndex(0);
+        panel.Children().Append(source_box);
+
+        TextBlock hint;
+        hint.Text(L"Tous les événements ou toutes les tâches sont enregistrés dans un fichier .ics, avec leurs fuseaux horaires.");
+        hint.TextWrapping(TextWrapping::Wrap);
+        hint.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+        panel.Children().Append(hint);
+
+        dialog.Content(panel);
+
+        auto result = co_await dialog.ShowAsync();
+        m_dialog_open = false;
+
+        int index = source_box.SelectedIndex();
+        if (result != ContentDialogResult::Primary || index < 0)
+            co_return;
+
+        auto source = sources.GetObjectAt(static_cast<uint32_t>(index));
+        hstring uid = source.GetNamedString(L"uid", L"");
+        hstring name = source.GetNamedString(L"name", L"");
+        bool tasks = source.GetNamedString(L"kind", L"") == L"tasks";
+
+        Windows::Storage::Pickers::FileSavePicker picker;
+        InitializePicker(picker);
+        picker.SuggestedFileName(SanitizeFileName(name, tasks ? L"taches" : L"agenda"));
+        picker.FileTypeChoices().Insert(L"Calendrier iCalendar", single_threaded_vector<hstring>({ L".ics" }));
+
+        auto file = co_await picker.PickSaveFileAsync();
+        if (!file)
+            co_return;
+        hstring dest = file.Path();
+
+        JsonObject request;
+        request.SetNamedValue(L"source_uid", JsonValue::CreateStringValue(uid));
+        request.SetNamedValue(L"path", JsonValue::CreateStringValue(dest));
+
+        ShowStatus(L"Exportation de « " + name + L" »…", InfoBarSeverity::Informational);
+        m_core->ExportCalendar(request.Stringify(), [this, dest, tasks](hstring const& json, hstring const& error)
+        {
+            JsonObject answer;
+            if (!error.empty() || !JsonObject::TryParse(json, answer))
+            {
+                ShowStatus(L"Exportation : " + error, InfoBarSeverity::Error);
+                return;
+            }
+            auto count = static_cast<uint32_t>(answer.GetNamedNumber(L"count", 0));
+            ShowStatus(hstring{ std::to_wstring(count) + (tasks ? L" tâche(s) exportée(s)" : L" événement(s) exporté(s)") +
+                L" dans « " + std::wstring{ dest } + L" »." }, InfoBarSeverity::Success);
+        });
+    }
+
     /* Charge la liste des contacts depuis les carnets d'adresses EDS.
      * Paramètres :
      *   query : texte de filtrage optionnel sur le nom ou l'adresse e-mail */
@@ -3826,6 +4372,130 @@ namespace winrt::EvolutionWin::implementation
             }
             ShowStatus(L"Contact enregistré.", InfoBarSeverity::Success);
             LoadContacts(ContactSearchBox().Text());
+        });
+    }
+
+    /* Gestionnaire du bouton « Exporter » des contacts : liste les carnets
+     * d'adresses, puis propose l'exportation vCard. */
+    void MainWindow::OnExportContactsClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        m_core->ListSources(L"contacts", [this](hstring const& json, hstring const& error)
+        {
+            JsonArray books;
+            if (!error.empty() || !JsonArray::TryParse(json, books))
+            {
+                ShowStatus(L"Exportation : " + error, InfoBarSeverity::Error);
+                return;
+            }
+            if (books.Size() == 0)
+            {
+                ShowStatus(L"Aucun carnet d'adresses à exporter.", InfoBarSeverity::Warning);
+                return;
+            }
+            ExportContactsAsync(books);
+        });
+    }
+
+    /* Demande le carnet d'adresses et le format (un seul fichier .vcf ou un
+     * fichier par contact), puis la destination, et lance l'exportation vCard.
+     * Paramètres :
+     *   books : tableau JSON [{"uid", "name", "kind"}] des carnets d'adresses */
+    fire_and_forget MainWindow::ExportContactsAsync(JsonArray books)
+    {
+        auto strong = get_strong();
+        if (m_dialog_open || !Content() || !Content().XamlRoot())
+            co_return;
+
+        m_dialog_open = true;
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(L"Exporter les contacts"));
+        dialog.PrimaryButtonText(L"Exporter");
+        dialog.CloseButtonText(L"Annuler");
+        dialog.DefaultButton(ContentDialogButton::Primary);
+
+        StackPanel panel;
+        panel.Spacing(10);
+        panel.MinWidth(380);
+
+        ComboBox book_box;
+        book_box.Header(box_value(L"Carnet d'adresses"));
+        book_box.HorizontalAlignment(HorizontalAlignment::Stretch);
+        book_box.Items().Append(box_value(L"Tous les carnets d'adresses"));
+        for (auto const& value : books)
+            book_box.Items().Append(box_value(value.GetObject().GetNamedString(L"name", L"")));
+        book_box.SelectedIndex(0);
+        panel.Children().Append(book_box);
+
+        RadioButtons format;
+        format.Header(box_value(L"Format vCard"));
+        format.Items().Append(box_value(L"Un seul fichier .vcf"));
+        format.Items().Append(box_value(L"Un fichier .vcf par contact, dans un dossier"));
+        format.SelectedIndex(0);
+        panel.Children().Append(format);
+
+        dialog.Content(panel);
+
+        auto result = co_await dialog.ShowAsync();
+        m_dialog_open = false;
+
+        if (result != ContentDialogResult::Primary)
+            co_return;
+
+        int index = book_box.SelectedIndex();
+        hstring book_uid;
+        hstring name = L"Contacts";
+        if (index > 0)
+        {
+            auto book = books.GetObjectAt(static_cast<uint32_t>(index - 1));
+            book_uid = book.GetNamedString(L"uid", L"");
+            name = book.GetNamedString(L"name", L"Contacts");
+        }
+        bool per_contact = format.SelectedIndex() == 1;
+
+        hstring dest;
+        if (per_contact)
+        {
+            Windows::Storage::Pickers::FolderPicker picker;
+            InitializePicker(picker);
+            picker.FileTypeFilter().Append(L"*");
+
+            auto folder = co_await picker.PickSingleFolderAsync();
+            if (!folder)
+                co_return;
+            dest = folder.Path();
+        }
+        else
+        {
+            Windows::Storage::Pickers::FileSavePicker picker;
+            InitializePicker(picker);
+            picker.SuggestedFileName(SanitizeFileName(name, L"Contacts"));
+            picker.FileTypeChoices().Insert(L"Carte de visite vCard", single_threaded_vector<hstring>({ L".vcf" }));
+
+            auto file = co_await picker.PickSaveFileAsync();
+            if (!file)
+                co_return;
+            dest = file.Path();
+        }
+
+        JsonObject request;
+        request.SetNamedValue(L"book_uid", JsonValue::CreateStringValue(book_uid));
+        request.SetNamedValue(L"path", JsonValue::CreateStringValue(dest));
+        request.SetNamedValue(L"per_contact", JsonValue::CreateBooleanValue(per_contact));
+
+        ShowStatus(L"Exportation des contacts…", InfoBarSeverity::Informational);
+        m_core->ExportContacts(request.Stringify(), [this, dest](hstring const& json, hstring const& error)
+        {
+            JsonObject answer;
+            if (!error.empty() || !JsonObject::TryParse(json, answer))
+            {
+                ShowStatus(L"Exportation des contacts : " + error, InfoBarSeverity::Error);
+                return;
+            }
+            auto count = static_cast<uint32_t>(answer.GetNamedNumber(L"count", 0));
+            ShowStatus(hstring{ std::to_wstring(count) + L" contact(s) exporté(s) dans « " + std::wstring{ dest } + L" »." },
+                InfoBarSeverity::Success);
         });
     }
 

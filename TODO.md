@@ -227,12 +227,12 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 
 Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceRequested` → 403).
 
-- [ ] 🟢 **Bandeau « contenu externe bloqué »** au-dessus du message :
-  - [ ] « Afficher les images pour ce message » (une seule fois)
-  - [ ] « Toujours faire confiance à l'expéditeur »
-  - [ ] « Toujours faire confiance au domaine » (ex. `@exemple.ch`)
-- [ ] 🟢 **Liste des expéditeurs / domaines de confiance** gérée dans les préférences
-- [ ] 🟢 **Option globale** : jamais / expéditeurs de confiance seulement / toujours charger le contenu externe
+- [x] 🟢 **Bandeau « contenu externe bloqué »** au-dessus du message :
+  - [x] « Afficher les images pour ce message » (une seule fois)
+  - [x] « Toujours faire confiance à l'expéditeur »
+  - [x] « Toujours faire confiance au domaine » (ex. `@exemple.ch`)
+- [x] 🟢 **Liste des expéditeurs / domaines de confiance** gérée dans les préférences
+- [x] 🟢 **Option globale** : jamais / expéditeurs de confiance seulement / toujours charger le contenu externe
 - [x] 🟢 **Enregistrer sous** (`.eml`, fonction `evo-core` existante), **Enregistrer toutes les pièces jointes**
 - [ ] 🟡 **Impression** : aperçu et styles mémo / tableau (l'impression simple existe déjà)
 - [ ] 🟠 **Aperçu des pièces jointes** directement dans le volet de lecture (et dans la fenêtre indépendante), sans les enregistrer ni les ouvrir dans une application externe ; même fonction pour les pièces jointes des événements du calendrier (§13) et des tâches (§16)
@@ -418,6 +418,14 @@ La vue actuelle se limite à un `CalendarView` mensuel et une liste d'événemen
 - [ ] 🟡 **Carnet d'adresses global** (GAL) Exchange / M365 : recherche et sélection des destinataires (backend evolution-ews)
 - [ ] 🟡 **Contacts unifiés** et regroupement des doublons — cf. §11
 - [ ] 🟢 **Recherche rapide de contacts** depuis la barre d'outils — cf. §10
+- [ ] 🟡 **Créer rapidement une fiche contact depuis un mail ou une invitation** :
+  - [ ] Clic droit (ou survol) sur une adresse — expéditeur, destinataires, Cc, organisateur ou participant d'une invitation — : *Ajouter aux contacts*, *Modifier le contact* si l'adresse est déjà connue
+  - [ ] Fiche préremplie : nom et adresse email tirés de l'en-tête ; 🟠 en option, téléphone, société, fonction et site web extraits de la signature du message
+  - [ ] 🟡 Pour les comptes Exchange / M365 : compléter la fiche depuis l'annuaire (GAL) si la personne y figure
+  - [ ] Choix du carnet d'adresses de destination (carnet par défaut, §3) ; détection des doublons (adresse déjà présente → proposer de compléter la fiche existante)
+  - [ ] Ajout en un clic sans ouvrir la fiche (enregistrement direct) ou ouverture de la fiche pour compléter
+  - [ ] Ajout groupé : tous les participants d'une invitation / tous les destinataires d'un mail
+  - [ ] Indicateur visuel sur les adresses déjà présentes dans les contacts (carte de contact au survol : nom, société, téléphone, actions *Écrire*, *Planifier une réunion*)
 
 ## 16. Tâches — 🟠
 
@@ -466,8 +474,8 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
   - [ ] 🟡 Format mbox (un fichier par dossier, arborescence conservée)
   - [ ] 🟢 Format EML (un fichier `.eml` par message, arborescence conservée ; export `.eml` existant dans `evo-core`)
   - [ ] 🟢 Choix des dossiers (tous / sélection / dossier courant)
-- [ ] 🟢 **Contacts** : vCard (`.vcf`, fichier unique ou un par contact) ; 🟡 CSV en option
-- [ ] 🟢 **Calendriers et tâches** : iCalendar (`.ics`, un fichier par calendrier)
+- [x] 🟢 **Contacts** : vCard (`.vcf`, fichier unique ou un par contact) ; 🟡 CSV en option
+- [x] 🟢 **Calendriers et tâches** : iCalendar (`.ics`, un fichier par calendrier)
 - [ ] 🟡 **Options** : filtre par plage de dates, export en arrière-plan avec progression (dépend de §4), rapport de fin
 - [ ] 🟠 **Import** : mbox / EML, vCard, iCalendar (*Fichier › Ouvrir et exporter*)
 

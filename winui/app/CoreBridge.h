@@ -308,6 +308,36 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Liste les sources activées (agendas, tâches, mémos, carnets d'adresses).
+         * Paramètres :
+         *   kinds   : types séparés par des virgules ("calendar,tasks", "contacts"), vide pour tous
+         *   handler : rappel recevant [{"uid", "name", "kind"}, ...] */
+        void ListSources(winrt::hstring const& kinds, CoreHandler handler)
+        {
+            evo_core_list_sources(m_core, winrt::to_string(kinds).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Exporte des contacts au format vCard (.vcf).
+         * Paramètres :
+         *   request_json : JSON {"book_uid": "..." (vide pour tous), "path": "...", "per_contact": false}
+         *   handler      : rappel recevant {"count": n, "files": [...]} */
+        void ExportContacts(winrt::hstring const& request_json, CoreHandler handler)
+        {
+            evo_core_export_contacts(m_core, winrt::to_string(request_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Exporte un agenda ou une liste de tâches au format iCalendar (.ics).
+         * Paramètres :
+         *   request_json : JSON {"source_uid": "...", "path": "...ics"}
+         *   handler      : rappel recevant {"count": n} */
+        void ExportCalendar(winrt::hstring const& request_json, CoreHandler handler)
+        {
+            evo_core_export_calendar(m_core, winrt::to_string(request_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Transmet la décision de confiance TLS de l'utilisateur au moteur.
          * Paramètres :
          *   trust_id       : identifiant de la demande ("host|sha256")
