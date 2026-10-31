@@ -12,6 +12,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [0.9.3] — en cours
 
+### Ajouté
+
+- **Barre de lecture rapide** à gauche de chaque message (comme Outlook) :
+  couleur d'accent pour les non-lus ; un clic bascule lu / non lu sans
+  ouvrir ni sélectionner le message, info-bulle au survol.
+
 ## [0.9.2] — 2026-10-31
 
 ### Ajouté
