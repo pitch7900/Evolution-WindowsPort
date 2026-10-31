@@ -7,6 +7,15 @@ Pour le journal technique détaillé, l'historique des correctifs CMake/MSVC et 
 
 ---
 
+## Projets GNOME d'origine
+
+| Projet | Dépôt GitHub (miroir officiel) | Dépôt de développement | Version de base |
+| --- | --- | --- | --- |
+| Evolution | [github.com/GNOME/evolution](https://github.com/GNOME/evolution) | [gitlab.gnome.org/GNOME/evolution](https://gitlab.gnome.org/GNOME/evolution) | commit `be33fb6204` |
+| Evolution Data Server | [github.com/GNOME/evolution-data-server](https://github.com/GNOME/evolution-data-server) | [gitlab.gnome.org/GNOME/evolution-data-server](https://gitlab.gnome.org/GNOME/evolution-data-server) | commit `ea6b0124d` |
+
+---
+
 ## Architecture du projet
 
 Le projet s'articule autour de deux couches principales :
@@ -33,7 +42,8 @@ Le projet s'articule autour de deux couches principales :
 | [`WINDOWS-PORT.md`](./WINDOWS-PORT.md) | Documentation technique complète et suivi d'avancement du portage |
 | [`winui/`](./winui) | Client natif Windows 11 : `winui/core` (`evo-core.dll`) et `winui/app` (`EvolutionWin.exe`) |
 | [`tools/`](./tools) | Scripts de compilation MSVC (`build-*.bat`, `env.bat`, `check-prereqs.ps1`), couche CMake (`cmake/msvc-compat.cmake`), en-têtes POSIX de compatibilité (`compat/`), shim WebKit2 (`webkit-shim/`) et utilitaires (`tools/nuget.exe`) |
-| [`build/`](./build) | Exécutables finaux prêts à l'emploi (`EvolutionWin.exe`, `evo-core.dll`, `evolution.exe`, `libexec/*.exe`) et sous-dossier `build/intermediate/` (fichiers d'objets CMake/MSBuild, ignoré par Git) |
+| `build/` | Sorties de compilation (`EvolutionWin.exe`, `evo-core.dll`, `evolution.exe`, `libexec/*.exe`, `build/intermediate/`), ignoré par Git |
+| [`dist/`](./dist) | Binaires packagés pour la distribution (MSI, `.exe`, DLL) |
 | [`evolution/`](./evolution) | Code source d'Evolution adapté pour MSVC |
 | [`evolution-data-server/`](./evolution-data-server) | Code source d'Evolution Data Server adapté pour Windows 11 / MSVC |
 | [`deps/`](./deps) | Sources tierces téléchargées automatiquement (NSS, NSPR, libical, SDK WebView2) |
@@ -71,4 +81,15 @@ tools\build-winui-app.bat    :: EvolutionWin.exe (client natif WinUI 3, génér�
 tools\run-winui.bat          :: Lance .\build\EvolutionWin.exe avec le préfixe dans le PATH
 tools\run-winui-debug.bat    :: Lance EvolutionWin.exe avec journaux de débogage IMAP/evo-core
 ```
+
+---
+
+## Licence
+
+Ce projet est distribué sous la **GNU Lesser General Public License, version 2.1 ou (à votre choix) toute version ultérieure** (`LGPL-2.1-or-later`), dont le texte figure dans [`LICENSE`](./LICENSE). C'est la licence des projets GNOME d'origine :
+
+- **Evolution** : LGPL v2 ou (à votre choix) LGPL v3, voir [`evolution/COPYING`](./evolution/COPYING). Quelques fichiers relèvent d'autres licences (OpenLDAP, MPL/GPL/LGPL), qui y sont listées.
+- **Evolution Data Server** : LGPL v2 ou ultérieure, voir [`evolution-data-server/COPYING`](./evolution-data-server/COPYING).
+
+Les fichiers repris de ces projets conservent leur licence et leurs mentions de copyright d'origine (en-têtes `SPDX-License-Identifier`).
 
