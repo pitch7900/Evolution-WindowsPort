@@ -268,6 +268,16 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Crée un compte Gmail / Google Workspace (courrier, agendas, contacts).
+         * Paramètres :
+         *   account_json : JSON {"email", "display_name", "full_name"}
+         *   handler      : rappel recevant {"uid", "collection_uid"} */
+        void AddGoogleAccount(winrt::hstring const& account_json, CoreHandler handler)
+        {
+            evo_core_add_google_account(m_core, winrt::to_string(account_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Crée un compte Microsoft 365 / Exchange Online (Microsoft Graph).
          * Paramètres :
          *   account_json : JSON {"email", "display_name", "full_name", "client_id"?, "tenant"?},

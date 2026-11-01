@@ -5157,23 +5157,49 @@ namespace winrt::EvolutionWin::implementation
         web.MinHeight(600);
         dialog.Content(web);
 
-        /* même hôte et même chemin que l'adresse de redirection : fin */
+        /* même schéma, même hôte et même chemin que l'adresse de redirection :
+           fin ; Google revient sur un schéma personnalisé
+           (com.googleusercontent.apps…:/oauth2redirect), que WebView2 propose
+           de lancer à l'extérieur au lieu de naviguer */
         auto reached = std::make_shared<hstring>();
-        web.NavigationStarting([dialog, reached, redirect](WebView2 const&,
-            Microsoft::Web::WebView2::Core::CoreWebView2NavigationStartingEventArgs const& args)
+        auto is_redirect = [redirect](hstring const& value)
         {
             try
             {
-                Uri target{ args.Uri() };
-                if (_wcsicmp(target.Host().c_str(), redirect.Host().c_str()) == 0 &&
-                    _wcsicmp(target.Path().c_str(), redirect.Path().c_str()) == 0)
+                Uri target{ value };
+                return _wcsicmp(target.SchemeName().c_str(), redirect.SchemeName().c_str()) == 0 &&
+                       _wcsicmp(target.Host().c_str(), redirect.Host().c_str()) == 0 &&
+                       _wcsicmp(target.Path().c_str(), redirect.Path().c_str()) == 0;
+            }
+            catch (...)
+            {
+                return false;
+            }
+        };
+        web.NavigationStarting([dialog, reached, is_redirect](WebView2 const&,
+            Microsoft::Web::WebView2::Core::CoreWebView2NavigationStartingEventArgs const& args)
+        {
+            if (is_redirect(args.Uri()))
+            {
+                args.Cancel(true);
+                *reached = args.Uri();
+                dialog.Hide();
+            }
+        });
+        web.CoreWebView2Initialized([dialog, reached, is_redirect](WebView2 const& sender, auto const&)
+        {
+            if (!sender.CoreWebView2())
+                return;
+            sender.CoreWebView2().LaunchingExternalUriScheme([dialog, reached, is_redirect](auto const&,
+                Microsoft::Web::WebView2::Core::CoreWebView2LaunchingExternalUriSchemeEventArgs const& args)
+            {
+                if (is_redirect(args.Uri()))
                 {
                     args.Cancel(true);
                     *reached = args.Uri();
                     dialog.Hide();
                 }
-            }
-            catch (...) {}
+            });
         });
         web.Source(Uri{ begin.GetNamedString(L"uri", L"") });
 
@@ -5597,7 +5623,8 @@ namespace winrt::EvolutionWin::implementation
         provider_box.HorizontalAlignment(HorizontalAlignment::Stretch);
         provider_box.Items().Append(box_value(L"IMAP / SMTP standard (mot de passe)"));
         provider_box.Items().Append(box_value(L"Microsoft 365 / Outlook.com (OAuth2 XOAUTH2)"));
-        provider_box.Items().Append(box_value(L"Google / Gmail (OAuth2 XOAUTH2)"));
+        /* index 2 : collection Google (courrier, agendas CalDAV, contacts CardDAV) */
+        provider_box.Items().Append(box_value(L"Google / Gmail (courrier, agenda, contacts)"));
         /* index 3 : compte evolution-ews (Microsoft Graph), sans IMAP/SMTP */
         provider_box.Items().Append(box_value(L"Microsoft 365 / Exchange Online (courrier, agenda, contacts)"));
         /* index 4 : compte evolution-ews (EWS) d'un serveur Exchange de l'entreprise */
@@ -5688,13 +5715,13 @@ namespace winrt::EvolutionWin::implementation
 
             /* Microsoft Graph : ni serveurs ni mot de passe, connexion OAuth2 ensuite ;
              * Exchange : adresse EWS et mot de passe */
-            auto server_visibility = idx == 3 || idx == 4 ? Visibility::Collapsed : Visibility::Visible;
+            auto server_visibility = idx == 2 || idx == 3 || idx == 4 ? Visibility::Collapsed : Visibility::Visible;
             imap_host_box.Visibility(server_visibility);
             imap_port_box.Visibility(server_visibility);
             smtp_host_box.Visibility(server_visibility);
             smtp_port_box.Visibility(server_visibility);
-            password_box.Visibility(idx == 3 ? Visibility::Collapsed : Visibility::Visible);
-            user_box.Visibility(idx == 3 ? Visibility::Collapsed : Visibility::Visible);
+            password_box.Visibility(idx == 2 || idx == 3 ? Visibility::Collapsed : Visibility::Visible);
+            user_box.Visibility(idx == 2 || idx == 3 ? Visibility::Collapsed : Visibility::Visible);
             ews_url_box.Visibility(idx == 4 ? Visibility::Visible : Visibility::Collapsed);
             client_id_box.PlaceholderText(idx == 3
                 ? L"Facultatif : application d'Evolution par défaut"
@@ -5717,13 +5744,8 @@ namespace winrt::EvolutionWin::implementation
             }
             else if (idx == 2)
             {
-                imap_host_box.Text(L"imap.gmail.com");
-                imap_port_box.Text(L"993");
-                smtp_host_box.Text(L"smtp.gmail.com");
-                smtp_port_box.Text(L"465");
-                oauth_panel.Visibility(Visibility::Visible);
-                tenant_id_box.Visibility(Visibility::Collapsed);
-                password_box.PlaceholderText(L"Laisser vide pour ouvrir la fenêtre OAuth2 WebView2");
+                /* connexion Google (identifiant d'application d'EDS), pas de Client ID */
+                oauth_panel.Visibility(Visibility::Collapsed);
             }
             else
             {
@@ -5781,6 +5803,34 @@ namespace winrt::EvolutionWin::implementation
                 tenant_id_box.Text() == L"common" ? L"" : tenant_id_box.Text()));
 
             m_core->AddMicrosoft365Account(m365.Stringify(), [this, account_name](hstring const& json, hstring const& error)
+            {
+                JsonObject created;
+                if (!error.empty() || !JsonObject::TryParse(json, created))
+                {
+                    ShowStatus(L"Ajout du compte : " + error, InfoBarSeverity::Error);
+                    return;
+                }
+                LoadAccounts();
+                SignInOAuth2Async(created.GetNamedString(L"collection_uid", L""), account_name);
+            });
+            co_return;
+        }
+
+        if (provider_idx == 2)
+        {
+            if (email.empty())
+            {
+                ShowStatus(L"Veuillez renseigner l'adresse Gmail du compte.", InfoBarSeverity::Warning);
+                co_return;
+            }
+
+            JsonObject google;
+            google.SetNamedValue(L"email", JsonValue::CreateStringValue(email));
+            google.SetNamedValue(L"display_name", JsonValue::CreateStringValue(account_name));
+            google.SetNamedValue(L"full_name", JsonValue::CreateStringValue(
+                full_name_box.Text().empty() ? email : full_name_box.Text()));
+
+            m_core->AddGoogleAccount(google.Stringify(), [this, account_name](hstring const& json, hstring const& error)
             {
                 JsonObject created;
                 if (!error.empty() || !JsonObject::TryParse(json, created))

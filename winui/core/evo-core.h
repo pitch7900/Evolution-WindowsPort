@@ -425,6 +425,21 @@ void		evo_core_detect_account		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Crée un compte Gmail / Google Workspace : collection EDS « google »
+ * (courrier IMAP / SMTP de Gmail avec l'authentification OAuth2 « Google »,
+ * agendas CalDAV et carnets d'adresses CardDAV découverts par EDS). La
+ * connexion se fait ensuite par evo_core_oauth2_begin () sur "collection_uid".
+ * Format attendu pour account_json : {"email", "display_name", "full_name"}
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   account_json : configuration du compte au format JSON UTF-8
+ *   func         : rappel recevant {"uid": "...", "collection_uid": "..."}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_add_google_account	(EvoCore *core,
+						 const char *account_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Connexion OAuth2 interactive d'un compte (Microsoft 365...), en deux
  * étapes, aussi en réponse à l'événement "oauth2-required"
  * ({"source_uid", "name", "user"}) :

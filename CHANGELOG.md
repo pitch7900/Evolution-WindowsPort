@@ -51,6 +51,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   côte s'ils se chevauchent, journée entière en haut, ligne de l'heure
   actuelle), vue Mois (six semaines, « +N autres ») et vue Liste ; un clic
   ouvre l'événement. Événements périodiques développés en occurrences.
+- **Compte Gmail / Google Workspace** complet : collection Google (courrier
+  IMAP / SMTP de Gmail, agendas et contacts découverts par EDS), une seule
+  connexion Google sans Client ID à saisir ; jetons du courrier fournis et
+  renouvelés par le service OAuth2 Google d'EDS.
 - Journaux des services evolution-data-server (`evolution-source-registry`,
   fabriques carnet d'adresses / agenda) dans
   `%LOCALAPPDATA%\EvolutionWin\<service>.log`, pour le diagnostic.
