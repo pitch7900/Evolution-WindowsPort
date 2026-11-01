@@ -471,6 +471,15 @@ void		evo_core_remove_account		(EvoCore *core,
  *                "description": "...", "start": 1730000000, "end": 1730003600,
  *                "calendar_uid": "...", "calendar_name": "..."}, ...]
  *   user_data  : données utilisateur transmises au rappel */
+/* Comme evo_core_list_events (), limité aux agendas calendar_uids (uids
+ * séparés par des virgules ; NULL ou "" : tous les agendas activés). */
+void		evo_core_list_calendar_events	(EvoCore *core,
+						 long long start_unix,
+						 long long end_unix,
+						 const char *calendar_uids,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 void		evo_core_list_events		(EvoCore *core,
 						 long long start_unix,
 						 long long end_unix,
@@ -619,7 +628,8 @@ void		evo_core_delete_contact		(EvoCore *core,
  *   kinds     : types séparés par des virgules parmi "calendar", "tasks",
  *               "memos" et "contacts" ("" ou NULL pour tous)
  *   func      : rappel recevant [{"uid": "...", "name": "...",
- *               "kind": "calendar"|"tasks"|"memos"|"contacts"}, ...]
+ *               "kind": "calendar"|"tasks"|"memos"|"contacts", "account": "...",
+ *               "color": "#rrggbb" ou "", "default": true|false}, ...]
  *   user_data : données utilisateur transmises au rappel */
 void		evo_core_list_sources		(EvoCore *core,
 						 const char *kinds,

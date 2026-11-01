@@ -33,10 +33,13 @@ namespace winrt::EvolutionWin::implementation
         void OnRibbonFolderPaneToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRibbonResetLayoutClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRibbonTodayClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
-        void OnRibbonNextDaysClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnReadingPaneMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
         void OnSearchAccelerator(Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender, Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
         void OnSearchKeyDown(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args);
+        void OnCalendarPeriodClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnCalendarPeriodChanged(Microsoft::UI::Xaml::Controls::SelectorBar const& sender, Microsoft::UI::Xaml::Controls::SelectorBarSelectionChangedEventArgs const& args);
+        void OnCalendarPreviousClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnCalendarNextClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnConfidentialToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnQuickAccessSizeChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::SizeChangedEventArgs const& args);
         void OnSortMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
@@ -363,7 +366,17 @@ namespace winrt::EvolutionWin::implementation
         void UpdateTitleBarPassthrough();
         EvolutionWin::FolderItem CurrentFolderItem();
         void ApplyFolderPaneVisibility(bool visible);
-        int64_t m_selected_day_start{ 0 };
+        int64_t m_selected_day_start{ 0 };	/* jour de référence (0 : aujourd'hui) */
+        hstring m_calendar_period{ L"week" };	/* "day", "week" ou "month" (calendar.period) */
+        bool m_updating_period{ false };
+        void SetCalendarPeriod(hstring const& period);
+        /* calendriers affichés (calendar.visible) et actif (calendar.active) */
+        Windows::Data::Json::JsonArray m_calendar_sources{ nullptr };
+        void LoadCalendarSources();
+        void RebuildCalendarSourcesPanel();
+        std::vector<hstring> VisibleCalendarUids();
+        hstring ActiveCalendarUid();
+        void ShiftCalendarPeriod(int direction);
         /* vue Tâches : listes de tâches [{"uid", "name", "kind"}], toutes les
            tâches chargées (avant filtres) et liste affichée ("" = toutes) */
         Windows::Data::Json::JsonArray m_task_lists{ nullptr };

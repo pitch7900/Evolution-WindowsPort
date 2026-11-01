@@ -116,4 +116,3 @@ Ce projet est distribué sous la **GNU Lesser General Public License, version 2.
 - **evolution-ews** : LGPL v2.1 ou ultérieure, voir [`evolution-ews/COPYING`](./evolution-ews/COPYING).
 
 Les fichiers repris de ces projets conservent leur licence et leurs mentions de copyright d'origine (en-têtes `SPDX-License-Identifier`).
-

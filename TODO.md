@@ -20,29 +20,30 @@ Hypothèse : démo de type « remplaçant d'Outlook » avec un compte Microsoft 
 
 | # | Tâche | § | Difficulté |
 | --- | --- | --- | --- |
-| 7 | Calendrier et contacts du compte en ligne : [Microsoft 365 / Exchange Online](#demo-cal-contacts-m365) (🟡), [Gmail / Google Workspace](#demo-cal-contacts-gmail) (🟠) | 3 | 🟡 / 🟠 |
-| 8 | [Gestion simple du calendrier](#demo-gestion-calendrier) (créer, **modifier**, supprimer un événement) et [des contacts](#demo-gestion-contacts) (créer, **modifier**, supprimer) | 3 | 🟡 |
-| 9 | [Autocomplétion des destinataires](#demo-autocompletion) | 15 | 🟡 |
-| 10 | [Simplifier l'assistant d'ajout de compte](#demo-assistant-compte) | 3 | 🟡 |
-| 11 | [Modifier un compte existant](#demo-modifier-compte) | 3 | 🟡 |
-| 12 | [Indicateur d'état des connexions / hors connexion et *Se reconnecter*](#demo-etat-connexions) | 4 | 🟡 |
-| 13 | [Barre de progression du rafraîchissement](#demo-progression) | 4 | 🟡 |
-| 14 | [Double-clic : message dans une fenêtre indépendante](#demo-fenetre-message) | 6 | 🟡 |
-| 15 | [Répondre aux invitations reçues](#demo-invitations) | 13 | 🟡 |
-| 16 | [Volet des tâches à droite](#demo-volet-taches) et [« Créer une tâche » depuis un mail](#demo-creer-tache) | 16 | 🟡 |
-| 17 | [Catégories communes en couleur](#demo-categories) | 17 | 🟡 |
-| 18 | [Recherche sur tous les comptes](#demo-recherche-portee) | 10 | 🟡 |
-| 19 | [Réorganisation de la page Paramètres](#demo-parametres) | 19 | 🟡 |
+| 7 | [Connexion Gmail compatible avec la double authentification](#demo-gmail-2fa) (bogue : « identifiants invalides ») — prérequis de tout compte Gmail | 3 | 🟡 |
+| 8 | Calendrier et contacts du compte en ligne : [Microsoft 365 / Exchange Online](#demo-cal-contacts-m365) (🟡), [Gmail / Google Workspace](#demo-cal-contacts-gmail) (🟠) | 3 | 🟡 / 🟠 |
+| 9 | [Gestion simple du calendrier](#demo-gestion-calendrier) (créer, **modifier**, supprimer un événement) et [des contacts](#demo-gestion-contacts) (créer, **modifier**, supprimer) | 3 | 🟡 |
+| 10 | [Autocomplétion des destinataires](#demo-autocompletion) | 15 | 🟡 |
+| 11 | [Simplifier l'assistant d'ajout de compte](#demo-assistant-compte) | 3 | 🟡 |
+| 12 | [Modifier un compte existant](#demo-modifier-compte) | 3 | 🟡 |
+| 13 | [Indicateur d'état des connexions / hors connexion et *Se reconnecter*](#demo-etat-connexions) | 4 | 🟡 |
+| 14 | [Barre de progression du rafraîchissement](#demo-progression) | 4 | 🟡 |
+| 15 | [Double-clic : message dans une fenêtre indépendante](#demo-fenetre-message) | 6 | 🟡 |
+| 16 | [Répondre aux invitations reçues](#demo-invitations) | 13 | 🟡 |
+| 17 | [Volet des tâches à droite](#demo-volet-taches) et [« Créer une tâche » depuis un mail](#demo-creer-tache) | 16 | 🟡 |
+| 18 | [Catégories communes en couleur](#demo-categories) | 17 | 🟡 |
+| 19 | [Recherche sur tous les comptes](#demo-recherche-portee) | 10 | 🟡 |
+| 20 | [Réorganisation de la page Paramètres](#demo-parametres) | 19 | 🟡 |
 
 ### Priorité 3 — ce qui fait vraiment « Outlook » (gros chantiers)
 
 | # | Tâche | § | Difficulté |
 | --- | --- | --- | --- |
-| 20 | [Grille calendrier Jour / Semaine](#demo-grille-calendrier) — plus gros écart visible avec Outlook | 12 | 🔴 |
-| 21 | [Éditeur d'événement complet](#demo-editeur-evenement) (périodicité, rappels) | 13 | 🟠 |
-| 22 | [Grouper par discussion](#demo-conversations) | 5 | 🟠 |
-| 23 | [Réponses automatiques](#demo-reponses-auto) Microsoft 365 / Exchange (si démo sur M365) | 3 | 🟡 |
-| 24 | [Carnet d'adresses global (GAL)](#demo-gal) (si démo sur M365) | 15 | 🟡 |
+| 21 | [Grille calendrier Jour / Semaine](#demo-grille-calendrier) — plus gros écart visible avec Outlook | 12 | 🔴 |
+| 22 | [Éditeur d'événement complet](#demo-editeur-evenement) (périodicité, rappels) | 13 | 🟠 |
+| 23 | [Grouper par discussion](#demo-conversations) | 5 | 🟠 |
+| 24 | [Réponses automatiques](#demo-reponses-auto) Microsoft 365 / Exchange (si démo sur M365) | 3 | 🟡 |
+| 25 | [Carnet d'adresses global (GAL)](#demo-gal) (si démo sur M365) | 15 | 🟡 |
 
 **Après la démo** : aperçu des pièces jointes, règles, mode hors connexion complet, vues unifiées, traductions, import / export, mise à jour automatique, installation silencieuse avancée, nettoyage à la désinstallation, boîte Prioritaire, réunions avec invitations et Planification (🔴).
 
@@ -193,6 +194,14 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] Embarquer une copie des fournisseurs les plus courants (détection hors ligne, remplace la liste « Fournisseurs connus »), mise à jour à chaque version
   - [x] Vérifier la licence du dépôt avant d'embarquer les fichiers et mentionner la provenance (MPL 2.0, `winui/core/ispdb/README.md`)
 - [x] 🟡 **Confirmation / correction manuelle** : type détecté et paramètres proposés, possibilité de forcer un autre type ou de passer en configuration manuelle
+- [ ] 🟡 **Connexion Gmail / Google Workspace compatible avec la double authentification (2FA)** — *bogue actuel : « identifiants invalides » même avec le bon mot de passe* <a id="demo-gmail-2fa"></a>
+  - [ ] Cause : Google refuse la connexion IMAP / SMTP par mot de passe du compte (« applications moins sécurisées » supprimées) ; seuls OAuth2 (XOAUTH2) ou un *mot de passe d'application* fonctionnent. Aujourd'hui, l'assistant laisse saisir le mot de passe du compte Google, et OAuth2 n'est utilisable que si l'on fournit soi-même un *Client ID* Google Cloud (`EVO_OAUTH2_CLIENT_ID`)
+  - [ ] **OAuth2 par défaut pour Gmail**, sans champ mot de passe : bouton *Se connecter avec Google* ; la double authentification (SMS, application Google, clé de sécurité, passkey) est alors gérée par la page de connexion Google elle-même
+  - [ ] **Connexion dans le navigateur système** (redirection en boucle locale `http://127.0.0.1:<port>`, PKCE, RFC 8252) et non dans un WebView2 intégré : Google bloque la connexion depuis les navigateurs intégrés (« Ce navigateur ou cette application ne sont peut-être pas sécurisés », `disallowed_useragent`) — à vérifier aussi pour Microsoft 365
+  - [ ] **Client ID Google fourni avec l'application** (projet Google Cloud d'EvolutionWin, application de bureau, portées `https://mail.google.com/` + Calendar + Contacts pour §3 « Calendrier et contacts ») — ou réutiliser le service OAuth2 Google d'EDS (`module-oauth2-services`) s'il est compilé avec un identifiant ; vérification de l'application par Google nécessaire pour dépasser 100 utilisateurs de test (portées sensibles)
+  - [ ] **Repli « mot de passe d'application »** (compte avec 2FA, OAuth2 indisponible) : champ dédié avec explication et lien vers `https://myaccount.google.com/apppasswords`
+  - [ ] Message d'erreur explicite si Google refuse le mot de passe (« Google exige une connexion sécurisée : utilisez *Se connecter avec Google* ou un mot de passe d'application ») au lieu de « identifiants invalides »
+  - [ ] Jeton de rafraîchissement enregistré dans le Gestionnaire d'identifiants Windows et renouvelé automatiquement (mécanisme XOAUTH2 existant d'`evo-core`) ; jeton révoqué → *Se reconnecter* (§4)
 - [ ] 🟡 **Simplifier l'assistant d'ajout de compte** — aujourd'hui la seconde étape affiche tous les champs à la fois (type, nom du compte, nom complet, adresse, utilisateur, serveur EWS, serveurs et ports IMAP / SMTP, Client ID et Tenant ID OAuth2, mot de passe), même quand l'autodétection a tout trouvé <a id="demo-assistant-compte"></a>
   - [ ] **Écran principal réduit à l'essentiel** : adresse électronique, nom complet, puis selon le type *Mot de passe* ou bouton *Se connecter avec Microsoft / Google* (OAuth2) — rien d'autre quand la détection a réussi
   - [ ] **Résumé lisible de la détection** à la place des champs techniques : logo / nom du fournisseur et une phrase (« Compte Microsoft 365 détecté — connexion sécurisée par Microsoft », « Serveurs trouvés : imap.exemple.ch, smtp.exemple.ch (chiffrés) »), avec la source de la détection (base Thunderbird, Autodiscover, DNS…) en info-bulle
@@ -509,7 +518,7 @@ La recherche dans le dossier courant existe déjà (filtrage instantané + reche
 ## 11. Vues unifiées multi-comptes — 🟠
 
 - [ ] 🟠 **Mails** : Boîte de réception unifiée (et Envoyés, Brouillons, Corbeille), compte d'origine indiqué (colonne ou pastille de couleur) — dossiers virtuels Camel
-- [ ] 🟡 **Calendriers** : événements de tous les calendriers de tous les comptes, une couleur par calendrier, chacun masquable
+- [ ] 🟡 **Calendriers** : événements de tous les calendriers de tous les comptes, une couleur par calendrier, chacun masquable — *fait dans la vue Calendrier : volet « Calendriers » par compte, cases à cocher mémorisées, couleur par calendrier*
 - [ ] 🟡 **Contacts** : carnet d'adresses unifié, détection et regroupement des doublons (même email)
 - [ ] 🟠 **Recherche dans les vues unifiées** (simple et avancée) pour mails, événements et contacts, compte d'origine visible dans les résultats
 - [ ] 🟢 **Choix des comptes inclus** dans les vues unifiées (préférences)
@@ -530,17 +539,17 @@ La vue actuelle se limite à un `CalendarView` mensuel et une liste d'événemen
 
 ### Navigation
 
-- [ ] 🟢 **Barre de navigation** : *Aujourd'hui*, précédent / suivant, plage affichée (« 26 – 30 octobre 2026 ») <a id="demo-cal-navigation"></a>
+- [x] 🟢 **Barre de navigation** : *Aujourd'hui*, précédent / suivant, plage affichée (« 26 – 30 octobre 2026 ») <a id="demo-cal-navigation"></a> — *périodes Jour / Semaine / Mois, mémorisée*
 - [ ] 🟢 **Atteindre** : Aujourd'hui, 7 prochains jours, aller à une date (Ctrl+G)
 - [ ] 🟡 **Mini-calendrier** dans le volet des dossiers (jours avec événements en gras)
 - [ ] 🟡 Météo (optionnelle)
 
 ### Plusieurs calendriers
 
-- [ ] 🟢 **Couleur par calendrier** (couleur EDS `ESourceSelectable`), dans la liste et dans la grille <a id="demo-cal-couleurs"></a>
+- [x] 🟢 **Couleur par calendrier** (couleur EDS `ESourceSelectable`), dans la liste et dans la grille <a id="demo-cal-couleurs"></a> — *liste des événements et volet des calendriers ; grille quand elle existera (§12)*
 - [ ] 🟠 **Superposé (vue globale)** : calendriers sélectionnés fusionnés dans une même grille
 - [ ] 🟠 **Côte à côte** : une colonne par calendrier, même période, défilement commun
-- [ ] 🟢 Bascule superposé / côte à côte ; mémorisation du mode et des calendriers affichés
+- [ ] 🟢 Bascule superposé / côte à côte ; mémorisation du mode et des calendriers affichés — *fait : calendriers affichés mémorisés, calendrier actif des nouveaux événements*
 - [ ] 🟡 **Groupes de calendriers** nommés (« Équipe », « Salles 2e étage ») pour en ouvrir plusieurs d'un coup
 
 ### Autres affichages

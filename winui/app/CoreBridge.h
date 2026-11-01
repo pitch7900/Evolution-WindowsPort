@@ -332,6 +332,13 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Événements des seuls agendas calendar_uids (séparés par des virgules). */
+        void ListCalendarEvents(long long start_unix, long long end_unix, winrt::hstring const& calendar_uids, CoreHandler handler)
+        {
+            evo_core_list_calendar_events(m_core, start_unix, end_unix, winrt::to_string(calendar_uids).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Crée un événement dans un agenda.
          * Paramètres :
          *   event_json : description JSON de l'événement

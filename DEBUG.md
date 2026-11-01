@@ -1,8 +1,20 @@
-Messages d'erreur : 
+<!-- cspell:disable -->
+# Fichier de Debug
+
+## Messages d'erreurs et logs
+
+````text
 %LOCALAPPDATA%\EvolutionWin\
+````
 
-Configuration des comptes :
+## Répertoire de configuration des comptes
+
+````text
 %LOCALAPPDATA%\evolution\sources\
+````
 
-WER :
+## Localisation des WER (dump)
+
+````text
 %PROGRAMDATA%\Microsoft\Windows\WER\
+````

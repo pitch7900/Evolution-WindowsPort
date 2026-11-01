@@ -6919,6 +6919,7 @@ typedef struct {
 	gint64 end;
 	gchar *calendar_uid;
 	gchar *calendar_name;
+	gchar *calendar_color;	/* "#rrggbb" (ESourceSelectable) ou NULL */
 } CalEventItem;
 
 /* Libère un élément d'événement d'agenda temporaire.
@@ -6938,6 +6939,7 @@ cal_event_item_free (gpointer data)
 	g_free (item->description);
 	g_free (item->calendar_uid);
 	g_free (item->calendar_name);
+	g_free (item->calendar_color);
 	g_free (item);
 }
 
@@ -6975,6 +6977,7 @@ core_list_events_run (EvoCore *core,
 	GPtrArray *items;
 	JsonBuilder *builder;
 	gchar *sexp, *json;
+	gchar **only;
 	guint ii;
 
 	if (start_unix > 0 && end_unix > 0 && end_unix >= start_unix) {
@@ -6992,16 +6995,32 @@ core_list_events_run (EvoCore *core,
 	items = g_ptr_array_new_with_free_func (cal_event_item_free);
 	sources = e_source_registry_list_enabled (core->registry, E_SOURCE_EXTENSION_CALENDAR);
 
+	/* args[2] : uids des agendas à lire, séparés par des virgules (tous sinon) */
+	only = args[2] && *args[2] ? g_strsplit (args[2], ",", -1) : NULL;
+
 	for (slink = sources; slink; slink = g_list_next (slink)) {
 		ESource *source = slink->data;
 		EClient *client;
 		GSList *objects = NULL, *olink;
 
-		client = e_cal_client_connect_sync (source, E_CAL_CLIENT_SOURCE_TYPE_EVENTS, 5, core->cancellable, NULL);
-		if (!client)
+		if (only && !g_strv_contains ((const gchar * const *) only, e_source_get_uid (source)))
 			continue;
 
-		if (e_cal_client_get_object_list_sync (E_CAL_CLIENT (client), sexp, &objects, core->cancellable, NULL)) {
+		GError *local_error = NULL;
+
+		client = e_cal_client_connect_sync (source, E_CAL_CLIENT_SOURCE_TYPE_EVENTS, 5, core->cancellable, &local_error);
+		if (!client) {
+			g_warning ("Cannot open calendar “%s” (%s): %s", e_source_get_display_name (source),
+				e_source_get_uid (source), local_error ? local_error->message : "unknown error");
+			g_clear_error (&local_error);
+			continue;
+		}
+
+		if (!e_cal_client_get_object_list_sync (E_CAL_CLIENT (client), sexp, &objects, core->cancellable, &local_error)) {
+			g_warning ("Cannot read calendar “%s” (%s): %s", e_source_get_display_name (source),
+				e_source_get_uid (source), local_error ? local_error->message : "unknown error");
+			g_clear_error (&local_error);
+		} else {
 			for (olink = objects; olink; olink = g_slist_next (olink)) {
 				ICalComponent *icomp = olink->data;
 				ICalTime *dtstart, *dtend;
@@ -7035,6 +7054,9 @@ core_list_events_run (EvoCore *core,
 				item->end = et;
 				item->calendar_uid = g_strdup (e_source_get_uid (source));
 				item->calendar_name = g_strdup (e_source_get_display_name (source));
+				if (e_source_has_extension (source, E_SOURCE_EXTENSION_CALENDAR))
+					item->calendar_color = e_source_selectable_dup_color (
+						e_source_get_extension (source, E_SOURCE_EXTENSION_CALENDAR));
 
 				g_clear_object (&desc_prop);
 				g_ptr_array_add (items, item);
@@ -7047,6 +7069,7 @@ core_list_events_run (EvoCore *core,
 
 	g_list_free_full (sources, g_object_unref);
 	g_free (sexp);
+	g_strfreev (only);
 
 	g_ptr_array_sort (items, compare_cal_events);
 
@@ -7067,6 +7090,7 @@ core_list_events_run (EvoCore *core,
 		json_builder_add_int_value (builder, item->end);
 		builder_add_string (builder, "calendar_uid", item->calendar_uid);
 		builder_add_string (builder, "calendar_name", item->calendar_name);
+		builder_add_string (builder, "calendar_color", item->calendar_color);
 		json_builder_end_object (builder);
 	}
 
@@ -7131,6 +7155,8 @@ core_create_event_run (EvoCore *core,
 		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "Aucun agenda disponible");
 		goto exit;
 	}
+
+	g_message ("New event in calendar “%s” (%s)", e_source_get_display_name (source), e_source_get_uid (source));
 
 	client = e_cal_client_connect_sync (source, E_CAL_CLIENT_SOURCE_TYPE_EVENTS, 5, core->cancellable, error);
 	if (!client)
@@ -8267,19 +8293,44 @@ core_list_sources_run (EvoCore *core,
 		if (kinds[0] && *kinds[0] && !g_strv_contains ((const gchar * const *) kinds, source_kinds[ii].kind))
 			continue;
 
+		ESource *default_source = NULL;
+
 		sources = e_source_registry_list_enabled (core->registry, source_kinds[ii].extension);
 		sources = g_list_sort (sources, (GCompareFunc) e_source_compare_by_display_name);
 
+		if (g_str_equal (source_kinds[ii].kind, "calendar"))
+			default_source = e_source_registry_ref_default_calendar (core->registry);
+		else if (g_str_equal (source_kinds[ii].kind, "tasks"))
+			default_source = e_source_registry_ref_default_task_list (core->registry);
+		else if (g_str_equal (source_kinds[ii].kind, "memos"))
+			default_source = e_source_registry_ref_default_memo_list (core->registry);
+		else
+			default_source = e_source_registry_ref_default_address_book (core->registry);
+
 		for (slink = sources; slink; slink = g_list_next (slink)) {
 			ESource *source = slink->data;
+			gpointer extension = e_source_get_extension (source, source_kinds[ii].extension);
+			const gchar *parent_uid = e_source_get_parent (source);
+			ESource *parent = parent_uid ? e_source_registry_ref_source (core->registry, parent_uid) : NULL;
+			gchar *color = E_IS_SOURCE_SELECTABLE (extension)
+				? e_source_selectable_dup_color (E_SOURCE_SELECTABLE (extension)) : NULL;
 
 			json_builder_begin_object (builder);
 			builder_add_string (builder, "uid", e_source_get_uid (source));
 			builder_add_string (builder, "name", e_source_get_display_name (source));
 			builder_add_string (builder, "kind", source_kinds[ii].kind);
+			/* compte : collection ou source parente (« Sur cet ordinateur »...) */
+			builder_add_string (builder, "account", parent ? e_source_get_display_name (parent) : "");
+			builder_add_string (builder, "color", color);
+			json_builder_set_member_name (builder, "default");
+			json_builder_add_boolean_value (builder, default_source && e_source_equal (source, default_source));
 			json_builder_end_object (builder);
+
+			g_free (color);
+			g_clear_object (&parent);
 		}
 
+		g_clear_object (&default_source);
 		g_list_free_full (sources, g_object_unref);
 	}
 
@@ -9293,8 +9344,19 @@ evo_core_list_events (EvoCore *core,
 		      EvoCoreResultFunc func,
 		      void *user_data)
 {
+	evo_core_list_calendar_events (core, start_unix, end_unix, NULL, func, user_data);
+}
+
+void
+evo_core_list_calendar_events (EvoCore *core,
+			       long long start_unix,
+			       long long end_unix,
+			       const char *calendar_uids,
+			       EvoCoreResultFunc func,
+			       void *user_data)
+{
 	gchar start_buf[32], end_buf[32];
-	gchar *args[] = { start_buf, end_buf, NULL };
+	gchar *args[] = { start_buf, end_buf, (gchar *) (calendar_uids ? calendar_uids : ""), NULL };
 
 	g_snprintf (start_buf, sizeof (start_buf), "%" G_GINT64_FORMAT, (gint64) start_unix);
 	g_snprintf (end_buf, sizeof (end_buf), "%" G_GINT64_FORMAT, (gint64) end_unix);
