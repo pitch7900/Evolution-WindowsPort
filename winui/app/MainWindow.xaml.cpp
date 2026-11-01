@@ -288,6 +288,7 @@ namespace winrt::EvolutionWin::implementation
         AppTitleBar().SizeChanged([this](IInspectable const&, SizeChangedEventArgs const&) { UpdateTitleBarPassthrough(); });
         RestorePaneWidths();
         ApplyFolderPaneVisibility(::EvolutionWin::Settings::Instance().GetBoolean(L"layout.folders-visible", true));
+        ApplyReadingPanePosition(::EvolutionWin::Settings::Instance().GetString(L"layout.reading-pane", L"right"));
 
         /* menu contextuel des dossiers (clic droit, touche Menu) */
         FolderTree().ContextRequested([this](UIElement const& sender, Input::ContextRequestedEventArgs const& args)
@@ -3887,6 +3888,8 @@ namespace winrt::EvolutionWin::implementation
             ::EvolutionWin::Settings::Instance().SetNumber(pane->key, pane->default_width);
         ::EvolutionWin::Settings::Instance().SetBoolean(L"layout.folders-visible", true);
         ApplyFolderPaneVisibility(true);
+        ::EvolutionWin::Settings::Instance().SetString(L"layout.reading-pane", L"right");
+        ApplyReadingPanePosition(L"right");
     }
 
     /* onglet Affichage (Calendrier) */
@@ -4231,6 +4234,61 @@ namespace winrt::EvolutionWin::implementation
             /* à égalité : du plus récent au plus ancien */
             return a.GetNamedNumber(L"date", 0) > b.GetNamedNumber(L"date", 0);
         });
+    }
+
+    /* Volet de lecture à droite de la liste (colonne 4, comme Outlook par
+     * défaut) ou en dessous (liste et lecture sur toute la largeur restante,
+     * l'une au-dessus de l'autre) ; le séparateur liste / lecture n'a de
+     * sens qu'à droite. */
+    void MainWindow::ApplyReadingPanePosition(hstring const& position)
+    {
+        bool bottom = position == L"bottom";
+        auto list = MessageListPane();
+        auto reader = ReaderPane();
+
+        Grid::SetRow(list, 0);
+        Grid::SetRowSpan(list, bottom ? 1 : 3);
+        Grid::SetColumnSpan(list, bottom ? 3 : 1);
+
+        Grid::SetRow(reader, bottom ? 2 : 0);
+        Grid::SetRowSpan(reader, bottom ? 1 : 3);
+        Grid::SetColumn(reader, bottom ? 2 : 4);
+        Grid::SetColumnSpan(reader, bottom ? 3 : 1);
+
+        ReaderRow().Height(bottom ? GridLengthHelper::FromValueAndType(1.3, GridUnitType::Star)
+                                  : GridLengthHelper::FromPixels(0));
+        ReaderDivider().Visibility(bottom ? Visibility::Visible : Visibility::Collapsed);
+        ListSplitter().Visibility(bottom ? Visibility::Collapsed : Visibility::Visible);
+    }
+
+    /* Menu Affichage › Volet de lecture : à droite / en bas (mémorisé). */
+    void MainWindow::OnReadingPaneMenuOpening(IInspectable const& sender, IInspectable const&)
+    {
+        auto menu = sender.as<MenuFlyout>();
+        menu.Items().Clear();
+
+        hstring current = ::EvolutionWin::Settings::Instance().GetString(L"layout.reading-pane", L"right");
+        for (auto const& [key, label] : { std::pair{ L"right", L"À droite" }, std::pair{ L"bottom", L"En bas" } })
+        {
+            RadioMenuFlyoutItem entry;
+            entry.Text(label);
+            entry.GroupName(L"reading-pane");
+            entry.IsChecked(current == key);
+            hstring position = key;
+            entry.Click([this, position](IInspectable const&, RoutedEventArgs const&)
+            {
+                ::EvolutionWin::Settings::Instance().SetString(L"layout.reading-pane", position);
+                ApplyReadingPanePosition(position);
+            });
+            menu.Items().Append(entry);
+        }
+
+        /* désactivé : nécessite la fenêtre de lecture indépendante (§6) */
+        RadioMenuFlyoutItem off;
+        off.Text(L"Désactivé (bientôt)");
+        off.GroupName(L"reading-pane");
+        off.IsEnabled(false);
+        menu.Items().Append(off);
     }
 
     /* Mode confidentiel des notifications : interrupteur des Paramètres,

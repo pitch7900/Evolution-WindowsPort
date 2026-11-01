@@ -34,6 +34,7 @@ namespace winrt::EvolutionWin::implementation
         void OnRibbonResetLayoutClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRibbonTodayClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRibbonNextDaysClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnReadingPaneMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
         void OnConfidentialToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnQuickAccessSizeChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::SizeChangedEventArgs const& args);
         void OnSortMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
@@ -349,6 +350,8 @@ namespace winrt::EvolutionWin::implementation
         /* mode confidentiel des notifications (préférence "notifications.confidential") */
         bool m_updating_confidential{ false };
         void SyncConfidentialControls();
+        /* position du volet de lecture : "right" ou "bottom" (layout.reading-pane) */
+        void ApplyReadingPanePosition(hstring const& position);
         void UpdateTitleBarPassthrough();
         EvolutionWin::FolderItem CurrentFolderItem();
         void ApplyFolderPaneVisibility(bool visible);

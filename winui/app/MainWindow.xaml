@@ -218,6 +218,12 @@
                                             Click="OnRibbonFolderPaneToggled">
                             <AppBarToggleButton.Icon><FontIcon Glyph="&#xE8A0;" /></AppBarToggleButton.Icon>
                         </AppBarToggleButton>
+                        <AppBarButton Label="Volet de lecture">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8A1;" /></AppBarButton.Icon>
+                            <AppBarButton.Flyout>
+                                <MenuFlyout Opening="OnReadingPaneMenuOpening" />
+                            </AppBarButton.Flyout>
+                        </AppBarButton>
                         <AppBarButton Label="Rétablir la disposition" Click="OnRibbonResetLayoutClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE72C;" /></AppBarButton.Icon>
                         </AppBarButton>
@@ -285,9 +291,16 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
+                <!-- volet de lecture en bas (MainWindow::ApplyReadingPanePosition) :
+                     liste en ligne 0, séparateur en ligne 1, lecture en ligne 2 -->
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition x:Name="ReaderRow" Height="0" />
+                </Grid.RowDefinitions>
 
                 <!-- accounts and folders -->
-                <Grid Grid.Column="0" Padding="4,8,4,8">
+                <Grid Grid.Column="0" Grid.RowSpan="3" Padding="4,8,4,8">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
@@ -327,13 +340,13 @@
                 </Grid>
 
                 <!-- séparateurs déplaçables (double-clic : largeur par défaut) -->
-                <local:PaneSplitter x:Name="FoldersSplitter" Grid.Column="1" Width="6" Background="Transparent"
+                <local:PaneSplitter x:Name="FoldersSplitter" Grid.Column="1" Grid.RowSpan="3" Width="6" Background="Transparent"
                                     PointerPressed="OnSplitterPointerPressed" PointerMoved="OnSplitterPointerMoved"
                                     PointerReleased="OnSplitterPointerReleased" PointerCaptureLost="OnSplitterPointerCaptureLost"
                                     DoubleTapped="OnSplitterDoubleTapped">
                     <Rectangle Width="1" HorizontalAlignment="Center" Fill="{ThemeResource CardStrokeColorDefaultBrush}" />
                 </local:PaneSplitter>
-                <local:PaneSplitter x:Name="ListSplitter" Grid.Column="3" Width="6" Background="Transparent"
+                <local:PaneSplitter x:Name="ListSplitter" Grid.Column="3" Grid.RowSpan="3" Width="6" Background="Transparent"
                                     PointerPressed="OnSplitterPointerPressed" PointerMoved="OnSplitterPointerMoved"
                                     PointerReleased="OnSplitterPointerReleased" PointerCaptureLost="OnSplitterPointerCaptureLost"
                                     DoubleTapped="OnSplitterDoubleTapped">
@@ -341,7 +354,7 @@
                 </local:PaneSplitter>
 
                 <!-- messages of the selected folder -->
-                <Grid Grid.Column="2" Padding="0,8,0,0">
+                <Grid x:Name="MessageListPane" Grid.Column="2" Grid.RowSpan="3" Padding="0,8,0,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
@@ -424,7 +437,9 @@
                 </Grid>
 
                 <!-- reading pane -->
-                <Grid Grid.Column="4">
+                <Rectangle x:Name="ReaderDivider" Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="3" Height="1"
+                           Margin="0,4,0,4" Visibility="Collapsed" Fill="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <Grid x:Name="ReaderPane" Grid.Column="4" Grid.RowSpan="3">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
