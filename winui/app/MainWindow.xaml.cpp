@@ -4125,7 +4125,8 @@ namespace winrt::EvolutionWin::implementation
      * barre de navigation. */
     void MainWindow::SetCalendarPeriod(hstring const& period)
     {
-        m_calendar_period = period == L"day" || period == L"month" ? period : hstring{ L"week" };
+        m_calendar_period = period == L"day" || period == L"workweek" || period == L"month" || period == L"list"
+            ? period : hstring{ L"week" };
         ::EvolutionWin::Settings::Instance().SetString(L"calendar.period", m_calendar_period);
 
         m_updating_period = true;
@@ -4358,7 +4359,7 @@ namespace winrt::EvolutionWin::implementation
         }
         else
         {
-            local_tm.tm_mday += direction * (m_calendar_period == L"day" ? 1 : 7);
+            local_tm.tm_mday += direction * (m_calendar_period == L"day" ? 1 : m_calendar_period == L"list" ? 30 : 7);
         }
 
         m_selected_day_start = static_cast<int64_t>(mktime(&local_tm));
@@ -5906,26 +5907,38 @@ namespace winrt::EvolutionWin::implementation
         first.tm_sec = 0;
         first.tm_isdst = -1;
 
-        struct tm last = first;
+        /* jours affichés : 1 (Jour), lundi-vendredi, lundi-dimanche, six
+           semaines autour du mois, 30 jours (Liste) */
+        int days = 1;
+        struct tm month_first = first;
+        month_first.tm_mday = 1;
+        int64_t month_unix = static_cast<int64_t>(mktime(&month_first));
+        m_grid_month = month_first.tm_mon;
+
         if (m_calendar_period == L"month")
         {
-            first.tm_mday = 1;
-            last = first;
-            last.tm_mon += 1;
+            first = month_first;
+            first.tm_mday -= (first.tm_wday + 6) % 7;
+            days = 42;
         }
-        else if (m_calendar_period == L"week")
+        else if (m_calendar_period == L"week" || m_calendar_period == L"workweek")
         {
             first.tm_mday -= (first.tm_wday + 6) % 7;
-            last = first;
-            last.tm_mday += 7;
+            days = m_calendar_period == L"week" ? 7 : 5;
         }
-        else
+        else if (m_calendar_period == L"list")
         {
-            last.tm_mday += 1;
+            days = 30;
         }
 
+        struct tm last = first;
+        last.tm_mday += days;
+        last.tm_isdst = -1;
+        first.tm_isdst = -1;
         int64_t start_unix = static_cast<int64_t>(mktime(&first));
         int64_t end_unix = static_cast<int64_t>(mktime(&last));
+        m_grid_start = start_unix;
+        m_grid_days = days;
 
         /* plage affichée : « samedi 31 octobre 2026 », « 26 oct. – 1 nov. 2026 »,
            « octobre 2026 » */
@@ -5936,8 +5949,8 @@ namespace winrt::EvolutionWin::implementation
             hstring label;
 
             if (m_calendar_period == L"month")
-                label = DateTimeFormatter{ L"month.full year.full" }.Format(from);
-            else if (m_calendar_period == L"week")
+                label = DateTimeFormatter{ L"month.full year.full" }.Format(winrt::clock::from_time_t(static_cast<time_t>(month_unix)));
+            else if (days > 1)
                 label = DateTimeFormatter{ L"day month.abbreviated" }.Format(from) + L" – " +
                         DateTimeFormatter{ L"day month.abbreviated year.full" }.Format(to);
             else
@@ -5945,6 +5958,10 @@ namespace winrt::EvolutionWin::implementation
 
             CalendarHeader().Text(label);
         }
+
+        bool list_view = m_calendar_period == L"list";
+        EventList().Visibility(list_view ? Visibility::Visible : Visibility::Collapsed);
+        CalendarGridHost().Visibility(list_view ? Visibility::Collapsed : Visibility::Visible);
 
         if (!m_calendar_sources)
         {
@@ -5971,6 +5988,16 @@ namespace winrt::EvolutionWin::implementation
             if (!error.empty())
             {
                 ShowStatus(L"Calendrier : " + error, InfoBarSeverity::Error);
+                return;
+            }
+
+            if (m_calendar_period != L"list")
+            {
+                auto occurrences = JsonArray::Parse(json);
+                if (m_calendar_period == L"month")
+                    RenderMonthGrid(occurrences, m_grid_start, m_grid_month);
+                else
+                    RenderCalendarGrid(occurrences, m_grid_start, m_grid_days);
                 return;
             }
 
@@ -6136,16 +6163,7 @@ namespace winrt::EvolutionWin::implementation
         hstring calendar_uid{ text.substr(0, sep) };
         hstring uid{ text.substr(sep + 1) };
 
-        m_core->GetEvent(calendar_uid, uid, [this](hstring const& json, hstring const& error)
-        {
-            JsonObject details;
-            if (!error.empty() || !JsonObject::TryParse(json, details))
-            {
-                ShowStatus(L"Ouverture de l'événement : " + error, InfoBarSeverity::Error);
-                return;
-            }
-            ShowEventDialogAsync(details);
-        });
+        OpenCalendarEvent(calendar_uid, uid);
     }
 
     /* Réponse d'un participant en clair. */

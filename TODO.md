@@ -276,7 +276,7 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
   - [x] Créer un événement dans le calendrier choisi (calendrier principal du compte par défaut) : titre, lieu, date, heures ou journée entière, description
   - [x] **Modifier** un événement existant (manquant aujourd'hui) et le supprimer, avec envoi au serveur — *clic sur l'événement : fenêtre modifiable (lecture seule si l'agenda l'est), organisateur et participants*
   - [ ] Modifications faites ailleurs (Outlook Web, Google Agenda, téléphone) visibles à la synchronisation suivante ; bouton *Actualiser*
-  - [ ] Événements périodiques existants affichés correctement (occurrences développées), en lecture seule tant que l'éditeur complet (§13) n'existe pas
+  - [x] Événements périodiques existants affichés correctement (occurrences développées), en lecture seule tant que l'éditeur complet (§13) n'existe pas
 - [ ] 🟡 **Gestion simple des contacts du compte** : <a id="demo-gestion-contacts"></a>
   - [ ] Contacts du compte (et sous-dossiers / groupes de contacts) listés avec le nom du carnet d'origine
   - [ ] Créer un contact dans le carnet choisi (carnet du compte par défaut) : nom, prénom, adresses email, téléphones, société, fonction, notes
@@ -529,8 +529,8 @@ La vue actuelle se limite à un `CalendarView` mensuel et une liste d'événemen
 
 ### Grille calendrier (brique préalable)
 
-- [ ] 🔴 **Contrôle grille Jour / Semaine de travail / Semaine** (WinUI n'en fournit pas) : créneaux horaires, événements positionnés et chevauchements, journée entière en haut, défilement vertical <a id="demo-grille-calendrier"></a>
-- [ ] 🟠 **Vue Mois** (détails faibles / moyens / élevés)
+- [x] 🔴 **Contrôle grille Jour / Semaine de travail / Semaine** (WinUI n'en fournit pas) : créneaux horaires, événements positionnés et chevauchements, journée entière en haut, défilement vertical <a id="demo-grille-calendrier"></a> — *blocs à la couleur du calendrier, ligne de l'heure actuelle, ouverture au clic, vue Liste conservée*
+- [x] 🟠 **Vue Mois** (détails faibles / moyens / élevés) — *six semaines, 3 événements par jour puis « +N », clic sur le jour = vue Jour ; un seul niveau de détail*
 - [ ] 🟢 Raccourcis Ctrl+Alt+1…5 entre les vues
 - [ ] 🟢 **Échelle de temps** : 5, 6, 10, 15, 30, 60 minutes
 - [ ] 🟢 **Heures de travail** : jours ouvrés, heures de début / fin, premier jour de la semaine (options)

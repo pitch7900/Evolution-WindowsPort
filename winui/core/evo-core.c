@@ -6920,6 +6920,8 @@ typedef struct {
 	gchar *calendar_uid;
 	gchar *calendar_name;
 	gchar *calendar_color;	/* "#rrggbb" (ESourceSelectable) ou NULL */
+	gboolean all_day;
+	gboolean recurring;
 } CalEventItem;
 
 /* Ouvre l'agenda calendar_uid (connexion EDS). */
@@ -7189,6 +7191,80 @@ compare_cal_events (gconstpointer a,
 	return g_utf8_collate (ea->summary ? ea->summary : "", eb->summary ? eb->summary : "");
 }
 
+/* Heure Unix d'une date / heure iCalendar : dans son fuseau (TZID), en heure
+ * locale pour une date sans heure (journée entière), UTC sinon. */
+static gint64
+cal_time_to_unix (ICalTime *value)
+{
+	ICalTimezone *zone;
+
+	if (!value || i_cal_time_is_null_time (value))
+		return 0;
+
+	if (i_cal_time_is_date (value))
+		return (gint64) i_cal_time_as_timet_with_zone (value, e_cal_util_get_system_timezone ());
+
+	zone = i_cal_time_get_timezone (value);
+	return (gint64) (zone ? i_cal_time_as_timet_with_zone (value, zone) : i_cal_time_as_timet (value));
+}
+
+/* Élément de la liste des événements pour une occurrence de icomp. */
+static CalEventItem *
+cal_event_item_new (ICalComponent *icomp,
+		    ESource *source,
+		    ICalTime *start,
+		    ICalTime *end)
+{
+	CalEventItem *item = g_new0 (CalEventItem, 1);
+	ICalProperty *prop;
+
+	item->uid = g_strdup (i_cal_component_get_uid (icomp));
+	item->summary = g_strdup (i_cal_component_get_summary (icomp) ? i_cal_component_get_summary (icomp) : "(Sans titre)");
+	item->location = g_strdup (i_cal_component_get_location (icomp) ? i_cal_component_get_location (icomp) : "");
+
+	prop = i_cal_component_get_first_property (icomp, I_CAL_DESCRIPTION_PROPERTY);
+	item->description = g_strdup (prop && i_cal_property_get_description (prop) ? i_cal_property_get_description (prop) : "");
+	g_clear_object (&prop);
+
+	prop = i_cal_component_get_first_property (icomp, I_CAL_RRULE_PROPERTY);
+	item->recurring = prop != NULL || e_cal_util_component_has_recurrences (icomp) ||
+		e_cal_util_component_is_instance (icomp);
+	g_clear_object (&prop);
+
+	item->all_day = start && i_cal_time_is_date (start);
+	item->start = cal_time_to_unix (start);
+	item->end = end && !i_cal_time_is_null_time (end) ? cal_time_to_unix (end) : item->start + 3600;
+
+	item->calendar_uid = g_strdup (e_source_get_uid (source));
+	item->calendar_name = g_strdup (e_source_get_display_name (source));
+	if (e_source_has_extension (source, E_SOURCE_EXTENSION_CALENDAR))
+		item->calendar_color = e_source_selectable_dup_color (
+			e_source_get_extension (source, E_SOURCE_EXTENSION_CALENDAR));
+
+	return item;
+}
+
+typedef struct {
+	GPtrArray *items;
+	ESource *source;
+} CalInstancesData;
+
+static gboolean
+cal_event_instance_cb (ICalComponent *icomp,
+		       ICalTime *instance_start,
+		       ICalTime *instance_end,
+		       gpointer user_data,
+		       GCancellable *cancellable,
+		       GError **error)
+{
+	CalInstancesData *data = user_data;
+
+	if (icomp && i_cal_component_get_uid (icomp))
+		g_ptr_array_add (data->items, cal_event_item_new (icomp, data->source, instance_start, instance_end));
+
+	return TRUE;
+}
+
 /* Liste les événements de tous les agendas activés dans l'intervalle demandé.
  * Paramètres :
  *   core  : instance du moteur evo-core
@@ -7208,8 +7284,9 @@ core_list_events_run (EvoCore *core,
 	gchar *sexp, *json;
 	gchar **only;
 	guint ii;
+	gboolean ranged = start_unix > 0 && end_unix > 0 && end_unix >= start_unix;
 
-	if (start_unix > 0 && end_unix > 0 && end_unix >= start_unix) {
+	if (ranged) {
 		gchar *iso_start = isodate_from_time_t ((time_t) start_unix);
 		gchar *iso_end = isodate_from_time_t ((time_t) end_unix);
 
@@ -7245,7 +7322,13 @@ core_list_events_run (EvoCore *core,
 			continue;
 		}
 
-		if (!e_cal_client_get_object_list_sync (E_CAL_CLIENT (client), sexp, &objects, core->cancellable, &local_error)) {
+		if (ranged) {
+			/* une entrée par occurrence (événements périodiques développés) */
+			CalInstancesData data = { items, source };
+
+			e_cal_client_generate_instances_sync (E_CAL_CLIENT (client), (time_t) start_unix, (time_t) end_unix,
+				core->cancellable, cal_event_instance_cb, &data);
+		} else if (!e_cal_client_get_object_list_sync (E_CAL_CLIENT (client), sexp, &objects, core->cancellable, &local_error)) {
 			g_warning ("Cannot read calendar “%s” (%s): %s", e_source_get_display_name (source),
 				e_source_get_uid (source), local_error ? local_error->message : "unknown error");
 			g_clear_error (&local_error);
@@ -7253,42 +7336,15 @@ core_list_events_run (EvoCore *core,
 			for (olink = objects; olink; olink = g_slist_next (olink)) {
 				ICalComponent *icomp = olink->data;
 				ICalTime *dtstart, *dtend;
-				ICalProperty *desc_prop;
-				CalEventItem *item;
-				gint64 st = 0, et = 0;
 
-				if (!icomp || ! i_cal_component_get_uid (icomp))
+				if (!icomp || !i_cal_component_get_uid (icomp))
 					continue;
 
 				dtstart = i_cal_component_get_dtstart (icomp);
 				dtend = i_cal_component_get_dtend (icomp);
-				if (dtstart && !i_cal_time_is_null_time (dtstart))
-					st = (gint64) i_cal_time_as_timet (dtstart);
-				if (dtend && !i_cal_time_is_null_time (dtend))
-					et = (gint64) i_cal_time_as_timet (dtend);
-				else
-					et = st + 3600;
-
+				g_ptr_array_add (items, cal_event_item_new (icomp, source, dtstart, dtend));
 				g_clear_object (&dtstart);
 				g_clear_object (&dtend);
-
-				desc_prop = i_cal_component_get_first_property (icomp, I_CAL_DESCRIPTION_PROPERTY);
-
-				item = g_new0 (CalEventItem, 1);
-				item->uid = g_strdup (i_cal_component_get_uid (icomp));
-				item->summary = g_strdup (i_cal_component_get_summary (icomp) ? i_cal_component_get_summary (icomp) : "(Sans titre)");
-				item->location = g_strdup (i_cal_component_get_location (icomp) ? i_cal_component_get_location (icomp) : "");
-				item->description = g_strdup (desc_prop && i_cal_property_get_description (desc_prop) ? i_cal_property_get_description (desc_prop) : "");
-				item->start = st;
-				item->end = et;
-				item->calendar_uid = g_strdup (e_source_get_uid (source));
-				item->calendar_name = g_strdup (e_source_get_display_name (source));
-				if (e_source_has_extension (source, E_SOURCE_EXTENSION_CALENDAR))
-					item->calendar_color = e_source_selectable_dup_color (
-						e_source_get_extension (source, E_SOURCE_EXTENSION_CALENDAR));
-
-				g_clear_object (&desc_prop);
-				g_ptr_array_add (items, item);
 			}
 			g_slist_free_full (objects, g_object_unref);
 		}
@@ -7320,6 +7376,10 @@ core_list_events_run (EvoCore *core,
 		builder_add_string (builder, "calendar_uid", item->calendar_uid);
 		builder_add_string (builder, "calendar_name", item->calendar_name);
 		builder_add_string (builder, "calendar_color", item->calendar_color);
+		json_builder_set_member_name (builder, "all_day");
+		json_builder_add_boolean_value (builder, item->all_day);
+		json_builder_set_member_name (builder, "recurring");
+		json_builder_add_boolean_value (builder, item->recurring);
 		json_builder_end_object (builder);
 	}
 

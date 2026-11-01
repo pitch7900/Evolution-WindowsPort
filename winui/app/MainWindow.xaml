@@ -283,11 +283,17 @@
                         <AppBarButton Label="Jour" Tag="day" Click="OnCalendarPeriodClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8BF;" /></AppBarButton.Icon>
                         </AppBarButton>
+                        <AppBarButton Label="Semaine de travail" Tag="workweek" Click="OnCalendarPeriodClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8C0;" /></AppBarButton.Icon>
+                        </AppBarButton>
                         <AppBarButton Label="Semaine" Tag="week" Click="OnCalendarPeriodClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8C0;" /></AppBarButton.Icon>
                         </AppBarButton>
                         <AppBarButton Label="Mois" Tag="month" Click="OnCalendarPeriodClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE787;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Liste" Tag="list" Click="OnCalendarPeriodClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8FD;" /></AppBarButton.Icon>
                         </AppBarButton>
                     </CommandBar>
                 </Grid>
@@ -629,8 +635,10 @@
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
                             <SelectorBar x:Name="CalendarPeriodBar" SelectionChanged="OnCalendarPeriodChanged">
                                 <SelectorBarItem Text="Jour" Tag="day" />
+                                <SelectorBarItem Text="Semaine de travail" Tag="workweek" />
                                 <SelectorBarItem Text="Semaine" Tag="week" />
                                 <SelectorBarItem Text="Mois" Tag="month" />
+                                <SelectorBarItem Text="Liste" Tag="list" />
                             </SelectorBar>
                             <Button Click="OnExportCalendarClick" ToolTipService.ToolTip="Exporter un agenda ou une liste de tâches (.ics)">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -643,8 +651,10 @@
                             </Button>
                         </StackPanel>
                     </Grid>
-                    <ListView x:Name="EventList" Grid.Row="1" SelectionMode="None"
+                    <ListView x:Name="EventList" Grid.Row="1" SelectionMode="None" Visibility="Collapsed"
                               IsItemClickEnabled="True" ItemClick="OnEventItemClick" />
+                    <!-- grille Jour / Semaine / Mois (MainWindow.Calendar.cpp) -->
+                    <Grid x:Name="CalendarGridHost" Grid.Row="1" />
                 </Grid>
             </Grid>
 

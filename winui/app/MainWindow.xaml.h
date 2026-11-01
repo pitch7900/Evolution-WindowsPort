@@ -372,6 +372,13 @@ namespace winrt::EvolutionWin::implementation
         bool m_updating_period{ false };
         void SetCalendarPeriod(hstring const& period);
         fire_and_forget ShowEventDialogAsync(Windows::Data::Json::JsonObject event);
+        /* grille du calendrier (MainWindow.Calendar.cpp) */
+        void OpenCalendarEvent(hstring const& calendar_uid, hstring const& uid);
+        void RenderCalendarGrid(Windows::Data::Json::JsonArray const& events, int64_t start_unix, int days);
+        void RenderMonthGrid(Windows::Data::Json::JsonArray const& events, int64_t start_unix, int month);
+        int64_t m_grid_start{ 0 };
+        int m_grid_days{ 7 };
+        int m_grid_month{ 0 };
         /* calendriers affichés (calendar.visible) et actif (calendar.active) */
         Windows::Data::Json::JsonArray m_calendar_sources{ nullptr };
         void LoadCalendarSources();
