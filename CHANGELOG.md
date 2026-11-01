@@ -33,6 +33,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   au premier usage ; **Copier vers** un dossier ; derniers dossiers
   utilisés en tête des menus *Déplacer* / *Copier vers* ; menu *Nouvel
   élément* : Rendez-vous (Réunion à venir).
+- **Recherche dans la barre de titre** (Ctrl+E, Échap pour effacer) : dossier
+  courant en Courrier, contacts en Contacts ; barre de titre plus haute.
 - Journaux des services evolution-data-server (`evolution-source-registry`,
   fabriques carnet d'adresses / agenda) dans
   `%LOCALAPPDATA%\EvolutionWin\<service>.log`, pour le diagnostic.

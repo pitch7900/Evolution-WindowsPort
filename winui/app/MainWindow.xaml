@@ -15,9 +15,10 @@
         <!-- raccourcis actifs dans toute la fenêtre, quelle que soit la vue -->
         <Grid.KeyboardAccelerators>
             <KeyboardAccelerator Modifiers="Control,Shift" Key="K" Invoked="OnNewTaskAccelerator" />
+            <KeyboardAccelerator Modifiers="Control" Key="E" Invoked="OnSearchAccelerator" />
         </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
-            <RowDefinition Height="32" />
+            <RowDefinition Height="48" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -32,6 +33,12 @@
                 <StackPanel x:Name="QuickAccessBar" Orientation="Horizontal" Spacing="2" Margin="12,0,0,0"
                             VerticalAlignment="Center" SizeChanged="OnQuickAccessSizeChanged" />
             </StackPanel>
+            <!-- recherche de la fenêtre (Ctrl+E) : dossier courant en Courrier,
+                 contacts en Contacts (MainWindow::OnSearchTextChanged) -->
+            <AutoSuggestBox x:Name="SearchBox" Width="460" HorizontalAlignment="Center" VerticalAlignment="Center"
+                            PlaceholderText="Rechercher dans le dossier (Ctrl+E)" QueryIcon="Find"
+                            TextChanged="OnSearchTextChanged" QuerySubmitted="OnSearchQuerySubmitted"
+                            KeyDown="OnSearchKeyDown" SizeChanged="OnQuickAccessSizeChanged" />
         </Grid>
 
         <!-- barre d'icônes fixe entre les modules (comme Outlook) : pas de
@@ -389,8 +396,6 @@
                                 </SplitButton.Flyout>
                             </SplitButton>
                         </Grid>
-                        <AutoSuggestBox x:Name="SearchBox" PlaceholderText="Rechercher dans ce dossier" QueryIcon="Find"
-                                        TextChanged="OnSearchTextChanged" QuerySubmitted="OnSearchQuerySubmitted" />
                         <!-- filtres rapides, combinés avec la recherche (appliqués par ShowMessages) -->
                         <Grid>
                             <SelectorBar x:Name="ReadFilterBar" SelectionChanged="OnQuickFilterChanged">
