@@ -661,11 +661,26 @@
             <!-- Vue Contacts -->
             <Grid x:Name="ContactsViewPane" Grid.Row="2" Visibility="Collapsed">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="260" />
                     <ColumnDefinition Width="380" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <Grid Grid.Column="0" Padding="16,12,16,12" RowSpacing="8"
+                <!-- carnets d'adresses par compte : case = affiché, clic sur le nom =
+                     carnet des nouveaux contacts (MainWindow::LoadContactBooks) -->
+                <Grid Grid.Column="0" Padding="16,12,8,12" RowSpacing="8"
+                      BorderThickness="0,0,1,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="Carnets d'adresses" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="ContactBooksPanel" Spacing="2" />
+                    </ScrollViewer>
+                </Grid>
+
+                <Grid Grid.Column="1" Padding="16,12,16,12" RowSpacing="8"
                       BorderThickness="0,0,1,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -673,7 +688,11 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     <Grid Grid.Row="0">
-                        <TextBlock Text="Contacts" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+                        <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Contacts" Style="{StaticResource SubtitleTextBlockStyle}" />
+                        <TextBlock x:Name="ActiveBookText" Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
                             <Button Click="OnExportContactsClick" ToolTipService.ToolTip="Exporter les contacts au format vCard (.vcf)">
                                 <FontIcon Glyph="&#xEDE1;" FontSize="14" />
@@ -691,7 +710,7 @@
                     <ListView x:Name="ContactList" Grid.Row="2" SelectionMode="Single" SelectionChanged="OnContactSelectionChanged" />
                 </Grid>
 
-                <Grid Grid.Column="1" Padding="32,24,32,24">
+                <Grid Grid.Column="2" Padding="32,24,32,24">
                     <StackPanel x:Name="ContactDetailPane" Spacing="12" Visibility="Collapsed">
                         <TextBlock x:Name="ContactNameText" Style="{StaticResource TitleTextBlockStyle}" IsTextSelectionEnabled="True" />
                         <StackPanel Orientation="Horizontal" Spacing="8">

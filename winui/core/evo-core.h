@@ -630,6 +630,14 @@ void		evo_core_delete_task		(EvoCore *core,
  *               "phone": "...", "org": "...", "notes": "...",
  *               "book_uid": "...", "book_name": "..."}, ...]
  *   user_data : données utilisateur transmises au rappel */
+/* Comme evo_core_list_contacts (), limité aux carnets book_uids (uids
+ * séparés par des virgules ; NULL ou "" : tous les carnets activés). */
+void		evo_core_list_book_contacts	(EvoCore *core,
+						 const char *query,
+						 const char *book_uids,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 void		evo_core_list_contacts		(EvoCore *core,
 						 const char *query,
 						 EvoCoreResultFunc func,

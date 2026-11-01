@@ -8523,6 +8523,7 @@ core_list_contacts_run (EvoCore *core,
 			gchar **args,
 			GError **error)
 {
+	gchar **only;
 	const gchar *query_text = args[0] ? args[0] : "";
 	EBookQuery *book_query;
 	gchar *sexp;
@@ -8540,16 +8541,31 @@ core_list_contacts_run (EvoCore *core,
 	items = g_ptr_array_new_with_free_func (contact_item_free);
 	sources = e_source_registry_list_enabled (core->registry, E_SOURCE_EXTENSION_ADDRESS_BOOK);
 
+	/* args[1] : uids des carnets à lire, séparés par des virgules (tous sinon) */
+	only = args[1] && *args[1] ? g_strsplit (args[1], ",", -1) : NULL;
+
 	for (slink = sources; slink; slink = g_list_next (slink)) {
 		ESource *source = slink->data;
 		EClient *client;
 		GSList *contacts = NULL, *clink;
+		GError *local_error = NULL;
 
-		client = e_book_client_connect_sync (source, 5, core->cancellable, NULL);
-		if (!client)
+		if (only && !g_strv_contains ((const gchar * const *) only, e_source_get_uid (source)))
 			continue;
 
-		if (e_book_client_get_contacts_sync (E_BOOK_CLIENT (client), sexp, &contacts, core->cancellable, NULL)) {
+		client = e_book_client_connect_sync (source, 5, core->cancellable, &local_error);
+		if (!client) {
+			g_warning ("Cannot open address book “%s” (%s): %s", e_source_get_display_name (source),
+				e_source_get_uid (source), local_error ? local_error->message : "unknown error");
+			g_clear_error (&local_error);
+			continue;
+		}
+
+		if (!e_book_client_get_contacts_sync (E_BOOK_CLIENT (client), sexp, &contacts, core->cancellable, &local_error)) {
+			g_warning ("Cannot read address book “%s” (%s): %s", e_source_get_display_name (source),
+				e_source_get_uid (source), local_error ? local_error->message : "unknown error");
+			g_clear_error (&local_error);
+		} else {
 			for (clink = contacts; clink; clink = g_slist_next (clink)) {
 				EContact *contact = clink->data;
 				const gchar *uid, *full_name, *email, *phone, *org, *notes;
@@ -8593,6 +8609,7 @@ core_list_contacts_run (EvoCore *core,
 	}
 
 	g_list_free_full (sources, g_object_unref);
+	g_strfreev (only);
 	g_free (sexp);
 
 	g_ptr_array_sort (items, compare_contacts);
@@ -10203,7 +10220,17 @@ evo_core_list_contacts (EvoCore *core,
 			EvoCoreResultFunc func,
 			void *user_data)
 {
-	gchar *args[] = { (gchar *) (query ? query : ""), NULL };
+	evo_core_list_book_contacts (core, query, NULL, func, user_data);
+}
+
+void
+evo_core_list_book_contacts (EvoCore *core,
+			     const char *query,
+			     const char *book_uids,
+			     EvoCoreResultFunc func,
+			     void *user_data)
+{
+	gchar *args[] = { (gchar *) (query ? query : ""), (gchar *) (book_uids ? book_uids : ""), NULL };
 
 	core_submit (core, core_list_contacts_run, g_strdupv (args), func, user_data);
 }

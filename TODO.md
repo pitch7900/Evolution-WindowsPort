@@ -278,8 +278,8 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
   - [ ] Modifications faites ailleurs (Outlook Web, Google Agenda, téléphone) visibles à la synchronisation suivante ; bouton *Actualiser*
   - [x] Événements périodiques existants affichés correctement (occurrences développées), en lecture seule tant que l'éditeur complet (§13) n'existe pas
 - [ ] 🟡 **Gestion simple des contacts du compte** : <a id="demo-gestion-contacts"></a>
-  - [ ] Contacts du compte (et sous-dossiers / groupes de contacts) listés avec le nom du carnet d'origine
-  - [ ] Créer un contact dans le carnet choisi (carnet du compte par défaut) : nom, prénom, adresses email, téléphones, société, fonction, notes
+  - [x] Contacts du compte (et sous-dossiers / groupes de contacts) listés avec le nom du carnet d'origine — *volet « Carnets d'adresses » par compte, cases à cocher mémorisées, carnet actif*
+  - [x] Créer un contact dans le carnet choisi (carnet du compte par défaut) : nom, prénom, adresses email, téléphones, société, fonction, notes
   - [ ] **Modifier** un contact existant (manquant aujourd'hui) et le supprimer, avec envoi au serveur
   - [ ] Contacts utilisables dans l'autocomplétion des destinataires (§15)
 - [ ] 🟢 Erreurs de synchronisation du calendrier / des contacts remontées dans l'indicateur d'état des connexions (§4)
