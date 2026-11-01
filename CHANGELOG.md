@@ -10,7 +10,7 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
-## [0.9.4] — en cours
+## [0.9.4] — 2026-11-01
 
 ### Ajouté
 
@@ -62,6 +62,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   Gmail, local) avec case à cocher pour afficher ou masquer chaque carnet
   (seuls les carnets affichés sont lus) et carnet actif des nouveaux
   contacts ; carnet qui ne s'ouvre pas signalé dans le journal.
+- **Autocomplétion des destinataires** (À, Cc, Cci) dès 2 caractères :
+  tous les carnets d'adresses, annuaire de l'organisation (GAL) compris,
+  avec le carnet d'origine ; adresses récemment utilisées en tête ;
+  flèches et Entrée pour choisir.
 - Journaux des services evolution-data-server (`evolution-source-registry`,
   fabriques carnet d'adresses / agenda) dans
   `%LOCALAPPDATA%\EvolutionWin\<service>.log`, pour le diagnostic.

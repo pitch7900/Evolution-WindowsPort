@@ -49,6 +49,7 @@ struct _EvoCore {
 	/* OAuth2 sign-ins in progress (evo_core_oauth2_begin/finish),
 	 * credentials source uid ~> CoreOAuth2Pending *, protected by lock */
 	GHashTable *oauth2_pending;
+	GHashTable *book_clients;	/* uid -> EBookClient (autocomplétion) */
 };
 
 static JsonBuilder *	core_event_builder	(void);
@@ -8786,6 +8787,187 @@ static const struct {
 	{ "contacts", E_SOURCE_EXTENSION_ADDRESS_BOOK }
 };
 
+/* --- autocomplétion des destinataires --- */
+
+typedef struct {
+	gchar *name;
+	gchar *email;
+	gchar *book;
+	gint rank;	/* 0 : début du nom complet ou de l'adresse, 1 : autre champ */
+} RecipientItem;
+
+static void
+recipient_item_free (gpointer data)
+{
+	RecipientItem *item = data;
+
+	g_free (item->name);
+	g_free (item->email);
+	g_free (item->book);
+	g_free (item);
+}
+
+static gint
+compare_recipients (gconstpointer a,
+		    gconstpointer b)
+{
+	const RecipientItem *ra = *(const RecipientItem **) a, *rb = *(const RecipientItem **) b;
+
+	if (ra->rank != rb->rank)
+		return ra->rank - rb->rank;
+
+	return g_utf8_collate (ra->name && *ra->name ? ra->name : ra->email,
+			       rb->name && *rb->name ? rb->name : rb->email);
+}
+
+/* Carnet ouvert une fois puis gardé : les recherches suivent la frappe. */
+static EBookClient *
+core_ref_book_client (EvoCore *core,
+		      ESource *source)
+{
+	EClient *client;
+
+	g_mutex_lock (&core->lock);
+	client = g_hash_table_lookup (core->book_clients, e_source_get_uid (source));
+	if (client)
+		g_object_ref (client);
+	g_mutex_unlock (&core->lock);
+
+	if (client)
+		return E_BOOK_CLIENT (client);
+
+	client = e_book_client_connect_sync (source, 5, core->cancellable, NULL);
+	if (!client)
+		return NULL;
+
+	g_mutex_lock (&core->lock);
+	g_hash_table_replace (core->book_clients, g_strdup (e_source_get_uid (source)), g_object_ref (client));
+	g_mutex_unlock (&core->lock);
+
+	return E_BOOK_CLIENT (client);
+}
+
+/* Destinataires dont le nom, le prénom, le nom de famille, le surnom ou
+ * l'adresse commence par la saisie, dans tous les carnets activés (GAL
+ * comprise) ; une entrée par adresse, sans doublon.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = saisie, [1] = nombre maximal de résultats
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : [{"name", "email", "book"}, ...]. */
+static gchar *
+core_search_recipients_run (EvoCore *core,
+			    gchar **args,
+			    GError **error)
+{
+	const gchar *text = args[0] ? args[0] : "";
+	guint limit = (guint) MAX (1, g_ascii_strtoll (args[1] ? args[1] : "15", NULL, 10));
+	GHashTable *seen = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+	GPtrArray *items = g_ptr_array_new_with_free_func (recipient_item_free);
+	GList *sources, *slink;
+	JsonBuilder *builder;
+	gchar *sexp, *lower, *json;
+	guint ii;
+
+	if (g_utf8_strlen (text, -1) < 2) {
+		g_hash_table_destroy (seen);
+		g_ptr_array_unref (items);
+		return g_strdup ("[]");
+	}
+
+	{
+		EBookQuery *fields[] = {
+			e_book_query_field_test (E_CONTACT_FULL_NAME, E_BOOK_QUERY_BEGINS_WITH, text),
+			e_book_query_field_test (E_CONTACT_GIVEN_NAME, E_BOOK_QUERY_BEGINS_WITH, text),
+			e_book_query_field_test (E_CONTACT_FAMILY_NAME, E_BOOK_QUERY_BEGINS_WITH, text),
+			e_book_query_field_test (E_CONTACT_NICKNAME, E_BOOK_QUERY_BEGINS_WITH, text),
+			e_book_query_field_test (E_CONTACT_EMAIL, E_BOOK_QUERY_BEGINS_WITH, text)
+		};
+		EBookQuery *query = e_book_query_or (G_N_ELEMENTS (fields), fields, TRUE);
+
+		sexp = e_book_query_to_string (query);
+		e_book_query_unref (query);
+	}
+
+	lower = g_utf8_casefold (text, -1);
+	sources = e_source_registry_list_enabled (core->registry, E_SOURCE_EXTENSION_ADDRESS_BOOK);
+
+	for (slink = sources; slink; slink = g_list_next (slink)) {
+		ESource *source = slink->data;
+		EBookClient *client = core_ref_book_client (core, source);
+		GSList *contacts = NULL, *clink;
+
+		if (!client)
+			continue;
+
+		if (e_book_client_get_contacts_sync (client, sexp, &contacts, core->cancellable, NULL)) {
+			for (clink = contacts; clink; clink = g_slist_next (clink)) {
+				EContact *contact = clink->data;
+				const gchar *full_name = e_contact_get_const (contact, E_CONTACT_FULL_NAME);
+				GList *emails = e_contact_get (contact, E_CONTACT_EMAIL), *elink;
+				gchar *name_lower = g_utf8_casefold (full_name ? full_name : "", -1);
+
+				for (elink = emails; elink; elink = g_list_next (elink)) {
+					const gchar *email = elink->data;
+					gchar *key, *email_lower;
+					RecipientItem *item;
+
+					if (!email || !*email)
+						continue;
+
+					key = g_ascii_strdown (email, -1);
+					if (g_hash_table_contains (seen, key)) {
+						g_free (key);
+						continue;
+					}
+					g_hash_table_add (seen, key);
+
+					email_lower = g_utf8_casefold (email, -1);
+					item = g_new0 (RecipientItem, 1);
+					item->name = g_strdup (full_name ? full_name : "");
+					item->email = g_strdup (email);
+					item->book = g_strdup (e_source_get_display_name (source));
+					item->rank = g_str_has_prefix (name_lower, lower) || g_str_has_prefix (email_lower, lower) ? 0 : 1;
+					g_ptr_array_add (items, item);
+					g_free (email_lower);
+				}
+
+				g_free (name_lower);
+				g_list_free_full (emails, g_free);
+			}
+			g_slist_free_full (contacts, g_object_unref);
+		}
+
+		g_object_unref (client);
+	}
+
+	g_list_free_full (sources, g_object_unref);
+	g_free (lower);
+	g_free (sexp);
+
+	g_ptr_array_sort (items, compare_recipients);
+
+	builder = json_builder_new ();
+	json_builder_begin_array (builder);
+	for (ii = 0; ii < items->len && ii < limit; ii++) {
+		RecipientItem *item = items->pdata[ii];
+
+		json_builder_begin_object (builder);
+		builder_add_string (builder, "name", item->name);
+		builder_add_string (builder, "email", item->email);
+		builder_add_string (builder, "book", item->book);
+		json_builder_end_object (builder);
+	}
+	json_builder_end_array (builder);
+	json = json_from_builder (builder);
+
+	g_object_unref (builder);
+	g_ptr_array_unref (items);
+	g_hash_table_destroy (seen);
+
+	return json;
+}
+
 /* --- demandes d'identification du service des comptes --- */
 
 /* Le service des comptes (evolution-source-registry) et les fabriques
@@ -9392,6 +9574,7 @@ evo_core_new (EvoCoreEventFunc event_func,
 	g_mutex_init (&core->connect_lock);
 	core->folders =g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 	core->oauth2_pending = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, core_oauth2_pending_free);
+	core->book_clients = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 
 	/* network requests run in parallel, a few at a time */
 	core->pool = g_thread_pool_new (core_request_run, core, 4, FALSE, NULL);
@@ -9440,6 +9623,7 @@ evo_core_free (EvoCore *core)
 	g_main_context_unref (core->context);
 	g_object_unref (core->cancellable);
 	g_hash_table_destroy (core->oauth2_pending);
+	g_hash_table_destroy (core->book_clients);
 	g_mutex_clear (&core->lock);
 	g_cond_clear (&core->cond);
 	g_free (core->start_error);
@@ -10214,6 +10398,21 @@ evo_core_delete_task (EvoCore *core,
  *   query     : texte recherché (ou "" / NULL pour tous les contacts)
  *   func      : rappel recevant le tableau JSON des contacts
  *   user_data : données utilisateur transmises au rappel */
+void
+evo_core_search_recipients (EvoCore *core,
+			    const char *text,
+			    int max_count,
+			    EvoCoreResultFunc func,
+			    void *user_data)
+{
+	gchar count_buf[16];
+	gchar *args[] = { (gchar *) (text ? text : ""), count_buf, NULL };
+
+	g_snprintf (count_buf, sizeof (count_buf), "%d", max_count > 0 ? max_count : 15);
+
+	core_submit (core, core_search_recipients_run, g_strdupv (args), func, user_data);
+}
+
 void
 evo_core_list_contacts (EvoCore *core,
 			const char *query,

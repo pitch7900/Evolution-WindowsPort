@@ -429,6 +429,13 @@ namespace EvolutionWin
          * Paramètres :
          *   query   : texte recherché (ou chaîne vide pour tous)
          *   handler : rappel sur le thread de l'interface */
+        /* Destinataires pour l'autocomplétion (tous les carnets, GAL comprise). */
+        void SearchRecipients(winrt::hstring const& text, int max_count, CoreHandler handler)
+        {
+            evo_core_search_recipients(m_core, winrt::to_string(text).c_str(), max_count,
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Contacts des seuls carnets book_uids (séparés par des virgules). */
         void ListBookContacts(winrt::hstring const& query, winrt::hstring const& book_uids, CoreHandler handler)
         {

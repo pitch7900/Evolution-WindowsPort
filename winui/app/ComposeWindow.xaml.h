@@ -38,6 +38,8 @@ namespace winrt::EvolutionWin::implementation
         fire_and_forget OnAttachClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnFormatModeToggle(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnDiscardClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnRecipientTextChanged(Microsoft::UI::Xaml::Controls::AutoSuggestBox const& sender, Microsoft::UI::Xaml::Controls::AutoSuggestBoxTextChangedEventArgs const& args);
+        void OnRecipientQuerySubmitted(Microsoft::UI::Xaml::Controls::AutoSuggestBox const& sender, Microsoft::UI::Xaml::Controls::AutoSuggestBoxQuerySubmittedEventArgs const& args);
         void OnSubjectChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::TextChangedEventArgs const& args);
 
         /* Gestionnaires de la barre de mise en forme HTML */
@@ -71,6 +73,10 @@ namespace winrt::EvolutionWin::implementation
         static hstring PlainTextToHtml(std::wstring_view text);
 
         std::weak_ptr<::EvolutionWin::CoreBridge> m_core;
+        /* autocomplétion : requête en cours, texte inséré par suggestion */
+        uint64_t m_recipient_request{ 0 };
+        std::map<std::wstring, std::wstring> m_suggestion_values;
+        void RememberRecipients();
         std::vector<hstring> m_account_uids;
         std::vector<hstring> m_attachments;
         ::EvolutionWin::ComposeData m_data;

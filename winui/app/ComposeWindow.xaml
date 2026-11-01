@@ -105,13 +105,17 @@
             </Grid>
 
             <TextBlock Grid.Row="1" Text="À" VerticalAlignment="Center" />
-            <TextBox x:Name="ToBox" Grid.Row="1" Grid.Column="1" PlaceholderText="Destinataires, séparés par des virgules" InputScope="EmailNameOrAddress" />
+            <!-- suggestions de destinataires (ComposeWindow::OnRecipientTextChanged) -->
+            <AutoSuggestBox x:Name="ToBox" Grid.Row="1" Grid.Column="1" PlaceholderText="Destinataires, séparés par des points-virgules"
+                            UpdateTextOnSelect="False" TextChanged="OnRecipientTextChanged" QuerySubmitted="OnRecipientQuerySubmitted" />
 
             <TextBlock Grid.Row="2" Text="Cc" VerticalAlignment="Center" />
-            <TextBox x:Name="CcBox" Grid.Row="2" Grid.Column="1" InputScope="EmailNameOrAddress" />
+            <AutoSuggestBox x:Name="CcBox" Grid.Row="2" Grid.Column="1"
+                            UpdateTextOnSelect="False" TextChanged="OnRecipientTextChanged" QuerySubmitted="OnRecipientQuerySubmitted" />
 
             <TextBlock Grid.Row="3" Text="Cci" VerticalAlignment="Center" />
-            <TextBox x:Name="BccBox" Grid.Row="3" Grid.Column="1" InputScope="EmailNameOrAddress" />
+            <AutoSuggestBox x:Name="BccBox" Grid.Row="3" Grid.Column="1"
+                            UpdateTextOnSelect="False" TextChanged="OnRecipientTextChanged" QuerySubmitted="OnRecipientQuerySubmitted" />
 
             <TextBlock Grid.Row="4" Text="Objet" VerticalAlignment="Center" />
             <TextBox x:Name="SubjectBox" Grid.Row="4" Grid.Column="1" TextChanged="OnSubjectChanged" />

@@ -630,6 +630,22 @@ void		evo_core_delete_task		(EvoCore *core,
  *               "phone": "...", "org": "...", "notes": "...",
  *               "book_uid": "...", "book_name": "..."}, ...]
  *   user_data : données utilisateur transmises au rappel */
+/* Destinataires pour l'autocomplétion : nom, prénom, nom de famille,
+ * surnom ou adresse commençant par text (2 caractères au moins), dans tous
+ * les carnets activés (annuaire de l'organisation compris), une entrée par
+ * adresse, les meilleures correspondances d'abord.
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   text      : saisie
+ *   max_count : nombre maximal de résultats
+ *   func      : rappel recevant [{"name", "email", "book"}, ...]
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_search_recipients	(EvoCore *core,
+						 const char *text,
+						 int max_count,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Comme evo_core_list_contacts (), limité aux carnets book_uids (uids
  * séparés par des virgules ; NULL ou "" : tous les carnets activés). */
 void		evo_core_list_book_contacts	(EvoCore *core,
