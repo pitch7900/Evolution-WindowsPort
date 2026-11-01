@@ -14,6 +14,13 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Arborescence des dossiers** : dossiers spéciaux en premier, dans l'ordre
+  d'Outlook (Boîte de réception, Brouillons, Éléments envoyés, Éléments
+  supprimés, Archive, Courrier indésirable, Boîte d'envoi), puis les autres
+  par ordre alphabétique ; noms des dossiers spéciaux en français quel que
+  soit le serveur ; dossiers spéciaux reconnus aussi d'après la
+  configuration du compte (serveurs IMAP sans SPECIAL-USE) ; icône au trait
+  pour la Boîte de réception.
 - Journaux des services evolution-data-server (`evolution-source-registry`,
   fabriques carnet d'adresses / agenda) dans
   `%LOCALAPPDATA%\EvolutionWin\<service>.log`, pour le diagnostic.
