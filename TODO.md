@@ -156,11 +156,11 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 ### Disposition des panneaux
 
 - [x] 🟢 **Panneaux redimensionnables** : séparateurs déplaçables entre dossiers, liste des messages et volet de lecture ; tailles mémorisées entre deux sessions
-- [ ] 🟡 **Position du volet de lecture** (menu *Affichage › Volet de lecture*), en Mail comme en Calendrier : <a id="demo-volet-lecture"></a>
-  - [ ] 🟢 À droite
-  - [ ] 🟢 En bas
-  - [ ] 🟢 Désactivé : ouverture des messages dans la fenêtre de lecture indépendante (§6) et des événements dans leur fenêtre
-  - [ ] 🟢 Choix mémorisé dans les préférences
+- [ ] 🟡 **Position du volet de lecture** (menu *Affichage › Volet de lecture*), en Mail comme en Calendrier : <a id="demo-volet-lecture"></a> — *fait en Mail ; le Calendrier n'a pas encore de volet de lecture (§12)*
+  - [x] 🟢 À droite
+  - [x] 🟢 En bas — *hauteur liste / lecture fixe, pas encore réglable à la souris*
+  - [ ] 🟢 Désactivé (*grisé dans le menu en attendant la fenêtre de lecture indépendante*) : ouverture des messages dans la fenêtre de lecture indépendante (§6) et des événements dans leur fenêtre
+  - [x] 🟢 Choix mémorisé dans les préférences
 - [ ] 🟢 **Volet des dossiers** : normal / réduit / désactivé, en Mail comme en Calendrier (en Calendrier, le mode réduit garde le mini-calendrier)
 - [ ] 🟢 **Espacement plus étroit** (mode compact) des listes, en Mail comme en Calendrier
 - Barre des tâches à droite (To-Do bar) : cf. « Barre latérale des tâches », §16
