@@ -10,7 +10,7 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
-## [0.9.4] — en cours
+## [0.9.4] — 2026-11-01
 
 ### Ajouté
 
