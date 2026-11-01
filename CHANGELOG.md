@@ -46,6 +46,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   enregistrés sur le serveur, organisateur et participants avec leur
   réponse, suppression ; lecture seule pour un agenda non modifiable.
   Nouvel événement : date de fin et journée entière.
+- **Grille du calendrier**, comme Outlook : vues Jour, Semaine de travail
+  et Semaine (une colonne par jour, blocs colorés par calendrier, côte à
+  côte s'ils se chevauchent, journée entière en haut, ligne de l'heure
+  actuelle), vue Mois (six semaines, « +N autres ») et vue Liste ; un clic
+  ouvre l'événement. Événements périodiques développés en occurrences.
 - Journaux des services evolution-data-server (`evolution-source-registry`,
   fabriques carnet d'adresses / agenda) dans
   `%LOCALAPPDATA%\EvolutionWin\<service>.log`, pour le diagnostic.

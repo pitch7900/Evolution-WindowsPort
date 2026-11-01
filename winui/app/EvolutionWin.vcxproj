@@ -181,6 +181,9 @@
     <ClCompile Include="MainWindow.Signatures.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="MainWindow.Calendar.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
     <ClCompile Include="ComposeWindow.xaml.cpp">
       <DependentUpon>ComposeWindow.xaml</DependentUpon>
     </ClCompile>
