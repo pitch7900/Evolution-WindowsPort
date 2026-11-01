@@ -1581,9 +1581,188 @@ folder_type_name (CamelFolderInfoFlags flags)
 	}
 }
 
+static gboolean parse_folder_uri (const gchar *uri, gchar **out_store_uid, gchar **out_folder_name);
+static ESource *core_ref_identity (EvoCore *core, const gchar *account_uid);
+
+/* Rôle (dossier spécial) de chaque dossier d'un compte, pour ceux que le
+ * serveur ne signale pas (IMAP sans SPECIAL-USE, par exemple) : dossiers
+ * configurés dans le compte, sinon noms usuels. full_name -> type. */
+typedef struct {
+	GHashTable *roles;	/* full_name -> type (statique) */
+	GHashTable *used;	/* types déjà attribués dans le compte */
+} FolderRoles;
+
+static void
+folder_roles_add_uri (FolderRoles *fr,
+		      const gchar *account_uid,
+		      gchar *uri,
+		      const gchar *type)
+{
+	gchar *store_uid = NULL, *folder_name = NULL;
+
+	if (parse_folder_uri (uri, &store_uid, &folder_name) && g_strcmp0 (store_uid, account_uid) == 0 &&
+	    !g_hash_table_contains (fr->roles, folder_name)) {
+		g_hash_table_insert (fr->roles, folder_name, (gpointer) type);
+		folder_name = NULL;
+	}
+
+	g_free (store_uid);
+	g_free (folder_name);
+	g_free (uri);
+}
+
+/* Dossier réel « real-trash-path » / « real-junk-path » des réglages Camel
+ * (IMAP), s'il est activé. */
+static void
+folder_roles_add_real_path (FolderRoles *fr,
+			    CamelSettings *settings,
+			    const gchar *use_property,
+			    const gchar *path_property,
+			    const gchar *type)
+{
+	GObjectClass *klass = G_OBJECT_GET_CLASS (settings);
+	gboolean use = FALSE;
+	gchar *path = NULL;
+
+	if (!g_object_class_find_property (klass, use_property) ||
+	    !g_object_class_find_property (klass, path_property))
+		return;
+
+	g_object_get (settings, use_property, &use, path_property, &path, NULL);
+
+	if (use && path && *path && !g_hash_table_contains (fr->roles, path))
+		g_hash_table_insert (fr->roles, g_steal_pointer (&path), (gpointer) type);
+
+	g_free (path);
+}
+
+static void
+folder_roles_mark_used (FolderRoles *fr,
+			CamelFolderInfo *fi)
+{
+	for (; fi; fi = fi->next) {
+		const gchar *type = folder_type_name (fi->flags);
+
+		if (!*type)
+			type = g_hash_table_lookup (fr->roles, fi->full_name);
+		if (type && *type)
+			g_hash_table_add (fr->used, (gpointer) type);
+
+		folder_roles_mark_used (fr, fi->child);
+	}
+}
+
+static FolderRoles *
+folder_roles_new (EvoCore *core,
+		  CamelStore *store,
+		  CamelFolderInfo *fi)
+{
+	FolderRoles *fr = g_new0 (FolderRoles, 1);
+	const gchar *account_uid = camel_service_get_uid (CAMEL_SERVICE (store));
+	ESource *identity = core_ref_identity (core, account_uid);
+	ESource *account = e_source_registry_ref_source (core->registry, account_uid);
+	CamelSettings *settings = camel_service_ref_settings (CAMEL_SERVICE (store));
+
+	fr->roles = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+	fr->used = g_hash_table_new (g_str_hash, g_str_equal);
+
+	if (identity && e_source_has_extension (identity, E_SOURCE_EXTENSION_MAIL_SUBMISSION))
+		folder_roles_add_uri (fr, account_uid, e_source_mail_submission_dup_sent_folder (
+			e_source_get_extension (identity, E_SOURCE_EXTENSION_MAIL_SUBMISSION)), "sent");
+
+	if (identity && e_source_has_extension (identity, E_SOURCE_EXTENSION_MAIL_COMPOSITION))
+		folder_roles_add_uri (fr, account_uid, e_source_mail_composition_dup_drafts_folder (
+			e_source_get_extension (identity, E_SOURCE_EXTENSION_MAIL_COMPOSITION)), "drafts");
+
+	if (account && e_source_has_extension (account, E_SOURCE_EXTENSION_MAIL_ACCOUNT))
+		folder_roles_add_uri (fr, account_uid, e_source_mail_account_dup_archive_folder (
+			e_source_get_extension (account, E_SOURCE_EXTENSION_MAIL_ACCOUNT)), "archive");
+
+	if (settings) {
+		folder_roles_add_real_path (fr, settings, "use-real-trash-path", "real-trash-path", "trash");
+		folder_roles_add_real_path (fr, settings, "use-real-junk-path", "real-junk-path", "junk");
+	}
+
+	folder_roles_mark_used (fr, fi);
+
+	g_clear_object (&settings);
+	g_clear_object (&account);
+	g_clear_object (&identity);
+
+	return fr;
+}
+
+static void
+folder_roles_free (FolderRoles *fr)
+{
+	if (!fr)
+		return;
+
+	g_hash_table_destroy (fr->roles);
+	g_hash_table_destroy (fr->used);
+	g_free (fr);
+}
+
+/* Type d'un dossier : rôle signalé par le serveur, dossier configuré dans le
+ * compte, sinon nom usuel (anglais / français) pour un rôle encore libre
+ * dans le compte (le premier dossier trouvé l'obtient). */
+static const gchar *
+folder_roles_type (FolderRoles *fr,
+		   CamelFolderInfo *fi)
+{
+	static const struct {
+		const gchar *type;
+		const gchar *names;	/* séparés par « | », en minuscules */
+	} usual[] = {
+		{ "inbox", "inbox|boîte de réception" },
+		{ "drafts", "drafts|draft|brouillons" },
+		{ "sent", "sent|sent items|sent messages|sent mail|éléments envoyés|envoyés|messages envoyés" },
+		{ "trash", "trash|deleted items|deleted messages|corbeille|éléments supprimés" },
+		{ "junk", "junk|junk e-mail|junk email|spam|courrier indésirable|indésirables|pourriels" },
+		{ "archive", "archive|archives" },
+		{ "outbox", "outbox|boîte d'envoi" }
+	};
+	const gchar *type = folder_type_name (fi->flags);
+	gchar *name;
+	guint ii;
+
+	if (*type || !fr)
+		return type;
+
+	type = g_hash_table_lookup (fr->roles, fi->full_name);
+	if (type)
+		return type;
+
+	name = g_utf8_strdown (fi->display_name ? fi->display_name : "", -1);
+
+	for (ii = 0; ii < G_N_ELEMENTS (usual) && !type; ii++) {
+		gchar **names;
+		guint jj;
+
+		if (g_hash_table_contains (fr->used, usual[ii].type))
+			continue;
+
+		names = g_strsplit (usual[ii].names, "|", -1);
+		for (jj = 0; names[jj] && !type; jj++) {
+			if (g_strcmp0 (name, names[jj]) == 0)
+				type = usual[ii].type;
+		}
+		g_strfreev (names);
+	}
+
+	g_free (name);
+
+	if (!type)
+		return "";
+
+	g_hash_table_add (fr->used, (gpointer) type);
+	return type;
+}
+
 static void
 add_folder_infos (JsonBuilder *builder,
-		  CamelFolderInfo *fi)
+		  CamelFolderInfo *fi,
+		  FolderRoles *roles)
 {
 	json_builder_begin_array (builder);
 
@@ -1598,11 +1777,11 @@ add_folder_infos (JsonBuilder *builder,
 		json_builder_set_member_name (builder, "total");
 		json_builder_add_int_value (builder, MAX (fi->total, 0));
 		json_builder_set_member_name (builder, "type");
-		json_builder_add_string_value (builder, folder_type_name (fi->flags));
+		json_builder_add_string_value (builder, folder_roles_type (roles, fi));
 		json_builder_set_member_name (builder, "selectable");
 		json_builder_add_boolean_value (builder, (fi->flags & CAMEL_FOLDER_NOSELECT) == 0);
 		json_builder_set_member_name (builder, "children");
-		add_folder_infos (builder, fi->child);
+		add_folder_infos (builder, fi->child, roles);
 		json_builder_end_object (builder);
 	}
 
@@ -1628,8 +1807,11 @@ core_list_folders_run (EvoCore *core,
 			CAMEL_STORE_FOLDER_INFO_RECURSIVE, core->cancellable, error);
 
 		if (fi || !(error && *error)) {
+			FolderRoles *roles = folder_roles_new (core, store, fi);
+
 			builder = json_builder_new ();
-			add_folder_infos (builder, fi);
+			add_folder_infos (builder, fi, roles);
+			folder_roles_free (roles);
 			json = json_from_builder (builder);
 			g_object_unref (builder);
 		}

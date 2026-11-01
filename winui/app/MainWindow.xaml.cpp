@@ -82,7 +82,7 @@ namespace
     /* Segoe Fluent Icons glyphs */
     hstring FolderGlyph(hstring const& type)
     {
-        if (type == L"inbox") return L"\xE8A8";
+        if (type == L"inbox") return L"\xE715";
         if (type == L"outbox") return L"\xE8BD";
         if (type == L"sent") return L"\xE724";
         if (type == L"drafts") return L"\xE70F";
@@ -563,16 +563,59 @@ namespace winrt::EvolutionWin::implementation
         });
     }
 
+    /* Rang d'un dossier spécial dans l'arborescence (ordre d'Outlook), les
+     * autres dossiers après, par ordre alphabétique. */
+    static int SpecialFolderRank(hstring const& type)
+    {
+        static wchar_t const* const order[] = { L"inbox", L"drafts", L"sent", L"trash", L"archive", L"junk", L"outbox" };
+        for (int ii = 0; ii < static_cast<int>(std::size(order)); ii++)
+            if (type == order[ii])
+                return ii;
+        return static_cast<int>(std::size(order));
+    }
+
+    /* Nom affiché d'un dossier spécial, quelle que soit la langue du serveur
+     * (« INBOX », « Sent Items »…) ; vide pour un dossier ordinaire. */
+    static hstring SpecialFolderName(hstring const& type)
+    {
+        if (type == L"inbox") return L"Boîte de réception";
+        if (type == L"drafts") return L"Brouillons";
+        if (type == L"sent") return L"Éléments envoyés";
+        if (type == L"trash") return L"Éléments supprimés";
+        if (type == L"archive") return L"Archive";
+        if (type == L"junk") return L"Courrier indésirable";
+        if (type == L"outbox") return L"Boîte d'envoi";
+        return {};
+    }
+
     void MainWindow::AddFolders(TreeViewNode const& parent, JsonArray const& folders, hstring const& account)
     {
+        /* dossiers spéciaux d'abord, puis ordre alphabétique (règles de la langue) */
+        std::vector<JsonObject> sorted;
         for (auto const& value : folders)
+            sorted.push_back(value.GetObject());
+
+        std::stable_sort(sorted.begin(), sorted.end(), [](JsonObject const& a, JsonObject const& b)
         {
-            auto folder = value.GetObject();
+            int ra = SpecialFolderRank(a.GetNamedString(L"type", L"")), rb = SpecialFolderRank(b.GetNamedString(L"type", L""));
+            if (ra != rb)
+                return ra < rb;
+            hstring na = a.GetNamedString(L"name", L""), nb = b.GetNamedString(L"name", L"");
+            return CompareStringEx(LOCALE_NAME_USER_DEFAULT, NORM_IGNORECASE | SORT_DIGITSASNUMBERS,
+                na.c_str(), static_cast<int>(na.size()), nb.c_str(), static_cast<int>(nb.size()),
+                nullptr, nullptr, 0) == CSTR_LESS_THAN;
+        });
+
+        for (auto const& folder : sorted)
+        {
             hstring full_name = folder.GetNamedString(L"full_name");
             hstring type = folder.GetNamedString(L"type", L"");
+            hstring name = SpecialFolderName(type);
+            if (name.empty())
+                name = folder.GetNamedString(L"name", full_name);
 
             TreeViewNode node;
-            node.Content(EvolutionWin::FolderItem(folder.GetNamedString(L"name", full_name), FolderGlyph(type),
+            node.Content(EvolutionWin::FolderItem(name, FolderGlyph(type),
                 static_cast<int32_t>(folder.GetNamedNumber(L"unread", 0)), account,
                 folder.GetNamedBoolean(L"selectable", true) ? full_name : hstring{}, false));
             node.IsExpanded(type == L"inbox");
