@@ -643,7 +643,8 @@
                             </Button>
                         </StackPanel>
                     </Grid>
-                    <ListView x:Name="EventList" Grid.Row="1" SelectionMode="None" />
+                    <ListView x:Name="EventList" Grid.Row="1" SelectionMode="None"
+                              IsItemClickEnabled="True" ItemClick="OnEventItemClick" />
                 </Grid>
             </Grid>
 

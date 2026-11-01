@@ -272,9 +272,9 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
   - [ ] Portées OAuth2 Calendar et Contacts ajoutées à la connexion Google (en plus de la messagerie)
   - [ ] Comptes Gmail déjà configurés : bouton *Activer le calendrier et les contacts* dans la page du compte (nouvelle connexion pour accorder les portées)
 - [ ] 🟡 **Gestion simple du calendrier du compte** : <a id="demo-gestion-calendrier"></a>
-  - [ ] Événements du calendrier principal (et des autres calendriers du compte) affichés avec la couleur du calendrier
-  - [ ] Créer un événement dans le calendrier choisi (calendrier principal du compte par défaut) : titre, lieu, date, heures ou journée entière, description
-  - [ ] **Modifier** un événement existant (manquant aujourd'hui) et le supprimer, avec envoi au serveur
+  - [x] Événements du calendrier principal (et des autres calendriers du compte) affichés avec la couleur du calendrier
+  - [x] Créer un événement dans le calendrier choisi (calendrier principal du compte par défaut) : titre, lieu, date, heures ou journée entière, description
+  - [x] **Modifier** un événement existant (manquant aujourd'hui) et le supprimer, avec envoi au serveur — *clic sur l'événement : fenêtre modifiable (lecture seule si l'agenda l'est), organisateur et participants*
   - [ ] Modifications faites ailleurs (Outlook Web, Google Agenda, téléphone) visibles à la synchronisation suivante ; bouton *Actualiser*
   - [ ] Événements périodiques existants affichés correctement (occurrences développées), en lecture seule tant que l'éditeur complet (§13) n'existe pas
 - [ ] 🟡 **Gestion simple des contacts du compte** : <a id="demo-gestion-contacts"></a>

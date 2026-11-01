@@ -41,6 +41,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   masquer chaque calendrier (seuls les calendriers affichés sont lus) et
   calendrier actif des nouveaux événements ; pastille de couleur du
   calendrier devant chaque événement.
+- **Ouvrir un événement** (clic dans la liste) : titre, lieu, début et fin
+  (date et heure, journée entière), description modifiables et
+  enregistrés sur le serveur, organisateur et participants avec leur
+  réponse, suppression ; lecture seule pour un agenda non modifiable.
+  Nouvel événement : date de fin et journée entière.
 - Journaux des services evolution-data-server (`evolution-source-registry`,
   fabriques carnet d'adresses / agenda) dans
   `%LOCALAPPDATA%\EvolutionWin\<service>.log`, pour le diagnostic.

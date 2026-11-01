@@ -471,6 +471,31 @@ void		evo_core_remove_account		(EvoCore *core,
  *                "description": "...", "start": 1730000000, "end": 1730003600,
  *                "calendar_uid": "...", "calendar_name": "..."}, ...]
  *   user_data  : données utilisateur transmises au rappel */
+/* Détail d'un événement.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   calendar_uid : uid de l'agenda
+ *   event_uid    : uid de l'événement
+ *   func         : rappel recevant {"uid", "calendar_uid", "calendar_name",
+ *                  "summary", "location", "description", "start", "end",
+ *                  "all_day", "recurring", "readonly", "organizer": {"name",
+ *                  "email"}, "attendees": [{"name", "email", "status":
+ *                  "accepted"|"declined"|"tentative"|"delegated"|"needs-action"}]}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_get_event		(EvoCore *core,
+						 const char *calendar_uid,
+						 const char *event_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Modifie un événement (toute la série s'il est périodique).
+ * event_json : {"calendar_uid", "uid", "summary", "location",
+ *               "description", "start", "end", "all_day"} ; rappel : {} */
+void		evo_core_modify_event		(EvoCore *core,
+						 const char *event_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Comme evo_core_list_events (), limité aux agendas calendar_uids (uids
  * séparés par des virgules ; NULL ou "" : tous les agendas activés). */
 void		evo_core_list_calendar_events	(EvoCore *core,

@@ -6067,6 +6067,8 @@ namespace winrt::EvolutionWin::implementation
                 });
                 row.Children().Append(del_btn);
 
+                /* ouverture au clic (OnEventItemClick) : "<agenda>\x1F<événement>" */
+                row.Tag(box_value(calendar_uid + L"\x1F" + uid));
                 items.Append(row);
             }
 
@@ -6113,9 +6115,55 @@ namespace winrt::EvolutionWin::implementation
         ShowNewEventDialogAsync();
     }
 
-    /* Affiche une boîte de dialogue permettant de créer un nouvel événement
-     * dans le calendrier EDS et l'enregistre via evo-core. */
+    /* Nouvel événement : fenêtre d'événement vide (calendrier actif). */
     fire_and_forget MainWindow::ShowNewEventDialogAsync()
+    {
+        ShowEventDialogAsync(nullptr);
+        co_return;
+    }
+
+    /* Clic sur un événement de la liste : détail lu par evo-core, puis
+     * fenêtre de l'événement. */
+    void MainWindow::OnEventItemClick(IInspectable const&, ItemClickEventArgs const& args)
+    {
+        auto row = args.ClickedItem().try_as<FrameworkElement>();
+        hstring key = row ? unbox_value_or<hstring>(row.Tag(), L"") : hstring{};
+        std::wstring text{ key };
+        auto sep = text.find(L'\x1F');
+        if (sep == std::wstring::npos)
+            return;
+
+        hstring calendar_uid{ text.substr(0, sep) };
+        hstring uid{ text.substr(sep + 1) };
+
+        m_core->GetEvent(calendar_uid, uid, [this](hstring const& json, hstring const& error)
+        {
+            JsonObject details;
+            if (!error.empty() || !JsonObject::TryParse(json, details))
+            {
+                ShowStatus(L"Ouverture de l'événement : " + error, InfoBarSeverity::Error);
+                return;
+            }
+            ShowEventDialogAsync(details);
+        });
+    }
+
+    /* Réponse d'un participant en clair. */
+    static hstring AttendeeStatusLabel(hstring const& status)
+    {
+        if (status == L"accepted") return L"accepté";
+        if (status == L"declined") return L"refusé";
+        if (status == L"tentative") return L"provisoire";
+        if (status == L"delegated") return L"délégué";
+        return L"sans réponse";
+    }
+
+    /* Fenêtre d'un événement : nouveau (event nul, calendrier actif) ou
+     * existant (détail evo-core : modifiable sauf agenda en lecture seule,
+     * organisateur et participants, suppression).
+     * Paramètres :
+     *   event : détail renvoyé par evo_core_get_event (), ou nullptr */
+    fire_and_forget MainWindow::ShowEventDialogAsync(JsonObject event)
     {
         auto strong = get_strong();
         if (m_dialog_open || !Content() || !Content().XamlRoot())
@@ -6123,77 +6171,245 @@ namespace winrt::EvolutionWin::implementation
 
         m_dialog_open = true;
 
+        bool existing = static_cast<bool>(event);
+        bool readonly = existing && event.GetNamedBoolean(L"readonly", false);
+        bool all_day = existing && event.GetNamedBoolean(L"all_day", false);
+
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Nouvel événement"));
-        dialog.PrimaryButtonText(L"Enregistrer");
-        dialog.CloseButtonText(L"Annuler");
-        dialog.DefaultButton(ContentDialogButton::Primary);
+        dialog.Title(box_value(existing ? (readonly ? L"Événement (lecture seule)" : L"Événement") : L"Nouvel événement"));
+        if (!readonly)
+            dialog.PrimaryButtonText(L"Enregistrer");
+        if (existing && !readonly)
+            dialog.SecondaryButtonText(L"Supprimer");
+        dialog.CloseButtonText(existing ? L"Fermer" : L"Annuler");
+        dialog.DefaultButton(readonly ? ContentDialogButton::Close : ContentDialogButton::Primary);
 
         StackPanel panel;
         panel.Spacing(10);
-        panel.MinWidth(380);
+        panel.MinWidth(420);
+
+        auto caption = [](hstring const& text)
+        {
+            TextBlock block;
+            block.Text(text);
+            block.TextWrapping(TextWrapping::Wrap);
+            block.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+            block.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+            return block;
+        };
+
+        if (existing)
+        {
+            panel.Children().Append(caption(L"Calendrier : " + event.GetNamedString(L"calendar_name", L"")));
+            if (event.GetNamedBoolean(L"recurring", false))
+                panel.Children().Append(caption(L"Événement périodique : la modification s'applique à toute la série."));
+        }
 
         TextBox summary_box;
         summary_box.Header(box_value(L"Titre"));
         summary_box.PlaceholderText(L"Réunion, Rendez-vous…");
+        summary_box.IsReadOnly(readonly);
+        if (existing)
+            summary_box.Text(event.GetNamedString(L"summary", L""));
         panel.Children().Append(summary_box);
 
         TextBox location_box;
         location_box.Header(box_value(L"Lieu"));
+        location_box.IsReadOnly(readonly);
+        if (existing)
+            location_box.Text(event.GetNamedString(L"location", L""));
         panel.Children().Append(location_box);
 
-        CalendarDatePicker date_picker;
-        date_picker.Header(box_value(L"Date"));
-        date_picker.Date(m_selected_day_start > 0
-            ? winrt::clock::from_time_t(static_cast<time_t>(m_selected_day_start + 3600))
-            : winrt::clock::now());
-        panel.Children().Append(date_picker);
+        /* début / fin : date et heure */
+        time_t start_t = existing ? static_cast<time_t>(event.GetNamedNumber(L"start", 0))
+            : static_cast<time_t>(m_selected_day_start > 0 ? m_selected_day_start + 9 * 3600 : 0);
+        time_t end_t = existing ? static_cast<time_t>(event.GetNamedNumber(L"end", 0)) : start_t + 3600;
+        if (!existing && start_t == 0)
+        {
+            time_t now = std::time(nullptr);
+            struct tm next{};
+            localtime_s(&next, &now);
+            next.tm_hour = 9;
+            next.tm_min = 0;
+            next.tm_sec = 0;
+            start_t = mktime(&next);
+            end_t = start_t + 3600;
+        }
+        /* journée entière : la fin (exclusive) est le lendemain */
+        if (all_day && end_t > start_t)
+            end_t -= 86400;
 
-        TimePicker start_picker;
-        start_picker.Header(box_value(L"Heure de début"));
-        start_picker.Time( std::chrono::hours(9) );
-        panel.Children().Append(start_picker);
+        auto time_of_day = [](time_t t)
+        {
+            struct tm local{};
+            localtime_s(&local, &t);
+            return std::chrono::hours(local.tm_hour) + std::chrono::minutes(local.tm_min);
+        };
 
-        TimePicker end_picker;
-        end_picker.Header(box_value(L"Heure de fin"));
-        end_picker.Time( std::chrono::hours(10) );
-        panel.Children().Append(end_picker);
+        CheckBox all_day_box;
+        all_day_box.Content(box_value(L"Journée entière"));
+        all_day_box.IsChecked(all_day);
+        all_day_box.IsEnabled(!readonly);
+        panel.Children().Append(all_day_box);
+
+        Grid start_row;
+        start_row.ColumnSpacing(8);
+        start_row.ColumnDefinitions().Append(ColumnDefinition{});
+        start_row.ColumnDefinitions().Append(ColumnDefinition{});
+        CalendarDatePicker start_date;
+        start_date.Header(box_value(L"Début"));
+        start_date.Date(winrt::clock::from_time_t(start_t));
+        start_date.IsEnabled(!readonly);
+        TimePicker start_time;
+        start_time.Header(box_value(L" "));
+        start_time.Time(time_of_day(start_t));
+        start_time.IsEnabled(!readonly);
+        Grid::SetColumn(start_time, 1);
+        start_row.Children().Append(start_date);
+        start_row.Children().Append(start_time);
+        panel.Children().Append(start_row);
+
+        Grid end_row;
+        end_row.ColumnSpacing(8);
+        end_row.ColumnDefinitions().Append(ColumnDefinition{});
+        end_row.ColumnDefinitions().Append(ColumnDefinition{});
+        CalendarDatePicker end_date;
+        end_date.Header(box_value(L"Fin"));
+        end_date.Date(winrt::clock::from_time_t(end_t));
+        end_date.IsEnabled(!readonly);
+        TimePicker end_time;
+        end_time.Header(box_value(L" "));
+        end_time.Time(time_of_day(end_t));
+        end_time.IsEnabled(!readonly);
+        Grid::SetColumn(end_time, 1);
+        end_row.Children().Append(end_date);
+        end_row.Children().Append(end_time);
+        panel.Children().Append(end_row);
+
+        auto update_times = [start_time, end_time](bool day)
+        {
+            start_time.Visibility(day ? Visibility::Collapsed : Visibility::Visible);
+            end_time.Visibility(day ? Visibility::Collapsed : Visibility::Visible);
+        };
+        update_times(all_day);
+        all_day_box.Click([all_day_box, update_times](IInspectable const&, RoutedEventArgs const&)
+        {
+            update_times(all_day_box.IsChecked() && all_day_box.IsChecked().GetBoolean());
+        });
+
+        /* organisateur et participants (lecture seule) */
+        if (existing)
+        {
+            auto person = [](JsonObject const& who)
+            {
+                hstring name = who.GetNamedString(L"name", L"");
+                hstring email = who.GetNamedString(L"email", L"");
+                return name.empty() ? email : (email.empty() ? name : name + L" <" + email + L">");
+            };
+
+            auto organizer = event.GetNamedObject(L"organizer", JsonObject{});
+            if (!person(organizer).empty())
+                panel.Children().Append(caption(L"Organisateur : " + person(organizer)));
+
+            auto attendees = event.GetNamedArray(L"attendees", JsonArray{});
+            if (attendees.Size() > 0)
+            {
+                std::wstring list = L"Participants :";
+                for (auto const& value : attendees)
+                {
+                    auto who = value.GetObject();
+                    list += L"\n  • " + std::wstring{ person(who) } + L" — " +
+                            std::wstring{ AttendeeStatusLabel(who.GetNamedString(L"status", L"")) };
+                }
+                panel.Children().Append(caption(hstring{ list }));
+            }
+        }
 
         TextBox desc_box;
         desc_box.Header(box_value(L"Description"));
         desc_box.AcceptsReturn(true);
-        desc_box.Height(80);
+        desc_box.TextWrapping(TextWrapping::Wrap);
+        desc_box.Height(120);
+        desc_box.IsReadOnly(readonly);
+        if (existing)
+            desc_box.Text(event.GetNamedString(L"description", L""));
         panel.Children().Append(desc_box);
 
-        dialog.Content(panel);
+        ScrollViewer scroll;
+        scroll.Content(panel);
+        scroll.MaxHeight(600);
+        dialog.Content(scroll);
 
         auto result = co_await dialog.ShowAsync();
         m_dialog_open = false;
 
-        if (result != ContentDialogResult::Primary || summary_box.Text().empty())
+        if (existing && result == ContentDialogResult::Secondary)
+        {
+            m_core->DeleteEvent(event.GetNamedString(L"calendar_uid", L""), event.GetNamedString(L"uid", L""),
+                [this](hstring const&, hstring const& error)
+            {
+                if (!error.empty())
+                {
+                    ShowStatus(L"Suppression de l'événement : " + error, InfoBarSeverity::Error);
+                    return;
+                }
+                ShowStatus(L"Événement supprimé.", InfoBarSeverity::Success);
+                LoadEvents();
+            });
+            co_return;
+        }
+
+        if (readonly || result != ContentDialogResult::Primary || summary_box.Text().empty())
             co_return;
 
-        auto picked_date = date_picker.Date() ? date_picker.Date().Value() : winrt::clock::now();
-        time_t raw_date = winrt::clock::to_time_t(picked_date);
-        struct tm day_tm{};
-        localtime_s(&day_tm, &raw_date);
-        day_tm.tm_hour = 0;
-        day_tm.tm_min = 0;
-        day_tm.tm_sec = 0;
-        int64_t day_base = static_cast<int64_t>(mktime(&day_tm));
+        /* date du sélecteur + heure du sélecteur (minuit en journée entière) */
+        bool day = all_day_box.IsChecked() && all_day_box.IsChecked().GetBoolean();
+        auto combine = [day](CalendarDatePicker const& date, TimePicker const& time) -> int64_t
+        {
+            time_t raw = winrt::clock::to_time_t(date.Date() ? date.Date().Value() : winrt::clock::now());
+            struct tm local{};
+            localtime_s(&local, &raw);
+            local.tm_hour = 0;
+            local.tm_min = 0;
+            local.tm_sec = 0;
+            local.tm_isdst = -1;
+            int64_t base = static_cast<int64_t>(mktime(&local));
+            return day ? base : base + std::chrono::duration_cast<std::chrono::seconds>(time.Time()).count();
+        };
 
-        int64_t start_secs = std::chrono::duration_cast<std::chrono::seconds>(start_picker.Time()).count();
-        int64_t end_secs = std::chrono::duration_cast<std::chrono::seconds>(end_picker.Time()).count();
-        if (end_secs <= start_secs)
-            end_secs = start_secs + 3600;
+        int64_t start_unix = combine(start_date, start_time);
+        int64_t end_unix = combine(end_date, end_time);
+        if (day)
+            end_unix += 86400;
+        if (end_unix <= start_unix)
+            end_unix = start_unix + (day ? 86400 : 3600);
 
         JsonObject payload;
         payload.SetNamedValue(L"summary", JsonValue::CreateStringValue(summary_box.Text()));
         payload.SetNamedValue(L"location", JsonValue::CreateStringValue(location_box.Text()));
         payload.SetNamedValue(L"description", JsonValue::CreateStringValue(desc_box.Text()));
-        payload.SetNamedValue(L"start", JsonValue::CreateNumberValue(static_cast<double>(day_base + start_secs)));
-        payload.SetNamedValue(L"end", JsonValue::CreateNumberValue(static_cast<double>(day_base + end_secs)));
+        payload.SetNamedValue(L"start", JsonValue::CreateNumberValue(static_cast<double>(start_unix)));
+        payload.SetNamedValue(L"end", JsonValue::CreateNumberValue(static_cast<double>(end_unix)));
+        payload.SetNamedValue(L"all_day", JsonValue::CreateBooleanValue(day));
+
+        if (existing)
+        {
+            payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(event.GetNamedString(L"calendar_uid", L"")));
+            payload.SetNamedValue(L"uid", JsonValue::CreateStringValue(event.GetNamedString(L"uid", L"")));
+            m_core->ModifyEvent(payload.Stringify(), [this](hstring const&, hstring const& error)
+            {
+                if (!error.empty())
+                {
+                    ShowStatus(L"Modification de l'événement : " + error, InfoBarSeverity::Error);
+                    return;
+                }
+                ShowStatus(L"Événement modifié.", InfoBarSeverity::Success);
+                LoadEvents();
+            });
+            co_return;
+        }
+
         if (hstring active = ActiveCalendarUid(); !active.empty())
             payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(active));
 

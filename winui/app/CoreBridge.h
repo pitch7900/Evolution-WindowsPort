@@ -332,6 +332,20 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Détail d'un événement (organisateur, participants, lecture seule…). */
+        void GetEvent(winrt::hstring const& calendar_uid, winrt::hstring const& uid, CoreHandler handler)
+        {
+            evo_core_get_event(m_core, winrt::to_string(calendar_uid).c_str(), winrt::to_string(uid).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Modifie un événement : JSON {"calendar_uid", "uid", "summary", ...}. */
+        void ModifyEvent(winrt::hstring const& event_json, CoreHandler handler)
+        {
+            evo_core_modify_event(m_core, winrt::to_string(event_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Événements des seuls agendas calendar_uids (séparés par des virgules). */
         void ListCalendarEvents(long long start_unix, long long end_unix, winrt::hstring const& calendar_uids, CoreHandler handler)
         {
