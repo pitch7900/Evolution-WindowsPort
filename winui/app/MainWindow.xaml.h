@@ -36,6 +36,7 @@ namespace winrt::EvolutionWin::implementation
         void OnReadingPaneMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
         void OnSearchAccelerator(Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender, Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
         void OnSearchKeyDown(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args);
+        void OnEventItemClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& args);
         void OnCalendarPeriodClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnCalendarPeriodChanged(Microsoft::UI::Xaml::Controls::SelectorBar const& sender, Microsoft::UI::Xaml::Controls::SelectorBarSelectionChangedEventArgs const& args);
         void OnCalendarPreviousClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -370,6 +371,7 @@ namespace winrt::EvolutionWin::implementation
         hstring m_calendar_period{ L"week" };	/* "day", "week" ou "month" (calendar.period) */
         bool m_updating_period{ false };
         void SetCalendarPeriod(hstring const& period);
+        fire_and_forget ShowEventDialogAsync(Windows::Data::Json::JsonObject event);
         /* calendriers affichés (calendar.visible) et actif (calendar.active) */
         Windows::Data::Json::JsonArray m_calendar_sources{ nullptr };
         void LoadCalendarSources();

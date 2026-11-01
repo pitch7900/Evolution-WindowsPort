@@ -6922,6 +6922,235 @@ typedef struct {
 	gchar *calendar_color;	/* "#rrggbb" (ESourceSelectable) ou NULL */
 } CalEventItem;
 
+/* Ouvre l'agenda calendar_uid (connexion EDS). */
+static EClient *
+core_connect_calendar (EvoCore *core,
+		       const gchar *calendar_uid,
+		       GError **error)
+{
+	ESource *source = e_source_registry_ref_source (core->registry, calendar_uid);
+	EClient *client;
+
+	if (!source) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "Agenda introuvable : « %s »", calendar_uid);
+		return NULL;
+	}
+
+	client = e_cal_client_connect_sync (source, E_CAL_CLIENT_SOURCE_TYPE_EVENTS, 5, core->cancellable, error);
+	g_object_unref (source);
+
+	return client;
+}
+
+/* Nom et adresse d'une propriété ORGANIZER / ATTENDEE (CN, mailto:). */
+static void
+builder_add_ical_person (JsonBuilder *builder,
+			 ICalProperty *prop,
+			 const gchar *address)
+{
+	ICalParameter *cn = i_cal_property_get_first_parameter (prop, I_CAL_CN_PARAMETER);
+	const gchar *email = address ? address : "";
+
+	if (g_ascii_strncasecmp (email, "mailto:", 7) == 0)
+		email += 7;
+
+	builder_add_string (builder, "name", cn && i_cal_parameter_get_cn (cn) ? i_cal_parameter_get_cn (cn) : "");
+	builder_add_string (builder, "email", email);
+	g_clear_object (&cn);
+}
+
+/* Détail d'un événement : champs modifiables, organisateur, participants
+ * et leur réponse, périodicité, agenda en lecture seule.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = uid de l'agenda, [1] = uid de l'événement
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : JSON de l'événement, NULL sinon. */
+static gchar *
+core_get_event_run (EvoCore *core,
+		    gchar **args,
+		    GError **error)
+{
+	EClient *client;
+	ICalComponent *icomp = NULL;
+	ICalProperty *prop;
+	ICalTime *dtstart, *dtend;
+	JsonBuilder *builder;
+	gchar *json = NULL;
+	gint64 st = 0, et = 0;
+	gboolean all_day = FALSE;
+
+	client = core_connect_calendar (core, args[0], error);
+	if (!client)
+		return NULL;
+
+	if (!e_cal_client_get_object_sync (E_CAL_CLIENT (client), args[1], NULL, &icomp, core->cancellable, error))
+		goto exit;
+
+	dtstart = i_cal_component_get_dtstart (icomp);
+	dtend = i_cal_component_get_dtend (icomp);
+	if (dtstart && !i_cal_time_is_null_time (dtstart)) {
+		st = (gint64) i_cal_time_as_timet (dtstart);
+		all_day = i_cal_time_is_date (dtstart);
+	}
+	et = dtend && !i_cal_time_is_null_time (dtend) ? (gint64) i_cal_time_as_timet (dtend) : st + 3600;
+	g_clear_object (&dtstart);
+	g_clear_object (&dtend);
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	builder_add_string (builder, "uid", args[1]);
+	builder_add_string (builder, "calendar_uid", args[0]);
+	builder_add_string (builder, "calendar_name", e_source_get_display_name (e_client_get_source (client)));
+	builder_add_string (builder, "summary", i_cal_component_get_summary (icomp));
+	builder_add_string (builder, "location", i_cal_component_get_location (icomp));
+
+	prop = i_cal_component_get_first_property (icomp, I_CAL_DESCRIPTION_PROPERTY);
+	builder_add_string (builder, "description", prop ? i_cal_property_get_description (prop) : "");
+	g_clear_object (&prop);
+
+	json_builder_set_member_name (builder, "start");
+	json_builder_add_int_value (builder, st);
+	json_builder_set_member_name (builder, "end");
+	json_builder_add_int_value (builder, et);
+	json_builder_set_member_name (builder, "all_day");
+	json_builder_add_boolean_value (builder, all_day);
+
+	prop = i_cal_component_get_first_property (icomp, I_CAL_RRULE_PROPERTY);
+	json_builder_set_member_name (builder, "recurring");
+	json_builder_add_boolean_value (builder, prop != NULL);
+	g_clear_object (&prop);
+
+	json_builder_set_member_name (builder, "readonly");
+	json_builder_add_boolean_value (builder, e_client_is_readonly (client));
+
+	prop = i_cal_component_get_first_property (icomp, I_CAL_ORGANIZER_PROPERTY);
+	json_builder_set_member_name (builder, "organizer");
+	json_builder_begin_object (builder);
+	if (prop)
+		builder_add_ical_person (builder, prop, i_cal_property_get_organizer (prop));
+	json_builder_end_object (builder);
+	g_clear_object (&prop);
+
+	json_builder_set_member_name (builder, "attendees");
+	json_builder_begin_array (builder);
+	for (prop = i_cal_component_get_first_property (icomp, I_CAL_ATTENDEE_PROPERTY); prop;
+	     g_object_unref (prop), prop = i_cal_component_get_next_property (icomp, I_CAL_ATTENDEE_PROPERTY)) {
+		ICalParameter *partstat = i_cal_property_get_first_parameter (prop, I_CAL_PARTSTAT_PARAMETER);
+		const gchar *status = "needs-action";
+
+		if (partstat) {
+			switch (i_cal_parameter_get_partstat (partstat)) {
+			case I_CAL_PARTSTAT_ACCEPTED: status = "accepted"; break;
+			case I_CAL_PARTSTAT_DECLINED: status = "declined"; break;
+			case I_CAL_PARTSTAT_TENTATIVE: status = "tentative"; break;
+			case I_CAL_PARTSTAT_DELEGATED: status = "delegated"; break;
+			default: break;
+			}
+			g_object_unref (partstat);
+		}
+
+		json_builder_begin_object (builder);
+		builder_add_ical_person (builder, prop, i_cal_property_get_attendee (prop));
+		builder_add_string (builder, "status", status);
+		json_builder_end_object (builder);
+	}
+	json_builder_end_array (builder);
+
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+
+ exit:
+	g_clear_object (&icomp);
+	g_object_unref (client);
+
+	return json;
+}
+
+/* Modifie un événement existant (toute la série s'il est périodique).
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = JSON {"calendar_uid", "uid", "summary", "location",
+ *           "description", "start", "end", "all_day"}
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : "{}" en cas de succès, NULL sinon. */
+static gchar *
+core_modify_event_run (EvoCore *core,
+		       gchar **args,
+		       GError **error)
+{
+	JsonNode *root;
+	JsonObject *object;
+	EClient *client = NULL;
+	ICalComponent *icomp = NULL;
+	ICalProperty *prop;
+	ICalTime *time_value;
+	const gchar *summary, *location, *description;
+	gint64 start_unix, end_unix;
+	gboolean all_day;
+	gchar *json = NULL;
+
+	root = json_from_string (args[0], error);
+	if (!root)
+		return NULL;
+
+	object = JSON_NODE_HOLDS_OBJECT (root) ? json_node_get_object (root) : NULL;
+	if (!object) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Événement non valide");
+		goto exit;
+	}
+
+	client = core_connect_calendar (core, json_object_get_string_member_with_default (object, "calendar_uid", ""), error);
+	if (!client)
+		goto exit;
+
+	if (!e_cal_client_get_object_sync (E_CAL_CLIENT (client), json_object_get_string_member_with_default (object, "uid", ""),
+		NULL, &icomp, core->cancellable, error))
+		goto exit;
+
+	summary = json_object_get_string_member_with_default (object, "summary", "");
+	location = json_object_get_string_member_with_default (object, "location", "");
+	description = json_object_get_string_member_with_default (object, "description", "");
+	start_unix = json_object_get_int_member_with_default (object, "start", 0);
+	end_unix = json_object_get_int_member_with_default (object, "end", start_unix + 3600);
+	all_day = json_object_get_boolean_member_with_default (object, "all_day", FALSE);
+
+	i_cal_component_set_summary (icomp, *summary ? summary : "(Sans titre)");
+	i_cal_component_set_location (icomp, location);
+
+	while ((prop = i_cal_component_get_first_property (icomp, I_CAL_DESCRIPTION_PROPERTY)) != NULL) {
+		i_cal_component_remove_property (icomp, prop);
+		g_object_unref (prop);
+	}
+	if (*description)
+		i_cal_component_take_property (icomp, i_cal_property_new_description (description));
+
+	if (start_unix > 0) {
+		/* journée entière : dates sans heure ; sinon heures en UTC */
+		time_value = i_cal_time_new_from_timet_with_zone ((time_t) start_unix, all_day,
+			all_day ? NULL : i_cal_timezone_get_utc_timezone ());
+		i_cal_component_set_dtstart (icomp, time_value);
+		g_object_unref (time_value);
+
+		time_value = i_cal_time_new_from_timet_with_zone ((time_t) MAX (end_unix, start_unix), all_day,
+			all_day ? NULL : i_cal_timezone_get_utc_timezone ());
+		i_cal_component_set_dtend (icomp, time_value);
+		g_object_unref (time_value);
+	}
+
+	if (e_cal_client_modify_object_sync (E_CAL_CLIENT (client), icomp, E_CAL_OBJ_MOD_ALL,
+		E_CAL_OPERATION_FLAG_NONE, core->cancellable, error))
+		json = g_strdup ("{}");
+
+ exit:
+	g_clear_object (&icomp);
+	g_clear_object (&client);
+	json_node_unref (root);
+
+	return json;
+}
+
 /* Libère un élément d'événement d'agenda temporaire.
  * Paramètres :
  *   data : pointeur vers CalEventItem */
@@ -9337,6 +9566,33 @@ evo_core_remove_account (EvoCore *core,
  *   end_unix   : fin de la plage temporelle en secondes Unix
  *   func       : rappel recevant le tableau JSON des événements
  *   user_data  : données utilisateur transmises au rappel */
+void
+evo_core_get_event (EvoCore *core,
+		    const char *calendar_uid,
+		    const char *event_uid,
+		    EvoCoreResultFunc func,
+		    void *user_data)
+{
+	gchar *args[] = { (gchar *) calendar_uid, (gchar *) event_uid, NULL };
+
+	g_return_if_fail (calendar_uid != NULL && event_uid != NULL);
+
+	core_submit (core, core_get_event_run, g_strdupv (args), func, user_data);
+}
+
+void
+evo_core_modify_event (EvoCore *core,
+		       const char *event_json,
+		       EvoCoreResultFunc func,
+		       void *user_data)
+{
+	gchar *args[] = { (gchar *) event_json, NULL };
+
+	g_return_if_fail (event_json != NULL);
+
+	core_submit (core, core_modify_event_run, g_strdupv (args), func, user_data);
+}
+
 void
 evo_core_list_events (EvoCore *core,
 		      long long start_unix,
