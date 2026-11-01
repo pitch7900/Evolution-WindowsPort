@@ -494,8 +494,8 @@ La recherche dans le dossier courant existe déjà (filtrage instantané + reche
 
 ### Recherche simple
 
-- [ ] 🟢 **Champ de recherche dans la barre de titre** de la fenêtre (au lieu de la vue Mail seule) <a id="demo-recherche-titre"></a>
-- [ ] 🟢 Bouton pour effacer la recherche ; raccourci Ctrl+E
+- [x] 🟢 **Champ de recherche dans la barre de titre** de la fenêtre (au lieu de la vue Mail seule) <a id="demo-recherche-titre"></a> — *dossier courant en Courrier, contacts en Contacts ; barre de titre haute (48 px)*
+- [x] 🟢 Bouton pour effacer la recherche ; raccourci Ctrl+E — *et Échap*
 - [ ] 🟡 **Portée** : dossier courant / sous-dossiers / compte courant / tous les comptes <a id="demo-recherche-portee"></a>
 - [ ] 🟢 **Recherche rapide de contacts** (champ dédié dans le ruban, comme Outlook) et accès au Carnet d'adresses
 - [ ] 🟡 **Recherche dans le calendrier** (titre, lieu, description, participants)

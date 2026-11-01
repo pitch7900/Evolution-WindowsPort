@@ -280,6 +280,8 @@ namespace winrt::EvolutionWin::implementation
     void MainWindow::Initialize()
     {
         ExtendsContentIntoTitleBar(true);
+        /* barre de titre haute (48 px) : place pour la recherche */
+        AppWindow().TitleBar().PreferredHeightOption(Microsoft::UI::Windowing::TitleBarHeightOption::Tall);
         SetTitleBar(AppTitleBar());
         AppWindow().Resize({ 1500, 950 });
         ::EvolutionWin::SetWindowIcon(AppWindow());
@@ -694,6 +696,9 @@ namespace winrt::EvolutionWin::implementation
         m_view_tag = tag;
         RefreshBanner();
         UpdateRibbon();
+
+        SearchBox().PlaceholderText(tag == L"contacts" ? L"Rechercher un contact (Ctrl+E)"
+            : tag == L"mail" ? L"Rechercher dans le dossier (Ctrl+E)" : L"Rechercher dans le courrier (Ctrl+E)");
 
         MailView().Visibility(tag == L"mail" ? Visibility::Visible : Visibility::Collapsed);
         CalendarViewPane().Visibility(tag == L"calendar" ? Visibility::Visible : Visibility::Collapsed);
@@ -3348,11 +3353,47 @@ namespace winrt::EvolutionWin::implementation
      * direct ou la restaure lorsque le champ est vidé. */
     void MainWindow::OnSearchTextChanged(AutoSuggestBox const& sender, AutoSuggestBoxTextChangedEventArgs const& args)
     {
-        if (args.Reason() == AutoSuggestionBoxTextChangeReason::UserInput)
+        if (args.Reason() != AutoSuggestionBoxTextChangeReason::UserInput)
+            return;
+
+        /* recherche de la barre de titre : contacts en vue Contacts, sinon le
+           dossier courant du courrier (vue Courrier affichée au besoin) */
+        if (m_view_tag == L"contacts")
         {
-            ++m_search_request;
-            FilterLocalMessages(sender.Text());
+            ContactSearchBox().Text(sender.Text());
+            LoadContacts(sender.Text());
+            return;
         }
+        if (m_view_tag != L"mail")
+            Navigation().SelectedItem(MailItem());
+
+        ++m_search_request;
+        FilterLocalMessages(sender.Text());
+    }
+
+    /* Ctrl+E : place le curseur dans la recherche de la barre de titre. */
+    void MainWindow::OnSearchAccelerator(Input::KeyboardAccelerator const&, Input::KeyboardAcceleratorInvokedEventArgs const& args)
+    {
+        args.Handled(true);
+        SearchBox().Focus(FocusState::Keyboard);
+    }
+
+    /* Échap dans la recherche : efface le texte et rétablit la liste. */
+    void MainWindow::OnSearchKeyDown(IInspectable const&, Input::KeyRoutedEventArgs const& args)
+    {
+        if (args.Key() != Windows::System::VirtualKey::Escape || SearchBox().Text().empty())
+            return;
+
+        args.Handled(true);
+        SearchBox().Text(L"");
+        if (m_view_tag == L"contacts")
+        {
+            ContactSearchBox().Text(L"");
+            LoadContacts(L"");
+            return;
+        }
+        ++m_search_request;
+        FilterLocalMessages(L"");
     }
 
     /* Gestionnaire de validation de la recherche (touche Entrée ou icône
@@ -3361,6 +3402,11 @@ namespace winrt::EvolutionWin::implementation
     void MainWindow::OnSearchQuerySubmitted(AutoSuggestBox const&, AutoSuggestBoxQuerySubmittedEventArgs const& args)
     {
         hstring query = args.QueryText();
+        if (m_view_tag == L"contacts")
+        {
+            LoadContacts(query);
+            return;
+        }
         if (query.empty() || m_account.empty() || m_folder.empty())
         {
             FilterLocalMessages(query);
@@ -4192,19 +4238,27 @@ namespace winrt::EvolutionWin::implementation
      * boutons reçoivent les clics (pixels physiques, relatifs à la fenêtre). */
     void MainWindow::UpdateTitleBarPassthrough()
     {
-        if (!QuickAccessBar().XamlRoot() || QuickAccessBar().ActualWidth() <= 0)
+        if (!QuickAccessBar().XamlRoot())
             return;
 
         double scale = QuickAccessBar().XamlRoot().RasterizationScale();
-        auto bounds = QuickAccessBar().TransformToVisual(nullptr).TransformBounds(
-            Rect{ 0, 0, static_cast<float>(QuickAccessBar().ActualWidth()), static_cast<float>(QuickAccessBar().ActualHeight()) });
+        std::vector<Windows::Graphics::RectInt32> rects;
 
-        Windows::Graphics::RectInt32 rect{
-            static_cast<int32_t>(bounds.X * scale), static_cast<int32_t>(bounds.Y * scale),
-            static_cast<int32_t>(bounds.Width * scale), static_cast<int32_t>(bounds.Height * scale) };
+        for (FrameworkElement element : { QuickAccessBar().as<FrameworkElement>(), SearchBox().as<FrameworkElement>() })
+        {
+            if (element.ActualWidth() <= 0)
+                continue;
+
+            auto bounds = element.TransformToVisual(nullptr).TransformBounds(
+                Rect{ 0, 0, static_cast<float>(element.ActualWidth()), static_cast<float>(element.ActualHeight()) });
+
+            rects.push_back({
+                static_cast<int32_t>(bounds.X * scale), static_cast<int32_t>(bounds.Y * scale),
+                static_cast<int32_t>(bounds.Width * scale), static_cast<int32_t>(bounds.Height * scale) });
+        }
 
         auto source = Microsoft::UI::Input::InputNonClientPointerSource::GetForWindowId(AppWindow().Id());
-        source.SetRegionRects(Microsoft::UI::Input::NonClientRegionKind::Passthrough, { rect });
+        source.SetRegionRects(Microsoft::UI::Input::NonClientRegionKind::Passthrough, rects);
     }
 
     /* Critères de tri de la liste des messages : clé mémorisée, libellé,
