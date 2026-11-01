@@ -1817,6 +1817,23 @@ namespace winrt::EvolutionWin::implementation
                 PopulateMoveMenuItems(move_sub.Items(), target_uids);
                 menu_items.Append(move_sub);
 
+                MenuFlyoutSubItem copy_sub;
+                copy_sub.Text(hstring{ L"Copier vers" + count_suffix });
+                copy_sub.Icon(FontIcon{});
+                copy_sub.Icon().as<FontIcon>().Glyph(L"\xE8C8");
+                PopulateMoveMenuItems(copy_sub.Items(), target_uids, true);
+                menu_items.Append(copy_sub);
+
+                MenuFlyoutItem archive_item;
+                archive_item.Text(hstring{ L"Archiver" + count_suffix });
+                archive_item.Icon(FontIcon{});
+                archive_item.Icon().as<FontIcon>().Glyph(L"\xE7B8");
+                archive_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
+                {
+                    ArchiveMessagesByUids(target_uids);
+                });
+                menu_items.Append(archive_item);
+
                 menu_items.Append(MenuFlyoutSeparator{});
 
                 MenuFlyoutItem delete_item;
@@ -2940,6 +2957,7 @@ namespace winrt::EvolutionWin::implementation
         hstring src_folder = m_folder;
 
         RemoveMessageFromList(uid);
+        RememberRecentFolder(dest_account, dest_folder);
 
         m_core->MoveMessage(src_account, src_folder, uid, dest_account, dest_folder,
             [this, dest_folder](hstring const&, hstring const& error)
@@ -2966,6 +2984,110 @@ namespace winrt::EvolutionWin::implementation
             MoveMessageByUid(u, dest_account, dest_folder);
     }
 
+    /* Copie des messages dans un autre dossier (les originaux restent).
+     * Paramètres :
+     *   uids         : identifiants des messages à copier
+     *   dest_account : compte de destination
+     *   dest_folder  : chemin complet du dossier de destination */
+    void MainWindow::CopyMessagesByUids(std::vector<hstring> const& uids, hstring const& dest_account, hstring const& dest_folder)
+    {
+        if (uids.empty() || m_account.empty() || m_folder.empty())
+            return;
+
+        RememberRecentFolder(dest_account, dest_folder);
+
+        auto remaining = std::make_shared<size_t>(uids.size());
+        for (auto const& uid : uids)
+        {
+            m_core->CopyMessage(m_account, m_folder, uid, dest_account, dest_folder,
+                [this, dest_folder, remaining, count = uids.size()](hstring const&, hstring const& error)
+            {
+                if (!error.empty())
+                    ShowStatus(L"Copie : " + error, InfoBarSeverity::Error);
+                else if (--*remaining == 0)
+                    ShowStatus(count > 1
+                        ? hstring{ std::to_wstring(count) + L" messages copiés vers « " } + dest_folder + L" »."
+                        : L"Message copié vers « " + dest_folder + L" ».", InfoBarSeverity::Informational);
+            });
+        }
+    }
+
+    /* Dossier Archive d'un compte (type "archive", cf. evo-core) ; vide
+     * s'il n'y en a pas. */
+    static hstring FindArchiveFolder(JsonArray const& folders)
+    {
+        for (auto const& value : folders)
+        {
+            auto folder = value.GetObject();
+            if (folder.GetNamedString(L"type", L"") == L"archive" && folder.GetNamedBoolean(L"selectable", true))
+                return folder.GetNamedString(L"full_name");
+            if (auto found = FindArchiveFolder(folder.GetNamedArray(L"children", JsonArray{})); !found.empty())
+                return found;
+        }
+        return {};
+    }
+
+    /* Archiver (Retour arrière) : déplace les messages dans le dossier
+     * Archive du compte, créé au premier usage s'il n'existe pas. */
+    void MainWindow::ArchiveMessagesByUids(std::vector<hstring> const& uids)
+    {
+        if (uids.empty() || m_account.empty())
+            return;
+
+        hstring archive;
+        if (auto it = m_account_folders.find(std::wstring{ m_account }); it != m_account_folders.end() && it->second)
+            archive = FindArchiveFolder(it->second);
+
+        if (archive == m_folder && !archive.empty())
+        {
+            ShowStatus(L"Ces messages sont déjà dans le dossier Archive.", InfoBarSeverity::Informational);
+            return;
+        }
+
+        if (!archive.empty())
+        {
+            MoveMessagesByUids(uids, m_account, archive);
+            return;
+        }
+
+        hstring account = m_account;
+        m_core->CreateFolder(account, L"", L"Archive", [this, uids, account](hstring const&, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                ShowStatus(L"Création du dossier Archive : " + error, InfoBarSeverity::Error);
+                return;
+            }
+            if (account == m_account)
+                MoveMessagesByUids(uids, account, L"Archive");
+        });
+    }
+
+    void MainWindow::OnArchiveClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ArchiveMessagesByUids(SelectedMessageUids());
+    }
+
+    /* Derniers dossiers de destination (Déplacer / Copier), en tête des
+     * menus : préférence "move.recent" ("<compte>\x1F<dossier>", 5 au plus). */
+    void MainWindow::RememberRecentFolder(hstring const& account, hstring const& folder)
+    {
+        auto& settings = ::EvolutionWin::Settings::Instance();
+        hstring key = hstring{ NodeKey(account, folder) };
+        JsonArray recent;
+        recent.Append(JsonValue::CreateStringValue(key));
+
+        for (auto const& value : settings.GetArray(L"move.recent"))
+        {
+            if (recent.Size() >= 5)
+                break;
+            if (value.ValueType() == JsonValueType::String && value.GetString() != key)
+                recent.Append(value);
+        }
+
+        settings.Set(L"move.recent", recent);
+    }
+
     /* Ajoute récursivement les dossiers d'un compte dans un menu « Déplacer vers ».
      * Paramètres :
      *   items   : collection d'éléments du menu à remplir
@@ -2978,7 +3100,8 @@ namespace winrt::EvolutionWin::implementation
         JsonArray const& folders,
         hstring const& account,
         hstring const& prefix,
-        std::vector<hstring> const& uids)
+        std::vector<hstring> const& uids,
+        bool copy)
     {
         for (auto const& value : folders)
         {
@@ -2994,14 +3117,17 @@ namespace winrt::EvolutionWin::implementation
                 item.Text(label);
                 item.Icon(FontIcon{});
                 item.Icon().as<FontIcon>().Glyph(FolderGlyph(folder.GetNamedString(L"type", L"")));
-                item.Click([this, uids, account, full_name](IInspectable const&, RoutedEventArgs const&)
+                item.Click([this, uids, account, full_name, copy](IInspectable const&, RoutedEventArgs const&)
                 {
-                    MoveMessagesByUids(uids, account, full_name);
+                    if (copy)
+                        CopyMessagesByUids(uids, account, full_name);
+                    else
+                        MoveMessagesByUids(uids, account, full_name);
                 });
                 items.Append(item);
             }
 
-            AppendFolderMoveItems(items, folder.GetNamedArray(L"children", JsonArray{}), account, label, uids);
+            AppendFolderMoveItems(items, folder.GetNamedArray(L"children", JsonArray{}), account, label, uids, copy);
         }
     }
 
@@ -3009,13 +3135,47 @@ namespace winrt::EvolutionWin::implementation
      * Paramètres :
      *   items : collection d'éléments du menu à remplir
      *   uids  : identifiants des messages à déplacer */
-    void MainWindow::PopulateMoveMenuItems(Collections::IVector<MenuFlyoutItemBase> const& items, std::vector<hstring> const& uids)
+    void MainWindow::PopulateMoveMenuItems(Collections::IVector<MenuFlyoutItemBase> const& items, std::vector<hstring> const& uids, bool copy)
     {
         items.Clear();
 
         auto it = m_account_folders.find(std::wstring{ m_account });
+
+        /* derniers dossiers utilisés du compte, puis tous les dossiers */
+        uint32_t recent_count = 0;
+        for (auto const& value : ::EvolutionWin::Settings::Instance().GetArray(L"move.recent"))
+        {
+            if (value.ValueType() != JsonValueType::String)
+                continue;
+            std::wstring key{ value.GetString() };
+            std::wstring prefix = std::wstring{ m_account } + L'\x1F';
+            if (key.rfind(prefix, 0) != 0)
+                continue;
+
+            hstring full_name{ key.substr(prefix.size()) };
+            if (full_name == m_folder)
+                continue;
+
+            MenuFlyoutItem item;
+            item.Text(full_name);
+            item.Icon(FontIcon{});
+            item.Icon().as<FontIcon>().Glyph(L"\xE81C");
+            hstring account = m_account;
+            item.Click([this, uids, account, full_name, copy](IInspectable const&, RoutedEventArgs const&)
+            {
+                if (copy)
+                    CopyMessagesByUids(uids, account, full_name);
+                else
+                    MoveMessagesByUids(uids, account, full_name);
+            });
+            items.Append(item);
+            recent_count++;
+        }
+        if (recent_count > 0)
+            items.Append(MenuFlyoutSeparator{});
+
         if (it != m_account_folders.end() && it->second)
-            AppendFolderMoveItems(items, it->second, m_account, L"", uids);
+            AppendFolderMoveItems(items, it->second, m_account, L"", uids, copy);
 
         if (items.Size() == 0)
         {
@@ -3080,7 +3240,16 @@ namespace winrt::EvolutionWin::implementation
     /* Gestionnaire d'ouverture du menu « Déplacer » du volet de lecture. */
     void MainWindow::OnMoveMenuOpening(IInspectable const&, IInspectable const&)
     {
-        PopulateMoveMenuItems(MoveMenu().Items(), SelectedMessageUids());
+        auto uids = SelectedMessageUids();
+        PopulateMoveMenuItems(MoveMenu().Items(), uids);
+
+        MenuFlyoutSubItem copy_sub;
+        copy_sub.Text(L"Copier vers");
+        copy_sub.Icon(FontIcon{});
+        copy_sub.Icon().as<FontIcon>().Glyph(L"\xE8C8");
+        PopulateMoveMenuItems(copy_sub.Items(), uids, true);
+        MoveMenu().Items().Append(MenuFlyoutSeparator{});
+        MoveMenu().Items().Append(copy_sub);
     }
 
     /* Filtre instantanément en mémoire les messages chargés du dossier selon
@@ -3921,6 +4090,7 @@ namespace winrt::EvolutionWin::implementation
         { L"new-message", L"Nouveau message", L"\xE710", &MainWindow::OnNewMessageClick },
         { L"reply", L"Répondre", L"\xE97A", &MainWindow::OnReplyClick },
         { L"delete", L"Supprimer", L"\xE74D", &MainWindow::OnDeleteClick },
+        { L"archive", L"Archiver", L"\xE7B8", &MainWindow::OnArchiveClick },
         { L"print", L"Imprimer", L"\xE749", &MainWindow::OnPrintClick },
         { L"confidential", L"Notifications confidentielles (activer / désactiver)", L"\xE72E", &MainWindow::OnConfidentialToggled },
         { L"new-event", L"Nouvel événement", L"\xE787", &MainWindow::OnNewEventClick },

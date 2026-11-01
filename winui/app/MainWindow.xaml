@@ -130,7 +130,9 @@
                             <AppBarButton.Flyout>
                                 <MenuFlyout>
                                     <MenuFlyoutItem Text="Message" Click="OnNewMessageClick"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE715;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
-                                    <MenuFlyoutItem Text="Événement" Click="OnNewEventClick"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE787;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Rendez-vous" Click="OnNewEventClick"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE787;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Réunion (bientôt)" IsEnabled="False"
+                                                    ToolTipService.ToolTip="Réunion avec participants et invitations : à venir"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE716;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
                                     <MenuFlyoutItem Text="Tâche" Click="OnNewTaskClick" KeyboardAcceleratorTextOverride="Ctrl+Maj+K"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE9D5;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
                                     <MenuFlyoutItem Text="Contact" Click="OnNewContactClick"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE77B;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
                                 </MenuFlyout>
@@ -139,6 +141,9 @@
                         <AppBarSeparator />
                         <AppBarButton Label="Supprimer" Click="OnDeleteClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE74D;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Archiver" Click="OnArchiveClick" ToolTipService.ToolTip="Archiver (Retour arrière)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE7B8;" /></AppBarButton.Icon>
                         </AppBarButton>
                         <AppBarSeparator />
                         <AppBarButton Label="Répondre" Click="OnReplyClick">
@@ -498,6 +503,14 @@
                                 </AppBarButton.Icon>
                                 <AppBarButton.KeyboardAccelerators>
                                     <KeyboardAccelerator Key="Delete" />
+                                </AppBarButton.KeyboardAccelerators>
+                            </AppBarButton>
+                            <AppBarButton Label="Archiver" Click="OnArchiveClick">
+                                <AppBarButton.Icon>
+                                    <FontIcon Glyph="&#xE7B8;" />
+                                </AppBarButton.Icon>
+                                <AppBarButton.KeyboardAccelerators>
+                                    <KeyboardAccelerator Key="Back" />
                                 </AppBarButton.KeyboardAccelerators>
                             </AppBarButton>
                             <AppBarSeparator />

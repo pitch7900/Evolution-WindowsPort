@@ -72,6 +72,7 @@ namespace winrt::EvolutionWin::implementation
         void OnToggleReadClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnToggleFlagClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnDeleteClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnArchiveClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnPrintClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnMoveMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
         void OnSearchTextChanged(
@@ -196,17 +197,22 @@ namespace winrt::EvolutionWin::implementation
         void DeleteMessagesByUids(std::vector<hstring> const& uids);
         void MoveMessageByUid(hstring const& uid, hstring const& dest_account, hstring const& dest_folder);
         void MoveMessagesByUids(std::vector<hstring> const& uids, hstring const& dest_account, hstring const& dest_folder);
+        void CopyMessagesByUids(std::vector<hstring> const& uids, hstring const& dest_account, hstring const& dest_folder);
+        void ArchiveMessagesByUids(std::vector<hstring> const& uids);
+        void RememberRecentFolder(hstring const& account, hstring const& folder);
         void RemoveMessageFromList(hstring const& uid);
         void ClearReader();
         void PopulateMoveMenuItems(
             Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items,
-            std::vector<hstring> const& uids);
+            std::vector<hstring> const& uids,
+            bool copy = false);
         void AppendFolderMoveItems(
             Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items,
             Windows::Data::Json::JsonArray const& folders,
             hstring const& account,
             hstring const& prefix,
-            std::vector<hstring> const& uids);
+            std::vector<hstring> const& uids,
+            bool copy = false);
         void ShowStatus(hstring const& message, Microsoft::UI::Xaml::Controls::InfoBarSeverity severity);
         fire_and_forget InitializeReaderAsync();
         void ShowInReader(hstring const& html, bool allow_remote = false);

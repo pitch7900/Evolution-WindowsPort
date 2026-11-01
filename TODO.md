@@ -393,7 +393,7 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
 
 ### Créer et répondre
 
-- [ ] 🟢 **Nouveaux éléments** (menu) : courrier, rendez-vous, réunion, contact, tâche <a id="demo-nouveaux-elements"></a>
+- [x] 🟢 **Nouveaux éléments** (menu) : courrier, rendez-vous, réunion, contact, tâche <a id="demo-nouveaux-elements"></a> — *« Réunion » grisée en attendant les invitations (§13)*
 - [ ] 🟡 **Brouillon en enregistrement automatique (autosave)** pendant la rédaction (nouveau message, réponse, transfert) : l'utilisateur n'a jamais à penser à enregistrer — *existant : le dossier Brouillons est déjà reconnu (rôle `CAMEL_FOLDER_TYPE_DRAFTS` ou dossier configuré dans l'identité EDS) ; aucun enregistrement de brouillon aujourd'hui*
   - [ ] **Autosave** : premier enregistrement dès que le message est modifié (destinataire, objet ou texte saisi), puis à chaque pause de frappe (ex. 3 s sans saisie), au plus tard toutes les 30 s pendant une saisie continue, à chaque ajout / retrait de pièce jointe, à la perte de focus et à la fermeture de la fenêtre ; aucun enregistrement si rien n'a changé depuis le précédent
   - [ ] Enregistrement en arrière-plan, sans bloquer la saisie ni voler le focus ; échec (serveur injoignable) signalé discrètement et nouvelle tentative au cycle suivant
@@ -410,8 +410,8 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
 
 ### Supprimer, archiver, déplacer
 
-- [ ] 🟢 **Archiver** : déplacer vers le dossier d'archive du compte (réglage `archive-folder` d'EDS), touche Retour arrière <a id="demo-archiver"></a>
-- [ ] 🟢 **Copier vers un dossier** ; liste des derniers dossiers utilisés dans *Déplacer*
+- [x] 🟢 **Archiver** : déplacer vers le dossier d'archive du compte (réglage `archive-folder` d'EDS), touche Retour arrière <a id="demo-archiver"></a> — *dossier Archive du compte (rôle détecté), créé au premier usage s'il n'existe pas*
+- [x] 🟢 **Copier vers un dossier** ; liste des derniers dossiers utilisés dans *Déplacer*
 - [ ] 🟠 **Ignorer la conversation** : les nouveaux messages du fil vont directement à la Corbeille
 - [ ] 🟠 **Nettoyer la conversation** : supprimer les messages redondants (entièrement cités dans un message plus récent)
 
@@ -478,6 +478,20 @@ Trois notions distinctes, comme dans Outlook : le **suivi** (drapeau avec libell
 
 La recherche dans le dossier courant existe déjà (filtrage instantané + recherche en-têtes et corps via `evo-core`).
 
+### Recherche côté serveur (accélération)
+
+- [ ] 🟠 **Utiliser l'API de recherche du serveur quand elle existe**, et ne faire la recherche locale « brute » qu'en repli :
+  - [ ] 🟡 **Microsoft 365 / Exchange Online** : Microsoft Graph (`$search` sur `/me/messages` et `/me/mailFolders/{id}/messages`, ou API `/search/query` pour plusieurs dossiers / boîtes) ; événements et contacts par `$filter` / `$search` Graph
+  - [ ] 🟡 **Exchange on-premise** : EWS `FindItem` avec `QueryString` (AQS, index de recherche du serveur) ou `Restriction` ; `ResolveNames` / `FindPeople` pour les contacts
+  - [ ] 🟡 **Gmail / Google Workspace** : extension IMAP `X-GM-RAW` (syntaxe de recherche Gmail : `from:`, `has:attachment`, `after:`…) sur le compte IMAP existant, ou API Gmail `users.messages.list?q=` si la portée OAuth2 est accordée ; Calendar / People API pour événements et contacts
+  - [ ] 🟢 **IMAP générique** : commande `SEARCH` du serveur (déjà utilisée par Camel IMAPX pour les messages non téléchargés), et extensions `ESEARCH` / `SEARCHRES` si annoncées
+  - [ ] 🟢 **Repli local** (comptes locaux, serveur sans recherche, mode hors connexion) : recherche actuelle dans les résumés et le cache (`camel_folder_search_sync`), éventuellement avec l'index plein texte Camel (`camel-index-control`)
+  - [ ] Choix automatique selon les capacités du compte (annonce `CAPABILITY` IMAP, type de collection EDS), sans réglage pour l'utilisateur
+  - [ ] Traduction des critères de la recherche simple et avancée vers la syntaxe de chaque serveur (Graph `$search` / KQL, AQS EWS, `X-GM-RAW`, `SEARCH` IMAP) ; critères non pris en charge par le serveur appliqués ensuite en local sur les résultats
+  - [ ] Résultats serveur portant sur des messages pas encore téléchargés : affichage des en-têtes reçus, téléchargement du message à l'ouverture
+  - [ ] Résultats affichés progressivement (premiers résultats locaux immédiatement, complétés par ceux du serveur), annulables (§4)
+  - [ ] Recherche multi-comptes (§11) : requêtes lancées en parallèle sur chaque compte, résultats fusionnés
+
 ### Recherche simple
 
 - [ ] 🟢 **Champ de recherche dans la barre de titre** de la fenêtre (au lieu de la vue Mail seule) <a id="demo-recherche-titre"></a>
@@ -489,7 +503,7 @@ La recherche dans le dossier courant existe déjà (filtrage instantané + reche
 ### Recherche avancée
 
 - [ ] 🟡 Accessible depuis le champ de recherche simple ; critères combinables : expéditeur, destinataire, objet, corps, plage de dates, taille, pièces jointes, lu / non lu, indicateur, catégorie
-- [ ] 🟡 Opérateurs ET / OU entre les critères (expressions de recherche Camel)
+- [ ] 🟡 Opérateurs ET / OU entre les critères (expressions de recherche Camel, traduites vers la recherche serveur quand elle existe — cf. « Recherche côté serveur » ci-dessus)
 - [ ] 🟠 Enregistrer une recherche comme dossier de recherche — dépend de §9
 
 ## 11. Vues unifiées multi-comptes — 🟠

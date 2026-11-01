@@ -123,6 +123,15 @@ namespace EvolutionWin
          *    dst_account : identifiant du compte de destination
          *   dst_folder  : chemin complet du dossier de destination
          *   handler     : rappel sur le thread de l'interface */
+        /* Copie un message dans un autre dossier (l'original reste en place). */
+        void CopyMessage(winrt::hstring const& src_account, winrt::hstring const& src_folder, winrt::hstring const& uid,
+                         winrt::hstring const& dst_account, winrt::hstring const& dst_folder, CoreHandler handler)
+        {
+            evo_core_copy_message(m_core, winrt::to_string(src_account).c_str(), winrt::to_string(src_folder).c_str(),
+                winrt::to_string(uid).c_str(), winrt::to_string(dst_account).c_str(), winrt::to_string(dst_folder).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         void MoveMessage(winrt::hstring const& src_account, winrt::hstring const& src_folder, winrt::hstring const& uid,
                          winrt::hstring const& dst_account, winrt::hstring const& dst_folder, CoreHandler handler)
         {

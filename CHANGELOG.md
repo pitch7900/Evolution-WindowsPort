@@ -28,6 +28,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 - **Position du volet de lecture** (*Affichage › Volet de lecture*) : à
   droite ou en bas de la liste des messages, choix mémorisé ; *Rétablir la
   disposition* le remet à droite.
+- **Archiver** (ruban, volet de lecture, menu contextuel, barre d'accès
+  rapide, touche Retour arrière) : vers le dossier Archive du compte, créé
+  au premier usage ; **Copier vers** un dossier ; derniers dossiers
+  utilisés en tête des menus *Déplacer* / *Copier vers* ; menu *Nouvel
+  élément* : Rendez-vous (Réunion à venir).
 - Journaux des services evolution-data-server (`evolution-source-registry`,
   fabriques carnet d'adresses / agenda) dans
   `%LOCALAPPDATA%\EvolutionWin\<service>.log`, pour le diagnostic.
