@@ -107,7 +107,10 @@ m365_store_summary_delete_cb (GFileMonitor *monitor,
 {
 	CamelM365StoreSummary *store_summary = user_data;
 
-	if (event == G_FILE_MONITOR_EVENT_DELETED) {
+	/* On Windows, saving the summary replaces the file, which the file
+	 * monitor reports as a deletion: only a file really gone clears it */
+	if (event == G_FILE_MONITOR_EVENT_DELETED &&
+	    !g_file_test (store_summary->priv->filename, G_FILE_TEST_EXISTS)) {
 		LOCK (store_summary);
 
 		if (store_summary->priv->key_file)

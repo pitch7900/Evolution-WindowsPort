@@ -55,6 +55,21 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] Raccourci du menu Démarrer (installeur MSI)
   - [x] *Paramètres › Applications installées* (propriété `ARPPRODUCTICON` du MSI)
 - [x] 🟢 **Mise à jour du MSI : erreur 1618** « Une autre installation est en cours d'exécution » à l'installation de la 0.9.1 par-dessus la 0.9.0 — cause : dialogue « fichiers en cours d'utilisation » caché (EvolutionWin et services EDS ouverts), une seconde installation lancée entre-temps échouait ; le MSI ferme désormais ces programmes (`util:CloseApplication`)
+- [ ] 🟡 **Option « installation silencieuse » du MSI avec fermeture forcée de l'application** — *existant : `util:CloseApplication` ferme déjà EvolutionWin et les services EDS / `gdbus` à chaque installation*
+  - [ ] Propriété publique documentée (ex. `FORCECLOSE=1`), utilisable avec `/qn` ou `/passive` : `msiexec /i Evolution-<version>-x64.msi /qn FORCECLOSE=1` (déploiement GPO / Intune, mise à jour automatique) — *aujourd'hui `/qn` fonctionne déjà sans propriété : la fermeture est toujours forcée (vérifié sur la VM de test)*
+  - [ ] Fermeture de **toutes les instances**, y compris dans les **autres sessions utilisateur** (serveur multi-sessions, session déconnectée) : demande de fermeture propre, puis arrêt forcé après un délai court — *fait pour la session courante (message de fermeture puis arrêt après 5 s) ; autres sessions non testées*
+  - [ ] Fermeture de **toutes les dépendances** lancées par EvolutionWin (*fait : services EDS et `gdbus` ; reste : `camel-index-control`, `gspawn-win64-helper`, `msedgewebview2.exe`*) : services EDS (`evolution-source-registry`, fabriques carnet d'adresses / calendrier et leurs sous-processus), `gdbus`, `camel-index-control`, `gspawn-win64-helper`, processus `msedgewebview2.exe` **dont le dossier de données est celui d'EvolutionWin** (sans toucher à Edge ni aux autres applications WebView2)
+  - [ ] Aucune boîte de dialogue « fichiers en cours d'utilisation » ni demande de redémarrage (*fait : `RebootPrompt="no"` ; reste : `MSIRESTARTMANAGERCONTROL=Disable`, code 3010*) (`MSIRESTARTMANAGERCONTROL=Disable`, `REBOOT=ReallySuppress`) ; si un fichier reste verrouillé malgré tout, remplacement au prochain démarrage et code de sortie 3010 au lieu d'un échec
+  - [ ] Sans `FORCECLOSE` en mode interactif : boîte de dialogue proposant de fermer Evolution — *aujourd'hui la fermeture est automatique, sans question*
+  - [ ] Journalisation des processus fermés dans le journal MSI (`/l*v`) — *partiel : le journal contient l'action `Wix4CloseApplications` et la liste des programmes visés, pas le détail des processus réellement fermés*
+  - [ ] Optionnel : relancer EvolutionWin pour l'utilisateur courant à la fin d'une installation silencieuse (`LAUNCHAPP=1`, utilisé par la mise à jour automatique)
+- [ ] 🟡 **Nettoyage des données utilisateur à la désinstallation** (sur demande) — aujourd'hui la désinstallation ne retire que `C:\Program Files\Evolution` et laisse les données de chaque utilisateur
+  - [ ] Données concernées : `%LOCALAPPDATA%\EvolutionWin\` (préférences, journaux, WebView2), `%LOCALAPPDATA%\evolution\` (comptes `sources\`, courrier local, carnets, agendas), cache du courrier `%LOCALAPPDATA%\Microsoft\Windows\INetCache\evolution\`, identifiants `Evolution-Data-Server:*` du Gestionnaire d'identifiants Windows
+  - [ ] **Conservées par défaut** (réinstallation sans perte, comme Outlook / Thunderbird) ; suppression seulement avec la propriété `PURGEUSERDATA=1` : `msiexec /x Evolution-<version>-x64.msi PURGEUSERDATA=1`
+  - [ ] **Jamais lors d'une mise à jour** : une mise à jour majeure du MSI désinstalle l'ancienne version, le nettoyage doit être exclu dans ce cas (`REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE`)
+  - [ ] Nettoyage du profil de l'utilisateur qui désinstalle (installation par machine : les autres profils ne sont pas accessibles proprement) ; documenter le nettoyage manuel des autres profils
+  - [ ] Optionnel : case « Supprimer aussi mes comptes et données » dans l'interface de désinstallation du MSI (non affichée par *Paramètres › Applications installées*)
+  - [ ] Journalisation des éléments supprimés dans le journal MSI
 - [x] 🟢 **Menu « À propos »** (menu *Aide* / *Fichier*, ou entrée en bas de la barre latérale) : boîte de dialogue avec icône, nom, version en cours, licence (LGPL 2.1 ou ultérieure), lien vers le dépôt GitHub et le [CHANGELOG.md](CHANGELOG.md)
   - [x] Version tirée du fichier [VERSION](VERSION) à la compilation (macro / ressource `VERSIONINFO` générée par MSBuild, comme le fait déjà `build-msi.ps1` pour le MSI), pour que l'exécutable, le MSI et la boîte « À propos » affichent toujours la même version
   - [x] Versions des composants (EDS, evolution-ews, Windows App SDK, WebView2) et bouton « Copier les informations » pour les rapports de bug
@@ -128,6 +143,29 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] Embarquer une copie des fournisseurs les plus courants (détection hors ligne, remplace la liste « Fournisseurs connus »), mise à jour à chaque version
   - [x] Vérifier la licence du dépôt avant d'embarquer les fichiers et mentionner la provenance (MPL 2.0, `winui/core/ispdb/README.md`)
 - [x] 🟡 **Confirmation / correction manuelle** : type détecté et paramètres proposés, possibilité de forcer un autre type ou de passer en configuration manuelle
+- [ ] 🟡 **Simplifier l'assistant d'ajout de compte** — aujourd'hui la seconde étape affiche tous les champs à la fois (type, nom du compte, nom complet, adresse, utilisateur, serveur EWS, serveurs et ports IMAP / SMTP, Client ID et Tenant ID OAuth2, mot de passe), même quand l'autodétection a tout trouvé
+  - [ ] **Écran principal réduit à l'essentiel** : adresse électronique, nom complet, puis selon le type *Mot de passe* ou bouton *Se connecter avec Microsoft / Google* (OAuth2) — rien d'autre quand la détection a réussi
+  - [ ] **Résumé lisible de la détection** à la place des champs techniques : logo / nom du fournisseur et une phrase (« Compte Microsoft 365 détecté — connexion sécurisée par Microsoft », « Serveurs trouvés : imap.exemple.ch, smtp.exemple.ch (chiffrés) »), avec la source de la détection (base Thunderbird, Autodiscover, DNS…) en info-bulle
+  - [ ] **Section repliée « Paramètres avancés »** (`Expander`, fermé par défaut) regroupant : type de compte forcé, nom du compte, nom d'utilisateur (si différent de l'adresse), serveurs et ports entrants / sortants, chiffrement (TLS / STARTTLS en liste plutôt qu'en numéro de port), méthode d'authentification, URL EWS, Client ID / Tenant ID OAuth2
+  - [ ] Section avancée **ouverte automatiquement** seulement si la détection a échoué ou n'a donné que des valeurs supposées (`imap.<domaine>` / `smtp.<domaine>`), avec les champs à vérifier mis en évidence
+  - [ ] Nom du compte prérempli avec l'adresse (modifiable dans les paramètres avancés ou plus tard dans la page du compte, §19)
+  - [ ] **Test de connexion** avant création (*Vérification…* puis coche verte, ou message d'erreur compréhensible et ouverture des paramètres avancés sur le champ fautif)
+  - [ ] Libellés sans jargon (« Serveur de réception » plutôt que « Serveur entrant (IMAP) », chiffrement en clair plutôt que « 993 = TLS, 143 = STARTTLS »)
+  - [ ] Une seule fenêtre à étapes (adresse → connexion → terminé) plutôt que deux boîtes de dialogue successives ; bouton *Précédent*
+
+### Modifier un compte existant
+
+Aujourd'hui, la liste des comptes des Paramètres ne propose que *Définir par défaut* et *Supprimer* : pour corriger un serveur ou un mot de passe, il faut supprimer puis recréer le compte.
+
+- [ ] 🟡 **Bouton *Modifier*** (et clic sur le compte) ouvrant la page du compte (cf. « Page détaillée par compte », §19), avec les mêmes sections que l'assistant d'ajout : essentiel en haut, *Paramètres avancés* repliés
+- [ ] 🟢 **Identité** : nom affiché, nom complet, adresse de réponse (Reply-To), organisation, nom du compte dans l'arborescence
+- [ ] 🟡 **Serveurs** : serveurs, ports, chiffrement, nom d'utilisateur et méthode d'authentification de réception et d'envoi (modification des sources EDS `ESourceMailAccount` / `ESourceMailTransport` / `ESourceMailIdentity` puis reconnexion des services Camel sans redémarrer l'application)
+- [ ] 🟢 **Mot de passe** : *Changer le mot de passe* (Gestionnaire d'identifiants Windows) ; pour OAuth2 : *Se reconnecter* (nouveau jeton) et affichage du compte Microsoft / Google connecté
+- [ ] 🟢 **Dossiers spéciaux** : choix des dossiers Envoyés, Brouillons, Corbeille, Indésirables, Archive sur le serveur
+- [ ] 🟢 **Rédaction** : signature par défaut (nouveaux messages / réponses), copie cachée automatique, demande d'accusé de lecture
+- [ ] 🟡 **Synchronisation** : intervalle de relève propre au compte, dossiers synchronisés hors connexion et ancienneté (§4), compte activé / désactivé sans le supprimer
+- [ ] 🟡 **Test de connexion** après modification, avec retour à l'ancienne configuration en cas d'échec si l'utilisateur le souhaite
+- [ ] 🟢 Actions *Définir par défaut* et *Supprimer* déplacées dans cette page (avec confirmation pour la suppression), en plus du menu de la liste
 
 ### Compte par défaut
 
@@ -330,6 +368,13 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
 - [ ] 🟡 **Nouveau dossier, Renommer, Copier, Déplacer, Supprimer** (`camel_store_create_folder_sync`, etc.), glisser-déposer dans l'arborescence — *fait : menu contextuel (nouveau, renommer, déplacer, copier, supprimer) ; reste : glisser-déposer*
 - [x] 🟢 **Marquer tout comme lu**
 - [x] 🟢 **Vider le dossier** : vider le dossier (vers la Corbeille), la Corbeille, les Indésirables
+- [ ] 🟡 **Réorganiser l'ordre des dossiers** d'un compte dans l'arborescence (aujourd'hui triés par ordre alphabétique) :
+  - [ ] 🟢 **Ordre par défaut « dossiers spéciaux d'abord »**, comme Outlook : Boîte de réception, Brouillons, Éléments envoyés, Éléments supprimés (Corbeille), Archive, Courrier indésirable, Boîte d'envoi, puis les autres dossiers par ordre alphabétique — dossiers spéciaux reconnus par leur rôle (`CAMEL_FOLDER_TYPE_*`, attributs IMAP SPECIAL-USE, dossiers distinctifs Exchange) et non par leur nom, quelle que soit la langue du serveur
+  - [ ] 🟢 **Icône de la Boîte de réception** : remplacer le glyphe plein `\xE8A8` (enveloppe pleine, rendue comme un carré noir à cette taille) par une icône au trait cohérente avec les autres dossiers (ex. `\xE715`, enveloppe) — `FolderGlyph()` dans [MainWindow.xaml.cpp](winui/app/MainWindow.xaml.cpp) ; vérifier aussi `inbox_glyph`, qui sert à repérer le nœud Boîte de réception par son glyphe
+  - [ ] 🟢 Noms des dossiers spéciaux affichés dans la langue de l'interface (« INBOX » → « Boîte de réception », « Sent Items » → « Éléments envoyés »)
+  - [ ] 🟡 **Ordre personnalisé** par glisser-déposer (ou *Monter* / *Descendre* dans le menu contextuel), mémorisé par compte, sans modifier les dossiers sur le serveur
+  - [ ] 🟢 Choix du mode de tri par compte : dossiers spéciaux d'abord (défaut) / alphabétique (*Afficher tous les dossiers de A à Z*) / personnalisé ; *Rétablir l'ordre par défaut*
+  - [ ] 🟢 Ordre des **comptes** eux-mêmes dans le volet des dossiers (compte par défaut en premier, puis glisser-déposer)
 - [ ] 🟢 **Afficher tous les dossiers de A à Z**
 - [ ] 🟠 **Nettoyer le dossier** (et sous-dossiers) des messages redondants — même logique que §7
 - [ ] **Récupérer les éléments supprimés** :
@@ -443,6 +488,20 @@ La vue actuelle se limite à un `CalendarView` mensuel et une liste d'événemen
 - [ ] 🟡 **Carnet d'adresses global** (GAL) Exchange / M365 : recherche et sélection des destinataires (backend evolution-ews)
 - [ ] 🟡 **Contacts unifiés** et regroupement des doublons — cf. §11
 - [ ] 🟢 **Recherche rapide de contacts** depuis la barre d'outils — cf. §10
+- [ ] 🟡 **Fenêtre de sélection de destinataires** (carnet d'adresses, comme le bouton *À…* d'Outlook) :
+  - [ ] Ouverte par un bouton en face de chaque ligne *À*, *Cc*, *Cci* de la fenêtre de rédaction, et en face de la ligne des participants (*Obligatoires*, *Facultatifs*, *Ressources*) d'une invitation (§13)
+  - [ ] Fenêtre indépendante redimensionnable : choix du carnet d'adresses (tous les carnets, carnet d'un compte, annuaire GAL Exchange / M365, listes de salles), champ de recherche (nom, prénom, adresse, société), liste des résultats (nom, adresse, société, téléphone)
+  - [ ] Boutons *À →*, *Cc →*, *Cci →* (ou *Obligatoires →*, *Facultatifs →*, *Ressources →* pour une invitation) et double-clic pour ajouter ; sélection multiple ; destinataires choisis affichés en bas de chaque ligne, supprimables
+  - [ ] Listes de distribution / groupes de contacts : ajout du groupe entier ou développement en membres
+  - [ ] *OK* : les destinataires sont ajoutés aux champs correspondants de la rédaction / de l'invitation ; *Annuler* : aucun changement
+  - [ ] Fiche du contact accessible depuis la liste (clic droit › *Propriétés*), création d'un nouveau contact depuis la fenêtre
+- [ ] 🟡 **Autocomplétion des adresses** dans les champs *À*, *Cc*, *Cci* de la rédaction et dans les participants d'une invitation :
+  - [ ] Suggestions au fil de la frappe (à partir de 2 caractères) depuis tous les carnets d'adresses (requête préfixe `EBookClient` sur nom, prénom, adresse), puis l'annuaire GAL pour les comptes Exchange / M365
+  - [ ] Adresses récemment utilisées en tête (destinataires des derniers messages envoyés), même si absentes des contacts
+  - [ ] Liste déroulante : nom, adresse, carnet d'origine ; navigation aux flèches, validation par Entrée / Tab / point-virgule
+  - [ ] Destinataire validé affiché en « jeton » (nom, adresse en info-bulle), supprimable, double-clic pour le modifier ; adresse inconnue ou mal formée soulignée
+  - [ ] Plusieurs adresses collées d'un coup (séparées par `;` ou `,`) découpées en jetons
+  - [ ] Suppression d'une suggestion récente (bouton ✕ dans la liste)
 - [ ] 🟡 **Créer rapidement une fiche contact depuis un mail ou une invitation** :
   - [ ] Clic droit (ou survol) sur une adresse — expéditeur, destinataires, Cc, organisateur ou participant d'une invitation — : *Ajouter aux contacts*, *Modifier le contact* si l'adresse est déjà connue
   - [ ] Fiche préremplie : nom et adresse email tirés de l'en-tête ; 🟠 en option, téléphone, société, fonction et site web extraits de la signature du message
@@ -524,6 +583,21 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 ## 19. Configuration de l'application — 🟡
 
 Page *Paramètres* regroupant les préférences générales (les réglages propres à un compte restent au §3). Préférences enregistrées dans un fichier de configuration utilisateur (`%LOCALAPPDATA%\EvolutionWin`), l'application n'étant pas empaquetée.
+
+### Réorganisation de la page Paramètres
+
+Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Comptes, Confidentialité, Signatures et Signature par compte, sans navigation ni regroupement logique ; elle deviendra illisible avec les réglages à venir.
+
+- [ ] 🟡 **Navigation par catégories** sur le modèle des Paramètres de Windows 11 : liste des catégories à gauche (`NavigationView` en mode gauche ou liste), contenu de la catégorie à droite, fil d'Ariane en haut (« Paramètres › Comptes › Compte X »)
+  - [ ] Catégories proposées : **Comptes**, **Courrier** (lecture, rédaction, signatures, contenu externe), **Calendrier**, **Contacts**, **Tâches**, **Notifications**, **Apparence** (thème, langue, disposition), **Confidentialité et sécurité**, **Mise à jour**, **Avancé** (caches, journaux, réinitialisation), **À propos**
+- [ ] 🟡 **Page détaillée par compte** : clic sur un compte → page dédiée regroupant tout ce qui le concerne (nom, adresse, serveurs, authentification / *Se reconnecter*, signature par défaut, réponses automatiques, synchronisation hors connexion, dossiers spéciaux Envoyés / Brouillons / Corbeille / Archive, compte par défaut, supprimer le compte) au lieu de réglages dispersés dans plusieurs sections
+- [ ] 🟢 **Contrôles homogènes** : cartes de réglage façon Windows 11 (`SettingsCard` / `SettingsExpander` du Windows Community Toolkit, ou équivalent maison) — titre, description courte, contrôle aligné à droite ; réglages avancés repliés dans un expandeur
+- [ ] 🟢 **Recherche dans les Paramètres** : champ en haut de la page qui filtre les réglages par mots-clés et ouvre directement la bonne catégorie
+- [ ] 🟢 **Enregistrement immédiat** des modifications (pas de bouton *Enregistrer* global) avec confirmation discrète ; boutons *Annuler* / *Enregistrer* seulement dans les éditeurs (signature, compte)
+- [ ] 🟢 **Accès contextuel** : liens directs depuis l'interface vers le réglage concerné (ex. bandeau « contenu externe bloqué » → *Confidentialité*, icône d'état des connexions → page du compte, menu contextuel d'un compte → *Paramètres du compte*)
+- [ ] 🟢 **Rétablir les valeurs par défaut** par catégorie
+- [ ] 🟢 Ouverture des Paramètres par Ctrl+, et depuis *Fichier › Options*
+- [ ] 🟢 Textes d'aide courts sous chaque réglage, sans jargon technique (laisser les détails de protocole dans la page *Avancé*)
 
 ### Notifications
 

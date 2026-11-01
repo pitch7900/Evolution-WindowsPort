@@ -138,8 +138,14 @@ monitor_delete_cb (GFileMonitor *monitor,
                    gpointer user_data)
 {
 	CamelEwsStoreSummary *ews_summary = (CamelEwsStoreSummary *) user_data;
+	gchar *path = g_file_get_path (file);
+	gboolean gone = !path || !g_file_test (path, G_FILE_TEST_EXISTS);
 
-	if (event == G_FILE_MONITOR_EVENT_DELETED) {
+	g_free (path);
+
+	/* On Windows, saving the summary replaces the file, which the file
+	 * monitor reports as a deletion: only a file really gone clears it */
+	if (event == G_FILE_MONITOR_EVENT_DELETED && gone) {
 		S_LOCK (ews_summary);
 
 		if (ews_summary->priv->key_file)
