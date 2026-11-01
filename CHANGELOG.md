@@ -35,12 +35,22 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   élément* : Rendez-vous (Réunion à venir).
 - **Recherche dans la barre de titre** (Ctrl+E, Échap pour effacer) : dossier
   courant en Courrier, contacts en Contacts ; barre de titre plus haute.
+- **Calendrier** : barre de navigation (Aujourd'hui, précédent / suivant,
+  plage affichée, période Jour / Semaine / Mois mémorisée) ; volet
+  *Calendriers* par compte avec couleur, case à cocher pour afficher ou
+  masquer chaque calendrier (seuls les calendriers affichés sont lus) et
+  calendrier actif des nouveaux événements ; pastille de couleur du
+  calendrier devant chaque événement.
 - Journaux des services evolution-data-server (`evolution-source-registry`,
   fabriques carnet d'adresses / agenda) dans
   `%LOCALAPPDATA%\EvolutionWin\<service>.log`, pour le diagnostic.
 
 ### Corrigé
 
+- Calendrier vide : le service des agendas s'arrêtait en lisant les
+  calendriers (libération d'une ressource jamais obtenue sous Windows dans
+  Camel) ; avertissement dans le journal pour un calendrier qui ne s'ouvre
+  pas.
 - Comptes Microsoft 365 / Exchange sur une installation par le MSI : les
   services evolution-data-server cherchaient leurs modules (registre,
   carnets d'adresses, agendas) dans le dossier de compilation au lieu de

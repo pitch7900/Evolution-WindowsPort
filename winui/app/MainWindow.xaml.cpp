@@ -291,6 +291,11 @@ namespace winrt::EvolutionWin::implementation
         RestorePaneWidths();
         ApplyFolderPaneVisibility(::EvolutionWin::Settings::Instance().GetBoolean(L"layout.folders-visible", true));
         ApplyReadingPanePosition(::EvolutionWin::Settings::Instance().GetString(L"layout.reading-pane", L"right"));
+        m_calendar_period = ::EvolutionWin::Settings::Instance().GetString(L"calendar.period", L"week");
+        m_updating_period = true;
+        for (auto const& item : CalendarPeriodBar().Items())
+            item.IsSelected(unbox_value_or<hstring>(item.Tag(), L"") == m_calendar_period);
+        m_updating_period = false;
 
         /* menu contextuel des dossiers (clic droit, touche Menu) */
         FolderTree().ContextRequested([this](UIElement const& sender, Input::ContextRequestedEventArgs const& args)
@@ -707,7 +712,7 @@ namespace winrt::EvolutionWin::implementation
         SettingsViewPane().Visibility(Visibility::Collapsed);
 
         if (tag == L"calendar")
-            LoadEvents();
+            LoadCalendarSources();
         else if (tag == L"contacts")
             LoadContacts(ContactSearchBox().Text());
         else if (tag == L"tasks")
@@ -4110,15 +4115,267 @@ namespace winrt::EvolutionWin::implementation
     /* onglet Affichage (Calendrier) */
     void MainWindow::OnRibbonTodayClick(IInspectable const&, RoutedEventArgs const&)
     {
+        m_selected_day_start = 0;
         MonthCalendar().SelectedDates().Clear();
-        MonthCalendar().SelectedDates().Append(winrt::clock::now());
         MonthCalendar().SetDisplayDate(winrt::clock::now());
+        LoadEvents();
     }
 
-    void MainWindow::OnRibbonNextDaysClick(IInspectable const&, RoutedEventArgs const&)
+    /* Période affichée (jour / semaine / mois), mémorisée ; synchronise la
+     * barre de navigation. */
+    void MainWindow::SetCalendarPeriod(hstring const& period)
     {
-        MonthCalendar().SelectedDates().Clear();
+        m_calendar_period = period == L"day" || period == L"month" ? period : hstring{ L"week" };
+        ::EvolutionWin::Settings::Instance().SetString(L"calendar.period", m_calendar_period);
+
+        m_updating_period = true;
+        for (auto const& item : CalendarPeriodBar().Items())
+            item.IsSelected(unbox_value_or<hstring>(item.Tag(), L"") == m_calendar_period);
+        m_updating_period = false;
+
+        LoadEvents();
     }
+
+    void MainWindow::OnCalendarPeriodClick(IInspectable const& sender, RoutedEventArgs const&)
+    {
+        SetCalendarPeriod(unbox_value_or<hstring>(sender.as<FrameworkElement>().Tag(), L"week"));
+    }
+
+    void MainWindow::OnCalendarPeriodChanged(SelectorBar const& sender, SelectorBarSelectionChangedEventArgs const&)
+    {
+        if (m_updating_period || !sender.SelectedItem())
+            return;
+        SetCalendarPeriod(unbox_value_or<hstring>(sender.SelectedItem().Tag(), L"week"));
+    }
+
+    /* Liste des calendriers (comptes, couleurs, calendrier par défaut), puis
+     * événements des calendriers affichés. */
+    void MainWindow::LoadCalendarSources()
+    {
+        m_core->ListSources(L"calendar", [this](hstring const& json, hstring const& error)
+        {
+            JsonArray sources;
+            if (!error.empty() || !JsonArray::TryParse(json, sources))
+            {
+                ShowStatus(L"Calendriers : " + error, InfoBarSeverity::Error);
+                return;
+            }
+
+            m_calendar_sources = sources;
+
+            /* premier usage : calendrier par défaut et calendriers principaux
+               des comptes, pas les calendriers partagés d'autres personnes */
+            auto& settings = ::EvolutionWin::Settings::Instance();
+            if (!settings.GetBoolean(L"calendar.visible-init", false))
+            {
+                JsonArray visible;
+                for (auto const& value : sources)
+                {
+                    auto source = value.GetObject();
+                    hstring name = source.GetNamedString(L"name", L"");
+                    if (source.GetNamedBoolean(L"default", false) || name == L"Calendrier" || name == L"Calendar" ||
+                        name == L"Personnel" || name == L"Personal")
+                        visible.Append(JsonValue::CreateStringValue(source.GetNamedString(L"uid", L"")));
+                }
+                settings.Set(L"calendar.visible", visible);
+                settings.SetBoolean(L"calendar.visible-init", true);
+            }
+
+            RebuildCalendarSourcesPanel();
+            LoadEvents();
+        });
+    }
+
+    std::vector<hstring> MainWindow::VisibleCalendarUids()
+    {
+        std::vector<hstring> uids;
+        auto visible = ::EvolutionWin::Settings::Instance().GetArray(L"calendar.visible");
+
+        for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
+        {
+            hstring uid = value.GetObject().GetNamedString(L"uid", L"");
+            for (auto const& entry : visible)
+                if (entry.ValueType() == JsonValueType::String && entry.GetString() == uid)
+                    uids.push_back(uid);
+        }
+        return uids;
+    }
+
+    /* Calendrier des nouveaux événements : choisi dans la liste, sinon celui
+     * par défaut. */
+    hstring MainWindow::ActiveCalendarUid()
+    {
+        hstring active = ::EvolutionWin::Settings::Instance().GetString(L"calendar.active", L"");
+        hstring fallback;
+
+        for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
+        {
+            auto source = value.GetObject();
+            if (source.GetNamedString(L"uid", L"") == active)
+                return active;
+            if (source.GetNamedBoolean(L"default", false))
+                fallback = source.GetNamedString(L"uid", L"");
+        }
+        return fallback;
+    }
+
+    /* Volet « Calendriers » : groupes par compte ; case à cocher = affiché,
+     * clic sur le nom = calendrier actif (mis en évidence). */
+    void MainWindow::RebuildCalendarSourcesPanel()
+    {
+        auto panel = CalendarSourcesPanel().Children();
+        panel.Clear();
+
+        auto& settings = ::EvolutionWin::Settings::Instance();
+        auto visible = VisibleCalendarUids();
+        hstring active = ActiveCalendarUid();
+        hstring active_name;
+
+        /* comptes dans l'ordre d'apparition, calendrier par défaut en tête */
+        std::vector<hstring> accounts;
+        for (auto const& value : m_calendar_sources)
+        {
+            hstring account = value.GetObject().GetNamedString(L"account", L"");
+            if (std::find(accounts.begin(), accounts.end(), account) == accounts.end())
+                accounts.push_back(account);
+        }
+
+        for (auto const& account : accounts)
+        {
+            TextBlock header;
+            header.Text(account.empty() ? hstring{ L"Autres" } : account);
+            header.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+            header.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+            header.Margin(ThicknessHelper::FromLengths(4, 8, 0, 2));
+            panel.Append(header);
+
+            for (auto const& value : m_calendar_sources)
+            {
+                auto source = value.GetObject();
+                if (source.GetNamedString(L"account", L"") != account)
+                    continue;
+
+                hstring uid = source.GetNamedString(L"uid", L"");
+                hstring name = source.GetNamedString(L"name", L"");
+                bool is_active = uid == active;
+                if (is_active)
+                    active_name = name;
+
+                Grid row;
+                row.ColumnSpacing(6);
+                row.Padding(ThicknessHelper::FromLengths(4, 0, 4, 0));
+                row.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));
+                ColumnDefinition check_col;
+                check_col.Width(GridLengthHelper::Auto());
+                row.ColumnDefinitions().Append(check_col);
+                row.ColumnDefinitions().Append(ColumnDefinition{});
+                if (is_active)
+                    row.Background(Application::Current().Resources().Lookup(box_value(L"SubtleFillColorSecondaryBrush")).as<Brush>());
+
+                CheckBox shown;
+                shown.MinWidth(0);
+                shown.IsChecked(std::find(visible.begin(), visible.end(), uid) != visible.end());
+                ToolTipService::SetToolTip(shown, box_value(L"Afficher ce calendrier"));
+                shown.Click([this, uid](IInspectable const& sender, RoutedEventArgs const&)
+                {
+                    bool checked = sender.as<CheckBox>().IsChecked() && sender.as<CheckBox>().IsChecked().GetBoolean();
+                    JsonArray updated;
+                    for (auto const& current : VisibleCalendarUids())
+                        if (current != uid)
+                            updated.Append(JsonValue::CreateStringValue(current));
+                    if (checked)
+                        updated.Append(JsonValue::CreateStringValue(uid));
+                    ::EvolutionWin::Settings::Instance().Set(L"calendar.visible", updated);
+                    LoadEvents();
+                });
+                row.Children().Append(shown);
+
+                /* pastille et nom : clic = calendrier actif */
+                StackPanel label;
+                label.Orientation(Orientation::Horizontal);
+                label.Spacing(8);
+                label.VerticalAlignment(VerticalAlignment::Center);
+                label.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+
+                Border dot;
+                dot.Width(12);
+                dot.Height(12);
+                dot.CornerRadius(CornerRadiusHelper::FromUniformRadius(3));
+                std::wstring color{ source.GetNamedString(L"color", L"") };
+                if (color.size() == 7 && color[0] == L'#')
+                {
+                    auto channel = [&](size_t at) { return static_cast<uint8_t>(std::wcstoul(color.substr(at, 2).c_str(), nullptr, 16)); };
+                    dot.Background(SolidColorBrush{ Microsoft::UI::ColorHelper::FromArgb(255, channel(1), channel(3), channel(5)) });
+                }
+                else
+                {
+                    dot.Background(Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
+                }
+                label.Children().Append(dot);
+
+                TextBlock text;
+                text.Text(name);
+                text.TextTrimming(TextTrimming::CharacterEllipsis);
+                if (is_active)
+                    text.FontWeight(Microsoft::UI::Text::FontWeights::SemiBold());
+                label.Children().Append(text);
+                ToolTipService::SetToolTip(label, box_value(is_active
+                    ? hstring{ L"Calendrier actif : les nouveaux événements y sont créés" }
+                    : hstring{ L"Choisir comme calendrier des nouveaux événements" }));
+
+                label.Tapped([this, uid](IInspectable const&, Input::TappedRoutedEventArgs const&)
+                {
+                    ::EvolutionWin::Settings::Instance().SetString(L"calendar.active", uid);
+                    RebuildCalendarSourcesPanel();
+                });
+                Grid::SetColumn(label, 1);
+                row.Children().Append(label);
+
+                panel.Append(row);
+            }
+        }
+
+        ActiveCalendarText().Text(active_name.empty() ? hstring{}
+            : L"Nouveaux événements dans : " + active_name);
+        (void) settings;
+    }
+
+    /* Période précédente (-1) ou suivante (+1). */
+    void MainWindow::ShiftCalendarPeriod(int direction)
+    {
+        time_t anchor = m_selected_day_start > 0 ? static_cast<time_t>(m_selected_day_start) : std::time(nullptr);
+        struct tm local_tm{};
+        localtime_s(&local_tm, &anchor);
+        local_tm.tm_hour = 0;
+        local_tm.tm_min = 0;
+        local_tm.tm_sec = 0;
+        local_tm.tm_isdst = -1;
+
+        if (m_calendar_period == L"month")
+        {
+            local_tm.tm_mday = 1;
+            local_tm.tm_mon += direction;
+        }
+        else
+        {
+            local_tm.tm_mday += direction * (m_calendar_period == L"day" ? 1 : 7);
+        }
+
+        m_selected_day_start = static_cast<int64_t>(mktime(&local_tm));
+        MonthCalendar().SetDisplayDate(winrt::clock::from_time_t(static_cast<time_t>(m_selected_day_start)));
+        LoadEvents();
+    }
+
+    void MainWindow::OnCalendarPreviousClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ShiftCalendarPeriod(-1);
+    }
+
+    void MainWindow::OnCalendarNextClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ShiftCalendarPeriod(+1);
+    }
+
 
     /* Commandes proposées dans la barre d'accès rapide (identifiant mémorisé,
      * libellé, glyphe, action) */
@@ -5639,22 +5896,77 @@ namespace winrt::EvolutionWin::implementation
      * sélectionnée (ou les 30 prochains jours par défaut). */
     void MainWindow::LoadEvents()
     {
-        int64_t start_unix = m_selected_day_start;
-        int64_t end_unix = 0;
+        /* plage de la période autour du jour de référence (aujourd'hui par
+           défaut) : jour, semaine du lundi au dimanche, mois civil */
+        time_t anchor = m_selected_day_start > 0 ? static_cast<time_t>(m_selected_day_start) : std::time(nullptr);
+        struct tm first{};
+        localtime_s(&first, &anchor);
+        first.tm_hour = 0;
+        first.tm_min = 0;
+        first.tm_sec = 0;
+        first.tm_isdst = -1;
 
-        if (start_unix <= 0)
+        struct tm last = first;
+        if (m_calendar_period == L"month")
         {
-            start_unix = static_cast<int64_t>(std::time(nullptr)) - 86400;
-            end_unix = start_unix + 30LL * 86400;
-            CalendarHeader().Text(L"Événements (30 prochains jours)");
+            first.tm_mday = 1;
+            last = first;
+            last.tm_mon += 1;
+        }
+        else if (m_calendar_period == L"week")
+        {
+            first.tm_mday -= (first.tm_wday + 6) % 7;
+            last = first;
+            last.tm_mday += 7;
         }
         else
         {
-            end_unix = start_unix + 86400;
-            CalendarHeader().Text(L"Événements du " + FormatDate(static_cast<double>(start_unix)));
+            last.tm_mday += 1;
         }
 
-        m_core->ListEvents(start_unix, end_unix, [this](hstring const& json, hstring const& error)
+        int64_t start_unix = static_cast<int64_t>(mktime(&first));
+        int64_t end_unix = static_cast<int64_t>(mktime(&last));
+
+        /* plage affichée : « samedi 31 octobre 2026 », « 26 oct. – 1 nov. 2026 »,
+           « octobre 2026 » */
+        {
+            using Windows::Globalization::DateTimeFormatting::DateTimeFormatter;
+            auto from = winrt::clock::from_time_t(static_cast<time_t>(start_unix));
+            auto to = winrt::clock::from_time_t(static_cast<time_t>(end_unix - 1));
+            hstring label;
+
+            if (m_calendar_period == L"month")
+                label = DateTimeFormatter{ L"month.full year.full" }.Format(from);
+            else if (m_calendar_period == L"week")
+                label = DateTimeFormatter{ L"day month.abbreviated" }.Format(from) + L" – " +
+                        DateTimeFormatter{ L"day month.abbreviated year.full" }.Format(to);
+            else
+                label = DateTimeFormatter{ L"dayofweek.full day month.full year.full" }.Format(from);
+
+            CalendarHeader().Text(label);
+        }
+
+        if (!m_calendar_sources)
+        {
+            LoadCalendarSources();
+            return;
+        }
+
+        std::wstring visible;
+        for (auto const& uid : VisibleCalendarUids())
+            visible += (visible.empty() ? L"" : L",") + std::wstring{ uid };
+
+        if (visible.empty())
+        {
+            EventList().Items().Clear();
+            TextBlock none;
+            none.Text(L"Aucun calendrier affiché : cochez un calendrier dans la liste de gauche.");
+            none.Padding(ThicknessHelper::FromLengths(12, 12, 12, 12));
+            EventList().Items().Append(none);
+            return;
+        }
+
+        m_core->ListCalendarEvents(start_unix, end_unix, hstring{ visible }, [this](hstring const& json, hstring const& error)
         {
             if (!error.empty())
             {
@@ -5679,10 +5991,31 @@ namespace winrt::EvolutionWin::implementation
 
                 Grid row;
                 row.Padding(ThicknessHelper::FromLengths(12, 10, 12, 10));
+                row.ColumnSpacing(12);
+                ColumnDefinition color_col;
+                color_col.Width(GridLengthHelper::Auto());
+                row.ColumnDefinitions().Append(color_col);
                 row.ColumnDefinitions().Append(ColumnDefinition{});
                 ColumnDefinition del_col;
                 del_col.Width(GridLengthHelper::Auto());
                 row.ColumnDefinitions().Append(del_col);
+
+                /* couleur du calendrier (EDS), sinon couleur d'accent */
+                Border color_bar;
+                color_bar.Width(4);
+                color_bar.CornerRadius(CornerRadiusHelper::FromUniformRadius(2));
+                std::wstring color{ ev.GetNamedString(L"calendar_color", L"") };
+                if (color.size() == 7 && color[0] == L'#')
+                {
+                    auto channel = [&](size_t at) { return static_cast<uint8_t>(std::wcstoul(color.substr(at, 2).c_str(), nullptr, 16)); };
+                    color_bar.Background(SolidColorBrush{ Microsoft::UI::ColorHelper::FromArgb(255, channel(1), channel(3), channel(5)) });
+                }
+                else
+                {
+                    color_bar.Background(Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
+                }
+                ToolTipService::SetToolTip(color_bar, box_value(ev.GetNamedString(L"calendar_name", L"")));
+                row.Children().Append(color_bar);
 
                 StackPanel details;
                 details.Spacing(2);
@@ -5709,6 +6042,7 @@ namespace winrt::EvolutionWin::implementation
                     details.Children().Append(desc);
                 }
 
+                Grid::SetColumn(details, 1);
                 row.Children().Append(details);
 
                 Button del_btn;
@@ -5717,7 +6051,7 @@ namespace winrt::EvolutionWin::implementation
                 del_icon.FontSize(14);
                 del_btn.Content(del_icon);
                 del_btn.VerticalAlignment(VerticalAlignment::Center);
-                Grid::SetColumn(del_btn, 1);
+                Grid::SetColumn(del_btn, 2);
                 ToolTipService::SetToolTip(del_btn, box_value(L"Supprimer l'événement"));
                 del_btn.Click([this, calendar_uid, uid](IInspectable const&, RoutedEventArgs const&)
                 {
@@ -5770,8 +6104,6 @@ namespace winrt::EvolutionWin::implementation
     /* Gestionnaire du bouton d'actualisation du calendrier. */
     void MainWindow::OnRefreshCalendarClick(IInspectable const&, RoutedEventArgs const&)
     {
-        m_selected_day_start = 0;
-        MonthCalendar().SelectedDates().Clear();
         LoadEvents();
     }
 
@@ -5862,6 +6194,8 @@ namespace winrt::EvolutionWin::implementation
         payload.SetNamedValue(L"description", JsonValue::CreateStringValue(desc_box.Text()));
         payload.SetNamedValue(L"start", JsonValue::CreateNumberValue(static_cast<double>(day_base + start_secs)));
         payload.SetNamedValue(L"end", JsonValue::CreateNumberValue(static_cast<double>(day_base + end_secs)));
+        if (hstring active = ActiveCalendarUid(); !active.empty())
+            payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(active));
 
         m_core->CreateEvent(payload.Stringify(), [this](hstring const&, hstring const& error)
         {

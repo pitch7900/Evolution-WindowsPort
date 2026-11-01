@@ -279,7 +279,14 @@
                         <AppBarButton Label="Aujourd'hui" Click="OnRibbonTodayClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8D1;" /></AppBarButton.Icon>
                         </AppBarButton>
-                        <AppBarButton Label="30 prochains jours" Click="OnRibbonNextDaysClick">
+                        <AppBarSeparator />
+                        <AppBarButton Label="Jour" Tag="day" Click="OnCalendarPeriodClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8BF;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Semaine" Tag="week" Click="OnCalendarPeriodClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8C0;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Mois" Tag="month" Click="OnCalendarPeriodClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE787;" /></AppBarButton.Icon>
                         </AppBarButton>
                     </CommandBar>
@@ -573,15 +580,28 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" Spacing="12">
-                    <Button HorizontalAlignment="Stretch" Style="{StaticResource AccentButtonStyle}" Click="OnNewEventClick">
+                <!-- colonne de gauche : la liste des calendriers prend la hauteur restante -->
+                <Grid Grid.Column="0" RowSpacing="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Button Grid.Row="0" HorizontalAlignment="Stretch" Style="{StaticResource AccentButtonStyle}" Click="OnNewEventClick">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon Glyph="&#xE710;" FontSize="14" />
                             <TextBlock Text="Nouvel événement" />
                         </StackPanel>
                     </Button>
-                    <CalendarView x:Name="MonthCalendar" SelectionMode="Single" SelectedDatesChanged="OnCalendarDateSelected" />
-                </StackPanel>
+                    <CalendarView Grid.Row="1" x:Name="MonthCalendar" SelectionMode="Single" SelectedDatesChanged="OnCalendarDateSelected" />
+                    <!-- calendriers par compte : case = affiché, clic sur le nom =
+                         calendrier actif des nouveaux événements (MainWindow::LoadCalendarSources) -->
+                    <TextBlock Grid.Row="2" Text="Calendriers" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="4,4,0,0" />
+                    <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="CalendarSourcesPanel" Spacing="2" />
+                    </ScrollViewer>
+                </Grid>
 
                 <Grid Grid.Column="1" RowSpacing="12">
                     <Grid.RowDefinitions>
@@ -589,8 +609,29 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     <Grid Grid.Row="0">
-                        <TextBlock x:Name="CalendarHeader" Text="Événements" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+                        <!-- barre de navigation : Aujourd'hui, précédent / suivant, plage
+                             affichée, période (MainWindow::LoadEvents) -->
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Button Content="Aujourd'hui" Click="OnRibbonTodayClick" />
+                            <Button Click="OnCalendarPreviousClick" ToolTipService.ToolTip="Période précédente">
+                                <FontIcon Glyph="&#xE76B;" FontSize="12" />
+                            </Button>
+                            <Button Click="OnCalendarNextClick" ToolTipService.ToolTip="Période suivante">
+                                <FontIcon Glyph="&#xE76C;" FontSize="12" />
+                            </Button>
+                            <StackPanel Margin="8,0,0,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="CalendarHeader" Text="Événements"
+                                           Style="{StaticResource SubtitleTextBlockStyle}" />
+                                <TextBlock x:Name="ActiveCalendarText" Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                            <SelectorBar x:Name="CalendarPeriodBar" SelectionChanged="OnCalendarPeriodChanged">
+                                <SelectorBarItem Text="Jour" Tag="day" />
+                                <SelectorBarItem Text="Semaine" Tag="week" />
+                                <SelectorBarItem Text="Mois" Tag="month" />
+                            </SelectorBar>
                             <Button Click="OnExportCalendarClick" ToolTipService.ToolTip="Exporter un agenda ou une liste de tâches (.ics)">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <FontIcon Glyph="&#xEDE1;" FontSize="14" />
