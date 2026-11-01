@@ -221,6 +221,12 @@
                         <AppBarButton Label="Rétablir la disposition" Click="OnRibbonResetLayoutClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE72C;" /></AppBarButton.Icon>
                         </AppBarButton>
+                        <AppBarSeparator />
+                        <AppBarToggleButton x:Name="RibbonConfidentialToggle" Label="Notifications confidentielles"
+                                            Click="OnConfidentialToggled"
+                                            ToolTipService.ToolTip="Masquer l'expéditeur et l'objet dans les notifications (présentation, partage d'écran)">
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE72E;" /></AppBarToggleButton.Icon>
+                        </AppBarToggleButton>
                     </CommandBar>
                     <CommandBar x:Name="RibbonCalendarFile" Visibility="Collapsed" DefaultLabelPosition="Right"
                                 HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
@@ -732,6 +738,10 @@
                     <TextBlock Text="Les images et styles distants d'un message (dont les pixels de suivi) révèlent à l'expéditeur que vous l'avez ouvert, à quel moment et depuis quelle adresse IP."
                                Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <ToggleSwitch x:Name="ConfidentialNotificationsSwitch" Header="Notifications confidentielles"
+                                  OffContent="Expéditeur et objet affichés dans les notifications"
+                                  OnContent="« Nouveau message » seulement, sans expéditeur ni objet (présentation, partage d'écran)"
+                                  Toggled="OnConfidentialToggled" />
                     <RadioButtons x:Name="RemoteContentModeChoice" Header="Charger le contenu externe des messages"
                                   SelectionChanged="OnRemoteContentModeChanged">
                         <x:String>Jamais</x:String>

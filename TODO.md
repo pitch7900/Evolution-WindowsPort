@@ -687,10 +687,10 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 ### Notifications
 
 - [ ] 🟢 **Activer / désactiver les notifications Windows** (toasts) de nouveau courrier, globalement et par compte / dossier
-- [ ] 🟢 **Mode confidentiel des notifications** : remplacer l'expéditeur, l'objet et l'extrait par un message générique (« Nouveau message », « 3 nouveaux messages ») — utile en présentation ou en partage d'écran <a id="demo-confidentiel"></a>
-  - [ ] Bascule rapide depuis la barre d'état / le menu de l'icône, sans passer par les Paramètres
+- [x] 🟢 **Mode confidentiel des notifications** : remplacer l'expéditeur, l'objet et l'extrait par un message générique (« Nouveau message », « 3 nouveaux messages ») — utile en présentation ou en partage d'écran <a id="demo-confidentiel"></a>
+  - [x] Bascule rapide depuis la barre d'état / le menu de l'icône, sans passer par les Paramètres — *ruban Affichage, barre d'accès rapide et Paramètres › Confidentialité*
   - [ ] 🟡 Activation automatique quand Windows est en mode *Ne pas déranger* / partage d'écran détecté (optionnel)
-  - [ ] S'applique aussi aux rappels de rendez-vous et de tâches (titre et lieu masqués)
+  - [ ] S'applique aussi aux rappels de rendez-vous et de tâches (titre et lieu masqués) — *quand les rappels existeront (§2)*
 - [ ] 🟢 Son de notification (aucun / son Windows / personnalisé), badge de non-lus sur l'icône de la barre des tâches
 - [ ] 🟢 Notifications des rappels de calendrier et de tâches (activer / désactiver, durée d'affichage)
 
