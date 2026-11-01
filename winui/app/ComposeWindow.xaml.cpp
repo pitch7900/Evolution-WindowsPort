@@ -761,7 +761,169 @@ namespace winrt::EvolutionWin::implementation
                 return;
             }
 
+            self->RememberRecipients();
             self->Close();
         });
+    }
+
+    /* Destinataire en cours de saisie : texte après le dernier « ; » ou « , ». */
+    static size_t RecipientTokenStart(std::wstring const& text)
+    {
+        size_t sep = text.find_last_of(L";,");
+        size_t start = sep == std::wstring::npos ? 0 : sep + 1;
+        while (start < text.size() && iswspace(text[start]))
+            start++;
+        return start;
+    }
+
+    /* Adresses récemment utilisées (préférence "recipients.recent", 50 au plus). */
+    static std::vector<std::wstring> RecentRecipients()
+    {
+        std::vector<std::wstring> recent;
+        for (auto const& value : ::EvolutionWin::Settings::Instance().GetArray(L"recipients.recent"))
+            if (value.ValueType() == Windows::Data::Json::JsonValueType::String)
+                recent.push_back(std::wstring{ value.GetString() });
+        return recent;
+    }
+
+    /* Saisie dans À / Cc / Cci : suggestions pour le destinataire en cours
+     * (2 caractères au moins), adresses récentes d'abord, puis carnets
+     * d'adresses (GAL comprise) via evo-core. */
+    void ComposeWindow::OnRecipientTextChanged(AutoSuggestBox const& sender, AutoSuggestBoxTextChangedEventArgs const& args)
+    {
+        if (args.Reason() != AutoSuggestionBoxTextChangeReason::UserInput)
+            return;
+
+        std::wstring text{ sender.Text() };
+        std::wstring token = text.substr(RecipientTokenStart(text));
+        uint64_t request = ++m_recipient_request;
+
+        if (token.size() < 2)
+        {
+            sender.ItemsSource(nullptr);
+            return;
+        }
+
+        auto lower = [](std::wstring value)
+        {
+            std::transform(value.begin(), value.end(), value.begin(), ::towlower);
+            return value;
+        };
+        std::wstring needle = lower(token);
+
+        /* adresses récentes : nom ou adresse commençant par la saisie */
+        std::vector<std::wstring> recent_matches;
+        for (auto const& entry : RecentRecipients())
+        {
+            std::wstring low = lower(entry);
+            size_t lt = low.find(L'<');
+            bool match = low.rfind(needle, 0) == 0 || (lt != std::wstring::npos && low.compare(lt + 1, needle.size(), needle) == 0);
+            if (match && recent_matches.size() < 5)
+                recent_matches.push_back(entry);
+        }
+
+        auto core = m_core.lock();
+        if (!core)
+            return;
+
+        auto weak = get_weak();
+        core->SearchRecipients(hstring{ token }, 15, [weak, sender, request, recent_matches](hstring const& json, hstring const& error)
+        {
+            auto self = weak.get();
+            if (!self || request != self->m_recipient_request)
+                return;
+
+            Windows::Data::Json::JsonArray results;
+            if (!error.empty() || !Windows::Data::Json::JsonArray::TryParse(json, results))
+                results = Windows::Data::Json::JsonArray{};
+
+            /* libellé affiché -> texte inséré */
+            self->m_suggestion_values.clear();
+            auto items = single_threaded_vector<IInspectable>();
+            std::vector<std::wstring> inserted;
+
+            for (auto const& entry : recent_matches)
+            {
+                std::wstring label = entry + L"  (récent)";
+                self->m_suggestion_values[label] = entry;
+                inserted.push_back(entry);
+                items.Append(box_value(hstring{ label }));
+            }
+
+            for (auto const& value : results)
+            {
+                auto person = value.GetObject();
+                std::wstring name{ person.GetNamedString(L"name", L"") };
+                std::wstring email{ person.GetNamedString(L"email", L"") };
+                std::wstring address = name.empty() ? email : name + L" <" + email + L">";
+                if (std::find(inserted.begin(), inserted.end(), address) != inserted.end())
+                    continue;
+
+                std::wstring label = address + L"  — " + std::wstring{ person.GetNamedString(L"book", L"") };
+                self->m_suggestion_values[label] = address;
+                inserted.push_back(address);
+                items.Append(box_value(hstring{ label }));
+            }
+
+            sender.ItemsSource(items.Size() > 0 ? items : nullptr);
+        });
+    }
+
+    /* Suggestion choisie (Entrée, clic) : remplace le destinataire en cours
+     * et ajoute « ; » pour le suivant. */
+    void ComposeWindow::OnRecipientQuerySubmitted(AutoSuggestBox const& sender, AutoSuggestBoxQuerySubmittedEventArgs const& args)
+    {
+        if (!args.ChosenSuggestion())
+            return;
+
+        std::wstring label{ unbox_value_or<hstring>(args.ChosenSuggestion(), L"") };
+        auto it = m_suggestion_values.find(label);
+        if (it == m_suggestion_values.end())
+            return;
+
+        std::wstring text{ sender.Text() };
+        text = text.substr(0, RecipientTokenStart(text)) + it->second + L"; ";
+        ++m_recipient_request;
+        sender.Text(hstring{ text });
+        sender.ItemsSource(nullptr);
+    }
+
+    /* Message envoyé : ses destinataires passent en tête des adresses récentes. */
+    void ComposeWindow::RememberRecipients()
+    {
+        std::vector<std::wstring> sent;
+        for (auto const& box : { ToBox(), CcBox(), BccBox() })
+        {
+            std::wstring text{ box.Text() };
+            size_t start = 0;
+            while (start <= text.size())
+            {
+                size_t end = text.find_first_of(L";,", start);
+                std::wstring part = text.substr(start, end == std::wstring::npos ? std::wstring::npos : end - start);
+                size_t first = part.find_first_not_of(L" \t");
+                size_t last = part.find_last_not_of(L" \t");
+                if (first != std::wstring::npos && part.find(L'@') != std::wstring::npos)
+                    sent.push_back(part.substr(first, last - first + 1));
+                if (end == std::wstring::npos)
+                    break;
+                start = end + 1;
+            }
+        }
+
+        Windows::Data::Json::JsonArray recent;
+        auto add = [&recent](std::wstring const& value)
+        {
+            for (auto const& existing : recent)
+                if (existing.GetString() == value)
+                    return;
+            if (recent.Size() < 50)
+                recent.Append(Windows::Data::Json::JsonValue::CreateStringValue(value));
+        };
+        for (auto const& value : sent)
+            add(value);
+        for (auto const& value : RecentRecipients())
+            add(value);
+
+        ::EvolutionWin::Settings::Instance().Set(L"recipients.recent", recent);
     }
 }

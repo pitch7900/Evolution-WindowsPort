@@ -21,29 +21,30 @@ Hypothèse : démo de type « remplaçant d'Outlook » avec un compte Microsoft 
 | # | Tâche | § | Difficulté |
 | --- | --- | --- | --- |
 | 7 | [Connexion Gmail compatible avec la double authentification](#demo-gmail-2fa) (bogue : « identifiants invalides ») — prérequis de tout compte Gmail | 3 | 🟡 |
-| 8 | Calendrier et contacts du compte en ligne : [Microsoft 365 / Exchange Online](#demo-cal-contacts-m365) (🟡), [Gmail / Google Workspace](#demo-cal-contacts-gmail) (🟠) | 3 | 🟡 / 🟠 |
-| 9 | [Gestion simple du calendrier](#demo-gestion-calendrier) (créer, **modifier**, supprimer un événement) et [des contacts](#demo-gestion-contacts) (créer, **modifier**, supprimer) | 3 | 🟡 |
-| 10 | [Autocomplétion des destinataires](#demo-autocompletion) | 15 | 🟡 |
-| 11 | [Simplifier l'assistant d'ajout de compte](#demo-assistant-compte) | 3 | 🟡 |
-| 12 | [Modifier un compte existant](#demo-modifier-compte) | 3 | 🟡 |
-| 13 | [Indicateur d'état des connexions / hors connexion et *Se reconnecter*](#demo-etat-connexions) | 4 | 🟡 |
-| 14 | [Barre de progression du rafraîchissement](#demo-progression) | 4 | 🟡 |
-| 15 | [Double-clic : message dans une fenêtre indépendante](#demo-fenetre-message) | 6 | 🟡 |
-| 16 | [Répondre aux invitations reçues](#demo-invitations) | 13 | 🟡 |
-| 17 | [Volet des tâches à droite](#demo-volet-taches) et [« Créer une tâche » depuis un mail](#demo-creer-tache) | 16 | 🟡 |
-| 18 | [Catégories communes en couleur](#demo-categories) | 17 | 🟡 |
-| 19 | [Recherche sur tous les comptes](#demo-recherche-portee) | 10 | 🟡 |
-| 20 | [Réorganisation de la page Paramètres](#demo-parametres) | 19 | 🟡 |
+| 8 | [Démarrage rapide à partir du cache local](#demo-cache-demarrage) (l'application rame à chaque ouverture) | 4 | 🟡 |
+| 9 | Calendrier et contacts du compte en ligne : [Microsoft 365 / Exchange Online](#demo-cal-contacts-m365) (🟡), [Gmail / Google Workspace](#demo-cal-contacts-gmail) (🟠) | 3 | 🟡 / 🟠 |
+| 10 | [Gestion simple du calendrier](#demo-gestion-calendrier) (créer, **modifier**, supprimer un événement) et [des contacts](#demo-gestion-contacts) (créer, **modifier**, supprimer) | 3 | 🟡 |
+| 11 | [Autocomplétion des destinataires](#demo-autocompletion) | 15 | 🟡 |
+| 12 | [Simplifier l'assistant d'ajout de compte](#demo-assistant-compte) | 3 | 🟡 |
+| 13 | [Modifier un compte existant](#demo-modifier-compte) | 3 | 🟡 |
+| 14 | [Indicateur d'état des connexions / hors connexion et *Se reconnecter*](#demo-etat-connexions) | 4 | 🟡 |
+| 15 | [Barre de progression du rafraîchissement](#demo-progression) | 4 | 🟡 |
+| 16 | [Double-clic : message dans une fenêtre indépendante](#demo-fenetre-message) | 6 | 🟡 |
+| 17 | [Répondre aux invitations reçues](#demo-invitations) | 13 | 🟡 |
+| 18 | [Volet des tâches à droite](#demo-volet-taches) et [« Créer une tâche » depuis un mail](#demo-creer-tache) | 16 | 🟡 |
+| 19 | [Catégories communes en couleur](#demo-categories) | 17 | 🟡 |
+| 20 | [Recherche sur tous les comptes](#demo-recherche-portee) | 10 | 🟡 |
+| 21 | [Réorganisation de la page Paramètres](#demo-parametres) | 19 | 🟡 |
 
 ### Priorité 3 — ce qui fait vraiment « Outlook » (gros chantiers)
 
 | # | Tâche | § | Difficulté |
 | --- | --- | --- | --- |
-| 21 | [Grille calendrier Jour / Semaine](#demo-grille-calendrier) — plus gros écart visible avec Outlook | 12 | 🔴 |
-| 22 | [Éditeur d'événement complet](#demo-editeur-evenement) (périodicité, rappels) | 13 | 🟠 |
-| 23 | [Grouper par discussion](#demo-conversations) | 5 | 🟠 |
-| 24 | [Réponses automatiques](#demo-reponses-auto) Microsoft 365 / Exchange (si démo sur M365) | 3 | 🟡 |
-| 25 | [Carnet d'adresses global (GAL)](#demo-gal) (si démo sur M365) | 15 | 🟡 |
+| 22 | [Grille calendrier Jour / Semaine](#demo-grille-calendrier) — plus gros écart visible avec Outlook | 12 | 🔴 |
+| 23 | [Éditeur d'événement complet](#demo-editeur-evenement) (périodicité, rappels) | 13 | 🟠 |
+| 24 | [Grouper par discussion](#demo-conversations) | 5 | 🟠 |
+| 25 | [Réponses automatiques](#demo-reponses-auto) Microsoft 365 / Exchange (si démo sur M365) | 3 | 🟡 |
+| 26 | [Carnet d'adresses global (GAL)](#demo-gal) (si démo sur M365) | 15 | 🟡 |
 
 **Après la démo** : aperçu des pièces jointes, règles, mode hors connexion complet, vues unifiées, traductions, import / export, mise à jour automatique, installation silencieuse avancée, nettoyage à la désinstallation, boîte Prioritaire, réunions avec invitations et Planification (🔴).
 
@@ -308,6 +309,17 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
 
 ### Hors connexion et téléchargement
 
+- [ ] 🟡 **Démarrage rapide à partir du cache local** — *constat : l'application rame à chaque ouverture ; `core_list_folders_run` attend la connexion au serveur (`core_ensure_connected`) puis interroge le serveur (`camel_store_get_folder_info_sync` sans `CAMEL_STORE_FOLDER_INFO_FAST`) avant d'afficher l'arborescence, alors que Camel conserve déjà sur disque l'arborescence et les résumés de messages* <a id="demo-cache-demarrage"></a>
+  - [ ] **Mesurer d'abord** : journal horodaté des étapes du démarrage (lancement des services EDS / bus D-Bus, `ESourceRegistry`, connexion de chaque compte, liste des dossiers, première liste de messages, premier rendu) pour cibler les vraies lenteurs
+  - [ ] **Afficher immédiatement depuis le cache**, sans attendre le réseau :
+    - [ ] Arborescence des dossiers et compteurs de non-lus lus localement (`CAMEL_STORE_FOLDER_INFO_FAST`, magasin hors ligne), sans connexion préalable
+    - [ ] Liste des messages du dernier dossier ouvert lue dans le résumé local (`CamelFolderSummary`) ; message sélectionné relu depuis le cache de messages
+    - [ ] Restauration de l'état de la dernière session (module, compte, dossier, message sélectionné, tri, défilement)
+  - [ ] **Puis synchroniser en arrière-plan** : connexion des comptes en parallèle (pas l'un après l'autre), rafraîchissement des dossiers et de la liste par événements (`folders-updated`, `folder-changed`), progression dans la barre d'état (§4) ; l'interface reste utilisable pendant ce temps
+  - [ ] **Cache propre à EvolutionWin** pour ce que Camel / EDS ne conservent pas : rôles des dossiers, ordre personnalisé, dernière liste affichée, aperçus de messages (§5), éventuellement un instantané JSON de l'arborescence par compte, invalidé à la synchronisation
+  - [ ] Calendrier, contacts et tâches : affichage depuis les caches EDS des backends (`ECalCache` / `EBookCache`) avant la fin de la synchronisation
+  - [ ] Démarrage des services EDS (`evolution-source-registry`, fabriques) en parallèle de la création de la fenêtre ; fenêtre affichée sans attendre la fin du démarrage du moteur (`core_wait_started`)
+  - [ ] Objectif mesurable : fenêtre et contenu du dernier dossier visibles en moins de 2 s avec un cache existant, quel que soit l'état du réseau
 - [ ] 🟠 **Cache local complet pour le mode hors connexion** : messages (en-têtes, corps et pièces jointes), contacts, calendriers et tâches disponibles sans réseau
   - [ ] Synchronisation hors connexion des dossiers (réglage IMAP `stay-synchronized` / `sync-offline` de Camel), par compte et par dossier, avec limite d'ancienneté (ex. 3 derniers mois) et de taille
   - [ ] Caches EDS des carnets d'adresses et calendriers (backends en cache local : EWS, CalDAV, CardDAV) consultables hors ligne
@@ -460,6 +472,13 @@ Trois notions distinctes, comme dans Outlook : le **suivi** (drapeau avec libell
 
 ## 9. Mail – Gestion des dossiers — 🟠
 
+- [ ] 🟡 **Copier / déplacer des mails et des dossiers d'un compte à un autre** (ex. d'un compte IMAP vers Microsoft 365, d'un ancien compte vers le nouveau) — *existant : le moteur accepte déjà un compte de destination pour un message (`core_move_message_run`, `camel_folder_transfer_messages_to_sync`) mais l'interface ne propose que les dossiers du même compte ; copie / déplacement de dossier limités au même compte, sans sous-dossiers*
+  - [ ] **Unitairement** : menus *Déplacer vers* / *Copier vers* listant les dossiers de **tous** les comptes (regroupés par compte, avec recherche dans la liste), pour un message ou une sélection multiple ; glisser-déposer de messages sur un dossier d'un autre compte (Ctrl = copier)
+  - [ ] **Dossier complet** : *Copier le dossier vers…* / *Déplacer le dossier vers…* un autre compte, avec option **sous-dossiers compris** ; recréation de l'arborescence sur le compte de destination (`camel_store_create_folder_sync`), puis transfert des messages dossier par dossier
+  - [ ] Conservation des indicateurs (lu / non lu, suivi, catégories / mots-clés) et de la date de réception d'origine (`INTERNALDATE` IMAP) quand le serveur de destination le permet
+  - [ ] Transfert par lots en arrière-plan, avec progression et annulation (§4) ; reprise possible après interruption (messages déjà copiés ignorés, repérés par `Message-ID`) ; rapport de fin (nombre de messages copiés, erreurs)
+  - [ ] Déplacement : suppression à la source seulement après copie confirmée sur la destination ; dossiers spéciaux de la source (Boîte de réception, Envoyés…) jamais supprimés, seulement vidés
+  - [ ] Confirmation avant un gros transfert (nombre de messages et taille estimés) ; avertissement si le quota du compte de destination risque d'être dépassé (§3)
 - [ ] 🟡 **Nouveau dossier, Renommer, Copier, Déplacer, Supprimer** (`camel_store_create_folder_sync`, etc.), glisser-déposer dans l'arborescence — *fait : menu contextuel (nouveau, renommer, déplacer, copier, supprimer) ; reste : glisser-déposer*
 - [x] 🟢 **Marquer tout comme lu**
 - [x] 🟢 **Vider le dossier** : vider le dossier (vers la Corbeille), la Corbeille, les Indésirables
@@ -603,9 +622,9 @@ La vue actuelle se limite à un `CalendarView` mensuel et une liste d'événemen
   - [ ] *OK* : les destinataires sont ajoutés aux champs correspondants de la rédaction / de l'invitation ; *Annuler* : aucun changement
   - [ ] Fiche du contact accessible depuis la liste (clic droit › *Propriétés*), création d'un nouveau contact depuis la fenêtre
 - [ ] 🟡 **Autocomplétion des adresses** dans les champs *À*, *Cc*, *Cci* de la rédaction et dans les participants d'une invitation : <a id="demo-autocompletion"></a>
-  - [ ] Suggestions au fil de la frappe (à partir de 2 caractères) depuis tous les carnets d'adresses (requête préfixe `EBookClient` sur nom, prénom, adresse), puis l'annuaire GAL pour les comptes Exchange / M365
-  - [ ] Adresses récemment utilisées en tête (destinataires des derniers messages envoyés), même si absentes des contacts
-  - [ ] Liste déroulante : nom, adresse, carnet d'origine ; navigation aux flèches, validation par Entrée / Tab / point-virgule
+  - [x] Suggestions au fil de la frappe (à partir de 2 caractères) depuis tous les carnets d'adresses (requête préfixe `EBookClient` sur nom, prénom, adresse), puis l'annuaire GAL pour les comptes Exchange / M365
+  - [x] Adresses récemment utilisées en tête (destinataires des derniers messages envoyés), même si absentes des contacts
+  - [x] Liste déroulante : nom, adresse, carnet d'origine ; navigation aux flèches, validation par Entrée / Tab / point-virgule — *validation par Entrée ou clic ; Tab et « ; » à faire*
   - [ ] Destinataire validé affiché en « jeton » (nom, adresse en info-bulle), supprimable, double-clic pour le modifier ; adresse inconnue ou mal formée soulignée
   - [ ] Plusieurs adresses collées d'un coup (séparées par `;` ou `,`) découpées en jetons
   - [ ] Suppression d'une suggestion récente (bouton ✕ dans la liste)
