@@ -360,18 +360,36 @@ e_module_load_all_in_directory_and_prefixes (const gchar *dirname,
 	GList *list = NULL;
 	GPtrArray *variants;
 	guint ii;
+#ifdef G_OS_WIN32
+	gchar *relocated = NULL;
+#endif
 
 	g_return_val_if_fail (dirname != NULL, NULL);
 
 	if (!g_module_supported ())
 		return NULL;
 
-	if (!dirprefix || !*dirprefix || !g_str_has_prefix (dirname, dirprefix))
-		return e_module_load_all_in_directory (dirname);
+#ifdef G_OS_WIN32
+	/* dirname is a configure-time path (MODULE_DIRECTORY, BACKENDDIR...):
+	 * relocate it to where the application is installed, else the services
+	 * would load the modules of the build tree, or none at all */
+	if (dirprefix && *dirprefix && g_str_has_prefix (dirname, dirprefix) && e_util_get_prefix ()) {
+		relocated = e_util_replace_prefix (dirprefix, e_util_get_prefix (), dirname);
+		dirname = relocated;
+		dirprefix = e_util_get_prefix ();
+	}
+#endif
+
+	if (!dirprefix || !*dirprefix || !g_str_has_prefix (dirname, dirprefix)) {
+		list = e_module_load_all_in_directory (dirname);
+		goto exit;
+	}
 
 	variants = e_util_get_directory_variants (dirname, dirprefix, TRUE);
-	if (!variants)
-		return e_module_load_all_in_directory (dirname);
+	if (!variants) {
+		list = e_module_load_all_in_directory (dirname);
+		goto exit;
+	}
 
 	for (ii = 0; ii < variants->len; ii++) {
 		const gchar *path = g_ptr_array_index (variants, ii);
@@ -387,6 +405,11 @@ e_module_load_all_in_directory_and_prefixes (const gchar *dirname,
 	}
 
 	g_ptr_array_unref (variants);
+
+ exit:
+#ifdef G_OS_WIN32
+	g_free (relocated);
+#endif
 
 	return list;
 }

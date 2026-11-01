@@ -1489,7 +1489,8 @@ compare_stores (gconstpointer a,
 	if (la != lb)
 		return la ? 1 : -1;
 
-	return g_utf8_collate (camel_service_get_display_name (sa), camel_service_get_display_name (sb));
+	return g_utf8_collate (camel_service_get_display_name (sa) ? camel_service_get_display_name (sa) : "",
+			       camel_service_get_display_name (sb) ? camel_service_get_display_name (sb) : "");
 }
 
 static gchar *
@@ -1527,7 +1528,8 @@ core_list_accounts_run (EvoCore *core,
 		json_builder_set_member_name (builder, "uid");
 		json_builder_add_string_value (builder, camel_service_get_uid (service));
 		json_builder_set_member_name (builder, "name");
-		json_builder_add_string_value (builder, camel_service_get_display_name (service));
+		json_builder_add_string_value (builder, camel_service_get_display_name (service)
+			? camel_service_get_display_name (service) : camel_service_get_uid (service));
 		json_builder_set_member_name (builder, "address");
 		json_builder_add_string_value (builder, address ? address : "");
 		json_builder_set_member_name (builder, "protocol");
@@ -4807,6 +4809,58 @@ core_send_message_run (EvoCore *core,
 
 /* --- gestion des comptes et des mots de passe --- */
 
+/* Attend que les sources créées soient connues du registre de evo-core.
+ * e_source_registry_create_sources_sync () n'attend que 2 s leur
+ * publication par evolution-source-registry, qui peut être plus lent (premier
+ * chargement des modules evolution-ews, antivirus, machine lente) : un
+ * service Camel ajouté avant n'aurait ni nom ni réglages.
+ * Paramètres :
+ *   core       : instance du moteur evo-core
+ *   sources    : sources créées (ESource)
+ *   timeout_ms : délai maximal en millisecondes
+ *   error      : emplacement pour une éventuelle erreur
+ * Retourne : TRUE quand toutes les sources sont connues. */
+static gboolean
+core_wait_for_sources (EvoCore *core,
+		       GList *sources,
+		       guint timeout_ms,
+		       GError **error)
+{
+	gint64 deadline = g_get_monotonic_time () + (gint64) timeout_ms * 1000;
+	gint64 start = g_get_monotonic_time ();
+
+	for (;;) {
+		const gchar *missing = NULL;
+		GList *link;
+
+		for (link = sources; link && !missing; link = g_list_next (link)) {
+			ESource *known = e_source_registry_ref_source (core->registry, e_source_get_uid (link->data));
+
+			if (known)
+				g_object_unref (known);
+			else
+				missing = e_source_get_uid (link->data);
+		}
+
+		if (!missing) {
+			if (g_get_monotonic_time () - start > 2 * G_USEC_PER_SEC)
+				g_message ("New sources published after %" G_GINT64_FORMAT " ms",
+					(g_get_monotonic_time () - start) / 1000);
+			return TRUE;
+		}
+
+		if (g_get_monotonic_time () >= deadline || g_cancellable_is_cancelled (core->cancellable)) {
+			g_warning ("Source “%s” still not published by the registry after %u ms", missing, timeout_ms);
+			g_set_error (error, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
+				"Le service des comptes (evolution-source-registry) n'a pas enregistré le "
+				"nouveau compte dans les %u secondes ; réessayer dans un instant", timeout_ms / 1000);
+			return FALSE;
+		}
+
+		g_usleep (100 * 1000);
+	}
+}
+
 /* Enregistre le mot de passe d'une source dans le gestionnaire d'identifiants
  * Windows via ESourceCredentialsProvider.
  * Paramètres :
@@ -5038,7 +5092,8 @@ core_add_account_run (EvoCore *core,
 	sources = g_list_append (sources, identity_source);
 	sources = g_list_append (sources, transport_source);
 
-	if (!e_source_registry_create_sources_sync (core->registry, sources, core->cancellable, error))
+	if (!e_source_registry_create_sources_sync (core->registry, sources, core->cancellable, error) ||
+	    !core_wait_for_sources (core, sources, 30000, error))
 		goto exit;
 
 	if (password && *password) {
@@ -5243,7 +5298,8 @@ core_add_m365_account_run (EvoCore *core,
 	sources = g_list_append (sources, identity_source);
 	sources = g_list_append (sources, transport_source);
 
-	if (!e_source_registry_create_sources_sync (core->registry, sources, core->cancellable, error))
+	if (!e_source_registry_create_sources_sync (core->registry, sources, core->cancellable, error) ||
+	    !core_wait_for_sources (core, sources, 30000, error))
 		goto exit;
 
 	/* EWS: the password is kept for the collection (credentials source) */
@@ -6026,8 +6082,14 @@ core_ref_credentials_source (EvoCore *core,
 			     GError **error)
 {
 	ESource *source, *collection;
+	guint attempt;
 
+	/* a source just created may not be published yet */
 	source = e_source_registry_ref_source (core->registry, uid);
+	for (attempt = 0; !source && attempt < 100 && !g_cancellable_is_cancelled (core->cancellable); attempt++) {
+		g_usleep (100 * 1000);
+		source = e_source_registry_ref_source (core->registry, uid);
+	}
 	if (!source) {
 		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "Compte introuvable : « %s »", uid);
 		return NULL;

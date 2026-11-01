@@ -12,8 +12,26 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [0.9.4] — en cours
 
+### Ajouté
+
+- Journaux des services evolution-data-server (`evolution-source-registry`,
+  fabriques carnet d'adresses / agenda) dans
+  `%LOCALAPPDATA%\EvolutionWin\<service>.log`, pour le diagnostic.
+
 ### Corrigé
 
+- Comptes Microsoft 365 / Exchange sur une installation par le MSI : les
+  services evolution-data-server cherchaient leurs modules (registre,
+  carnets d'adresses, agendas) dans le dossier de compilation au lieu de
+  `C:\Program Files\Evolution` ; le nouveau compte n'était jamais
+  enregistré (« Compte introuvable »).
+- Dossiers d'un compte Microsoft 365 ou Exchange qui disparaissaient après
+  la première relève : sous Windows, l'enregistrement de la liste des
+  dossiers était pris pour une suppression du fichier, et la liste était
+  vidée.
+- Ajout d'un compte : attente de son enregistrement par le service des
+  comptes (jusqu'à 30 s) avant de le connecter, message d'erreur clair
+  sinon ; plus de compte sans nom dans la liste.
 - Ajout d'un compte Microsoft 365 professionnel : la connexion échouait
   (« CredWrite: Le relais a reçu des données incorrectes ») car les jetons
   OAuth2 dépassaient la taille maximale d'un identifiant Windows (2 560

@@ -22,6 +22,7 @@
 #endif
 
 #include <glib-object.h>
+#include <glib/gstdio.h>
 #include <libsoup/soup.h>
 
 #include "e-source.h"
@@ -2117,6 +2118,43 @@ win32_dbus_name_has_owner (GDBusConnection *connection,
 	return has_owner;
 }
 
+/* Inheritable handle on %LOCALAPPDATA%\EvolutionWin\<executable>.log for the
+ * standard output and error of a service, INVALID_HANDLE_VALUE on failure. */
+static HANDLE
+win32_open_service_log (const gchar *executable)
+{
+	SECURITY_ATTRIBUTES attributes = { sizeof (SECURITY_ATTRIBUTES), NULL, TRUE };
+	const gchar *local_app_data = g_getenv ("LOCALAPPDATA");
+	gchar *dir, *name, *path, *old;
+	gunichar2 *wpath;
+	HANDLE handle = INVALID_HANDLE_VALUE;
+
+	if (!local_app_data || !*local_app_data)
+		return INVALID_HANDLE_VALUE;
+
+	dir = g_build_filename (local_app_data, "EvolutionWin", NULL);
+	g_mkdir_with_parents (dir, 0700);
+	name = g_strconcat (executable, ".log", NULL);
+	path = g_build_filename (dir, name, NULL);
+	old = g_strconcat (path, ".old", NULL);
+
+	g_remove (old);
+	g_rename (path, old);
+
+	wpath = g_utf8_to_utf16 (path, -1, NULL, NULL, NULL);
+	if (wpath)
+		handle = CreateFileW ((LPCWSTR) wpath, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE,
+			&attributes, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+	g_free (wpath);
+	g_free (old);
+	g_free (path);
+	g_free (name);
+	g_free (dir);
+
+	return handle;
+}
+
 static gboolean
 win32_is_current_executable (const gchar *executable)
 {
@@ -2165,6 +2203,7 @@ e_util_win32_ensure_dbus_service (const gchar *bus_name,
 	gunichar2 *wpath;
 	STARTUPINFOW startup_info = { 0 };
 	PROCESS_INFORMATION process_info = { 0 };
+	HANDLE log_handle = INVALID_HANDLE_VALUE;
 	gboolean success = FALSE;
 	guint ii;
 
@@ -2199,7 +2238,17 @@ e_util_win32_ensure_dbus_service (const gchar *bus_name,
 
 	startup_info.cb = sizeof (startup_info);
 
-	if (!wpath || !CreateProcessW ((LPCWSTR) wpath, NULL, NULL, NULL, FALSE,
+	/* no console: the GLib warnings of the service go to
+	 * %LOCALAPPDATA%\EvolutionWin\<service>.log (previous run kept as .old) */
+	log_handle = win32_open_service_log (executable);
+	if (log_handle != INVALID_HANDLE_VALUE) {
+		startup_info.dwFlags = STARTF_USESTDHANDLES;
+		startup_info.hStdInput = NULL;
+		startup_info.hStdOutput = log_handle;
+		startup_info.hStdError = log_handle;
+	}
+
+	if (!wpath || !CreateProcessW ((LPCWSTR) wpath, NULL, NULL, NULL, log_handle != INVALID_HANDLE_VALUE,
 		CREATE_NO_WINDOW, NULL, NULL, &startup_info, &process_info)) {
 		gchar *msg = g_win32_error_message (GetLastError ());
 
@@ -2239,6 +2288,8 @@ e_util_win32_ensure_dbus_service (const gchar *bus_name,
 		CloseHandle (process_info.hProcess);
 	}
 
+	if (log_handle != INVALID_HANDLE_VALUE)
+		CloseHandle (log_handle);
 	g_free (wpath);
 	g_free (path);
 
