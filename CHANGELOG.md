@@ -21,6 +21,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   soit le serveur ; dossiers spéciaux reconnus aussi d'après la
   configuration du compte (serveurs IMAP sans SPECIAL-USE) ; icône au trait
   pour la Boîte de réception.
+- **Notifications confidentielles** : « Nouveau message » seulement, sans
+  expéditeur ni objet (présentation, partage d'écran) ; bouton du ruban
+  *Affichage*, commande de la barre d'accès rapide et interrupteur dans
+  *Paramètres › Confidentialité*.
 - Journaux des services evolution-data-server (`evolution-source-registry`,
   fabriques carnet d'adresses / agenda) dans
   `%LOCALAPPDATA%\EvolutionWin\<service>.log`, pour le diagnostic.

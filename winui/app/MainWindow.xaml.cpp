@@ -284,6 +284,7 @@ namespace winrt::EvolutionWin::implementation
         AppWindow().Resize({ 1500, 950 });
         ::EvolutionWin::SetWindowIcon(AppWindow());
         RebuildQuickAccess();
+        SyncConfidentialControls();
         AppTitleBar().SizeChanged([this](IInspectable const&, SizeChangedEventArgs const&) { UpdateTitleBarPassthrough(); });
         RestorePaneWidths();
         ApplyFolderPaneVisibility(::EvolutionWin::Settings::Instance().GetBoolean(L"layout.folders-visible", true));
@@ -3241,6 +3242,13 @@ namespace winrt::EvolutionWin::implementation
             ? from + L" — " + subject
             : subject;
 
+        /* mode confidentiel : ni expéditeur ni objet (présentation, partage d'écran) */
+        if (::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.confidential", false))
+        {
+            title = count > 1 ? hstring{ std::to_wstring(count) + L" nouveaux messages" } : hstring{ L"Nouveau message" };
+            body = count > 1 ? L"Ouvrez Evolution pour les lire." : L"Ouvrez Evolution pour le lire.";
+        }
+
         ShowStatus(title + L" : " + body, InfoBarSeverity::Informational);
 
         try
@@ -3911,6 +3919,7 @@ namespace winrt::EvolutionWin::implementation
         { L"reply", L"Répondre", L"\xE97A", &MainWindow::OnReplyClick },
         { L"delete", L"Supprimer", L"\xE74D", &MainWindow::OnDeleteClick },
         { L"print", L"Imprimer", L"\xE749", &MainWindow::OnPrintClick },
+        { L"confidential", L"Notifications confidentielles (activer / désactiver)", L"\xE72E", &MainWindow::OnConfidentialToggled },
         { L"new-event", L"Nouvel événement", L"\xE787", &MainWindow::OnNewEventClick },
         { L"new-task", L"Nouvelle tâche", L"\xE9D5", &MainWindow::OnNewTaskClick },
     };
@@ -4222,6 +4231,39 @@ namespace winrt::EvolutionWin::implementation
             /* à égalité : du plus récent au plus ancien */
             return a.GetNamedNumber(L"date", 0) > b.GetNamedNumber(L"date", 0);
         });
+    }
+
+    /* Mode confidentiel des notifications : interrupteur des Paramètres,
+     * bouton du ruban (Affichage) ou commande de la barre d'accès rapide
+     * (sender nul : bascule). */
+    void MainWindow::OnConfidentialToggled(IInspectable const& sender, RoutedEventArgs const&)
+    {
+        if (m_updating_confidential)
+            return;
+
+        auto& settings = ::EvolutionWin::Settings::Instance();
+        bool enabled = !settings.GetBoolean(L"notifications.confidential", false);
+
+        if (auto toggle = sender.try_as<ToggleSwitch>())
+            enabled = toggle.IsOn();
+        else if (auto button = sender.try_as<AppBarToggleButton>())
+            enabled = button.IsChecked() && button.IsChecked().GetBoolean();
+
+        settings.SetBoolean(L"notifications.confidential", enabled);
+        SyncConfidentialControls();
+        ShowStatus(enabled
+            ? L"Notifications confidentielles : ni expéditeur ni objet dans les notifications."
+            : L"Notifications confidentielles désactivées.", InfoBarSeverity::Informational);
+    }
+
+    void MainWindow::SyncConfidentialControls()
+    {
+        bool enabled = ::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.confidential", false);
+
+        m_updating_confidential = true;
+        ConfidentialNotificationsSwitch().IsOn(enabled);
+        RibbonConfidentialToggle().IsChecked(enabled);
+        m_updating_confidential = false;
     }
 
     /* Croix du bandeau : l'avis affiché est retiré, le suivant apparaît. */
