@@ -1246,6 +1246,10 @@ core_add_stores (EvoCore *core)
 #define REFRESH_INTERVAL_SECONDS (5 * 60)
 
 static gboolean core_refresh_timeout_cb (gpointer user_data);
+static void core_check_pending_credentials (EvoCore *core);
+static void core_credentials_required_cb (ESourceRegistry *registry, ESource *source,
+	ESourceCredentialsReason reason, const gchar *certificate_pem,
+	GTlsCertificateFlags certificate_errors, const GError *op_error, gpointer user_data);
 
 static gpointer
 core_thread_func (gpointer user_data)
@@ -1268,6 +1272,9 @@ core_thread_func (gpointer user_data)
 	if (core->registry) {
 		core->session = evo_core_session_new (core, core->registry);
 		core_add_stores (core);
+		g_signal_connect (core->registry, "credentials-required",
+			G_CALLBACK (core_credentials_required_cb), core);
+		core_check_pending_credentials (core);
 	}
 
 	g_mutex_lock (&core->lock);
@@ -6671,6 +6678,19 @@ core_oauth2_finish_run (EvoCore *core,
 		g_hash_table_remove (session->prompted_sources, e_source_get_uid (source));
 		g_mutex_unlock (&session->prompted_lock);
 
+		/* le service des comptes relance l'authentification de la collection
+		   (découverte des agendas et carnets d'une collection Google...) */
+		{
+			ENamedParameters *credentials = e_named_parameters_new ();
+			GError *local_error = NULL;
+
+			if (!e_source_invoke_authenticate_sync (source, credentials, core->cancellable, &local_error))
+				g_warning ("Cannot authenticate “%s”: %s", e_source_get_display_name (source),
+					local_error ? local_error->message : "unknown error");
+			g_clear_error (&local_error);
+			e_named_parameters_free (credentials);
+		}
+
 		evo_core_refresh (core);
 	}
 
@@ -8748,6 +8768,175 @@ static const struct {
 	{ "memos", E_SOURCE_EXTENSION_MEMO_LIST },
 	{ "contacts", E_SOURCE_EXTENSION_ADDRESS_BOOK }
 };
+
+/* --- demandes d'identification du service des comptes --- */
+
+/* Le service des comptes (evolution-source-registry) et les fabriques
+ * demandent des identifiants par le signal "credentials-required" ; dans
+ * Evolution, c'est le « credentials prompter » de l'interface GTK qui y
+ * répond. Ici, pour une source OAuth2 d'EDS (collection Google...) : si le
+ * jeton est disponible, l'authentification est relancée
+ * (e_source_invoke_authenticate) ; sinon, ou s'il a été refusé,
+ * l'interface est invitée à se reconnecter ("oauth2-required"). */
+
+typedef struct {
+	EvoCore *core;
+	ESource *source;
+	ESourceCredentialsReason reason;
+} CoreCredentialsRequest;
+
+static ESource *
+core_credentials_ref_source_cb (gpointer user_data,
+				const gchar *uid)
+{
+	return e_source_registry_ref_source (user_data, uid);
+}
+
+/* Émet "oauth2-required" pour une source (collection) : connexion à refaire. */
+static void
+core_emit_oauth2_required_for_source (EvoCore *core,
+				      ESource *source)
+{
+	JsonBuilder *builder = core_event_builder ();
+	gchar *user = NULL;
+
+	if (e_source_has_extension (source, E_SOURCE_EXTENSION_AUTHENTICATION))
+		user = e_source_authentication_dup_user (e_source_get_extension (source, E_SOURCE_EXTENSION_AUTHENTICATION));
+
+	builder_add_string (builder, "source_uid", e_source_get_uid (source));
+	builder_add_string (builder, "name", e_source_get_display_name (source));
+	builder_add_string (builder, "user", user ? user : "");
+	core_emit_builder (core, "oauth2-required", builder);
+
+	g_free (user);
+}
+
+static void
+core_credentials_request_thread (GTask *task,
+				 gpointer source_object,
+				 gpointer task_data,
+				 GCancellable *cancellable)
+{
+	CoreCredentialsRequest *request = task_data;
+	EvoCore *core = request->core;
+	EOAuth2Service *oauth2;
+	gchar *token = NULL;
+	gint expires_in = 0;
+	GError *local_error = NULL;
+
+	oauth2 = e_oauth2_services_find (e_source_registry_get_oauth2_services (core->registry), request->source);
+	if (!oauth2)
+		return;
+
+	if (request->reason == E_SOURCE_CREDENTIALS_REASON_REQUIRED &&
+	    e_oauth2_service_get_access_token_sync (oauth2, request->source, core_credentials_ref_source_cb,
+		core->registry, &token, &expires_in, cancellable, &local_error)) {
+		ENamedParameters *credentials = e_named_parameters_new ();
+
+		/* le jeton est relu par la source elle-même : identifiants vides */
+		if (!e_source_invoke_authenticate_sync (request->source, credentials, cancellable, &local_error))
+			g_warning ("Cannot authenticate “%s”: %s", e_source_get_display_name (request->source),
+				local_error ? local_error->message : "unknown error");
+		e_named_parameters_free (credentials);
+	} else if (!g_error_matches (local_error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+		core_emit_oauth2_required_for_source (core, request->source);
+	}
+
+	e_util_safe_free_string (token);
+	g_clear_error (&local_error);
+	g_object_unref (oauth2);
+}
+
+static void
+core_credentials_request_free (gpointer data)
+{
+	CoreCredentialsRequest *request = data;
+
+	g_object_unref (request->source);
+	g_free (request);
+}
+
+/* Au démarrage : demandes d'identification émises avant que le moteur
+ * n'écoute (collection créée puis connectée, service déjà lancé). */
+static void
+core_check_pending_credentials_thread (GTask *task,
+				       gpointer source_object,
+				       gpointer task_data,
+				       GCancellable *cancellable)
+{
+	EvoCore *core = task_data;
+	GList *sources, *link;
+
+	sources = e_source_registry_list_enabled (core->registry, E_SOURCE_EXTENSION_COLLECTION);
+
+	for (link = sources; link; link = g_list_next (link)) {
+		ESource *source = link->data;
+		ESourceCredentialsReason reason = E_SOURCE_CREDENTIALS_REASON_UNKNOWN;
+		gchar *certificate_pem = NULL;
+		GTlsCertificateFlags certificate_errors = 0;
+		GError *op_error = NULL;
+
+		if (e_source_get_last_credentials_required_arguments_sync (source, &reason, &certificate_pem,
+			&certificate_errors, &op_error, cancellable, NULL))
+			core_credentials_required_cb (core->registry, source, reason, certificate_pem,
+				certificate_errors, op_error, core);
+
+		g_free (certificate_pem);
+		g_clear_error (&op_error);
+	}
+
+	g_list_free_full (sources, g_object_unref);
+}
+
+static void
+core_check_pending_credentials (EvoCore *core)
+{
+	GTask *task = g_task_new (NULL, core->cancellable, NULL, NULL);
+
+	g_task_set_task_data (task, core, NULL);
+	g_task_run_in_thread (task, core_check_pending_credentials_thread);
+	g_object_unref (task);
+}
+
+static void
+core_credentials_required_cb (ESourceRegistry *registry,
+			      ESource *source,
+			      ESourceCredentialsReason reason,
+			      const gchar *certificate_pem,
+			      GTlsCertificateFlags certificate_errors,
+			      const GError *op_error,
+			      gpointer user_data)
+{
+	EvoCore *core = user_data;
+	CoreCredentialsRequest *request;
+	GTask *task;
+	gchar *method = NULL;
+
+	if (reason != E_SOURCE_CREDENTIALS_REASON_REQUIRED && reason != E_SOURCE_CREDENTIALS_REASON_REJECTED)
+		return;
+
+	if (e_source_has_extension (source, E_SOURCE_EXTENSION_AUTHENTICATION))
+		method = e_source_authentication_dup_method (e_source_get_extension (source, E_SOURCE_EXTENSION_AUTHENTICATION));
+
+	if (!method || !e_oauth2_services_is_oauth2_alias (e_source_registry_get_oauth2_services (registry), method)) {
+		g_free (method);
+		return;
+	}
+	g_free (method);
+
+	g_message ("Credentials required for “%s” (%s)", e_source_get_display_name (source),
+		reason == E_SOURCE_CREDENTIALS_REASON_REJECTED ? "rejected" : "required");
+
+	request = g_new0 (CoreCredentialsRequest, 1);
+	request->core = core;
+	request->source = g_object_ref (source);
+	request->reason = reason;
+
+	task = g_task_new (NULL, core->cancellable, NULL, NULL);
+	g_task_set_task_data (task, request, core_credentials_request_free);
+	g_task_run_in_thread (task, core_credentials_request_thread);
+	g_object_unref (task);
+}
 
 /* Liste les sources activées d'un ou plusieurs types (agendas, listes de
  * tâches, listes de mémos, carnets d'adresses), triées par nom.
