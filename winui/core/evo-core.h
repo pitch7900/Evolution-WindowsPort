@@ -193,6 +193,17 @@ void		evo_core_move_message		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Copie un message dans un autre dossier (l'original reste en place).
+ * Paramètres : comme evo_core_move_message (). */
+void		evo_core_copy_message		(EvoCore *core,
+						 const char *src_account_uid,
+						 const char *src_folder_full_name,
+						 const char *message_uid,
+						 const char *dest_account_uid,
+						 const char *dest_folder_full_name,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Gestion des dossiers d'un compte. Les chemins complets sont ceux de
  * evo_core_list_folders () (séparateur « / » quel que soit le séparateur du
  * serveur IMAP). Chaque opération réussie émet "folders-updated".

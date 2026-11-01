@@ -2552,7 +2552,8 @@ core_folder_action_run (EvoCore *core,
  * Paramètres :
  *   core  : instance du moteur evo-core
  *   args  : [0] src_account_uid, [1] src_folder_full_name, [2] message_uid,
- *           [3] dest_account_uid, [4] dest_folder_full_name
+ *           [3] dest_account_uid, [4] dest_folder_full_name,
+ *           [5] "copy" pour copier (l'original reste en place), facultatif
  *   error : emplacement d'erreur GError
  * Retourne : "{}" en cas de succès, ou NULL en cas d'erreur. */
 static gchar *
@@ -2562,7 +2563,7 @@ core_move_message_run (EvoCore *core,
 {
 	CamelFolder *src, *dest;
 	GPtrArray *uids;
-	gboolean ok;
+	gboolean ok, copy = args[5] && g_str_equal (args[5], "copy");
 
 	src = core_ref_folder (core, args[0], args[1], error);
 	if (!src)
@@ -2583,12 +2584,13 @@ core_move_message_run (EvoCore *core,
 	uids = g_ptr_array_new ();
 	g_ptr_array_add (uids, args[2]);
 
-	ok = camel_folder_transfer_messages_to_sync (src, uids, dest, TRUE, NULL, core->cancellable, error);
+	ok = camel_folder_transfer_messages_to_sync (src, uids, dest, !copy, NULL, core->cancellable, error);
 	g_ptr_array_unref (uids);
 
 	if (ok) {
-		camel_folder_set_message_flags (src, args[2], CAMEL_MESSAGE_SEEN, CAMEL_MESSAGE_SEEN);
-		camel_folder_synchronize_sync (src, TRUE, core->cancellable, NULL);
+		if (!copy)
+			camel_folder_set_message_flags (src, args[2], CAMEL_MESSAGE_SEEN, CAMEL_MESSAGE_SEEN);
+		camel_folder_synchronize_sync (src, !copy, core->cancellable, NULL);
 		camel_folder_synchronize_sync (dest, FALSE, core->cancellable, NULL);
 
 		{
@@ -8879,6 +8881,32 @@ evo_core_delete_message (EvoCore *core,
  *   dest_folder_full_name : chemin complet du dossier de destination
  *   func                  : rappel recevant {}
  *   user_data             : données utilisateur transmises au rappel */
+void
+evo_core_copy_message (EvoCore *core,
+		       const char *src_account_uid,
+		       const char *src_folder_full_name,
+		       const char *message_uid,
+		       const char *dest_account_uid,
+		       const char *dest_folder_full_name,
+		       EvoCoreResultFunc func,
+		       void *user_data)
+{
+	gchar *args[] = {
+		(gchar *) src_account_uid,
+		(gchar *) src_folder_full_name,
+		(gchar *) message_uid,
+		(gchar *) dest_account_uid,
+		(gchar *) dest_folder_full_name,
+		(gchar *) "copy",
+		NULL
+	};
+
+	g_return_if_fail (src_account_uid != NULL && src_folder_full_name != NULL && message_uid != NULL);
+	g_return_if_fail (dest_account_uid != NULL && dest_folder_full_name != NULL);
+
+	core_submit (core, core_move_message_run, g_strdupv (args), func, user_data);
+}
+
 void
 evo_core_move_message (EvoCore *core,
 		       const char *src_account_uid,
