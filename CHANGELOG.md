@@ -54,7 +54,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 - **Compte Gmail / Google Workspace** complet : collection Google (courrier
   IMAP / SMTP de Gmail, agendas et contacts découverts par EDS), une seule
   connexion Google sans Client ID à saisir ; jetons du courrier fournis et
-  renouvelés par le service OAuth2 Google d'EDS.
+  renouvelés par le service OAuth2 Google d'EDS. Agendas Google découverts
+  après la connexion : le moteur répond aux demandes d'identification du
+  service des comptes (relance de l'authentification avec le jeton OAuth2,
+  ou nouvelle connexion si le jeton manque).
 - Journaux des services evolution-data-server (`evolution-source-registry`,
   fabriques carnet d'adresses / agenda) dans
   `%LOCALAPPDATA%\EvolutionWin\<service>.log`, pour le diagnostic.
