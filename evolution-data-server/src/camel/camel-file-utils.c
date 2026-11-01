@@ -504,7 +504,10 @@ camel_read (gint fd,
 #endif
 	}
 
-	g_cancellable_release_fd (cancellable);
+	/* get_fd () returns -1 without taking a reference on Windows (and
+	 * without a cancellable): releasing then aborts the process */
+	if (cancel_fd != -1)
+		g_cancellable_release_fd (cancellable);
 
 	if (g_cancellable_set_error_if_cancelled (cancellable, error))
 		return -1;
@@ -607,7 +610,10 @@ camel_write (gint fd,
 #endif
 	}
 
-	g_cancellable_release_fd (cancellable);
+	/* get_fd () returns -1 without taking a reference on Windows (and
+	 * without a cancellable): releasing then aborts the process */
+	if (cancel_fd != -1)
+		g_cancellable_release_fd (cancellable);
 
 	if (g_cancellable_set_error_if_cancelled (cancellable, error))
 		return -1;
