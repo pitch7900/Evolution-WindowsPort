@@ -429,6 +429,13 @@ namespace EvolutionWin
          * Paramètres :
          *   query   : texte recherché (ou chaîne vide pour tous)
          *   handler : rappel sur le thread de l'interface */
+        /* Contacts des seuls carnets book_uids (séparés par des virgules). */
+        void ListBookContacts(winrt::hstring const& query, winrt::hstring const& book_uids, CoreHandler handler)
+        {
+            evo_core_list_book_contacts(m_core, winrt::to_string(query).c_str(), winrt::to_string(book_uids).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         void ListContacts(winrt::hstring const& query, CoreHandler handler)
         {
             evo_core_list_contacts(m_core, winrt::to_string(query).c_str(),

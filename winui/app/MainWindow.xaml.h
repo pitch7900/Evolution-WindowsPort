@@ -382,6 +382,12 @@ namespace winrt::EvolutionWin::implementation
         /* calendriers affichés (calendar.visible) et actif (calendar.active) */
         Windows::Data::Json::JsonArray m_calendar_sources{ nullptr };
         void LoadCalendarSources();
+        /* carnets d'adresses affichés (contacts.visible) et actif (contacts.active) */
+        Windows::Data::Json::JsonArray m_contact_books{ nullptr };
+        void LoadContactBooks();
+        void RebuildContactBooksPanel();
+        std::vector<hstring> VisibleBookUids();
+        hstring ActiveBookUid();
         void RebuildCalendarSourcesPanel();
         std::vector<hstring> VisibleCalendarUids();
         hstring ActiveCalendarUid();
