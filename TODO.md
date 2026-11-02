@@ -242,6 +242,17 @@ En entreprise (Exchange Online / Microsoft 365, Exchange on-premise), les utilis
   - [ ] 🟡 **Contacts** : ajout du carnet d'adresses partagé de l'utilisateur sélectionné.
   - [ ] 🟢 **Mémorisation et suppression** : persistance des comptes et dossiers partagés ouverts entre les sessions ; option *« Masquer / Fermer le compte partagé »* par clic droit.
 
+### Boîte d'archivage en ligne (Exchange Online Archiving / In-Place Archive) — 🟠
+
+Dans Microsoft 365 / Exchange Online, les utilisateurs disposent souvent d'une boîte d'archivage distante séparée (*In-Place Archive* ou *Archives en ligne*), distincte de la boîte aux lettres principale et de son quota, affichée sous forme d'un magasin de dossiers indépendant dans Outlook.
+
+- [ ] 🟠 **Visibilité et accès à la boîte d'archivage en ligne (Online Archive)** :
+  - [ ] 🟠 **Découverte automatique de l'archive en ligne** : détection de la boîte aux lettres d'archivage lors de la connexion Exchange Online / M365 (via Graph `GET /me/mailboxSettings` / `archiveMailbox` ou EWS Autodiscover `ArchiveDomain` / racine `archivemsgfolderroot`).
+  - [ ] 🟡 **Affichage d'un nœud d'archive dédié dans l'arborescence** : afficher un compte / nœud distinct sous le compte principal, intitulé *« Archive en ligne – [Nom / Adresse] »* avec une icône de boîte d'archives, développable pour parcourir ses dossiers.
+  - [ ] 🟡 **Synchronisation et arborescence des dossiers archivés** : chargement et affichage des dossiers de l'archive (Boîte de réception archivée, dossiers personnalisés, éléments supprimés d'archive).
+  - [ ] 🟡 **Consultation et recherche des messages archivés** : lecture complète des courriels archivés dans le volet de lecture et la fenêtre indépendante, inclusion dans la recherche transversale de messages (§10).
+  - [ ] 🟡 **Déplacement vers l'archive** : déplacement ou copie de messages depuis la boîte principale vers les dossiers de l'archive en ligne via le menu *Déplacer vers* ou par glisser-déposer.
+
 ### Compte par défaut
 
 - [x] 🟢 **Désigner le compte par défaut** dans la liste des comptes, avec indication visuelle (`e_source_registry_set_default_mail_account`)
