@@ -240,33 +240,64 @@ namespace winrt::EvolutionWin::implementation
      * sens qu'à droite. */
     void MainWindow::ApplyReadingPanePosition(hstring const& position)
     {
+        bool off = position == L"off";
         bool bottom = position == L"bottom";
         auto list = MessageListPane();
         auto reader = ReaderPane();
 
-        Grid::SetRow(list, 0);
-        Grid::SetRowSpan(list, bottom ? 1 : 3);
-        Grid::SetColumnSpan(list, bottom ? 3 : 1);
+        if (off)
+        {
+            /* Volet de lecture désactivé : la liste de messages s'étend sur toute la largeur */
+            Grid::SetRow(list, 0);
+            Grid::SetRowSpan(list, 3);
+            Grid::SetColumn(list, 2);
+            Grid::SetColumnSpan(list, 3);
 
-        Grid::SetRow(reader, bottom ? 2 : 0);
-        Grid::SetRowSpan(reader, bottom ? 1 : 3);
-        Grid::SetColumn(reader, bottom ? 2 : 4);
-        Grid::SetColumnSpan(reader, bottom ? 3 : 1);
+            reader.Visibility(Visibility::Collapsed);
+            ReaderDivider().Visibility(Visibility::Collapsed);
+            ListSplitter().Visibility(Visibility::Collapsed);
+            ReaderRow().Height(GridLengthHelper::FromPixels(0));
+        }
+        else
+        {
+            reader.Visibility(Visibility::Visible);
 
-        ReaderRow().Height(bottom ? GridLengthHelper::FromValueAndType(1.3, GridUnitType::Star)
-                                  : GridLengthHelper::FromPixels(0));
-        ReaderDivider().Visibility(bottom ? Visibility::Visible : Visibility::Collapsed);
-        ListSplitter().Visibility(bottom ? Visibility::Collapsed : Visibility::Visible);
+            Grid::SetRow(list, 0);
+            Grid::SetRowSpan(list, bottom ? 1 : 3);
+            Grid::SetColumn(list, 2);
+            Grid::SetColumnSpan(list, bottom ? 3 : 1);
+
+            Grid::SetRow(reader, bottom ? 2 : 0);
+            Grid::SetRowSpan(reader, bottom ? 1 : 3);
+            Grid::SetColumn(reader, bottom ? 2 : 4);
+            Grid::SetColumnSpan(reader, bottom ? 3 : 1);
+
+            ReaderRow().Height(bottom ? GridLengthHelper::FromValueAndType(1.3, GridUnitType::Star)
+                                      : GridLengthHelper::FromPixels(0));
+            ReaderDivider().Visibility(bottom ? Visibility::Visible : Visibility::Collapsed);
+            ListSplitter().Visibility(bottom ? Visibility::Collapsed : Visibility::Visible);
+
+            if (!bottom)
+            {
+                RestorePaneWidths();
+            }
+
+            /* Si un message était déjà sélectionné, le recharger dans le lecteur */
+            if (!m_current_message_uid.empty() && !m_current_message)
+            {
+                OnMessageSelectionChanged(nullptr, nullptr);
+            }
+        }
     }
 
-    /* Menu Affichage › Volet de lecture : à droite / en bas (mémorisé). */
+    /* Menu Affichage › Volet de lecture : à droite / en bas / désactivé (mémorisé). */
     void MainWindow::OnReadingPaneMenuOpening(IInspectable const& sender, IInspectable const&)
     {
         auto menu = sender.as<MenuFlyout>();
         menu.Items().Clear();
 
         hstring current = ::EvolutionWin::Settings::Instance().GetString(L"layout.reading-pane", L"right");
-        for (auto const& [key, label] : { std::pair{ L"right", L"À droite" }, std::pair{ L"bottom", L"En bas" } })
+        for (auto const& [key, label] : { std::pair{ L"right", L"À droite" }, std::pair{ L"bottom", L"En bas" }, std::pair{ L"off", L"Désactivé" } })
         {
             RadioMenuFlyoutItem entry;
             entry.Text(label);
@@ -280,12 +311,5 @@ namespace winrt::EvolutionWin::implementation
             });
             menu.Items().Append(entry);
         }
-
-        /* désactivé : nécessite la fenêtre de lecture indépendante (§6) */
-        RadioMenuFlyoutItem off;
-        off.Text(L"Désactivé (bientôt)");
-        off.GroupName(L"reading-pane");
-        off.IsEnabled(false);
-        menu.Items().Append(off);
     }
 }

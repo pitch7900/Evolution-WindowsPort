@@ -502,6 +502,13 @@ namespace winrt::EvolutionWin::implementation
         UpdateMessageItemVisual(item, true, flagged);
         UpdateActionButtons(uid);
 
+        /* Si le volet de lecture est désactivé, conserver la sélection et les boutons sans charger le WebView2 */
+        if (::EvolutionWin::Settings::Instance().GetString(L"layout.reading-pane", L"right") == L"off")
+        {
+            m_current_message_uid = uid;
+            return;
+        }
+
         auto loc = GetMessageLocation(uid);
         hstring target_account = loc.account.empty() ? m_account : loc.account;
         hstring target_folder = loc.folder.empty() ? m_folder : loc.folder;

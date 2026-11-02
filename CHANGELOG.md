@@ -14,6 +14,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Option « Volet de lecture : Désactivé » (Quickwin #1)** :
+  - **Désactivation complète du volet de lecture** : accessible depuis le menu *Affichage › Volet de lecture* (options *À droite*, *En bas*, *Désactivé*), avec mémorisation dans `settings.json` (`layout.reading-pane`).
+  - **Extension pleine largeur de la liste de messages** : lorsque le volet est désactivé, la liste s'étend sur toute la largeur disponible (colonnes 2 à 4) pour un confort de lecture optimal des listes denses.
+  - **Ouverture native des messages** : maintien de la sélection active pour les actions du ruban (Répondre, Transférer, Supprimer, etc.) et ouverture des messages en fenêtre indépendante (`MessageWindow`) au double-clic ou avec la touche Entrée.
+  - **Optimisation des performances de compilation** : régulation des processus concurrents de compilation (`-m:4` dans `tools\build-winui-app.bat`) évitant la saturation de pagination mémoire lors des builds parallèles.
 - **Recherche complète dans les tâches (Ctrl+E et recherche locale)** :
   - **Recherche unifiée dans la barre de titre** : placeholder contextuel « Rechercher dans les tâches (Ctrl+E) » lors de l'affichage de la vue Tâches, avec masquage automatique du sélecteur de portée de dossiers de courriels.
   - **Champ de recherche dédié dans la vue Tâches (`TaskSearchBox`)** : situé dans l'en-tête de la vue, synchronisé en temps réel avec le champ de la barre de titre.

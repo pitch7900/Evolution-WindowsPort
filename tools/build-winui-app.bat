@@ -26,7 +26,7 @@ if exist "%BUILD_DIR%\EvolutionWin.exe.old" del /f /q "%BUILD_DIR%\EvolutionWin.
 set "EXTRA_MSBUILD_ARGS="
 if defined PLATFORM_TOOLSET set "EXTRA_MSBUILD_ARGS=-p:PlatformToolset=%PLATFORM_TOOLSET%"
 
-msbuild "%APP%\EvolutionWin.vcxproj" -nologo -m -v:minimal ^
+msbuild "%APP%\EvolutionWin.vcxproj" -nologo -m:4 -v:minimal ^
 	-p:Configuration=Release -p:Platform=x64 ^
 	-p:GtkPrefix="%PREFIX%" ^
 	-p:PackagesDir=%WINUI_PACKAGES%\ ^

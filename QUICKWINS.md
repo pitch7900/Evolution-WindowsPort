@@ -18,7 +18,7 @@ Ces chantiers ne dépendent pas de refontes architecturales complexes et apporte
 
 ## 1. Ergonomie et affichage (XAML / WinUI 3)
 
-- [ ] **Volet de lecture désactivé** (menu *Affichage › Volet de lecture*)
+- [x] **Volet de lecture désactivé** (menu *Affichage › Volet de lecture*)
   - Activer l'entrée actuellement grisée dans le menu.
   - Masquer le volet de lecture principal.
   - Ouvrir directement le message en fenêtre indépendante lors de la sélection / double-clic.
