@@ -14,6 +14,13 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Indicateur d'avancement dans la barre des tâches (`ITaskbarList3`)** :
+  reflète l'état de synchronisation en arrière-plan directement sur l'icône de
+  l'application (progression indéterminée, pourcentage ou rouge en cas d'erreur).
+- **Refonte planifiée des Paramètres (panneau et navigation par catégories)** :
+  cadrage de la réorganisation façon Windows 11 avec menu latéral à gauche et
+  panneau structuré à droite regroupant les paramètres par sections et cartes
+  thématiques (`SettingsGroup` / `SettingsCard`).
 - **Écran de démarrage fluide (`SplashWindow`) et robustesse au démarrage** :
   affichage instantané d'une fenêtre de démarrage épurée au lancement de l'application
   pendant l'initialisation du moteur et des services EDS. Transition fluide vers
