@@ -229,6 +229,13 @@ namespace winrt::EvolutionWin::implementation
 
         Closed([this](IInspectable const&, WindowEventArgs const&)
         {
+            /* Purge automatique de la corbeille si le paramètre est activé */
+            if (::EvolutionWin::Settings::Instance().GetBoolean(L"mail.empty-trash-on-exit", false))
+            {
+                EmptyAllTrashFolders();
+                Sleep(200);
+            }
+
             /* stops the engine before the window goes away */
             m_core.reset();
         });

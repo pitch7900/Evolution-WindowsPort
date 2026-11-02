@@ -21,6 +21,7 @@
 #include <cwctype>
 #include <utility>
 #include <vector>
+#include <set>
 
 /* Comptes et arbre des dossiers : chargement, compteurs, menu contextuel et
  * gestion des dossiers (création, renommage, déplacement, suppression). */
@@ -947,5 +948,51 @@ namespace winrt::EvolutionWin::implementation
             folder = FindFolderJson(folders->second, m_folder);
         DeleteFolderAsync(m_account, m_folder, item.Name(),
             folder ? static_cast<int32_t>(folder.GetNamedNumber(L"total", 0)) : 0);
+    }
+
+    /**
+     * @brief Purge l'ensemble des éléments supprimés (dossiers Corbeille) de tous les comptes configurés.
+     *        Utilisé lors de la fermeture de l'application si la préférence 'mail.empty-trash-on-exit' est active.
+     */
+    void MainWindow::EmptyAllTrashFolders()
+    {
+        if (!m_core)
+            return;
+
+        // Purge les dossiers détectés comme Corbeille dans l'arborescence
+        std::set<std::pair<std::wstring, std::wstring>> emptied;
+
+        for (auto const& [account_str, folders_array] : m_account_folders)
+        {
+            hstring account{ account_str };
+            for (auto const& item_val : folders_array)
+            {
+                auto obj = item_val.GetObject();
+                hstring type = obj.GetNamedString(L"type", L"");
+                hstring full_name = obj.GetNamedString(L"full_name", L"");
+                if (type == L"trash" && !full_name.empty())
+                {
+                    emptied.insert({ account_str, std::wstring{ full_name } });
+                    m_core->FolderAction(account, full_name, L"empty", [](hstring const&, hstring const&) {});
+                }
+            }
+        }
+
+        // Parcourt également les nœuds enregistrés pour les dossiers spéciaux personnalisés
+        for (auto const& [key, node] : m_nodes)
+        {
+            if (auto folder_item = node.Content().try_as<EvolutionWin::FolderItem>())
+            {
+                if (folder_item.Glyph() == FolderGlyph(L"trash") && !folder_item.Folder().empty())
+                {
+                    std::pair<std::wstring, std::wstring> p{ std::wstring{ folder_item.Account() }, std::wstring{ folder_item.Folder() } };
+                    if (emptied.find(p) == emptied.end())
+                    {
+                        emptied.insert(p);
+                        m_core->FolderAction(folder_item.Account(), folder_item.Folder(), L"empty", [](hstring const&, hstring const&) {});
+                    }
+                }
+            }
+        }
     }
 }

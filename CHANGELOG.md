@@ -22,6 +22,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Vider automatiquement la Corbeille à la fermeture (Quickwin §5 / §19)** :
+  - **Purge complète multi-comptes** : lors de la fermeture de la fenêtre principale, si la préférence `mail.empty-trash-on-exit` est cochée, `EmptyAllTrashFolders()` parcourt l'ensemble des comptes et des dossiers spéciaux pour envoyer la commande de purge définitive `empty` à `evo-core`.
+  - **Déduplication sécurisée** : utilisation d'un registre d'UIDs pour éviter tout double déclenchement sur les dossiers mappés.
+  - **Validation par test unitaire** : couverture de la clé de configuration et de son repli sécurisé (`false` par défaut) dans `tests/unit/test_settings.cpp`.
+
 - **Gestion complète du statut « Lu / Non lu » (Quickwin §5 / §19)** :
   - **Quatre modes de marquage paramétrables** : configuration via *Paramètres › Courrier* avec prise en charge complète des options *Immédiatement*, *Après 5 secondes*, *Au changement de sélection* et *Manuellement seulement* (`mail.mark-as-read`).
   - **Minuterie asynchrone non-bloquante** : implémentation d'un `DispatcherTimer` dédié pour le mode différé (5 secondes) avec annulation automatique si l'utilisateur change de sélection ou vide la liste avant la fin du délai.

@@ -811,7 +811,7 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 - [x] 🟢 Marquer comme lu : immédiatement / après N secondes / au changement de sélection / jamais à l'affichage dans le volet de lecture
 - [ ] 🟢 Format de rédaction par défaut (HTML / texte brut), police et taille par défaut, correcteur orthographique (langue)
 - [ ] 🟢 Confirmations : avant suppression définitive, avant d'envoyer sans objet, pièce jointe mentionnée mais absente
-- [ ] 🟢 Vider la Corbeille à la fermeture
+- [x] 🟢 Vider la Corbeille à la fermeture
 - [ ] 🟢 Contenu externe : cf. §6 ; signatures : cf. §3
 
 ### Calendrier
