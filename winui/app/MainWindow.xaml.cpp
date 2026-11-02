@@ -236,6 +236,9 @@ namespace winrt::EvolutionWin::implementation
                 Sleep(200);
             }
 
+            /* Fermeture de toutes les fenêtres secondaires (messages, rédaction) */
+            CloseAllSecondaryWindows();
+
             /* stops the engine before the window goes away */
             m_core.reset();
         });

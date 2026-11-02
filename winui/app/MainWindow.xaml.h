@@ -41,6 +41,8 @@ namespace winrt::EvolutionWin::implementation
         void GoToCalendarDate(Windows::Foundation::DateTime date);
         winrt::fire_and_forget ShowGoToDateDialogAsync();
         void OnReadingPaneMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
+        void OnCloseAllSecondaryWindowsClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void CloseAllSecondaryWindows();
         void OnRibbonCompactDensityToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void ApplyCompactDensity(bool compact);
         void OnSearchAccelerator(Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender, Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
@@ -489,6 +491,8 @@ namespace winrt::EvolutionWin::implementation
         hstring m_update_page;
         /* fenêtres indépendantes de lecture ouvertes par UID */
         std::map<std::wstring, winrt::EvolutionWin::MessageWindow> m_open_message_windows;
+        /* fenêtres de rédaction ouvertes */
+        std::vector<winrt::EvolutionWin::ComposeWindow> m_open_compose_windows;
 
         /* Bandeau d'information (vues Courrier et Calendrier) : avis identifiés,
          * le dernier est affiché ; voir ShowBanner */

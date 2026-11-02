@@ -22,6 +22,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Fermer tous les éléments ouverts (TODO ligne 188)** :
+  - **Gestion unifiée des fenêtres secondaires** : recensement dynamique et suivi du cycle de vie de toutes les fenêtres de lecture indépendante (`MessageWindow`) et de rédaction de messages (`ComposeWindow`).
+  - **Commande dédiée dans le ruban** : bouton `Fermer les fenêtres ouvertes` avec icône dans le ruban Affichage (Courrier et Calendrier) pour refermer instantanément toutes les fenêtres secondaires et ne conserver que la fenêtre principale.
+  - **Fermeture propre à l'arrêt** : intégration dans l'événement `Closed` de `MainWindow` pour garantir l'arrêt sans blocage ni fuite de processus en arrière-plan.
+
 - **Ordre des comptes et tri des dossiers dans le volet latéral (Quickwin §1 / §6 / TODO ligne 534)** :
   - **Priorité au compte principal** : le compte de messagerie par défaut est automatiquement positionné en tête de liste dans l'arborescence des dossiers, suivi des autres comptes distants par ordre alphabétique, et enfin des dossiers locaux (« Sur cet ordinateur »).
   - **Tri paramétrable des dossiers** : option permettant de choisir entre l'affichage des dossiers spéciaux en premier (`special-first`, Boîte de réception, Brouillons, Éléments envoyés...) et le tri alphabétique complet de A à Z (`alphabetical`).

@@ -602,6 +602,43 @@ namespace winrt::EvolutionWin::implementation
 
     /* largeurs par défaut des panneaux, volet des dossiers réaffiché */
 
+        /**
+     * @brief Ferme l'ensemble des fenêtres secondaires ouvertes par l'application.
+     * Parcourt et ferme toutes les instances de MessageWindow et ComposeWindow actives.
+     */
+    void MainWindow::CloseAllSecondaryWindows()
+    {
+        // 1. Fermeture des fenêtres de lecture indépendante de messages
+        auto msg_windows = m_open_message_windows;
+        for (auto const& [uid, win] : msg_windows)
+        {
+            try {
+                win.Close();
+            } catch (...) {}
+        }
+        m_open_message_windows.clear();
+
+        // 2. Fermeture des fenêtres de rédaction de messages
+        auto comp_windows = m_open_compose_windows;
+        for (auto const& win : comp_windows)
+        {
+            try {
+                win.Close();
+            } catch (...) {}
+        }
+        m_open_compose_windows.clear();
+    }
+
+    /**
+     * @brief Gestionnaire du bouton du ruban pour fermer tous les éléments ouverts.
+     * @param sender Contrôle bouton émetteur.
+     * @param args Arguments d'événement routé.
+     */
+    void MainWindow::OnCloseAllSecondaryWindowsClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        CloseAllSecondaryWindows();
+    }
+
     void MainWindow::OnRibbonResetLayoutClick(IInspectable const&, RoutedEventArgs const&)
 
     {

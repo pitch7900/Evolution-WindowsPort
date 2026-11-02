@@ -66,6 +66,13 @@ namespace winrt::EvolutionWin::implementation
         }
 
         auto window = make<ComposeWindow>();
+        m_open_compose_windows.push_back(window);
+        window.Closed([this, window](auto const&, auto const&)
+        {
+            auto it = std::find(m_open_compose_windows.begin(), m_open_compose_windows.end(), window);
+            if (it != m_open_compose_windows.end())
+                m_open_compose_windows.erase(it);
+        });
         get_self<ComposeWindow>(window)->Setup(m_core, m_accounts, data);
         window.Activate();
     }

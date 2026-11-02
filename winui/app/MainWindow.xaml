@@ -586,6 +586,13 @@
 
                         </AppBarButton>
 
+                        <AppBarButton Label="Fermer les éléments ouverts" Click="OnCloseAllSecondaryWindowsClick"
+                                      ToolTipService.ToolTip="Ferme toutes les fenêtres de messages et de rédaction ouvertes">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8BB;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
                         <AppBarToggleButton x:Name="RibbonMailCompactDensityToggle" Label="Mode compact"
 
                                             Click="OnRibbonCompactDensityToggled"

@@ -185,7 +185,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 
 ### Fenêtres et lecture
 
-- [ ] 🟡 **Ouvrir un événement ou un dossier dans une nouvelle fenêtre** (pour un message : fenêtre de lecture indépendante, §6) ; 🟢 **Fermer tous les éléments ouverts**
+- [ ] 🟡 **Ouvrir un événement ou un dossier dans une nouvelle fenêtre** (pour un message : fenêtre de lecture indépendante, §6) ; [x] 🟢 **Fermer tous les éléments ouverts**
 - [ ] 🟠 **Fenêtre des rappels** : rappels des rendez-vous (alarmes EDS) et des messages en suivi, avec Reporter / Ignorer
 - [ ] 🟡 **Lecteur immersif** : vue de lecture plein écran épurée (taille du texte, espacement)
 - [x] 🟢 **Lecture à voix haute** du message (`Windows.Media.SpeechSynthesis`)
