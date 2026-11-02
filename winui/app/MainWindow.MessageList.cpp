@@ -272,6 +272,21 @@ namespace winrt::EvolutionWin::implementation
                 bool multi = target_uids.size() > 1;
                 std::wstring count_suffix = multi ? L" (" + std::to_wstring(target_uids.size()) + L" messages)" : L"";
 
+                if (!multi)
+                {
+                    MenuFlyoutItem open_item;
+                    open_item.Text(L"Ouvrir");
+                    open_item.FontWeight(Microsoft::UI::Text::FontWeights::SemiBold());
+                    open_item.Icon(FontIcon{});
+                    open_item.Icon().as<FontIcon>().Glyph(L"\xE8E7");
+                    open_item.Click([this, uid](IInspectable const&, RoutedEventArgs const&)
+                    {
+                        OpenMessageInWindow(uid);
+                    });
+                    menu_items.Append(open_item);
+                    menu_items.Append(MenuFlyoutSeparator{});
+                }
+
                 MenuFlyoutItem reply_item;
                 reply_item.Text(multi
                     ? hstring{ L"Répondre (1er mail + " + std::to_wstring(target_uids.size() - 1) + L" en PJ)" }
@@ -668,5 +683,156 @@ namespace winrt::EvolutionWin::implementation
             /* Si l'application non empaquetée n'a pas pu enregistrer de canal toast,
                l'InfoBar reste visible pour prévenir l'utilisateur. */
         }
+    }
+
+    /* Détermine si le dossier actuellement affiché est le dossier des brouillons.
+     * Retourne : true s'il s'agit du dossier Brouillons. */
+    bool MainWindow::IsDraftsFolder()
+    {
+        if (m_account.empty() || m_folder.empty())
+            return false;
+
+        auto it = m_account_folders.find(std::wstring{ m_account });
+        if (it != m_account_folders.end() && it->second)
+        {
+            auto folder = FindFolderJson(it->second, m_folder);
+            if (folder && folder.GetNamedString(L"type", L"") == L"drafts")
+                return true;
+        }
+
+        return false;
+    }
+
+    /* Double-clic sur la liste des messages : ouvre le message dans une fenêtre
+     * indépendante (ou la fenêtre de rédaction si c'est un brouillon).
+     * Paramètres :
+     *   args : arguments de l'événement DoubleTapped */
+    void MainWindow::OnMessageListDoubleTapped(IInspectable const&, Input::DoubleTappedRoutedEventArgs const& args)
+    {
+        hstring uid = SelectedMessageUid();
+        if (uid.empty())
+            return;
+
+        args.Handled(true);
+        OpenMessageInWindow(uid);
+    }
+
+    /* Touche Entrée sur la liste des messages : ouverture dans une fenêtre indépendante.
+     * Paramètres :
+     *   args : arguments de l'événement KeyDown */
+    void MainWindow::OnMessageListKeyDown(IInspectable const&, Input::KeyRoutedEventArgs const& args)
+    {
+        if (args.Key() == Windows::System::VirtualKey::Enter)
+        {
+            hstring uid = SelectedMessageUid();
+            if (!uid.empty())
+            {
+                args.Handled(true);
+                OpenMessageInWindow(uid);
+            }
+        }
+    }
+
+    /* Ouvre le message sélectionné dans une fenêtre indépendante (MessageWindow).
+     * S'il s'agit d'un brouillon, ouvre la fenêtre de rédaction (ComposeWindow).
+     * Si la fenêtre pour cet UID est déjà ouverte, elle est ramenée au premier plan.
+     * Paramètres :
+     *   uid : identifiant unique du message à ouvrir */
+    void MainWindow::OpenMessageInWindow(hstring const& uid)
+    {
+        if (uid.empty() || m_account.empty() || m_folder.empty())
+            return;
+
+        /* Si le dossier courant est le dossier Brouillons, ouvrir la fenêtre de rédaction */
+        if (IsDraftsFolder())
+        {
+            m_core->FetchMessage(m_account, m_folder, uid, [this](hstring const& json, hstring const& error)
+            {
+                if (!error.empty())
+                {
+                    ShowStatus(L"Impossible d'ouvrir le brouillon : " + error, InfoBarSeverity::Error);
+                    return;
+                }
+                JsonObject msg;
+                if (!JsonObject::TryParse(json, msg))
+                    return;
+
+                ::EvolutionWin::ComposeData data;
+                data.account = m_account;
+                data.to = msg.GetNamedString(L"to", L"");
+                data.cc = msg.GetNamedString(L"cc", L"");
+                data.subject = msg.GetNamedString(L"subject", L"");
+                data.body = msg.GetNamedString(L"text", L"");
+                data.html_body = msg.GetNamedString(L"html", L"");
+                data.in_reply_to = msg.GetNamedString(L"in_reply_to", L"");
+                data.references = msg.GetNamedString(L"references", L"");
+                data.reply = false;
+
+                OpenCompose(data);
+            });
+            return;
+        }
+
+        /* Si une fenêtre est déjà ouverte pour ce message, l'activer */
+        auto it = m_open_message_windows.find(std::wstring{ uid });
+        if (it != m_open_message_windows.end())
+        {
+            it->second.Activate();
+            return;
+        }
+
+        /* Liste des UID ordonnés de la vue pour la navigation Précédent / Suivant */
+        std::vector<hstring> all_uids;
+        for (auto const& item : MessageList().Items())
+        {
+            if (auto grid = item.try_as<Grid>())
+            {
+                hstring u = unbox_value_or<hstring>(grid.Tag(), L"");
+                if (!u.empty())
+                    all_uids.push_back(u);
+            }
+        }
+
+        auto window = make<MessageWindow>();
+        m_open_message_windows[std::wstring{ uid }] = window;
+
+        /* Nettoyage du registre à la fermeture de la fenêtre */
+        window.Closed([this, uid](auto const&, auto const&)
+        {
+            m_open_message_windows.erase(std::wstring{ uid });
+        });
+
+        /* Configuration et synchronisation de l'état avec la liste principale */
+        get_self<MessageWindow>(window)->Setup(
+            m_core,
+            m_accounts,
+            m_account,
+            m_folder,
+            uid,
+            all_uids,
+            m_account_folders,
+            [this](hstring const& updated_uid, bool seen)
+            {
+                m_message_states[std::wstring{ updated_uid }].seen = seen;
+                if (auto grid = FindMessageItem(updated_uid))
+                {
+                    auto state_it = m_message_states.find(std::wstring{ updated_uid });
+                    bool flagged = state_it != m_message_states.end() ? state_it->second.flagged : false;
+                    UpdateMessageItemVisual(grid, seen, flagged);
+                }
+                if (updated_uid == m_current_message_uid)
+                    UpdateActionButtons(updated_uid);
+            },
+            [this](hstring const& /*deleted_uid*/)
+            {
+                LoadMessages(true);
+            },
+            [this](hstring const& /*moved_uid*/, hstring const& /*dest_folder*/)
+            {
+                LoadMessages(true);
+            }
+        );
+
+        window.Activate();
     }
 }

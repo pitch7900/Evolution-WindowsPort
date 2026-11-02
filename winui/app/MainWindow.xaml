@@ -448,7 +448,9 @@
                         </StackPanel>
                     </StackPanel>
                     <ListView x:Name="MessageList" Grid.Row="1" SelectionMode="Extended"
-                              SelectionChanged="OnMessageSelectionChanged">
+                              SelectionChanged="OnMessageSelectionChanged"
+                              DoubleTapped="OnMessageListDoubleTapped"
+                              KeyDown="OnMessageListKeyDown">
                         <ListView.ItemContainerStyle>
                             <Style TargetType="ListViewItem">
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />

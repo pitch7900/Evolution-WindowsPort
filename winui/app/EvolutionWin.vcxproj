@@ -168,11 +168,15 @@
     <ClInclude Include="ComposeWindow.xaml.h">
       <DependentUpon>ComposeWindow.xaml</DependentUpon>
     </ClInclude>
+    <ClInclude Include="MessageWindow.xaml.h">
+      <DependentUpon>MessageWindow.xaml</DependentUpon>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml" />
     <Page Include="MainWindow.xaml" />
     <Page Include="ComposeWindow.xaml" />
+    <Page Include="MessageWindow.xaml" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -238,6 +242,9 @@
     <ClCompile Include="ComposeWindow.xaml.cpp">
       <DependentUpon>ComposeWindow.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="MessageWindow.xaml.cpp">
+      <DependentUpon>MessageWindow.xaml</DependentUpon>
+    </ClCompile>
     <ClCompile Include="FolderItem.cpp">
       <DependentUpon>FolderItem.idl</DependentUpon>
     </ClCompile>
@@ -252,6 +259,10 @@
     <Midl Include="ComposeWindow.idl">
       <SubType>Code</SubType>
       <DependentUpon>ComposeWindow.xaml</DependentUpon>
+    </Midl>
+    <Midl Include="MessageWindow.idl">
+      <SubType>Code</SubType>
+      <DependentUpon>MessageWindow.xaml</DependentUpon>
     </Midl>
     <Midl Include="MainWindow.idl">
       <SubType>Code</SubType>
