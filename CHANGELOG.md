@@ -12,6 +12,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [0.9.6] — en cours
 
+### Corrigé
+
+- **Stabilité au démarrage et crash XAML (0x80004002 / 0xc000027b)** :
+  - **Suppression des Setter dynamiques générant une incompatibilité de type** : élimination de l'instanciation programmatique de `Style` avec `Setter` C++/WinRT dans `ApplyCompactDensity`, qui provoquait une levée d'exception `E_NOINTERFACE` dans le dispatcher XAML (`CDeferredInvoke::DispatchQueuedMessage`).
+  - **Déclaration statique du gabarit des conteneurs** : définition pérenne dans le XAML statique de `MessageList` et `EventList` (`MinHeight="24"`, `Padding="0"`) permettant à la densité compacte de s'appliquer sans aucun risque d'instabilité.
+
 ### Ajouté
 
 - **Sélection du module actif au démarrage (Quickwin §5 / §19)** :

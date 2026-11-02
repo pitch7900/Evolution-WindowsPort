@@ -331,44 +331,6 @@ namespace winrt::EvolutionWin::implementation
         if (auto sw = AppearanceCompactDensitySwitch())
             sw.IsOn(compact);
 
-        // Style conteneur pour la liste des messages
-        if (auto list = MessageList())
-        {
-            auto style = Style(xaml_typename<ListViewItem>());
-            style.Setters().Append(Setter(
-                FrameworkElement::HorizontalAlignmentProperty(),
-                box_value(HorizontalAlignment::Stretch)));
-            style.Setters().Append(Setter(
-                Control::HorizontalContentAlignmentProperty(),
-                box_value(HorizontalAlignment::Stretch)));
-            style.Setters().Append(Setter(
-                FrameworkElement::MinHeightProperty(),
-                box_value(compact ? 30.0 : 44.0)));
-            style.Setters().Append(Setter(
-                Control::PaddingProperty(),
-                box_value(compact ? ThicknessHelper::FromLengths(0, 0, 0, 0) : ThicknessHelper::FromLengths(4, 2, 4, 2))));
-            list.ItemContainerStyle(style);
-        }
-
-        // Style conteneur pour la liste des événements
-        if (auto list = EventList())
-        {
-            auto style = Style(xaml_typename<ListViewItem>());
-            style.Setters().Append(Setter(
-                FrameworkElement::HorizontalAlignmentProperty(),
-                box_value(HorizontalAlignment::Stretch)));
-            style.Setters().Append(Setter(
-                Control::HorizontalContentAlignmentProperty(),
-                box_value(HorizontalAlignment::Stretch)));
-            style.Setters().Append(Setter(
-                FrameworkElement::MinHeightProperty(),
-                box_value(compact ? 28.0 : 40.0)));
-            style.Setters().Append(Setter(
-                Control::PaddingProperty(),
-                box_value(compact ? ThicknessHelper::FromLengths(0, 0, 0, 0) : ThicknessHelper::FromLengths(4, 2, 4, 2))));
-            list.ItemContainerStyle(style);
-        }
-
         if (m_all_messages)
         {
             ShowMessages(m_all_messages);
