@@ -371,7 +371,9 @@ namespace winrt::EvolutionWin::implementation
         auto text_secondary = res.Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>();
         auto body_strong_style = res.Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>();
         auto caption_style = res.Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>();
-        auto subtle_btn_style = res.Lookup(box_value(L"SubtleButtonStyle")).as<Style>();
+        Style subtle_btn_style{ nullptr };
+        if (res.HasKey(box_value(L"SubtleButtonStyle")))
+            subtle_btn_style = res.Lookup(box_value(L"SubtleButtonStyle")).as<Style>();
 
         for (auto const& item : m_notifications)
         {
@@ -432,7 +434,8 @@ namespace winrt::EvolutionWin::implementation
 
             /* Bouton de fermeture individuel (✕) */
             Button close_btn;
-            close_btn.Style(subtle_btn_style);
+            if (subtle_btn_style)
+                close_btn.Style(subtle_btn_style);
             close_btn.Padding(Thickness{ 4, 4, 4, 4 });
             close_btn.Margin(Thickness{ 4, 0, 0, 0 });
             close_btn.VerticalAlignment(VerticalAlignment::Top);
