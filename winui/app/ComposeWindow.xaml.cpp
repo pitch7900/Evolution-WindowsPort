@@ -679,10 +679,29 @@ namespace winrt::EvolutionWin::implementation
             co_return;
         }
 
+        if (core->GetOffline())
+        {
+            ShowStatus(L"Impossible d'envoyer le message : l'application est en mode hors connexion. Reconnectez-vous via la barre d'état.", InfoBarSeverity::Error);
+            co_return;
+        }
+
+        auto sanitize_addresses = [](hstring const& input) -> hstring
+        {
+            std::wstring s{ input };
+            for (auto& ch : s)
+            {
+                if (ch == L';')
+                    ch = L',';
+            }
+            while (!s.empty() && (s.back() == L' ' || s.back() == L'\t' || s.back() == L',' || s.back() == L';'))
+                s.pop_back();
+            return hstring{ s };
+        };
+
         hstring account_uid = m_account_uids[index];
-        hstring to_text = ToBox().Text();
-        hstring cc_text = CcBox().Text();
-        hstring bcc_text = BccBox().Text();
+        hstring to_text = sanitize_addresses(ToBox().Text());
+        hstring cc_text = sanitize_addresses(CcBox().Text());
+        hstring bcc_text = sanitize_addresses(BccBox().Text());
         hstring subject_text = SubjectBox().Text();
 
         SendButton().IsEnabled(false);

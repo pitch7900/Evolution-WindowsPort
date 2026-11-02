@@ -4940,15 +4940,62 @@ core_ref_identity (EvoCore *core,
 	return identity;
 }
 
+/* Analyse et valide une liste d'adresses de destinataires (À, Cc, Cci).
+ * Remplace les séparateurs point-virgule ';' par des virgules ',', retire les
+ * délimiteurs superflus ou traînants et filtre les entrées invalides (comme ';')
+ * pour éviter l'erreur SMTP "RCPT TO <;>".
+ * Paramètres :
+ *   object : objet JSON contenant le champ
+ *   member : nom du champ ("to", "cc", "bcc")
+ * Retourne : un objet CamelInternetAddress * nettoyé et validé. */
 static CamelInternetAddress *
 parse_addresses (JsonObject *object,
 		 const gchar *member)
 {
-	const gchar *value = json_object_get_string_member_with_default (object, member, "");
+	const gchar *raw_value = json_object_get_string_member_with_default (object, member, "");
 	CamelInternetAddress *addresses = camel_internet_address_new ();
+	gchar *sanitized, *p;
+	gboolean in_quote = FALSE;
+	CamelInternetAddress *temp;
+	gint len, i;
 
-	if (value && *value)
-		camel_address_unformat (CAMEL_ADDRESS (addresses), value);
+	if (!raw_value || !*raw_value)
+		return addresses;
+
+	sanitized = g_strdup (raw_value);
+
+	/* Remplace les ';' par des ',' hors des guillemets (standard Windows / Outlook) */
+	for (p = sanitized; *p; p++) {
+		if (*p == '"')
+			in_quote = !in_quote;
+		else if (*p == ';' && !in_quote)
+			*p = ',';
+	}
+
+	/* Supprime les espaces et séparateurs finaux */
+	p = sanitized + strlen (sanitized) - 1;
+	while (p >= sanitized && (g_ascii_isspace (*p) || *p == ',' || *p == ';')) {
+		*p = '\0';
+		p--;
+	}
+
+	temp = camel_internet_address_new ();
+	if (*sanitized)
+		camel_address_unformat (CAMEL_ADDRESS (temp), sanitized);
+
+	len = camel_address_length (CAMEL_ADDRESS (temp));
+	for (i = 0; i < len; i++) {
+		const gchar *name = NULL, *addr = NULL;
+		if (camel_internet_address_get (temp, i, &name, &addr) && addr && *addr) {
+			/* Ne conserver que les adresses contenant un '@' et non réductibles à de la ponctuation */
+			if (strchr (addr, '@') != NULL && strcmp (addr, ";") != 0 && strcmp (addr, ",") != 0) {
+				camel_internet_address_add (addresses, name, addr);
+			}
+		}
+	}
+
+	g_object_unref (temp);
+	g_free (sanitized);
 
 	return addresses;
 }
@@ -5126,6 +5173,12 @@ core_send_message_run (EvoCore *core,
 	root = json_from_string (args[0], error);
 	if (!root)
 		return NULL;
+
+	if (evo_core_get_offline (core) || (core->session && !camel_session_get_online (core->session))) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_CONNECTED,
+			"Impossible d'envoyer le message : l'application est en mode hors connexion. Reconnectez-vous via la barre d'état pour envoyer ce message.");
+		goto exit;
+	}
 
 	object = JSON_NODE_HOLDS_OBJECT (root) ? json_node_get_object (root) : NULL;
 	account_uid = object ? json_object_get_string_member_with_default (object, "account", NULL) : NULL;
