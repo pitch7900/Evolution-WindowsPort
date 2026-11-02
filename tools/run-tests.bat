@@ -1,0 +1,97 @@
+@echo off
+rem =========================================================================
+rem Script d'execution automatisee des tests unitaires et de non-regression
+rem pour Evolution-WindowsPort (Windows 11 / MSVC).
+rem
+rem Ce script configure l'environnement MSVC, compile chaque suite de tests
+rem et execute l'ensemble des verifications (helpers, contrats, reglages, ABI).
+rem Code de retour : 0 si tous les tests reussissent, 1 en cas d'echec.
+rem =========================================================================
+
+setlocal enabledelayedexpansion
+
+call "%~dp0env.bat" || (
+    echo [ERREUR] Impossible d'initialiser l'environnement MSVC via env.bat.
+    exit /b 1
+)
+
+set "TEST_BIN_DIR=%BUILD_DIR%\tests"
+if not exist "%TEST_BIN_DIR%" mkdir "%TEST_BIN_DIR%"
+
+echo.
+echo ======================================================
+echo   COMPILATION DES SUITES DE TESTS UNITAIRES (MSVC)
+echo ======================================================
+
+rem 1. Compilation des tests unitaires Helpers WinUI (C++17)
+echo [1/3] Compilation de test_helpers.cpp ...
+cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_helpers.cpp" ^
+    /Fe:"%TEST_BIN_DIR%\test_helpers.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_helpers.obj" || (
+        echo [ERREUR] Echec de la compilation de test_helpers.cpp
+        exit /b 1
+    )
+
+rem 2. Compilation des tests unitaires Contrats evo-core (C)
+echo [2/3] Compilation de test_evo_core_contracts.c ...
+cl.exe /nologo /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_evo_core_contracts.c" ^
+    /Fe:"%TEST_BIN_DIR%\test_evo_core_contracts.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_evo_core_contracts.obj" || (
+        echo [ERREUR] Echec de la compilation de test_evo_core_contracts.c
+        exit /b 1
+    )
+
+rem 3. Compilation des tests unitaires Preferences Settings (C++17)
+echo [3/3] Compilation de test_settings.cpp ...
+cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_settings.cpp" ^
+    /Fe:"%TEST_BIN_DIR%\test_settings.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_settings.obj" || (
+        echo [ERREUR] Echec de la compilation de test_settings.cpp
+        exit /b 1
+    )
+
+echo Compilation achevee avec succes.
+echo.
+
+rem =========================================================================
+rem EXECUTION DES TESTS UNITAIRES ET DE NON-REGRESSION
+rem =========================================================================
+
+set "FAILED_SUITES=0"
+
+rem Execution de la suite 1 : Helpers WinUI
+"%TEST_BIN_DIR%\test_helpers.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite 2 : Contrats evo-core
+"%TEST_BIN_DIR%\test_evo_core_contracts.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite 3 : Preferences Settings
+"%TEST_BIN_DIR%\test_settings.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution du test d'export ABI DLL
+if exist "%BUILD_DIR%\evo-core.dll" (
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%EVO_WORKSPACE%\tests\abi\test_abi_exports.ps1"
+    if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+) else (
+    echo [AVERTISSEMENT] build\evo-core.dll introuvable : test ABI ignore.
+)
+
+echo.
+echo ======================================================
+echo   SYNTHESE GENERALE DE LA CAMPAGNE DE TESTS
+echo ======================================================
+if !FAILED_SUITES! equ 0 (
+    echo   TOUTES LES SUITES DE TESTS SONT VALIDEES AVEC SUCCES !
+    echo ======================================================
+    exit /b 0
+) else (
+    echo   ECHEC : !FAILED_SUITES! suites de tests ont echoue.
+    echo ======================================================
+    exit /b 1
+)
