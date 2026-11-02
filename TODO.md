@@ -719,7 +719,7 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
   - [x] Clic : ouvre l'éditeur complet de tâche
   - [x] Volet affichable / masquable (bouton *Volet des tâches* du ruban, raccourci clavier universel `Alt+F2`), largeur redimensionnable par séparateur `PaneSplitter` et mémorisée dans `settings.json`, lien *Voir tout (Ctrl+4)*
   - [x] Mise à jour en direct lors des créations, modifications, suppressions et synchronisations du serveur
-- [ ] 🟢 Recherche dans les tâches — cf. §10
+- [x] 🟢 **Recherche dans les tâches** — cf. §10 : filtrage instantané par mot-clé (objet, description, catégories, compte source), recherche intégrée dans la barre de titre (Ctrl+E) et champ de recherche dédié dans la vue Tâches
 
 ## 17. Catégories et codes couleur — 🟡
 

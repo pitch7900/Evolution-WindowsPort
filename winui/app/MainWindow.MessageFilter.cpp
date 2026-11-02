@@ -190,6 +190,14 @@ namespace winrt::EvolutionWin::implementation
             LoadContacts(sender.Text());
             return;
         }
+        if (m_view_tag == L"tasks")
+        {
+            m_task_search_query = sender.Text();
+            if (TaskSearchBox() && TaskSearchBox().Text() != sender.Text())
+                TaskSearchBox().Text(sender.Text());
+            ShowTasks();
+            return;
+        }
         if (m_view_tag != L"mail")
             Navigation().SelectedItem(MailItem());
 
@@ -228,6 +236,14 @@ namespace winrt::EvolutionWin::implementation
             LoadContacts(L"");
             return;
         }
+        if (m_view_tag == L"tasks")
+        {
+            m_task_search_query = L"";
+            if (TaskSearchBox())
+                TaskSearchBox().Text(L"");
+            ShowTasks();
+            return;
+        }
         ++m_search_request;
         if (CurrentSearchScope() == L"folder")
             FilterLocalMessages(L"");
@@ -247,6 +263,12 @@ namespace winrt::EvolutionWin::implementation
         if (m_view_tag == L"contacts")
         {
             LoadContacts(query);
+            return;
+        }
+        if (m_view_tag == L"tasks")
+        {
+            m_task_search_query = query;
+            ShowTasks();
             return;
         }
 

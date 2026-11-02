@@ -164,6 +164,8 @@ namespace winrt::EvolutionWin::implementation
         void OnShowCompletedTasksClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnTaskItemClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& args);
         void OnCreateTaskFromMessageClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTaskSearchTextChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::AutoSuggestBoxTextChangedEventArgs const& args);
+        void OnTaskSearchQuerySubmitted(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::AutoSuggestBoxQuerySubmittedEventArgs const& args);
 
         /* Barre latérale des tâches (To-Do bar) */
         void OnRibbonTodoBarToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -407,6 +409,7 @@ namespace winrt::EvolutionWin::implementation
         void RestoreTaskViewSettings();
         void ShowTasks();
         bool MatchesTaskFilter(Windows::Data::Json::JsonObject const& task, hstring const& filter);
+        bool MatchesTaskSearch(Windows::Data::Json::JsonObject const& task, hstring const& query);
         Microsoft::UI::Xaml::UIElement BuildTaskRow(Windows::Data::Json::JsonObject const& task, bool show_list);
         void GetTaskAccountInfo(Windows::Data::Json::JsonObject const& task, hstring& out_name, hstring& out_email);
         void CreateTaskFromMessage(hstring const& message_uid);
@@ -523,6 +526,7 @@ namespace winrt::EvolutionWin::implementation
         Windows::Data::Json::JsonArray m_task_lists{ nullptr };
         Windows::Data::Json::JsonArray m_all_tasks{ nullptr };
         hstring m_task_list_uid;
+        hstring m_task_search_query;
         /* préférences de la vue relues ; contrôles mis à jour par le code */
         bool m_task_view_restored{ false };
         bool m_updating_task_view{ false };

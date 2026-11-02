@@ -877,11 +877,15 @@
                 <Grid Grid.Row="0" ColumnSpacing="16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Tâches" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
-                    <ComboBox x:Name="TaskListChoice" Grid.Column="1" HorizontalAlignment="Left" MinWidth="240" VerticalAlignment="Center"
+                    <ComboBox x:Name="TaskListChoice" Grid.Column="1" HorizontalAlignment="Left" MinWidth="220" VerticalAlignment="Center"
                               SelectionChanged="OnTaskListChanged" ToolTipService.ToolTip="Liste de tâches" />
+                    <AutoSuggestBox x:Name="TaskSearchBox" Grid.Column="2" HorizontalAlignment="Right" Width="280"
+                                    VerticalAlignment="Center" PlaceholderText="Rechercher une tâche (Ctrl+E)..." QueryIcon="Find"
+                                    TextChanged="OnTaskSearchTextChanged" QuerySubmitted="OnTaskSearchQuerySubmitted" />
                 </Grid>
                 <!-- filtres et tri, appliqués localement (ShowTasks) et mémorisés -->
                 <Grid Grid.Row="1" ColumnSpacing="16">

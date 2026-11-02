@@ -240,6 +240,83 @@ namespace winrt::EvolutionWin::implementation
 
     /* Affiche les tâches chargées selon la liste choisie, le filtre rapide,
      * l'affichage des tâches terminées et le tri (terminées à la fin). */
+        /**
+     * @brief Vérifie si une tâche correspond aux termes de recherche saisis par l'utilisateur.
+     * 
+     * Recherche insensible à la casse dans l'objet, la description, les catégories,
+     * le nom de la liste et le compte d'origine.
+     * 
+     * @param task Données JSON de la tâche.
+     * @param query Termes recherchés.
+     * @return true si la tâche correspond ou si query est vide, false sinon.
+     */
+    bool MainWindow::MatchesTaskSearch(JsonObject const& task, hstring const& query)
+    {
+        if (query.empty())
+            return true;
+
+        std::wstring needle = ToLower(std::wstring{ query });
+
+        // Objet
+        std::wstring summary = ToLower(std::wstring{ task.GetNamedString(L"summary", L"") });
+        if (summary.find(needle) != std::wstring::npos)
+            return true;
+
+        // Description
+        std::wstring desc = ToLower(std::wstring{ task.GetNamedString(L"description", L"") });
+        if (desc.find(needle) != std::wstring::npos)
+            return true;
+
+        // Nom de la liste
+        std::wstring list_name = ToLower(std::wstring{ task.GetNamedString(L"list_name", L"") });
+        if (list_name.find(needle) != std::wstring::npos)
+            return true;
+
+        // Compte source et adresse
+        hstring acc_name, acc_email;
+        GetTaskAccountInfo(task, acc_name, acc_email);
+        if (ToLower(std::wstring{ acc_name }).find(needle) != std::wstring::npos ||
+            ToLower(std::wstring{ acc_email }).find(needle) != std::wstring::npos)
+            return true;
+
+        // Catégories
+        for (auto const& val : task.GetNamedArray(L"categories", JsonArray{}))
+        {
+            if (val.ValueType() == JsonValueType::String)
+            {
+                std::wstring cat = ToLower(std::wstring{ val.GetString() });
+                if (cat.find(needle) != std::wstring::npos)
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @brief Gestionnaire de modification de texte dans le champ de recherche local des tâches.
+     */
+    void MainWindow::OnTaskSearchTextChanged(IInspectable const&, AutoSuggestBoxTextChangedEventArgs const& args)
+    {
+        if (args.Reason() != AutoSuggestionBoxTextChangeReason::UserInput)
+            return;
+
+        m_task_search_query = TaskSearchBox().Text();
+        if (SearchBox() && SearchBox().Text() != m_task_search_query)
+            SearchBox().Text(m_task_search_query);
+
+        ShowTasks();
+    }
+
+    /**
+     * @brief Gestionnaire de soumission de requête dans le champ de recherche local des tâches.
+     */
+    void MainWindow::OnTaskSearchQuerySubmitted(IInspectable const&, AutoSuggestBoxQuerySubmittedEventArgs const& args)
+    {
+        m_task_search_query = args ? args.QueryText() : TaskSearchBox().Text();
+        ShowTasks();
+    }
+
     void MainWindow::ShowTasks()
     {
         auto items = TaskList().Items();
@@ -262,7 +339,7 @@ namespace winrt::EvolutionWin::implementation
                 continue;
             if (!show_completed && task.GetNamedString(L"status", L"") == L"completed")
                 continue;
-            if (MatchesTaskFilter(task, filter))
+            if (MatchesTaskFilter(task, filter) && MatchesTaskSearch(task, m_task_search_query))
                 tasks.push_back(task);
         }
 
@@ -297,9 +374,12 @@ namespace winrt::EvolutionWin::implementation
         if (tasks.empty())
         {
             TextBlock empty;
-            empty.Text(m_all_tasks.Size() == 0
-                ? L"Aucune tâche. Créez-en une avec « Nouvelle tâche » (Ctrl+Maj+K)."
-                : L"Aucune tâche ne correspond à ce filtre.");
+            if (!m_task_search_query.empty())
+                empty.Text(L"Aucune tâche ne correspond à la recherche « " + m_task_search_query + L" ».");
+            else if (m_all_tasks.Size() == 0)
+                empty.Text(L"Aucune tâche. Créez-en une avec « Nouvelle tâche » (Ctrl+Maj+K).");
+            else
+                empty.Text(L"Aucune tâche ne correspond à ce filtre.");
             empty.Padding(ThicknessHelper::FromLengths(12, 12, 12, 12));
             empty.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
             items.Append(empty);

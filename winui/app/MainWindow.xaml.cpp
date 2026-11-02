@@ -412,10 +412,13 @@ namespace winrt::EvolutionWin::implementation
                 box.PlaceholderText(L"Rechercher un contact (Ctrl+E)");
             else if (tag == L"mail")
                 UpdateSearchPlaceholder();
+            else if (tag == L"tasks")
+                box.PlaceholderText(L"Rechercher dans les tâches (Ctrl+E)");
             else
-                box.PlaceholderText(L"Rechercher dans le courrier (Ctrl+E)");
+                box.PlaceholderText(L"Rechercher (Ctrl+E)");
         }
 
+        SearchScopeBox().Visibility(tag == L"mail" ? Visibility::Visible : Visibility::Collapsed);
         MailView().Visibility(tag == L"mail" ? Visibility::Visible : Visibility::Collapsed);
         CalendarViewPane().Visibility(tag == L"calendar" ? Visibility::Visible : Visibility::Collapsed);
         ContactsViewPane().Visibility(tag == L"contacts" ? Visibility::Visible : Visibility::Collapsed);

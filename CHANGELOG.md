@@ -14,6 +14,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Recherche complète dans les tâches (Ctrl+E et recherche locale)** :
+  - **Recherche unifiée dans la barre de titre** : placeholder contextuel « Rechercher dans les tâches (Ctrl+E) » lors de l'affichage de la vue Tâches, avec masquage automatique du sélecteur de portée de dossiers de courriels.
+  - **Champ de recherche dédié dans la vue Tâches (`TaskSearchBox`)** : situé dans l'en-tête de la vue, synchronisé en temps réel avec le champ de la barre de titre.
+  - **Filtrage multicritère instantané** : recherche insensible à la casse dans l'objet, la description, les catégories, le nom de la liste et le compte source de chaque tâche, avec message informatif en cas d'absence de résultat et effacement rapide via la touche Échap.
 - **Volet latéral droit des tâches (To-Do bar façon Outlook)** :
   - **Barre des tâches compacte toujours accessible** : disponible dans les vues Courrier, Calendrier et Contacts, permettant de garder ses tâches en vue sans quitter son travail en cours (repli automatique sur les vues Tâches et Paramètres).
   - **Tri optimisé pour la productivité** : classement prioritaire des tâches en retard en tête (mise en évidence en rouge), suivi des tâches du jour, des échéances les plus proches, et des tâches sans date, avec départage par niveau de priorité.
