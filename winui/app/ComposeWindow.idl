@@ -1,5 +1,18 @@
 namespace EvolutionWin
 {
+    /* Suggestion d'adresse pour l'autocomplétion des destinataires (À, Cc, Cci) */
+    [bindable]
+    [default_interface]
+    runtimeclass RecipientSuggestion
+    {
+        RecipientSuggestion(String displayText, String address, Boolean isRecent);
+
+        String DisplayText { get; };
+        String Address { get; };
+        Boolean IsRecent { get; };
+        Microsoft.UI.Xaml.Visibility RecentVisibility { get; };
+    }
+
     [default_interface]
     runtimeclass ComposeWindow : Microsoft.UI.Xaml.Window
     {

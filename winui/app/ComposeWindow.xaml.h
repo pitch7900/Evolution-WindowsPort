@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ComposeWindow.g.h"
+#include "RecipientSuggestion.g.h"
 #include "CoreBridge.h"
 
 namespace EvolutionWin
@@ -27,6 +28,35 @@ namespace EvolutionWin
 
 namespace winrt::EvolutionWin::implementation
 {
+    /* Suggestion d'adresse pour l'autocomplétion des destinataires (À, Cc, Cci).
+     * Comporte le libellé affiché, l'adresse email normalisée et un indicateur
+     * permettant de distinguer les adresses récentes (supprimables) des contacts. */
+    struct RecipientSuggestion : RecipientSuggestionT<RecipientSuggestion>
+    {
+        /* Initialise une suggestion de destinataire.
+         * Paramètres :
+         *   displayText : libellé enrichi affiché dans la liste déroulante
+         *   address     : adresse complète ou normalisée à insérer
+         *   isRecent    : true s'il s'agit d'une adresse récemment utilisée */
+        RecipientSuggestion(hstring const& displayText, hstring const& address, bool isRecent)
+            : m_displayText(displayText), m_address(address), m_isRecent(isRecent)
+        {
+        }
+
+        hstring DisplayText() const { return m_displayText; }
+        hstring Address() const { return m_address; }
+        bool IsRecent() const { return m_isRecent; }
+        Microsoft::UI::Xaml::Visibility RecentVisibility() const
+        {
+            return m_isRecent ? Microsoft::UI::Xaml::Visibility::Visible : Microsoft::UI::Xaml::Visibility::Collapsed;
+        }
+
+    private:
+        hstring m_displayText;
+        hstring m_address;
+        bool m_isRecent{ false };
+    };
+
     struct ComposeWindow : ComposeWindowT<ComposeWindow>
     {
         ComposeWindow();
@@ -43,6 +73,9 @@ namespace winrt::EvolutionWin::implementation
         void OnDiscardClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRecipientTextChanged(Microsoft::UI::Xaml::Controls::AutoSuggestBox const& sender, Microsoft::UI::Xaml::Controls::AutoSuggestBoxTextChangedEventArgs const& args);
         void OnRecipientQuerySubmitted(Microsoft::UI::Xaml::Controls::AutoSuggestBox const& sender, Microsoft::UI::Xaml::Controls::AutoSuggestBoxQuerySubmittedEventArgs const& args);
+        void OnRecipientSuggestionChosen(Microsoft::UI::Xaml::Controls::AutoSuggestBox const& sender, Microsoft::UI::Xaml::Controls::AutoSuggestBoxSuggestionChosenEventArgs const& args);
+        void OnRecipientPreviewKeyDown(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args);
+        void OnRemoveRecentRecipientClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnSubjectChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::TextChangedEventArgs const& args);
 
         /* Gestionnaires de la barre de mise en forme HTML */
@@ -80,6 +113,8 @@ namespace winrt::EvolutionWin::implementation
         uint64_t m_recipient_request{ 0 };
         std::map<std::wstring, std::wstring> m_suggestion_values;
         void RememberRecipients();
+        void RemoveRecentRecipient(std::wstring const& address);
+        EvolutionWin::RecipientSuggestion m_focused_suggestion{ nullptr };
         std::vector<hstring> m_account_uids;
         std::vector<hstring> m_attachments;
         ::EvolutionWin::ComposeData m_data;
@@ -101,6 +136,10 @@ namespace winrt::EvolutionWin::implementation
 
 namespace winrt::EvolutionWin::factory_implementation
 {
+    struct RecipientSuggestion : RecipientSuggestionT<RecipientSuggestion, implementation::RecipientSuggestion>
+    {
+    };
+
     struct ComposeWindow : ComposeWindowT<ComposeWindow, implementation::ComposeWindow>
     {
     };

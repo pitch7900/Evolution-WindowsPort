@@ -100,6 +100,7 @@ namespace winrt::EvolutionWin::implementation
 
         /* Barre d'état permanente : indicateur d'état des connexions et hors connexion */
         void OnConnectionStatusButtonClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnClearAllNotificationsClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRetryConnectionsClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnToggleOfflineClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void UpdateStatusBarProgress(bool active, winrt::hstring const& message, int32_t percent);
@@ -498,6 +499,21 @@ namespace winrt::EvolutionWin::implementation
         std::map<std::wstring, AccountConnectionState> m_account_states;
         bool m_is_offline{ false };
         Microsoft::UI::Xaml::DispatcherTimer m_progress_hide_timer{ nullptr };
+
+        /* Notifications reçues dans la barre d'état (Lot 4) */
+        struct NotificationItemRecord
+        {
+            winrt::hstring id;
+            winrt::hstring title;
+            winrt::hstring body;
+            winrt::hstring timestamp;
+        };
+        std::vector<NotificationItemRecord> m_notifications;
+        uint64_t m_next_notification_id{ 1 };
+        void AddNotificationItem(winrt::hstring const& title, winrt::hstring const& body);
+        void DismissNotificationItem(winrt::hstring const& id);
+        void ClearAllNotifications();
+        void UpdateNotificationsUI();
     };
 }
 

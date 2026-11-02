@@ -27,7 +27,7 @@ Hypothèse : démo de type « remplaçant d'Outlook » avec un compte Microsoft 
 | 11 | [Démarrage rapide à partir du cache local](#demo-cache-demarrage) (l'application rame à chaque ouverture) | 4 | 🟢 |
 | 12 | Calendrier et contacts du compte en ligne : [Microsoft 365 / Exchange Online](#demo-cal-contacts-m365) (🟡), [Gmail / Google Workspace](#demo-cal-contacts-gmail) (🟠) | 3 | 🟡 / 🟠 |
 | 13 | [Gestion simple du calendrier](#demo-gestion-calendrier) (créer, **modifier**, supprimer un événement) et [des contacts](#demo-gestion-contacts) (créer, **modifier**, supprimer) | 3 | 🟡 |
-| 14 | [Autocomplétion des destinataires](#demo-autocompletion) | 15 | 🟡 |
+| 14 | [Autocomplétion des destinataires](#demo-autocompletion) — *fait en 0.9.4 et finitions Tab / « ; » / suppression récents* | 15 | 🟢 (Fait) |
 | 15 | [Simplifier l'assistant d'ajout de compte](#demo-assistant-compte) | 3 | 🟡 |
 | 16 | [Modifier un compte existant](#demo-modifier-compte) | 3 | 🟡 |
 | 17 | [Indicateur d'état des connexions / hors connexion et *Se reconnecter*](#demo-etat-connexions) | 4 | 🟢 |
@@ -166,14 +166,14 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 ### Disposition des panneaux
 
 - [x] 🟢 **Panneaux redimensionnables** : séparateurs déplaçables entre dossiers, liste des messages et volet de lecture ; tailles mémorisées entre deux sessions
-  - [ ] 🟢 **Visibilité et lisibilité des séparateurs (`PaneSplitter`)** : rendre les séparateurs plus visibles et repérables (actuellement un simple trait discret de 1 px) avec un contraste renforcé au repos, une couleur d'accentuation ou un état visuel accentué au survol / glissement pour faciliter la manipulation à la souris
+  - [x] 🟢 **Visibilité et lisibilité des séparateurs (`PaneSplitter`)** : zone active de 8 px, trait visible de 1 px avec `DividerStrokeColorDefaultBrush`, épaississement à 3 px avec bord arrondi et couleur d'accentuation (`AccentFillColorDefaultBrush`) au survol et lors du glissement à la souris
 - [ ] 🟡 **Position du volet de lecture** (menu *Affichage › Volet de lecture*), en Mail comme en Calendrier : <a id="demo-volet-lecture"></a> — *fait en Mail ; le Calendrier n'a pas encore de volet de lecture (§12)*
   - [x] 🟢 À droite
   - [x] 🟢 En bas — *hauteur liste / lecture fixe, pas encore réglable à la souris*
   - [ ] 🟢 Désactivé (*grisé dans le menu en attendant la fenêtre de lecture indépendante*) : ouverture des messages dans la fenêtre de lecture indépendante (§6) et des événements dans leur fenêtre
   - [x] 🟢 Choix mémorisé dans les préférences
 - [ ] 🟢 **Volet des dossiers** : normal / réduit / désactivé, en Mail comme en Calendrier (en Calendrier, le mode réduit garde le mini-calendrier)
-  - [ ] 🟢 **Décalage des compteurs de messages par rapport à la barre de défilement** : ajouter une marge / espacement à droite des compteurs de non-lus dans l'arborescence (`TreeViewItem` de `FolderTree`) afin d'éviter tout chevauchement avec la barre de défilement verticale (`ScrollBar`) lors du défilement
+  - [x] 🟢 **Décalage des compteurs de messages par rapport à la barre de défilement** : marge de 10 px à droite des badges de non-lus dans l'arborescence (`TreeViewItem` de `FolderTree`) afin d'éviter tout chevauchement avec la barre de défilement verticale (`ScrollBar`)
 - [ ] 🟢 **Espacement plus étroit** (mode compact) des listes, en Mail comme en Calendrier
 - Barre des tâches à droite (To-Do bar) : cf. « Barre latérale des tâches », §16
 
@@ -596,8 +596,8 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
 
 ### Plusieurs calendriers
 
-- [x] 🟢 **Couleur par calendrier** (couleur EDS `ESourceSelectable`), dans la liste et dans la grille <a id="demo-cal-couleurs"></a> — *liste des événements et volet des calendriers ; grille quand elle existera (§12)*
-- [ ] 🟠 **Superposé (vue globale)** : calendriers sélectionnés fusionnés dans une même grille
+- [x] 🟢 **Couleur par calendrier** (couleur EDS `ESourceSelectable`), dans la liste et dans la grille <a id="demo-cal-couleurs"></a> — *liste des événements, volet des calendriers et blocs/barres colorés de la grille*
+- [x] 🟠 **Superposé (vue globale)** : calendriers sélectionnés fusionnés dans une même grille — *déjà fonctionnel : événements des calendriers cochés regroupés et synchronisés dans la même vue*
 - [ ] 🟠 **Côte à côte** : une colonne par calendrier, même période, défilement commun
 - [ ] 🟢 Bascule superposé / côte à côte ; mémorisation du mode et des calendriers affichés — *fait : calendriers affichés mémorisés, calendrier actif des nouveaux événements*
 - [ ] 🟡 **Groupes de calendriers** nommés (« Équipe », « Salles 2e étage ») pour en ouvrir plusieurs d'un coup
@@ -665,10 +665,10 @@ Constat : sur un compte Exchange Online / Microsoft 365 (ex. EVAM), EvolutionWin
 - [ ] 🟡 **Autocomplétion des adresses** dans les champs *À*, *Cc*, *Cci* de la rédaction et dans les participants d'une invitation : <a id="demo-autocompletion"></a>
   - [x] Suggestions au fil de la frappe (à partir de 2 caractères) depuis tous les carnets d'adresses (requête préfixe `EBookClient` sur nom, prénom, adresse), puis l'annuaire GAL pour les comptes Exchange / M365
   - [x] Adresses récemment utilisées en tête (destinataires des derniers messages envoyés), même si absentes des contacts
-  - [x] Liste déroulante : nom, adresse, carnet d'origine ; navigation aux flèches, validation par Entrée / Tab / point-virgule — *validation par Entrée ou clic ; Tab et « ; » à faire*
+  - [x] Liste déroulante : nom, adresse, carnet d'origine ; navigation aux flèches, validation par Entrée / Tab / point-virgule
   - [ ] Destinataire validé affiché en « jeton » (nom, adresse en info-bulle), supprimable, double-clic pour le modifier ; adresse inconnue ou mal formée soulignée
   - [ ] Plusieurs adresses collées d'un coup (séparées par `;` ou `,`) découpées en jetons
-  - [ ] Suppression d'une suggestion récente (bouton ✕ dans la liste)
+  - [x] Suppression d'une suggestion récente (bouton ✕ dans la liste et touche Suppr au clavier)
 - [ ] 🟡 **Créer rapidement une fiche contact depuis un mail ou une invitation** :
   - [ ] Clic droit (ou survol) sur une adresse — expéditeur, destinataires, Cc, organisateur ou participant d'une invitation — : *Ajouter aux contacts*, *Modifier le contact* si l'adresse est déjà connue
   - [ ] Fiche préremplie : nom et adresse email tirés de l'en-tête ; 🟠 en option, téléphone, société, fonction et site web extraits de la signature du message
@@ -782,14 +782,14 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 ### Notifications
 
 - [ ] 🟢 **Activer / désactiver les notifications Windows** (toasts) de nouveau courrier, globalement et par compte / dossier
-- [ ] 🟢 **Notifications discrètes : Toasts système et liste déroulante dans la barre d'état** :
-  - [ ] **Suppression du bandeau intrusif en bas de fenêtre** : ne plus afficher l'InfoBar temporaire en bas de l'application pour les notifications de messages reçus (« X nouveaux messages »), afin d'éviter de masquer le contenu ou d'encombrer l'espace de travail.
-  - [ ] **Émission exclusive via les Toasts système Windows** : notification par le Centre de notifications Windows (`Microsoft.Windows.AppNotifications`), respectant le mode confidentiel et le paramétrage du système.
-  - [ ] **Bouton et menu déroulant (Flyout) dans la barre d'état** : placé dans la barre d'état permanente en bas, immédiatement à côté du statut de connexion (« Connecté ») :
-    - [ ] Icône cloche avec badge / compteur indiquant le nombre de notifications actives (masqué si aucune notification).
-    - [ ] Menu déroulant (`Flyout`) affichant l'historique chronologique des notifications reçues (expéditeur, objet ou extrait, horodatage).
-    - [ ] Bouton de fermeture individuel (`✕`) sur chaque notification permettant de la faire disparaître de la liste et de décrémenter le compteur.
-    - [ ] Bouton *« Tout effacer »* / *« Tout marquer comme lu »* pour vider l'ensemble des notifications d'un clic.
+- [x] 🟢 **Notifications discrètes : Toasts système et liste déroulante dans la barre d'état** :
+  - [x] **Suppression du bandeau intrusif en bas de fenêtre** : suppression de l'InfoBar temporaire en bas de l'application pour les nouveaux messages reçus afin de préserver l'espace de travail.
+  - [x] **Émission exclusive via les Toasts système Windows** : notification par le Centre de notifications Windows (`Microsoft.Windows.AppNotifications`), respectant le mode confidentiel et le paramétrage du système.
+  - [x] **Bouton et menu déroulant (Flyout) dans la barre d'état** : placé dans la barre d'état permanente en bas, immédiatement à côté du statut de connexion (« Connecté ») :
+    - [x] Icône cloche avec badge / compteur indiquant le nombre de notifications actives (masqué si aucune notification).
+    - [x] Menu déroulant (`Flyout`) affichant l'historique chronologique des notifications reçues (expéditeur, objet ou extrait, horodatage).
+    - [x] Bouton de fermeture individuel (`✕`) sur chaque notification permettant de la faire disparaître de la liste et de décrémenter le compteur.
+    - [x] Bouton *« Tout effacer »* / *« Tout marquer comme lu »* pour vider l'ensemble des notifications d'un clic.
     - [ ] Clic sur une notification pour naviguer directement vers le message ou dossier concerné.
 - [x] 🟢 **Mode confidentiel des notifications** : remplacer l'expéditeur, l'objet et l'extrait par un message générique (« Nouveau message », « 3 nouveaux messages ») — utile en présentation ou en partage d'écran <a id="demo-confidentiel"></a>
   - [x] Bascule rapide depuis la barre d'état / le menu de l'icône, sans passer par les Paramètres — *ruban Affichage, barre d'accès rapide et Paramètres › Confidentialité*

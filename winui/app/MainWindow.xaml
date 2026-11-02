@@ -126,7 +126,7 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <!-- ruban (vues Courrier et Calendrier) : onglets (SelectorBar) et
+            <!-- ruban (vues Courrier, Calendrier, Contacts et Tâches) : onglets (SelectorBar) et
                  barre de commandes de l'onglet choisi ; voir MainWindow::UpdateRibbon -->
             <StackPanel x:Name="Ribbon" Grid.Row="0" Margin="12,4,12,0">
                 <SelectorBar x:Name="RibbonTabs" SelectionChanged="OnRibbonTabChanged">
@@ -163,6 +163,9 @@
                                 HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
                         <AppBarButton Label="Nouveau message" Click="OnNewMessageClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE710;" /></AppBarButton.Icon>
+                            <AppBarButton.KeyboardAccelerators>
+                                <KeyboardAccelerator Modifiers="Control" Key="N" />
+                            </AppBarButton.KeyboardAccelerators>
                         </AppBarButton>
                         <AppBarButton Label="Nouvel élément">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8F4;" /></AppBarButton.Icon>
@@ -328,6 +331,78 @@
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8FD;" /></AppBarButton.Icon>
                         </AppBarButton>
                     </CommandBar>
+
+                    <!-- ruban Contacts -->
+                    <CommandBar x:Name="RibbonContactsFile" Visibility="Collapsed" DefaultLabelPosition="Right"
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+                        <AppBarButton Label="Exporter" Click="OnExportContactsClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xEDE1;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarSeparator />
+                        <AppBarButton Label="Paramètres" Click="OnRibbonSettingsClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE713;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="À propos" Click="OnRibbonAboutClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Quitter" Click="OnRibbonQuitClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE7E8;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                    </CommandBar>
+                    <CommandBar x:Name="RibbonContactsHome" Visibility="Collapsed" DefaultLabelPosition="Right"
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+                        <AppBarButton Label="Nouveau contact" Click="OnNewContactClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE710;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Écrire un message" Click="OnComposeToContactClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE715;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Supprimer le contact" Click="OnDeleteContactClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE74D;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarSeparator />
+                        <AppBarButton Label="Exporter" Click="OnExportContactsClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xEDE1;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                    </CommandBar>
+                    <CommandBar x:Name="RibbonContactsView" Visibility="Collapsed" DefaultLabelPosition="Right"
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+                        <AppBarButton Label="Rétablir la disposition" Click="OnRibbonResetLayoutClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE777;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                    </CommandBar>
+
+                    <!-- ruban Tâches -->
+                    <CommandBar x:Name="RibbonTasksFile" Visibility="Collapsed" DefaultLabelPosition="Right"
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+                        <AppBarButton Label="Paramètres" Click="OnRibbonSettingsClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE713;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="À propos" Click="OnRibbonAboutClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Quitter" Click="OnRibbonQuitClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE7E8;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                    </CommandBar>
+                    <CommandBar x:Name="RibbonTasksHome" Visibility="Collapsed" DefaultLabelPosition="Right"
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+                        <AppBarButton Label="Nouvelle tâche" Click="OnNewTaskClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE710;" /></AppBarButton.Icon>
+                            <AppBarButton.KeyboardAccelerators>
+                                <KeyboardAccelerator Modifiers="Control,Shift" Key="K" />
+                            </AppBarButton.KeyboardAccelerators>
+                        </AppBarButton>
+                        <AppBarButton Label="Actualiser" Click="OnRefreshTasksClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE72C;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                    </CommandBar>
+                    <CommandBar x:Name="RibbonTasksView" Visibility="Collapsed" DefaultLabelPosition="Right"
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+                        <AppBarButton Label="Rétablir la disposition" Click="OnRibbonResetLayoutClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE777;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                    </CommandBar>
                 </Grid>
                 </Border>
             </StackPanel>
@@ -358,21 +433,7 @@
 
                 <!-- accounts and folders -->
                 <Grid Grid.Column="0" Grid.RowSpan="3" Padding="4,8,4,8">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-                    <Button Grid.Row="0" HorizontalAlignment="Stretch" Margin="8,0,8,8"
-                            Style="{StaticResource AccentButtonStyle}" Click="OnNewMessageClick">
-                        <Button.KeyboardAccelerators>
-                            <KeyboardAccelerator Modifiers="Control" Key="N" />
-                        </Button.KeyboardAccelerators>
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE710;" FontSize="14" />
-                            <TextBlock Text="Nouveau message" />
-                        </StackPanel>
-                    </Button>
-                    <TreeView x:Name="FolderTree" Grid.Row="1" SelectionMode="Single"
+                    <TreeView x:Name="FolderTree" SelectionMode="Single"
                               ItemInvoked="OnFolderInvoked">
                         <!-- nodes hold a FolderItem in their Content -->
                         <TreeView.ItemTemplate>
@@ -400,17 +461,17 @@
                 </Grid>
 
                 <!-- séparateurs déplaçables (double-clic : largeur par défaut) -->
-                <local:PaneSplitter x:Name="FoldersSplitter" Grid.Column="1" Grid.RowSpan="3" Width="6" Background="Transparent"
+                <local:PaneSplitter x:Name="FoldersSplitter" Grid.Column="1" Grid.RowSpan="3" Width="8" Background="Transparent"
                                     PointerPressed="OnSplitterPointerPressed" PointerMoved="OnSplitterPointerMoved"
                                     PointerReleased="OnSplitterPointerReleased" PointerCaptureLost="OnSplitterPointerCaptureLost"
                                     DoubleTapped="OnSplitterDoubleTapped">
-                    <Rectangle Width="1" HorizontalAlignment="Center" Fill="{ThemeResource CardStrokeColorDefaultBrush}" />
+                    <Rectangle Width="1" HorizontalAlignment="Center" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
                 </local:PaneSplitter>
-                <local:PaneSplitter x:Name="ListSplitter" Grid.Column="3" Grid.RowSpan="3" Width="6" Background="Transparent"
+                <local:PaneSplitter x:Name="ListSplitter" Grid.Column="3" Grid.RowSpan="3" Width="8" Background="Transparent"
                                     PointerPressed="OnSplitterPointerPressed" PointerMoved="OnSplitterPointerMoved"
                                     PointerReleased="OnSplitterPointerReleased" PointerCaptureLost="OnSplitterPointerCaptureLost"
                                     DoubleTapped="OnSplitterDoubleTapped">
-                    <Rectangle Width="1" HorizontalAlignment="Center" Fill="{ThemeResource CardStrokeColorDefaultBrush}" />
+                    <Rectangle Width="1" HorizontalAlignment="Center" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
                 </local:PaneSplitter>
 
                 <!-- messages of the selected folder -->
@@ -623,25 +684,18 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- colonne de gauche : la liste des calendriers prend la hauteur restante -->
+                <!-- colonne de gauche : le mini-calendrier et la liste des calendriers -->
                 <Grid Grid.Column="0" RowSpacing="12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <Button Grid.Row="0" HorizontalAlignment="Stretch" Style="{StaticResource AccentButtonStyle}" Click="OnNewEventClick">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE710;" FontSize="14" />
-                            <TextBlock Text="Nouvel événement" />
-                        </StackPanel>
-                    </Button>
-                    <CalendarView Grid.Row="1" x:Name="MonthCalendar" SelectionMode="Single" SelectedDatesChanged="OnCalendarDateSelected" />
+                    <CalendarView Grid.Row="0" x:Name="MonthCalendar" SelectionMode="Single" SelectedDatesChanged="OnCalendarDateSelected" />
                     <!-- calendriers par compte : case = affiché, clic sur le nom =
                          calendrier actif des nouveaux événements (MainWindow::LoadCalendarSources) -->
-                    <TextBlock Grid.Row="2" Text="Calendriers" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="4,4,0,0" />
-                    <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+                    <TextBlock Grid.Row="1" Text="Calendriers" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="4,4,0,0" />
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                         <StackPanel x:Name="CalendarSourcesPanel" Spacing="2" />
                     </ScrollViewer>
                 </Grid>
@@ -724,24 +778,11 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <Grid Grid.Row="0">
-                        <StackPanel VerticalAlignment="Center">
+                    <StackPanel Grid.Row="0" VerticalAlignment="Center">
                         <TextBlock Text="Contacts" Style="{StaticResource SubtitleTextBlockStyle}" />
                         <TextBlock x:Name="ActiveBookText" Style="{StaticResource CaptionTextBlockStyle}"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-                            <Button Click="OnExportContactsClick" ToolTipService.ToolTip="Exporter les contacts au format vCard (.vcf)">
-                                <FontIcon Glyph="&#xEDE1;" FontSize="14" />
-                            </Button>
-                            <Button Style="{StaticResource AccentButtonStyle}" Click="OnNewContactClick">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon Glyph="&#xE710;" FontSize="14" />
-                                    <TextBlock Text="Nouveau contact" />
-                                </StackPanel>
-                            </Button>
-                        </StackPanel>
-                    </Grid>
                     <AutoSuggestBox x:Name="ContactSearchBox" Grid.Row="1" PlaceholderText="Rechercher un contact" QueryIcon="Find"
                                     TextChanged="OnContactSearchChanged" QuerySubmitted="OnContactSearchSubmitted" />
                     <ListView x:Name="ContactList" Grid.Row="2" SelectionMode="Single" SelectionChanged="OnContactSelectionChanged" />
@@ -797,23 +838,10 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Tâches" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
-                    <ComboBox x:Name="TaskListChoice" Grid.Column="1" MinWidth="240" VerticalAlignment="Center"
+                    <ComboBox x:Name="TaskListChoice" Grid.Column="1" HorizontalAlignment="Left" MinWidth="240" VerticalAlignment="Center"
                               SelectionChanged="OnTaskListChanged" ToolTipService.ToolTip="Liste de tâches" />
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-                        <Button Click="OnRefreshTasksClick" ToolTipService.ToolTip="Actualiser les tâches">
-                            <FontIcon Glyph="&#xE72C;" FontSize="14" />
-                        </Button>
-                        <Button Style="{StaticResource AccentButtonStyle}" Click="OnNewTaskClick"
-                                ToolTipService.ToolTip="Nouvelle tâche (Ctrl+Maj+K)">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon Glyph="&#xE710;" FontSize="14" />
-                                <TextBlock Text="Nouvelle tâche" />
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
                 </Grid>
                 <!-- filtres et tri, appliqués localement (ShowTasks) et mémorisés -->
                 <Grid Grid.Row="1" ColumnSpacing="16">
@@ -1006,8 +1034,45 @@
                                Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
                 </StackPanel>
 
-                <!-- À droite : indicateur d'état des connexions et bouton vers le panneau détaillé -->
-                <Button x:Name="ConnectionStatusButton" Grid.Column="3"
+                <!-- À droite : notifications et indicateur d'état des connexions -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <!-- Menu déroulant des notifications récentes -->
+                    <Button x:Name="NotificationsButton"
+                            Padding="6,3,6,3" VerticalAlignment="Center"
+                            ToolTipService.ToolTip="Notifications reçues">
+                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xEA8F;" FontSize="14" VerticalAlignment="Center" />
+                            <InfoBadge x:Name="NotificationsBadge" Value="0" Visibility="Collapsed"
+                                       Style="{StaticResource AttentionValueInfoBadgeStyle}" />
+                        </StackPanel>
+                        <Button.Flyout>
+                            <Flyout x:Name="NotificationsFlyout">
+                                <StackPanel Width="340" Spacing="8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Notifications" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+                                        <Button x:Name="ClearAllNotificationsButton" Grid.Column="1"
+                                                Content="Tout effacer" Style="{StaticResource SubtleButtonStyle}"
+                                                Click="OnClearAllNotificationsClick" />
+                                    </Grid>
+                                    <MenuFlyoutSeparator />
+                                    <ScrollViewer MaxHeight="300" HorizontalScrollBarVisibility="Disabled">
+                                        <StackPanel Spacing="6">
+                                            <TextBlock x:Name="NoNotificationsText" Text="Aucune notification"
+                                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                       HorizontalAlignment="Center" Margin="0,16,0,16" />
+                                            <StackPanel x:Name="NotificationsPanel" Spacing="6" />
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                <Button x:Name="ConnectionStatusButton"
                         Click="OnConnectionStatusButtonClick"
                         Padding="8,3,8,3" VerticalAlignment="Center"
                         ToolTipService.ToolTip="Afficher l'état des connexions réseau">
@@ -1035,6 +1100,7 @@
                         </Flyout>
                     </Button.Flyout>
                 </Button>
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>

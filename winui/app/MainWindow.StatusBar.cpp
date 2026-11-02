@@ -283,4 +283,180 @@ namespace winrt::EvolutionWin::implementation
             FolderStatusText().Text(to_hstring(count) + L" messages");
         }
     }
+
+    /* Ajoute une notification dans l'historique de la barre d'état.
+     * Paramètres :
+     *   title : titre de la notification (ex: "Nouveau message de Alice")
+     *   body  : extrait ou objet du message */
+    void MainWindow::AddNotificationItem(hstring const& title, hstring const& body)
+    {
+        SYSTEMTIME st;
+        GetLocalTime(&st);
+        wchar_t time_buf[16];
+        swprintf_s(time_buf, L"%02d:%02d", st.wHour, st.wMinute);
+
+        NotificationItemRecord record;
+        record.id = L"notif_" + to_hstring(m_next_notification_id++);
+        record.title = title;
+        record.body = body;
+        record.timestamp = hstring{ time_buf };
+
+        /* Insertion en tête de liste (chronologie inverse) */
+        m_notifications.insert(m_notifications.begin(), record);
+
+        /* Limite à 50 notifications au maximum */
+        if (m_notifications.size() > 50)
+            m_notifications.pop_back();
+
+        UpdateNotificationsUI();
+    }
+
+    /* Supprime une notification individuelle de la liste.
+     * Paramètre :
+     *   id : identifiant unique de la notification à retirer */
+    void MainWindow::DismissNotificationItem(hstring const& id)
+    {
+        for (auto it = m_notifications.begin(); it != m_notifications.end(); ++it)
+        {
+            if (it->id == id)
+            {
+                m_notifications.erase(it);
+                break;
+            }
+        }
+        UpdateNotificationsUI();
+    }
+
+    /* Efface toutes les notifications enregistrées. */
+    void MainWindow::ClearAllNotifications()
+    {
+        m_notifications.clear();
+        UpdateNotificationsUI();
+    }
+
+    /* Gestionnaire du bouton "Tout effacer" du menu déroulant des notifications.
+     * Paramètres :
+     *   sender : bouton ayant déclenché l'action
+     *   args   : arguments de routage de l'événement */
+    void MainWindow::OnClearAllNotificationsClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ClearAllNotifications();
+    }
+
+    /* Rafraîchit l'affichage du menu déroulant et du badge des notifications. */
+    void MainWindow::UpdateNotificationsUI()
+    {
+        uint32_t count = static_cast<uint32_t>(m_notifications.size());
+
+        if (count == 0)
+        {
+            NotificationsBadge().Visibility(Visibility::Collapsed);
+            NotificationsBadge().Value(0);
+            NoNotificationsText().Visibility(Visibility::Visible);
+            ClearAllNotificationsButton().IsEnabled(false);
+        }
+        else
+        {
+            NotificationsBadge().Visibility(Visibility::Visible);
+            NotificationsBadge().Value(static_cast<int32_t>(count));
+            NoNotificationsText().Visibility(Visibility::Collapsed);
+            ClearAllNotificationsButton().IsEnabled(true);
+        }
+
+        NotificationsPanel().Children().Clear();
+
+        auto res = Application::Current().Resources();
+        auto card_bg = res.Lookup(box_value(L"CardBackgroundFillColorDefaultBrush")).as<Brush>();
+        auto card_stroke = res.Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>();
+        auto text_secondary = res.Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>();
+        auto body_strong_style = res.Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>();
+        auto caption_style = res.Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>();
+        Style subtle_btn_style{ nullptr };
+        if (res.HasKey(box_value(L"SubtleButtonStyle")))
+            subtle_btn_style = res.Lookup(box_value(L"SubtleButtonStyle")).as<Style>();
+
+        for (auto const& item : m_notifications)
+        {
+            Border card;
+            card.Background(card_bg);
+            card.BorderBrush(card_stroke);
+            card.BorderThickness(Thickness{ 1, 1, 1, 1 });
+            card.CornerRadius(CornerRadius{ 4, 4, 4, 4 });
+            card.Padding(Thickness{ 10, 8, 8, 8 });
+
+            Grid grid;
+            ColumnDefinition c0, c1;
+            c0.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+            c1.Width(GridLengthHelper::Auto());
+            grid.ColumnDefinitions().Append(c0);
+            grid.ColumnDefinitions().Append(c1);
+
+            StackPanel text_stack;
+            text_stack.Spacing(2);
+            text_stack.VerticalAlignment(VerticalAlignment::Center);
+
+            /* Ligne supérieure : Titre et horodatage */
+            Grid header_grid;
+            ColumnDefinition hc0, hc1;
+            hc0.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+            hc1.Width(GridLengthHelper::Auto());
+            header_grid.ColumnDefinitions().Append(hc0);
+            header_grid.ColumnDefinitions().Append(hc1);
+
+            TextBlock title_block;
+            title_block.Text(item.title);
+            title_block.Style(body_strong_style);
+            title_block.TextTrimming(TextTrimming::CharacterEllipsis);
+            Grid::SetColumn(title_block, 0);
+            header_grid.Children().Append(title_block);
+
+            TextBlock time_block;
+            time_block.Text(item.timestamp);
+            time_block.Style(caption_style);
+            time_block.Foreground(text_secondary);
+            time_block.Margin(Thickness{ 8, 0, 0, 0 });
+            Grid::SetColumn(time_block, 1);
+            header_grid.Children().Append(time_block);
+
+            text_stack.Children().Append(header_grid);
+
+            /* Ligne inférieure : Extrait du message */
+            TextBlock body_block;
+            body_block.Text(item.body);
+            body_block.Style(caption_style);
+            body_block.TextWrapping(TextWrapping::Wrap);
+            body_block.MaxLines(2);
+            body_block.TextTrimming(TextTrimming::CharacterEllipsis);
+            text_stack.Children().Append(body_block);
+
+            Grid::SetColumn(text_stack, 0);
+            grid.Children().Append(text_stack);
+
+            /* Bouton de fermeture individuel (✕) */
+            Button close_btn;
+            if (subtle_btn_style)
+                close_btn.Style(subtle_btn_style);
+            close_btn.Padding(Thickness{ 4, 4, 4, 4 });
+            close_btn.Margin(Thickness{ 4, 0, 0, 0 });
+            close_btn.VerticalAlignment(VerticalAlignment::Top);
+            ToolTipService::SetToolTip(close_btn, box_value(L"Supprimer cette notification"));
+
+            FontIcon close_icon;
+            close_icon.Glyph(L"\xE711");
+            close_icon.FontSize(10);
+            close_btn.Content(close_icon);
+
+            hstring id_to_dismiss = item.id;
+            close_btn.Click([this, id_to_dismiss](IInspectable const&, RoutedEventArgs const&)
+            {
+                DismissNotificationItem(id_to_dismiss);
+            });
+
+            Grid::SetColumn(close_btn, 1);
+            grid.Children().Append(close_btn);
+
+            card.Child(grid);
+            NotificationsPanel().Children().Append(card);
+        }
+    }
 }

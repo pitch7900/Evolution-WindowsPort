@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    xmlns:local="using:EvolutionWin"
     Title="Nouveau message">
 
     <Window.SystemBackdrop>
@@ -11,6 +12,26 @@
     </Window.SystemBackdrop>
 
     <Grid>
+        <Grid.Resources>
+            <!-- Modèle d'affichage pour les suggestions d'adresses avec suppression des récents -->
+            <DataTemplate x:Key="RecipientSuggestionTemplate" x:DataType="local:RecipientSuggestion">
+                <Grid HorizontalAlignment="Stretch" MinWidth="280" Padding="2,3,2,3">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{x:Bind DisplayText}" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                    <Button Grid.Column="1" Style="{StaticResource SubtleButtonStyle}"
+                            Visibility="{x:Bind RecentVisibility}"
+                            Padding="4" Margin="6,0,0,0" VerticalAlignment="Center"
+                            ToolTipService.ToolTip="Supprimer des adresses récentes"
+                            Click="OnRemoveRecentRecipientClick" Tag="{x:Bind Address}">
+                        <FontIcon Glyph="&#xE711;" FontSize="10" />
+                    </Button>
+                </Grid>
+            </DataTemplate>
+        </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="32" />
             <RowDefinition Height="Auto" />
@@ -107,15 +128,21 @@
             <TextBlock Grid.Row="1" Text="À" VerticalAlignment="Center" />
             <!-- suggestions de destinataires (ComposeWindow::OnRecipientTextChanged) -->
             <AutoSuggestBox x:Name="ToBox" Grid.Row="1" Grid.Column="1" PlaceholderText="Destinataires, séparés par des points-virgules"
-                            UpdateTextOnSelect="False" TextChanged="OnRecipientTextChanged" QuerySubmitted="OnRecipientQuerySubmitted" />
+                            UpdateTextOnSelect="False" TextChanged="OnRecipientTextChanged" QuerySubmitted="OnRecipientQuerySubmitted"
+                            SuggestionChosen="OnRecipientSuggestionChosen" PreviewKeyDown="OnRecipientPreviewKeyDown"
+                            ItemTemplate="{StaticResource RecipientSuggestionTemplate}" />
 
             <TextBlock Grid.Row="2" Text="Cc" VerticalAlignment="Center" />
             <AutoSuggestBox x:Name="CcBox" Grid.Row="2" Grid.Column="1"
-                            UpdateTextOnSelect="False" TextChanged="OnRecipientTextChanged" QuerySubmitted="OnRecipientQuerySubmitted" />
+                            UpdateTextOnSelect="False" TextChanged="OnRecipientTextChanged" QuerySubmitted="OnRecipientQuerySubmitted"
+                            SuggestionChosen="OnRecipientSuggestionChosen" PreviewKeyDown="OnRecipientPreviewKeyDown"
+                            ItemTemplate="{StaticResource RecipientSuggestionTemplate}" />
 
             <TextBlock Grid.Row="3" Text="Cci" VerticalAlignment="Center" />
             <AutoSuggestBox x:Name="BccBox" Grid.Row="3" Grid.Column="1"
-                            UpdateTextOnSelect="False" TextChanged="OnRecipientTextChanged" QuerySubmitted="OnRecipientQuerySubmitted" />
+                            UpdateTextOnSelect="False" TextChanged="OnRecipientTextChanged" QuerySubmitted="OnRecipientQuerySubmitted"
+                            SuggestionChosen="OnRecipientSuggestionChosen" PreviewKeyDown="OnRecipientPreviewKeyDown"
+                            ItemTemplate="{StaticResource RecipientSuggestionTemplate}" />
 
             <TextBlock Grid.Row="4" Text="Objet" VerticalAlignment="Center" />
             <TextBox x:Name="SubjectBox" Grid.Row="4" Grid.Column="1" TextChanged="OnSubjectChanged" />

@@ -5,6 +5,9 @@
 #if __has_include("ComposeWindow.g.cpp")
 #include "ComposeWindow.g.cpp"
 #endif
+#if __has_include("RecipientSuggestion.g.cpp")
+#include "RecipientSuggestion.g.cpp"
+#endif
 
 #include <winrt/Windows.Storage.h>
 #include <algorithm>
@@ -801,6 +804,131 @@ namespace winrt::EvolutionWin::implementation
         return recent;
     }
 
+    /* Supprime une adresse de l'historique des destinataires récents.
+     * Paramètre :
+     *   address : adresse email normalisée à retirer */
+    void ComposeWindow::RemoveRecentRecipient(std::wstring const& address)
+    {
+        auto arr = ::EvolutionWin::Settings::Instance().GetArray(L"recipients.recent");
+        Windows::Data::Json::JsonArray updated;
+        for (auto const& val : arr)
+        {
+            if (val.ValueType() == Windows::Data::Json::JsonValueType::String)
+            {
+                if (std::wstring{ val.GetString() } != address)
+                    updated.Append(val);
+            }
+        }
+        ::EvolutionWin::Settings::Instance().Set(L"recipients.recent", updated);
+    }
+
+    /* Gestionnaire du clic sur le bouton de suppression (✕) d'une suggestion récente.
+     * Paramètres :
+     *   sender : bouton émetteur portant l'adresse en Tag
+     *   args   : arguments de routage de l'événement */
+    void ComposeWindow::OnRemoveRecentRecipientClick(IInspectable const& sender, RoutedEventArgs const&)
+    {
+        auto btn = sender.try_as<Button>();
+        if (!btn || !btn.Tag())
+            return;
+
+        hstring address = unbox_value_or<hstring>(btn.Tag(), L"");
+        if (address.empty())
+            return;
+
+        RemoveRecentRecipient(std::wstring{ address });
+
+        /* Retire la suggestion de la boîte active */
+        for (auto const& box : { ToBox(), CcBox(), BccBox() })
+        {
+            if (auto items = box.ItemsSource().try_as<Windows::Foundation::Collections::IVector<IInspectable>>())
+            {
+                for (uint32_t i = 0; i < items.Size(); ++i)
+                {
+                    if (auto sug = items.GetAt(i).try_as<EvolutionWin::RecipientSuggestion>())
+                    {
+                        if (sug.Address() == address)
+                        {
+                            items.RemoveAt(i);
+                            break;
+                        }
+                    }
+                }
+                if (items.Size() == 0)
+                    box.ItemsSource(nullptr);
+            }
+        }
+    }
+
+    /* Mémorise la suggestion activement survolée ou sélectionnée au clavier.
+     * Paramètres :
+     *   sender : contrôle AutoSuggestBox émetteur
+     *   args   : arguments contenant l'élément sélectionné */
+    void ComposeWindow::OnRecipientSuggestionChosen(AutoSuggestBox const&, AutoSuggestBoxSuggestionChosenEventArgs const& args)
+    {
+        m_focused_suggestion = args.SelectedItem().try_as<EvolutionWin::RecipientSuggestion>();
+    }
+
+    /* Intercepte les touches Tab, Point-virgule et Suppr dans les champs destinataires.
+     * Paramètres :
+     *   sender : contrôle AutoSuggestBox émetteur
+     *   args   : arguments de l'événement clavier */
+    void ComposeWindow::OnRecipientPreviewKeyDown(IInspectable const& sender, Input::KeyRoutedEventArgs const& args)
+    {
+        auto box = sender.try_as<AutoSuggestBox>();
+        if (!box)
+            return;
+
+        if (args.Key() == Windows::System::VirtualKey::Tab)
+        {
+            auto items = box.ItemsSource().try_as<Windows::Foundation::Collections::IVector<IInspectable>>();
+            if (items && items.Size() > 0)
+            {
+                EvolutionWin::RecipientSuggestion chosen = m_focused_suggestion;
+                if (!chosen)
+                    chosen = items.GetAt(0).try_as<EvolutionWin::RecipientSuggestion>();
+
+                if (chosen)
+                {
+                    std::wstring text{ box.Text() };
+                    text = text.substr(0, RecipientTokenStart(text)) + std::wstring{ chosen.Address() } + L"; ";
+                    ++m_recipient_request;
+                    box.Text(hstring{ text });
+                    box.ItemsSource(nullptr);
+                    m_focused_suggestion = nullptr;
+                    args.Handled(true);
+                }
+            }
+        }
+        else if (args.Key() == Windows::System::VirtualKey::Delete)
+        {
+            if (m_focused_suggestion && m_focused_suggestion.IsRecent())
+            {
+                std::wstring address{ m_focused_suggestion.Address() };
+                RemoveRecentRecipient(address);
+
+                if (auto items = box.ItemsSource().try_as<Windows::Foundation::Collections::IVector<IInspectable>>())
+                {
+                    for (uint32_t i = 0; i < items.Size(); ++i)
+                    {
+                        if (auto sug = items.GetAt(i).try_as<EvolutionWin::RecipientSuggestion>())
+                        {
+                            if (sug.Address() == hstring{ address })
+                            {
+                                items.RemoveAt(i);
+                                break;
+                            }
+                        }
+                    }
+                    if (items.Size() == 0)
+                        box.ItemsSource(nullptr);
+                }
+                m_focused_suggestion = nullptr;
+                args.Handled(true);
+            }
+        }
+    }
+
     /* Saisie dans À / Cc / Cci : suggestions pour le destinataire en cours
      * (2 caractères au moins), adresses récentes d'abord, puis carnets
      * d'adresses (GAL comprise) via evo-core. */
@@ -810,12 +938,43 @@ namespace winrt::EvolutionWin::implementation
             return;
 
         std::wstring text{ sender.Text() };
-        std::wstring token = text.substr(RecipientTokenStart(text));
+        size_t token_start = RecipientTokenStart(text);
+        std::wstring token = text.substr(token_start);
+
+        /* Si l'utilisateur termine sa frappe par ';' ou ',', valider la première suggestion si disponible */
+        if (token.size() > 1 && (token.back() == L';' || token.back() == L','))
+        {
+            std::wstring clean = token.substr(0, token.size() - 1);
+            while (!clean.empty() && iswspace(clean.back()))
+                clean.pop_back();
+
+            if (!clean.empty() && sender.ItemsSource())
+            {
+                if (auto items = sender.ItemsSource().try_as<Windows::Foundation::Collections::IVector<IInspectable>>())
+                {
+                    if (items.Size() > 0)
+                    {
+                        auto chosen = m_focused_suggestion ? m_focused_suggestion : items.GetAt(0).try_as<EvolutionWin::RecipientSuggestion>();
+                        if (chosen)
+                        {
+                            text = text.substr(0, token_start) + std::wstring{ chosen.Address() } + L"; ";
+                            ++m_recipient_request;
+                            sender.Text(hstring{ text });
+                            sender.ItemsSource(nullptr);
+                            m_focused_suggestion = nullptr;
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
         uint64_t request = ++m_recipient_request;
 
         if (token.size() < 2)
         {
             sender.ItemsSource(nullptr);
+            m_focused_suggestion = nullptr;
             return;
         }
 
@@ -862,7 +1021,8 @@ namespace winrt::EvolutionWin::implementation
                 std::wstring label = entry + L"  (récent)";
                 self->m_suggestion_values[label] = entry;
                 inserted.push_back(entry);
-                items.Append(box_value(hstring{ label }));
+                auto sug = make<RecipientSuggestion>(hstring{ label }, hstring{ entry }, true);
+                items.Append(sug);
             }
 
             for (auto const& value : results)
@@ -877,7 +1037,8 @@ namespace winrt::EvolutionWin::implementation
                 std::wstring label = address + L"  — " + std::wstring{ person.GetNamedString(L"book", L"") };
                 self->m_suggestion_values[label] = address;
                 inserted.push_back(address);
-                items.Append(box_value(hstring{ label }));
+                auto sug = make<RecipientSuggestion>(hstring{ label }, hstring{ address }, false);
+                items.Append(sug);
             }
 
             sender.ItemsSource(items.Size() > 0 ? items : nullptr);
@@ -888,19 +1049,47 @@ namespace winrt::EvolutionWin::implementation
      * et ajoute « ; » pour le suivant. */
     void ComposeWindow::OnRecipientQuerySubmitted(AutoSuggestBox const& sender, AutoSuggestBoxQuerySubmittedEventArgs const& args)
     {
-        if (!args.ChosenSuggestion())
-            return;
+        std::wstring address;
 
-        std::wstring label{ unbox_value_or<hstring>(args.ChosenSuggestion(), L"") };
-        auto it = m_suggestion_values.find(label);
-        if (it == m_suggestion_values.end())
+        if (args.ChosenSuggestion())
+        {
+            if (auto sug = args.ChosenSuggestion().try_as<EvolutionWin::RecipientSuggestion>())
+            {
+                address = std::wstring{ sug.Address() };
+            }
+            else
+            {
+                std::wstring label{ unbox_value_or<hstring>(args.ChosenSuggestion(), L"") };
+                auto it = m_suggestion_values.find(label);
+                if (it != m_suggestion_values.end())
+                    address = it->second;
+            }
+        }
+        else if (m_focused_suggestion)
+        {
+            address = std::wstring{ m_focused_suggestion.Address() };
+        }
+        else if (sender.ItemsSource())
+        {
+            if (auto items = sender.ItemsSource().try_as<Windows::Foundation::Collections::IVector<IInspectable>>())
+            {
+                if (items.Size() > 0)
+                {
+                    if (auto sug = items.GetAt(0).try_as<EvolutionWin::RecipientSuggestion>())
+                        address = std::wstring{ sug.Address() };
+                }
+            }
+        }
+
+        if (address.empty())
             return;
 
         std::wstring text{ sender.Text() };
-        text = text.substr(0, RecipientTokenStart(text)) + it->second + L"; ";
+        text = text.substr(0, RecipientTokenStart(text)) + address + L"; ";
         ++m_recipient_request;
         sender.Text(hstring{ text });
         sender.ItemsSource(nullptr);
+        m_focused_suggestion = nullptr;
     }
 
     /* Message envoyé : ses destinataires passent en tête des adresses récentes. */
