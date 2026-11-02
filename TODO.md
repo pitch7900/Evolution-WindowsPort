@@ -161,6 +161,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 - [x] 🟡 **Barre d'accès rapide** personnalisable dans la barre de titre (Envoyer/Recevoir, Annuler, etc.) — *reste : « Annuler » (pas encore de mécanisme d'annulation)*
 - [x] 🟢 **Barre latérale gauche** de navigation entre modules (Mail, Calendrier, Contacts, Tâches) — `NavigationView` déjà en place, à restyler en barre d'icônes
 - [x] 🟢 **Bandeau d'information** sous la barre d'outils (`InfoBar`), affiché dans les vues Mail et Calendrier (ex. réponses automatiques actives + bouton *Désactiver*)
+- Bandeau de notification en bas de fenêtre (`StatusBar`) : supprimé au profit des Toasts système et du menu déroulant dans la barre d'état (cf. §19)
 
 ### Disposition des panneaux
 
@@ -361,6 +362,7 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
   - [x] Bouton *Réessayer* par compte ; lien vers les paramètres du compte
   - [ ] Pastille d'erreur sur le compte concerné dans l'arborescence des dossiers et notification Windows (une seule fois par erreur) quand une réauthentification est nécessaire
   - [x] État fourni par `evo-core` (événement `connection-status` par service, à partir de `CamelService:connection-status`, des erreurs de relève et de l'état des sources EDS)
+  - Menu déroulant des notifications dans la barre d'état (à côté de l'indicateur d'état des connexions) : cf. §19
 - [ ] 🟡 **Préférences de téléchargement** : en-têtes seuls / message complet, limite de taille (synchronisation hors connexion des dossiers : cf. « Cache local » ci-dessus)
 - [ ] 🟠 **Mode en-têtes seuls** : télécharger les en-têtes, marquer pour téléchargement (message / copie), annuler les marques, traiter les en-têtes marqués
 
@@ -777,6 +779,15 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 ### Notifications
 
 - [ ] 🟢 **Activer / désactiver les notifications Windows** (toasts) de nouveau courrier, globalement et par compte / dossier
+- [ ] 🟢 **Notifications discrètes : Toasts système et liste déroulante dans la barre d'état** :
+  - [ ] **Suppression du bandeau intrusif en bas de fenêtre** : ne plus afficher l'InfoBar temporaire en bas de l'application pour les notifications de messages reçus (« X nouveaux messages »), afin d'éviter de masquer le contenu ou d'encombrer l'espace de travail.
+  - [ ] **Émission exclusive via les Toasts système Windows** : notification par le Centre de notifications Windows (`Microsoft.Windows.AppNotifications`), respectant le mode confidentiel et le paramétrage du système.
+  - [ ] **Bouton et menu déroulant (Flyout) dans la barre d'état** : placé dans la barre d'état permanente en bas, immédiatement à côté du statut de connexion (« Connecté ») :
+    - [ ] Icône cloche avec badge / compteur indiquant le nombre de notifications actives (masqué si aucune notification).
+    - [ ] Menu déroulant (`Flyout`) affichant l'historique chronologique des notifications reçues (expéditeur, objet ou extrait, horodatage).
+    - [ ] Bouton de fermeture individuel (`✕`) sur chaque notification permettant de la faire disparaître de la liste et de décrémenter le compteur.
+    - [ ] Bouton *« Tout effacer »* / *« Tout marquer comme lu »* pour vider l'ensemble des notifications d'un clic.
+    - [ ] Clic sur une notification pour naviguer directement vers le message ou dossier concerné.
 - [x] 🟢 **Mode confidentiel des notifications** : remplacer l'expéditeur, l'objet et l'extrait par un message générique (« Nouveau message », « 3 nouveaux messages ») — utile en présentation ou en partage d'écran <a id="demo-confidentiel"></a>
   - [x] Bascule rapide depuis la barre d'état / le menu de l'icône, sans passer par les Paramètres — *ruban Affichage, barre d'accès rapide et Paramètres › Confidentialité*
   - [ ] 🟡 Activation automatique quand Windows est en mode *Ne pas déranger* / partage d'écran détecté (optionnel)
