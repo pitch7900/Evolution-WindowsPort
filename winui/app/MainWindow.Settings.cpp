@@ -145,8 +145,8 @@ namespace winrt::EvolutionWin::implementation
             combo.SelectedIndex(sel);
         }
 
-        if (auto sw = MailEmptyTrashOnExitSwitch())
-            sw.IsOn(settings.GetBoolean(L"mail.empty-trash-on-exit", false));
+        if (auto chk = MailEmptyTrashOnExitCheck())
+            chk.IsChecked(settings.GetBoolean(L"mail.empty-trash-on-exit", false));
 
         // Format par défaut (HTML / texte brut)
         hstring def_format = settings.GetString(L"mail.default-format", L"html");
@@ -713,6 +713,29 @@ namespace winrt::EvolutionWin::implementation
                 {
                     ApplyCalendarPreferences();
                 }
+            }
+        }
+    }
+
+    /**
+     * @brief Gestionnaire universel de modification d'une case à cocher (CheckBox) de configuration.
+     * @param sender Contrôle CheckBox émetteur.
+     * @param args Arguments de l'événement.
+     */
+    void MainWindow::OnSettingCheckChanged(
+        IInspectable const& sender,
+        [[maybe_unused]] RoutedEventArgs const& args)
+    {
+        if (!m_initialized || m_updating_settings_view)
+            return;
+
+        if (auto check = sender.try_as<CheckBox>())
+        {
+            hstring key = unbox_value_or<hstring>(check.Tag(), L"");
+            if (!key.empty())
+            {
+                bool is_checked = check.IsChecked() && check.IsChecked().Value();
+                ::EvolutionWin::Settings::Instance().SetBoolean(key, is_checked);
             }
         }
     }

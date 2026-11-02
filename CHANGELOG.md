@@ -29,7 +29,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   - **Test unitaire dédié** : ajout du test `test_attachment_keywords` dans `tests/unit/test_helpers.cpp` (22/22 tests réussis).
 
 - **Vider automatiquement la Corbeille à la fermeture (Quickwin §5 / §19)** :
-  - **Purge complète multi-comptes** : lors de la fermeture de la fenêtre principale, si la préférence `mail.empty-trash-on-exit` est cochée, `EmptyAllTrashFolders()` parcourt l'ensemble des comptes et des dossiers spéciaux pour envoyer la commande de purge définitive `empty` à `evo-core`.
+  - **Optionnel via case à cocher dans les Paramètres** : ajout d'une case à cocher standard (`CheckBox` x:Name `MailEmptyTrashOnExitCheck`) dans *Paramètres › Courrier* reliée à la préférence `mail.empty-trash-on-exit` (`false` par défaut).
+  - **Purge complète multi-comptes** : lors de la fermeture de la fenêtre principale, si la case est cochée, `EmptyAllTrashFolders()` parcourt l'ensemble des comptes et des dossiers spéciaux pour envoyer la commande de purge définitive `empty` à `evo-core`.
   - **Déduplication sécurisée** : utilisation d'un registre d'UIDs pour éviter tout double déclenchement sur les dossiers mappés.
   - **Validation par test unitaire** : couverture de la clé de configuration et de son repli sécurisé (`false` par défaut) dans `tests/unit/test_settings.cpp`.
 

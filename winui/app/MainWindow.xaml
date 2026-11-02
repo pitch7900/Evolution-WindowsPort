@@ -1214,8 +1214,8 @@
                                             <TextBlock Text="Purger définitivement les éléments supprimés à la fermeture d'EvolutionWin."
                                                        Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
-                                        <ToggleSwitch Grid.Column="2" x:Name="MailEmptyTrashOnExitSwitch" Tag="mail.empty-trash-on-exit"
-                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                        <CheckBox Grid.Column="2" x:Name="MailEmptyTrashOnExitCheck" Tag="mail.empty-trash-on-exit"
+                                                  Click="OnSettingCheckChanged" VerticalAlignment="Center" />
                                     </Grid>
                                 </Border>
 
