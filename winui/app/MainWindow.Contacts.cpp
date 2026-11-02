@@ -392,4 +392,110 @@ namespace winrt::EvolutionWin::implementation
             LoadContacts(ContactSearchBox().Text());
         });
     }
+
+    /**
+     * @brief Ouvre le carnet d'adresses en basculant directement vers le module Contacts.
+     * @param sender Bouton de commande émetteur.
+     * @param args Arguments de l'événement routé.
+     */
+    void MainWindow::OnAddressBookClick(
+        [[maybe_unused]] IInspectable const& sender,
+        [[maybe_unused]] RoutedEventArgs const& args)
+    {
+        SelectNavigationModule(L"contacts");
+    }
+
+    /**
+     * @brief Filtre dynamiquement les suggestions de contacts dans la zone de recherche rapide du ruban.
+     * @param sender AutoSuggestBox du ruban.
+     * @param args Arguments de modification de texte.
+     */
+    void MainWindow::OnRibbonContactSearchTextChanged(
+        AutoSuggestBox const& sender,
+        AutoSuggestBoxTextChangedEventArgs const& args)
+    {
+        if (args.Reason() != AutoSuggestionBoxTextChangeReason::UserInput)
+            return;
+
+        hstring query = sender.Text();
+        if (query.empty())
+        {
+            sender.ItemsSource(nullptr);
+            return;
+        }
+
+        if (!m_contact_books)
+            LoadContactBooks();
+
+        std::wstring visible;
+        for (auto const& uid : VisibleBookUids())
+            visible += (visible.empty() ? L"" : L",") + std::wstring{ uid };
+
+        m_core->ListBookContacts(query, hstring{ visible }, [this, sender, query](hstring const& json, hstring const& error)
+        {
+            if (!error.empty())
+                return;
+
+            JsonArray contacts;
+            if (!JsonArray::TryParse(json, contacts))
+                return;
+
+            std::vector<hstring> suggestions;
+            for (auto const& value : contacts)
+            {
+                auto contact = value.GetObject();
+                hstring full_name = contact.GetNamedString(L"full_name", L"");
+                hstring email = contact.GetNamedString(L"email", L"");
+                std::wstring formatted = ::EvolutionWin::Helpers::FormatContactSuggestion(full_name, email);
+                suggestions.push_back(hstring{ formatted });
+            }
+
+            DispatcherQueue().TryEnqueue([sender, suggestions = std::move(suggestions)]()
+            {
+                auto vec = single_threaded_vector<hstring>(std::move(const_cast<std::vector<hstring>&>(suggestions)));
+                sender.ItemsSource(vec);
+            });
+        });
+    }
+
+    /**
+     * @brief Valide la recherche de contact rapide dans le ruban et navigue vers la vue Contacts avec le filtre.
+     * @param sender AutoSuggestBox émetteur.
+     * @param args Arguments de validation de requête.
+     */
+    void MainWindow::OnRibbonContactSearchQuerySubmitted(
+        [[maybe_unused]] AutoSuggestBox const& sender,
+        AutoSuggestBoxQuerySubmittedEventArgs const& args)
+    {
+        hstring query = args.QueryText();
+        SelectNavigationModule(L"contacts");
+        ContactSearchBox().Text(query);
+        LoadContacts(query);
+    }
+
+    /**
+     * @brief Sélectionne une suggestion de contact choisie dans la liste déroulante du ruban.
+     * @param sender AutoSuggestBox émetteur.
+     * @param args Arguments de l'élément sélectionné.
+     */
+    void MainWindow::OnRibbonContactSearchSuggestionChosen(
+        [[maybe_unused]] AutoSuggestBox const& sender,
+        AutoSuggestBoxSuggestionChosenEventArgs const& args)
+    {
+        if (!args.SelectedItem())
+            return;
+
+        hstring chosen = unbox_value_or<hstring>(args.SelectedItem(), L"");
+        // Extrait le nom avant les chevrons s'il y a une adresse
+        std::wstring query{ chosen };
+        auto open_bracket = query.find(L" <");
+        if (open_bracket != std::wstring::npos)
+        {
+            query = query.substr(0, open_bracket);
+        }
+
+        SelectNavigationModule(L"contacts");
+        ContactSearchBox().Text(hstring{ query });
+        LoadContacts(hstring{ query });
+    }
 }

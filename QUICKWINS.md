@@ -72,7 +72,7 @@ Ces chantiers ne dépendent pas de refontes architecturales complexes et apporte
   - Bouton rapide « Aujourd’hui ».
 - [ ] **Échelle de temps du calendrier**
   - Choix du pas horaire dans la grille Jour / Semaine : 15, 30 ou 60 minutes.
-- [ ] **Recherche rapide de contacts**
+- [x] **Recherche rapide de contacts**
   - Champ de saisie direct dans le ruban avec filtrage dynamique dans le carnet d'adresses.
 
 ---

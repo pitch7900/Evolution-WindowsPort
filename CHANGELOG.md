@@ -22,6 +22,13 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Recherche rapide de contacts et accès direct au carnet d'adresses (Quickwin §4 / §14)** :
+  - **Champ dédié dans le ruban Accueil** : intégration d'une `AutoSuggestBox` dans le ruban principal de la messagerie (style Outlook) permettant de rechercher n'importe quel contact instantanément.
+  - **Suggestions dynamiques en direct** : affichage en temps réel des correspondances avec nom complet et adresse électronique au fur et à mesure de la saisie via `ListBookContacts`.
+  - **Navigation fluide vers le carnet d'adresses** : la validation ou la sélection d'un contact bascule automatiquement vers le module Contacts avec le filtre appliqué (`ContactSearchBox`).
+  - **Bouton d'accès direct « Carnet d'adresses »** : commande dédiée dans le ruban pour ouvrir immédiatement le carnet d'adresses complet d'un simple clic.
+  - **Validation par tests unitaires** : ajout de la suite `FormatContactSuggestion` dans `tests/unit/test_helpers.cpp` (33/33 tests validés).
+
 - **Aperçus sécurisés de pièces jointes simples (Quickwin §2 / §8)** :
   - **Aperçu intégré dans le volet de lecture et la fenêtre de message** : clic direct sur le bouton de n'importe quelle pièce jointe pour basculer instantanément vers un panneau d'aperçu dédié avec bouton « Retour au message », nom du document et boutons d'action (« Enregistrer sous... », « Ouvrir »).
   - **Images supportées** : décodage natif et sécurisé via `BitmapImage` (PNG, JPEG, GIF, BMP, WebP, ICO, TIFF) avec adaptation fluide aux dimensions de l'affichage.

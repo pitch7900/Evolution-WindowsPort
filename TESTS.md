@@ -50,6 +50,7 @@ Valide les fonctions pures issues de `MainWindow.Helpers.h` :
 - **Génération HTML autonome pour navigateur (`BuildStandaloneHtmlMessage`)** : construction d'un document complet (en-têtes RFC, métadonnées, corps HTML ou texte brut échappé dans `<pre>`) pour l'affichage dans le navigateur système.
 - **Extraction et nettoyage de texte pour synthèse vocale (`ExtractPlainTextForSpeech`)** : extraction ordonnée (expéditeur, objet, corps), filtrage des balises HTML et décodage des entités courantes pour une lecture vocale fluide.
 - **Classification d'aperçu sécurisé de pièce jointe (`DetectAttachmentPreviewKind`)** : typage strict des extensions de fichiers (images décodables WIC, fichiers texte et code brut non interprétés, types exécutables ou à risque protégés sans aperçu).
+- **Formatage des suggestions de contacts (`FormatContactSuggestion`)** : présentation élégante des contacts ("Nom <email>" ou repli sur le champ disponible) pour la recherche rapide dans l'AutoSuggestBox du ruban.
 
 ### Suite 2 : Contrats d'interface et robustesse `evo-core` (`test_evo_core_contracts.c`)
 Vérifie la robustesse du moteur C et ses échanges avec l'interface :

@@ -424,16 +424,26 @@
 
                         <AppBarSeparator />
 
-                        <AppBarButton x:Name="RibbonCreateTaskFromMessage" Label="Créer une tâche" Click="OnCreateTaskFromMessageClick" ToolTipService.ToolTip="Créer une tâche à partir du message sélectionné (Ctrl+Maj+T)">
-
+                                                <AppBarButton x:Name="RibbonCreateTaskFromMessage" Label="Créer une tâche" Click="OnCreateTaskFromMessageClick" ToolTipService.ToolTip="Créer une tâche à partir du message sélectionné (Ctrl+Maj+T)">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE9D5;" /></AppBarButton.Icon>
-
                             <AppBarButton.KeyboardAccelerators>
-
                                 <KeyboardAccelerator Modifiers="Control,Shift" Key="T" />
-
                             </AppBarButton.KeyboardAccelerators>
-
+                        </AppBarButton>
+                        <AppBarSeparator />
+                        <AppBarElementContainer VerticalAlignment="Center">
+                            <AutoSuggestBox x:Name="RibbonQuickContactSearch"
+                                            PlaceholderText="Rechercher un contact..."
+                                            QueryIcon="Find"
+                                            Width="220"
+                                            Margin="4,0,4,0"
+                                            TextChanged="OnRibbonContactSearchTextChanged"
+                                            QuerySubmitted="OnRibbonContactSearchQuerySubmitted"
+                                            SuggestionChosen="OnRibbonContactSearchSuggestionChosen"
+                                            ToolTipService.ToolTip="Recherche rapide dans le carnet d'adresses (Ctrl+E ou saisie directe)" />
+                        </AppBarElementContainer>
+                        <AppBarButton x:Name="RibbonAddressBookButton" Label="Carnet d'adresses" Click="OnAddressBookClick" ToolTipService.ToolTip="Ouvrir le carnet d'adresses">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE779;" /></AppBarButton.Icon>
                         </AppBarButton>
 
                     </CommandBar>

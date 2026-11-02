@@ -557,4 +557,21 @@ namespace EvolutionWin::Helpers
 
         return AttachmentPreviewKind::Unsupported;
     }
+
+    /**
+     * @brief Formate un libellé lisible de suggestion de contact pour l'AutoSuggestBox ("Nom <email>").
+     * @param full_name Nom complet du contact.
+     * @param email Adresse électronique principale.
+     * @return Libellé complet ou repli sur l'un des deux champs.
+     */
+    inline std::wstring FormatContactSuggestion(std::wstring_view full_name, std::wstring_view email)
+    {
+        if (full_name.empty() && email.empty())
+            return L"(Sans nom)";
+        if (email.empty())
+            return std::wstring{ full_name };
+        if (full_name.empty())
+            return std::wstring{ email };
+        return std::wstring{ full_name } + L" <" + std::wstring{ email } + L">";
+    }
 }

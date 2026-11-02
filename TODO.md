@@ -153,6 +153,11 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] Préversions marquées _Pre-release_ (canal « préversions » de la mise à jour automatique)
   - [x] Retirer `dist/` du dépôt (et l'ajouter au `.gitignore`), mettre à jour la documentation ([WINDOWS-PORT.md](WINDOWS-PORT.md), README)
   - [-] 🟠 **Annulé** : construction et publication automatiques par GitHub Actions à chaque étiquette (nécessite un runner Windows avec toute la chaîne MSVC / gvsbuild, ou un runner auto-hébergé)
+- [ ] 🟡 **Arrêt complet des modules et processus d'arrière-plan à la fermeture de l'application** :
+  - Constat : lorsque l'utilisateur ferme EvolutionWin, plusieurs modules et processus d'arrière-plan démarrés par l'application continuent de tourner indéfiniment en mémoire (services EDS `evolution-source-registry.exe`, `evolution-calendar-factory.exe`, `evolution-addressbook-factory.exe`, daemons et utilitaires D-Bus `gdbus.exe`, `camel-index-control.exe`, processus auxiliaires `gspawn-win64-helper.exe`). Dès lors que l'utilisateur décide de fermer l'application, aucun composant ne doit subsister en tâche de fond.
+  - [ ] **Arrêt ordonné à la fermeture** : notification et arrêt propre des services EDS et du bus D-Bus lors de la destruction du moteur `CoreBridge` / `evo-core` sur l'événement `Closed` de la fenêtre principale.
+  - [ ] **Encapsulation dans un Job Object Windows** : associer tous les processus satellites enfants à un `Job Object` Windows configuré avec `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, garantissant la fermeture automatique et immédiate de l'ensemble de l'arborescence des processus si l'application principale se termine (normalement ou par arrêt inopiné).
+  - [ ] **Nettoyage de sécurité résiduel** : détection et terminaison forcée de tout processus orphelin résiduel associé à la session utilisateur courante pour libérer la mémoire vive et déverrouiller les fichiers de cache/base de données.
 
 ## 2. Interface générale et disposition — 🟡
 
@@ -568,7 +573,7 @@ La recherche dans le dossier courant existe déjà (filtrage instantané + reche
 - [x] 🟢 **Champ de recherche dans la barre de titre** de la fenêtre (au lieu de la vue Mail seule) <a id="demo-recherche-titre"></a> — _dossier courant en Courrier, contacts en Contacts ; barre de titre haute (48 px)_
 - [x] 🟢 Bouton pour effacer la recherche ; raccourci Ctrl+E — _et Échap_
 - [x] 🟢 **Portée** : dossier courant / sous-dossiers / compte courant / tous les comptes <a id="demo-recherche-portee"></a> — _sélecteur ComboBox dans la barre de titre, placeholder dynamique, parcours récursif Camel et étiquette d'origine_
-- [ ] 🟢 **Recherche rapide de contacts** (champ dédié dans le ruban, comme Outlook) et accès au Carnet d'adresses
+- [x] 🟢 **Recherche rapide de contacts** (champ dédié dans le ruban, comme Outlook) et accès au Carnet d'adresses
 - [ ] 🟡 **Recherche dans le calendrier** (titre, lieu, description, participants)
 
 ### Recherche avancée
@@ -815,6 +820,7 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 
 - [ ] 🟢 Langue de l'interface (cf. §20), thème (clair / sombre / système), taille du texte
 - [ ] 🟢 Démarrage avec Windows, réduction dans la zone de notification à la fermeture
+  - Arrêt complet des modules et processus d'arrière-plan à la fermeture : cf. §1
 - [x] 🟢 Module affiché au démarrage (Mail, Calendrier, Contacts, Tâches)
 - [ ] 🟡 Raccourcis clavier (afficher la liste, profil Outlook / Evolution)
 

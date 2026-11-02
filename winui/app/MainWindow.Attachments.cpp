@@ -386,7 +386,7 @@ namespace winrt::EvolutionWin::implementation
         CreateDirectoryW((std::wstring{ temp_dir } + L"EvolutionWin").c_str(), nullptr);
         CreateDirectoryW(preview_dir.c_str(), nullptr);
 
-        std::wstring temp_file = preview_dir + L"\preview_" + std::to_wstring(index) + L"_" + std::wstring{ SanitizeFileName(filename, L"piece-jointe") };
+        std::wstring temp_file = preview_dir + L"\\preview_" + std::to_wstring(index) + L"_" + std::wstring{ SanitizeFileName(filename, L"piece-jointe") };
         m_preview_current_path = hstring{ temp_file };
 
         // Masquage du lecteur et affichage du panneau d'aperçu
