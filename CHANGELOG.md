@@ -16,6 +16,20 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Fenêtre de message indépendante (`MessageWindow`)** : ouverture d'un
+  message dans une fenêtre dédiée au double-clic, avec la touche Entrée ou via
+  l'action *Ouvrir* du menu contextuel. Prise en charge des actions complètes
+  (Répondre, Répondre à tous, Transférer, Supprimer, Déplacer, Lu / Non lu,
+  Impression native WebView2, enregistrement des pièces jointes), navigation
+  message précédent / suivant, mémorisation des dimensions et de la position,
+  marquage comme lu à l'ouverture et reprise automatique des brouillons dans la
+  fenêtre de rédaction (`ComposeWindow`).
+- **Portée de recherche dans la barre de titre** : sélecteur compact intégré
+  à la barre de titre permettant de choisir la portée de la recherche :
+  *Dossier courant*, *Sous-dossiers*, *Compte courant* ou *Tous les comptes*.
+  Texte d'aide dynamique, recherche récursive en profondeur dans le moteur
+  `evo-core` (Camel), et affichage discret du dossier / compte d'origine
+  sur chaque message trouvé lors d'une recherche transversale.
 - **Recherche de mise à jour** dans *À propos* : la version installée est
   comparée à la dernière version publiée sur GitHub (Releases) ; si une
   version plus récente existe, un lien mène à sa page de téléchargement.
