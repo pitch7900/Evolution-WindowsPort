@@ -15,6 +15,7 @@ namespace winrt::EvolutionWin::implementation
         MainWindow();
         ~MainWindow();
 
+        void SelectNavigationModule(winrt::hstring const& tag);
         void OnNavigationSelectionChanged(
             Microsoft::UI::Xaml::Controls::NavigationView const& sender,
             Microsoft::UI::Xaml::Controls::NavigationViewSelectionChangedEventArgs const& args);

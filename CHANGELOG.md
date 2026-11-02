@@ -14,6 +14,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Raccourcis de navigation globale et vues du calendrier (Quickwin §4 / §12)** :
+  - **Navigation instantanée entre modules (Ctrl+1..4 et Ctrl+Alt+1..4)** : bascule directe depuis n'importe quelle vue vers Courrier (Ctrl+1), Calendrier (Ctrl+2), Contacts (Ctrl+3) et Tâches (Ctrl+4).
+  - **Bascule rapide des vues Calendrier (Ctrl+Alt+1..5)** : dans la vue Calendrier, les combinaisons Ctrl+Alt commutent instantanément l'affichage entre Jour (Ctrl+Alt+1), Semaine de travail (Ctrl+Alt+2), Semaine (Ctrl+Alt+3), Mois (Ctrl+Alt+4) et Liste (Ctrl+Alt+5).
+  - **Infobulles enrichies** : affichage explicite des raccourcis clavier dans les infobulles des modules de navigation (NavigationView) et des boutons de vue du ruban Calendrier.
 - **Mode compact des listes (Quickwin #3)** :
   - **Espacement plus étroit pour afficher plus d'éléments** : réduction de la hauteur minimale des lignes (ListViewItem à 30px au lieu de 44px) et des marges intérieures (Padding à 2px au lieu de 8px) dans la liste des messages (MessageList) et la liste des événements du calendrier (EventList).
   - **Bouton à bascule dans le ruban** : ajout du bouton « Mode compact » (RibbonMailCompactDensityToggle et RibbonCalendarCompactDensityToggle) dans l'onglet *Affichage* du ruban Courrier et du ruban Calendrier.

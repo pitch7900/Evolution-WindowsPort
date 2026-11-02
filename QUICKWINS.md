@@ -62,7 +62,7 @@ Ces chantiers ne dépendent pas de refontes architecturales complexes et apporte
 
 ## 4. Navigation et Calendrier
 
-- [ ] **Raccourcis de navigation globale**
+- [x] **Raccourcis de navigation globale**
   - `Ctrl+Alt+1` : Courrier
   - `Ctrl+Alt+2` : Calendrier
   - `Ctrl+Alt+3` : Contacts

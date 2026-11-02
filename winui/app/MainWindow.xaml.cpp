@@ -138,7 +138,7 @@ namespace winrt::EvolutionWin::implementation
         AppTitleBar().SizeChanged([this](IInspectable const&, SizeChangedEventArgs const&) { UpdateTitleBarPassthrough(); });
         ApplyTheme(::EvolutionWin::Settings::Instance().GetString(L"appearance.theme", L"system"));
 
-        /* Accélérateurs clavier globaux (Ctrl+, pour Paramètres, Alt+F2 pour To-Do bar) */
+        /* Accélérateurs clavier globaux (Ctrl+, pour Paramètres, Alt+F2 pour To-Do bar, navigation Ctrl+1..4 et Ctrl+Alt+1..5) */
         if (auto root = this->Content().try_as<FrameworkElement>())
         {
             Microsoft::UI::Xaml::Input::KeyboardAccelerator accel;
@@ -152,6 +152,40 @@ namespace winrt::EvolutionWin::implementation
             todobar_accel.Key(Windows::System::VirtualKey::F2);
             todobar_accel.Invoked({ this, &MainWindow::OnTodoBarAccelerator });
             root.KeyboardAccelerators().Append(todobar_accel);
+
+            // Raccourcis de navigation globale (Ctrl+1 à Ctrl+4) et vues calendrier (Ctrl+Alt+1 à Ctrl+Alt+5)
+            auto add_nav_accel = [root, this](Windows::System::VirtualKey key, winrt::hstring const& module_tag, winrt::hstring const& cal_period, Windows::System::VirtualKeyModifiers mod)
+            {
+                Microsoft::UI::Xaml::Input::KeyboardAccelerator nav_accel;
+                nav_accel.Modifiers(mod);
+                nav_accel.Key(key);
+                nav_accel.Invoked([this, module_tag, cal_period](Microsoft::UI::Xaml::Input::KeyboardAccelerator const&, Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args)
+                {
+                    args.Handled(true);
+                    if (m_view_tag == L"calendar" && !cal_period.empty())
+                    {
+                        SetCalendarPeriod(cal_period);
+                    }
+                    else if (!module_tag.empty())
+                    {
+                        SelectNavigationModule(module_tag);
+                    }
+                });
+                root.KeyboardAccelerators().Append(nav_accel);
+            };
+
+            // Ctrl+1..4 (Courrier, Calendrier, Contacts, Tâches)
+            add_nav_accel(Windows::System::VirtualKey::Number1, L"mail", L"", Windows::System::VirtualKeyModifiers::Control);
+            add_nav_accel(Windows::System::VirtualKey::Number2, L"calendar", L"", Windows::System::VirtualKeyModifiers::Control);
+            add_nav_accel(Windows::System::VirtualKey::Number3, L"contacts", L"", Windows::System::VirtualKeyModifiers::Control);
+            add_nav_accel(Windows::System::VirtualKey::Number4, L"tasks", L"", Windows::System::VirtualKeyModifiers::Control);
+
+            // Ctrl+Alt+1..5 (navigation globale ou vues calendrier Jour, Semaine ouvrée, Semaine, Mois, Liste)
+            add_nav_accel(Windows::System::VirtualKey::Number1, L"mail", L"day", Windows::System::VirtualKeyModifiers::Control | Windows::System::VirtualKeyModifiers::Menu);
+            add_nav_accel(Windows::System::VirtualKey::Number2, L"calendar", L"workweek", Windows::System::VirtualKeyModifiers::Control | Windows::System::VirtualKeyModifiers::Menu);
+            add_nav_accel(Windows::System::VirtualKey::Number3, L"contacts", L"week", Windows::System::VirtualKeyModifiers::Control | Windows::System::VirtualKeyModifiers::Menu);
+            add_nav_accel(Windows::System::VirtualKey::Number4, L"tasks", L"month", Windows::System::VirtualKeyModifiers::Control | Windows::System::VirtualKeyModifiers::Menu);
+            add_nav_accel(Windows::System::VirtualKey::Number5, L"", L"list", Windows::System::VirtualKeyModifiers::Control | Windows::System::VirtualKeyModifiers::Menu);
         }
         RestorePaneWidths();
         RestoreTodoBarSettings();
@@ -381,6 +415,32 @@ namespace winrt::EvolutionWin::implementation
         badge.Value(unread);
         MailItem().InfoBadge(badge);
         ToolTipService::SetToolTip(MailItem(), box_value(L"Courrier (" + to_hstring(unread) + L" non lus)"));
+    }
+
+    /**
+     * Sélectionne par programmation le module de navigation demandé (mail, calendar, contacts, tasks, settings).
+     * Paramètres :
+     *   tag : identifiant du module cible
+     */
+    void MainWindow::SelectNavigationModule(winrt::hstring const& tag)
+    {
+        if (tag == L"settings")
+        {
+            Navigation().SelectedItem(Navigation().SettingsItem());
+            return;
+        }
+
+        for (auto const& item_obj : Navigation().MenuItems())
+        {
+            if (auto nav_item = item_obj.try_as<NavigationViewItem>())
+            {
+                if (unbox_value_or<winrt::hstring>(nav_item.Tag(), L"") == tag)
+                {
+                    Navigation().SelectedItem(nav_item);
+                    break;
+                }
+            }
+        }
     }
 
     void MainWindow::OnNavigationSelectionChanged(NavigationView const&, NavigationViewSelectionChangedEventArgs const& args)

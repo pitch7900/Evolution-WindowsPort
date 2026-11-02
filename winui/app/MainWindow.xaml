@@ -87,22 +87,22 @@
 
             <NavigationView.MenuItems>
                 <NavigationViewItem x:Name="MailItem" Content="Courrier" Tag="mail" IsSelected="True"
-                                    ToolTipService.ToolTip="Courrier">
+                                    ToolTipService.ToolTip="Courrier (Ctrl+1)">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE715;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Calendrier" Tag="calendar" ToolTipService.ToolTip="Calendrier">
+                <NavigationViewItem Content="Calendrier" Tag="calendar" ToolTipService.ToolTip="Calendrier (Ctrl+2)">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE787;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Contacts" Tag="contacts" ToolTipService.ToolTip="Contacts">
+                <NavigationViewItem Content="Contacts" Tag="contacts" ToolTipService.ToolTip="Contacts (Ctrl+3)">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE77B;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Tâches" Tag="tasks" ToolTipService.ToolTip="Tâches">
+                <NavigationViewItem Content="Tâches" Tag="tasks" ToolTipService.ToolTip="Tâches (Ctrl+4)">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE9D5;" />
                     </NavigationViewItem.Icon>
@@ -339,19 +339,19 @@
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8D1;" /></AppBarButton.Icon>
                         </AppBarButton>
                         <AppBarSeparator />
-                        <AppBarButton Label="Jour" Tag="day" Click="OnCalendarPeriodClick">
+                        <AppBarButton Label="Jour" Tag="day" Click="OnCalendarPeriodClick" ToolTipService.ToolTip="Affichage Jour (Ctrl+Alt+1)">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8BF;" /></AppBarButton.Icon>
                         </AppBarButton>
-                        <AppBarButton Label="Semaine de travail" Tag="workweek" Click="OnCalendarPeriodClick">
+                        <AppBarButton Label="Semaine de travail" Tag="workweek" Click="OnCalendarPeriodClick" ToolTipService.ToolTip="Affichage Semaine de travail (Ctrl+Alt+2)">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8C0;" /></AppBarButton.Icon>
                         </AppBarButton>
-                        <AppBarButton Label="Semaine" Tag="week" Click="OnCalendarPeriodClick">
+                        <AppBarButton Label="Semaine" Tag="week" Click="OnCalendarPeriodClick" ToolTipService.ToolTip="Affichage Semaine (Ctrl+Alt+3)">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8C0;" /></AppBarButton.Icon>
                         </AppBarButton>
-                        <AppBarButton Label="Mois" Tag="month" Click="OnCalendarPeriodClick">
+                        <AppBarButton Label="Mois" Tag="month" Click="OnCalendarPeriodClick" ToolTipService.ToolTip="Affichage Mois (Ctrl+Alt+4)">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE787;" /></AppBarButton.Icon>
                         </AppBarButton>
-                        <AppBarButton Label="Liste" Tag="list" Click="OnCalendarPeriodClick">
+                        <AppBarButton Label="Liste" Tag="list" Click="OnCalendarPeriodClick" ToolTipService.ToolTip="Affichage Liste (Ctrl+Alt+5)">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8FD;" /></AppBarButton.Icon>
                         </AppBarButton>
                         <AppBarToggleButton x:Name="RibbonCalendarCompactDensityToggle" Label="Mode compact"
