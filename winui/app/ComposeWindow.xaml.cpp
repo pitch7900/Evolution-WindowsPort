@@ -2,6 +2,8 @@
 #include "ComposeWindow.xaml.h"
 #include "WindowIcon.h"
 #include "Signatures.h"
+#include "Settings.h"
+#include "MainWindow.Helpers.h"
 #if __has_include("ComposeWindow.g.cpp")
 #include "ComposeWindow.g.cpp"
 #endif
@@ -733,6 +735,51 @@ namespace winrt::EvolutionWin::implementation
                 if (c == L'\r')
                     c = L'\n';
             plain_body = hstring{ body };
+        }
+
+        // VÃ©rification de sÃ©curitÃ© 1 : Objet vide (si activÃ© dans les paramÃ¨tres)
+        bool warn_empty_subject = ::EvolutionWin::Settings::Instance().GetBoolean(L"mail.warn-empty-subject", true);
+        if (warn_empty_subject && subject_text.empty())
+        {
+            ContentDialog dialog;
+            dialog.XamlRoot(this->Content().XamlRoot());
+            dialog.Title(box_value(L"Envoyer sans objet ?"));
+            dialog.Content(box_value(L"Ce message ne comporte aucun objet.\n\nSouhaitez-vous vraiment l'envoyer tel quel ?"));
+            dialog.PrimaryButtonText(L"Envoyer quand mÃªme");
+            dialog.CloseButtonText(L"Annuler");
+            dialog.DefaultButton(ContentDialogButton::Close);
+
+            auto res = co_await dialog.ShowAsync();
+            if (res != ContentDialogResult::Primary)
+            {
+                SendButton().IsEnabled(true);
+                SubjectBox().Focus(FocusState::Programmatic);
+                co_return;
+            }
+        }
+
+        // VÃ©rification de sÃ©curitÃ© 2 : PiÃ¨ce jointe mentionnÃ©e mais absente
+        if (m_attachments.empty())
+        {
+            bool has_attachment_mention = ::EvolutionWin::Helpers::HasAttachmentKeywords(std::wstring_view{ subject_text }) ||
+                                          ::EvolutionWin::Helpers::HasAttachmentKeywords(std::wstring_view{ plain_body });
+            if (has_attachment_mention)
+            {
+                ContentDialog dialog;
+                dialog.XamlRoot(this->Content().XamlRoot());
+                dialog.Title(box_value(L"PiÃ¨ce jointe manquante ?"));
+                dialog.Content(box_value(L"Votre message semble mentionner une piÃ¨ce jointe, mais aucun fichier n'a Ã©tÃ© joint.\n\nSouhaitez-vous envoyer le message sans piÃ¨ce jointe ?"));
+                dialog.PrimaryButtonText(L"Envoyer quand mÃªme");
+                dialog.CloseButtonText(L"Annuler");
+                dialog.DefaultButton(ContentDialogButton::Close);
+
+                auto res = co_await dialog.ShowAsync();
+                if (res != ContentDialogResult::Primary)
+                {
+                    SendButton().IsEnabled(true);
+                    co_return;
+                }
+            }
         }
 
         JsonObject message;

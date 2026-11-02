@@ -22,6 +22,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Confirmations de sécurité pour la rédaction et la suppression (Quickwin §5 / §19)** :
+  - **Avertissement de pièce jointe oubliée** : analyse syntaxique du sujet et du corps du message dans `ComposeWindow` via `HasAttachmentKeywords` (mots-clés français et anglais comme "pièce jointe", "ci-joint", "en pj", "attachment"). Si aucun fichier n'est joint, une boîte modale Fluent avertit l'expéditeur avant le départ du message.
+  - **Avertissement d'envoi sans objet** : confirmation modale automatique si l'objet est vide et que `mail.warn-empty-subject` est actif (activé par défaut).
+  - **Confirmation avant suppression définitive (Maj+Suppr et Corbeille)** : interception du raccourci clavier `Suppr` et de la combinaison `Maj+Suppr` sur la liste des messages. Si la suppression est définitive ou effectuée depuis la Corbeille, un dialogue de sécurité `ConfirmAndDeleteMessages()` empêche toute perte accidentelle tant que `mail.confirm-permanent-delete` est actif.
+  - **Test unitaire dédié** : ajout du test `test_attachment_keywords` dans `tests/unit/test_helpers.cpp` (22/22 tests réussis).
+
 - **Vider automatiquement la Corbeille à la fermeture (Quickwin §5 / §19)** :
   - **Purge complète multi-comptes** : lors de la fermeture de la fenêtre principale, si la préférence `mail.empty-trash-on-exit` est cochée, `EmptyAllTrashFolders()` parcourt l'ensemble des comptes et des dossiers spéciaux pour envoyer la commande de purge définitive `empty` à `evo-core`.
   - **Déduplication sécurisée** : utilisation d'un registre d'UIDs pour éviter tout double déclenchement sur les dossiers mappés.

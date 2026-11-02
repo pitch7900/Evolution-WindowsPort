@@ -234,7 +234,7 @@ namespace winrt::EvolutionWin::implementation
             Grid::SetRowSpan(delete_button, 2);
             delete_button.Click([this, uid](IInspectable const&, RoutedEventArgs const&)
             {
-                DeleteMessagesByUids(TargetMessageUids(uid));
+                ConfirmAndDeleteMessages(TargetMessageUids(uid), IsTrashFolder());
             });
             item.Children().Append(delete_button);
 
@@ -439,7 +439,7 @@ namespace winrt::EvolutionWin::implementation
                 delete_item.Icon().as<FontIcon>().Glyph(L"\xE74D");
                 delete_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
                 {
-                    DeleteMessagesByUids(target_uids);
+                    ConfirmAndDeleteMessages(target_uids, IsTrashFolder());
                 });
                 menu_items.Append(delete_item);
             });
@@ -875,6 +875,78 @@ namespace winrt::EvolutionWin::implementation
         return false;
     }
 
+    /**
+     * @brief Détermine si le dossier actuellement affiché est la Corbeille (Éléments supprimés).
+     * @return true s'il s'agit du dossier Corbeille, false sinon.
+     */
+    bool MainWindow::IsTrashFolder()
+    {
+        if (m_account.empty() || m_folder.empty())
+            return false;
+
+        auto it = m_account_folders.find(std::wstring{ m_account });
+        if (it != m_account_folders.end() && it->second)
+        {
+            auto folder = FindFolderJson(it->second, m_folder);
+            if (folder && folder.GetNamedString(L"type", L"") == L"trash")
+                return true;
+        }
+
+        if (auto current = CurrentFolderItem())
+        {
+            if (current.Glyph() == FolderGlyph(L"trash"))
+                return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @brief Supprime une sélection de messages avec demande de confirmation si la suppression est définitive.
+     * @param uids Liste des identifiants uniques des messages à supprimer.
+     * @param permanent Indique si la suppression demandée est définitive (Maj+Suppr ou dossier Corbeille).
+     */
+    fire_and_forget MainWindow::ConfirmAndDeleteMessages(std::vector<winrt::hstring> uids, bool permanent)
+    {
+        if (uids.empty())
+            co_return;
+
+        bool confirm_required = permanent && ::EvolutionWin::Settings::Instance().GetBoolean(L"mail.confirm-permanent-delete", true);
+
+        if (confirm_required)
+        {
+            if (m_dialog_open || !Content() || !Content().XamlRoot())
+                co_return;
+
+            ContentDialog confirm;
+            confirm.XamlRoot(Content().XamlRoot());
+            confirm.Title(box_value(L"Supprimer définitivement ?"));
+            TextBlock text;
+            text.TextWrapping(TextWrapping::Wrap);
+            if (uids.size() == 1)
+            {
+                text.Text(L"Le message sélectionné sera définitivement supprimé. Cette opération est irréversible.");
+            }
+            else
+            {
+                text.Text(hstring{ std::to_wstring(uids.size()) + L" messages sélectionnés seront définitivement supprimés. Cette opération est irréversible." });
+            }
+            confirm.Content(text);
+            confirm.PrimaryButtonText(L"Supprimer définitivement");
+            confirm.CloseButtonText(L"Annuler");
+            confirm.DefaultButton(ContentDialogButton::Close);
+
+            m_dialog_open = true;
+            auto result = co_await confirm.ShowAsync();
+            m_dialog_open = false;
+
+            if (result != ContentDialogResult::Primary)
+                co_return;
+        }
+
+        DeleteMessagesByUids(uids);
+    }
+
     /* Double-clic sur la liste des messages : ouvre le message dans une fenêtre
      * indépendante (ou la fenêtre de rédaction si c'est un brouillon).
      * Paramètres :
@@ -901,6 +973,22 @@ namespace winrt::EvolutionWin::implementation
             {
                 args.Handled(true);
                 OpenMessageInWindow(uid);
+            }
+        }
+        else if (args.Key() == Windows::System::VirtualKey::Delete)
+        {
+            auto uids = SelectedMessageUids();
+            if (uids.empty())
+            {
+                hstring single = SelectedMessageUid();
+                if (!single.empty())
+                    uids.push_back(single);
+            }
+            if (!uids.empty())
+            {
+                args.Handled(true);
+                bool is_shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+                ConfirmAndDeleteMessages(uids, is_shift || IsTrashFolder());
             }
         }
     }

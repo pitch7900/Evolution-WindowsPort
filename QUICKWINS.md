@@ -83,7 +83,7 @@ Ces chantiers ne dépendent pas de refontes architecturales complexes et apporte
   - Paramètre pour marquer automatiquement comme lu : immédiatement, après N secondes d'affichage, ou uniquement lors d'un changement de sélection.
 - [x] **Vider la Corbeille à la fermeture**
   - Option dans les paramètres pour purger automatiquement les éléments supprimés à l'arrêt de l'application.
-- [ ] **Confirmations de sécurité**
+- [x] **Confirmations de sécurité**
   - Confirmation avant suppression définitive (`Maj+Suppr`).
   - Avertissement si un message mentionne une pièce jointe mais qu'aucun fichier n'est joint.
 - [x] **Module actif au démarrage**

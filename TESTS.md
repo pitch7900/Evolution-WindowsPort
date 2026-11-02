@@ -46,6 +46,7 @@ Valide les fonctions pures issues de `MainWindow.Helpers.h` :
 - **Sécurité HTML (`EscapeHtml`)** : échappement des caractères spéciaux (`&`, `<`, `>`, `"`) et conversion des sauts de ligne CRLF en `<br>` pour prévenir toute corruption ou injection lors des citations.
 - **Citations de courriel (`Quote`)** : formatage des blocs de texte avec préfixe `> ` et gestion des fins de ligne CRLF.
 - **Comparaison sémantique de versions (`SemVer`)** : garantit une comparaison numérique stricte (`x.y.z`) pour le mécanisme de recherche de mise à jour GitHub, évitant le piège textuel où `"0.9.10"` serait considéré inférieur à `"0.9.9"`.
+- **Détection lexicale de pièce jointe manquante (`HasAttachmentKeywords`)** : analyse multilingue (français, anglais) et insensible à la casse des mentions explicites de pièces jointes ("pièce jointe", "ci-joint", "en pj", "attachment", etc.) pour alerter l'utilisateur avant l'envoi.
 
 ### Suite 2 : Contrats d'interface et robustesse `evo-core` (`test_evo_core_contracts.c`)
 Vérifie la robustesse du moteur C et ses échanges avec l'interface :

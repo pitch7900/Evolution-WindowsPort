@@ -263,4 +263,50 @@ namespace EvolutionWin::Helpers
 
         return data;
     }
+
+    /**
+     * @brief Détecte si un texte contient des mentions explicites de pièces jointes.
+     * @param text Texte à analyser (sujet ou corps de courriel).
+     * @return true si au moins un mot-clé caractéristique est détecté, false sinon.
+     */
+    inline bool HasAttachmentKeywords(std::wstring_view text)
+    {
+        if (text.empty())
+            return false;
+
+        std::wstring lower;
+        lower.reserve(text.size());
+        for (wchar_t ch : text)
+        {
+            lower.push_back(std::towlower(ch));
+        }
+
+        static const wchar_t* const patterns[] = {
+            L"pièce jointe",
+            L"pièces jointes",
+            L"piece jointe",
+            L"pieces jointes",
+            L"ci-joint",
+            L"ci-jointe",
+            L"ci-joints",
+            L"ci-jointes",
+            L"en pièce jointe",
+            L"en piece jointe",
+            L"en pj",
+            L"attachment",
+            L"attachments",
+            L"attached file",
+            L"attached files"
+        };
+
+        for (const auto* p : patterns)
+        {
+            if (lower.find(p) != std::wstring::npos)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

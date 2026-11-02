@@ -474,7 +474,8 @@ namespace winrt::EvolutionWin::implementation
     /* Gestionnaire du bouton « Supprimer » du volet de lecture. */
     void MainWindow::OnDeleteClick(IInspectable const&, RoutedEventArgs const&)
     {
-        DeleteMessagesByUids(SelectedMessageUids());
+        auto uids = SelectedMessageUids();
+        ConfirmAndDeleteMessages(uids, IsTrashFolder());
     }
 
     /* Gestionnaire d'ouverture du menu « Déplacer » du volet de lecture. */

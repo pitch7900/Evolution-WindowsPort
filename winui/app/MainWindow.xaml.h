@@ -342,6 +342,8 @@ namespace winrt::EvolutionWin::implementation
         /* Fenêtre de lecture indépendante (Tâche 16) */
         void OpenMessageInWindow(hstring const& uid);
         bool IsDraftsFolder();
+        bool IsTrashFolder();
+        fire_and_forget ConfirmAndDeleteMessages(std::vector<winrt::hstring> uids, bool permanent);
 
         /* Portée de la recherche et localisation des messages (Tâche 20) */
         struct MessageLocation

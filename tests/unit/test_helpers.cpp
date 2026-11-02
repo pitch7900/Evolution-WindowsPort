@@ -416,6 +416,60 @@ static void test_semver_comparison(void)
 }
 
 /**
+ * @brief Detection autonome de mots-cles de pieces jointes pour tests unitaires.
+ */
+static bool HasAttachmentKeywords(std::wstring_view text)
+{
+    if (text.empty())
+        return false;
+
+    std::wstring lower;
+    lower.reserve(text.size());
+    for (wchar_t ch : text)
+        lower.push_back(std::towlower(ch));
+
+    static const wchar_t* const patterns[] = {
+        L"piÃ¨ce jointe",
+        L"piÃ¨ces jointes",
+        L"piece jointe",
+        L"pieces jointes",
+        L"ci-joint",
+        L"ci-jointe",
+        L"ci-joints",
+        L"ci-jointes",
+        L"en piÃ¨ce jointe",
+        L"en piece jointe",
+        L"en pj",
+        L"attachment",
+        L"attachments",
+        L"attached file",
+        L"attached files"
+    };
+
+    for (const auto* p : patterns)
+    {
+        if (lower.find(p) != std::wstring::npos)
+            return true;
+    }
+    return false;
+}
+
+static void test_attachment_keywords(void)
+{
+    TEST_CASE("HasAttachmentKeywords: Detection en francais et anglais");
+    {
+        ASSERT_TRUE(HasAttachmentKeywords(L"Veuillez trouver la piÃ¨ce jointe"));
+        ASSERT_TRUE(HasAttachmentKeywords(L"Le devis est ci-joint pour validation"));
+        ASSERT_TRUE(HasAttachmentKeywords(L"Voir le document en piece jointe svp"));
+        ASSERT_TRUE(HasAttachmentKeywords(L"Please find the attachment below"));
+        ASSERT_TRUE(HasAttachmentKeywords(L"En PJ les comptes-rendus"));
+        ASSERT_FALSE(HasAttachmentKeywords(L"Bonjour Pierre, rdv a 14h aujourd'hui"));
+        ASSERT_FALSE(HasAttachmentKeywords(L""));
+    }
+    TEST_CASE_END();
+}
+
+/**
  * @brief Point d'entree principal de la suite de tests des helpers.
  * @return 0 si tous les tests reussissent, 1 sinon.
  */
@@ -430,6 +484,7 @@ int main(void)
     test_quote();
     test_starts_with_nocase();
     test_semver_comparison();
+    test_attachment_keywords();
 
     return test_suite_summary();
 }

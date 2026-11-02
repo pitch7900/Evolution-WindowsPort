@@ -810,7 +810,7 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 - [ ] 🟢 Intervalle de relève automatique (5 minutes actuellement ; valeur par défaut, remplaçable par compte, §3), relève au démarrage
 - [x] 🟢 Marquer comme lu : immédiatement / après N secondes / au changement de sélection / jamais à l'affichage dans le volet de lecture
 - [ ] 🟢 Format de rédaction par défaut (HTML / texte brut), police et taille par défaut, correcteur orthographique (langue)
-- [ ] 🟢 Confirmations : avant suppression définitive, avant d'envoyer sans objet, pièce jointe mentionnée mais absente
+- [x] 🟢 Confirmations : avant suppression définitive, avant d'envoyer sans objet, pièce jointe mentionnée mais absente
 - [x] 🟢 Vider la Corbeille à la fermeture
 - [ ] 🟢 Contenu externe : cf. §6 ; signatures : cf. §3
 
