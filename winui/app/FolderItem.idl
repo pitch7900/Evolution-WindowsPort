@@ -9,8 +9,9 @@ namespace EvolutionWin
         FolderItem(String name, String glyph, Int32 unread, String account, String folder, Boolean isAccount);
 
         String Name { get; };
-        /* Segoe Fluent Icons glyph */
+        /* Segoe Fluent Icons glyph (ou Segoe UI Symbol pour le sablier) */
         String Glyph { get; };
+        Microsoft.UI.Xaml.Media.FontFamily GlyphFontFamily { get; };
         Int32 Unread;
         /* "" when there is no unread message */
         String UnreadText { get; };

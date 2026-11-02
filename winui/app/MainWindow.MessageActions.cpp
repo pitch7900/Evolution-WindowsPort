@@ -377,8 +377,7 @@ namespace winrt::EvolutionWin::implementation
             {
                 MenuFlyoutItem item;
                 item.Text(label);
-                item.Icon(FontIcon{});
-                item.Icon().as<FontIcon>().Glyph(FolderGlyph(folder.GetNamedString(L"type", L"")));
+                item.Icon(CreateFolderIcon(folder.GetNamedString(L"type", L"")));
                 item.Click([this, uids, account, full_name, copy](IInspectable const&, RoutedEventArgs const&)
                 {
                     if (copy)

@@ -369,8 +369,7 @@ namespace winrt::EvolutionWin::implementation
             {
                 MenuFlyoutItem item;
                 item.Text(label);
-                item.Icon(FontIcon{});
-                item.Icon().as<FontIcon>().Glyph(FolderGlyph(folder.GetNamedString(L"type", L"")));
+                item.Icon(CreateFolderIcon(folder.GetNamedString(L"type", L"")));
                 item.Click([on_pick, full_name](IInspectable const&, RoutedEventArgs const&)
                 {
                     on_pick(full_name);
