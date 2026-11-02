@@ -13,6 +13,6 @@ if not defined GTK_BUILD (
 	)
 )
 
-set "PATH=%GTK_BUILD%\gtk\x64\release\bin;%PATH%"
-start "" "%BUILD_DIR%\EvolutionWin.exe"
+set "PATH=%BUILD_DIR%;%GTK_BUILD%\gtk\x64\release\bin;%PATH%"
+start "" /D "%BUILD_DIR%" "%BUILD_DIR%\EvolutionWin.exe" %*
 endlocal

@@ -72,8 +72,9 @@ namespace winrt::EvolutionWin::implementation
             }
         }
 
-        hstring account = m_account;
-        hstring folder = m_folder;
+        auto loc = GetMessageLocation(uid);
+        hstring account = loc.account.empty() ? m_account : loc.account;
+        hstring folder = loc.folder.empty() ? m_folder : loc.folder;
         m_core->SetMessageFlags(account, folder, uid, flag, value,
             [this, account, folder, uid](hstring const& json, hstring const& error)
         {
@@ -168,11 +169,14 @@ namespace winrt::EvolutionWin::implementation
      *   uid : identifiant du message à supprimer */
     void MainWindow::DeleteMessageByUid(hstring const& uid)
     {
-        if (uid.empty() || m_account.empty() || m_folder.empty())
+        if (uid.empty())
             return;
 
-        hstring account = m_account;
-        hstring folder = m_folder;
+        auto loc = GetMessageLocation(uid);
+        hstring account = loc.account.empty() ? m_account : loc.account;
+        hstring folder = loc.folder.empty() ? m_folder : loc.folder;
+        if (account.empty() || folder.empty())
+            return;
 
         RemoveMessageFromList(uid);
 
@@ -202,14 +206,17 @@ namespace winrt::EvolutionWin::implementation
      *   dest_folder  : chemin complet du dossier de destination */
     void MainWindow::MoveMessageByUid(hstring const& uid, hstring const& dest_account, hstring const& dest_folder)
     {
-        if (uid.empty() || m_account.empty() || m_folder.empty() || dest_account.empty() || dest_folder.empty())
+        if (uid.empty() || dest_account.empty() || dest_folder.empty())
             return;
 
-        if (dest_account == m_account && dest_folder == m_folder)
+        auto loc = GetMessageLocation(uid);
+        hstring src_account = loc.account.empty() ? m_account : loc.account;
+        hstring src_folder = loc.folder.empty() ? m_folder : loc.folder;
+        if (src_account.empty() || src_folder.empty())
             return;
 
-        hstring src_account = m_account;
-        hstring src_folder = m_folder;
+        if (dest_account == src_account && dest_folder == src_folder)
+            return;
 
         RemoveMessageFromList(uid);
         RememberRecentFolder(dest_account, dest_folder);

@@ -15,36 +15,37 @@ Hypothèse : démo de type « remplaçant d'Outlook » avec un compte Microsoft 
 | 4 | [Nouveaux éléments](#demo-nouveaux-elements), [Archiver, Copier](#demo-archiver) | 7 | 🟢 |
 | 5 | [Champ de recherche dans la barre de titre, Ctrl+E](#demo-recherche-titre) | 10 | 🟢 |
 | 6 | Calendrier : [barre de navigation](#demo-cal-navigation), [couleur par calendrier](#demo-cal-couleurs) | 12 | 🟢 |
+| 7 | [Écran de démarrage (splash screen)](#demo-splash) (retour visuel immédiat) | 1 | 🟢 |
+| 8 | [Double-clic : message dans une fenêtre indépendante](#demo-fenetre-message) | 6 | 🟢 |
+| 9 | [Portée de la recherche : dossier, sous-dossiers, compte, tous les comptes](#demo-recherche-portee) | 10 | 🟢 |
 
 ### Priorité 2 — les gestes de base d'un utilisateur Outlook (≈ 3 à 5 semaines)
 
 | # | Tâche | § | Difficulté |
 | --- | --- | --- | --- |
-| 7 | [Connexion Gmail compatible avec la double authentification](#demo-gmail-2fa) (bogue : « identifiants invalides ») — prérequis de tout compte Gmail | 3 | 🟡 |
-| 8 | [Démarrage rapide à partir du cache local](#demo-cache-demarrage) (l'application rame à chaque ouverture) | 4 | 🟡 |
-| 9 | Calendrier et contacts du compte en ligne : [Microsoft 365 / Exchange Online](#demo-cal-contacts-m365) (🟡), [Gmail / Google Workspace](#demo-cal-contacts-gmail) (🟠) | 3 | 🟡 / 🟠 |
-| 10 | [Gestion simple du calendrier](#demo-gestion-calendrier) (créer, **modifier**, supprimer un événement) et [des contacts](#demo-gestion-contacts) (créer, **modifier**, supprimer) | 3 | 🟡 |
-| 11 | [Autocomplétion des destinataires](#demo-autocompletion) | 15 | 🟡 |
-| 12 | [Simplifier l'assistant d'ajout de compte](#demo-assistant-compte) | 3 | 🟡 |
-| 13 | [Modifier un compte existant](#demo-modifier-compte) | 3 | 🟡 |
-| 14 | [Indicateur d'état des connexions / hors connexion et *Se reconnecter*](#demo-etat-connexions) | 4 | 🟡 |
-| 15 | [Barre de progression du rafraîchissement](#demo-progression) | 4 | 🟡 |
-| 16 | [Double-clic : message dans une fenêtre indépendante](#demo-fenetre-message) | 6 | 🟡 |
-| 17 | [Répondre aux invitations reçues](#demo-invitations) | 13 | 🟡 |
-| 18 | [Volet des tâches à droite](#demo-volet-taches) et [« Créer une tâche » depuis un mail](#demo-creer-tache) | 16 | 🟡 |
-| 19 | [Catégories communes en couleur](#demo-categories) | 17 | 🟡 |
-| 20 | [Recherche sur tous les comptes](#demo-recherche-portee) | 10 | 🟡 |
-| 21 | [Réorganisation de la page Paramètres](#demo-parametres) | 19 | 🟡 |
+| 10 | [Connexion Gmail compatible avec la double authentification](#demo-gmail-2fa) (bogue : « identifiants invalides ») — prérequis de tout compte Gmail | 3 | 🟡 |
+| 11 | [Démarrage rapide à partir du cache local](#demo-cache-demarrage) (l'application rame à chaque ouverture) | 4 | 🟡 |
+| 12 | Calendrier et contacts du compte en ligne : [Microsoft 365 / Exchange Online](#demo-cal-contacts-m365) (🟡), [Gmail / Google Workspace](#demo-cal-contacts-gmail) (🟠) | 3 | 🟡 / 🟠 |
+| 13 | [Gestion simple du calendrier](#demo-gestion-calendrier) (créer, **modifier**, supprimer un événement) et [des contacts](#demo-gestion-contacts) (créer, **modifier**, supprimer) | 3 | 🟡 |
+| 14 | [Autocomplétion des destinataires](#demo-autocompletion) | 15 | 🟡 |
+| 15 | [Simplifier l'assistant d'ajout de compte](#demo-assistant-compte) | 3 | 🟡 |
+| 16 | [Modifier un compte existant](#demo-modifier-compte) | 3 | 🟡 |
+| 17 | [Indicateur d'état des connexions / hors connexion et *Se reconnecter*](#demo-etat-connexions) | 4 | 🟡 |
+| 18 | [Barre de progression du rafraîchissement](#demo-progression) | 4 | 🟡 |
+| 19 | [Répondre aux invitations reçues](#demo-invitations) | 13 | 🟡 |
+| 20 | [Volet des tâches à droite](#demo-volet-taches) et [« Créer une tâche » depuis un mail](#demo-creer-tache) | 16 | 🟡 |
+| 21 | [Catégories communes en couleur](#demo-categories) | 17 | 🟡 |
+| 22 | [Réorganisation de la page Paramètres](#demo-parametres) | 19 | 🟡 |
 
 ### Priorité 3 — ce qui fait vraiment « Outlook » (gros chantiers)
 
 | # | Tâche | § | Difficulté |
 | --- | --- | --- | --- |
-| 22 | [Grille calendrier Jour / Semaine](#demo-grille-calendrier) — plus gros écart visible avec Outlook | 12 | 🔴 |
-| 23 | [Éditeur d'événement complet](#demo-editeur-evenement) (périodicité, rappels) | 13 | 🟠 |
-| 24 | [Grouper par discussion](#demo-conversations) | 5 | 🟠 |
-| 25 | [Réponses automatiques](#demo-reponses-auto) Microsoft 365 / Exchange (si démo sur M365) | 3 | 🟡 |
-| 26 | [Carnet d'adresses global (GAL)](#demo-gal) (si démo sur M365) | 15 | 🟡 |
+| 23 | [Grille calendrier Jour / Semaine](#demo-grille-calendrier) — plus gros écart visible avec Outlook | 12 | 🔴 |
+| 24 | [Éditeur d'événement complet](#demo-editeur-evenement) (périodicité, rappels) | 13 | 🟠 |
+| 25 | [Grouper par discussion](#demo-conversations) | 5 | 🟠 |
+| 26 | [Réponses automatiques](#demo-reponses-auto) Microsoft 365 / Exchange (si démo sur M365) | 3 | 🟡 |
+| 27 | [Carnet d'adresses global (GAL)](#demo-gal) (si démo sur M365) | 15 | 🟡 |
 
 **Après la démo** : aperçu des pièces jointes, règles, mode hors connexion complet, vues unifiées, traductions, import / export, mise à jour automatique, installation silencieuse avancée, nettoyage à la désinstallation, boîte Prioritaire, réunions avec invitations et Planification (🔴).
 
@@ -107,6 +108,12 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] Explorateur, barre des tâches, Alt+Tab, barre de titre (`AppWindow.SetIcon`)
   - [x] Raccourci du menu Démarrer (installeur MSI)
   - [x] *Paramètres › Applications installées* (propriété `ARPPRODUCTICON` du MSI)
+- [ ] 🟢 **Écran de démarrage (splash screen)** : affichage immédiat d'une fenêtre de démarrage au lancement de l'application pendant le chargement des composants <a id="demo-splash"></a>
+  - [ ] Fenêtre épurée et centrée sans bordures (`OverlappedPresenter` sans barre de titre ni boutons système), avec l'icône / logo d'Evolution, le nom de l'application et la version (issue de [VERSION](VERSION))
+  - [ ] Indicateur d'activité discret (`ProgressBar` indéterminée ou `ProgressRing`) et message d'état sur l'étape en cours (« Démarrage des services… », « Chargement des comptes… »)
+  - [ ] Affichage instantané dès `App::OnLaunched` avant l'initialisation lourde du moteur `CoreBridge` et des services EDS, pour offrir un retour visuel immédiat
+  - [ ] Fermeture automatique et transition fluide vers la fenêtre principale (`MainWindow`) dès que l'interface est prête (événement `ready`)
+  - [ ] Prise en compte du thème sombre / clair de Windows pour l'arrière-plan du splash screen
 - [x] 🟢 **Mise à jour du MSI : erreur 1618** « Une autre installation est en cours d'exécution » à l'installation de la 0.9.1 par-dessus la 0.9.0 — cause : dialogue « fichiers en cours d'utilisation » caché (EvolutionWin et services EDS ouverts), une seconde installation lancée entre-temps échouait ; le MSI ferme désormais ces programmes (`util:CloseApplication`)
 - [ ] 🟡 **Option « installation silencieuse » du MSI avec fermeture forcée de l'application** — *existant : `util:CloseApplication` ferme déjà EvolutionWin et les services EDS / `gdbus` à chaque installation*
   - [ ] Propriété publique documentée (ex. `FORCECLOSE=1`), utilisable avec `/qn` ou `/passive` : `msiexec /i Evolution-<version>-x64.msi /qn FORCECLOSE=1` (déploiement GPO / Intune, mise à jour automatique) — *aujourd'hui `/qn` fonctionne déjà sans propriété : la fermeture est toujours forcée (vérifié sur la VM de test)*
@@ -318,7 +325,7 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
   - [ ] **Puis synchroniser en arrière-plan** : connexion des comptes en parallèle (pas l'un après l'autre), rafraîchissement des dossiers et de la liste par événements (`folders-updated`, `folder-changed`), progression dans la barre d'état (§4) ; l'interface reste utilisable pendant ce temps
   - [ ] **Cache propre à EvolutionWin** pour ce que Camel / EDS ne conservent pas : rôles des dossiers, ordre personnalisé, dernière liste affichée, aperçus de messages (§5), éventuellement un instantané JSON de l'arborescence par compte, invalidé à la synchronisation
   - [ ] Calendrier, contacts et tâches : affichage depuis les caches EDS des backends (`ECalCache` / `EBookCache`) avant la fin de la synchronisation
-  - [ ] Démarrage des services EDS (`evolution-source-registry`, fabriques) en parallèle de la création de la fenêtre ; fenêtre affichée sans attendre la fin du démarrage du moteur (`core_wait_started`)
+  - [ ] Démarrage des services EDS (`evolution-source-registry`, fabriques) en parallèle de la création de la fenêtre ; fenêtre affichée sans attendre la fin du démarrage du moteur (`core_wait_started`) (cf. écran de démarrage, §1)
   - [ ] Objectif mesurable : fenêtre et contenu du dernier dossier visibles en moins de 2 s avec un cache existant, quel que soit l'état du réseau
 - [ ] 🟠 **Cache local complet pour le mode hors connexion** : messages (en-têtes, corps et pièces jointes), contacts, calendriers et tâches disponibles sans réseau
   - [ ] Synchronisation hors connexion des dossiers (réglage IMAP `stay-synchronized` / `sync-offline` de Camel), par compte et par dossier, avec limite d'ancienneté (ex. 3 derniers mois) et de taille
@@ -403,12 +410,12 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
     - [ ] 🟢 Types non pris en charge ou à risque (`.exe`, `.js`, `.vbs`, `.ps1`, `.lnk`, `.hta`, archives…) : pas d'aperçu, simple fiche (nom, type, taille) avec avertissement
   - [ ] 🟡 Fichiers d'aperçu temporaires dans un dossier privé, supprimés à la fermeture ; taille maximale configurable pour l'aperçu
   - [ ] 🟢 Boutons *Enregistrer* et *Ouvrir avec l'application* (avec avertissement si le fichier vient d'Internet : marque *Mark of the Web* `Zone.Identifier` posée à l'enregistrement)
-- [ ] 🟡 **Double-clic sur un mail : ouverture dans une fenêtre indépendante** (aussi avec Entrée et *Ouvrir* du menu contextuel) <a id="demo-fenetre-message"></a>
-  - [ ] Fenêtre de lecture avec en-têtes, pièces jointes, bandeau de sécurité / contenu externe et barre d'actions (Répondre, Répondre à tous, Transférer, Supprimer, Déplacer, Lu / Non lu, Imprimer)
-  - [ ] Navigation message précédent / suivant dans la fenêtre
-  - [ ] Plusieurs fenêtres ouvertes simultanément ; taille et position mémorisées
-  - [ ] Brouillon (dossier Brouillons) : double-clic ouvre la fenêtre de rédaction pour reprendre le message
-  - [ ] Message marqué comme lu à l'ouverture
+- [x] 🟢 **Double-clic sur un mail : ouverture dans une fenêtre indépendante** (aussi avec Entrée et *Ouvrir* du menu contextuel) <a id="demo-fenetre-message"></a>
+  - [x] Fenêtre de lecture avec en-têtes, pièces jointes, bandeau de sécurité / contenu externe et barre d'actions (Répondre, Répondre à tous, Transférer, Supprimer, Déplacer, Lu / Non lu, Imprimer)
+  - [x] Navigation message précédent / suivant dans la fenêtre
+  - [x] Plusieurs fenêtres ouvertes simultanément ; taille et position mémorisées
+  - [x] Brouillon (dossier Brouillons) : double-clic ouvre la fenêtre de rédaction pour reprendre le message
+  - [x] Message marqué comme lu à l'ouverture
 
 ## 7. Mail – Actions sur les messages — 🟠
 
@@ -524,7 +531,7 @@ La recherche dans le dossier courant existe déjà (filtrage instantané + reche
 
 - [x] 🟢 **Champ de recherche dans la barre de titre** de la fenêtre (au lieu de la vue Mail seule) <a id="demo-recherche-titre"></a> — *dossier courant en Courrier, contacts en Contacts ; barre de titre haute (48 px)*
 - [x] 🟢 Bouton pour effacer la recherche ; raccourci Ctrl+E — *et Échap*
-- [ ] 🟡 **Portée** : dossier courant / sous-dossiers / compte courant / tous les comptes <a id="demo-recherche-portee"></a>
+- [x] 🟢 **Portée** : dossier courant / sous-dossiers / compte courant / tous les comptes <a id="demo-recherche-portee"></a> — *sélecteur ComboBox dans la barre de titre, placeholder dynamique, parcours récursif Camel et étiquette d'origine*
 - [ ] 🟢 **Recherche rapide de contacts** (champ dédié dans le ruban, comme Outlook) et accès au Carnet d'adresses
 - [ ] 🟡 **Recherche dans le calendrier** (titre, lieu, description, participants)
 
