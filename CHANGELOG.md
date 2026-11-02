@@ -14,9 +14,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Corrigé
 
-- **Stabilité au démarrage et crash XAML (0x80004002 / 0xc000027b)** :
-  - **Suppression des Setter dynamiques générant une incompatibilité de type** : élimination de l'instanciation programmatique de `Style` avec `Setter` C++/WinRT dans `ApplyCompactDensity`, qui provoquait une levée d'exception `E_NOINTERFACE` dans le dispatcher XAML (`CDeferredInvoke::DispatchQueuedMessage`).
-  - **Déclaration statique du gabarit des conteneurs** : définition pérenne dans le XAML statique de `MessageList` et `EventList` (`MinHeight="24"`, `Padding="0"`) permettant à la densité compacte de s'appliquer sans aucun risque d'instabilité.
+- **Stabilité au démarrage et élimination définitive du crash post-splashscreen (0x80004002 / 0xc0000005)** :
+  - **Correction du gabarit XAML de MessageList et EventList** : suppression des setters `MinHeight` et `Padding` dans `ItemContainerStyle` qui provoquaient une incompatibilité d'interface (`E_NOINTERFACE 0x80004002`) lors de la mesure des conteneurs par le dispatcher XAML.
+  - **Protection contre les événements prématurés et la réentrance** : ajout systématique de gardes `if (!m_initialized)` dans les gestionnaires de paramètres (`MainWindow.Settings.cpp`) et de mise en page (`MainWindow.Layout.cpp`) pour neutraliser tout déclenchement d'événement XAML (`Toggled`, `SelectionChanged`) avant la finalisation de l'initialisation de la fenêtre.
+  - **Suppression de l'appel anticipé de statut réseau** : élimination de l'appel `UpdateConnectionStatus` dans `SetSplashWindow` avant que la fenêtre ne soit prête, prévenant toute corruption de mémoire sur les conteneurs d'état de compte.
+  - **Nettoyage et régénération des binaires intermédiaires** : recompilation propre de l'ensemble des modules assurant un alignement parfait de l'ABI et des structures en mémoire. L'application démarre désormais de manière fluide et pérenne.
 
 ### Ajouté
 

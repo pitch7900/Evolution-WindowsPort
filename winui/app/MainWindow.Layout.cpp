@@ -329,7 +329,14 @@ namespace winrt::EvolutionWin::implementation
         if (auto btn = RibbonCalendarCompactDensityToggle())
             btn.IsChecked(compact);
         if (auto sw = AppearanceCompactDensitySwitch())
-            sw.IsOn(compact);
+        {
+            if (sw.IsOn() != compact)
+            {
+                m_updating_settings_view = true;
+                sw.IsOn(compact);
+                m_updating_settings_view = false;
+            }
+        }
 
         if (m_all_messages)
         {
@@ -350,6 +357,8 @@ namespace winrt::EvolutionWin::implementation
      */
     void MainWindow::OnRibbonCompactDensityToggled(IInspectable const& sender, RoutedEventArgs const&)
     {
+        if (!m_initialized)
+            return;
         auto toggle = sender.try_as<AppBarToggleButton>();
         bool compact = toggle ? toggle.IsChecked().GetBoolean() : false;
         ::EvolutionWin::Settings::Instance().SetBoolean(L"layout.compact-density", compact);

@@ -661,7 +661,7 @@ namespace winrt::EvolutionWin::implementation
         [[maybe_unused]] IInspectable const& sender,
         [[maybe_unused]] SelectionChangedEventArgs const& args)
     {
-        if (m_updating_settings_view)
+        if (!m_initialized || m_updating_settings_view)
             return;
 
         int32_t index = AppearanceThemeChoice().SelectedIndex();
@@ -696,7 +696,7 @@ namespace winrt::EvolutionWin::implementation
         IInspectable const& sender,
         [[maybe_unused]] RoutedEventArgs const& args)
     {
-        if (m_updating_settings_view)
+        if (!m_initialized || m_updating_settings_view)
             return;
 
         if (auto toggle = sender.try_as<ToggleSwitch>())
@@ -726,7 +726,7 @@ namespace winrt::EvolutionWin::implementation
         IInspectable const& sender,
         [[maybe_unused]] SelectionChangedEventArgs const& args)
     {
-        if (m_updating_settings_view)
+        if (!m_initialized || m_updating_settings_view)
             return;
 
         if (auto combo = sender.try_as<ComboBox>())
@@ -856,7 +856,7 @@ namespace winrt::EvolutionWin::implementation
         [[maybe_unused]] IInspectable const& sender,
         [[maybe_unused]] RoutedEventArgs const& args)
     {
-        if (m_updating_settings_view)
+        if (!m_initialized || m_updating_settings_view)
             return;
 
         std::wstring days;

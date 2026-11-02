@@ -604,8 +604,6 @@
                         <ListView.ItemContainerStyle>
                             <Style TargetType="ListViewItem">
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                <Setter Property="MinHeight" Value="24" />
-                                <Setter Property="Padding" Value="0" />
                             </Style>
                         </ListView.ItemContainerStyle>
                     </ListView>
@@ -815,15 +813,7 @@
                         </StackPanel>
                     </Grid>
                     <ListView x:Name="EventList" Grid.Row="1" SelectionMode="None" Visibility="Collapsed"
-                              IsItemClickEnabled="True" ItemClick="OnEventItemClick">
-                        <ListView.ItemContainerStyle>
-                            <Style TargetType="ListViewItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                <Setter Property="MinHeight" Value="24" />
-                                <Setter Property="Padding" Value="0" />
-                            </Style>
-                        </ListView.ItemContainerStyle>
-                    </ListView>
+                              IsItemClickEnabled="True" ItemClick="OnEventItemClick" />
                     <!-- grille Jour / Semaine / Mois (MainWindow.Calendar.cpp) -->
                     <Grid x:Name="CalendarGridHost" Grid.Row="1" />
                 </Grid>

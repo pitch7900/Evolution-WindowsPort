@@ -85,7 +85,6 @@ namespace winrt::EvolutionWin::implementation
         if (m_splash)
         {
             StartCore();
-        UpdateConnectionStatus(L"global", m_is_offline ? L"offline" : L"online", L"");
 
             m_splash_timer = DispatcherTimer();
             m_splash_timer.Interval(std::chrono::seconds(6));
