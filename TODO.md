@@ -27,7 +27,7 @@ Hypothèse : démo de type « remplaçant d'Outlook » avec un compte Microsoft 
 | 11 | [Démarrage rapide à partir du cache local](#demo-cache-demarrage) (l'application rame à chaque ouverture) | 4 | 🟢 |
 | 12 | Calendrier et contacts du compte en ligne : [Microsoft 365 / Exchange Online](#demo-cal-contacts-m365) (🟡), [Gmail / Google Workspace](#demo-cal-contacts-gmail) (🟠) | 3 | 🟡 / 🟠 |
 | 13 | [Gestion simple du calendrier](#demo-gestion-calendrier) (créer, **modifier**, supprimer un événement) et [des contacts](#demo-gestion-contacts) (créer, **modifier**, supprimer) | 3 | 🟡 |
-| 14 | [Autocomplétion des destinataires](#demo-autocompletion) | 15 | 🟡 |
+| 14 | [Autocomplétion des destinataires](#demo-autocompletion) — *fait en 0.9.4 et finitions Tab / « ; » / suppression récents* | 15 | 🟢 (Fait) |
 | 15 | [Simplifier l'assistant d'ajout de compte](#demo-assistant-compte) | 3 | 🟡 |
 | 16 | [Modifier un compte existant](#demo-modifier-compte) | 3 | 🟡 |
 | 17 | [Indicateur d'état des connexions / hors connexion et *Se reconnecter*](#demo-etat-connexions) | 4 | 🟢 |
