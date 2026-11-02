@@ -6,6 +6,7 @@
 #include "ComposeWindow.xaml.h"
 #include <cwctype>
 #include <string>
+#include <shellapi.h>
 #include <string_view>
 #include <vector>
 
@@ -308,5 +309,114 @@ namespace EvolutionWin::Helpers
         }
 
         return false;
+    }
+
+    /**
+     * @brief Construit un document HTML complet et autonome à partir des données d'un courriel.
+     * @param from Expéditeur
+     * @param to Destinataires
+     * @param date Date formatée
+     * @param subject Objet du message
+     * @param html_body Corps HTML (si présent)
+     * @param text_body Corps texte brut (si pas de HTML)
+     * @return Document HTML complet avec métadonnées et styles adaptés pour affichage web.
+     */
+    inline std::wstring BuildStandaloneHtmlMessage(
+        std::wstring_view from,
+        std::wstring_view to,
+        std::wstring_view date,
+        std::wstring_view subject,
+        std::wstring_view html_body,
+        std::wstring_view text_body)
+    {
+        std::wstring out;
+        out += L"<!DOCTYPE html>\n<html>\n<head>\n";
+        out += L"<meta charset=\"utf-8\">\n";
+        out += L"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n";
+        out += L"<title>";
+        out += subject.empty() ? L"(Sans objet)" : EscapeHtml(subject);
+        out += L"</title>\n";
+        out += L"<style>\n";
+        out += L"body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; margin: 0; padding: 24px; color: #202020; background: #fafafa; }\n";
+        out += L".email-header { background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 18px 24px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }\n";
+        out += L".email-title { font-size: 20px; font-weight: 600; margin: 0 0 12px 0; color: #111111; }\n";
+        out += L".email-meta { font-size: 13px; line-height: 1.6; color: #555555; }\n";
+        out += L".email-meta strong { color: #222222; }\n";
+        out += L".email-body { background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 24px; min-height: 300px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }\n";
+        out += L"</style>\n</head>\n<body>\n";
+        out += L"<div class=\"email-header\">\n";
+        out += L"  <h1 class=\"email-title\">" + (subject.empty() ? std::wstring{ L"(Sans objet)" } : EscapeHtml(subject)) + L"</h1>\n";
+        out += L"  <div class=\"email-meta\">\n";
+        out += L"    <div><strong>De :</strong> " + EscapeHtml(from) + L"</div>\n";
+        if (!to.empty())
+            out += L"    <div><strong>Ã :</strong> " + EscapeHtml(to) + L"</div>\n";
+        if (!date.empty())
+            out += L"    <div><strong>Date :</strong> " + EscapeHtml(date) + L"</div>\n";
+        out += L"  </div>\n</div>\n";
+        out += L"<div class=\"email-body\">\n";
+        if (!html_body.empty())
+        {
+            out += html_body;
+        }
+        else
+        {
+            out += L"<pre style=\"font-family: inherit; white-space: pre-wrap; word-wrap: break-word;\">" + EscapeHtml(text_body) + L"</pre>";
+        }
+        out += L"\n</div>\n</body>\n</html>";
+        return out;
+    }
+
+    /**
+     * @brief Ouvre un message dans le navigateur Web par défaut du système Windows.
+     * @param message Données JSON du message contenant subject, from, to, date, html, text.
+     * @param fallback_html Document HTML déjà généré pour le lecteur (si disponible).
+     * @return true si le lancement a réussi, false sinon.
+     */
+    inline bool OpenInDefaultBrowser(Windows::Data::Json::JsonObject const& message, std::wstring_view fallback_html = L"")
+    {
+        if (!message)
+            return false;
+
+        std::wstring subject{ message.GetNamedString(L"subject", L"") };
+        std::wstring from{ message.GetNamedString(L"from", L"") };
+        std::wstring to{ message.GetNamedString(L"to", L"") };
+        std::wstring date{ message.GetNamedString(L"date", L"") };
+        std::wstring html{ message.GetNamedString(L"html", L"") };
+        std::wstring text{ message.GetNamedString(L"text", L"") };
+
+        if (html.empty() && !fallback_html.empty())
+            html = std::wstring{ fallback_html };
+
+        std::wstring standalone = BuildStandaloneHtmlMessage(from, to, date, subject, html, text);
+
+        wchar_t temp_dir[MAX_PATH];
+        DWORD dir_len = GetTempPathW(MAX_PATH, temp_dir);
+        if (dir_len == 0 || dir_len > MAX_PATH)
+            return false;
+
+        std::wstring evo_temp = std::wstring{ temp_dir } + L"EvolutionWin";
+        CreateDirectoryW(evo_temp.c_str(), nullptr);
+
+        auto now = std::chrono::system_clock::now().time_since_epoch();
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+        std::wstring filename = evo_temp + L"\\message_" + std::to_wstring(ms) + L".html";
+
+        HANDLE file = CreateFileW(filename.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (file == INVALID_HANDLE_VALUE)
+            return false;
+
+        int utf8_size = WideCharToMultiByte(CP_UTF8, 0, standalone.c_str(), -1, nullptr, 0, nullptr, nullptr);
+        if (utf8_size > 0)
+        {
+            std::string utf8_buf;
+            utf8_buf.resize(utf8_size - 1);
+            WideCharToMultiByte(CP_UTF8, 0, standalone.c_str(), -1, utf8_buf.data(), utf8_size, nullptr, nullptr);
+            DWORD written = 0;
+            WriteFile(file, utf8_buf.data(), static_cast<DWORD>(utf8_buf.size()), &written, nullptr);
+        }
+        CloseHandle(file);
+
+        HINSTANCE res = ShellExecuteW(nullptr, L"open", filename.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+        return reinterpret_cast<intptr_t>(res) > 32;
     }
 }

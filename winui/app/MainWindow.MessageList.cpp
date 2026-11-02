@@ -370,6 +370,29 @@ namespace winrt::EvolutionWin::implementation
                 });
                 menu_items.Append(forward_att_item);
 
+                MenuFlyoutItem browser_item;
+                browser_item.Text(L"Afficher dans le navigateur");
+                browser_item.Icon(FontIcon{});
+                browser_item.Icon().as<FontIcon>().Glyph(L"\xE774");
+                browser_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
+                {
+                    hstring target_uid = target_uids.empty() ? SelectedMessageUid() : target_uids.front();
+                    if (!target_uid.empty())
+                    {
+                        auto loc = GetMessageLocation(target_uid);
+                        hstring acc = loc.account.empty() ? m_account : loc.account;
+                        hstring fld = loc.folder.empty() ? m_folder : loc.folder;
+                        m_core->FetchMessage(acc, fld, target_uid, [this](hstring const& json, hstring const& error)
+                        {
+                            if (!error.empty()) return;
+                            JsonObject obj;
+                            if (JsonObject::TryParse(json, obj))
+                                ::EvolutionWin::Helpers::OpenInDefaultBrowser(obj);
+                        });
+                    }
+                });
+                menu_items.Append(browser_item);
+
                 menu_items.Append(MenuFlyoutSeparator{});
 
                 auto state_it = m_message_states.find(std::wstring{ target_uids.front() });

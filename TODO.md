@@ -535,7 +535,7 @@ Trois notions distinctes, comme dans Outlook : le **suivi** (drapeau avec libell
     - [ ] **Restauration en self-service** : sélection unitaire ou multiple d'éléments avec bouton *Restaurer les éléments sélectionnés* (rétablissement direct dans la Boîte de réception ou le dossier d'origine) et bouton *Supprimer définitivement* (purge manuelle si autorisée par la stratégie de rétention)
     - [ ] **Recherche et tri** : filtrage par expéditeur, objet ou date de suppression pour localiser rapidement les courriels purgés par erreur
 - [ ] 🟡 **Favoris** : section *Favoris* en haut du volet des dossiers, réordonnable
-- [ ] 🟢 **Afficher dans le navigateur** (OWA / webmail du fournisseur)
+- [x] 🟢 **Afficher dans le navigateur** (OWA / webmail du fournisseur)
 - [ ] 🟠 **Dossiers de recherche** (dossiers virtuels `CamelVeeFolder`, aujourd'hui ignorés par `evo-core`), avec modèles prédéfinis : non lus, marqués, de personnes spécifiques, gros messages…
 - [ ] **Propriétés du dossier** :
   - [ ] 🟡 Taille, nombre d'éléments, afficher le total ou les non-lus (quota du compte : §3)

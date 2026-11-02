@@ -43,7 +43,7 @@ Ces chantiers ne dépendent pas de refontes architecturales complexes et apporte
 - [ ] **Aperçus sécurisés de pièces jointes simples**
   - **Images** (PNG, JPEG, GIF, BMP, WebP) : affichage direct dans le volet de lecture via `BitmapImage`.
   - **Fichiers texte, JSON, CSV, logs** : affichage direct en texte brut non interprété dans un conteneur dédié.
-- [ ] **Bouton « Afficher dans le navigateur »**
+- [x] **Bouton « Afficher dans le navigateur »**
   - Permettre d'ouvrir le courriel ou le portail webmail correspondant dans le navigateur système par défaut.
 
 ---

@@ -1002,4 +1002,21 @@ namespace winrt::EvolutionWin::implementation
             ::EvolutionWin::Settings::Instance().SetNumber(L"window.message.height", size.Height);
         }
     }
+
+    /**
+     * @brief Ouvre le message visualisé dans le navigateur web par défaut du système.
+     * @param sender Bouton de commande émetteur.
+     * @param args Arguments de l'événement de clic.
+     */
+    void MessageWindow::OnOpenInBrowserClick(
+        [[maybe_unused]] IInspectable const& sender,
+        [[maybe_unused]] RoutedEventArgs const& args)
+    {
+        if (!m_current_message)
+            return;
+
+        bool ok = ::EvolutionWin::Helpers::OpenInDefaultBrowser(m_current_message, m_reader_html);
+        if (!ok)
+            ShowStatus(L"Impossible d'ouvrir le navigateur web par défaut.", InfoBarSeverity::Error);
+    }
 }

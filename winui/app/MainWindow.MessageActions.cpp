@@ -492,4 +492,26 @@ namespace winrt::EvolutionWin::implementation
         MoveMenu().Items().Append(MenuFlyoutSeparator{});
         MoveMenu().Items().Append(copy_sub);
     }
+
+    /**
+     * @brief Ouvre le message sélectionné dans le navigateur web par défaut du système Windows.
+     * @param sender Bouton de commande émetteur.
+     * @param args Arguments de l'événement de clic.
+     */
+    void MainWindow::OnOpenInBrowserClick(
+        [[maybe_unused]] IInspectable const& sender,
+        [[maybe_unused]] RoutedEventArgs const& args)
+    {
+        if (!m_current_message)
+        {
+            ShowStatus(L"Sélectionnez d'abord un message à afficher.", InfoBarSeverity::Informational);
+            return;
+        }
+
+        bool ok = ::EvolutionWin::Helpers::OpenInDefaultBrowser(m_current_message, m_reader_html);
+        if (!ok)
+        {
+            ShowStatus(L"Impossible d'ouvrir le navigateur web par défaut.", InfoBarSeverity::Error);
+        }
+    }
 }

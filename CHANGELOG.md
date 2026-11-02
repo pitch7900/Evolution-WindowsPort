@@ -22,6 +22,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Bouton « Afficher dans le navigateur » (Quickwin §2 / §7)** :
+  - **Ouverture native et ergonomique** : ajout d'un bouton dédié avec icône globe (`\xE774`) dans la barre d'outils du volet de lecture (`ReaderPane`), dans la fenêtre indépendante (`MessageWindow`) et dans le menu contextuel par clic droit sur un message.
+  - **Rendu HTML autonome et soigné** : routine `BuildStandaloneHtmlMessage` générant un document HTML 5 complet et stylisé (en-tête avec expéditeur, destinataires, date et objet, corps HTML ou texte brut formaté) enregistré dans un emplacement temporaire sécurisé (`%TEMP%\EvolutionWin`).
+  - **Lancement dans le navigateur par défaut** : ouverture immédiate via `ShellExecuteW` dans le navigateur Web système (Edge, Chrome, Firefox, etc.) facilitant la consultation des newsletters complexes et courriels transactionnels.
+  - **Tests unitaires de validation** : validation de la génération autonome et de l'échappement sécurisé (`test_build_standalone_html_message`) dans `tests/unit/test_helpers.cpp` (24/24 tests réussis).
+
 - **Confirmations de sécurité pour la rédaction et la suppression (Quickwin §5 / §19)** :
   - **Avertissement de pièce jointe oubliée** : analyse syntaxique du sujet et du corps du message dans `ComposeWindow` via `HasAttachmentKeywords` (mots-clés français et anglais comme "pièce jointe", "ci-joint", "en pj", "attachment"). Si aucun fichier n'est joint, une boîte modale Fluent avertit l'expéditeur avant le départ du message.
   - **Avertissement d'envoi sans objet** : confirmation modale automatique si l'objet est vide et que `mail.warn-empty-subject` est actif (activé par défaut).

@@ -469,6 +469,73 @@ static void test_attachment_keywords(void)
     TEST_CASE_END();
 }
 
+static std::wstring BuildStandaloneHtmlMessage(
+    std::wstring_view from,
+    std::wstring_view to,
+    std::wstring_view date,
+    std::wstring_view subject,
+    std::wstring_view html_body,
+    std::wstring_view text_body)
+{
+    std::wstring out;
+    out += L"<!DOCTYPE html>\n<html>\n<head>\n";
+    out += L"<meta charset=\"utf-8\">\n";
+    out += L"<title>";
+    out += subject.empty() ? L"(Sans objet)" : EscapeHtml(subject);
+    out += L"</title>\n</head>\n<body>\n";
+    out += L"<div class=\"email-header\">\n";
+    out += L"  <h1>" + (subject.empty() ? std::wstring{ L"(Sans objet)" } : EscapeHtml(subject)) + L"</h1>\n";
+    out += L"  <div>De : " + EscapeHtml(from) + L"</div>\n";
+    if (!to.empty())
+        out += L"  <div>A : " + EscapeHtml(to) + L"</div>\n";
+    if (!date.empty())
+        out += L"  <div>Date : " + EscapeHtml(date) + L"</div>\n";
+    out += L"</div>\n";
+    out += L"<div class=\"email-body\">\n";
+    if (!html_body.empty())
+        out += html_body;
+    else
+        out += L"<pre>" + EscapeHtml(text_body) + L"</pre>";
+    out += L"\n</div>\n</body>\n</html>";
+    return out;
+}
+
+static void test_build_standalone_html_message(void)
+{
+    TEST_CASE("BuildStandaloneHtmlMessage: Document autonome avec HTML et metadonnees");
+    {
+        std::wstring html = BuildStandaloneHtmlMessage(
+            L"expediteur@test.com",
+            L"destinataire@test.com",
+            L"02/11/2026 23:15",
+            L"Rapport mensuel & synthese",
+            L"<p>Contenu HTML riche</p>",
+            L"");
+
+        ASSERT_TRUE(html.find(L"<!DOCTYPE html>") != std::wstring::npos);
+        ASSERT_TRUE(html.find(L"Rapport mensuel &amp; synthese") != std::wstring::npos);
+        ASSERT_TRUE(html.find(L"expediteur@test.com") != std::wstring::npos);
+        ASSERT_TRUE(html.find(L"<p>Contenu HTML riche</p>") != std::wstring::npos);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("BuildStandaloneHtmlMessage: Repli texte brut avec balises echappees");
+    {
+        std::wstring html = BuildStandaloneHtmlMessage(
+            L"client@test.com",
+            L"",
+            L"",
+            L"",
+            L"",
+            L"Attention <script>alert(1)</script> & test");
+
+        ASSERT_TRUE(html.find(L"(Sans objet)") != std::wstring::npos);
+        ASSERT_TRUE(html.find(L"&lt;script&gt;alert(1)&lt;/script&gt; &amp; test") != std::wstring::npos);
+        ASSERT_TRUE(html.find(L"<pre>") != std::wstring::npos);
+    }
+    TEST_CASE_END();
+}
+
 /**
  * @brief Point d'entree principal de la suite de tests des helpers.
  * @return 0 si tous les tests reussissent, 1 sinon.
@@ -485,6 +552,7 @@ int main(void)
     test_starts_with_nocase();
     test_semver_comparison();
     test_attachment_keywords();
+    test_build_standalone_html_message();
 
     return test_suite_summary();
 }

@@ -114,6 +114,11 @@
                     <KeyboardAccelerator Modifiers="Control" Key="P" />
                 </AppBarButton.KeyboardAccelerators>
             </AppBarButton>
+            <AppBarButton x:Name="OpenInBrowserButton" Label="Afficher dans le navigateur" Click="OnOpenInBrowserClick" ToolTipService.ToolTip="Ouvrir ce message dans le navigateur web par défaut">
+                <AppBarButton.Icon>
+                    <FontIcon Glyph="&#xE774;" />
+                </AppBarButton.Icon>
+            </AppBarButton>
         </CommandBar>
 
         <!-- En-tête complet du message -->
