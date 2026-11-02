@@ -842,7 +842,7 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 
 - [ ] 🟢 Masquer l'aperçu du message dans la liste (lignes d'extrait, §5) en même temps que le mode confidentiel des notifications
 - [ ] 🟡 Verrouiller l'application après inactivité (Windows Hello)
-- [ ] 🟢 Effacer les caches (WebView2, aperçus de pièces jointes)
+- [x] 🟢 Effacer les caches (WebView2, aperçus de pièces jointes)
 
 ### Sauvegarde des préférences
 

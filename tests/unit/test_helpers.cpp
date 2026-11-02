@@ -2,7 +2,15 @@
 
 
 
+
+
+
+
  * @file test_helpers.cpp
+
+
+
+
 
 
 
@@ -10,7 +18,15 @@
 
 
 
+
+
+
+
  *
+
+
+
+
 
 
 
@@ -18,7 +34,15 @@
 
 
 
+
+
+
+
  * - Extraction du nom de l'expediteur (SenderName)
+
+
+
+
 
 
 
@@ -26,7 +50,15 @@
 
 
 
+
+
+
+
  * - Filtrage des adresses propres pour repondre a tous (WithoutAddress)
+
+
+
+
 
 
 
@@ -34,7 +66,15 @@
 
 
 
+
+
+
+
  * - Formatage des citations de reponse (Quote)
+
+
+
+
 
 
 
@@ -42,7 +82,15 @@
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -50,7 +98,15 @@
 
 
 
+
+
+
+
 #include <cwctype>
+
+
+
+
 
 
 
@@ -58,11 +114,27 @@
 
 
 
+
+
+
+
 #include <string_view>
 
 
 
+
+
+
+
 #include <vector>
+
+#include <filesystem>
+
+#include <fstream>
+
+
+
+
 
 
 
@@ -70,11 +142,23 @@
 
 
 
+
+
+
+
 /* --- Re-implementation autonome des fonctions pures de MainWindow.Helpers pour isolation de test --- */
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -82,7 +166,15 @@
 
 
 
+
+
+
+
  * @param from Chaine d'origine (ex: "\"Pierre Dupont\" <pierre@example.com>").
+
+
+
+
 
 
 
@@ -90,7 +182,15 @@
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -98,7 +198,15 @@ static std::wstring SenderName(std::wstring_view from)
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -106,11 +214,23 @@ static std::wstring SenderName(std::wstring_view from)
 
 
 
+
+
+
+
     if (pos != std::wstring_view::npos && pos > 0)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -118,7 +238,15 @@ static std::wstring SenderName(std::wstring_view from)
 
 
 
+
+
+
+
         if (name.size() >= 2 && name.front() == L'"' && name.back() == L'"')
+
+
+
+
 
 
 
@@ -126,11 +254,23 @@ static std::wstring SenderName(std::wstring_view from)
 
 
 
+
+
+
+
         return std::wstring{ name };
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -138,11 +278,23 @@ static std::wstring SenderName(std::wstring_view from)
 
 
 
+
+
+
+
 }
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -150,7 +302,15 @@ static std::wstring SenderName(std::wstring_view from)
 
 
 
+
+
+
+
  * Remplace les caracteres interdits (\ / : * ? " < > |) et les caracteres non imprimables (< 32) par '_'.
+
+
+
+
 
 
 
@@ -158,7 +318,15 @@ static std::wstring SenderName(std::wstring_view from)
 
 
 
+
+
+
+
  * @param fallback Nom de secours utilise si le resultat nettoye est vide.
+
+
+
+
 
 
 
@@ -166,7 +334,15 @@ static std::wstring SenderName(std::wstring_view from)
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -174,7 +350,15 @@ static std::wstring SanitizeFileName(std::wstring const& name, std::wstring cons
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -182,11 +366,23 @@ static std::wstring SanitizeFileName(std::wstring const& name, std::wstring cons
 
 
 
+
+
+
+
     for (auto& c : clean)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -194,11 +390,23 @@ static std::wstring SanitizeFileName(std::wstring const& name, std::wstring cons
 
 
 
+
+
+
+
             c = L'_';
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -206,11 +414,23 @@ static std::wstring SanitizeFileName(std::wstring const& name, std::wstring cons
 
 
 
+
+
+
+
 }
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -218,7 +438,15 @@ static std::wstring SanitizeFileName(std::wstring const& name, std::wstring cons
 
 
 
+
+
+
+
  * Utilise lors de l'action "Repondre a tous".
+
+
+
+
 
 
 
@@ -226,7 +454,15 @@ static std::wstring SanitizeFileName(std::wstring const& name, std::wstring cons
 
 
 
+
+
+
+
  * @param own_address Adresse email de l'utilisateur a exclure (insensible a la casse).
+
+
+
+
 
 
 
@@ -234,7 +470,15 @@ static std::wstring SanitizeFileName(std::wstring const& name, std::wstring cons
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -242,7 +486,15 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -250,7 +502,15 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
     size_t start = 0;
+
+
+
+
 
 
 
@@ -258,7 +518,15 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
         std::wstring low;
+
+
+
+
 
 
 
@@ -266,7 +534,15 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
         for (wchar_t c : sv)
+
+
+
+
 
 
 
@@ -274,11 +550,23 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
         return low;
 
 
 
+
+
+
+
     };
+
+
+
+
 
 
 
@@ -286,11 +574,23 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
     while (start <= addresses.size())
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -298,7 +598,15 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
         if (end == std::wstring_view::npos)
+
+
+
+
 
 
 
@@ -306,7 +614,15 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
         std::wstring part{ addresses.substr(start, end - start) };
+
+
+
+
 
 
 
@@ -314,7 +630,15 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
         if (first_not_space != std::wstring::npos)
+
+
+
+
 
 
 
@@ -322,7 +646,15 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
         else
+
+
+
+
 
 
 
@@ -330,7 +662,15 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
         size_t last_not_space = part.find_last_not_of(L' ');
+
+
+
+
 
 
 
@@ -338,7 +678,15 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
             part.erase(last_not_space + 1);
+
+
+
+
 
 
 
@@ -346,11 +694,23 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
         if (!part.empty() && (lower_own.empty() || lower_part.find(lower_own) == std::wstring::npos))
 
 
 
+
+
+
+
         {
+
+
+
+
 
 
 
@@ -358,7 +718,15 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
                 result += L", ";
+
+
+
+
 
 
 
@@ -366,7 +734,15 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -374,7 +750,15 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -382,11 +766,23 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
 }
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -394,7 +790,15 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
  * @param text Texte brut source.
+
+
+
+
 
 
 
@@ -402,7 +806,15 @@ static std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_vie
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -410,11 +822,23 @@ static std::wstring EscapeHtml(std::wstring_view text)
 
 
 
+
+
+
+
 {
 
 
 
+
+
+
+
     std::wstring out;
+
+
+
+
 
 
 
@@ -422,11 +846,23 @@ static std::wstring EscapeHtml(std::wstring_view text)
 
 
 
+
+
+
+
     for (wchar_t c : text)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -434,7 +870,15 @@ static std::wstring EscapeHtml(std::wstring_view text)
 
 
 
+
+
+
+
         {
+
+
+
+
 
 
 
@@ -442,7 +886,15 @@ static std::wstring EscapeHtml(std::wstring_view text)
 
 
 
+
+
+
+
         case L'<': out += L"&lt;"; break;
+
+
+
+
 
 
 
@@ -450,7 +902,15 @@ static std::wstring EscapeHtml(std::wstring_view text)
 
 
 
+
+
+
+
         case L'"': out += L"&quot;"; break;
+
+
+
+
 
 
 
@@ -458,7 +918,15 @@ static std::wstring EscapeHtml(std::wstring_view text)
 
 
 
+
+
+
+
         case L'\n': out += L"<br>"; break;
+
+
+
+
 
 
 
@@ -466,7 +934,15 @@ static std::wstring EscapeHtml(std::wstring_view text)
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -474,7 +950,15 @@ static std::wstring EscapeHtml(std::wstring_view text)
 
 
 
+
+
+
+
     return out;
+
+
+
+
 
 
 
@@ -482,7 +966,15 @@ static std::wstring EscapeHtml(std::wstring_view text)
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -490,7 +982,15 @@ static std::wstring EscapeHtml(std::wstring_view text)
 
 
 
+
+
+
+
  * @param text Texte brut du message cite.
+
+
+
+
 
 
 
@@ -498,7 +998,15 @@ static std::wstring EscapeHtml(std::wstring_view text)
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -506,7 +1014,15 @@ static std::wstring Quote(std::wstring_view text)
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -514,11 +1030,23 @@ static std::wstring Quote(std::wstring_view text)
 
 
 
+
+
+
+
     for (auto c : text)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -526,7 +1054,15 @@ static std::wstring Quote(std::wstring_view text)
 
 
 
+
+
+
+
             continue;
+
+
+
+
 
 
 
@@ -534,7 +1070,15 @@ static std::wstring Quote(std::wstring_view text)
 
 
 
+
+
+
+
         if (c == L'\n')
+
+
+
+
 
 
 
@@ -542,7 +1086,15 @@ static std::wstring Quote(std::wstring_view text)
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -550,11 +1102,23 @@ static std::wstring Quote(std::wstring_view text)
 
 
 
+
+
+
+
 }
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -562,7 +1126,15 @@ static std::wstring Quote(std::wstring_view text)
 
 
 
+
+
+
+
  * @param text Chaine principale a verifier.
+
+
+
+
 
 
 
@@ -570,11 +1142,23 @@ static std::wstring Quote(std::wstring_view text)
 
 
 
+
+
+
+
  * @return true si le prefixe correspond, false sinon.
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -582,7 +1166,15 @@ static bool StartsWithNoCase(std::wstring_view text, std::wstring_view prefix)
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -590,7 +1182,15 @@ static bool StartsWithNoCase(std::wstring_view text, std::wstring_view prefix)
 
 
 
+
+
+
+
         return false;
+
+
+
+
 
 
 
@@ -598,7 +1198,15 @@ static bool StartsWithNoCase(std::wstring_view text, std::wstring_view prefix)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -606,11 +1214,23 @@ static bool StartsWithNoCase(std::wstring_view text, std::wstring_view prefix)
 
 
 
+
+
+
+
             return false;
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -618,11 +1238,23 @@ static bool StartsWithNoCase(std::wstring_view text, std::wstring_view prefix)
 
 
 
+
+
+
+
 }
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -630,7 +1262,15 @@ static bool StartsWithNoCase(std::wstring_view text, std::wstring_view prefix)
 
 
 
+
+
+
+
  * Ignore le prefixe eventuel 'v'.
+
+
+
+
 
 
 
@@ -638,7 +1278,15 @@ static bool StartsWithNoCase(std::wstring_view text, std::wstring_view prefix)
 
 
 
+
+
+
+
  * @param v2 Deuxieme version (ex: "0.9.6").
+
+
+
+
 
 
 
@@ -646,7 +1294,15 @@ static bool StartsWithNoCase(std::wstring_view text, std::wstring_view prefix)
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -654,7 +1310,15 @@ static int CompareSemVer(std::string const& v1, std::string const& v2)
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -662,7 +1326,15 @@ static int CompareSemVer(std::string const& v1, std::string const& v2)
 
 
 
+
+
+
+
         std::vector<int> parts;
+
+
+
+
 
 
 
@@ -670,7 +1342,15 @@ static int CompareSemVer(std::string const& v1, std::string const& v2)
 
 
 
+
+
+
+
         std::stringstream ss(ver.substr(start));
+
+
+
+
 
 
 
@@ -678,7 +1358,15 @@ static int CompareSemVer(std::string const& v1, std::string const& v2)
 
 
 
+
+
+
+
         while (std::getline(ss, token, '.')) {
+
+
+
+
 
 
 
@@ -686,7 +1374,15 @@ static int CompareSemVer(std::string const& v1, std::string const& v2)
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -694,11 +1390,23 @@ static int CompareSemVer(std::string const& v1, std::string const& v2)
 
 
 
+
+
+
+
         return parts;
 
 
 
+
+
+
+
     };
+
+
+
+
 
 
 
@@ -706,7 +1414,15 @@ static int CompareSemVer(std::string const& v1, std::string const& v2)
 
 
 
+
+
+
+
     auto p2 = parse_parts(v2);
+
+
+
+
 
 
 
@@ -714,7 +1430,15 @@ static int CompareSemVer(std::string const& v1, std::string const& v2)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -722,11 +1446,23 @@ static int CompareSemVer(std::string const& v1, std::string const& v2)
 
 
 
+
+
+
+
         if (p1[i] > p2[i]) return 1;
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -734,11 +1470,23 @@ static int CompareSemVer(std::string const& v1, std::string const& v2)
 
 
 
+
+
+
+
 }
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -746,7 +1494,15 @@ static int CompareSemVer(std::string const& v1, std::string const& v2)
 
 
 
+
+
+
+
  * @param from Nom ou adresse de l'expediteur.
+
+
+
+
 
 
 
@@ -754,7 +1510,15 @@ static int CompareSemVer(std::string const& v1, std::string const& v2)
 
 
 
+
+
+
+
  * @param text Corps en texte brut si disponible.
+
+
+
+
 
 
 
@@ -762,11 +1526,23 @@ static int CompareSemVer(std::string const& v1, std::string const& v2)
 
 
 
+
+
+
+
  * @return Texte fluide debarrasse de balises et pret pour la synthese vocale.
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -774,7 +1550,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
     std::wstring const& from,
+
+
+
+
 
 
 
@@ -782,7 +1566,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
     std::wstring const& text,
+
+
+
+
 
 
 
@@ -790,7 +1582,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -798,11 +1598,23 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
     if (!from.empty())
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -810,7 +1622,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -818,7 +1638,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -826,7 +1654,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -834,11 +1670,23 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
     if (!text.empty())
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -846,7 +1694,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -854,7 +1710,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -862,7 +1726,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
         for (size_t i = 0; i < html.size(); ++i)
+
+
+
+
 
 
 
@@ -870,7 +1742,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
             wchar_t c = html[i];
+
+
+
+
 
 
 
@@ -878,7 +1758,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
             {
+
+
+
+
 
 
 
@@ -886,7 +1774,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
                 if (i + 3 <= html.size() && (_wcsnicmp(&html[i], L"<br", 3) == 0 || _wcsnicmp(&html[i], L"</p", 3) == 0 || (i + 5 <= html.size() && _wcsnicmp(&html[i], L"</div", 5) == 0)))
+
+
+
+
 
 
 
@@ -894,7 +1790,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
                     body_clean += L'\n';
+
+
+
+
 
 
 
@@ -902,7 +1806,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
             }
+
+
+
+
 
 
 
@@ -910,7 +1822,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
             {
+
+
+
+
 
 
 
@@ -918,7 +1838,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
             }
+
+
+
+
 
 
 
@@ -926,7 +1854,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
             {
+
+
+
+
 
 
 
@@ -934,7 +1870,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
             }
+
+
+
+
 
 
 
@@ -942,7 +1886,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -950,7 +1902,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
         size_t start_pos = 0;
+
+
+
+
 
 
 
@@ -958,7 +1918,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
             str.replace(start_pos, from_str.length(), to_str);
+
+
+
+
 
 
 
@@ -966,11 +1934,23 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
         }
 
 
 
+
+
+
+
     };
+
+
+
+
 
 
 
@@ -978,7 +1958,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
     replace_all(body_clean, L"&amp;", L"&");
+
+
+
+
 
 
 
@@ -986,7 +1974,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
     replace_all(body_clean, L"&gt;", L">");
+
+
+
+
 
 
 
@@ -994,7 +1990,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
     replace_all(body_clean, L"&#39;", L"'");
+
+
+
+
 
 
 
@@ -1002,11 +2006,23 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
     return speech;
 
 
 
+
+
+
+
 }
+
+
+
+
 
 
 
@@ -1014,7 +2030,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -1022,7 +2046,15 @@ static std::wstring ExtractPlainTextForSpeech(
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -1030,7 +2062,15 @@ static void test_sender_name_parsing(void)
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -1038,7 +2078,15 @@ static void test_sender_name_parsing(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1046,7 +2094,15 @@ static void test_sender_name_parsing(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(res == L"Pierre Dupont");
+
+
+
+
 
 
 
@@ -1054,7 +2110,15 @@ static void test_sender_name_parsing(void)
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -1062,7 +2126,15 @@ static void test_sender_name_parsing(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1070,7 +2142,15 @@ static void test_sender_name_parsing(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(res == L"Dupont, Pierre");
+
+
+
+
 
 
 
@@ -1078,7 +2158,15 @@ static void test_sender_name_parsing(void)
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -1086,7 +2174,15 @@ static void test_sender_name_parsing(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1094,7 +2190,15 @@ static void test_sender_name_parsing(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(res == L"pierre@example.com");
+
+
+
+
 
 
 
@@ -1102,7 +2206,15 @@ static void test_sender_name_parsing(void)
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -1110,7 +2222,15 @@ static void test_sender_name_parsing(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1118,7 +2238,15 @@ static void test_sender_name_parsing(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(res.empty());
+
+
+
+
 
 
 
@@ -1126,7 +2254,15 @@ static void test_sender_name_parsing(void)
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -1134,7 +2270,15 @@ static void test_sender_name_parsing(void)
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -1142,7 +2286,15 @@ static void test_sender_name_parsing(void)
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -1150,7 +2302,15 @@ static void test_sanitize_filename(void)
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -1158,7 +2318,15 @@ static void test_sanitize_filename(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1166,7 +2334,15 @@ static void test_sanitize_filename(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(res == L"Calendrier_Projet");
+
+
+
+
 
 
 
@@ -1174,7 +2350,15 @@ static void test_sanitize_filename(void)
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -1182,7 +2366,15 @@ static void test_sanitize_filename(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1190,7 +2382,15 @@ static void test_sanitize_filename(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(res == L"Rapport_ 2026_11_02 _v1_ _test_ _ dossier_ _export_");
+
+
+
+
 
 
 
@@ -1198,7 +2398,15 @@ static void test_sanitize_filename(void)
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -1206,7 +2414,15 @@ static void test_sanitize_filename(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1214,7 +2430,15 @@ static void test_sanitize_filename(void)
 
 
 
+
+
+
+
         std::wstring res = SanitizeFileName(input, L"defaut");
+
+
+
+
 
 
 
@@ -1222,11 +2446,23 @@ static void test_sanitize_filename(void)
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -1234,7 +2470,15 @@ static void test_sanitize_filename(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1242,7 +2486,15 @@ static void test_sanitize_filename(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(res == L"secours");
+
+
+
+
 
 
 
@@ -1250,7 +2502,15 @@ static void test_sanitize_filename(void)
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -1258,7 +2518,15 @@ static void test_sanitize_filename(void)
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -1266,7 +2534,15 @@ static void test_sanitize_filename(void)
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -1274,7 +2550,15 @@ static void test_without_address(void)
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -1282,7 +2566,15 @@ static void test_without_address(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1290,7 +2582,15 @@ static void test_without_address(void)
 
 
 
+
+
+
+
         std::wstring res = WithoutAddress(list, L"pierre@example.com");
+
+
+
+
 
 
 
@@ -1298,11 +2598,23 @@ static void test_without_address(void)
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -1310,7 +2622,15 @@ static void test_without_address(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1318,7 +2638,15 @@ static void test_without_address(void)
 
 
 
+
+
+
+
         std::wstring res = WithoutAddress(list, L"pierre@example.com");
+
+
+
+
 
 
 
@@ -1326,11 +2654,23 @@ static void test_without_address(void)
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -1338,7 +2678,15 @@ static void test_without_address(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1346,7 +2694,15 @@ static void test_without_address(void)
 
 
 
+
+
+
+
         std::wstring res = WithoutAddress(list, L"pierre@example.com");
+
+
+
+
 
 
 
@@ -1354,11 +2710,23 @@ static void test_without_address(void)
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -1366,7 +2734,15 @@ static void test_without_address(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1374,7 +2750,15 @@ static void test_without_address(void)
 
 
 
+
+
+
+
         std::wstring res = WithoutAddress(list, L"pierre@example.com");
+
+
+
+
 
 
 
@@ -1382,7 +2766,15 @@ static void test_without_address(void)
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -1390,11 +2782,23 @@ static void test_without_address(void)
 
 
 
+
+
+
+
 }
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -1402,7 +2806,15 @@ static void test_without_address(void)
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -1410,7 +2822,15 @@ static void test_escape_html(void)
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -1418,7 +2838,15 @@ static void test_escape_html(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1426,7 +2854,15 @@ static void test_escape_html(void)
 
 
 
+
+
+
+
         std::wstring res = EscapeHtml(input);
+
+
+
+
 
 
 
@@ -1434,11 +2870,23 @@ static void test_escape_html(void)
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -1446,7 +2894,15 @@ static void test_escape_html(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1454,7 +2910,15 @@ static void test_escape_html(void)
 
 
 
+
+
+
+
         std::wstring res = EscapeHtml(input);
+
+
+
+
 
 
 
@@ -1462,7 +2926,15 @@ static void test_escape_html(void)
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -1470,11 +2942,23 @@ static void test_escape_html(void)
 
 
 
+
+
+
+
 }
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -1482,7 +2966,15 @@ static void test_escape_html(void)
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -1490,7 +2982,15 @@ static void test_quote(void)
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -1498,7 +2998,15 @@ static void test_quote(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1506,7 +3014,15 @@ static void test_quote(void)
 
 
 
+
+
+
+
         std::wstring res = Quote(input);
+
+
+
+
 
 
 
@@ -1514,11 +3030,23 @@ static void test_quote(void)
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -1526,7 +3054,15 @@ static void test_quote(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1534,7 +3070,15 @@ static void test_quote(void)
 
 
 
+
+
+
+
         std::wstring res = Quote(input);
+
+
+
+
 
 
 
@@ -1542,7 +3086,15 @@ static void test_quote(void)
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -1550,11 +3102,23 @@ static void test_quote(void)
 
 
 
+
+
+
+
 }
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -1562,7 +3126,15 @@ static void test_quote(void)
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -1570,7 +3142,15 @@ static void test_starts_with_nocase(void)
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -1578,7 +3158,15 @@ static void test_starts_with_nocase(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1586,7 +3174,15 @@ static void test_starts_with_nocase(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(StartsWithNoCase(L"RE: Reunion projet", L"re:"));
+
+
+
+
 
 
 
@@ -1594,7 +3190,15 @@ static void test_starts_with_nocase(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(StartsWithNoCase(L"Fwd: Notification", L"FWD:"));
+
+
+
+
 
 
 
@@ -1602,11 +3206,23 @@ static void test_starts_with_nocase(void)
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -1614,7 +3230,15 @@ static void test_starts_with_nocase(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1622,7 +3246,15 @@ static void test_starts_with_nocase(void)
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -1630,11 +3262,23 @@ static void test_starts_with_nocase(void)
 
 
 
+
+
+
+
 }
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -1642,7 +3286,15 @@ static void test_starts_with_nocase(void)
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -1650,7 +3302,15 @@ static void test_semver_comparison(void)
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -1658,7 +3318,15 @@ static void test_semver_comparison(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1666,7 +3334,15 @@ static void test_semver_comparison(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(CompareSemVer("0.9.4", "0.9.6") < 0);
+
+
+
+
 
 
 
@@ -1674,11 +3350,23 @@ static void test_semver_comparison(void)
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -1686,7 +3374,15 @@ static void test_semver_comparison(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1694,7 +3390,15 @@ static void test_semver_comparison(void)
 
 
 
+
+
+
+
         ASSERT_EQ_INT(0, CompareSemVer("v0.9.6", "0.9.6"));
+
+
+
+
 
 
 
@@ -1702,11 +3406,23 @@ static void test_semver_comparison(void)
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -1714,7 +3430,15 @@ static void test_semver_comparison(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1722,7 +3446,15 @@ static void test_semver_comparison(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(CompareSemVer("0.9.10", "0.9.9") > 0);
+
+
+
+
 
 
 
@@ -1730,7 +3462,15 @@ static void test_semver_comparison(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(CompareSemVer("1.0.0", "0.9.6") > 0);
+
+
+
+
 
 
 
@@ -1738,7 +3478,15 @@ static void test_semver_comparison(void)
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -1746,7 +3494,15 @@ static void test_semver_comparison(void)
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -1754,7 +3510,15 @@ static void test_semver_comparison(void)
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -1762,7 +3526,15 @@ static bool HasAttachmentKeywords(std::wstring_view text)
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -1770,7 +3542,15 @@ static bool HasAttachmentKeywords(std::wstring_view text)
 
 
 
+
+
+
+
         return false;
+
+
+
+
 
 
 
@@ -1778,7 +3558,15 @@ static bool HasAttachmentKeywords(std::wstring_view text)
 
 
 
+
+
+
+
     lower.reserve(text.size());
+
+
+
+
 
 
 
@@ -1786,7 +3574,15 @@ static bool HasAttachmentKeywords(std::wstring_view text)
 
 
 
+
+
+
+
         lower.push_back(std::towlower(ch));
+
+
+
+
 
 
 
@@ -1794,7 +3590,15 @@ static bool HasAttachmentKeywords(std::wstring_view text)
 
 
 
+
+
+
+
         L"piÃ¨ce jointe",
+
+
+
+
 
 
 
@@ -1802,7 +3606,15 @@ static bool HasAttachmentKeywords(std::wstring_view text)
 
 
 
+
+
+
+
         L"piece jointe",
+
+
+
+
 
 
 
@@ -1810,7 +3622,15 @@ static bool HasAttachmentKeywords(std::wstring_view text)
 
 
 
+
+
+
+
         L"ci-joint",
+
+
+
+
 
 
 
@@ -1818,7 +3638,15 @@ static bool HasAttachmentKeywords(std::wstring_view text)
 
 
 
+
+
+
+
         L"ci-joints",
+
+
+
+
 
 
 
@@ -1826,7 +3654,15 @@ static bool HasAttachmentKeywords(std::wstring_view text)
 
 
 
+
+
+
+
         L"en piÃ¨ce jointe",
+
+
+
+
 
 
 
@@ -1834,7 +3670,15 @@ static bool HasAttachmentKeywords(std::wstring_view text)
 
 
 
+
+
+
+
         L"en pj",
+
+
+
+
 
 
 
@@ -1842,7 +3686,15 @@ static bool HasAttachmentKeywords(std::wstring_view text)
 
 
 
+
+
+
+
         L"attachments",
+
+
+
+
 
 
 
@@ -1850,7 +3702,15 @@ static bool HasAttachmentKeywords(std::wstring_view text)
 
 
 
+
+
+
+
         L"attached files"
+
+
+
+
 
 
 
@@ -1858,11 +3718,23 @@ static bool HasAttachmentKeywords(std::wstring_view text)
 
 
 
+
+
+
+
     for (const auto* p : patterns)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1870,11 +3742,23 @@ static bool HasAttachmentKeywords(std::wstring_view text)
 
 
 
+
+
+
+
             return true;
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -1882,7 +3766,15 @@ static bool HasAttachmentKeywords(std::wstring_view text)
 
 
 
+
+
+
+
 }
+
+
+
+
 
 
 
@@ -1890,7 +3782,15 @@ static void test_attachment_keywords(void)
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -1898,7 +3798,15 @@ static void test_attachment_keywords(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -1906,7 +3814,15 @@ static void test_attachment_keywords(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(HasAttachmentKeywords(L"Le devis est ci-joint pour validation"));
+
+
+
+
 
 
 
@@ -1914,7 +3830,15 @@ static void test_attachment_keywords(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(HasAttachmentKeywords(L"Please find the attachment below"));
+
+
+
+
 
 
 
@@ -1922,7 +3846,15 @@ static void test_attachment_keywords(void)
 
 
 
+
+
+
+
         ASSERT_FALSE(HasAttachmentKeywords(L"Bonjour Pierre, rdv a 14h aujourd'hui"));
+
+
+
+
 
 
 
@@ -1930,7 +3862,15 @@ static void test_attachment_keywords(void)
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -1938,7 +3878,15 @@ static void test_attachment_keywords(void)
 
 
 
+
+
+
+
 }
+
+
+
+
 
 
 
@@ -1946,7 +3894,15 @@ static std::wstring BuildStandaloneHtmlMessage(
 
 
 
+
+
+
+
     std::wstring_view from,
+
+
+
+
 
 
 
@@ -1954,7 +3910,15 @@ static std::wstring BuildStandaloneHtmlMessage(
 
 
 
+
+
+
+
     std::wstring_view date,
+
+
+
+
 
 
 
@@ -1962,7 +3926,15 @@ static std::wstring BuildStandaloneHtmlMessage(
 
 
 
+
+
+
+
     std::wstring_view html_body,
+
+
+
+
 
 
 
@@ -1970,7 +3942,15 @@ static std::wstring BuildStandaloneHtmlMessage(
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -1978,7 +3958,15 @@ static std::wstring BuildStandaloneHtmlMessage(
 
 
 
+
+
+
+
     out += L"<!DOCTYPE html>\n<html>\n<head>\n";
+
+
+
+
 
 
 
@@ -1986,7 +3974,15 @@ static std::wstring BuildStandaloneHtmlMessage(
 
 
 
+
+
+
+
     out += L"<title>";
+
+
+
+
 
 
 
@@ -1994,7 +3990,15 @@ static std::wstring BuildStandaloneHtmlMessage(
 
 
 
+
+
+
+
     out += L"</title>\n</head>\n<body>\n";
+
+
+
+
 
 
 
@@ -2002,7 +4006,15 @@ static std::wstring BuildStandaloneHtmlMessage(
 
 
 
+
+
+
+
     out += L"  <h1>" + (subject.empty() ? std::wstring{ L"(Sans objet)" } : EscapeHtml(subject)) + L"</h1>\n";
+
+
+
+
 
 
 
@@ -2010,7 +4022,15 @@ static std::wstring BuildStandaloneHtmlMessage(
 
 
 
+
+
+
+
     if (!to.empty())
+
+
+
+
 
 
 
@@ -2018,7 +4038,15 @@ static std::wstring BuildStandaloneHtmlMessage(
 
 
 
+
+
+
+
     if (!date.empty())
+
+
+
+
 
 
 
@@ -2026,7 +4054,15 @@ static std::wstring BuildStandaloneHtmlMessage(
 
 
 
+
+
+
+
     out += L"</div>\n";
+
+
+
+
 
 
 
@@ -2034,7 +4070,15 @@ static std::wstring BuildStandaloneHtmlMessage(
 
 
 
+
+
+
+
     if (!html_body.empty())
+
+
+
+
 
 
 
@@ -2042,7 +4086,15 @@ static std::wstring BuildStandaloneHtmlMessage(
 
 
 
+
+
+
+
     else
+
+
+
+
 
 
 
@@ -2050,7 +4102,15 @@ static std::wstring BuildStandaloneHtmlMessage(
 
 
 
+
+
+
+
     out += L"\n</div>\n</body>\n</html>";
+
+
+
+
 
 
 
@@ -2058,7 +4118,15 @@ static std::wstring BuildStandaloneHtmlMessage(
 
 
 
+
+
+
+
 }
+
+
+
+
 
 
 
@@ -2066,7 +4134,15 @@ static void test_build_standalone_html_message(void)
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -2074,11 +4150,23 @@ static void test_build_standalone_html_message(void)
 
 
 
+
+
+
+
     {
 
 
 
+
+
+
+
         std::wstring html = BuildStandaloneHtmlMessage(
+
+
+
+
 
 
 
@@ -2086,7 +4174,15 @@ static void test_build_standalone_html_message(void)
 
 
 
+
+
+
+
             L"destinataire@test.com",
+
+
+
+
 
 
 
@@ -2094,7 +4190,15 @@ static void test_build_standalone_html_message(void)
 
 
 
+
+
+
+
             L"Rapport mensuel & synthese",
+
+
+
+
 
 
 
@@ -2102,7 +4206,15 @@ static void test_build_standalone_html_message(void)
 
 
 
+
+
+
+
             L"");
+
+
+
+
 
 
 
@@ -2110,7 +4222,15 @@ static void test_build_standalone_html_message(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(html.find(L"Rapport mensuel &amp; synthese") != std::wstring::npos);
+
+
+
+
 
 
 
@@ -2118,7 +4238,15 @@ static void test_build_standalone_html_message(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(html.find(L"<p>Contenu HTML riche</p>") != std::wstring::npos);
+
+
+
+
 
 
 
@@ -2126,7 +4254,15 @@ static void test_build_standalone_html_message(void)
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -2134,7 +4270,15 @@ static void test_build_standalone_html_message(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -2142,15 +4286,15 @@ static void test_build_standalone_html_message(void)
 
 
 
+
+
+
+
             L"client@test.com",
 
 
 
-            L"",
 
-
-
-            L"",
 
 
 
@@ -2158,7 +4302,31 @@ static void test_build_standalone_html_message(void)
 
 
 
+
+
+
+
             L"",
+
+
+
+
+
+
+
+            L"",
+
+
+
+
+
+
+
+            L"",
+
+
+
+
 
 
 
@@ -2166,7 +4334,15 @@ static void test_build_standalone_html_message(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(html.find(L"(Sans objet)") != std::wstring::npos);
+
+
+
+
 
 
 
@@ -2174,7 +4350,15 @@ static void test_build_standalone_html_message(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(html.find(L"<pre>") != std::wstring::npos);
+
+
+
+
 
 
 
@@ -2182,7 +4366,15 @@ static void test_build_standalone_html_message(void)
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -2190,7 +4382,15 @@ static void test_build_standalone_html_message(void)
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -2198,7 +4398,15 @@ static void test_build_standalone_html_message(void)
 
 
 
+
+
+
+
  */
+
+
+
+
 
 
 
@@ -2206,7 +4414,15 @@ static void test_extract_plain_text_for_speech(void)
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -2214,11 +4430,23 @@ static void test_extract_plain_text_for_speech(void)
 
 
 
+
+
+
+
     {
 
 
 
+
+
+
+
         std::wstring speech = ExtractPlainTextForSpeech(
+
+
+
+
 
 
 
@@ -2226,7 +4454,15 @@ static void test_extract_plain_text_for_speech(void)
 
 
 
+
+
+
+
             L"Reunion de projet",
+
+
+
+
 
 
 
@@ -2234,7 +4470,15 @@ static void test_extract_plain_text_for_speech(void)
 
 
 
+
+
+
+
             L"");
+
+
+
+
 
 
 
@@ -2242,7 +4486,15 @@ static void test_extract_plain_text_for_speech(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(speech.find(L"Objet : Reunion de projet.") != std::wstring::npos);
+
+
+
+
 
 
 
@@ -2250,11 +4502,23 @@ static void test_extract_plain_text_for_speech(void)
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
@@ -2262,7 +4526,15 @@ static void test_extract_plain_text_for_speech(void)
 
 
 
+
+
+
+
     {
+
+
+
+
 
 
 
@@ -2270,7 +4542,15 @@ static void test_extract_plain_text_for_speech(void)
 
 
 
+
+
+
+
             L"info@service.fr",
+
+
+
+
 
 
 
@@ -2278,7 +4558,15 @@ static void test_extract_plain_text_for_speech(void)
 
 
 
+
+
+
+
             L"",
+
+
+
+
 
 
 
@@ -2286,7 +4574,15 @@ static void test_extract_plain_text_for_speech(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(speech.find(L"<p>") == std::wstring::npos);
+
+
+
+
 
 
 
@@ -2294,7 +4590,15 @@ static void test_extract_plain_text_for_speech(void)
 
 
 
+
+
+
+
         ASSERT_TRUE(speech.find(L"Bonjour & bienvenue !") != std::wstring::npos);
+
+
+
+
 
 
 
@@ -2302,7 +4606,15 @@ static void test_extract_plain_text_for_speech(void)
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -2310,11 +4622,23 @@ static void test_extract_plain_text_for_speech(void)
 
 
 
+
+
+
+
 }
 
 
 
+
+
+
+
 /**
+
+
+
+
 
 
 
@@ -2322,11 +4646,25 @@ static void test_extract_plain_text_for_speech(void)
 
 
 
+
+
+
+
  * @return 0 si tous les tests reussissent, 1 sinon.
 
 
 
+
+
+
+
  */
+
+
+
+
+
+
 
 
 
@@ -2334,234 +4672,575 @@ static void test_extract_plain_text_for_speech(void)
 
 enum class AttachmentPreviewKind
 
+
+
 {
+
+
 
     Image,
 
+
+
     Text,
 
+
+
     Unsupported
+
+
 
 };
 
 
 
+
+
+
+
 static AttachmentPreviewKind DetectAttachmentPreviewKind(std::wstring_view filename)
+
+
 
 {
 
+
+
     auto dot = filename.rfind(L'.');
 
+
+
     if (dot == std::wstring_view::npos || dot + 1 >= filename.size())
+
+
 
         return AttachmentPreviewKind::Unsupported;
 
 
 
+
+
+
+
     std::wstring ext{ filename.substr(dot) };
 
+
+
     for (auto& c : ext)
+
+
 
         c = static_cast<wchar_t>(std::towlower(c));
 
 
 
+
+
+
+
     if (ext == L".png" || ext == L".jpg" || ext == L".jpeg" || ext == L".gif" ||
+
+
 
         ext == L".bmp" || ext == L".webp" || ext == L".ico" || ext == L".tif" || ext == L".tiff")
 
+
+
     {
+
+
 
         return AttachmentPreviewKind::Image;
 
+
+
     }
+
+
+
+
 
 
 
     if (ext == L".txt" || ext == L".csv" || ext == L".tsv" || ext == L".log" ||
 
+
+
         ext == L".json" || ext == L".xml" || ext == L".ini" || ext == L".cfg" ||
+
+
 
         ext == L".conf" || ext == L".md" || ext == L".patch" || ext == L".diff" ||
 
+
+
         ext == L".yaml" || ext == L".yml" || ext == L".sql" || ext == L".c" ||
+
+
 
         ext == L".cpp" || ext == L".h" || ext == L".hpp" || ext == L".cs" ||
 
+
+
         ext == L".js" || ext == L".ts" || ext == L".py")
+
+
 
     {
 
+
+
         return AttachmentPreviewKind::Text;
 
+
+
     }
+
+
+
+
 
 
 
     return AttachmentPreviewKind::Unsupported;
 
+
+
 }
+
+
+
+
 
 
 
 /**
 
+
+
  * @brief Test de la détection de format d'aperçu sécurisé de pièce jointe.
+
+
 
  */
 
+
+
 static void test_attachment_preview_kind(void)
+
+
 
 {
 
+
+
     TEST_CASE("DetectAttachmentPreviewKind: Images supportees");
+
+
 
     {
 
+
+
         ASSERT_TRUE(DetectAttachmentPreviewKind(L"photo.PNG") == AttachmentPreviewKind::Image);
+
+
 
         ASSERT_TRUE(DetectAttachmentPreviewKind(L"capture.jpg") == AttachmentPreviewKind::Image);
 
+
+
         ASSERT_TRUE(DetectAttachmentPreviewKind(L"schema.webp") == AttachmentPreviewKind::Image);
+
+
 
         ASSERT_TRUE(DetectAttachmentPreviewKind(L"icone.ico") == AttachmentPreviewKind::Image);
 
+
+
     }
 
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
     TEST_CASE("DetectAttachmentPreviewKind: Fichiers texte brut et code securises");
 
+
+
     {
+
+
 
         ASSERT_TRUE(DetectAttachmentPreviewKind(L"rapport.csv") == AttachmentPreviewKind::Text);
 
+
+
         ASSERT_TRUE(DetectAttachmentPreviewKind(L"donnees.json") == AttachmentPreviewKind::Text);
+
+
 
         ASSERT_TRUE(DetectAttachmentPreviewKind(L"journal.log") == AttachmentPreviewKind::Text);
 
+
+
         ASSERT_TRUE(DetectAttachmentPreviewKind(L"config.xml") == AttachmentPreviewKind::Text);
+
+
 
         ASSERT_TRUE(DetectAttachmentPreviewKind(L"source.cpp") == AttachmentPreviewKind::Text);
 
+
+
     }
 
+
+
     TEST_CASE_END();
+
+
+
+
 
 
 
     TEST_CASE("DetectAttachmentPreviewKind: Types a risque ou non supportes");
 
+
+
     {
+
+
 
         ASSERT_TRUE(DetectAttachmentPreviewKind(L"programme.exe") == AttachmentPreviewKind::Unsupported);
 
+
+
         ASSERT_TRUE(DetectAttachmentPreviewKind(L"script.vbs") == AttachmentPreviewKind::Unsupported);
+
+
 
         ASSERT_TRUE(DetectAttachmentPreviewKind(L"archive.zip") == AttachmentPreviewKind::Unsupported);
 
+
+
         ASSERT_TRUE(DetectAttachmentPreviewKind(L"sans_extension") == AttachmentPreviewKind::Unsupported);
+
+
 
     }
 
+
+
     TEST_CASE_END();
 
+
+
 }
+
+
+
+
+
 
 
 
 
 static std::wstring FormatContactSuggestion(std::wstring_view full_name, std::wstring_view email)
+
 {
+
     if (full_name.empty() && email.empty())
+
         return L"(Sans nom)";
+
     if (email.empty())
+
         return std::wstring{ full_name };
+
     if (full_name.empty())
+
         return std::wstring{ email };
+
     return std::wstring{ full_name } + L" <" + std::wstring{ email } + L">";
+
 }
+
+
 
 /**
+
  * @brief Test du formatage des suggestions de contacts pour la recherche rapide.
+
  */
+
 static void test_format_contact_suggestion(void)
+
 {
+
     TEST_CASE("FormatContactSuggestion: Nom et adresse renseignes");
+
     {
+
         std::wstring res = FormatContactSuggestion(L"Pierre Dupont", L"pierre@example.com");
+
         ASSERT_TRUE(res == L"Pierre Dupont <pierre@example.com>");
+
     }
+
     TEST_CASE_END();
+
+
 
     TEST_CASE("FormatContactSuggestion: Nom seul sans adresse");
+
     {
+
         std::wstring res = FormatContactSuggestion(L"Service Support", L"");
+
         ASSERT_TRUE(res == L"Service Support");
+
     }
+
     TEST_CASE_END();
+
+
 
     TEST_CASE("FormatContactSuggestion: Adresse seule sans nom");
+
     {
+
         std::wstring res = FormatContactSuggestion(L"", L"contact@societe.com");
+
         ASSERT_TRUE(res == L"contact@societe.com");
+
     }
+
     TEST_CASE_END();
 
+
+
     TEST_CASE("FormatContactSuggestion: Champs vides avec repli par defaut");
+
     {
+
         std::wstring res = FormatContactSuggestion(L"", L"");
+
         ASSERT_TRUE(res == L"(Sans nom)");
+
     }
+
     TEST_CASE_END();
+
 }
+
+
+
 
 
 static double GetCalendarHourHeight(int scale_minutes)
+
 {
+
     switch (scale_minutes)
+
     {
+
     case 15:
+
         return 120.0;
+
     case 60:
+
         return 48.0;
+
     case 30:
+
     default:
+
         return 72.0;
+
     }
+
 }
+
+
 
 /**
+
  * @brief Test du calcul de la hauteur d'une heure selon l'échelle de temps de la grille.
+
  */
+
 static void test_calendar_time_scale(void)
+
 {
+
     TEST_CASE("CalendarHourHeight: Echelle 60 minutes");
+
     {
+
         ASSERT_EQ_INT(48, static_cast<int>(GetCalendarHourHeight(60)));
+
     }
+
     TEST_CASE_END();
+
+
 
     TEST_CASE("CalendarHourHeight: Echelle 30 minutes (defaut)");
+
     {
+
         ASSERT_EQ_INT(72, static_cast<int>(GetCalendarHourHeight(30)));
+
     }
+
     TEST_CASE_END();
 
+
+
     TEST_CASE("CalendarHourHeight: Echelle 15 minutes");
+
     {
+
         ASSERT_EQ_INT(120, static_cast<int>(GetCalendarHourHeight(15)));
+
     }
+
     TEST_CASE_END();
+
 }
+
+
+
+static uint64_t PurgeDirectoryFiles(std::wstring const& dir_path)
+
+{
+
+    uint64_t bytes_freed = 0;
+
+    try
+
+    {
+
+        std::filesystem::path p(dir_path);
+
+        if (std::filesystem::exists(p) && std::filesystem::is_directory(p))
+
+        {
+
+            for (auto const& entry : std::filesystem::directory_iterator(p))
+
+            {
+
+                if (entry.is_regular_file())
+
+                {
+
+                    std::error_code ec;
+
+                    auto sz = entry.file_size(ec);
+
+                    if (!ec) bytes_freed += sz;
+
+                    std::filesystem::remove(entry.path(), ec);
+
+                }
+
+            }
+
+        }
+
+    }
+
+    catch (...) {}
+
+    return bytes_freed;
+
+}
+
+
+
+static void test_purge_directory_files(void)
+
+{
+
+    TEST_CASE("PurgeDirectoryFiles: Nettoyage des fichiers temporaires");
+
+    {
+
+        std::filesystem::path test_dir = std::filesystem::temp_directory_path() / L"EvoTestPurge";
+
+        std::filesystem::create_directories(test_dir);
+
+
+
+        auto f1 = test_dir / L"file1.tmp";
+
+        auto f2 = test_dir / L"file2.tmp";
+
+        auto f3 = test_dir / L"file3.tmp";
+
+
+
+        { std::ofstream out(f1); out << "Contenu 1"; }
+
+        { std::ofstream out(f2); out << "Contenu de test 2 plus long"; }
+
+        { std::ofstream out(f3); out << "Contenu 3"; }
+
+
+
+        ASSERT_TRUE(std::filesystem::exists(f1));
+
+        ASSERT_TRUE(std::filesystem::exists(f2));
+
+        ASSERT_TRUE(std::filesystem::exists(f3));
+
+
+
+        uint64_t freed = PurgeDirectoryFiles(test_dir.wstring());
+
+        ASSERT_TRUE(freed > 0);
+
+        ASSERT_FALSE(std::filesystem::exists(f1));
+
+        ASSERT_FALSE(std::filesystem::exists(f2));
+
+        ASSERT_FALSE(std::filesystem::exists(f3));
+
+
+
+        std::filesystem::remove_all(test_dir);
+
+    }
+
+    TEST_CASE_END();
+
+}
+
+
 
 int main(void)
 
 
 
+
+
+
+
 {
+
+
+
+
 
 
 
@@ -2569,7 +5248,15 @@ int main(void)
 
 
 
+
+
+
+
     test_sender_name_parsing();
+
+
+
+
 
 
 
@@ -2577,7 +5264,15 @@ int main(void)
 
 
 
+
+
+
+
     test_without_address();
+
+
+
+
 
 
 
@@ -2585,7 +5280,15 @@ int main(void)
 
 
 
+
+
+
+
     test_quote();
+
+
+
+
 
 
 
@@ -2593,7 +5296,15 @@ int main(void)
 
 
 
+
+
+
+
     test_semver_comparison();
+
+
+
+
 
 
 
@@ -2601,15 +5312,33 @@ int main(void)
 
 
 
+
+
+
+
     test_build_standalone_html_message();
+
+
+
+
 
 
 
     test_extract_plain_text_for_speech();
 
+
+
     test_attachment_preview_kind();
+
     test_format_contact_suggestion();
+
     test_calendar_time_scale();
+
+    test_purge_directory_files();
+
+
+
+
 
 
 
@@ -2617,7 +5346,15 @@ int main(void)
 
 
 
+
+
+
+
 }
+
+
+
+
 
 
 

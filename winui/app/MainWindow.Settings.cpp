@@ -3,6 +3,7 @@
 #include "MainWindow.xaml.h"
 
 #include "Settings.h"
+#include "MainWindow.Helpers.h"
 
 #include "ErrorLog.h"
 
@@ -1766,16 +1767,40 @@ namespace winrt::EvolutionWin::implementation
 
      */
 
-    void MainWindow::OnClearWebViewCacheClick(
-
+    fire_and_forget MainWindow::OnClearWebViewCacheClick(
         [[maybe_unused]] IInspectable const& sender,
-
         [[maybe_unused]] RoutedEventArgs const& args)
-
     {
-
-        ShowStatus(L"Le cache temporaire de rendu et les données locales ont été vidés.", InfoBarSeverity::Success);
-
+        uint64_t bytes_freed = 0;
+        try {
+            if (Reader() && Reader().CoreWebView2()) {
+                auto profile = Reader().CoreWebView2().Profile();
+                if (profile) co_await profile.ClearBrowsingDataAsync();
+            }
+        } catch (...) {}
+        try {
+            wchar_t temp_dir[MAX_PATH];
+            DWORD len = GetTempPathW(MAX_PATH, temp_dir);
+            if (len > 0 && len <= MAX_PATH) {
+                std::wstring preview_dir = std::wstring{ temp_dir } + L"EvolutionWin\\Previews";
+                bytes_freed += ::EvolutionWin::Helpers::PurgeDirectoryFiles(preview_dir);
+            }
+        } catch (...) {}
+        hstring report;
+        if (bytes_freed > 1024 * 1024) {
+            double mb = static_cast<double>(bytes_freed) / (1024.0 * 1024.0);
+            wchar_t buf[64];
+            swprintf_s(buf, L"Caches et fichiers temporaires vidés (%.1f Mo libérés).", mb);
+            report = hstring{ buf };
+        } else if (bytes_freed > 0) {
+            double kb = static_cast<double>(bytes_freed) / 1024.0;
+            wchar_t buf[64];
+            swprintf_s(buf, L"Caches et fichiers temporaires vidés (%.0f Ko libérés).", kb);
+            report = hstring{ buf };
+        } else {
+            report = L"Caches de rendu et fichiers temporaires vidés avec succès.";
+        }
+        ShowStatus(report, InfoBarSeverity::Success);
     }
 
 

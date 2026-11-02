@@ -268,7 +268,7 @@ namespace winrt::EvolutionWin::implementation
         void OnOpenDataFolderClick(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
-        void OnClearWebViewCacheClick(
+        winrt::fire_and_forget OnClearWebViewCacheClick(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnResetAllSettingsClick(

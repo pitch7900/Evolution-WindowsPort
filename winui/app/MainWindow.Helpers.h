@@ -9,6 +9,7 @@
 #include <shellapi.h>
 #include <string_view>
 #include <vector>
+#include <filesystem>
 
 namespace EvolutionWin::Helpers
 {
@@ -573,5 +574,23 @@ namespace EvolutionWin::Helpers
         if (full_name.empty())
             return std::wstring{ email };
         return std::wstring{ full_name } + L" <" + std::wstring{ email } + L">";
+    }
+    inline uint64_t PurgeDirectoryFiles(std::wstring const& dir_path)
+    {
+        uint64_t bytes_freed = 0;
+        try {
+            std::filesystem::path p(dir_path);
+            if (std::filesystem::exists(p) && std::filesystem::is_directory(p)) {
+                for (auto const& entry : std::filesystem::directory_iterator(p)) {
+                    if (entry.is_regular_file()) {
+                        std::error_code ec;
+                        auto sz = entry.file_size(ec);
+                        if (!ec) bytes_freed += sz;
+                        std::filesystem::remove(entry.path(), ec);
+                    }
+                }
+            }
+        } catch (...) {}
+        return bytes_freed;
     }
 }

@@ -22,6 +22,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Effacement réel des caches WebView2 et aperçus temporaires (TODO ligne 845)** :
+  - **Purge complète des caches de rendu** : appel direct à `ClearBrowsingDataAsync` sur le profil WebView2 du lecteur de messages.
+  - **Suppression des fichiers temporaires d'aperçus** : nettoyage intégral et sécurisé du répertoire `%TEMP%\EvolutionWin\Previews` via `PurgeDirectoryFiles`.
+  - **Bilan d'espace libéré** : calcul dynamique de la taille récupérée et notification informative à l'utilisateur (« Caches vidés : X Ko/Mo libérés »).
+  - **Validation par tests unitaires** : suite de tests `PurgeDirectoryFiles` ajoutée dans `tests/unit/test_helpers.cpp` (37/37 tests validés).
+
 - **Calendrier et carnet d'adresses par défaut pour les nouveaux éléments (TODO ligne 271)** :
   - **Sélecteur de calendrier par défaut** : ajout d'une option `calendar.active` dans *Paramètres › Calendrier* pour désigner l'agenda d'enregistrement par défaut des nouveaux rendez-vous et réunions parmi les sources configurées.
   - **Sélecteur de carnet d'adresses par défaut** : ajout d'une option `contacts.active` dans *Paramètres › Contacts* pour choisir le carnet principal d'ajout des nouveaux contacts.
