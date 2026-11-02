@@ -439,6 +439,11 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
   - [x] Plusieurs fenêtres ouvertes simultanément ; taille et position mémorisées
   - [x] Brouillon (dossier Brouillons) : double-clic ouvre la fenêtre de rédaction pour reprendre le message
   - [x] Message marqué comme lu à l'ouverture
+- [ ] 🟡 **Affichage du contenu brut et des en-têtes détaillés (source MIME / Propriétés du message)** :
+  - [ ] **Accès rapide** : clic droit › *Propriétés* sur un mail dans la liste des messages, raccourci clavier (ex. Ctrl+U ou Alt+Entrée), et commande dédiée dans le volet de lecture et la fenêtre indépendante
+  - [ ] **En-têtes Internet complets** : affichage exhaustif de la totalité des en-têtes RFC 5322 bruts (`Received`, `Authentication-Results`, `DKIM-Signature`, `SPF`, `Message-ID`, en-têtes `X-*`), avec sélection, recherche et bouton de copie rapide vers le presse-papiers (équivalent des « Options du message / Propriétés » d'Outlook)
+  - [ ] **Contenu complet brut (source MIME / RFC 822)** : visualiseur du flux brut intégral non interprété du courriel (en-têtes et corps multi-parties avec frontières MIME, codages Base64 / Quoted-Printable d'origine) avec police monospace, recherche textuelle (Ctrl+F) et boutons de copie / export `.eml`
+  - [ ] **Métadonnées techniques de diagnostic** : taille exacte en octets, compte et dossier d'origine, UID Camel / IMAP, encodage des caractères (charset), état de synchronisation
 
 ## 7. Mail – Actions sur les messages — 🟠
 
@@ -480,7 +485,7 @@ Trois notions distinctes, comme dans Outlook : le **suivi** (drapeau avec libell
   - [ ] Filtres rapides « Urgents » et « À traiter » (§5) et dossiers de recherche correspondants (§9)
   - [ ] 🟠 Rappel sur un suivi — dépend de la fenêtre des rappels (§2)
 - [ ] 🟡 **Importance** (haute / normale / basse) : affichée dans la liste et le volet de lecture (en-têtes `Importance` / `X-Priority`), choisie à la rédaction ; filtre rapide « Importants » (§5)
-- Catégoriser le message : cf. §17 ; créer une tâche à partir du message : cf. §16 ; export par glisser-déposer vers l'extérieur : cf. §18
+- Catégoriser le message : cf. §17 ; créer une tâche à partir du message : cf. §16 ; export par glisser-déposer vers l'extérieur : cf. §18 ; propriétés et contenu brut du message : cf. §6
 
 ### Actions rapides
 
