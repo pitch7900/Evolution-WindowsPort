@@ -86,7 +86,8 @@ Tous les scripts déduisent leurs chemins de leur propre emplacement
 | `<workspace>\gtk-build\gtk\x64\release` | préfixe d'installation commun de toutes les dépendances | `PREFIX` (dérivé de `GTK_BUILD`) |
 | `C:\msys64` | MSYS2, utilisé **uniquement comme fournisseur d'outils** (patch, make, bash) par gvsbuild et le build de NSPR. Aucun binaire produit ne dépend de MSYS2. | `MSYS2_ROOT` |
 
-Visual Studio 2022 est localisé automatiquement avec `vswhere` (toutes éditions).
+Visual Studio (2026 ou 2022) est localisé automatiquement avec `vswhere` (toutes éditions).
+La variable `VS_VERSION` permet de choisir la version souhaitée (`set VS_VERSION=2026` ou `set VS_VERSION=2022`) ; par défaut, la version la plus récente installée est utilisée. Il est également possible de surcharger directement le chemin via `VS_INSTALL`.
 
 ## Choix d'architecture
 
@@ -101,7 +102,7 @@ Visual Studio 2022 est localisé automatiquement avec `vswhere` (toutes édition
 
 | Outil | Version testée | Installation (`check-prereqs -Install`) |
 | --- | --- | --- |
-| Visual Studio 2022, charge « Développement Desktop en C++ » | MSVC 14.44.35207 | `winget install Microsoft.VisualStudio.2022.BuildTools` + charge VCTools |
+| Visual Studio 2026 / 2022, charge « Développement Desktop en C++ » | MSVC 19.51 (VS 2026) / 14.44 (VS 2022) | `winget install Microsoft.VisualStudio.2022.BuildTools` ou Visual Studio 2026 Community + charge VCTools |
 | Windows SDK | 10.0.26100.0 | avec Visual Studio |
 | Git | 2.56 | `winget install Git.Git` |
 | CMake (≥ 3.15) | 4.4.5 | `winget install Kitware.CMake` |

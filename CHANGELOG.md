@@ -14,6 +14,18 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Écran de démarrage fluide (`SplashWindow`) et robustesse au démarrage** :
+  affichage instantané d'une fenêtre de démarrage épurée au lancement de l'application
+  pendant l'initialisation du moteur et des services EDS. Transition fluide vers
+  la fenêtre principale dès l'événement `ready` ou dès qu'une action utilisateur
+  (mot de passe, certificat TLS, OAuth2) est requise. Sécurisation complète contre
+  les événements asynchrones précoces du moteur avant montage de l'interface XAML.
+- **Support de Visual Studio 2026 et bascule multi-version** : support natif du
+  compilateur MSVC 19.51 et de MSBuild 18.x (Visual Studio 2026 Community) dans
+  l'ensemble des scripts de compilation (`tools\env.bat`, `tools\check-prereqs.ps1`,
+  `tools\build-winui-app.bat`). Variable d'environnement `VS_VERSION` permettant de
+  choisir facilement la version (`2026`, `2022`, ou détection automatique de la
+  plus récente).
 - **Fenêtre de message indépendante (`MessageWindow`)** : ouverture d'un
   message dans une fenêtre dédiée au double-clic, avec la touche Entrée ou via
   l'action *Ouvrir* du menu contextuel. Prise en charge des actions complètes

@@ -513,10 +513,20 @@ namespace winrt::EvolutionWin::implementation
         }
 
         ReaderWebView().DefaultBackgroundColor(Microsoft::UI::Colors::White());
-        co_await ReaderWebView().EnsureCoreWebView2Async();
+        try
+        {
+            co_await ReaderWebView().EnsureCoreWebView2Async();
+        }
+        catch (...)
+        {
+            co_return;
+        }
         ReaderWebView().DefaultBackgroundColor(Microsoft::UI::Colors::White());
 
         auto core = ReaderWebView().CoreWebView2();
+        if (!core)
+            co_return;
+
         core.Profile().PreferredColorScheme(Microsoft::Web::WebView2::Core::CoreWebView2PreferredColorScheme::Light);
 
         auto settings = core.Settings();

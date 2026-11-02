@@ -38,7 +38,7 @@
     <ApplicationType>Windows Store</ApplicationType>
     <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
     <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
-    <WindowsTargetPlatformMinVersion>10.0.17763.0</WindowsTargetPlatformMinVersion>
+    <WindowsTargetPlatformMinVersion>10.0.26100.0</WindowsTargetPlatformMinVersion>
     <UseWinUI>true</UseWinUI>
     <EnableMsixTooling>true</EnableMsixTooling>
     <WindowsPackageType>None</WindowsPackageType>
@@ -57,7 +57,7 @@
   </ItemGroup>
   <PropertyGroup Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset Condition="'$(PlatformToolset)' == ''">v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <DesktopCompatible>true</DesktopCompatible>
   </PropertyGroup>
@@ -88,6 +88,7 @@
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <AdditionalOptions>%(AdditionalOptions) /bigobj /utf-8</AdditionalOptions>
       <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -171,12 +172,16 @@
     <ClInclude Include="MessageWindow.xaml.h">
       <DependentUpon>MessageWindow.xaml</DependentUpon>
     </ClInclude>
+    <ClInclude Include="SplashWindow.xaml.h">
+      <DependentUpon>SplashWindow.xaml</DependentUpon>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml" />
     <Page Include="MainWindow.xaml" />
     <Page Include="ComposeWindow.xaml" />
     <Page Include="MessageWindow.xaml" />
+    <Page Include="SplashWindow.xaml" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -248,6 +253,9 @@
     <ClCompile Include="MessageWindow.xaml.cpp">
       <DependentUpon>MessageWindow.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="SplashWindow.xaml.cpp">
+      <DependentUpon>SplashWindow.xaml</DependentUpon>
+    </ClCompile>
     <ClCompile Include="FolderItem.cpp">
       <DependentUpon>FolderItem.idl</DependentUpon>
     </ClCompile>
@@ -266,6 +274,10 @@
     <Midl Include="MessageWindow.idl">
       <SubType>Code</SubType>
       <DependentUpon>MessageWindow.xaml</DependentUpon>
+    </Midl>
+    <Midl Include="SplashWindow.idl">
+      <SubType>Code</SubType>
+      <DependentUpon>SplashWindow.xaml</DependentUpon>
     </Midl>
     <Midl Include="MainWindow.idl">
       <SubType>Code</SubType>

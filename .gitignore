@@ -29,6 +29,7 @@ evolution-ews/.git-upstream/
 # --- Paquets NuGet et fichiers générés par C++/WinRT & XAML ---
 winui/packages/
 winui/app/Generated Files/
+winui/app/EvolutionWin/
 winui/app/x64/
 winui/app/Debug/
 winui/app/Release/

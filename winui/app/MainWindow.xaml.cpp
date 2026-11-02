@@ -36,10 +36,12 @@ using namespace ::EvolutionWin::Helpers;
 
 namespace winrt::EvolutionWin::implementation
 {
+    /**
+     * @brief Constructeur de la fenêtre principale. Initialise sur premier événement Activated.
+     */
     MainWindow::MainWindow()
     {
-        /* named elements exist once the XAML is loaded: initialize on the
-           first activation */
+        /* Les éléments nommés XAML sont disponibles une fois activés */
         m_activated_token = Activated([this](IInspectable const&, WindowActivatedEventArgs const&)
         {
             if (!m_initialized)
@@ -47,12 +49,79 @@ namespace winrt::EvolutionWin::implementation
                 m_initialized = true;
                 Initialize();
             }
+            UpdateTitleBarPassthrough();
         });
     }
 
+    /**
+     * @brief Destructeur de la fenêtre principale. Libère l'écran de démarrage et le pont CoreBridge.
+     */
     MainWindow::~MainWindow()
     {
+        CloseSplash();
         m_core.reset();
+    }
+
+    /**
+     * @brief Démarre le pont de messagerie CoreBridge s'il n'est pas déjà instancié.
+     */
+    void MainWindow::StartCore()
+    {
+        if (!m_core)
+        {
+            m_core = std::make_shared<::EvolutionWin::CoreBridge>(
+                DispatcherQueue(),
+                [this](hstring const& event, hstring const& json) { OnCoreEvent(event, json); });
+        }
+    }
+
+    /**
+     * @brief Associe la fenêtre d'écran de démarrage (Splash screen) et arme le minuteur de secours.
+     * @param splash Instance de la SplashWindow affichée au lancement.
+     */
+    void MainWindow::SetSplashWindow(winrt::EvolutionWin::SplashWindow const& splash)
+    {
+        m_splash = splash;
+        if (m_splash)
+        {
+            StartCore();
+        UpdateConnectionStatus(L"global", m_is_offline ? L"offline" : L"online", L"");
+
+            m_splash_timer = DispatcherTimer();
+            m_splash_timer.Interval(std::chrono::seconds(6));
+            m_splash_timer.Tick([this](IInspectable const&, IInspectable const&)
+            {
+                if (m_splash)
+                {
+                    Activate();
+                    CloseSplash();
+                    if (!m_initialized)
+                    {
+                        m_initialized = true;
+                        Initialize();
+                    }
+                }
+            });
+            m_splash_timer.Start();
+        }
+    }
+
+    /**
+     * @brief Ferme l'écran de démarrage et désactive le minuteur de secours.
+     */
+    void MainWindow::CloseSplash()
+    {
+        if (m_splash_timer)
+        {
+            m_splash_timer.Stop();
+            m_splash_timer = nullptr;
+        }
+        if (m_splash)
+        {
+            auto splash = m_splash;
+            m_splash = nullptr;
+            splash.Close();
+        }
     }
 
     void MainWindow::Initialize()
@@ -85,9 +154,8 @@ namespace winrt::EvolutionWin::implementation
         InitializeReaderAsync();
         CheckForUpdateOnStartup();
 
-        m_core = std::make_shared<::EvolutionWin::CoreBridge>(
-            DispatcherQueue(),
-            [this](hstring const& event, hstring const& json) { OnCoreEvent(event, json); });
+        StartCore();
+        UpdateConnectionStatus(L"global", m_is_offline ? L"offline" : L"online", L"");
 
         Closed([this](IInspectable const&, WindowEventArgs const&)
         {
@@ -108,8 +176,21 @@ namespace winrt::EvolutionWin::implementation
 
         if (event == L"ready")
         {
-            StatusBar().IsOpen(false);
-            LoadAccounts();
+            if (m_splash)
+            {
+                Activate();
+                CloseSplash();
+                if (!m_initialized)
+                {
+                    m_initialized = true;
+                    Initialize();
+                }
+            }
+            if (m_initialized)
+            {
+                StatusBar().IsOpen(false);
+                LoadAccounts();
+            }
         }
         else if (event == L"folder-changed")
         {
@@ -153,11 +234,29 @@ namespace winrt::EvolutionWin::implementation
         }
         else if (event == L"error")
         {
+            if (m_splash)
+            {
+                Activate();
+                CloseSplash();
+                if (!m_initialized)
+                {
+                    m_initialized = true;
+                    Initialize();
+                }
+            }
+            UpdateTaskbarProgress(false, 0, true);
             ShowStatus(L"Le moteur de messagerie n'a pas pu démarrer : " + message, InfoBarSeverity::Error);
         }
         else if (event == L"status")
         {
-            ShowStatus(message, InfoBarSeverity::Informational);
+            hstring display_status = message;
+            if (message == L"Connecting to evolution-data-server")
+                display_status = L"Connexion à evolution-data-server…";
+            if (m_splash)
+            {
+                m_splash.SetStatus(display_status);
+            }
+            ShowStatus(display_status, InfoBarSeverity::Informational);
         }
         else if (event == L"new-mail")
         {
@@ -177,6 +276,16 @@ namespace winrt::EvolutionWin::implementation
         }
         else if (event == L"auth-required")
         {
+            if (m_splash)
+            {
+                Activate();
+                CloseSplash();
+                if (!m_initialized)
+                {
+                    m_initialized = true;
+                    Initialize();
+                }
+            }
             UpdateConnectionStatus(object.GetNamedString(L"source_uid", L""), L"auth-required", L"Authentification requise");
             PromptPasswordAsync(
                 object.GetNamedString(L"source_uid", L""),
@@ -186,10 +295,30 @@ namespace winrt::EvolutionWin::implementation
         }
         else if (event == L"tls-trust-required")
         {
+            if (m_splash)
+            {
+                Activate();
+                CloseSplash();
+                if (!m_initialized)
+                {
+                    m_initialized = true;
+                    Initialize();
+                }
+            }
             PromptTlsCertificateAsync(object);
         }
         else if (event == L"oauth2-required")
         {
+            if (m_splash)
+            {
+                Activate();
+                CloseSplash();
+                if (!m_initialized)
+                {
+                    m_initialized = true;
+                    Initialize();
+                }
+            }
             UpdateConnectionStatus(object.GetNamedString(L"source_uid", L""), L"auth-required", L"Connexion requise");
             SignInOAuth2Async(object.GetNamedString(L"source_uid", L""), object.GetNamedString(L"name", L""));
         }
@@ -197,6 +326,9 @@ namespace winrt::EvolutionWin::implementation
 
     void MainWindow::ShowStatus(hstring const& message, InfoBarSeverity severity)
     {
+        if (!m_initialized)
+            return;
+
         StatusBar().Message(message);
         StatusBar().Severity(severity);
         StatusBar().IsOpen(!message.empty());
@@ -206,6 +338,9 @@ namespace winrt::EvolutionWin::implementation
      * boîtes de réception de tous les comptes (masqué à zéro). */
     void MainWindow::UpdateMailBadge()
     {
+        if (!m_initialized)
+            return;
+
         int32_t unread = 0;
         hstring inbox_glyph = FolderGlyph(L"inbox");
 

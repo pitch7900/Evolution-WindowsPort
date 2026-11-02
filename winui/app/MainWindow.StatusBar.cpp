@@ -18,6 +18,58 @@ using namespace ::EvolutionWin::Helpers;
 
 namespace winrt::EvolutionWin::implementation
 {
+    /**
+     * @brief Met à jour l'état et l'avancement de la progression sur l'icône de la barre des tâches Windows (ITaskbarList3).
+     * @param active true si une tâche de fond est en cours, false si terminée.
+     * @param percent Pourcentage d'avancement (0 à 100), ou -1 pour indéterminé.
+     * @param error true pour afficher l'indicateur d'erreur rouge.
+     */
+    void MainWindow::UpdateTaskbarProgress(bool active, int32_t percent, bool error)
+    {
+        if (!m_initialized)
+            return;
+
+        HWND hwnd = reinterpret_cast<HWND>(AppWindow().Id().Value);
+        if (!hwnd)
+            return;
+
+        if (!m_taskbar_list)
+        {
+            if (FAILED(CoCreateInstance(CLSID_TaskbarList, nullptr, CLSCTX_INPROC_SERVER, IID_ITaskbarList3, m_taskbar_list.put_void())))
+                return;
+            m_taskbar_list->HrInit();
+        }
+
+        if (error)
+        {
+            m_taskbar_list->SetProgressState(hwnd, TBPF_ERROR);
+            m_taskbar_list->SetProgressValue(hwnd, 100, 100);
+
+            auto reset_timer = std::make_shared<DispatcherTimer>();
+            reset_timer->Interval(std::chrono::milliseconds(3000));
+            reset_timer->Tick([this, reset_timer, hwnd](IInspectable const&, IInspectable const&)
+            {
+                reset_timer->Stop();
+                if (m_taskbar_list)
+                    m_taskbar_list->SetProgressState(hwnd, TBPF_NOPROGRESS);
+            });
+            reset_timer->Start();
+        }
+        else if (!active)
+        {
+            m_taskbar_list->SetProgressState(hwnd, TBPF_NOPROGRESS);
+        }
+        else if (percent < 0)
+        {
+            m_taskbar_list->SetProgressState(hwnd, TBPF_INDETERMINATE);
+        }
+        else
+        {
+            m_taskbar_list->SetProgressState(hwnd, TBPF_NORMAL);
+            m_taskbar_list->SetProgressValue(hwnd, static_cast<ULONGLONG>(percent), 100);
+        }
+    }
+
     /* Met à jour la barre de progression permanente et son texte indicatif.
      * Paramètres :
      *   active  : true si une opération de synchronisation est en cours, false si terminée
@@ -25,6 +77,11 @@ namespace winrt::EvolutionWin::implementation
      *   percent : pourcentage d'avancement (-1 pour indéterminé) */
     void MainWindow::UpdateStatusBarProgress(bool active, hstring const& message, int32_t percent)
     {
+        if (!m_initialized)
+            return;
+
+        UpdateTaskbarProgress(active, percent, false);
+
         if (active)
         {
             if (m_progress_hide_timer)
@@ -75,6 +132,7 @@ namespace winrt::EvolutionWin::implementation
         else
         {
             hstring account_name = account;
+        if (m_accounts)
             for (auto const& val : m_accounts)
             {
                 auto obj = val.GetObject();
@@ -87,6 +145,9 @@ namespace winrt::EvolutionWin::implementation
 
             m_account_states[std::wstring{ account }] = AccountConnectionState{ account_name, status, message };
         }
+
+        if (!m_initialized)
+            return;
 
         bool has_error = false;
         bool has_connecting = false;
@@ -132,9 +193,12 @@ namespace winrt::EvolutionWin::implementation
     /* Rafraîchit la liste des comptes affichée dans le menu déroulant de connexion. */
     void MainWindow::RefreshConnectionAccountsList()
     {
+        if (!m_initialized)
+            return;
+
         ConnectionAccountsPanel().Children().Clear();
 
-        if (m_accounts.Size() == 0)
+        if (!m_accounts || m_accounts.Size() == 0)
         {
             TextBlock empty_text;
             empty_text.Text(L"Aucun compte configuré.");
@@ -257,6 +321,9 @@ namespace winrt::EvolutionWin::implementation
     /* Met à jour le libellé d'état du dossier à gauche dans la barre d'état. */
     void MainWindow::UpdateFolderStatusText()
     {
+        if (!m_initialized)
+            return;
+
         if (m_is_offline)
         {
             FolderStatusText().Text(L"Mode hors connexion");

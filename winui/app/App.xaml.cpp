@@ -28,7 +28,12 @@ namespace winrt::EvolutionWin::implementation
 
     void App::OnLaunched([[maybe_unused]] LaunchActivatedEventArgs const& e)
     {
-        window = make<MainWindow>();
-        window.Activate();
+        /* Affichage instantané de l'écran de démarrage avant le chargement de CoreBridge */
+        m_splash = make<SplashWindow>();
+        m_splash.Activate();
+
+        auto main_window = make<MainWindow>();
+        winrt::get_self<MainWindow>(main_window)->SetSplashWindow(m_splash);
+        window = main_window;
     }
 }
