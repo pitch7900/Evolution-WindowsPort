@@ -82,6 +82,7 @@ namespace winrt::EvolutionWin::implementation
                     m_account_folders[std::wstring{ uid }] = parsed;
                     AddFolders(node, parsed, uid);
                     UpdateMailBadge();
+                    RestoreSessionFolder();
                 });
             }
         });
@@ -813,12 +814,72 @@ namespace winrt::EvolutionWin::implementation
         m_folder = folder;
         ++m_search_request;
 
+        /* Mémorise le dernier dossier actif pour la restauration rapide au prochain démarrage */
+        ::EvolutionWin::Settings::Instance().SetString(L"session.account", m_account);
+        ::EvolutionWin::Settings::Instance().SetString(L"session.folder", m_folder);
+
         FolderTitle().Text(item.Name());
         LoadFolderSort();
         UpdateRibbon();
         SearchBox().Text(L"");
 
         LoadMessages(false);
+    }
+
+    /* Restaure automatiquement le dernier dossier ouvert lors de la session précédente
+     * (ou la boîte de réception du premier compte), sélectionne son nœud dans l'arborescence
+     * et affiche ses messages sans nécessiter de clic utilisateur. */
+    void MainWindow::RestoreSessionFolder()
+    {
+        if (!m_account.empty() && !m_folder.empty())
+            return;
+
+        std::wstring saved_acc{ ::EvolutionWin::Settings::Instance().GetString(L"session.account", L"") };
+        std::wstring saved_fld{ ::EvolutionWin::Settings::Instance().GetString(L"session.folder", L"") };
+
+        TreeViewNode target_node{ nullptr };
+        EvolutionWin::FolderItem target_item{ nullptr };
+
+        /* 1. Essai avec le dossier mémorisé lors de la session précédente */
+        if (!saved_acc.empty() && !saved_fld.empty())
+        {
+            auto it = m_nodes.find(NodeKey(hstring{ saved_acc }, hstring{ saved_fld }));
+            if (it != m_nodes.end())
+            {
+                target_node = it->second;
+                target_item = target_node.Content().try_as<EvolutionWin::FolderItem>();
+            }
+        }
+
+        /* 2. Repli : première boîte de réception disponible */
+        if (!target_item)
+        {
+            hstring inbox_glyph = FolderGlyph(L"inbox");
+            for (auto const& [key, node] : m_nodes)
+            {
+                if (auto item = node.Content().try_as<EvolutionWin::FolderItem>(); item && !item.IsAccount() && item.Glyph() == inbox_glyph)
+                {
+                    target_node = node;
+                    target_item = item;
+                    break;
+                }
+            }
+        }
+
+        if (target_node && target_item && !target_item.Folder().empty())
+        {
+            m_account = target_item.Account();
+            m_folder = target_item.Folder();
+            ++m_search_request;
+
+            FolderTree().SelectedNode(target_node);
+            FolderTitle().Text(target_item.Name());
+            LoadFolderSort();
+            UpdateRibbon();
+            SearchBox().Text(L"");
+
+            LoadMessages(false);
+        }
     }
 
     /* Élément de l'arborescence du dossier affiché (nullptr sans dossier). */

@@ -98,6 +98,16 @@ namespace winrt::EvolutionWin::implementation
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
 
+        /* Barre d'état permanente : indicateur d'état des connexions et hors connexion */
+        void OnConnectionStatusButtonClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnRetryConnectionsClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnToggleOfflineClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void UpdateStatusBarProgress(bool active, winrt::hstring const& message, int32_t percent);
+        void UpdateConnectionStatus(winrt::hstring const& account, winrt::hstring const& status, winrt::hstring const& message);
+        void RefreshConnectionAccountsList();
+        void UpdateFolderStatusText();
+        void RestoreSessionFolder();
+
         /* Séparateurs déplaçables entre dossiers, liste et volet de lecture */
         void OnSplitterPointerPressed(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
         void OnSplitterPointerMoved(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
@@ -475,6 +485,17 @@ namespace winrt::EvolutionWin::implementation
         double m_drag_origin{ 0 };
         double m_drag_start_width{ 0 };
         event_token m_activated_token;
+
+        /* État des connexions réseau et de la barre de progression permanente */
+        struct AccountConnectionState
+        {
+            winrt::hstring name;
+            winrt::hstring status;
+            winrt::hstring message;
+        };
+        std::map<std::wstring, AccountConnectionState> m_account_states;
+        bool m_is_offline{ false };
+        Microsoft::UI::Xaml::DispatcherTimer m_progress_hide_timer{ nullptr };
     };
 }
 

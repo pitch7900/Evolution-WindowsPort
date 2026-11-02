@@ -86,6 +86,8 @@ namespace winrt::EvolutionWin::implementation
                     m_reselecting = false;
                 }
             }
+
+            UpdateFolderStatusText();
         });
     }
 
@@ -527,6 +529,7 @@ namespace winrt::EvolutionWin::implementation
 
     void MainWindow::OnRefreshClick(IInspectable const&, RoutedEventArgs const&)
     {
+        UpdateStatusBarProgress(true, L"Relève du courrier…", -1);
         ShowStatus(L"Relève du courrier…", InfoBarSeverity::Informational);
         m_core->Refresh();
     }
@@ -539,6 +542,7 @@ namespace winrt::EvolutionWin::implementation
     /* F9 : tous les dossiers de tous les comptes (progression dans la barre d'état) */
     void MainWindow::OnRefreshAllClick(IInspectable const&, RoutedEventArgs const&)
     {
+        UpdateStatusBarProgress(true, L"Relève de tous les dossiers…", -1);
         ShowStatus(L"Relève de tous les dossiers…", InfoBarSeverity::Informational);
         m_core->RefreshAll();
     }
@@ -548,6 +552,7 @@ namespace winrt::EvolutionWin::implementation
     {
         if (m_folder.empty())
             return;
+        UpdateStatusBarProgress(true, L"Mise à jour de « " + FolderTitle().Text() + L" »…", -1);
         ShowStatus(L"Mise à jour de « " + FolderTitle().Text() + L" »…", InfoBarSeverity::Informational);
         LoadMessages(true);
     }

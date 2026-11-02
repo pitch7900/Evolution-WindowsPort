@@ -68,6 +68,29 @@ namespace EvolutionWin
             evo_core_refresh_all(m_core);
         }
 
+        /* Active ou désactive le mode hors connexion global du moteur.
+         * Paramètres :
+         *   offline : true pour travailler hors connexion, false pour se reconnecter */
+        void SetOffline(bool offline)
+        {
+            evo_core_set_offline(m_core, offline ? 1 : 0);
+        }
+
+        /* Indique si le moteur est actuellement en mode hors connexion.
+         * Retourne : true si hors connexion, false si en ligne. */
+        bool GetOffline() const
+        {
+            return evo_core_get_offline(m_core) != 0;
+        }
+
+        /* Relance la tentative de connexion / d'authentification pour un compte donné.
+         * Paramètres :
+         *   account : identifiant du compte à reconnecter */
+        void ReconnectAccount(winrt::hstring const& account)
+        {
+            evo_core_reconnect_account(m_core, winrt::to_string(account).c_str());
+        }
+
         /* not SendMessage: a Win32 macro */
         void SendMail(winrt::hstring const& message_json, CoreHandler handler)
         {

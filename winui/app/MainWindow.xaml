@@ -21,6 +21,7 @@
             <RowDefinition Height="48" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- title bar drawn by the app (ExtendsContentIntoTitleBar) -->
@@ -973,7 +974,65 @@
             </Grid>
         </NavigationView>
 
-        <!-- status / errors -->
-        <InfoBar x:Name="StatusBar" Grid.Row="2" IsOpen="False" IsClosable="True" />
+        <!-- status / notifications temporaires -->
+        <InfoBar x:Name="StatusBar" Grid.Row="2" IsOpen="False" IsClosable="True" Margin="8,0,8,4" />
+
+        <!-- barre d'état permanente (style Outlook) : compteurs, progression, état des connexions -->
+        <Border Grid.Row="3" Background="{ThemeResource LayerFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0"
+                Padding="12,4,12,4" MinHeight="32">
+            <Grid VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- À gauche : statut du dossier / nombre d'éléments -->
+                <TextBlock x:Name="FolderStatusText" Grid.Column="0"
+                           Text="Tous les dossiers sont à jour" VerticalAlignment="Center"
+                           Style="{StaticResource CaptionTextBlockStyle}" />
+
+                <!-- Au centre / droite : barre de progression discrète lors de la synchronisation -->
+                <StackPanel x:Name="StatusBarProgressPanel" Grid.Column="2" Orientation="Horizontal"
+                            Spacing="8" VerticalAlignment="Center" Margin="0,0,16,0" Visibility="Collapsed">
+                    <ProgressBar x:Name="StatusBarProgressBar" Width="140" Height="4"
+                                 IsIndeterminate="True" VerticalAlignment="Center" />
+                    <TextBlock x:Name="StatusBarProgressText" Text="Synchronisation…"
+                               Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!-- À droite : indicateur d'état des connexions et bouton vers le panneau détaillé -->
+                <Button x:Name="ConnectionStatusButton" Grid.Column="3"
+                        Click="OnConnectionStatusButtonClick"
+                        Padding="8,3,8,3" VerticalAlignment="Center"
+                        ToolTipService.ToolTip="Afficher l'état des connexions réseau">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <Ellipse x:Name="ConnectionStatusDot" Width="8" Height="8"
+                                 Fill="#107C41" VerticalAlignment="Center" />
+                        <TextBlock x:Name="ConnectionStatusLabel" Text="Connecté"
+                                   Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Button.Flyout>
+                        <Flyout x:Name="ConnectionStatusFlyout">
+                            <StackPanel Width="340" Spacing="12">
+                                <TextBlock Text="État des connexions" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                <StackPanel x:Name="ConnectionAccountsPanel" Spacing="8">
+                                    <!-- Rempli dynamiquement par RefreshConnectionAccountsList -->
+                                </StackPanel>
+                                <MenuFlyoutSeparator />
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                    <Button x:Name="RetryConnectionsButton" Content="Vérifier maintenant"
+                                            Click="OnRetryConnectionsClick" />
+                                    <Button x:Name="ToggleOfflineButton" Content="Travailler hors connexion"
+                                            Click="OnToggleOfflineClick" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

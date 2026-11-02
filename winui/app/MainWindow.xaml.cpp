@@ -163,8 +163,21 @@ namespace winrt::EvolutionWin::implementation
         {
             ShowNewMailNotification(object);
         }
+        else if (event == L"progress")
+        {
+            bool active = object.GetNamedBoolean(L"active", true);
+            int32_t percent = static_cast<int32_t>(object.GetNamedNumber(L"percent", -1));
+            UpdateStatusBarProgress(active, message, percent);
+        }
+        else if (event == L"connection-status")
+        {
+            hstring account = object.GetNamedString(L"account", L"");
+            hstring status = object.GetNamedString(L"status", L"");
+            UpdateConnectionStatus(account, status, message);
+        }
         else if (event == L"auth-required")
         {
+            UpdateConnectionStatus(object.GetNamedString(L"source_uid", L""), L"auth-required", L"Authentification requise");
             PromptPasswordAsync(
                 object.GetNamedString(L"source_uid", L""),
                 object.GetNamedString(L"name", L""),
@@ -177,6 +190,7 @@ namespace winrt::EvolutionWin::implementation
         }
         else if (event == L"oauth2-required")
         {
+            UpdateConnectionStatus(object.GetNamedString(L"source_uid", L""), L"auth-required", L"Connexion requise");
             SignInOAuth2Async(object.GetNamedString(L"source_uid", L""), object.GetNamedString(L"name", L""));
         }
     }

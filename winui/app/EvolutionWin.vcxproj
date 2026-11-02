@@ -218,6 +218,9 @@
     <ClCompile Include="MainWindow.MessageActions.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="MainWindow.StatusBar.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
     <ClCompile Include="MainWindow.Compose.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>

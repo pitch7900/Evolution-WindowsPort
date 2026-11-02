@@ -28,29 +28,32 @@ typedef void (*EvoCoreResultFunc) (const char *json,
 				   const char *error_message,
 				   void *user_data);
 
-/* Events of the core:
- *   "ready"   {}                         the accounts are loaded
- *   "error"   {"message": "..."}         the core could not start
- *   "status"  {"message": "..."}         progress information
+/* Événements émis par le moteur evo-core :
+ *   "ready"   {}                         les comptes sont chargés
+ *   "error"   {"message": "..."}         erreur fatale au démarrage du moteur
+ *   "status"  {"message": "..."}         information d'état textuelle
+ *   "progress" {"account": "...", "folder": "...", "message": "...", "percent": 0..100, "active": true|false}
+ *                                        progression d'une relève ou synchronisation
+ *   "connection-status" {"account": "...", "service": "imap"|"smtp"|"global",
+ *                        "status": "connected"|"connecting"|"offline"|"auth-required"|"error",
+ *                        "message": "..."} état de connexion d'un compte
  *   "folder-changed" {"account": "...", "folder": "...", "unread": 3,
  *                     "total": 120, "added": 1, "removed": 0, "changed": 2}
- *                                        messages of an opened folder changed
- *   "folders-updated" {"account": "..."} folder counts may have changed:
- *                                        list the folders again
+ *                                        changement sur un dossier ouvert
+ *   "folders-updated" {"account": "..."} compteurs ou arborescence mis à jour
  *   "new-mail" {"account": "...", "folder": "...", "count": 2,
  *               "from": "...", "subject": "..."}
- *                                        new unread messages arrived in Inbox
- *   "sending" / "sent" {"subject": "..."} a message is being / was sent
+ *                                        nouveaux messages non lus dans la boîte de réception
+ *   "sending" / "sent" {"subject": "..."} message en cours d'envoi / envoyé
  */
 typedef void (*EvoCoreEventFunc) (const char *event,
 				  const char *json,
 				  void *user_data);
 
-/* Starts the core thread; "ready" or "error" follows. */
+/* Démarre le thread du moteur ; l'événement "ready" ou "error" suivra. */
 EvoCore *	evo_core_new			(EvoCoreEventFunc event_func,
 						 void *user_data);
-/* Stops the core thread and frees the core; no callback is invoked
- * after it returns. */
+/* Arrête le thread du moteur et libère toutes ses ressources. */
 void		evo_core_free			(EvoCore *core);
 
 /* [{"uid": "...", "name": "Display name", "address": "user@example.com",
@@ -62,7 +65,7 @@ void		evo_core_list_accounts		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
-/* Connects the account if needed, then its folder tree:
+/* Connecte le compte si nécessaire, puis renvoie son arborescence de dossiers :
  * [{"full_name": "INBOX", "name": "Inbox", "unread": 3, "total": 120,
  *   "type": "inbox"|"outbox"|"sent"|"drafts"|"trash"|"junk"|"archive"|"",
  *   "children": [...]}, ...] */
@@ -71,8 +74,7 @@ void		evo_core_list_folders		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
-/* Refreshes the folder, then its messages, most recent first (at most
- * max_count, 0 for all):
+/* Rafraîchit le dossier puis retourne ses messages du plus récent au plus ancien :
  * [{"uid": "...", "subject": "...", "from": "Name <a@b>", "date": 1730000000,
  *   "seen": true, "flagged": false, "attachments": false}, ...] */
 void		evo_core_list_messages		(EvoCore *core,
@@ -82,12 +84,11 @@ void		evo_core_list_messages		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
-/* Downloads the message, marks it as read, and returns it ready to display:
+/* Télécharge un message, le marque comme lu, et le retourne prêt à afficher :
  * {"subject": "...", "from": "...", "to": "...", "cc": "...", "date": 1730000000,
  *  "reply_to": "...", "message_id": "<...>", "references": "<...> <...>",
- *  "html": "<html>...</html>",  (the body; plain text is converted to HTML)
- *  "text": "..."                 (the body as plain text, to quote in replies)
- * } */
+ *  "html": "<html>...</html>",
+ *  "text": "..."} */
 void		evo_core_get_message		(EvoCore *core,
 						 const char *account_uid,
 						 const char *folder_full_name,
@@ -95,15 +96,30 @@ void		evo_core_get_message		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
-/* Checks for new mail now in every account (also done every 5 minutes);
- * "folder-changed" / "folders-updated" events follow. */
+/* Vérifie les nouveaux messages dans chaque compte ;
+ * des événements "folder-changed" / "folders-updated" / "progress" suivent. */
 void		evo_core_refresh		(EvoCore *core);
 
 /* Envoyer/Recevoir tous les dossiers (F9) : comme evo_core_refresh, plus
- * tous les autres dossiers de chaque compte (progression par événements
- * "status" {"message": "Relève de « compte » : dossier"}, message vide à
- * la fin). */
+ * tous les autres dossiers de chaque compte. */
 void		evo_core_refresh_all		(EvoCore *core);
+
+/* Active ou désactive le mode hors connexion global du moteur.
+ * Paramètres :
+ *   core    : instance du moteur
+ *   offline : 1 pour travailler hors connexion, 0 pour revenir en ligne */
+void		evo_core_set_offline		(EvoCore *core,
+						 int offline);
+
+/* Renvoie 1 si le moteur est en mode hors connexion, 0 s'il est en ligne. */
+int		evo_core_get_offline		(EvoCore *core);
+
+/* Force une tentative de reconnexion / réauthentification pour un compte donné.
+ * Paramètres :
+ *   core        : instance du moteur
+ *   account_uid : identifiant du compte à reconnecter */
+void		evo_core_reconnect_account	(EvoCore *core,
+						 const char *account_uid);
 
 /* Envoie un message avec l'identité et le serveur SMTP d'un compte, puis
  * l'enregistre dans le dossier Envoyés du compte. Format attendu pour message_json :

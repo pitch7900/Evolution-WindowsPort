@@ -28,6 +28,24 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   Texte d'aide dynamique, recherche récursive en profondeur dans le moteur
   `evo-core` (Camel), et affichage discret du dossier / compte d'origine
   sur chaque message trouvé lors d'une recherche transversale.
+- **Démarrage rapide depuis le cache local et reprise de session** : affichage
+  immédiat de l'arborescence des dossiers et des compteurs depuis le cache Camel
+  local sans bloquer sur le réseau (`CAMEL_STORE_FOLDER_INFO_FAST`). Chargement
+  instantané de la liste des messages depuis le résumé local (`CamelFolderSummary`)
+  avec rafraîchissement asynchrone en arrière-plan. Restauration automatique
+  du dernier compte et dossier consulté (`session.account` / `session.folder`).
+- **Barre d'état permanente façon Outlook avec indicateur de progression** :
+  barre d'état intégrée en bas de fenêtre affichant l'état du dossier à gauche
+  (« Tous les dossiers sont à jour », nombre d'éléments), et une barre de
+  progression permanente avec libellé indicatif des opérations réseau en cours
+  (événements `"progress"` d'`evo-core`, pourcentage d'avancement et masquage
+  automatique après achèvement).
+- **Indicateur d'état des connexions et mode hors connexion** :
+  pastille d'état dynamique (vert connecté, orange en cours, rouge erreur, gris
+  hors connexion) avec menu déroulant détaillant chaque compte. Bouton *Se
+  reconnecter* pour relancer un compte en échec sans passer par les Paramètres,
+  bouton de réessai global, et bascule manuelle *Travailler hors connexion*
+  (`evo_core_set_offline`).
 
 ## [0.9.5] — 2026-11-02
 

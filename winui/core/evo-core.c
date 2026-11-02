@@ -1174,6 +1174,66 @@ core_emit (EvoCore *core,
 	core_emit_builder (core, event, builder);
 }
 
+/* Émet un événement de progression pour la barre d'état de l'interface.
+ * Paramètres :
+ *   core    : instance du moteur evo-core
+ *   account : identifiant du compte concerné (ou NULL si non spécifique)
+ *   folder  : nom complet du dossier concerné (ou NULL)
+ *   message : libellé de l'étape en cours
+ *   percent : pourcentage d'avancement (0..100, ou -1 pour indéterminé)
+ *   active  : TRUE si une opération est en cours, FALSE si elle est terminée */
+static void
+core_emit_progress (EvoCore *core,
+		    const gchar *account,
+		    const gchar *folder,
+		    const gchar *message,
+		    gint percent,
+		    gboolean active)
+{
+	JsonBuilder *builder = core_event_builder ();
+
+	if (account)
+		builder_add_string (builder, "account", account);
+	if (folder)
+		builder_add_string (builder, "folder", folder);
+	if (message)
+		builder_add_string (builder, "message", message);
+	json_builder_set_member_name (builder, "percent");
+	json_builder_add_int_value (builder, percent);
+	json_builder_set_member_name (builder, "active");
+	json_builder_add_boolean_value (builder, active);
+
+	core_emit_builder (core, "progress", builder);
+}
+
+/* Émet un événement d'état de connexion d'un compte ou du moteur global.
+ * Paramètres :
+ *   core    : instance du moteur evo-core
+ *   account : identifiant du compte concerné (ou NULL si global)
+ *   service : type de service ("imap", "smtp", "global")
+ *   status  : état ("connected", "connecting", "offline", "auth-required", "error")
+ *   message : libellé explicatif de l'état */
+static void
+core_emit_connection_status (EvoCore *core,
+			     const gchar *account,
+			     const gchar *service,
+			     const gchar *status,
+			     const gchar *message)
+{
+	JsonBuilder *builder = core_event_builder ();
+
+	if (account)
+		builder_add_string (builder, "account", account);
+	if (service)
+		builder_add_string (builder, "service", service);
+	if (status)
+		builder_add_string (builder, "status", status);
+	if (message)
+		builder_add_string (builder, "message", message);
+
+	core_emit_builder (core, "connection-status", builder);
+}
+
 static void
 core_add_stores (EvoCore *core)
 {
@@ -1372,6 +1432,18 @@ core_request_run (gpointer data,
 	g_free (json);
 	g_strfreev (request->args);
 	g_free (request);
+}
+
+/* Fonction de rappel neutre qui ignore le résultat d'une requête asynchrone.
+ * Paramètres :
+ *   json          : chaîne JSON éventuelle (ignorée)
+ *   error_message : message d'erreur éventuel (ignoré)
+ *   user_data     : données utilisateur éventuelles (ignorées) */
+static void
+core_ignore_result (const char *json,
+		    const char *error_message,
+		    void *user_data)
+{
 }
 
 static void
@@ -1833,13 +1905,22 @@ add_folder_infos (JsonBuilder *builder,
 	json_builder_end_array (builder);
 }
 
+/* Liste l'arborescence des dossiers d'un compte : tente d'abord une lecture
+ * rapide depuis le cache local (CAMEL_STORE_FOLDER_INFO_FAST) pour un affichage
+ * instantané au démarrage, sans attendre la connexion réseau, puis se rabat sur
+ * le serveur si le compte n'a pas encore de cache local.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : args[0] = uid du compte
+ *   error : récepteur d'erreur en cas d'échec
+ * Retourne : chaîne JSON de l'arborescence des dossiers ou NULL sur erreur. */
 static gchar *
 core_list_folders_run (EvoCore *core,
 		       gchar **args,
 		       GError **error)
 {
 	CamelStore *store;
-	CamelFolderInfo *fi;
+	CamelFolderInfo *fi = NULL;
 	JsonBuilder *builder;
 	gchar *json = NULL;
 
@@ -1847,22 +1928,31 @@ core_list_folders_run (EvoCore *core,
 	if (!store)
 		return NULL;
 
-	if (core_ensure_connected (core, store, error)) {
-		fi = camel_store_get_folder_info_sync (store, NULL,
-			CAMEL_STORE_FOLDER_INFO_RECURSIVE, core->cancellable, error);
+	/* Essai 1 : lecture immédiate depuis le cache local sans attendre le réseau */
+	fi = camel_store_get_folder_info_sync (store, NULL,
+		CAMEL_STORE_FOLDER_INFO_FAST | CAMEL_STORE_FOLDER_INFO_RECURSIVE,
+		core->cancellable, NULL);
 
-		if (fi || !(error && *error)) {
-			FolderRoles *roles = folder_roles_new (core, store, fi);
-
-			builder = json_builder_new ();
-			add_folder_infos (builder, fi, roles);
-			folder_roles_free (roles);
-			json = json_from_builder (builder);
-			g_object_unref (builder);
+	/* Essai 2 : si aucun cache local n'existe encore (premier démarrage), se connecter au serveur */
+	if (!fi) {
+		if (core_ensure_connected (core, store, error)) {
+			fi = camel_store_get_folder_info_sync (store, NULL,
+				CAMEL_STORE_FOLDER_INFO_RECURSIVE, core->cancellable, error);
 		}
-
-		camel_folder_info_free (fi);
 	}
+
+	if (fi || !(error && *error)) {
+		FolderRoles *roles = folder_roles_new (core, store, fi);
+
+		builder = json_builder_new ();
+		add_folder_infos (builder, fi, roles);
+		folder_roles_free (roles);
+		json = json_from_builder (builder);
+		g_object_unref (builder);
+	}
+
+	if (fi)
+		camel_folder_info_free (fi);
 
 	g_object_unref (store);
 
@@ -2120,6 +2210,38 @@ json_from_message_infos (GPtrArray *infos,
 	return json;
 }
 
+/* Rafraîchissement asynchrone d'un dossier en arrière-plan (sans bloquer l'interface).
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : args[0] = uid du compte, args[1] = nom complet du dossier
+ *   error : récepteur d'erreur éventuel
+ * Retourne : chaîne JSON vide. */
+static gchar *
+core_folder_background_refresh_run (EvoCore *core,
+				    gchar **args,
+				    GError **error)
+{
+	CamelFolder *folder;
+
+	folder = core_ref_folder (core, args[0], args[1], error);
+	if (folder) {
+		camel_folder_refresh_info_sync (folder, core->cancellable, NULL);
+		g_object_set_data (G_OBJECT (folder), "evo-initial-sync-done", GINT_TO_POINTER (1));
+		g_object_unref (folder);
+	}
+
+	return g_strdup ("{}");
+}
+
+/* Liste les messages d'un dossier : s'il existe déjà des résumés en cache local,
+ * ils sont immédiatement retournés pour un affichage instantané, et la relève
+ * serveur est exécutée en arrière-plan (émettant "folder-changed" si de nouveaux
+ * messages sont arrivés).
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : args[0] = uid du compte, args[1] = nom complet du dossier, args[2] = max_count
+ *   error : récepteur d'erreur en cas d'échec
+ * Retourne : tableau JSON des messages du dossier. */
 static gchar *
 core_list_messages_run (EvoCore *core,
 			gchar **args,
@@ -2130,21 +2252,38 @@ core_list_messages_run (EvoCore *core,
 	GError *refresh_error = NULL;
 	guint max_count, ii;
 	gchar *json;
+	gboolean has_cache = FALSE;
 
 	folder = core_ref_folder (core, args[0], args[1], error);
 	if (!folder)
 		return NULL;
 
-	/* new messages from the server; the cached list is used on failure */
-	if (!camel_folder_refresh_info_sync (folder, core->cancellable, &refresh_error)) {
-		g_warning ("Cannot refresh “%s”: %s", args[1], refresh_error ? refresh_error->message : "?");
-		g_clear_error (&refresh_error);
-	}
-	g_object_set_data (G_OBJECT (folder), "evo-initial-sync-done", GINT_TO_POINTER (1));
-
 	max_count = (guint) g_ascii_strtoull (args[2], NULL, 10);
 
+	/* Vérifie si le résumé local Camel contient déjà des messages */
 	uids = camel_folder_dup_uids (folder);
+	has_cache = (uids != NULL && uids->len > 0);
+
+	if (!has_cache) {
+		/* Premier chargement de ce dossier sans cache : interrogation serveur */
+		if (!camel_folder_refresh_info_sync (folder, core->cancellable, &refresh_error)) {
+			g_warning ("Cannot refresh “%s”: %s", args[1], refresh_error ? refresh_error->message : "?");
+			g_clear_error (&refresh_error);
+		}
+		if (uids)
+			g_ptr_array_unref (uids);
+		uids = camel_folder_dup_uids (folder);
+	} else {
+		/* Cache local présent : on renvoie immédiatement les messages locaux,
+		 * et on lance la synchronisation distante en tâche de fond */
+		gchar **bg_args = g_new0 (gchar *, 3);
+		bg_args[0] = g_strdup (args[0]);
+		bg_args[1] = g_strdup (args[1]);
+		core_submit (core, core_folder_background_refresh_run, bg_args, core_ignore_result, NULL);
+	}
+
+	g_object_set_data (G_OBJECT (folder), "evo-initial-sync-done", GINT_TO_POINTER (1));
+
 	infos = g_ptr_array_new_with_free_func (g_object_unref);
 
 	for (ii = 0; uids && ii < uids->len; ii++) {
@@ -4641,7 +4780,15 @@ core_refresh_run (EvoCore *core,
 {
 	GList *services, *link;
 
+	guint total_services = 0, current_service = 0;
 	services = camel_session_list_services (core->session);
+
+	for (link = services; link; link = g_list_next (link)) {
+		if (CAMEL_IS_STORE (link->data) && CAMEL_IS_NETWORK_SERVICE (link->data))
+			total_services++;
+	}
+
+	core_emit_progress (core, NULL, NULL, "Vérification des nouveaux messages...", 0, TRUE);
 
 	for (link = services; link && !g_cancellable_is_cancelled (core->cancellable); link = g_list_next (link)) {
 		CamelService *service = link->data;
@@ -4657,14 +4804,24 @@ core_refresh_run (EvoCore *core,
 		if (!CAMEL_IS_STORE (service) || !CAMEL_IS_NETWORK_SERVICE (service))
 			continue;
 
+		current_service++;
 		g_message ("refresh of “%s”", camel_service_get_display_name (service));
+
+		core_emit_progress (core, uid, NULL,
+			camel_service_get_display_name (service),
+			total_services > 0 ? (gint) ((current_service * 100) / total_services) : -1,
+			TRUE);
 
 		if (!core_ensure_connected (core, CAMEL_STORE (service), &local_error)) {
 			g_warning ("Cannot connect “%s”: %s", camel_service_get_display_name (service),
 				local_error ? local_error->message : "?");
+			core_emit_connection_status (core, uid, "imap", "error",
+				local_error ? local_error->message : "Échec de connexion au serveur");
 			g_clear_error (&local_error);
 			continue;
 		}
+
+		core_emit_connection_status (core, uid, "imap", "connected", "Connecté");
 
 		/* the inbox is followed even when not shown, for new mail */
 		inbox_name = core_dup_inbox_name (core, CAMEL_STORE (service));
@@ -4720,16 +4877,12 @@ core_refresh_run (EvoCore *core,
 		}
 	}
 
+	core_emit_progress (core, NULL, NULL, "Tous les dossiers sont à jour", 100, FALSE);
+	core_emit_connection_status (core, NULL, "global", "connected", "Connecté");
+
 	g_list_free_full (services, g_object_unref);
 
 	return g_strdup ("{}");
-}
-
-static void
-core_ignore_result (const char *json,
-		    const char *error_message,
-		    void *user_data)
-{
 }
 
 static gboolean
@@ -9972,6 +10125,63 @@ evo_core_refresh_all (EvoCore *core)
 	gchar *args[] = { (gchar *) "all", NULL };
 
 	core_submit (core, core_refresh_run, g_strdupv (args), core_ignore_result, NULL);
+}
+
+/* Active ou désactive le mode hors connexion global du moteur.
+ * Paramètres :
+ *   core    : instance du moteur evo-core
+ *   offline : 1 pour travailler hors connexion, 0 pour revenir en ligne */
+void
+evo_core_set_offline (EvoCore *core,
+		      int offline)
+{
+	g_return_if_fail (core != NULL);
+
+	if (core->session) {
+		camel_session_set_online (core->session, !offline);
+		core_emit_connection_status (core, NULL, "global",
+			offline ? "offline" : "online",
+			offline ? "Mode hors connexion activé" : "Connexion en cours...");
+
+		if (!offline)
+			evo_core_refresh (core);
+	}
+}
+
+/* Renvoie 1 si le moteur est actuellement en mode hors connexion, 0 sinon.
+ * Paramètres :
+ *   core : instance du moteur evo-core
+ * Retourne : 1 si hors connexion, 0 si en ligne. */
+int
+evo_core_get_offline (EvoCore *core)
+{
+	if (!core || !core->session)
+		return 0;
+
+	return !camel_session_get_online (core->session);
+}
+
+/* Relance la connexion / l'authentification pour un compte spécifique.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant unique du compte à reconnecter */
+void
+evo_core_reconnect_account (EvoCore *core,
+			    const char *account_uid)
+{
+	CamelService *service;
+
+	g_return_if_fail (core != NULL);
+	g_return_if_fail (account_uid != NULL);
+
+	service = camel_session_ref_service (core->session, account_uid);
+	if (service) {
+		if (CAMEL_IS_OFFLINE_STORE (service))
+			camel_offline_store_set_online_sync (CAMEL_OFFLINE_STORE (service), TRUE, core->cancellable, NULL);
+		g_object_unref (service);
+	}
+
+	evo_core_refresh (core);
 }
 
 void

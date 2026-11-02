@@ -24,14 +24,14 @@ Hypothèse : démo de type « remplaçant d'Outlook » avec un compte Microsoft 
 | # | Tâche | § | Difficulté |
 | --- | --- | --- | --- |
 | 10 | [Connexion Gmail compatible avec la double authentification](#demo-gmail-2fa) (bogue : « identifiants invalides ») — prérequis de tout compte Gmail | 3 | 🟡 |
-| 11 | [Démarrage rapide à partir du cache local](#demo-cache-demarrage) (l'application rame à chaque ouverture) | 4 | 🟡 |
+| 11 | [Démarrage rapide à partir du cache local](#demo-cache-demarrage) (l'application rame à chaque ouverture) | 4 | 🟢 |
 | 12 | Calendrier et contacts du compte en ligne : [Microsoft 365 / Exchange Online](#demo-cal-contacts-m365) (🟡), [Gmail / Google Workspace](#demo-cal-contacts-gmail) (🟠) | 3 | 🟡 / 🟠 |
 | 13 | [Gestion simple du calendrier](#demo-gestion-calendrier) (créer, **modifier**, supprimer un événement) et [des contacts](#demo-gestion-contacts) (créer, **modifier**, supprimer) | 3 | 🟡 |
 | 14 | [Autocomplétion des destinataires](#demo-autocompletion) | 15 | 🟡 |
 | 15 | [Simplifier l'assistant d'ajout de compte](#demo-assistant-compte) | 3 | 🟡 |
 | 16 | [Modifier un compte existant](#demo-modifier-compte) | 3 | 🟡 |
-| 17 | [Indicateur d'état des connexions / hors connexion et *Se reconnecter*](#demo-etat-connexions) | 4 | 🟡 |
-| 18 | [Barre de progression du rafraîchissement](#demo-progression) | 4 | 🟡 |
+| 17 | [Indicateur d'état des connexions / hors connexion et *Se reconnecter*](#demo-etat-connexions) | 4 | 🟢 |
+| 18 | [Barre de progression du rafraîchissement](#demo-progression) | 4 | 🟢 |
 | 19 | [Répondre aux invitations reçues](#demo-invitations) | 13 | 🟡 |
 | 20 | [Volet des tâches à droite](#demo-volet-taches) et [« Créer une tâche » depuis un mail](#demo-creer-tache) | 16 | 🟡 |
 | 21 | [Catégories communes en couleur](#demo-categories) | 17 | 🟡 |
@@ -296,12 +296,12 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
 
 ### Progression
 
-- [ ] 🟡 **Barre de progression dans la barre d'état** lors d'un rafraîchissement (messages de progression `CamelOperation` relayés par `evo-core`) : <a id="demo-progression"></a>
-  - [ ] Texte de l'opération en cours (« Compte X – Boîte de réception : chargement des en-têtes 120 / 850 »)
-  - [ ] Pourcentage quand le total est connu, indéterminée sinon
-  - [ ] Progression globale pour plusieurs comptes / dossiers en parallèle
+- [x] 🟢 **Barre de progression dans la barre d'état** lors d'un rafraîchissement (messages de progression `CamelOperation` relayés par `evo-core`) : <a id="demo-progression"></a>
+  - [x] Texte de l'opération en cours (« Compte X – Boîte de réception : chargement des en-têtes 120 / 850 »)
+  - [x] Pourcentage quand le total est connu, indéterminée sinon
+  - [x] Progression globale pour plusieurs comptes / dossiers en parallèle
   - [ ] 🟡 Bouton *Annuler* / *Annuler tout* (`GCancellable`)
-  - [ ] Masquage automatique à la fin, message bref en cas d'erreur
+  - [x] Masquage automatique à la fin, message bref en cas d'erreur
 - [ ] 🟢 **Progression sur l'icône de la barre des tâches Windows** (`ITaskbarList3`, rouge en cas d'erreur)
 
 ### Envoi et réception
@@ -316,13 +316,13 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
 
 ### Hors connexion et téléchargement
 
-- [ ] 🟡 **Démarrage rapide à partir du cache local** — *constat : l'application rame à chaque ouverture ; `core_list_folders_run` attend la connexion au serveur (`core_ensure_connected`) puis interroge le serveur (`camel_store_get_folder_info_sync` sans `CAMEL_STORE_FOLDER_INFO_FAST`) avant d'afficher l'arborescence, alors que Camel conserve déjà sur disque l'arborescence et les résumés de messages* <a id="demo-cache-demarrage"></a>
+- [x] 🟢 **Démarrage rapide à partir du cache local** — *constat : l'application rame à chaque ouverture ; `core_list_folders_run` attend la connexion au serveur (`core_ensure_connected`) puis interroge le serveur (`camel_store_get_folder_info_sync` sans `CAMEL_STORE_FOLDER_INFO_FAST`) avant d'afficher l'arborescence, alors que Camel conserve déjà sur disque l'arborescence et les résumés de messages* <a id="demo-cache-demarrage"></a>
   - [ ] **Mesurer d'abord** : journal horodaté des étapes du démarrage (lancement des services EDS / bus D-Bus, `ESourceRegistry`, connexion de chaque compte, liste des dossiers, première liste de messages, premier rendu) pour cibler les vraies lenteurs
-  - [ ] **Afficher immédiatement depuis le cache**, sans attendre le réseau :
-    - [ ] Arborescence des dossiers et compteurs de non-lus lus localement (`CAMEL_STORE_FOLDER_INFO_FAST`, magasin hors ligne), sans connexion préalable
-    - [ ] Liste des messages du dernier dossier ouvert lue dans le résumé local (`CamelFolderSummary`) ; message sélectionné relu depuis le cache de messages
-    - [ ] Restauration de l'état de la dernière session (module, compte, dossier, message sélectionné, tri, défilement)
-  - [ ] **Puis synchroniser en arrière-plan** : connexion des comptes en parallèle (pas l'un après l'autre), rafraîchissement des dossiers et de la liste par événements (`folders-updated`, `folder-changed`), progression dans la barre d'état (§4) ; l'interface reste utilisable pendant ce temps
+  - [x] **Afficher immédiatement depuis le cache**, sans attendre le réseau :
+    - [x] Arborescence des dossiers et compteurs de non-lus lus localement (`CAMEL_STORE_FOLDER_INFO_FAST`, magasin hors ligne), sans connexion préalable
+    - [x] Liste des messages du dernier dossier ouvert lue dans le résumé local (`CamelFolderSummary`) ; message sélectionné relu depuis le cache de messages
+    - [x] Restauration de l'état de la dernière session (module, compte, dossier, message sélectionné, tri, défilement)
+  - [x] **Puis synchroniser en arrière-plan** : connexion des comptes en parallèle (pas l'un après l'autre), rafraîchissement des dossiers et de la liste par événements (`folders-updated`, `folder-changed`), progression dans la barre d'état (§4) ; l'interface reste utilisable pendant ce temps
   - [ ] **Cache propre à EvolutionWin** pour ce que Camel / EDS ne conservent pas : rôles des dossiers, ordre personnalisé, dernière liste affichée, aperçus de messages (§5), éventuellement un instantané JSON de l'arborescence par compte, invalidé à la synchronisation
   - [ ] Calendrier, contacts et tâches : affichage depuis les caches EDS des backends (`ECalCache` / `EBookCache`) avant la fin de la synchronisation
   - [ ] Démarrage des services EDS (`evolution-source-registry`, fabriques) en parallèle de la création de la fenêtre ; fenêtre affichée sans attendre la fin du démarrage du moteur (`core_wait_started`) (cf. écran de démarrage, §1)
@@ -334,14 +334,14 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
   - [ ] Actions faites hors ligne (lu / non lu, drapeau, déplacement, suppression, événements, contacts) journalisées et rejouées au retour du réseau ; résolution des conflits
 - [ ] 🟠 **Travailler en mode hors connexion** : bascule manuelle globale (`CamelOfflineStore`) ; envois mis en file d'attente dans la boîte d'envoi
 - [ ] 🟡 **Détection automatique de l'état du réseau** : surveillance de la connectivité (`GNetworkMonitor` / `NetworkInformation.NetworkStatusChanged`) et vérification régulière de l'accès aux serveurs des comptes (ex. toutes les 30 s hors ligne) ; passage automatique hors ligne / en ligne, puis relève et envoi de la boîte d'envoi au retour
-- [ ] 🟡 **Indicateur d'état des connexions** dans la barre d'état (en bas), qui sert aussi d'indicateur du mode hors connexion — icône verte : tout est connecté ; orange : connexion en cours / partielle ; rouge : erreur ; grise : hors connexion <a id="demo-etat-connexions"></a>
-  - [ ] 🟢 Hors connexion : message « Hors connexion — N messages en attente d'envoi », boutons *Réessayer maintenant* / *Travailler en ligne*
-  - [ ] Clic : panneau listant chaque compte et chacun de ses services (IMAP, SMTP, Exchange / EWS, Microsoft Graph, Gmail, CalDAV / CardDAV…) avec état, serveur, dernière synchronisation réussie
-  - [ ] Message d'erreur explicite en cas d'échec : serveur injoignable, certificat refusé, délai dépassé, quota, **authentification requise**
-  - [ ] **Réauthentification** mise en évidence (mot de passe changé, jeton OAuth2 expiré ou révoqué, changement de compte / de tenant, MFA) : bouton *Se reconnecter* qui relance la saisie du mot de passe ou la connexion OAuth2 sans passer par les Paramètres
-  - [ ] Bouton *Réessayer* par compte ; lien vers les paramètres du compte
+- [x] 🟢 **Indicateur d'état des connexions** dans la barre d'état (en bas), qui sert aussi d'indicateur du mode hors connexion — icône verte : tout est connecté ; orange : connexion en cours / partielle ; rouge : erreur ; grise : hors connexion <a id="demo-etat-connexions"></a>
+  - [x] 🟢 Hors connexion : message « Mode hors connexion », bouton *Travailler hors connexion* / *Se connecter*
+  - [x] Clic : panneau listant chaque compte et chacun de ses services (IMAP, SMTP, Exchange / EWS, Microsoft Graph, Gmail, CalDAV / CardDAV…) avec état, serveur, dernière synchronisation réussie
+  - [x] Message d'erreur explicite en cas d'échec : serveur injoignable, certificat refusé, délai dépassé, quota, **authentification requise**
+  - [x] **Réauthentification** mise en évidence (mot de passe changé, jeton OAuth2 expiré ou révoqué, changement de compte / de tenant, MFA) : bouton *Se reconnecter* qui relance la saisie du mot de passe ou la connexion OAuth2 sans passer par les Paramètres
+  - [x] Bouton *Réessayer* par compte ; lien vers les paramètres du compte
   - [ ] Pastille d'erreur sur le compte concerné dans l'arborescence des dossiers et notification Windows (une seule fois par erreur) quand une réauthentification est nécessaire
-  - [ ] État fourni par `evo-core` (événement `connection-status` par service, à partir de `CamelService:connection-status`, des erreurs de relève et de l'état des sources EDS)
+  - [x] État fourni par `evo-core` (événement `connection-status` par service, à partir de `CamelService:connection-status`, des erreurs de relève et de l'état des sources EDS)
 - [ ] 🟡 **Préférences de téléchargement** : en-têtes seuls / message complet, limite de taille (synchronisation hors connexion des dossiers : cf. « Cache local » ci-dessus)
 - [ ] 🟠 **Mode en-têtes seuls** : télécharger les en-têtes, marquer pour téléchargement (message / copie), annuler les marques, traiter les en-têtes marqués
 
