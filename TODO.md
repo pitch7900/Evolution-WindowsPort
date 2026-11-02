@@ -325,7 +325,7 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
   - [x] Progression globale pour plusieurs comptes / dossiers en parallèle
   - [ ] 🟡 Bouton *Annuler* / *Annuler tout* (`GCancellable`)
   - [x] Masquage automatique à la fin, message bref en cas d'erreur
-- [ ] 🟢 **Progression sur l'icône de la barre des tâches Windows** (`ITaskbarList3`, rouge en cas d'erreur)
+- [x] 🟢 **Progression sur l'icône de la barre des tâches Windows** (`ITaskbarList3`, rouge en cas d'erreur)
 
 ### Envoi et réception
 

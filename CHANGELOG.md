@@ -22,6 +22,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Intégration Windows 11 : Progression et badge sur la barre des tâches (`ITaskbarList3`) (Quickwin §3 / §11)** :
+  - **Jauges de progression dynamiques** : affichage de la progression sur l'icône de la barre des tâches lors des synchronisations de boîte ou opérations d'arrière-plan (vert pour déterminé/indéterminé, rouge temporaire en cas d'erreur réseau ou d'envoi).
+  - **Badge de courriels non lus (overlay icon)** : génération dynamique d'une icône de superposition 16x16 représentant une pastille bleue Fluent avec le nombre exact de messages non lus (ou `99+`), mis à jour instantanément avec le badge du volet de navigation.
+  - **Respect des préférences utilisateur** : prise en compte de la clé `notifications.taskbar-badge` (`true` par défaut), validée par test unitaire dans `tests/unit/test_settings.cpp`.
+
 - **Bouton « Afficher dans le navigateur » (Quickwin §2 / §7)** :
   - **Ouverture native et ergonomique** : ajout d'un bouton dédié avec icône globe (`\xE774`) dans la barre d'outils du volet de lecture (`ReaderPane`), dans la fenêtre indépendante (`MessageWindow`) et dans le menu contextuel par clic droit sur un message.
   - **Rendu HTML autonome et soigné** : routine `BuildStandaloneHtmlMessage` générant un document HTML 5 complet et stylisé (en-tête avec expéditeur, destinataires, date et objet, corps HTML ou texte brut formaté) enregistré dans un emplacement temporaire sécurisé (`%TEMP%\EvolutionWin`).

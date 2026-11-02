@@ -114,6 +114,7 @@ namespace winrt::EvolutionWin::implementation
         void OnToggleOfflineClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void UpdateStatusBarProgress(bool active, winrt::hstring const& message, int32_t percent);
         void UpdateTaskbarProgress(bool active, int32_t percent, bool error);
+        void UpdateTaskbarBadge(int32_t count);
         void UpdateConnectionStatus(winrt::hstring const& account, winrt::hstring const& status, winrt::hstring const& message);
         void RefreshConnectionAccountsList();
         void UpdateFolderStatusText();

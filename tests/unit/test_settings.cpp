@@ -259,6 +259,9 @@ static void test_settings_mail_read_and_security_options(void)
 
         /* Confirmation avant suppression definitive : par defaut true */
         ASSERT_EQ_INT(1, mgr.GetBoolean("mail.confirm-permanent-delete", true));
+
+        /* Badge non-lus sur la barre des taches : par defaut true */
+        ASSERT_EQ_INT(1, mgr.GetBoolean("notifications.taskbar-badge", true));
     }
     TEST_CASE_END();
 }

@@ -431,6 +431,7 @@ namespace winrt::EvolutionWin::implementation
         {
             MailItem().InfoBadge(nullptr);
             ToolTipService::SetToolTip(MailItem(), box_value(L"Courrier"));
+            UpdateTaskbarBadge(0);
             return;
         }
 
@@ -438,6 +439,7 @@ namespace winrt::EvolutionWin::implementation
         badge.Value(unread);
         MailItem().InfoBadge(badge);
         ToolTipService::SetToolTip(MailItem(), box_value(L"Courrier (" + to_hstring(unread) + L" non lus)"));
+        UpdateTaskbarBadge(unread);
     }
 
     /**

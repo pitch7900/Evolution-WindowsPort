@@ -6,6 +6,8 @@
 #include <winrt/Microsoft.UI.Xaml.Media.h>
 #include <winrt/Microsoft.UI.Xaml.Shapes.h>
 
+#pragma comment(lib, "gdi32.lib")
+
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
@@ -68,6 +70,103 @@ namespace winrt::EvolutionWin::implementation
             m_taskbar_list->SetProgressState(hwnd, TBPF_NORMAL);
             m_taskbar_list->SetProgressValue(hwnd, static_cast<ULONGLONG>(percent), 100);
         }
+    }
+
+    /**
+     * @brief Met à jour le badge de superposition (overlay icon) de la barre des tâches avec le nombre de courriels non lus.
+     * @param count Nombre total de courriels non lus dans les boîtes de réception.
+     */
+    void MainWindow::UpdateTaskbarBadge(int32_t count)
+    {
+        if (!m_initialized)
+            return;
+
+        // Contrôle de l'autorisation du badge dans les paramètres utilisateur
+        bool show_badge = ::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.taskbar-badge", true);
+        if (!show_badge)
+            count = 0;
+
+        HWND hwnd = reinterpret_cast<HWND>(AppWindow().Id().Value);
+        if (!hwnd)
+            return;
+
+        if (!m_taskbar_list)
+        {
+            if (FAILED(CoCreateInstance(CLSID_TaskbarList, nullptr, CLSCTX_INPROC_SERVER, IID_ITaskbarList3, m_taskbar_list.put_void())))
+                return;
+            m_taskbar_list->HrInit();
+        }
+
+        if (count <= 0)
+        {
+            m_taskbar_list->SetOverlayIcon(hwnd, nullptr, nullptr);
+            return;
+        }
+
+        // Crée une icône dynamique 16x16 représentant le badge chiffré
+        HDC screen_dc = GetDC(nullptr);
+        HDC mem_dc = CreateCompatibleDC(screen_dc);
+
+        BITMAPINFO bmi = {};
+        bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+        bmi.bmiHeader.biWidth = 16;
+        bmi.bmiHeader.biHeight = 16;
+        bmi.bmiHeader.biPlanes = 1;
+        bmi.bmiHeader.biBitCount = 32;
+        bmi.bmiHeader.biCompression = BI_RGB;
+
+        void* bits = nullptr;
+        HBITMAP hColor = CreateDIBSection(mem_dc, &bmi, DIB_RGB_COLORS, &bits, nullptr, 0);
+        HBITMAP hMono = CreateBitmap(16, 16, 1, 1, nullptr);
+
+        HGDIOBJ old_bmp = SelectObject(mem_dc, hColor);
+
+        // Dessine une pastille circulaire bleue Fluent
+        HBRUSH brush = CreateSolidBrush(RGB(0, 120, 215));
+        HBRUSH old_brush = static_cast<HBRUSH>(SelectObject(mem_dc, brush));
+        HPEN pen = CreatePen(PS_SOLID, 1, RGB(255, 255, 255));
+        HPEN old_pen = static_cast<HPEN>(SelectObject(mem_dc, pen));
+
+        ::Ellipse(mem_dc, 0, 0, 16, 16);
+
+        SelectObject(mem_dc, old_pen);
+        DeleteObject(pen);
+        SelectObject(mem_dc, old_brush);
+        DeleteObject(brush);
+
+        // Dessine le nombre de non lus en blanc centré
+        SetBkMode(mem_dc, TRANSPARENT);
+        SetTextColor(mem_dc, RGB(255, 255, 255));
+        HFONT font = CreateFontW(10, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Segoe UI");
+        HGDIOBJ old_font = SelectObject(mem_dc, font);
+
+        std::wstring text = count > 99 ? L"99+" : std::to_wstring(count);
+        RECT rc = { 0, 1, 16, 16 };
+        DrawTextW(mem_dc, text.c_str(), -1, &rc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+        SelectObject(mem_dc, old_font);
+        DeleteObject(font);
+
+        SelectObject(mem_dc, old_bmp);
+        DeleteDC(mem_dc);
+        ReleaseDC(nullptr, screen_dc);
+
+        ICONINFO ii = {};
+        ii.fIcon = TRUE;
+        ii.hbmMask = hMono;
+        ii.hbmColor = hColor;
+
+        HICON overlay_icon = CreateIconIndirect(&ii);
+
+        std::wstring desc = std::to_wstring(count) + L" messages non lus";
+        m_taskbar_list->SetOverlayIcon(hwnd, overlay_icon, desc.c_str());
+
+        if (overlay_icon)
+            DestroyIcon(overlay_icon);
+        if (hColor)
+            DeleteObject(hColor);
+        if (hMono)
+            DeleteObject(hMono);
     }
 
     /* Met à jour la barre de progression permanente et son texte indicatif.

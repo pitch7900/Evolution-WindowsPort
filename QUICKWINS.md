@@ -50,7 +50,7 @@ Ces chantiers ne dépendent pas de refontes architecturales complexes et apporte
 
 ## 3. Intégration Windows 11
 
-- [ ] **Progression et badge sur la barre des tâches** (`ITaskbarList3`)
+- [x] **Progression et badge sur la barre des tâches** (`ITaskbarList3`)
   - Jauge de progression verte lors des synchronisations / relèves de boîte.
   - Jauge rouge en cas d'erreur de connexion ou d'échec d'envoi.
   - Badge indiquant le nombre de messages non lus.
