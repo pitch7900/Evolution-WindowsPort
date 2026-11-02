@@ -86,5 +86,5 @@ Ces chantiers ne dépendent pas de refontes architecturales complexes et apporte
 - [ ] **Confirmations de sécurité**
   - Confirmation avant suppression définitive (`Maj+Suppr`).
   - Avertissement si un message mentionne une pièce jointe mais qu'aucun fichier n'est joint.
-- [ ] **Module actif au démarrage**
+- [x] **Module actif au démarrage**
   - Permettre de choisir d'ouvrir par défaut le Calendrier plutôt que le Courrier au lancement.

@@ -802,7 +802,7 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 
 - [ ] 🟢 Langue de l'interface (cf. §20), thème (clair / sombre / système), taille du texte
 - [ ] 🟢 Démarrage avec Windows, réduction dans la zone de notification à la fermeture
-- [ ] 🟢 Module affiché au démarrage (Mail, Calendrier, Contacts, Tâches)
+- [x] 🟢 Module affiché au démarrage (Mail, Calendrier, Contacts, Tâches)
 - [ ] 🟡 Raccourcis clavier (afficher la liste, profil Outlook / Evolution)
 
 ### Mail

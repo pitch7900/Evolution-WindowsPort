@@ -218,6 +218,13 @@ namespace winrt::EvolutionWin::implementation
         InitializeReaderAsync();
         CheckForUpdateOnStartup();
 
+        /* Module affiché au démarrage configuré dans les préférences (Courrier par défaut) */
+        hstring startup_view = ::EvolutionWin::Settings::Instance().GetString(L"appearance.startup-view", L"mail");
+        if (startup_view != L"mail")
+        {
+            SelectNavigationModule(startup_view);
+        }
+
         StartCore();
         UpdateConnectionStatus(L"global", m_is_offline ? L"offline" : L"online", L"");
 

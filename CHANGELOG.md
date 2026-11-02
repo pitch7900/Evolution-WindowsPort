@@ -14,6 +14,9 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Sélection du module actif au démarrage (Quickwin §5 / §19)** :
+  - **Prise en compte automatique à l'ouverture** : application au lancement du réglage `appearance.startup-view` défini dans *Paramètres › Apparence* (Courrier, Calendrier, Contacts ou Tâches).
+  - **Transition fluide** : sélection directe du module cible via `SelectNavigationModule` et masquage immédiat des autres vues sans clignotement à l'affichage.
 - **Atteindre une date dans le Calendrier (Ctrl+G - Quickwin §4 / §12)** :
   - **Boîte de dialogue modale Windows 11 Fluent** : accessible via le raccourci clavier global Ctrl+G, le ruban Calendrier (*Atteindre la date*) ou le bouton rapide « Aller au… » au-dessus de la grille des rendez-vous.
   - **Sélecteur de date graphique (CalendarDatePicker)** : prépositionné sur la date actuellement visualisée pour une navigation rapide vers n'importe quelle date passée ou future.
