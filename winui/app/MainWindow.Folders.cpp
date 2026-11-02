@@ -369,8 +369,7 @@ namespace winrt::EvolutionWin::implementation
             {
                 MenuFlyoutItem item;
                 item.Text(label);
-                item.Icon(FontIcon{});
-                item.Icon().as<FontIcon>().Glyph(FolderGlyph(folder.GetNamedString(L"type", L"")));
+                item.Icon(CreateFolderIcon(folder.GetNamedString(L"type", L"")));
                 item.Click([on_pick, full_name](IInspectable const&, RoutedEventArgs const&)
                 {
                     on_pick(full_name);
@@ -431,7 +430,17 @@ namespace winrt::EvolutionWin::implementation
             });
 
         if (is_account)
+        {
+            if (account != L"local")
+            {
+                add_item(L"Propriétés du compte…", L"\xE713", true,
+                    [this, account](IInspectable const&, RoutedEventArgs const&)
+                    {
+                        ShowEditAccountDialogAsync(account);
+                    });
+            }
             return;
+        }
 
         add_item(L"Renommer…", L"\xE8AC", !special,
             [this, account, full_name, name](IInspectable const&, RoutedEventArgs const&)

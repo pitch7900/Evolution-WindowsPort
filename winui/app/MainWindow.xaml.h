@@ -286,6 +286,8 @@ namespace winrt::EvolutionWin::implementation
         void RefreshAccountsView();
         fire_and_forget ShowAccountDetectionDialogAsync();
         fire_and_forget ShowAddAccountDialogAsync(Windows::Data::Json::JsonObject prefill);
+        fire_and_forget ShowEditAccountDialogAsync(hstring account_uid);
+        fire_and_forget SignInGoogleOAuth2BrowserAsync(hstring source_uid, hstring name);
         fire_and_forget ShowAboutDialogAsync();
         void CheckForUpdateOnStartup();
         fire_and_forget ShowUpdateDialogAsync();

@@ -41,7 +41,7 @@ Hypothèse : démo de type « remplaçant d'Outlook » avec un compte Microsoft 
 
 | # | Tâche | § | Difficulté |
 | --- | --- | --- | --- |
-| 23 | [Grille calendrier Jour / Semaine](#demo-grille-calendrier) — plus gros écart visible avec Outlook | 12 | 🔴 |
+| 23 | [Grille calendrier Jour / Semaine](#demo-grille-calendrier) — *réalisé dans MainWindow.Calendar.cpp* | 12 | 🔴 (Fait) |
 | 24 | [Éditeur d'événement complet](#demo-editeur-evenement) (périodicité, rappels) | 13 | 🟠 |
 | 25 | [Grouper par discussion](#demo-conversations) | 5 | 🟠 |
 | 26 | [Réponses automatiques](#demo-reponses-auto) Microsoft 365 / Exchange (si démo sur M365) | 3 | 🟡 |
@@ -161,16 +161,19 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 - [x] 🟡 **Barre d'accès rapide** personnalisable dans la barre de titre (Envoyer/Recevoir, Annuler, etc.) — *reste : « Annuler » (pas encore de mécanisme d'annulation)*
 - [x] 🟢 **Barre latérale gauche** de navigation entre modules (Mail, Calendrier, Contacts, Tâches) — `NavigationView` déjà en place, à restyler en barre d'icônes
 - [x] 🟢 **Bandeau d'information** sous la barre d'outils (`InfoBar`), affiché dans les vues Mail et Calendrier (ex. réponses automatiques actives + bouton *Désactiver*)
+- Bandeau de notification en bas de fenêtre (`StatusBar`) : supprimé au profit des Toasts système et du menu déroulant dans la barre d'état (cf. §19)
 
 ### Disposition des panneaux
 
 - [x] 🟢 **Panneaux redimensionnables** : séparateurs déplaçables entre dossiers, liste des messages et volet de lecture ; tailles mémorisées entre deux sessions
+  - [ ] 🟢 **Visibilité et lisibilité des séparateurs (`PaneSplitter`)** : rendre les séparateurs plus visibles et repérables (actuellement un simple trait discret de 1 px) avec un contraste renforcé au repos, une couleur d'accentuation ou un état visuel accentué au survol / glissement pour faciliter la manipulation à la souris
 - [ ] 🟡 **Position du volet de lecture** (menu *Affichage › Volet de lecture*), en Mail comme en Calendrier : <a id="demo-volet-lecture"></a> — *fait en Mail ; le Calendrier n'a pas encore de volet de lecture (§12)*
   - [x] 🟢 À droite
   - [x] 🟢 En bas — *hauteur liste / lecture fixe, pas encore réglable à la souris*
   - [ ] 🟢 Désactivé (*grisé dans le menu en attendant la fenêtre de lecture indépendante*) : ouverture des messages dans la fenêtre de lecture indépendante (§6) et des événements dans leur fenêtre
   - [x] 🟢 Choix mémorisé dans les préférences
 - [ ] 🟢 **Volet des dossiers** : normal / réduit / désactivé, en Mail comme en Calendrier (en Calendrier, le mode réduit garde le mini-calendrier)
+  - [ ] 🟢 **Décalage des compteurs de messages par rapport à la barre de défilement** : ajouter une marge / espacement à droite des compteurs de non-lus dans l'arborescence (`TreeViewItem` de `FolderTree`) afin d'éviter tout chevauchement avec la barre de défilement verticale (`ScrollBar`) lors du défilement
 - [ ] 🟢 **Espacement plus étroit** (mode compact) des listes, en Mail comme en Calendrier
 - Barre des tâches à droite (To-Do bar) : cf. « Barre latérale des tâches », §16
 
@@ -202,37 +205,56 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] Embarquer une copie des fournisseurs les plus courants (détection hors ligne, remplace la liste « Fournisseurs connus »), mise à jour à chaque version
   - [x] Vérifier la licence du dépôt avant d'embarquer les fichiers et mentionner la provenance (MPL 2.0, `winui/core/ispdb/README.md`)
 - [x] 🟡 **Confirmation / correction manuelle** : type détecté et paramètres proposés, possibilité de forcer un autre type ou de passer en configuration manuelle
-- [ ] 🟡 **Connexion Gmail / Google Workspace compatible avec la double authentification (2FA)** — *bogue actuel : « identifiants invalides » même avec le bon mot de passe* <a id="demo-gmail-2fa"></a>
-  - [ ] Cause : Google refuse la connexion IMAP / SMTP par mot de passe du compte (« applications moins sécurisées » supprimées) ; seuls OAuth2 (XOAUTH2) ou un *mot de passe d'application* fonctionnent. Aujourd'hui, l'assistant laisse saisir le mot de passe du compte Google, et OAuth2 n'est utilisable que si l'on fournit soi-même un *Client ID* Google Cloud (`EVO_OAUTH2_CLIENT_ID`)
-  - [ ] **OAuth2 par défaut pour Gmail**, sans champ mot de passe : bouton *Se connecter avec Google* ; la double authentification (SMS, application Google, clé de sécurité, passkey) est alors gérée par la page de connexion Google elle-même
-  - [ ] **Connexion dans le navigateur système** (redirection en boucle locale `http://127.0.0.1:<port>`, PKCE, RFC 8252) et non dans un WebView2 intégré : Google bloque la connexion depuis les navigateurs intégrés (« Ce navigateur ou cette application ne sont peut-être pas sécurisés », `disallowed_useragent`) — à vérifier aussi pour Microsoft 365
-  - [ ] **Client ID Google fourni avec l'application** (projet Google Cloud d'EvolutionWin, application de bureau, portées `https://mail.google.com/` + Calendar + Contacts pour §3 « Calendrier et contacts ») — ou réutiliser le service OAuth2 Google d'EDS (`module-oauth2-services`) s'il est compilé avec un identifiant ; vérification de l'application par Google nécessaire pour dépasser 100 utilisateurs de test (portées sensibles)
-  - [ ] **Repli « mot de passe d'application »** (compte avec 2FA, OAuth2 indisponible) : champ dédié avec explication et lien vers `https://myaccount.google.com/apppasswords`
-  - [ ] Message d'erreur explicite si Google refuse le mot de passe (« Google exige une connexion sécurisée : utilisez *Se connecter avec Google* ou un mot de passe d'application ») au lieu de « identifiants invalides »
-  - [ ] Jeton de rafraîchissement enregistré dans le Gestionnaire d'identifiants Windows et renouvelé automatiquement (mécanisme XOAUTH2 existant d'`evo-core`) ; jeton révoqué → *Se reconnecter* (§4)
-- [ ] 🟡 **Simplifier l'assistant d'ajout de compte** — aujourd'hui la seconde étape affiche tous les champs à la fois (type, nom du compte, nom complet, adresse, utilisateur, serveur EWS, serveurs et ports IMAP / SMTP, Client ID et Tenant ID OAuth2, mot de passe), même quand l'autodétection a tout trouvé <a id="demo-assistant-compte"></a>
-  - [ ] **Écran principal réduit à l'essentiel** : adresse électronique, nom complet, puis selon le type *Mot de passe* ou bouton *Se connecter avec Microsoft / Google* (OAuth2) — rien d'autre quand la détection a réussi
-  - [ ] **Résumé lisible de la détection** à la place des champs techniques : logo / nom du fournisseur et une phrase (« Compte Microsoft 365 détecté — connexion sécurisée par Microsoft », « Serveurs trouvés : imap.exemple.ch, smtp.exemple.ch (chiffrés) »), avec la source de la détection (base Thunderbird, Autodiscover, DNS…) en info-bulle
-  - [ ] **Section repliée « Paramètres avancés »** (`Expander`, fermé par défaut) regroupant : type de compte forcé, nom du compte, nom d'utilisateur (si différent de l'adresse), serveurs et ports entrants / sortants, chiffrement (TLS / STARTTLS en liste plutôt qu'en numéro de port), méthode d'authentification, URL EWS, Client ID / Tenant ID OAuth2
-  - [ ] Section avancée **ouverte automatiquement** seulement si la détection a échoué ou n'a donné que des valeurs supposées (`imap.<domaine>` / `smtp.<domaine>`), avec les champs à vérifier mis en évidence
-  - [ ] Nom du compte prérempli avec l'adresse (modifiable dans les paramètres avancés ou plus tard dans la page du compte, §19)
-  - [ ] **Test de connexion** avant création (*Vérification…* puis coche verte, ou message d'erreur compréhensible et ouverture des paramètres avancés sur le champ fautif)
-  - [ ] Libellés sans jargon (« Serveur de réception » plutôt que « Serveur entrant (IMAP) », chiffrement en clair plutôt que « 993 = TLS, 143 = STARTTLS »)
+- [x] 🟡 **Connexion Gmail / Google Workspace compatible avec la double authentification (2FA)** — *bogue résolu via OAuth2 RFC 8252 et repli mot de passe d'application* <a id="demo-gmail-2fa"></a>
+  - [x] Cause : Google refuse la connexion IMAP / SMTP par mot de passe du compte (« applications moins sécurisées » supprimées) ; seuls OAuth2 (XOAUTH2) ou un *mot de passe d'application* fonctionnent.
+  - [x] **OAuth2 par défaut pour Gmail**, sans champ mot de passe : flux moderne avec détection automatique ; la double authentification (SMS, application Google, clé de sécurité, passkey) est alors gérée par la page de connexion Google elle-même
+  - [x] **Connexion dans le navigateur système** (redirection en boucle locale `http://127.0.0.1:<port>`, RFC 8252) et non dans un WebView2 intégré : évite le blocage Google `disallowed_useragent`
+  - [x] **Client ID Google fourni avec l'application** (intégré via le service OAuth2 Google d'EDS avec portées Calendrier, Contacts et Mail)
+  - [x] **Repli « mot de passe d'application »** (compte avec 2FA, OAuth2 indisponible) : champ dédié avec explication et lien vers `https://myaccount.google.com/apppasswords`
+  - [x] Message d'erreur explicite si Google refuse le mot de passe et gestion des portées
+  - [x] Jeton de rafraîchissement enregistré dans le Gestionnaire d'identifiants Windows et renouvelé automatiquement
+- [x] 🟡 **Simplifier l'assistant d'ajout de compte** — écran épuré avec paramètres avancés sous Expander <a id="demo-assistant-compte"></a>
+  - [x] **Écran principal réduit à l'essentiel** : adresse électronique, nom complet, mot de passe ou connexion moderne (OAuth2)
+  - [x] **Résumé lisible de la détection** à la place des champs techniques avec type détecté et source
+  - [x] **Section repliée « Paramètres avancés »** (`Expander`, fermé par défaut) regroupant : serveurs entrants / sortants, ports, chiffrement (TLS / STARTTLS en liste déroulante), nom d'utilisateur, URL EWS, paramètres OAuth2
+  - [x] Section avancée **ouverte automatiquement** si le test échoue ou pour correction manuelle
+  - [x] Nom du compte prérempli avec l'adresse
+  - [x] **Test de connexion** avant création (test réseau et TLS IMAP / SMTP avec rapport d'état en direct)
+  - [x] Libellés sans jargon et options claires
   - [ ] Une seule fenêtre à étapes (adresse → connexion → terminé) plutôt que deux boîtes de dialogue successives ; bouton *Précédent*
 
 ### Modifier un compte existant
 
-Aujourd'hui, la liste des comptes des Paramètres ne propose que *Définir par défaut* et *Supprimer* : pour corriger un serveur ou un mot de passe, il faut supprimer puis recréer le compte.
-
-- [ ] 🟡 **Bouton *Modifier*** (et clic sur le compte) ouvrant la page du compte (une page par compte dans les Paramètres, §19), avec les mêmes sections que l'assistant d'ajout : essentiel en haut, *Paramètres avancés* repliés <a id="demo-modifier-compte"></a>
-- [ ] 🟢 **Identité** : nom affiché, nom complet, adresse de réponse (Reply-To), organisation, nom du compte dans l'arborescence
-- [ ] 🟡 **Serveurs** : serveurs, ports, chiffrement, nom d'utilisateur et méthode d'authentification de réception et d'envoi (modification des sources EDS `ESourceMailAccount` / `ESourceMailTransport` / `ESourceMailIdentity` puis reconnexion des services Camel sans redémarrer l'application)
-- [ ] 🟢 **Mot de passe** : *Changer le mot de passe* (Gestionnaire d'identifiants Windows) ; pour OAuth2 : *Se reconnecter* (nouveau jeton) et affichage du compte Microsoft / Google connecté
-- [ ] 🟢 **Dossiers spéciaux** : choix des dossiers Envoyés, Brouillons, Corbeille, Indésirables, Archive sur le serveur
+- [x] 🟡 **Bouton *Modifier*** (et clic droit « Propriétés du compte… » dans l'arborescence) ouvrant la boîte de modification complète du compte <a id="demo-modifier-compte"></a>
+- [x] 🟢 **Identité** : nom affiché, nom complet, adresse électronique, compte par défaut
+- [x] 🟡 **Serveurs** : serveurs, ports, chiffrement, nom d'utilisateur de réception et d'envoi (modification des sources EDS `ESourceMailAccount` / `ESourceMailTransport` / `ESourceMailIdentity` et réémission des événements sans redémarrage)
+- [x] 🟢 **Mot de passe** : champ de mise à jour du mot de passe dans le gestionnaire d'identifiants
+- [x] 🟢 **Dossiers spéciaux** : attribution des rôles CAMEL_FOLDER_TYPE_* (Envoyés, Brouillons, Corbeille, Indésirables, Archives) avec listes déroulantes basées sur les dossiers du compte
 - [ ] 🟢 **Rédaction** : signature par défaut (nouveaux messages / réponses), copie cachée automatique, demande d'accusé de lecture
 - [ ] 🟡 **Synchronisation** : intervalle de relève propre au compte (remplace la valeur globale des Paramètres, §19), dossiers synchronisés hors connexion et ancienneté (§4), compte activé / désactivé sans le supprimer
-- [ ] 🟡 **Test de connexion** après modification, avec retour à l'ancienne configuration en cas d'échec si l'utilisateur le souhaite
-- [ ] 🟢 Actions *Définir par défaut* et *Supprimer* déplacées dans cette page (avec confirmation pour la suppression), en plus du menu de la liste
+- [x] 🟡 **Test de connexion** après modification, avec bouton dédié et rapport d'état
+### Boîtes partagées et comptes délégués (Mail, Calendrier, Contacts) — 🟠
+
+En entreprise (Exchange Online / Microsoft 365, Exchange on-premise), les utilisateurs accèdent fréquemment à des boîtes aux lettres partagées (ex. support, info, boîtes de service), ainsi qu'aux calendriers et carnets d'adresses d'autres collaborateurs (délégation avec droits de lecture ou de gestion).
+
+- [ ] 🟠 **Ajouter un compte ou dossier partagé en visibilité (clic droit sur un compte)** :
+  - [ ] 🟡 **Menu contextuel du compte** : action *« Ouvrir le dossier / compte partagé d'un autre utilisateur… »* (accessible par clic droit sur un compte dans l'arborescence Mail, Calendrier et Contacts).
+  - [ ] 🟡 **Boîte de dialogue de sélection** : recherche de l'utilisateur ou de la boîte partagée par nom ou adresse email dans l'annuaire (GAL) ou saisie directe de l'adresse (ex. `equipe@entreprise.com` ou `collegue@entreprise.com`).
+  - [ ] 🟠 **Courrier (Mail)** : ajout de la boîte aux lettres partagée / déléguée sous l'arborescence (accès aux dossiers Boîte de réception, Éléments envoyés, etc. selon les autorisations Exchange `FullAccess` / `SendAs` ou délégation Camel / EWS / Graph).
+  - [ ] 🟡 **Calendrier** : ajout du calendrier partagé sous le groupe *Calendriers partagés* ou *Autres calendriers*, avec synchronisation et affichage superposé ou côte à côte.
+  - [ ] 🟡 **Contacts** : ajout du carnet d'adresses partagé de l'utilisateur sélectionné.
+  - [ ] 🟢 **Mémorisation et suppression** : persistance des comptes et dossiers partagés ouverts entre les sessions ; option *« Masquer / Fermer le compte partagé »* par clic droit.
+
+### Boîte d'archivage en ligne (Exchange Online Archiving / In-Place Archive) — 🟠
+
+Dans Microsoft 365 / Exchange Online, les utilisateurs disposent souvent d'une boîte d'archivage distante séparée (*In-Place Archive* ou *Archives en ligne*), distincte de la boîte aux lettres principale et de son quota, affichée sous forme d'un magasin de dossiers indépendant dans Outlook.
+
+- [ ] 🟠 **Visibilité et accès à la boîte d'archivage en ligne (Online Archive)** :
+  - [ ] 🟠 **Découverte automatique de l'archive en ligne** : détection de la boîte aux lettres d'archivage lors de la connexion Exchange Online / M365 (via Graph `GET /me/mailboxSettings` / `archiveMailbox` ou EWS Autodiscover `ArchiveDomain` / racine `archivemsgfolderroot`).
+  - [ ] 🟡 **Affichage d'un nœud d'archive dédié dans l'arborescence** : afficher un compte / nœud distinct sous le compte principal, intitulé *« Archive en ligne – [Nom / Adresse] »* avec une icône de boîte d'archives, développable pour parcourir ses dossiers.
+  - [ ] 🟡 **Synchronisation et arborescence des dossiers archivés** : chargement et affichage des dossiers de l'archive (Boîte de réception archivée, dossiers personnalisés, éléments supprimés d'archive).
+  - [ ] 🟡 **Consultation et recherche des messages archivés** : lecture complète des courriels archivés dans le volet de lecture et la fenêtre indépendante, inclusion dans la recherche transversale de messages (§10).
+  - [ ] 🟡 **Déplacement vers l'archive** : déplacement ou copie de messages depuis la boîte principale vers les dossiers de l'archive en ligne via le menu *Déplacer vers* ou par glisser-déposer.
 
 ### Compte par défaut
 
@@ -274,10 +296,10 @@ Aujourd'hui, la liste des comptes des Paramètres ne propose que *Définir par d
 Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte en ligne de l'utilisateur, et pouvoir les gérer simplement (les fonctions avancées restent aux §12 à §15). Aujourd'hui : un compte Microsoft 365 crée déjà une collection EDS avec calendrier et contacts activés (`e_source_collection_set_calendar_enabled` / `_contacts_enabled`), sans validation de bout en bout ; un compte Gmail n'est créé qu'en IMAP / SMTP (XOAUTH2), sans calendrier ni contacts ; l'interface sait lister, créer et supprimer des événements et des contacts, mais pas les modifier.
 
 - [ ] 🟡 **Microsoft 365 / Exchange Online** : vérifier de bout en bout que la collection `microsoft365` (Graph) découvre et synchronise les calendriers et carnets d'adresses du compte ; les afficher sous le nom du compte dans les vues Calendrier et Contacts <a id="demo-cal-contacts-m365"></a>
-  - [ ] Portées OAuth2 nécessaires (`Calendars.ReadWrite`, `Contacts.ReadWrite`) demandées à la connexion ; consentement manquant → message clair et *Se reconnecter*
+  - [x] Portées OAuth2 nécessaires (`Calendars.ReadWrite`, `Contacts.ReadWrite`) demandées à la connexion ; consentement manquant → message clair et *Se reconnecter*
   - [ ] Exchange on-premise (collection `ews`) : même vérification dès qu'un serveur de test est disponible
 - [ ] 🟠 **Gmail / Google Workspace** : à l'ajout d'un compte Gmail, créer aussi une collection Google (backend `google` d'EDS : calendriers CalDAV, contacts CardDAV / Google People) avec le même jeton OAuth2 <a id="demo-cal-contacts-gmail"></a>
-  - [ ] Portées OAuth2 Calendar et Contacts ajoutées à la connexion Google (en plus de la messagerie)
+  - [x] Portées OAuth2 Calendar et Contacts ajoutées à la connexion Google (en plus de la messagerie)
   - [ ] Comptes Gmail déjà configurés : bouton *Activer le calendrier et les contacts* dans la page du compte (nouvelle connexion pour accorder les portées)
 - [ ] 🟡 **Gestion simple du calendrier du compte** : <a id="demo-gestion-calendrier"></a>
   - [x] Événements du calendrier principal (et des autres calendriers du compte) affichés avec la couleur du calendrier
@@ -342,6 +364,7 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
   - [x] Bouton *Réessayer* par compte ; lien vers les paramètres du compte
   - [ ] Pastille d'erreur sur le compte concerné dans l'arborescence des dossiers et notification Windows (une seule fois par erreur) quand une réauthentification est nécessaire
   - [x] État fourni par `evo-core` (événement `connection-status` par service, à partir de `CamelService:connection-status`, des erreurs de relève et de l'état des sources EDS)
+  - Menu déroulant des notifications dans la barre d'état (à côté de l'indicateur d'état des connexions) : cf. §19
 - [ ] 🟡 **Préférences de téléchargement** : en-têtes seuls / message complet, limite de taille (synchronisation hors connexion des dossiers : cf. « Cache local » ci-dessus)
 - [ ] 🟠 **Mode en-têtes seuls** : télécharger les en-têtes, marquer pour téléchargement (message / copie), annuler les marques, traiter les en-têtes marqués
 
@@ -457,7 +480,7 @@ Trois notions distinctes, comme dans Outlook : le **suivi** (drapeau avec libell
   - [ ] Filtres rapides « Urgents » et « À traiter » (§5) et dossiers de recherche correspondants (§9)
   - [ ] 🟠 Rappel sur un suivi — dépend de la fenêtre des rappels (§2)
 - [ ] 🟡 **Importance** (haute / normale / basse) : affichée dans la liste et le volet de lecture (en-têtes `Importance` / `X-Priority`), choisie à la rédaction ; filtre rapide « Importants » (§5)
-- Catégoriser le message : cf. §17 ; créer une tâche à partir du message : cf. §16
+- Catégoriser le message : cf. §17 ; créer une tâche à partir du message : cf. §16 ; export par glisser-déposer vers l'extérieur : cf. §18
 
 ### Actions rapides
 
@@ -496,6 +519,7 @@ Trois notions distinctes, comme dans Outlook : le **suivi** (drapeau avec libell
   - [ ] 🟡 **Ordre personnalisé** par glisser-déposer (ou *Monter* / *Descendre* dans le menu contextuel), mémorisé par compte, sans modifier les dossiers sur le serveur
   - [ ] 🟢 Choix du mode de tri par compte : dossiers spéciaux d'abord (défaut) / alphabétique (*Afficher tous les dossiers de A à Z*) / personnalisé ; *Rétablir l'ordre par défaut*
   - [ ] 🟢 Ordre des **comptes** eux-mêmes dans le volet des dossiers (compte par défaut en premier, puis glisser-déposer)
+  - Compteurs de messages non lus et barre de défilement (décalage à gauche) : cf. §2
 - [ ] 🟠 **Nettoyer le dossier** (et sous-dossiers) des messages redondants — même logique que §7
 - [ ] **Récupérer les éléments supprimés** :
   - [ ] 🟡 IMAP : messages marqués supprimés non purgés
@@ -551,17 +575,17 @@ La recherche dans le dossier courant existe déjà (filtrage instantané + reche
 
 ## 12. Calendrier – Vues et navigation — 🔴
 
-La vue actuelle se limite à un `CalendarView` mensuel et une liste d'événements.
+Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des chevauchements), Mois (6 semaines) et Liste sont déjà implémentées dans `MainWindow.Calendar.cpp`.
 
 ### Grille calendrier (brique préalable)
 
-- [x] 🔴 **Contrôle grille Jour / Semaine de travail / Semaine** (WinUI n'en fournit pas) : créneaux horaires, événements positionnés et chevauchements, journée entière en haut, défilement vertical <a id="demo-grille-calendrier"></a> — *blocs à la couleur du calendrier, ligne de l'heure actuelle, ouverture au clic, vue Liste conservée*
-- [x] 🟠 **Vue Mois** (détails faibles / moyens / élevés) — *six semaines, 3 événements par jour puis « +N », clic sur le jour = vue Jour ; un seul niveau de détail*
+- [x] 🔴 **Contrôle grille Jour / Semaine de travail / Semaine** (WinUI n'en fournit pas) : créneaux horaires (24 h), événements positionnés et chevauchements en couloirs (*lanes*), bandeau journée entière en haut, défilement vertical centré sur 7 h, ligne rouge en temps réel de l'heure courante <a id="demo-grille-calendrier"></a> — *blocs colorés selon le calendrier, titre, horaires, lieu et tooltip, ouverture au clic/tap*
+- [x] 🟠 **Vue Mois** : six semaines à partir du lundi précédent, jours hors mois estompés, 3 événements par jour puis « +N », clic sur un jour basculant en vue Jour
 - [ ] 🟢 Raccourcis Ctrl+Alt+1…5 entre les vues
 - [ ] 🟢 **Échelle de temps** : 5, 6, 10, 15, 30, 60 minutes
 - [ ] 🟢 **Heures de travail** : jours ouvrés, heures de début / fin, premier jour de la semaine (options)
 - [ ] 🟡 **Second fuseau horaire** dans la grille
-- [ ] 🟠 **Glisser-déposer** d'un événement vers un autre créneau / jour / calendrier (déplacer, copier, redimensionner la durée)
+- [ ] 🟠 **Glisser-déposer** d'un événement vers un autre créneau / jour / calendrier (déplacer, copier, redimensionner la durée) ; export par glisser-déposer vers l'extérieur : cf. §18
 
 ### Navigation
 
@@ -615,12 +639,22 @@ La vue actuelle se limite à un `CalendarView` mensuel et une liste d'événemen
   - [ ] 🟠 Invitation de partage avec niveaux de droits (disponibilités, titres et lieux, tous les détails, édition, délégué) — Exchange / M365
   - [ ] 🟡 Envoyer un extrait par email (plage de dates, niveau de détail)
   - [ ] 🔴 Publication en ligne (URL ICS publique)
+### Hiérarchie complète des groupes de calendriers Exchange Online / Microsoft 365 — 🟠
+
+Constat : sur un compte Exchange Online / Microsoft 365 (ex. EVAM), EvolutionWin n'affiche aujourd'hui qu'une liste plate et très partielle de calendriers découverts (quelques collègues seulement sous le compte), alors qu'Outlook reflète l'intégralité des calendriers organisés en groupes structurés (*Mes calendriers*, *Équipe : Manager*, *Équipe : Mes collaborateurs direct reports*, *Autres calendriers*, *Salles*).
+
+- [ ] 🟠 **Découverte exhaustive et reflet fidèle de tous les calendriers Exchange Online / M365 (Graph / EWS)** :
+  - [ ] 🟠 **Exploration complète de l'API Graph / EWS** : interroger tous les groupes de calendriers (`GET /me/calendarGroups` et `GET /me/calendarGroups/{id}/calendars` sous Microsoft Graph, ou `FindFolder` / `CalendarFolder` avec `calendarGroup` sous EWS) pour récupérer l'ensemble des calendriers personnels, souscrits, partagés, d'équipe et de ressources (salles de réunion), sans omission.
+  - [ ] 🟡 **Arborescence hiérarchique par groupes dans le volet latéral** : reproduire fidèlement l'organisation d'Outlook avec groupes repliables/dépliables (*Mes calendriers*, *Équipe : Nom du manager*, *Équipe : Mes collaborateurs*, *Autres calendriers*, *Salles*), au lieu d'une simple liste plate.
+  - [ ] 🟢 **Sélection et couleurs individuelles** : case à cocher par calendrier, couleur d'accent propre conservée, mémorisation des calendriers cochés entre les sessions.
+  - [ ] 🟡 **Gestion des groupes de calendriers** : création, renommage et suppression de groupes de calendriers répercutés sur le serveur Exchange Online.
+
 - Calendriers de groupes Microsoft 365 : cf. « Groupes Microsoft 365 », §7
 
 ## 15. Contacts — 🟡
 
 - [ ] 🟡 **Carnet d'adresses global** (GAL) Exchange / M365 : recherche et sélection des destinataires (backend evolution-ews) <a id="demo-gal"></a>
-- Contacts unifiés et doublons : cf. §11 ; recherche rapide de contacts : cf. §10
+- Contacts unifiés et doublons : cf. §11 ; recherche rapide de contacts : cf. §10 ; export par glisser-déposer vers l'extérieur : cf. §18
 - [ ] 🟡 **Fenêtre de sélection de destinataires** (carnet d'adresses, comme le bouton *À…* d'Outlook) :
   - [ ] Ouverte par un bouton en face de chaque ligne *À*, *Cc*, *Cci* de la fenêtre de rédaction, et en face de la ligne des participants (*Obligatoires*, *Facultatifs*, *Ressources*) d'une invitation (§13)
   - [ ] Fenêtre indépendante redimensionnable : choix du carnet d'adresses (tous les carnets, carnet d'un compte, annuaire GAL Exchange / M365, listes de salles), champ de recherche (nom, prénom, adresse, société), liste des résultats (nom, adresse, société, téléphone)
@@ -704,6 +738,18 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 
 ## 18. Import / Export — 🟡
 
+### Export par glisser-déposer vers l'extérieur (Drag and drop)
+
+- [ ] 🟡 **Export d'un mail, d'un événement ou d'un contact par simple glisser-déposer vers l'extérieur (Explorateur Windows, Bureau)** :
+  - Déposer un ou plusieurs éléments depuis l'interface d'EvolutionWin vers l'Explorateur de fichiers Windows, le Bureau ou une autre application pour les exporter directement sous forme de fichiers natifs. Réutilise les fonctions d'export existantes en générant les fichiers dans un dossier temporaire avant de les transférer via le `DataPackage` (`SetStorageItems`).
+  - [ ] 🟡 **Courriels (format `.eml`)** : glisser un ou plusieurs messages sélectionnés depuis la liste des messages vers l'extérieur ; réutilisation de la fonction d'export EML existante (`evo_core_export_messages_eml` / `ExportMessagesEml`)
+  - [ ] 🟡 **Événements de calendrier (format `.ics`)** : glisser un événement depuis la vue calendrier vers l'extérieur pour générer un fichier iCalendar (`.ics`) ; réutilisation de l'export iCalendar existant
+  - [ ] 🟡 **Contacts (format `.vcf`)** : glisser un contact depuis la vue des contacts vers l'extérieur pour générer un fichier vCard (`.vcf`) ; réutilisation de l'export vCard existant
+  - [ ] 🟢 **Sélection multiple** : prise en charge du glisser-déposer de plusieurs éléments sélectionnés simultanément (génération par lot)
+  - [ ] 🟢 **Gestion des fichiers temporaires** : nettoyage automatique des fichiers temporaires créés après confirmation du dépôt ou annulation
+
+### Assistant et formats d'export
+
 - [ ] 🟡 **Assistant d'export** (*Fichier › Exporter*) : compte, éléments (emails, contacts, calendriers, tâches), dossier de destination
 - [ ] **Emails** :
   - [ ] 🟡 Format mbox (un fichier par dossier, arborescence conservée)
@@ -736,6 +782,15 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 ### Notifications
 
 - [ ] 🟢 **Activer / désactiver les notifications Windows** (toasts) de nouveau courrier, globalement et par compte / dossier
+- [ ] 🟢 **Notifications discrètes : Toasts système et liste déroulante dans la barre d'état** :
+  - [ ] **Suppression du bandeau intrusif en bas de fenêtre** : ne plus afficher l'InfoBar temporaire en bas de l'application pour les notifications de messages reçus (« X nouveaux messages »), afin d'éviter de masquer le contenu ou d'encombrer l'espace de travail.
+  - [ ] **Émission exclusive via les Toasts système Windows** : notification par le Centre de notifications Windows (`Microsoft.Windows.AppNotifications`), respectant le mode confidentiel et le paramétrage du système.
+  - [ ] **Bouton et menu déroulant (Flyout) dans la barre d'état** : placé dans la barre d'état permanente en bas, immédiatement à côté du statut de connexion (« Connecté ») :
+    - [ ] Icône cloche avec badge / compteur indiquant le nombre de notifications actives (masqué si aucune notification).
+    - [ ] Menu déroulant (`Flyout`) affichant l'historique chronologique des notifications reçues (expéditeur, objet ou extrait, horodatage).
+    - [ ] Bouton de fermeture individuel (`✕`) sur chaque notification permettant de la faire disparaître de la liste et de décrémenter le compteur.
+    - [ ] Bouton *« Tout effacer »* / *« Tout marquer comme lu »* pour vider l'ensemble des notifications d'un clic.
+    - [ ] Clic sur une notification pour naviguer directement vers le message ou dossier concerné.
 - [x] 🟢 **Mode confidentiel des notifications** : remplacer l'expéditeur, l'objet et l'extrait par un message générique (« Nouveau message », « 3 nouveaux messages ») — utile en présentation ou en partage d'écran <a id="demo-confidentiel"></a>
   - [x] Bascule rapide depuis la barre d'état / le menu de l'icône, sans passer par les Paramètres — *ruban Affichage, barre d'accès rapide et Paramètres › Confidentialité*
   - [ ] 🟡 Activation automatique quand Windows est en mode *Ne pas déranger* / partage d'écran détecté (optionnel)

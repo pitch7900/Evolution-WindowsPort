@@ -15,6 +15,12 @@ namespace winrt::EvolutionWin::implementation
 
         hstring Name() const { return m_name; }
         hstring Glyph() const { return m_glyph; }
+        Microsoft::UI::Xaml::Media::FontFamily GlyphFontFamily() const
+        {
+            if (m_glyph == L"\x231B" || m_glyph == L"\x23F3")
+                return Microsoft::UI::Xaml::Media::FontFamily{ L"Segoe UI Symbol" };
+            return Microsoft::UI::Xaml::Media::FontFamily{ L"Segoe Fluent Icons" };
+        }
         int32_t Unread() const { return m_unread; }
         void Unread(int32_t value)
         {

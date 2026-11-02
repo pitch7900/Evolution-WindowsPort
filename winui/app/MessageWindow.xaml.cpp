@@ -406,8 +406,7 @@ namespace winrt::EvolutionWin::implementation
                 {
                     MenuFlyoutSubItem sub;
                     sub.Text(name);
-                    sub.Icon(FontIcon{});
-                    sub.Icon().as<FontIcon>().Glyph(FolderGlyph(type));
+                    sub.Icon(CreateFolderIcon(type));
                     append_folders(children, sub);
                     if (auto parent_sub = parent_menu.try_as<MenuFlyoutSubItem>())
                         parent_sub.Items().Append(sub);
@@ -418,8 +417,7 @@ namespace winrt::EvolutionWin::implementation
                 {
                     MenuFlyoutItem menu_item;
                     menu_item.Text(name);
-                    menu_item.Icon(FontIcon{});
-                    menu_item.Icon().as<FontIcon>().Glyph(FolderGlyph(type));
+                    menu_item.Icon(CreateFolderIcon(type));
                     menu_item.Click([this, full_name](IInspectable const&, RoutedEventArgs const&)
                     {
                         auto core = m_core.lock();

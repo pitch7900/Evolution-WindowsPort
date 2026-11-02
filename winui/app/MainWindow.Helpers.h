@@ -17,7 +17,7 @@ namespace EvolutionWin::Helpers
     using namespace Windows::Data::Json;
     using namespace Windows::Foundation;
 
-    /* Segoe Fluent Icons glyphs */
+    /* Segoe Fluent Icons glyphs (et Segoe UI Symbol pour le sablier de la boîte d'envoi) */
     inline hstring FolderGlyph(hstring const& type)
     {
         if (type == L"inbox") return L"\xE715";
@@ -28,6 +28,18 @@ namespace EvolutionWin::Helpers
         if (type == L"junk") return L"\xE7BA";
         if (type == L"archive") return L"\xE7B8";
         return L"\xE8B7";
+    }
+
+    inline FontIcon CreateFolderIcon(hstring const& type)
+    {
+        FontIcon icon;
+        hstring glyph = FolderGlyph(type);
+        icon.Glyph(glyph);
+        if (glyph == L"\x231B" || glyph == L"\x23F3")
+            icon.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{ L"Segoe UI Symbol" });
+        else
+            icon.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{ L"Segoe Fluent Icons" });
+        return icon;
     }
 
     inline hstring FormatDate(double unix_time)

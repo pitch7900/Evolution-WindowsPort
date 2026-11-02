@@ -394,6 +394,44 @@ void		evo_core_save_password		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Teste la connectivité réseau et les protocoles entrant (IMAP) et sortant (SMTP).
+ * Format attendu pour account_json :
+ * {"imap_host": "...", "imap_port": 993, "imap_security": "tls"|"starttls"|"none",
+ *  "smtp_host": "...", "smtp_port": 465, "smtp_security": "tls"|"starttls"|"none"}
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   account_json : configuration JSON des serveurs à tester
+ *   func         : rappel recevant {"imap_ok": bool, "imap_banner": "...", "imap_error": "...",
+ *                                   "smtp_ok": bool, "smtp_banner": "...", "smtp_error": "..."}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_test_connection	(EvoCore *core,
+						 const char *account_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Récupère la configuration détaillée d'un compte de messagerie existant.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant unique du compte
+ *   func        : rappel recevant la description JSON détaillée du compte
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_get_account		(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Modifie la configuration d'un compte de messagerie existant (serveurs, mot de passe,
+ * dossiers spéciaux CAMEL_FOLDER_TYPE_*).
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   account_json : modifications au format JSON UTF-8
+ *   func         : rappel recevant {"uid": "<uid du compte>"}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_modify_account		(EvoCore *core,
+						 const char *account_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Crée et enregistre un nouveau compte de messagerie IMAP / SMTP dans
  * evolution-data-server, puis l'ajoute à la session courante.
  * Format attendu pour account_json :
@@ -496,6 +534,12 @@ void		evo_core_add_google_account	(EvoCore *core,
  *   user_data    : données utilisateur transmises au rappel */
 void		evo_core_oauth2_begin		(EvoCore *core,
 						 const char *source_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+void		evo_core_oauth2_begin_with_redirect
+						(EvoCore *core,
+						 const char *source_uid,
+						 const char *redirect_uri,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 void		evo_core_oauth2_finish		(EvoCore *core,
