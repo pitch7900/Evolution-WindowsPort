@@ -207,6 +207,23 @@ namespace EvolutionWin
                 winrt::to_string(query).c_str(), max_count, &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Recherche les messages avec une portée spécifique (dossier courant, sous-dossiers, compte courant, tous les comptes).
+         * Paramètres :
+         *   account   : identifiant du compte
+         *   folder    : chemin complet du dossier
+         *   scope     : portée ("folder", "subfolders", "account", "all")
+         *   query     : texte recherché
+         *   max_count : nombre maximal de résultats (0 pour tous)
+         *   handler   : rappel sur le thread de l'interface */
+        void SearchMessagesScoped(winrt::hstring const& account, winrt::hstring const& folder,
+                                  winrt::hstring const& scope, winrt::hstring const& query,
+                                  unsigned max_count, CoreHandler handler)
+        {
+            evo_core_search_messages_scoped(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                winrt::to_string(scope).c_str(), winrt::to_string(query).c_str(), max_count,
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Enregistre une pièce jointe d'un message dans un fichier local.
          * Paramètres :
          *   account          : identifiant du compte

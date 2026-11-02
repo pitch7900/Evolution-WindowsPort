@@ -3,6 +3,7 @@
 #include "MainWindow.g.h"
 #include "CoreBridge.h"
 #include "ComposeWindow.xaml.h"
+#include "MessageWindow.xaml.h"
 
 #include <map>
 
@@ -57,6 +58,12 @@ namespace winrt::EvolutionWin::implementation
         void OnMessageSelectionChanged(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+        void OnMessageListDoubleTapped(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::Input::DoubleTappedRoutedEventArgs const& args);
+        void OnMessageListKeyDown(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args);
         void OnNewMessageClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRefreshClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRefreshSplitClick(
@@ -87,6 +94,9 @@ namespace winrt::EvolutionWin::implementation
         void OnSearchQuerySubmitted(
             Microsoft::UI::Xaml::Controls::AutoSuggestBox const& sender,
             Microsoft::UI::Xaml::Controls::AutoSuggestBoxQuerySubmittedEventArgs const& args);
+        void OnSearchScopeChanged(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
 
         /* Séparateurs déplaçables entre dossiers, liste et volet de lecture */
         void OnSplitterPointerPressed(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
@@ -160,7 +170,7 @@ namespace winrt::EvolutionWin::implementation
         void OnTrustDomainClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
     private:
-        enum class ReplyKind { Sender, All, Forward };
+        using ReplyKind = ::EvolutionWin::ReplyKind;
 
         struct MessageState
         {
@@ -239,6 +249,23 @@ namespace winrt::EvolutionWin::implementation
         void PopulateAttachments(Windows::Data::Json::JsonArray const& attachments);
         void UpdateSecurityBanner(Windows::Data::Json::JsonObject const& security);
         fire_and_forget SaveAttachmentAsync(uint32_t index, hstring filename);
+
+        /* Fenêtre de lecture indépendante (Tâche 16) */
+        void OpenMessageInWindow(hstring const& uid);
+        bool IsDraftsFolder();
+
+        /* Portée de la recherche et localisation des messages (Tâche 20) */
+        struct MessageLocation
+        {
+            hstring account;
+            hstring folder;
+            hstring folder_name;
+            hstring account_name;
+        };
+        std::unordered_map<std::wstring, MessageLocation> m_message_locations;
+        MessageLocation GetMessageLocation(hstring const& uid);
+        hstring CurrentSearchScope();
+        void UpdateSearchPlaceholder();
 
         /* Étape 2 : Gestion des comptes, certificats TLS et authentification OAuth2 */
         fire_and_forget PromptPasswordAsync(hstring source_uid, hstring name, hstring user, bool rejected);
@@ -335,6 +362,8 @@ namespace winrt::EvolutionWin::implementation
         bool m_dialog_open{ false };
         hstring m_update_tag;	/* version plus récente disponible (vide : aucune connue) */
         hstring m_update_page;
+        /* fenêtres indépendantes de lecture ouvertes par UID */
+        std::map<std::wstring, winrt::EvolutionWin::MessageWindow> m_open_message_windows;
 
         /* Bandeau d'information (vues Courrier et Calendrier) : avis identifiés,
          * le dernier est affiché ; voir ShowBanner */

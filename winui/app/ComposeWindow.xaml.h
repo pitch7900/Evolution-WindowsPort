@@ -5,6 +5,9 @@
 
 namespace EvolutionWin
 {
+    /* Type de réponse ou transfert */
+    enum class ReplyKind { Sender, All, Forward };
+
     /* Contenu initial d'un message en cours de rédaction (nouveau, réponse, transfert) */
     struct ComposeData
     {

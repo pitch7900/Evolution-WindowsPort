@@ -1,0 +1,8 @@
+namespace EvolutionWin
+{
+    [default_interface]
+    runtimeclass MessageWindow : Microsoft.UI.Xaml.Window
+    {
+        MessageWindow();
+    }
+}

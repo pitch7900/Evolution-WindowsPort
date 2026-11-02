@@ -307,6 +307,26 @@ void		evo_core_search_messages	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Recherche des messages avec sélection de la portée (dossier courant,
+ * sous-dossiers, compte courant, ou tous les comptes).
+ * Paramètres :
+ *   core             : instance du moteur evo-core
+ *   account_uid      : identifiant du compte (pour portée folder/subfolders/account)
+ *   folder_full_name : chemin complet du dossier de base (pour portée folder/subfolders)
+ *   scope            : portée ("folder", "subfolders", "account", "all")
+ *   query            : texte recherché (mots séparés par des espaces)
+ *   max_count        : nombre maximal de messages renvoyés (0 pour tous)
+ *   func             : rappel recevant le tableau JSON des messages
+ *   user_data        : données utilisateur transmises au rappel */
+void		evo_core_search_messages_scoped	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *scope,
+						 const char *query,
+						 unsigned int max_count,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Enregistre une pièce jointe d'un message dans un fichier sur le disque.
  * Paramètres :
  *   core             : instance du moteur evo-core

@@ -1,8 +1,9 @@
 #pragma once
 
-/* Utilitaires partagés par les fichiers MainWindow.*.cpp (formatage des
- * expéditeurs, dates, listes de confiance du contenu distant…). */
+/* Utilitaires partagés par les fichiers MainWindow.*.cpp et MessageWindow
+ * (formatage des expéditeurs, dates, listes de confiance, réponses/transferts…). */
 
+#include "ComposeWindow.xaml.h"
 #include <cwctype>
 #include <string>
 #include <string_view>
@@ -85,5 +86,169 @@ namespace EvolutionWin::Helpers
             if (wcschr(L"\\/:*?\"<>|", c) || c < 32)
                 c = L'_';
         return clean.empty() ? fallback : hstring{ clean };
+    }
+
+    inline bool StartsWithNoCase(std::wstring_view text, std::wstring_view prefix)
+    {
+        return text.size() >= prefix.size() &&
+            CompareStringOrdinal(text.data(), static_cast<int>(prefix.size()),
+                prefix.data(), static_cast<int>(prefix.size()), TRUE) == CSTR_EQUAL;
+    }
+
+    /* Échappe les caractères spéciaux HTML d'une chaîne brute. */
+    inline std::wstring EscapeHtml(std::wstring_view text)
+    {
+        std::wstring out;
+        out.reserve(text.size() + 32);
+
+        for (wchar_t c : text)
+        {
+            switch (c)
+            {
+            case L'&': out += L"&amp;"; break;
+            case L'<': out += L"&lt;"; break;
+            case L'>': out += L"&gt;"; break;
+            case L'"': out += L"&quot;"; break;
+            case L'\r': break;
+            case L'\n': out += L"<br>"; break;
+            default: out += c; break;
+            }
+        }
+
+        return out;
+    }
+
+    /* Préfixe "> " devant chaque ligne */
+    inline std::wstring Quote(std::wstring_view text)
+    {
+        std::wstring quoted = L"> ";
+
+        for (auto c : text)
+        {
+            if (c == L'\r')
+                continue;
+            quoted += c;
+            if (c == L'\n')
+                quoted += L"> ";
+        }
+
+        return quoted;
+    }
+
+    /* Liste d'adresses séparées par des virgules sans celle de l'utilisateur */
+    inline std::wstring WithoutAddress(std::wstring_view addresses, std::wstring_view own_address)
+    {
+        std::wstring result;
+        size_t start = 0;
+
+        while (start <= addresses.size())
+        {
+            size_t end = addresses.find(L',', start);
+            if (end == std::wstring_view::npos)
+                end = addresses.size();
+
+            std::wstring part{ addresses.substr(start, end - start) };
+            part.erase(0, part.find_first_not_of(L' '));
+
+            std::wstring lower_part = part, lower_own{ own_address };
+            CharLowerBuffW(lower_part.data(), static_cast<DWORD>(lower_part.size()));
+            CharLowerBuffW(lower_own.data(), static_cast<DWORD>(lower_own.size()));
+
+            if (!part.empty() && (lower_own.empty() || lower_part.find(lower_own) == std::wstring::npos))
+            {
+                if (!result.empty())
+                    result += L", ";
+                result += part;
+            }
+
+            start = end + 1;
+        }
+
+        return result;
+    }
+
+    /* Construit la structure ComposeData (destinataires, objet, corps cité) à
+     * partir d'un objet JSON de message pour une réponse ou un transfert.
+     * Paramètres :
+     *   kind        : type d'action (Sender, All ou Forward)
+     *   message     : objet JSON complet du message source
+     *   account_uid : identifiant du compte d'envoi
+     *   accounts    : liste JSON des comptes configurés (pour l'adresse de l'utilisateur)
+     * Retourne : la structure ComposeData prête pour OpenCompose. */
+    inline ::EvolutionWin::ComposeData BuildReplyComposeData(
+        ::EvolutionWin::ReplyKind kind,
+        JsonObject const& message,
+        hstring const& account_uid,
+        JsonArray const& accounts)
+    {
+        hstring subject = message.GetNamedString(L"subject", L"");
+        hstring from = message.GetNamedString(L"from", L"");
+        hstring to = message.GetNamedString(L"to", L"");
+        hstring cc = message.GetNamedString(L"cc", L"");
+        hstring date = FormatDate(message.GetNamedNumber(L"date", 0));
+        hstring text = message.GetNamedString(L"text", L"");
+        hstring message_id = message.GetNamedString(L"message_id", L"");
+
+        ::EvolutionWin::ComposeData data;
+        data.account = account_uid;
+        data.reply = true;
+
+        if (kind == ::EvolutionWin::ReplyKind::Forward)
+        {
+            data.subject = StartsWithNoCase(subject, L"TR:") || StartsWithNoCase(subject, L"Fwd:") ? subject : L"TR: " + subject;
+            data.body = L"\r\r-------- Message transféré --------\rDe : " + from + L"\rDate : " + date +
+                L"\rObjet : " + subject + L"\rÀ : " + to + (cc.empty() ? hstring{} : L"\rCc : " + cc) +
+                L"\r\r" + text;
+            data.html_body = hstring{
+                L"<div><br></div><hr style=\"border:none;border-top:1px solid #ccc;\">"
+                L"<div style=\"color:#444;font-size:10pt;\">"
+                L"<b>-------- Message transféré --------</b><br>"
+                L"<b>De :</b> " + EscapeHtml(from) + L"<br>"
+                L"<b>Date :</b> " + EscapeHtml(date) + L"<br>"
+                L"<b>Objet :</b> " + EscapeHtml(subject) + L"<br>"
+                L"<b>À :</b> " + EscapeHtml(to) +
+                (cc.empty() ? std::wstring{} : L"<br><b>Cc :</b> " + EscapeHtml(cc)) +
+                L"</div><br><div>" + EscapeHtml(text) + L"</div>" };
+        }
+        else
+        {
+            hstring reply_to = message.GetNamedString(L"reply_to", L"");
+
+            data.to = reply_to.empty() ? from : reply_to;
+            data.subject = StartsWithNoCase(subject, L"Re:") ? subject : L"Re: " + subject;
+            data.in_reply_to = message_id;
+
+            hstring references = message.GetNamedString(L"references", L"");
+            data.references = references.empty() ? message_id : references + L" " + message_id;
+
+            if (kind == ::EvolutionWin::ReplyKind::All)
+            {
+                hstring own_address;
+                if (accounts)
+                {
+                    for (auto const& value : accounts)
+                    {
+                        auto account = value.GetObject();
+                        if (account.GetNamedString(L"uid") == account_uid)
+                            own_address = account.GetNamedString(L"address", L"");
+                    }
+                }
+
+                std::wstring others = std::wstring{ to } + (cc.empty() ? L"" : L", " + std::wstring{ cc });
+                data.cc = hstring{ WithoutAddress(others, own_address) };
+            }
+
+            std::wstring quoted = Quote(text);
+            for (auto& c : quoted)
+                if (c == L'\n')
+                    c = L'\r';
+
+            data.body = L"\r\rLe " + date + L", " + from + L" a écrit :\r" + hstring{ quoted };
+            data.html_body = hstring{
+                L"<div><br></div><div>Le " + EscapeHtml(date) + L", " + EscapeHtml(from) + L" a écrit :</div>"
+                L"<blockquote>" + EscapeHtml(text) + L"</blockquote>" };
+        }
+
+        return data;
     }
 }
