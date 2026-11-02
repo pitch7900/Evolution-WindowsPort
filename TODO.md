@@ -166,12 +166,14 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 ### Disposition des panneaux
 
 - [x] 🟢 **Panneaux redimensionnables** : séparateurs déplaçables entre dossiers, liste des messages et volet de lecture ; tailles mémorisées entre deux sessions
+  - [ ] 🟢 **Visibilité et lisibilité des séparateurs (`PaneSplitter`)** : rendre les séparateurs plus visibles et repérables (actuellement un simple trait discret de 1 px) avec un contraste renforcé au repos, une couleur d'accentuation ou un état visuel accentué au survol / glissement pour faciliter la manipulation à la souris
 - [ ] 🟡 **Position du volet de lecture** (menu *Affichage › Volet de lecture*), en Mail comme en Calendrier : <a id="demo-volet-lecture"></a> — *fait en Mail ; le Calendrier n'a pas encore de volet de lecture (§12)*
   - [x] 🟢 À droite
   - [x] 🟢 En bas — *hauteur liste / lecture fixe, pas encore réglable à la souris*
   - [ ] 🟢 Désactivé (*grisé dans le menu en attendant la fenêtre de lecture indépendante*) : ouverture des messages dans la fenêtre de lecture indépendante (§6) et des événements dans leur fenêtre
   - [x] 🟢 Choix mémorisé dans les préférences
 - [ ] 🟢 **Volet des dossiers** : normal / réduit / désactivé, en Mail comme en Calendrier (en Calendrier, le mode réduit garde le mini-calendrier)
+  - [ ] 🟢 **Décalage des compteurs de messages par rapport à la barre de défilement** : ajouter une marge / espacement à droite des compteurs de non-lus dans l'arborescence (`TreeViewItem` de `FolderTree`) afin d'éviter tout chevauchement avec la barre de défilement verticale (`ScrollBar`) lors du défilement
 - [ ] 🟢 **Espacement plus étroit** (mode compact) des listes, en Mail comme en Calendrier
 - Barre des tâches à droite (To-Do bar) : cf. « Barre latérale des tâches », §16
 
@@ -517,6 +519,7 @@ Trois notions distinctes, comme dans Outlook : le **suivi** (drapeau avec libell
   - [ ] 🟡 **Ordre personnalisé** par glisser-déposer (ou *Monter* / *Descendre* dans le menu contextuel), mémorisé par compte, sans modifier les dossiers sur le serveur
   - [ ] 🟢 Choix du mode de tri par compte : dossiers spéciaux d'abord (défaut) / alphabétique (*Afficher tous les dossiers de A à Z*) / personnalisé ; *Rétablir l'ordre par défaut*
   - [ ] 🟢 Ordre des **comptes** eux-mêmes dans le volet des dossiers (compte par défaut en premier, puis glisser-déposer)
+  - Compteurs de messages non lus et barre de défilement (décalage à gauche) : cf. §2
 - [ ] 🟠 **Nettoyer le dossier** (et sous-dossiers) des messages redondants — même logique que §7
 - [ ] **Récupérer les éléments supprimés** :
   - [ ] 🟡 IMAP : messages marqués supprimés non purgés
