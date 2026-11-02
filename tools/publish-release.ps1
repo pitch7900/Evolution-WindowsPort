@@ -1,4 +1,4 @@
-﻿<#
+<#
   Publie une version d'EvolutionWin dans les Releases GitHub. Lancé par
   publish-release.bat, après build-msi.bat.
 
@@ -143,7 +143,11 @@ if ($LASTEXITCODE -ne 0) { throw "Envoi de l'étiquette $Tag impossible" }
 # --- 3. empreinte ---------------------------------------------------------------
 
 $MsiName = Split-Path $Msi -Leaf
-$Hash = (Get-FileHash $Msi -Algorithm SHA256).Hash.ToLowerInvariant()
+$Sha256 = [System.Security.Cryptography.SHA256]::Create()
+$Stream = [System.IO.File]::OpenRead($Msi)
+$HashBytes = $Sha256.ComputeHash($Stream)
+$Stream.Close()
+$Hash = [System.BitConverter]::ToString($HashBytes).Replace('-', '').ToLowerInvariant()
 $HashFile = "$Msi.sha256"
 [IO.File]::WriteAllText($HashFile, "$Hash *$MsiName`n", (New-Object Text.UTF8Encoding $false))
 Write-Host "SHA-256      : $Hash"
