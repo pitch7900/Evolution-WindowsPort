@@ -419,4 +419,98 @@ namespace EvolutionWin::Helpers
         HINSTANCE res = ShellExecuteW(nullptr, L"open", filename.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
         return reinterpret_cast<intptr_t>(res) > 32;
     }
+
+    /**
+     * @brief Extrait et nettoie le texte d'un courriel pour la lecture vocale (SpeechSynthesis).
+     * @param from Nom ou adresse de l'expéditeur.
+     * @param subject Objet du message.
+     * @param text Corps en texte brut si disponible.
+     * @param html Corps HTML si disponible (servant de repli si le texte brut est absent).
+     * @return Texte fluide débarrassé de balises et prêt pour la synthèse vocale.
+     */
+    inline std::wstring ExtractPlainTextForSpeech(
+        std::wstring const& from,
+        std::wstring const& subject,
+        std::wstring const& text,
+        std::wstring const& html)
+    {
+        std::wstring speech;
+        if (!from.empty())
+        {
+            speech += L"Message de " + std::wstring{ SenderName(hstring{ from }) } + L".\n";
+        }
+        if (!subject.empty())
+        {
+            speech += L"Objet : " + subject + L".\n\n";
+        }
+
+        std::wstring body_clean;
+        if (!text.empty())
+        {
+            body_clean = text;
+        }
+        else if (!html.empty())
+        {
+            bool in_tag = false;
+            for (size_t i = 0; i < html.size(); ++i)
+            {
+                wchar_t c = html[i];
+                if (c == L'<')
+                {
+                    in_tag = true;
+                    if (i + 3 <= html.size() && (_wcsnicmp(&html[i], L"<br", 3) == 0 || _wcsnicmp(&html[i], L"</p", 3) == 0 || (i + 5 <= html.size() && _wcsnicmp(&html[i], L"</div", 5) == 0)))
+                    {
+                        body_clean += L'\n';
+                    }
+                }
+                else if (c == L'>')
+                {
+                    in_tag = false;
+                }
+                else if (!in_tag)
+                {
+                    body_clean += c;
+                }
+            }
+        }
+
+        auto replace_all = [](std::wstring& str, const std::wstring& from_str, const std::wstring& to_str) {
+            size_t start_pos = 0;
+            while ((start_pos = str.find(from_str, start_pos)) != std::wstring::npos) {
+                str.replace(start_pos, from_str.length(), to_str);
+                start_pos += to_str.length();
+            }
+        };
+        replace_all(body_clean, L"&nbsp;", L" ");
+        replace_all(body_clean, L"&amp;", L"&");
+        replace_all(body_clean, L"&lt;", L"<");
+        replace_all(body_clean, L"&gt;", L">");
+        replace_all(body_clean, L"&quot;", L"\"");
+        replace_all(body_clean, L"&#39;", L"'");
+
+        speech += body_clean;
+        return speech;
+    }
+
+    /**
+     * @brief Extrait le texte d'un message pour la synthèse vocale depuis son objet JSON.
+     * @param message Objet JSON représentant le message.
+     * @param fallback_html Chaîne HTML alternative en cas d'absence dans l'objet JSON.
+     * @return Texte prêt pour la lecture vocale.
+     */
+    inline std::wstring ExtractPlainTextForSpeech(
+        Windows::Data::Json::JsonObject const& message,
+        winrt::hstring const& fallback_html = L"")
+    {
+        if (!message)
+            return {};
+        std::wstring from{ message.GetNamedString(L"from", L"") };
+        std::wstring subject{ message.GetNamedString(L"subject", L"") };
+        std::wstring text{ message.GetNamedString(L"text", L"") };
+        std::wstring html{ message.GetNamedString(L"html", L"") };
+        if (html.empty() && !fallback_html.empty())
+            html = std::wstring{ fallback_html };
+
+        return ExtractPlainTextForSpeech(from, subject, text, html);
+    }
 }

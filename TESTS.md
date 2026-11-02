@@ -48,6 +48,7 @@ Valide les fonctions pures issues de `MainWindow.Helpers.h` :
 - **Comparaison sémantique de versions (`SemVer`)** : garantit une comparaison numérique stricte (`x.y.z`) pour le mécanisme de recherche de mise à jour GitHub, évitant le piège textuel où `"0.9.10"` serait considéré inférieur à `"0.9.9"`.
 - **Détection lexicale de pièce jointe manquante (`HasAttachmentKeywords`)** : analyse multilingue (français, anglais) et insensible à la casse des mentions explicites de pièces jointes ("pièce jointe", "ci-joint", "en pj", "attachment", etc.) pour alerter l'utilisateur avant l'envoi.
 - **Génération HTML autonome pour navigateur (`BuildStandaloneHtmlMessage`)** : construction d'un document complet (en-têtes RFC, métadonnées, corps HTML ou texte brut échappé dans `<pre>`) pour l'affichage dans le navigateur système.
+- **Extraction et nettoyage de texte pour synthèse vocale (`ExtractPlainTextForSpeech`)** : extraction ordonnée (expéditeur, objet, corps), filtrage des balises HTML et décodage des entités courantes pour une lecture vocale fluide.
 
 ### Suite 2 : Contrats d'interface et robustesse `evo-core` (`test_evo_core_contracts.c`)
 Vérifie la robustesse du moteur C et ses échanges avec l'interface :

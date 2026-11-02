@@ -627,6 +627,7 @@ namespace winrt::EvolutionWin::implementation
         UpdateMessageItemVisual(item, seen, flagged);
         UpdateActionButtons(uid);
 
+        StopSpeech();
         ScheduleMarkAsRead(uid);
 
         /* Si le volet de lecture est désactivé, conserver la sélection et les boutons sans charger le WebView2 */

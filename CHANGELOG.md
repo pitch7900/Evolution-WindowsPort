@@ -22,6 +22,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Lecture à voix haute du message (`Windows.Media.SpeechSynthesis`) (Quickwin §3 / §18)** :
+  - **Synthèse vocale native Windows** : intégration de l'API moderne `Windows.Media.SpeechSynthesis` et `Windows.Media.Playback.MediaPlayer` pour lire le contenu des courriels à voix haute avec les voix système installées sous Windows 11.
+  - **Commandes dédiées** : bouton « Lire à voix haute » avec glyphe officiel Fluent (`\xEC92`) dans la barre d'outils du volet de lecture principal et de la fenêtre indépendante (`MessageWindow`), basculant dynamiquement vers un bouton d'arrêt/pause (`\xE71A`) pendant l'écoute.
+  - **Extraction et nettoyage de contenu** : utilitaire `ExtractPlainTextForSpeech` extrayant l'en-tête (expéditeur, objet) et nettoyant les balises HTML et entités encodées pour une élocution naturelle et fluide.
+  - **Tests unitaires de validation** : tests unitaires d'extraction de texte et de nettoyage HTML ajoutés à `tests/unit/test_helpers.cpp` (26/26 tests réussis).
+
 - **Intégration Windows 11 : Progression et badge sur la barre des tâches (`ITaskbarList3`) (Quickwin §3 / §11)** :
   - **Jauges de progression dynamiques** : affichage de la progression sur l'icône de la barre des tâches lors des synchronisations de boîte ou opérations d'arrière-plan (vert pour déterminé/indéterminé, rouge temporaire en cas d'erreur réseau ou d'envoi).
   - **Badge de courriels non lus (overlay icon)** : génération dynamique d'une icône de superposition 16x16 représentant une pastille bleue Fluent avec le nombre exact de messages non lus (ou `99+`), mis à jour instantanément avec le badge du volet de navigation.

@@ -54,7 +54,7 @@ Ces chantiers ne dépendent pas de refontes architecturales complexes et apporte
   - Jauge de progression verte lors des synchronisations / relèves de boîte.
   - Jauge rouge en cas d'erreur de connexion ou d'échec d'envoi.
   - Badge indiquant le nombre de messages non lus.
-- [ ] **Lecture à voix haute du message**
+- [x] **Lecture à voix haute du message**
   - Utilisation de l'API native `Windows.Media.SpeechSynthesis`.
   - Bouton dédié dans la barre d'outils du volet de lecture et de la fenêtre indépendante.
 

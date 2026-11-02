@@ -35,6 +35,9 @@
 #include <winrt/Microsoft.UI.Xaml.Shapes.h>
 #include <winrt/Microsoft.Web.WebView2.Core.h>
 #include <winrt/Windows.Storage.Pickers.h>
+#include <winrt/Windows.Media.SpeechSynthesis.h>
+#include <winrt/Windows.Media.Playback.h>
+#include <winrt/Windows.Media.Core.h>
 #include <winrt/Microsoft.Windows.AppNotifications.h>
 #include <winrt/Microsoft.Windows.AppNotifications.Builder.h>
 

@@ -471,6 +471,7 @@ namespace winrt::EvolutionWin::implementation
     /* Vide le volet de lecture lorsqu'aucun message n'est sélectionné. */
     void MainWindow::ClearReader()
     {
+        StopSpeech();
         ++m_message_request;
         m_current_message = nullptr;
         m_current_message_uid = L"";

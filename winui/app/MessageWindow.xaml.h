@@ -51,6 +51,8 @@ namespace winrt::EvolutionWin::implementation
         void OnDeleteClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnPrintClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnOpenInBrowserClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        fire_and_forget OnReadAloudClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void StopSpeech();
 
         /* Gestion du contenu externe distant */
         void OnAllowRemoteForMessageClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -104,6 +106,11 @@ namespace winrt::EvolutionWin::implementation
         bool m_reader_remote_allowed{ false };
         uint32_t m_reader_blocked_count{ 0 };
         uint64_t m_message_request{ 0 };
+
+        /* Synthèse vocale Windows (Lecture à voix haute) */
+        Windows::Media::SpeechSynthesis::SpeechSynthesizer m_speech_synth{ nullptr };
+        Windows::Media::Playback::MediaPlayer m_speech_player{ nullptr };
+        bool m_is_speaking{ false };
     };
 }
 

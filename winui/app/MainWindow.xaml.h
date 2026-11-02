@@ -82,6 +82,8 @@ namespace winrt::EvolutionWin::implementation
         void OnQuickFilterToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnSaveMessageClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnOpenInBrowserClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        fire_and_forget OnReadAloudClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void StopSpeech();
         void OnRefreshAllClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRefreshFolderClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRefreshAccelerator(
@@ -640,6 +642,11 @@ namespace winrt::EvolutionWin::implementation
         bool m_settings_initialized{ false };
         bool m_updating_settings_view{ false };
         winrt::hstring m_current_settings_category{ L"accounts" };
+
+        /* Synthèse vocale Windows (Lecture à voix haute) */
+        Windows::Media::SpeechSynthesis::SpeechSynthesizer m_speech_synth{ nullptr };
+        Windows::Media::Playback::MediaPlayer m_speech_player{ nullptr };
+        bool m_is_speaking{ false };
     };
 }
 
