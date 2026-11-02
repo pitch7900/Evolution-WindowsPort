@@ -262,6 +262,18 @@ static void test_settings_mail_read_and_security_options(void)
 
         /* Badge non-lus sur la barre des taches : par defaut true */
         ASSERT_EQ_INT(1, mgr.GetBoolean("notifications.taskbar-badge", true));
+
+        /* Volet des dossiers (normal / minimized / off) : par defaut 'normal' */
+        std::string pane_default = mgr.GetString("layout.folder-pane", "normal");
+        ASSERT_EQ_STR("normal", pane_default.c_str());
+
+        mgr.SetString("layout.folder-pane", "minimized");
+        std::string pane_min = mgr.GetString("layout.folder-pane", "normal");
+        ASSERT_EQ_STR("minimized", pane_min.c_str());
+
+        mgr.SetString("layout.folder-pane", "off");
+        std::string pane_off = mgr.GetString("layout.folder-pane", "normal");
+        ASSERT_EQ_STR("off", pane_off.c_str());
     }
     TEST_CASE_END();
 }

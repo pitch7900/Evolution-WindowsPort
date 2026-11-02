@@ -178,7 +178,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] 🟢 En bas — _hauteur liste / lecture fixe, pas encore réglable à la souris_
   - [x] 🟢 **Désactivé** (menu _Affichage › Volet de lecture_) : la liste de messages occupe toute la largeur disponible, mise à jour des boutons d'actions et ouverture des messages dans une fenêtre indépendante (MessageWindow) au double-clic ou avec la touche Entrée
   - [x] 🟢 Choix mémorisé dans les préférences
-- [ ] 🟢 **Volet des dossiers** : normal / réduit / désactivé, en Mail comme en Calendrier (en Calendrier, le mode réduit garde le mini-calendrier)
+- [x] 🟢 **Volet des dossiers** : normal / réduit / désactivé, en Mail comme en Calendrier (en Calendrier, le mode réduit garde le mini-calendrier)
   - [x] 🟢 **Décalage des compteurs de messages par rapport à la barre de défilement** : marge de 10 px à droite des badges de non-lus dans l'arborescence (`TreeViewItem` de `FolderTree`) afin d'éviter tout chevauchement avec la barre de défilement verticale (`ScrollBar`)
 - [x] 🟢 **Espacement plus étroit** (mode compact) des listes, en Mail comme en Calendrier
 - Barre des tâches à droite (To-Do bar) : cf. « Barre latérale des tâches », §16

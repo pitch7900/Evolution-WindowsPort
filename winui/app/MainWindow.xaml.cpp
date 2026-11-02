@@ -198,7 +198,7 @@ namespace winrt::EvolutionWin::implementation
         }
         RestorePaneWidths();
         RestoreTodoBarSettings();
-        ApplyFolderPaneVisibility(::EvolutionWin::Settings::Instance().GetBoolean(L"layout.folders-visible", true));
+        ApplyFolderPaneState(GetFolderPaneState());
         ApplyReadingPanePosition(::EvolutionWin::Settings::Instance().GetString(L"layout.reading-pane", L"right"));
         ApplyCompactDensity(::EvolutionWin::Settings::Instance().GetBoolean(L"layout.compact-density", false));
         ApplyCalendarPreferences();

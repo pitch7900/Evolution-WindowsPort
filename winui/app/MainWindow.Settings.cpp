@@ -393,6 +393,15 @@ namespace winrt::EvolutionWin::implementation
             combo.SelectedIndex(sel);
         }
 
+                hstring folder_pane = settings.GetString(L"layout.folder-pane", L"normal");
+        if (auto combo = AppearanceFolderPaneCombo())
+        {
+            int32_t sel = 0;
+            if (folder_pane == L"minimized") sel = 1;
+            else if (folder_pane == L"off") sel = 2;
+            combo.SelectedIndex(sel);
+        }
+
         if (auto sw = AppearanceCompactDensitySwitch())
             sw.IsOn(settings.GetBoolean(L"layout.compact-density", false));
 
@@ -763,7 +772,11 @@ namespace winrt::EvolutionWin::implementation
                     if (!val.empty())
                     {
                         ::EvolutionWin::Settings::Instance().SetString(key, val);
-                        if (std::wstring_view{ key }.rfind(L"calendar.", 0) == 0)
+                        if (key == L"layout.folder-pane")
+                        {
+                            ApplyFolderPaneState(val);
+                        }
+                        else if (std::wstring_view{ key }.rfind(L"calendar.", 0) == 0)
                         {
                             ApplyCalendarPreferences();
                         }

@@ -34,6 +34,7 @@ namespace winrt::EvolutionWin::implementation
         void OnRibbonDeleteFolderClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRibbonReadFilterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRibbonFolderPaneToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnFolderPaneMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
         void OnRibbonResetLayoutClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRibbonTodayClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnGoToDateClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -524,6 +525,8 @@ namespace winrt::EvolutionWin::implementation
         void ApplyReadingPanePosition(hstring const& position);
         void UpdateTitleBarPassthrough();
         EvolutionWin::FolderItem CurrentFolderItem();
+        hstring GetFolderPaneState();
+        void ApplyFolderPaneState(hstring const& state);
         void ApplyFolderPaneVisibility(bool visible);
         int64_t m_selected_day_start{ 0 };	/* jour de référence (0 : aujourd'hui) */
         hstring m_calendar_period{ L"week" };	/* "day", "week" ou "month" (calendar.period) */

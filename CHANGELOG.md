@@ -22,6 +22,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Volet des dossiers réductible en Mail et Calendrier (Quickwin §1 / §2 / TODO ligne 181)** :
+  - **Trois modes d'affichage ergonomiques** : Normal (pleine largeur dépliée mémorisée), Réduit (bande compacte de 48px pour les icônes de dossiers ou affichage exclusif du mini-calendrier) et Désactivé (volet entièrement masqué à 0px pour maximiser l'espace d'affichage).
+  - **Menu déroulant dans le ruban** : bouton `Volet des dossiers` avec options radio (Normal, Réduit, Désactivé) accessible aussi bien dans le ruban Courrier que dans le ruban Calendrier.
+  - **Option dédiée dans les paramètres** : sélecteur direct `layout.folder-pane` dans *Paramètres › Apparence* synchronisé avec l'interface.
+  - **Validation par tests unitaires** : couverture des transitions d'états dans `tests/unit/test_settings.cpp`.
+
 - **Échelle de temps du calendrier (Quickwin §4 / §12 / TODO ligne 603)** :
   - **Intervalles configurables** : sélection rapide du pas horaire dans la grille Jour / Semaine de travail / Semaine (60 minutes, 30 minutes ou 15 minutes).
   - **Commande dédiée dans le ruban Calendrier** : menu déroulant `RibbonCalendarTimeScale` avec icône d'horloge pour changer dynamiquement l'échelle d'affichage sans quitter la vue active.

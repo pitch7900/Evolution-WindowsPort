@@ -560,13 +560,13 @@
 
                         <AppBarSeparator />
 
-                        <AppBarToggleButton x:Name="RibbonFolderPaneToggle" Label="Volet des dossiers" IsChecked="True"
-
-                                            Click="OnRibbonFolderPaneToggled">
-
-                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE8A0;" /></AppBarToggleButton.Icon>
-
-                        </AppBarToggleButton>
+                        <AppBarButton x:Name="RibbonFolderPaneButton" Label="Volet des dossiers"
+                                            ToolTipService.ToolTip="Affichage du volet des dossiers (Normal, Réduit ou Désactivé)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8A0;" /></AppBarButton.Icon>
+                            <AppBarButton.Flyout>
+                                <MenuFlyout Opening="OnFolderPaneMenuOpening" />
+                            </AppBarButton.Flyout>
+                        </AppBarButton>
 
                         <AppBarButton Label="Volet de lecture">
 
@@ -736,6 +736,16 @@
                                 </MenuFlyout>
                             </AppBarButton.Flyout>
                         </AppBarButton>
+                        <AppBarButton x:Name="RibbonCalendarFolderPaneButton" Label="Volet des dossiers"
+                                            ToolTipService.ToolTip="Affichage du volet des dossiers et calendriers (Normal, Réduit ou Désactivé)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8A0;" /></AppBarButton.Icon>
+                            <AppBarButton.Flyout>
+                                <MenuFlyout Opening="OnFolderPaneMenuOpening" />
+                            </AppBarButton.Flyout>
+                        </AppBarButton>
+
+                        <AppBarSeparator />
+
                         <AppBarToggleButton x:Name="RibbonCalendarCompactDensityToggle" Label="Mode compact"
 
                                             Click="OnRibbonCompactDensityToggled"
@@ -1626,7 +1636,7 @@
 
                 <Grid.ColumnDefinitions>
 
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition x:Name="CalendarSidebarColumn" Width="Auto" />
 
                     <ColumnDefinition Width="*" />
 
@@ -1636,7 +1646,7 @@
 
                 <!-- colonne de gauche : le mini-calendrier et la liste des calendriers -->
 
-                <Grid Grid.Column="0" RowSpacing="12">
+                <Grid x:Name="CalendarSidebarPanel" Grid.Column="0" RowSpacing="12">
 
                     <Grid.RowDefinitions>
 
@@ -1654,9 +1664,9 @@
 
                          calendrier actif des nouveaux événements (MainWindow::LoadCalendarSources) -->
 
-                    <TextBlock Grid.Row="1" Text="Calendriers" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="4,4,0,0" />
+                    <TextBlock x:Name="CalendarSourcesTitle" Grid.Row="1" Text="Calendriers" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="4,4,0,0" />
 
-                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer x:Name="CalendarSourcesScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto">
 
                         <StackPanel x:Name="CalendarSourcesPanel" Spacing="2" />
 
@@ -3870,6 +3880,31 @@
                                 </Border>
 
 
+
+                                <!-- Volet des dossiers -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8A0;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Volet des dossiers" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Choisissez entre le mode normal, réduit (icônes seules / mini-calendrier) ou masqué."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="AppearanceFolderPaneCombo" Tag="layout.folder-pane"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+                                            <ComboBoxItem Content="Normal" Tag="normal" />
+                                            <ComboBoxItem Content="Réduit" Tag="minimized" />
+                                            <ComboBoxItem Content="Désactivé" Tag="off" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
 
                                 <!-- Mode compact des listes -->
 

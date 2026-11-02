@@ -66,8 +66,7 @@ Teste la persistance du fichier `settings.json` :
 - Modification et persistance des nombres, booléens et chaînes.
 - Gestion des tableaux JSON (liste des expéditeurs et domaines de confiance pour le blocage de contenu externe).
 - Résilience face aux corruptions syntaxiques d'un fichier JSON mal formé.
-- **Options de courriel et de sécurité (Quickwins)** : validation des modes de marquage comme lu (`immediate`, `delayed`, `on-selection-change`, `never`), purge de la corbeille à la sortie (`mail.empty-trash-on-exit`) et confirmations de suppression définitive.
-- **Options de courriel et de sécurité (Quickwins)** : validation des modes de marquage comme lu (`immediate`, `delayed`, `on-selection-change`, `never`), purge de la corbeille à la sortie (`mail.empty-trash-on-exit`) et confirmations de suppression définitive.
+- **Options de courriel et de sécurité (Quickwins)** : validation des modes de marquage comme lu (`immediate`, `delayed`, `on-selection-change`, `never`), purge de la corbeille à la sortie (`mail.empty-trash-on-exit`), confirmations de suppression définitive et modes du volet des dossiers (`layout.folder-pane` : `normal`, `minimized`, `off`).
 
 ### Suite 4 : Intégrité binaire et export ABI (`test_abi_exports.ps1`)
 - Extrait dynamiquement toutes les déclarations de fonctions publiques de [`winui/core/evo-core.h`](./winui/core/evo-core.h) (`evo_core_*`).

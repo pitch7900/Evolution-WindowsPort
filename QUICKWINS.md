@@ -26,7 +26,7 @@ Ces chantiers ne dépendent pas de refontes architecturales complexes et apporte
 - [x] **Mode compact des listes** (Mail et Calendrier)
   - Bascule dans le ruban ou les paramètres d'affichage.
   - Réduction de la hauteur des lignes et des marges intérieures.
-- [ ] **Volet des dossiers réductible** (Mail et Calendrier)
+- [x] **Volet des dossiers réductible** (Mail et Calendrier)
   - États : normal, réduit (icônes seules / mini-calendrier) ou masqué.
   - Libère de l'espace sur les écrans plus compacts.
 - [ ] **Ordre des comptes dans le volet des dossiers**
