@@ -97,6 +97,12 @@ namespace EvolutionWin
             evo_core_send_message(m_core, winrt::to_string(message_json).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Traite et envoie tous les messages en attente dans la Boîte d'envoi. */
+        void SendUnsentMessages()
+        {
+            evo_core_send_unsent_messages(m_core);
+        }
+
         /* Modifie un indicateur ("seen" ou "flagged") sur un message.
          * Paramètres :
          *   account : identifiant du compte

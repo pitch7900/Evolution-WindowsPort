@@ -134,6 +134,10 @@ void		evo_core_send_message		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Envoie tous les messages en attente dans la Boîte d'envoi locale
+ * ("local" / "Outbox") via leurs comptes respectifs. */
+void		evo_core_send_unsent_messages	(EvoCore *core);
+
 /* Modifie un indicateur d'un message ("seen" ou "flagged") et synchronise le
  * dossier avec le serveur.
  * Paramètres :

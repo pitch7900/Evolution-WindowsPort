@@ -1467,6 +1467,8 @@ core_submit (EvoCore *core,
 	g_thread_pool_push (core->pool, request, NULL);
 }
 
+static void core_process_outbox (EvoCore *core);
+
 static CamelStore *
 core_ref_store (EvoCore *core,
 		const gchar *account_uid,
@@ -5174,12 +5176,6 @@ core_send_message_run (EvoCore *core,
 	if (!root)
 		return NULL;
 
-	if (evo_core_get_offline (core) || (core->session && !camel_session_get_online (core->session))) {
-		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_CONNECTED,
-			"Impossible d'envoyer le message : l'application est en mode hors connexion. Reconnectez-vous via la barre d'état pour envoyer ce message.");
-		goto exit;
-	}
-
 	object = JSON_NODE_HOLDS_OBJECT (root) ? json_node_get_object (root) : NULL;
 	account_uid = object ? json_object_get_string_member_with_default (object, "account", NULL) : NULL;
 
@@ -5461,6 +5457,32 @@ core_send_message_run (EvoCore *core,
 		}
 	}
 
+	/* Si l'application est en mode hors connexion, enregistre le message
+	 * dans la Boîte d'envoi locale ("local" / "Outbox") pour envoi automatique dès le retour en ligne */
+	if (evo_core_get_offline (core) || (core->session && !camel_session_get_online (core->session))) {
+		CamelFolder *outbox = core_ref_folder (core, "local", "Outbox", error);
+		if (outbox) {
+			CamelMessageInfo *info = camel_message_info_new (NULL);
+
+			camel_medium_set_header (CAMEL_MEDIUM (message), "X-EvolutionWin-Account", account_uid);
+			if (camel_address_length (CAMEL_ADDRESS (bcc)) > 0) {
+				gchar *bcc_str = camel_address_format (CAMEL_ADDRESS (bcc));
+				camel_medium_set_header (CAMEL_MEDIUM (message), "X-EvolutionWin-Bcc", bcc_str);
+				g_free (bcc_str);
+			}
+
+			camel_message_info_set_flags (info, 0, CAMEL_MESSAGE_SEEN);
+			if (camel_folder_append_message_sync (outbox, message, info, NULL, core->cancellable, error)) {
+				camel_folder_synchronize_sync (outbox, FALSE, core->cancellable, NULL);
+				core_emit_folders_updated (core, "local");
+				json = g_strdup ("{\"status\":\"queued\",\"message\":\"Message placé dans la Boîte d'envoi\"}");
+			}
+			g_object_unref (info);
+			g_object_unref (outbox);
+		}
+		goto exit;
+	}
+
 	{
 		JsonBuilder *builder = core_event_builder ();
 
@@ -5472,6 +5494,35 @@ core_send_message_run (EvoCore *core,
 	    !camel_transport_send_to_sync (CAMEL_TRANSPORT (transport), message, CAMEL_ADDRESS (from),
 		CAMEL_ADDRESS (recipients), &sent_message_saved, core->cancellable, error)) {
 		camel_service_disconnect_sync (transport, FALSE, NULL, NULL);
+
+		/* Si l'envoi direct a échoué en raison d'une panne réseau imprévue, basculer
+		 * automatiquement le message dans la Boîte d'envoi locale pour ne pas le perdre */
+		if (error && *error && (g_error_matches (*error, G_IO_ERROR, G_IO_ERROR_NOT_CONNECTED) ||
+		    g_error_matches (*error, G_IO_ERROR, G_IO_ERROR_HOST_NOT_FOUND) ||
+		    g_error_matches (*error, G_IO_ERROR, G_IO_ERROR_NETWORK_UNREACHABLE) ||
+		    g_error_matches (*error, G_IO_ERROR, G_IO_ERROR_TIMED_OUT))) {
+			CamelFolder *outbox = core_ref_folder (core, "local", "Outbox", NULL);
+			if (outbox) {
+				CamelMessageInfo *info = camel_message_info_new (NULL);
+
+				camel_medium_set_header (CAMEL_MEDIUM (message), "X-EvolutionWin-Account", account_uid);
+				if (camel_address_length (CAMEL_ADDRESS (bcc)) > 0) {
+					gchar *bcc_str = camel_address_format (CAMEL_ADDRESS (bcc));
+					camel_medium_set_header (CAMEL_MEDIUM (message), "X-EvolutionWin-Bcc", bcc_str);
+					g_free (bcc_str);
+				}
+
+				camel_message_info_set_flags (info, 0, CAMEL_MESSAGE_SEEN);
+				if (camel_folder_append_message_sync (outbox, message, info, NULL, core->cancellable, NULL)) {
+					camel_folder_synchronize_sync (outbox, FALSE, core->cancellable, NULL);
+					core_emit_folders_updated (core, "local");
+					g_clear_error (error);
+					json = g_strdup ("{\"status\":\"queued\",\"message\":\"Serveur injoignable : message placé dans la Boîte d'envoi\"}");
+				}
+				g_object_unref (info);
+				g_object_unref (outbox);
+			}
+		}
 		goto exit;
 	}
 
@@ -5532,6 +5583,187 @@ core_send_message_run (EvoCore *core,
 
 	return json;
 }
+
+/* Parcourt la Boîte d'envoi locale ("local" / "Outbox") et transmet chaque
+ * message en attente via le serveur SMTP de son compte émetteur.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : arguments (non utilisé)
+ *   error : récepteur d'erreur éventuel
+ * Retourne : chaîne JSON indiquant le résultat de l'opération. */
+static gchar *
+core_process_outbox_run (EvoCore *core,
+			 gchar **args,
+			 GError **error)
+{
+	CamelFolder *outbox;
+	GPtrArray *uids;
+	guint ii;
+	gboolean changed = FALSE;
+
+	if (evo_core_get_offline (core) || (core->session && !camel_session_get_online (core->session)))
+		return g_strdup ("{\"status\":\"offline\"}");
+
+	outbox = core_ref_folder (core, "local", "Outbox", NULL);
+	if (!outbox)
+		return g_strdup ("{\"status\":\"no_outbox\"}");
+
+	uids = camel_folder_dup_uids (outbox);
+	if (!uids || uids->len == 0) {
+		if (uids)
+			g_ptr_array_unref (uids);
+		g_object_unref (outbox);
+		return g_strdup ("{\"status\":\"empty\"}");
+	}
+
+	core_emit_progress (core, "local", "Outbox", "Envoi des messages de la Boîte d'envoi...", 0, TRUE);
+
+	for (ii = 0; ii < uids->len; ii++) {
+		const gchar *uid = g_ptr_array_index (uids, ii);
+		CamelMimeMessage *msg;
+		const gchar *account_uid;
+		const gchar *bcc_header;
+		ESource *identity;
+		ESourceMailIdentity *identity_ext;
+		ESourceMailSubmission *submission;
+		CamelService *transport;
+		const CamelInternetAddress *from;
+		CamelInternetAddress *recipients;
+		const CamelInternetAddress *msg_to, *msg_cc;
+		gboolean sent_saved = FALSE;
+		GError *send_err = NULL;
+
+		msg = camel_folder_get_message_sync (outbox, uid, core->cancellable, NULL);
+		if (!msg)
+			continue;
+
+		account_uid = camel_medium_get_header (CAMEL_MEDIUM (msg), "X-EvolutionWin-Account");
+		if (!account_uid || !*account_uid) {
+			ESource *def = e_source_registry_ref_default_mail_account (core->registry);
+			if (def) {
+				account_uid = e_source_get_uid (def);
+				g_object_unref (def);
+			}
+		}
+
+		identity = account_uid ? core_ref_identity (core, account_uid) : NULL;
+		if (!identity || !e_source_has_extension (identity, E_SOURCE_EXTENSION_MAIL_IDENTITY) ||
+		    !e_source_has_extension (identity, E_SOURCE_EXTENSION_MAIL_SUBMISSION)) {
+			g_clear_object (&identity);
+			g_object_unref (msg);
+			continue;
+		}
+
+		identity_ext = e_source_get_extension (identity, E_SOURCE_EXTENSION_MAIL_IDENTITY);
+		submission = e_source_get_extension (identity, E_SOURCE_EXTENSION_MAIL_SUBMISSION);
+		transport = camel_session_ref_service (core->session, e_source_mail_submission_get_transport_uid (submission));
+
+		if (!CAMEL_IS_TRANSPORT (transport)) {
+			g_clear_object (&transport);
+			g_object_unref (identity);
+			g_object_unref (msg);
+			continue;
+		}
+
+		from = camel_mime_message_get_from (msg);
+		recipients = camel_internet_address_new ();
+		msg_to = camel_mime_message_get_recipients (msg, CAMEL_RECIPIENT_TYPE_TO);
+		msg_cc = camel_mime_message_get_recipients (msg, CAMEL_RECIPIENT_TYPE_CC);
+		if (msg_to)
+			camel_address_cat (CAMEL_ADDRESS (recipients), CAMEL_ADDRESS (msg_to));
+		if (msg_cc)
+			camel_address_cat (CAMEL_ADDRESS (recipients), CAMEL_ADDRESS (msg_cc));
+
+		bcc_header = camel_medium_get_header (CAMEL_MEDIUM (msg), "X-EvolutionWin-Bcc");
+		if (bcc_header && *bcc_header) {
+			CamelInternetAddress *bcc = camel_internet_address_new ();
+			camel_address_unformat (CAMEL_ADDRESS (bcc), bcc_header);
+			camel_address_cat (CAMEL_ADDRESS (recipients), CAMEL_ADDRESS (bcc));
+			g_object_unref (bcc);
+		}
+
+		/* Supprime les en-têtes techniques avant transmission réseau */
+		camel_medium_remove_header (CAMEL_MEDIUM (msg), "X-EvolutionWin-Account");
+		camel_medium_remove_header (CAMEL_MEDIUM (msg), "X-EvolutionWin-Bcc");
+
+		{
+			JsonBuilder *builder = core_event_builder ();
+			builder_add_string (builder, "subject", camel_mime_message_get_subject (msg)
+				? camel_mime_message_get_subject (msg) : "");
+			core_emit_builder (core, "sending", builder);
+		}
+
+		if (camel_service_connect_sync (transport, core->cancellable, &send_err) &&
+		    camel_transport_send_to_sync (CAMEL_TRANSPORT (transport), msg, CAMEL_ADDRESS (from),
+			CAMEL_ADDRESS (recipients), &sent_saved, core->cancellable, &send_err)) {
+
+			camel_service_disconnect_sync (transport, TRUE, NULL, NULL);
+
+			{
+				JsonBuilder *builder = core_event_builder ();
+				builder_add_string (builder, "subject", camel_mime_message_get_subject (msg)
+					? camel_mime_message_get_subject (msg) : "");
+				core_emit_builder (core, "sent", builder);
+			}
+
+			if (!sent_saved && e_source_mail_submission_get_use_sent_folder (submission)) {
+				gchar *sent_uri = e_source_mail_submission_dup_sent_folder (submission);
+				gchar *store_uid = NULL, *folder_name = NULL;
+				if (parse_folder_uri (sent_uri, &store_uid, &folder_name)) {
+					CamelFolder *sent = core_ref_folder (core, store_uid, folder_name, NULL);
+					if (sent) {
+						CamelMessageInfo *info = camel_message_info_new (NULL);
+						camel_message_info_set_flags (info, CAMEL_MESSAGE_SEEN, CAMEL_MESSAGE_SEEN);
+						camel_folder_append_message_sync (sent, msg, info, NULL, core->cancellable, NULL);
+						g_object_unref (info);
+						g_object_unref (sent);
+					}
+				}
+				g_free (store_uid);
+				g_free (folder_name);
+				g_free (sent_uri);
+			}
+
+			camel_folder_set_message_flags (outbox, uid,
+				CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_SEEN,
+				CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_SEEN);
+			changed = TRUE;
+		} else {
+			camel_service_disconnect_sync (transport, FALSE, NULL, NULL);
+			if (send_err) {
+				g_warning ("Échec de l'envoi du message en attente %s : %s", uid, send_err->message);
+				g_clear_error (&send_err);
+			}
+		}
+
+		g_object_unref (recipients);
+		g_object_unref (transport);
+		g_object_unref (identity);
+		g_object_unref (msg);
+	}
+
+	if (changed) {
+		camel_folder_expunge_sync (outbox, core->cancellable, NULL);
+		camel_folder_synchronize_sync (outbox, FALSE, core->cancellable, NULL);
+		core_emit_folders_updated (core, "local");
+	}
+
+	core_emit_progress (core, "local", "Outbox", "Boîte d'envoi traitée", 100, FALSE);
+
+	g_ptr_array_unref (uids);
+	g_object_unref (outbox);
+
+	return g_strdup ("{\"status\":\"done\"}");
+}
+
+/* Lance le traitement asynchrone de la Boîte d'envoi. */
+static void
+core_process_outbox (EvoCore *core)
+{
+	gchar *args[] = { NULL };
+	core_submit (core, core_process_outbox_run, g_strdupv (args), core_ignore_result, NULL);
+}
+
 
 /* --- gestion des comptes et des mots de passe --- */
 
@@ -10169,6 +10401,7 @@ evo_core_list_messages (EvoCore *core,
 void
 evo_core_refresh (EvoCore *core)
 {
+	core_process_outbox (core);
 	core_submit (core, core_refresh_run, g_new0 (gchar *, 1), core_ignore_result, NULL);
 }
 
@@ -10177,6 +10410,7 @@ evo_core_refresh_all (EvoCore *core)
 {
 	gchar *args[] = { (gchar *) "all", NULL };
 
+	core_process_outbox (core);
 	core_submit (core, core_refresh_run, g_strdupv (args), core_ignore_result, NULL);
 }
 
@@ -10196,9 +10430,19 @@ evo_core_set_offline (EvoCore *core,
 			offline ? "offline" : "online",
 			offline ? "Mode hors connexion activé" : "Connexion en cours...");
 
-		if (!offline)
+		if (!offline) {
+			core_process_outbox (core);
 			evo_core_refresh (core);
+		}
 	}
+}
+
+/* Envoie tous les messages placés dans la Boîte d'envoi locale. */
+void
+evo_core_send_unsent_messages (EvoCore *core)
+{
+	g_return_if_fail (core != NULL);
+	core_process_outbox (core);
 }
 
 /* Renvoie 1 si le moteur est actuellement en mode hors connexion, 0 sinon.

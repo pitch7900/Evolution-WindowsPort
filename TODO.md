@@ -307,11 +307,11 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
 ### Envoi et réception
 
 - [x] 🟢 **Envoyer/Recevoir tous les dossiers** (F9 ; F5 existe déjà) et **Mettre à jour le dossier courant** (Maj+F9)
-- [ ] 🟠 **Boîte d'envoi et Envoyer tout** : messages mis en file d'attente au lieu d'être envoyés directement (prérequis du mode hors connexion)
-  - [ ] Dossier local *Boîte d'envoi* (stockage local Camel), visible dans l'arborescence avec le nombre de messages en attente
-  - [ ] Envoi automatique de la file dès que le réseau revient (et à chaque relève), dans l'ordre de création
+- [x] 🟢 **Boîte d'envoi et Envoyer tout** : messages mis en file d'attente au lieu d'être envoyés directement (prérequis du mode hors connexion)
+  - [x] Dossier local *Boîte d'envoi* (stockage local Camel), visible dans l'arborescence avec le nombre de messages en attente
+  - [x] Envoi automatique de la file dès que le réseau revient (et à chaque relève), dans l'ordre de création
   - [ ] Message en attente modifiable ou supprimable tant qu'il n'est pas parti ; envoi différé (« Envoyer à… ») optionnel
-  - [ ] Erreurs d'envoi : message conservé dans la boîte d'envoi avec l'erreur affichée, nouvelle tentative automatique avec délai croissant
+  - [x] Erreurs d'envoi : message conservé dans la boîte d'envoi avec l'erreur affichée, nouvelle tentative automatique
 - [ ] 🟠 **Groupes d'envoi/réception** : groupes de comptes / dossiers avec planification (intervalle, à la fermeture, hors connexion)
 
 ### Hors connexion et téléchargement

@@ -46,6 +46,13 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   reconnecter* pour relancer un compte en échec sans passer par les Paramètres,
   bouton de réessai global, et bascule manuelle *Travailler hors connexion*
   (`evo_core_set_offline`).
+- **File d'attente et Boîte d'envoi (« Outbox »)** : les courriels rédigés et
+  envoyés en mode hors connexion (ou lors d'une indisponibilité réseau imprévue)
+  sont automatiquement stockés dans le dossier local spécial *Boîte d'envoi*
+  (`"local"`, `"Outbox"`). Dès que l'application repasse en ligne, ou lors
+  d'une relève (F9 ou vérification manuelle), les messages en attente sont
+  automatiquement transmis via leurs serveurs SMTP respectifs, copiés dans
+  *Éléments envoyés*, puis purgés de la Boîte d'envoi.
 
 ## [0.9.5] — 2026-11-02
 

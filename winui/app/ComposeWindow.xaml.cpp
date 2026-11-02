@@ -679,11 +679,7 @@ namespace winrt::EvolutionWin::implementation
             co_return;
         }
 
-        if (core->GetOffline())
-        {
-            ShowStatus(L"Impossible d'envoyer le message : l'application est en mode hors connexion. Reconnectez-vous via la barre d'état.", InfoBarSeverity::Error);
-            co_return;
-        }
+        bool is_offline = core->GetOffline();
 
         auto sanitize_addresses = [](hstring const& input) -> hstring
         {
@@ -705,7 +701,7 @@ namespace winrt::EvolutionWin::implementation
         hstring subject_text = SubjectBox().Text();
 
         SendButton().IsEnabled(false);
-        ShowStatus(L"Envoi en cours…", InfoBarSeverity::Informational);
+        ShowStatus(is_offline ? L"Mise en file d'attente dans la Boîte d'envoi…" : L"Envoi en cours…", InfoBarSeverity::Informational);
 
         hstring plain_body;
         hstring html_document;
