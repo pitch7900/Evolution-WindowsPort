@@ -37,7 +37,7 @@ Ces chantiers ne dépendent pas de refontes architecturales complexes et apporte
 
 ## 2. Actions et confort sur les messages
 
-- [ ] **Transférer en pièce jointe (message unique)**
+- [x] **Transférer en pièce jointe (message unique)**
   - Ajouter l'option dans le menu contextuel et le ruban d'action d'un message sélectionné.
   - Réutiliser la routine existante de génération de fichier `.eml` en pièce jointe.
 - [ ] **Aperçus sécurisés de pièces jointes simples**

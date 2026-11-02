@@ -343,7 +343,7 @@ namespace winrt::EvolutionWin::implementation
 
                 MenuFlyoutItem forward_item;
                 forward_item.Text(multi
-                    ? hstring{ L"Transférer en pièces jointes" + count_suffix }
+                    ? hstring{ L"Transférer (1er mail + " + std::to_wstring(target_uids.size() - 1) + L" en PJ)" }
                     : L"Transférer");
                 forward_item.Icon(FontIcon{});
                 forward_item.Icon().as<FontIcon>().Glyph(L"\xE72D");
@@ -353,18 +353,17 @@ namespace winrt::EvolutionWin::implementation
                 });
                 menu_items.Append(forward_item);
 
-                if (!multi)
+                MenuFlyoutItem forward_att_item;
+                forward_att_item.Text(multi
+                    ? hstring{ L"Transférer en pièces jointes" + count_suffix }
+                    : L"Transférer en pièce jointe (.eml)");
+                forward_att_item.Icon(FontIcon{});
+                forward_att_item.Icon().as<FontIcon>().Glyph(L"\xE723");
+                forward_att_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
                 {
-                    MenuFlyoutItem forward_att_item;
-                    forward_att_item.Text(L"Transférer en pièce jointe (.eml)");
-                    forward_att_item.Icon(FontIcon{});
-                    forward_att_item.Icon().as<FontIcon>().Glyph(L"\xE723");
-                    forward_att_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
-                    {
-                        ForwardMessagesAsAttachments(target_uids);
-                    });
-                    menu_items.Append(forward_att_item);
-                }
+                    ForwardMessagesAsAttachments(target_uids);
+                });
+                menu_items.Append(forward_att_item);
 
                 menu_items.Append(MenuFlyoutSeparator{});
 

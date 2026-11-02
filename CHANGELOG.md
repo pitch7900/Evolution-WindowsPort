@@ -14,6 +14,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Transférer en pièce jointe pour un message seul (Quickwin #2)** :
+  - **Action dédiée « Transférer en PJ »** : ajout de boutons dédiés avec icône trombone dans le ruban Courrier (*Accueil*), dans la barre d'outils du volet de lecture (ReaderPane) et dans la fenêtre indépendante (MessageWindow), associés au raccourci clavier Ctrl+Maj+F.
+  - **Distinction claire entre transfert dans le corps et transfert en PJ** : le bouton « Transférer » (Ctrl+F) effectue désormais un transfert classique dans le corps du texte (inline avec historique et citations TR:) pour un message unique, tandis que « Transférer en PJ » exporte le message au format standard .eml et le joint à un nouveau courriel.
+  - **Menu contextuel enrichi** : présence systématique des actions « Transférer » (dans le corps) et « Transférer en pièce jointe (.eml) » par clic droit dans la liste des messages, que ce soit pour un courriel unique ou pour une sélection multiple.
+  - **Prise en charge complète dans MessageWindow** : intégration de l'exportation EML via CoreBridge et ouverture de la fenêtre de rédaction ComposeWindow avec la pièce jointe attachée directement depuis une fenêtre de message individuelle.
 - **Option « Volet de lecture : Désactivé » (Quickwin #1)** :
   - **Désactivation complète du volet de lecture** : accessible depuis le menu *Affichage › Volet de lecture* (options *À droite*, *En bas*, *Désactivé*), avec mémorisation dans `settings.json` (`layout.reading-pane`).
   - **Extension pleine largeur de la liste de messages** : lorsque le volet est désactivé, la liste s'étend sur toute la largeur disponible (colonnes 2 à 4) pour un confort de lecture optimal des listes denses.

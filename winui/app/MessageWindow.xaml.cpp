@@ -358,6 +358,74 @@ namespace winrt::EvolutionWin::implementation
         compose.Activate();
     }
 
+    /**
+     * Transfère le message courant sous forme de pièce jointe (.eml).
+     * Exporte le courriel via l'API CoreBridge et ouvre ComposeWindow
+     * avec le fichier .eml attaché.
+     * Paramètres :
+     *   sender : bouton ayant émis le clic
+     *   args   : arguments de l'événement routé
+     */
+    void MessageWindow::OnForwardAsAttachmentClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (m_uid.empty() || m_account.empty() || m_folder.empty())
+            return;
+        auto core = m_core.lock();
+        if (!core)
+            return;
+
+        hstring first_subject;
+        if (m_current_message)
+        {
+            first_subject = m_current_message.GetNamedString(L"subject", L"");
+        }
+
+        JsonObject req;
+        req.SetNamedValue(L"account", JsonValue::CreateStringValue(m_account));
+        req.SetNamedValue(L"folder", JsonValue::CreateStringValue(m_folder));
+        JsonArray uid_array;
+        uid_array.Append(JsonValue::CreateStringValue(m_uid));
+        req.SetNamedValue(L"uids", uid_array);
+
+        hstring account = m_account;
+        ShowStatus(L"Préparation du courriel en pièce jointe…", InfoBarSeverity::Informational);
+
+        core->ExportMessagesEml(req.Stringify(),
+            [this, core, account, first_subject](hstring const& json, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                ShowStatus(L"Transfert : " + error, InfoBarSeverity::Error);
+                return;
+            }
+
+            JsonArray paths;
+            if (!JsonArray::TryParse(json, paths))
+                return;
+
+            ::EvolutionWin::ComposeData data;
+            data.account = account;
+            data.reply = true;
+            if (!first_subject.empty())
+            {
+                data.subject = StartsWithNoCase(first_subject, L"TR:") || StartsWithNoCase(first_subject, L"Fwd:")
+                    ? first_subject
+                    : L"TR: " + first_subject;
+            }
+            else
+            {
+                data.subject = L"TR: Message transféré";
+            }
+
+            for (auto const& val : paths)
+                data.attachments.push_back(val.GetString());
+
+            auto compose = make<ComposeWindow>();
+            get_self<ComposeWindow>(compose)->Setup(core, m_accounts, data);
+            compose.Activate();
+        });
+    }
+
     /* Bascule Lu / Non lu */
     void MessageWindow::OnToggleReadClick(IInspectable const&, RoutedEventArgs const&)
     {

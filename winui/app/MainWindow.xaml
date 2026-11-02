@@ -197,6 +197,12 @@
                         <AppBarButton Label="Transférer" Click="OnForwardClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE72D;" /></AppBarButton.Icon>
                         </AppBarButton>
+                        <AppBarButton Label="Transférer en PJ" Click="OnForwardAsAttachmentClick" ToolTipService.ToolTip="Transférer en tant que pièce jointe (Ctrl+Maj+F)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE723;" /></AppBarButton.Icon>
+                            <AppBarButton.KeyboardAccelerators>
+                                <KeyboardAccelerator Modifiers="Control,Shift" Key="F" />
+                            </AppBarButton.KeyboardAccelerators>
+                        </AppBarButton>
                         <AppBarSeparator />
                         <AppBarButton Label="Lu / Non lu" Click="OnToggleReadClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8C3;" /></AppBarButton.Icon>
@@ -625,6 +631,11 @@
                                 <AppBarButton.KeyboardAccelerators>
                                     <KeyboardAccelerator Modifiers="Control" Key="F" />
                                 </AppBarButton.KeyboardAccelerators>
+                            </AppBarButton>
+                            <AppBarButton Label="Transférer en PJ" Click="OnForwardAsAttachmentClick" ToolTipService.ToolTip="Transférer en tant que pièce jointe (Ctrl+Maj+F)">
+                                <AppBarButton.Icon>
+                                    <FontIcon Glyph="&#xE723;" />
+                                </AppBarButton.Icon>
                             </AppBarButton>
                             <AppBarSeparator />
                             <AppBarButton x:Name="ToggleReadButton" Label="Non lu" Click="OnToggleReadClick">

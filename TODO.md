@@ -457,7 +457,7 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
   - [ ] Indication discrète de l'état de l'autosave dans la fenêtre de rédaction (« Enregistrement… », « Brouillon enregistré à 14:32 », « Non enregistré — nouvelle tentative »)
   - [ ] Récupération après plantage : copie locale écrite à chaque autosave, brouillons non synchronisés retrouvés au redémarrage
 - [ ] 🟡 **Répondre par une réunion** (réunion pré-remplie avec les participants) — dépend de §13
-- [ ] 🟢 **Transférer en pièce jointe** pour un message seul (déjà fait en sélection multiple)
+- [x] 🟢 **Transférer en pièce jointe** pour un message seul (déjà fait en sélection multiple)
 
 ### Supprimer, archiver, déplacer
 

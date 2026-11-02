@@ -85,6 +85,26 @@ namespace winrt::EvolutionWin::implementation
         Reply(ReplyKind::Forward);
     }
 
+    /**
+     * Gestionnaire du clic sur "Transférer en pièce jointe".
+     * Exporte le ou les courriels sélectionnés en fichiers .eml
+     * et ouvre la fenêtre de composition avec ces pièces jointes attachées.
+     * Paramètres :
+     *   sender : objet ayant émis le clic
+     *   args   : arguments de l'événement routé
+     */
+    void MainWindow::OnForwardAsAttachmentClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        auto uids = SelectedMessageUids();
+        if (uids.empty() && !m_current_message_uid.empty())
+            uids.push_back(m_current_message_uid);
+
+        if (!uids.empty())
+        {
+            ForwardMessagesAsAttachments(uids);
+        }
+    }
+
     /* Construit la structure ComposeData (destinataires, objet, corps cité) à
      * partir d'un objet JSON de message pour une réponse ou un transfert simple.
      * Paramètres :
@@ -182,8 +202,8 @@ namespace winrt::EvolutionWin::implementation
         if (uids.empty() || m_account.empty() || m_folder.empty())
             return;
 
-        /* Pour le transfert, on joint le ou les mails sélectionnés en pièces jointes (.eml) */
-        if (kind == ReplyKind::Forward)
+        /* Pour un transfert avec plusieurs courriels sélectionnés, on joint tous les messages en .eml */
+        if (kind == ReplyKind::Forward && uids.size() > 1)
         {
             ForwardMessagesAsAttachments(uids);
             return;

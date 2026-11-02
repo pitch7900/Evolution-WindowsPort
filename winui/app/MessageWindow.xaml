@@ -72,6 +72,14 @@
                     <KeyboardAccelerator Modifiers="Control" Key="F" />
                 </AppBarButton.KeyboardAccelerators>
             </AppBarButton>
+            <AppBarButton x:Name="ForwardAttachmentButton" Label="Transférer en PJ" Click="OnForwardAsAttachmentClick" ToolTipService.ToolTip="Transférer en pièce jointe .eml (Ctrl+Maj+F)">
+                <AppBarButton.Icon>
+                    <FontIcon Glyph="&#xE723;" />
+                </AppBarButton.Icon>
+                <AppBarButton.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Control,Shift" Key="F" />
+                </AppBarButton.KeyboardAccelerators>
+            </AppBarButton>
             <AppBarSeparator />
             <AppBarButton x:Name="ToggleReadButton" Label="Non lu" Click="OnToggleReadClick" ToolTipService.ToolTip="Marquer comme non lu / lu (Ctrl+U)">
                 <AppBarButton.Icon>
