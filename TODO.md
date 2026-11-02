@@ -813,7 +813,7 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
   - [x] Bascule rapide depuis la barre d'état / le menu de l'icône, sans passer par les Paramètres — _ruban Affichage, barre d'accès rapide et Paramètres › Confidentialité_
   - [ ] 🟡 Activation automatique quand Windows est en mode _Ne pas déranger_ / partage d'écran détecté (optionnel)
   - [ ] S'applique aussi aux rappels de rendez-vous et de tâches (titre et lieu masqués) — _quand les rappels existeront (§2)_
-- [ ] 🟢 Son de notification (aucun / son Windows / personnalisé), badge de non-lus sur l'icône de la barre des tâches
+- [x] 🟢 Son de notification (aucun / son Windows / personnalisé), badge de non-lus sur l'icône de la barre des tâches
 - [ ] 🟢 Notifications des rappels de calendrier et de tâches (activer / désactiver, durée d'affichage)
 
 ### Général

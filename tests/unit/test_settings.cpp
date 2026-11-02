@@ -293,6 +293,14 @@ static void test_settings_mail_read_and_security_options(void)
         mgr.SetString("contacts.active", "personal-book-uid");
         std::string active_book = mgr.GetString("contacts.active", "");
         ASSERT_EQ_STR("personal-book-uid", active_book.c_str());
+
+        /* Son de notification (windows / chime / custom / none) : par defaut 'windows' */
+        std::string sound_default = mgr.GetString("notifications.sound-kind", "windows");
+        ASSERT_EQ_STR("windows", sound_default.c_str());
+
+        mgr.SetString("notifications.sound-kind", "chime");
+        std::string sound_chime = mgr.GetString("notifications.sound-kind", "windows");
+        ASSERT_EQ_STR("chime", sound_chime.c_str());
     }
     TEST_CASE_END();
 }

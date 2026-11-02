@@ -7,6 +7,8 @@
 #include <cwctype>
 #include <string>
 #include <shellapi.h>
+#include <mmsystem.h>
+#pragma comment(lib, "winmm.lib")
 #include <string_view>
 #include <vector>
 #include <filesystem>
@@ -592,5 +594,36 @@ namespace EvolutionWin::Helpers
             }
         } catch (...) {}
         return bytes_freed;
+    }
+    /**
+     * @brief Émet le signal sonore configuré pour les notifications de nouveau courrier.
+     * @param sound_kind Type de son ("windows", "chime", "custom", "none").
+     * @param custom_path Chemin d'accès au fichier .wav personnalisé si sound_kind == "custom".
+     */
+    inline void PlayNewMailSound(std::wstring_view sound_kind, std::wstring_view custom_path = {})
+    {
+        if (sound_kind == L"none")
+            return;
+
+        if (sound_kind == L"custom" && !custom_path.empty())
+        {
+            if (::GetFileAttributesW(std::wstring{ custom_path }.c_str()) != INVALID_FILE_ATTRIBUTES)
+            {
+                ::PlaySoundW(std::wstring{ custom_path }.c_str(), NULL, SND_FILENAME | SND_ASYNC);
+                return;
+            }
+        }
+
+        if (sound_kind == L"chime")
+        {
+            ::PlaySoundW(L"Notification.Default", NULL, SND_ALIAS | SND_ASYNC);
+            return;
+        }
+
+        // Par défaut : son système Windows de nouveau message
+        if (!::PlaySoundW(L"MailBeep", NULL, SND_ALIAS | SND_ASYNC))
+        {
+            ::MessageBeep(MB_ICONASTERISK);
+        }
     }
 }

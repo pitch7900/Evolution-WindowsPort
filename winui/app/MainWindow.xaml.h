@@ -271,6 +271,9 @@ namespace winrt::EvolutionWin::implementation
         winrt::fire_and_forget OnClearWebViewCacheClick(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTestNotificationSoundClick(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnResetAllSettingsClick(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::RoutedEventArgs const& args);

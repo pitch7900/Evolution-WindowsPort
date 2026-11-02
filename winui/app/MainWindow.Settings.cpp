@@ -797,6 +797,12 @@ namespace winrt::EvolutionWin::implementation
 
 
 
+        if (auto combo = NotificationsSoundKindCombo())
+        {
+            hstring sound_kind = settings.GetString(L"notifications.sound-kind", L"windows");
+            combo.SelectedIndex(sound_kind == L"chime" ? 1 : 0);
+        }
+
         if (auto sw = NotificationsPlaySoundSwitch())
 
             sw.IsOn(settings.GetBoolean(L"notifications.sound", true));
@@ -1814,6 +1820,18 @@ namespace winrt::EvolutionWin::implementation
      * @param args Arguments de clic.
 
      */
+
+        /**
+     * @brief Permet d'écouter le son de notification configuré.
+     * @param sender Contrôle bouton émetteur.
+     * @param args Arguments de clic.
+     */
+    void MainWindow::OnTestNotificationSoundClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        hstring kind = ::EvolutionWin::Settings::Instance().GetString(L"notifications.sound-kind", L"windows");
+        hstring custom_path = ::EvolutionWin::Settings::Instance().GetString(L"notifications.custom-sound-path", L"");
+        ::EvolutionWin::Helpers::PlayNewMailSound(kind, custom_path);
+    }
 
     void MainWindow::OnResetAllSettingsClick(
 

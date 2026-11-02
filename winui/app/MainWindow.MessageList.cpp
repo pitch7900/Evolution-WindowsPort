@@ -869,6 +869,14 @@ namespace winrt::EvolutionWin::implementation
         /* Ajout dans l'historique du menu déroulant de la barre d'état (notifications discrètes) */
         AddNotificationItem(title, body);
 
+        /* Émission du signal sonore configuré si activé */
+        if (::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.sound", true))
+        {
+            hstring sound_kind = ::EvolutionWin::Settings::Instance().GetString(L"notifications.sound-kind", L"windows");
+            hstring custom_path = ::EvolutionWin::Settings::Instance().GetString(L"notifications.custom-sound-path", L"");
+            ::EvolutionWin::Helpers::PlayNewMailSound(sound_kind, custom_path);
+        }
+
         /* Émission exclusive de la notification via les Toasts système Windows */
         try
         {

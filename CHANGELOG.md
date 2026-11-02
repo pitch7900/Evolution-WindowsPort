@@ -22,6 +22,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Signaux sonores de notification paramétrables (TODO ligne 816)** :
+  - **Choix du signal sonore** : sélection entre le son système Windows officiel de nouveau courrier (`MailBeep` / `PlaySoundW`), un carillon discret (`chime`) ou aucun son.
+  - **Bouton d'écoute directe** : commande « Tester » dans *Paramètres › Notifications* pour écouter immédiatement le son sélectionné.
+  - **Émission asynchrone native** : intégration dans la routine d'arrivée de nouveaux messages `ShowNewMailNotification` sans blocage de l'interface utilisateur.
+  - **Validation par tests unitaires** : persistance de `notifications.sound-kind` dans `tests/unit/test_settings.cpp`.
+
 - **Effacement réel des caches WebView2 et aperçus temporaires (TODO ligne 845)** :
   - **Purge complète des caches de rendu** : appel direct à `ClearBrowsingDataAsync` sur le profil WebView2 du lecteur de messages.
   - **Suppression des fichiers temporaires d'aperçus** : nettoyage intégral et sécurisé du répertoire `%TEMP%\EvolutionWin\Previews` via `PurgeDirectoryFiles`.
