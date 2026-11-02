@@ -393,6 +393,9 @@ namespace winrt::EvolutionWin::implementation
             combo.SelectedIndex(sel);
         }
 
+        if (auto sw = AppearanceCompactDensitySwitch())
+            sw.IsOn(settings.GetBoolean(L"layout.compact-density", false));
+
         if (auto sw = AppearanceMinimizeToTraySwitch())
             sw.IsOn(settings.GetBoolean(L"appearance.minimize-to-tray", false));
 
@@ -702,7 +705,11 @@ namespace winrt::EvolutionWin::implementation
             if (!key.empty())
             {
                 ::EvolutionWin::Settings::Instance().SetBoolean(key, toggle.IsOn());
-                if (std::wstring_view{ key }.rfind(L"calendar.", 0) == 0)
+                if (key == L"layout.compact-density")
+                {
+                    ApplyCompactDensity(toggle.IsOn());
+                }
+                else if (std::wstring_view{ key }.rfind(L"calendar.", 0) == 0)
                 {
                     ApplyCalendarPreferences();
                 }

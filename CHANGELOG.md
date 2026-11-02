@@ -14,6 +14,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Mode compact des listes (Quickwin #3)** :
+  - **Espacement plus étroit pour afficher plus d'éléments** : réduction de la hauteur minimale des lignes (ListViewItem à 30px au lieu de 44px) et des marges intérieures (Padding à 2px au lieu de 8px) dans la liste des messages (MessageList) et la liste des événements du calendrier (EventList).
+  - **Bouton à bascule dans le ruban** : ajout du bouton « Mode compact » (RibbonMailCompactDensityToggle et RibbonCalendarCompactDensityToggle) dans l'onglet *Affichage* du ruban Courrier et du ruban Calendrier.
+  - **Intégration dans les Paramètres Windows 11 Fluent** : ajout d'une carte de réglage dédiée dans *Paramètres › Apparence* avec interrupteur à bascule synchronisé en direct.
+  - **Persistance et mise à jour en direct** : mémorisation dans settings.json (layout.compact-density), application automatique au démarrage et rafraîchissement immédiat de la vue active lors du basculement.
 - **Transférer en pièce jointe pour un message seul (Quickwin #2)** :
   - **Action dédiée « Transférer en PJ »** : ajout de boutons dédiés avec icône trombone dans le ruban Courrier (*Accueil*), dans la barre d'outils du volet de lecture (ReaderPane) et dans la fenêtre indépendante (MessageWindow), associés au raccourci clavier Ctrl+Maj+F.
   - **Distinction claire entre transfert dans le corps et transfert en PJ** : le bouton « Transférer » (Ctrl+F) effectue désormais un transfert classique dans le corps du texte (inline avec historique et citations TR:) pour un message unique, tandis que « Transférer en PJ » exporte le message au format standard .eml et le joint à un nouveau courriel.

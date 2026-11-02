@@ -174,7 +174,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] 🟢 Choix mémorisé dans les préférences
 - [ ] 🟢 **Volet des dossiers** : normal / réduit / désactivé, en Mail comme en Calendrier (en Calendrier, le mode réduit garde le mini-calendrier)
   - [x] 🟢 **Décalage des compteurs de messages par rapport à la barre de défilement** : marge de 10 px à droite des badges de non-lus dans l'arborescence (`TreeViewItem` de `FolderTree`) afin d'éviter tout chevauchement avec la barre de défilement verticale (`ScrollBar`)
-- [ ] 🟢 **Espacement plus étroit** (mode compact) des listes, en Mail comme en Calendrier
+- [x] 🟢 **Espacement plus étroit** (mode compact) des listes, en Mail comme en Calendrier
 - Barre des tâches à droite (To-Do bar) : cf. « Barre latérale des tâches », §16
 
 ### Fenêtres et lecture

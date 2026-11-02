@@ -23,7 +23,7 @@ Ces chantiers ne dépendent pas de refontes architecturales complexes et apporte
   - Masquer le volet de lecture principal.
   - Ouvrir directement le message en fenêtre indépendante lors de la sélection / double-clic.
   - Mémoriser le choix dans les préférences locales.
-- [ ] **Mode compact des listes** (Mail et Calendrier)
+- [x] **Mode compact des listes** (Mail et Calendrier)
   - Bascule dans le ruban ou les paramètres d'affichage.
   - Réduction de la hauteur des lignes et des marges intérieures.
 - [ ] **Volet des dossiers réductible** (Mail et Calendrier)

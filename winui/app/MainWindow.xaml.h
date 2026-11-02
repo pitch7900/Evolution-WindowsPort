@@ -36,6 +36,8 @@ namespace winrt::EvolutionWin::implementation
         void OnRibbonResetLayoutClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRibbonTodayClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnReadingPaneMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
+        void OnRibbonCompactDensityToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void ApplyCompactDensity(bool compact);
         void OnSearchAccelerator(Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender, Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
         void OnSearchKeyDown(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args);
         void OnEventItemClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& args);
@@ -492,6 +494,7 @@ namespace winrt::EvolutionWin::implementation
         /* mode confidentiel des notifications (préférence "notifications.confidential") */
         bool m_updating_confidential{ false };
         void SyncConfidentialControls();
+        bool m_compact_density{ false };
         /* position du volet de lecture : "right" ou "bottom" (layout.reading-pane) */
         void ApplyReadingPanePosition(hstring const& position);
         void UpdateTitleBarPassthrough();

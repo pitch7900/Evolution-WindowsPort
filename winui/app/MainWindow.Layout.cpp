@@ -312,4 +312,85 @@ namespace winrt::EvolutionWin::implementation
             menu.Items().Append(entry);
         }
     }
+
+    /**
+     * Applique la densité compacte aux listes (Courrier, Calendrier).
+     * Réduit la hauteur minimale des conteneurs ListViewItem (30px au lieu de 44px)
+     * et l'espacement intérieur des éléments pour afficher davantage d'éléments.
+     * Paramètres :
+     *   compact : true pour activer le mode compact, false pour le mode normal
+     */
+    void MainWindow::ApplyCompactDensity(bool compact)
+    {
+        m_compact_density = compact;
+
+        if (auto btn = RibbonMailCompactDensityToggle())
+            btn.IsChecked(compact);
+        if (auto btn = RibbonCalendarCompactDensityToggle())
+            btn.IsChecked(compact);
+        if (auto sw = AppearanceCompactDensitySwitch())
+            sw.IsOn(compact);
+
+        // Style conteneur pour la liste des messages
+        if (auto list = MessageList())
+        {
+            auto style = Style(xaml_typename<ListViewItem>());
+            style.Setters().Append(Setter(
+                FrameworkElement::HorizontalAlignmentProperty(),
+                box_value(HorizontalAlignment::Stretch)));
+            style.Setters().Append(Setter(
+                Control::HorizontalContentAlignmentProperty(),
+                box_value(HorizontalAlignment::Stretch)));
+            style.Setters().Append(Setter(
+                FrameworkElement::MinHeightProperty(),
+                box_value(compact ? 30.0 : 44.0)));
+            style.Setters().Append(Setter(
+                Control::PaddingProperty(),
+                box_value(compact ? ThicknessHelper::FromLengths(0, 0, 0, 0) : ThicknessHelper::FromLengths(4, 2, 4, 2))));
+            list.ItemContainerStyle(style);
+        }
+
+        // Style conteneur pour la liste des événements
+        if (auto list = EventList())
+        {
+            auto style = Style(xaml_typename<ListViewItem>());
+            style.Setters().Append(Setter(
+                FrameworkElement::HorizontalAlignmentProperty(),
+                box_value(HorizontalAlignment::Stretch)));
+            style.Setters().Append(Setter(
+                Control::HorizontalContentAlignmentProperty(),
+                box_value(HorizontalAlignment::Stretch)));
+            style.Setters().Append(Setter(
+                FrameworkElement::MinHeightProperty(),
+                box_value(compact ? 28.0 : 40.0)));
+            style.Setters().Append(Setter(
+                Control::PaddingProperty(),
+                box_value(compact ? ThicknessHelper::FromLengths(0, 0, 0, 0) : ThicknessHelper::FromLengths(4, 2, 4, 2))));
+            list.ItemContainerStyle(style);
+        }
+
+        if (m_all_messages)
+        {
+            ShowMessages(m_all_messages);
+        }
+
+        if (m_calendar_period == L"list")
+        {
+            LoadEvents();
+        }
+    }
+
+    /**
+     * Gestionnaire d'activation/désactivation du mode compact depuis le ruban.
+     * Paramètres :
+     *   sender : bouton bascule déclencheur
+     *   args   : arguments d'événement
+     */
+    void MainWindow::OnRibbonCompactDensityToggled(IInspectable const& sender, RoutedEventArgs const&)
+    {
+        auto toggle = sender.try_as<AppBarToggleButton>();
+        bool compact = toggle ? toggle.IsChecked().GetBoolean() : false;
+        ::EvolutionWin::Settings::Instance().SetBoolean(L"layout.compact-density", compact);
+        ApplyCompactDensity(compact);
+    }
 }

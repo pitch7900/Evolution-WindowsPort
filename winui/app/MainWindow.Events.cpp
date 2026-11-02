@@ -245,7 +245,10 @@ namespace winrt::EvolutionWin::implementation
                 double end_t = ev.GetNamedNumber(L"end", 0);
 
                 Grid row;
-                row.Padding(ThicknessHelper::FromLengths(12, 10, 12, 10));
+                if (m_compact_density)
+                    row.Padding(ThicknessHelper::FromLengths(10, 3, 10, 3));
+                else
+                    row.Padding(ThicknessHelper::FromLengths(12, 10, 12, 10));
                 row.ColumnSpacing(12);
                 ColumnDefinition color_col;
                 color_col.Width(GridLengthHelper::Auto());

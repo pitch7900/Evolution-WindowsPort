@@ -287,6 +287,11 @@
                         <AppBarButton Label="Rétablir la disposition" Click="OnRibbonResetLayoutClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE72C;" /></AppBarButton.Icon>
                         </AppBarButton>
+                        <AppBarToggleButton x:Name="RibbonMailCompactDensityToggle" Label="Mode compact"
+                                            Click="OnRibbonCompactDensityToggled"
+                                            ToolTipService.ToolTip="Espacement plus étroit des listes pour afficher plus d'éléments">
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE8E9;" /></AppBarToggleButton.Icon>
+                        </AppBarToggleButton>
                         <AppBarSeparator />
                         <AppBarToggleButton x:Name="RibbonMailTodoBarToggle" Label="Volet des tâches"
                                             Click="OnRibbonTodoBarToggled"
@@ -349,6 +354,11 @@
                         <AppBarButton Label="Liste" Tag="list" Click="OnCalendarPeriodClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8FD;" /></AppBarButton.Icon>
                         </AppBarButton>
+                        <AppBarToggleButton x:Name="RibbonCalendarCompactDensityToggle" Label="Mode compact"
+                                            Click="OnRibbonCompactDensityToggled"
+                                            ToolTipService.ToolTip="Espacement plus étroit des listes pour afficher plus d'éléments">
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE8E9;" /></AppBarToggleButton.Icon>
+                        </AppBarToggleButton>
                         <AppBarSeparator />
                         <AppBarToggleButton x:Name="RibbonCalendarTodoBarToggle" Label="Volet des tâches"
                                             Click="OnRibbonTodoBarToggled"
@@ -1831,6 +1841,27 @@
                                             <x:String>Clair</x:String>
                                             <x:String>Sombre</x:String>
                                         </RadioButtons>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Mode compact des listes -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8E9;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Mode compact des listes" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Réduit l'espacement et la hauteur des lignes (Courrier et Calendrier) pour afficher plus d'éléments à l'écran."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="AppearanceCompactDensitySwitch" Tag="layout.compact-density"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
                                     </Grid>
                                 </Border>
 

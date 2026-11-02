@@ -135,7 +135,10 @@ namespace winrt::EvolutionWin::implementation
             m_message_states[std::wstring{ uid }] = MessageState{ seen, flagged, attachments };
 
             Grid item;
-            item.Padding(ThicknessHelper::FromLengths(8, 8, 8, 8));
+            if (m_compact_density)
+                item.Padding(ThicknessHelper::FromLengths(8, 2, 8, 2));
+            else
+                item.Padding(ThicknessHelper::FromLengths(8, 8, 8, 8));
             item.HorizontalAlignment(HorizontalAlignment::Stretch);
             /* Fond transparent explicite pour que le survol (PointerEntered/PointerExited)
              * soit détecté sur toute la surface de la ligne et pas uniquement sur le texte */
@@ -217,8 +220,8 @@ namespace winrt::EvolutionWin::implementation
             trash_icon.Glyph(L"\xE74D");
             trash_icon.FontSize(14);
             delete_button.Content(trash_icon);
-            delete_button.Width(32);
-            delete_button.Height(32);
+            delete_button.Width(m_compact_density ? 26 : 32);
+            delete_button.Height(m_compact_density ? 26 : 32);
             delete_button.Padding(ThicknessHelper::FromUniformLength(0));
             delete_button.Margin(ThicknessHelper::FromLengths(6, 0, 0, 0));
             delete_button.VerticalAlignment(VerticalAlignment::Center);
