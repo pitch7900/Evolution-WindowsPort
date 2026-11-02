@@ -35,16 +35,22 @@ using namespace ::EvolutionWin::Helpers;
 
 namespace winrt::EvolutionWin::implementation
 {
-    /* Ruban des vues Courrier et Calendrier : onglets visibles selon la vue,
-     * barre de commandes de l'onglet choisi, commandes de l'onglet Dossier
-     * activées selon le dossier affiché (dossiers spéciaux protégés). */
+    /**
+     * @brief Met à jour l'affichage et l'état du ruban selon la vue active et l'onglet sélectionné.
+     * 
+     * Affiche ou masque le ruban pour Courrier, Calendrier, Contacts et Tâches.
+     * Masque les onglets spécifiques au courrier (Envoi/réception et Dossier) dans les autres vues,
+     * et affiche la barre de commandes appropriée selon l'onglet choisi.
+     */
     void MainWindow::UpdateRibbon()
     {
         bool mail = m_view_tag == L"mail";
         bool calendar = m_view_tag == L"calendar";
+        bool contacts = m_view_tag == L"contacts";
+        bool tasks = m_view_tag == L"tasks";
 
-        Ribbon().Visibility(mail || calendar ? Visibility::Visible : Visibility::Collapsed);
-        if (!mail && !calendar)
+        Ribbon().Visibility((mail || calendar || contacts || tasks) ? Visibility::Visible : Visibility::Collapsed);
+        if (!mail && !calendar && !contacts && !tasks)
             return;
 
         RibbonSendReceiveTab().Visibility(mail ? Visibility::Visible : Visibility::Collapsed);
@@ -53,7 +59,7 @@ namespace winrt::EvolutionWin::implementation
         hstring tab = L"home";
         if (auto selected = RibbonTabs().SelectedItem())
             tab = unbox_value_or<hstring>(selected.Tag(), L"home");
-        if (calendar && (tab == L"sendreceive" || tab == L"folder"))
+        if (!mail && (tab == L"sendreceive" || tab == L"folder"))
         {
             tab = L"home";
             for (auto const& item : RibbonTabs().Items())
@@ -70,27 +76,39 @@ namespace winrt::EvolutionWin::implementation
         show(RibbonSendReceive(), mail && tab == L"sendreceive");
         show(RibbonFolder(), mail && tab == L"folder");
         show(RibbonMailView(), mail && tab == L"view");
+
         show(RibbonCalendarFile(), calendar && tab == L"file");
         show(RibbonCalendarHome(), calendar && tab == L"home");
         show(RibbonCalendarView(), calendar && tab == L"view");
 
-        /* onglet Dossier : selon le dossier affiché */
-        auto item = CurrentFolderItem();
-        JsonObject folder{ nullptr };
-        if (item)
-        {
-            if (auto folders = m_account_folders.find(std::wstring{ m_account }); folders != m_account_folders.end() && folders->second)
-                folder = FindFolderJson(folders->second, m_folder);
-        }
-        hstring type = folder ? folder.GetNamedString(L"type", L"") : hstring{};
-        bool special = !type.empty() && type != L"archive";
-        bool has_children = folder && folder.GetNamedArray(L"children", JsonArray{}).Size() > 0;
+        show(RibbonContactsFile(), contacts && tab == L"file");
+        show(RibbonContactsHome(), contacts && tab == L"home");
+        show(RibbonContactsView(), contacts && tab == L"view");
 
-        RibbonRenameFolder().IsEnabled(item && !special);
-        RibbonFolderMore().IsEnabled(item != nullptr);
-        RibbonEmptyFolder().IsEnabled(item != nullptr);
-        RibbonEmptyFolder().Label(type == L"trash" ? L"Vider la Corbeille" : type == L"junk" ? L"Vider les Indésirables" : L"Vider le dossier");
-        RibbonDeleteFolder().IsEnabled(item && !special && !has_children);
+        show(RibbonTasksFile(), tasks && tab == L"file");
+        show(RibbonTasksHome(), tasks && tab == L"home");
+        show(RibbonTasksView(), tasks && tab == L"view");
+
+        /* onglet Dossier : selon le dossier affiché (vue Courrier uniquement) */
+        if (mail)
+        {
+            auto item = CurrentFolderItem();
+            JsonObject folder{ nullptr };
+            if (item)
+            {
+                if (auto folders = m_account_folders.find(std::wstring{ m_account }); folders != m_account_folders.end() && folders->second)
+                    folder = FindFolderJson(folders->second, m_folder);
+            }
+            hstring type = folder ? folder.GetNamedString(L"type", L"") : hstring{};
+            bool special = !type.empty() && type != L"archive";
+            bool has_children = folder && folder.GetNamedArray(L"children", JsonArray{}).Size() > 0;
+
+            RibbonRenameFolder().IsEnabled(item && !special);
+            RibbonFolderMore().IsEnabled(item != nullptr);
+            RibbonEmptyFolder().IsEnabled(item != nullptr);
+            RibbonEmptyFolder().Label(type == L"trash" ? L"Vider la Corbeille" : type == L"junk" ? L"Vider les Indésirables" : L"Vider le dossier");
+            RibbonDeleteFolder().IsEnabled(item && !special && !has_children);
+        }
     }
 
     void MainWindow::OnRibbonTabChanged(SelectorBar const&, SelectorBarSelectionChangedEventArgs const&)
