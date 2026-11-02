@@ -40,7 +40,7 @@ Ces chantiers ne dépendent pas de refontes architecturales complexes et apporte
 - [x] **Transférer en pièce jointe (message unique)**
   - Ajouter l'option dans le menu contextuel et le ruban d'action d'un message sélectionné.
   - Réutiliser la routine existante de génération de fichier `.eml` en pièce jointe.
-- [ ] **Aperçus sécurisés de pièces jointes simples**
+- [x] **Aperçus sécurisés de pièces jointes simples**
   - **Images** (PNG, JPEG, GIF, BMP, WebP) : affichage direct dans le volet de lecture via `BitmapImage`.
   - **Fichiers texte, JSON, CSV, logs** : affichage direct en texte brut non interprété dans un conteneur dédié.
 - [x] **Bouton « Afficher dans le navigateur »**

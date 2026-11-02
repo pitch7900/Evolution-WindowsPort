@@ -426,16 +426,16 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
 - [x] 🟢 **Enregistrer sous** (`.eml`, fonction `evo-core` existante), **Enregistrer toutes les pièces jointes**
 - [ ] 🟡 **Impression** : aperçu et styles mémo / tableau (l'impression simple existe déjà)
 - [ ] 🟠 **Aperçu des pièces jointes** directement dans le volet de lecture (et dans la fenêtre indépendante), sans les enregistrer ni les ouvrir dans une application externe ; même fonction pour les pièces jointes des événements du calendrier (§13) et des tâches (§16)
-  - [ ] Clic sur une pièce jointe → aperçu à la place du corps du message, bouton _Retour au message_, navigation entre pièces jointes
+  - [x] Clic sur une pièce jointe → aperçu à la place du corps du message, bouton _Retour au message_, navigation entre pièces jointes
   - [ ] **Rendu sécurisé, sans exécution de code actif** :
-    - [ ] 🟢 Images (PNG, JPEG, GIF, BMP, WebP, SVG converti en image fixe) : décodage natif (`BitmapImage` / WIC), SVG sans scripts
-    - [ ] 🟢 Texte, CSV, JSON, XML, code : affichage en texte brut (jamais interprété)
+    - [x] 🟢 Images (PNG, JPEG, GIF, BMP, WebP, SVG converti en image fixe) : décodage natif (`BitmapImage` / WIC), SVG sans scripts
+    - [x] 🟢 Texte, CSV, JSON, XML, code : affichage en texte brut (jamais interprété)
     - [ ] 🟡 PDF : rendu page par page en images avec `Windows.Data.Pdf` (aucun JavaScript, formulaire, lien de lancement ni pièce jointe imbriquée exécutés), zoom et défilement
     - [ ] 🟡 HTML / EML / MSG joint : WebView2 isolé avec scripts désactivés et contenu distant bloqué (même règles que le lecteur, §6)
     - [ ] 🟠 Office (Word, Excel, PowerPoint, OpenDocument) : rendu en lecture seule **sans macros ni contenu actif** — conversion en PDF / image hors processus, ou gestionnaires d'aperçu Windows (`IPreviewHandler`) exécutés dans un processus isolé à faibles privilèges ; macros VBA, objets OLE / ActiveX, liens externes et DDE jamais exécutés
-    - [ ] 🟢 Types non pris en charge ou à risque (`.exe`, `.js`, `.vbs`, `.ps1`, `.lnk`, `.hta`, archives…) : pas d'aperçu, simple fiche (nom, type, taille) avec avertissement
-  - [ ] 🟡 Fichiers d'aperçu temporaires dans un dossier privé, supprimés à la fermeture ; taille maximale configurable pour l'aperçu
-  - [ ] 🟢 Boutons _Enregistrer_ et _Ouvrir avec l'application_ (avec avertissement si le fichier vient d'Internet : marque _Mark of the Web_ `Zone.Identifier` posée à l'enregistrement)
+    - [x] 🟢 Types non pris en charge ou à risque (`.exe`, `.js`, `.vbs`, `.ps1`, `.lnk`, `.hta`, archives…) : pas d'aperçu, simple fiche (nom, type, taille) avec avertissement
+  - [x] 🟡 Fichiers d'aperçu temporaires dans un dossier privé, supprimés à la fermeture ; taille maximale configurable pour l'aperçu
+  - [x] 🟢 Boutons _Enregistrer_ et _Ouvrir avec l'application_ (avec avertissement si le fichier vient d'Internet : marque _Mark of the Web_ `Zone.Identifier` posée à l'enregistrement)
 - [x] 🟢 **Double-clic sur un mail : ouverture dans une fenêtre indépendante** (aussi avec Entrée et _Ouvrir_ du menu contextuel) <a id="demo-fenetre-message"></a>
   - [x] Fenêtre de lecture avec en-têtes, pièces jointes, bandeau de sécurité / contenu externe et barre d'actions (Répondre, Répondre à tous, Transférer, Supprimer, Déplacer, Lu / Non lu, Imprimer)
   - [x] Navigation message précédent / suivant dans la fenêtre

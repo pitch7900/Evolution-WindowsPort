@@ -22,6 +22,14 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Aperçus sécurisés de pièces jointes simples (Quickwin §2 / §8)** :
+  - **Aperçu intégré dans le volet de lecture et la fenêtre de message** : clic direct sur le bouton de n'importe quelle pièce jointe pour basculer instantanément vers un panneau d'aperçu dédié avec bouton « Retour au message », nom du document et boutons d'action (« Enregistrer sous... », « Ouvrir »).
+  - **Images supportées** : décodage natif et sécurisé via `BitmapImage` (PNG, JPEG, GIF, BMP, WebP, ICO, TIFF) avec adaptation fluide aux dimensions de l'affichage.
+  - **Fichiers texte, code et données** : affichage en texte brut sécurisé sans aucune interprétation de code pour les fichiers texte (`.txt`, `.log`, `.csv`, `.tsv`, `.json`, `.xml`, `.ini`, `.conf`, `.md`, `.patch`, `.sql`, code source C/C++/C#/Python/JS/TS).
+  - **Protection des types exécutables à risque** : désactivation automatique de l'aperçu et présentation d'une fiche d'avertissement pour les fichiers exécutables ou non reconnus (`.exe`, `.bat`, `.ps1`, archives, etc.).
+  - **Menu contextuel enrichi** : clic droit sur chaque pièce jointe offrant le choix direct entre « Aperçu » et « Enregistrer sous... ».
+  - **Validation par tests unitaires** : suite de tests `DetectAttachmentPreviewKind` ajoutée dans `tests/unit/test_helpers.cpp` (29/29 tests validés).
+
 - **Lecture à voix haute du message (`Windows.Media.SpeechSynthesis`) (Quickwin §3 / §18)** :
   - **Synthèse vocale native Windows** : intégration de l'API moderne `Windows.Media.SpeechSynthesis` et `Windows.Media.Playback.MediaPlayer` pour lire le contenu des courriels à voix haute avec les voix système installées sous Windows 11.
   - **Commandes dédiées** : bouton « Lire à voix haute » avec glyphe officiel Fluent (`\xEC92`) dans la barre d'outils du volet de lecture principal et de la fenêtre indépendante (`MessageWindow`), basculant dynamiquement vers un bouton d'arrêt/pause (`\xE71A`) pendant l'écoute.

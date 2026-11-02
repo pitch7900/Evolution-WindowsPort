@@ -513,4 +513,48 @@ namespace EvolutionWin::Helpers
 
         return ExtractPlainTextForSpeech(from, subject, text, html);
     }
+
+    /**
+     * @brief Catégories d'aperçu pour les pièces jointes d'un message.
+     */
+    enum class AttachmentPreviewKind
+    {
+        Image,       ///< Fichier image décodable directement par BitmapImage
+        Text,        ///< Fichier texte brut, code source, CSV, JSON, logs
+        Unsupported  ///< Type non pris en charge ou exécutable à risque
+    };
+
+    /**
+     * @brief Détermine la catégorie d'aperçu sécurisé selon l'extension du nom de fichier.
+     * @param filename Nom ou chemin d'accès au fichier joint.
+     * @return Catégorie d'aperçu (Image, Text ou Unsupported).
+     */
+    inline AttachmentPreviewKind DetectAttachmentPreviewKind(std::wstring_view filename)
+    {
+        auto dot = filename.rfind(L'.');
+        if (dot == std::wstring_view::npos || dot + 1 >= filename.size())
+            return AttachmentPreviewKind::Unsupported;
+
+        std::wstring ext = ToLower(filename.substr(dot));
+
+        // Formats d'images pris en charge nativement par WinUI 3 (BitmapImage / WIC)
+        if (ext == L".png" || ext == L".jpg" || ext == L".jpeg" || ext == L".gif" ||
+            ext == L".bmp" || ext == L".webp" || ext == L".ico" || ext == L".tif" || ext == L".tiff")
+        {
+            return AttachmentPreviewKind::Image;
+        }
+
+        // Fichiers texte brut affichés sans interprétation de code
+        if (ext == L".txt" || ext == L".csv" || ext == L".tsv" || ext == L".log" ||
+            ext == L".json" || ext == L".xml" || ext == L".ini" || ext == L".cfg" ||
+            ext == L".conf" || ext == L".md" || ext == L".patch" || ext == L".diff" ||
+            ext == L".yaml" || ext == L".yml" || ext == L".sql" || ext == L".c" ||
+            ext == L".cpp" || ext == L".h" || ext == L".hpp" || ext == L".cs" ||
+            ext == L".js" || ext == L".ts" || ext == L".py")
+        {
+            return AttachmentPreviewKind::Text;
+        }
+
+        return AttachmentPreviewKind::Unsupported;
+    }
 }

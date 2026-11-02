@@ -49,6 +49,7 @@ Valide les fonctions pures issues de `MainWindow.Helpers.h` :
 - **Détection lexicale de pièce jointe manquante (`HasAttachmentKeywords`)** : analyse multilingue (français, anglais) et insensible à la casse des mentions explicites de pièces jointes ("pièce jointe", "ci-joint", "en pj", "attachment", etc.) pour alerter l'utilisateur avant l'envoi.
 - **Génération HTML autonome pour navigateur (`BuildStandaloneHtmlMessage`)** : construction d'un document complet (en-têtes RFC, métadonnées, corps HTML ou texte brut échappé dans `<pre>`) pour l'affichage dans le navigateur système.
 - **Extraction et nettoyage de texte pour synthèse vocale (`ExtractPlainTextForSpeech`)** : extraction ordonnée (expéditeur, objet, corps), filtrage des balises HTML et décodage des entités courantes pour une lecture vocale fluide.
+- **Classification d'aperçu sécurisé de pièce jointe (`DetectAttachmentPreviewKind`)** : typage strict des extensions de fichiers (images décodables WIC, fichiers texte et code brut non interprétés, types exécutables ou à risque protégés sans aperçu).
 
 ### Suite 2 : Contrats d'interface et robustesse `evo-core` (`test_evo_core_contracts.c`)
 Vérifie la robustesse du moteur C et ses échanges avec l'interface :

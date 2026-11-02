@@ -10,8 +10,6 @@
 
 #include "Settings.h"
 
-
-
 #include <microsoft.ui.xaml.window.h>
 
 #include <shobjidl.h>
@@ -30,21 +28,15 @@
 
 #include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
 
-
-
 #if __has_include("MessageWindow.g.cpp")
 
 #include "MessageWindow.g.cpp"
 
 #endif
 
-
-
 /* Fenêtre indépendante de lecture d'un message électronique avec en-têtes,
 
  * pièces jointes, bandeau de sécurité/confidentialité et barre d'actions. */
-
-
 
 using namespace winrt;
 
@@ -58,11 +50,7 @@ using namespace Windows::Data::Json;
 
 using namespace Windows::Foundation;
 
-
-
 using namespace ::EvolutionWin::Helpers;
-
-
 
 namespace
 
@@ -76,8 +64,6 @@ namespace
 
     constexpr wchar_t TrustedDomainsKey[] = L"privacy.trusted-domains";
 
-
-
     bool StartsWith(std::wstring_view text, std::wstring_view prefix)
 
     {
@@ -85,8 +71,6 @@ namespace
         return text.size() >= prefix.size() && text.compare(0, prefix.size(), prefix) == 0;
 
     }
-
-
 
     bool IsRemoteUri(std::wstring_view uri)
 
@@ -100,8 +84,6 @@ namespace
 
     }
 
-
-
     std::wstring SenderAddress(hstring const& from)
 
     {
@@ -109,8 +91,6 @@ namespace
         std::wstring_view view{ from };
 
         std::wstring_view address;
-
-
 
         auto open = view.find(L'<');
 
@@ -132,8 +112,6 @@ namespace
 
         }
 
-
-
         address = Trim(address);
 
         auto at = address.rfind(L'@');
@@ -144,13 +122,9 @@ namespace
 
             return {};
 
-
-
         return ToLower(address);
 
     }
-
-
 
     std::wstring AddressDomain(std::wstring const& address)
 
@@ -161,8 +135,6 @@ namespace
         return at == std::wstring::npos ? std::wstring{} : address.substr(at + 1);
 
     }
-
-
 
     std::vector<std::wstring> ReadTrustList(wchar_t const* key)
 
@@ -192,8 +164,6 @@ namespace
 
     }
 
-
-
     void WriteTrustList(wchar_t const* key, std::vector<std::wstring> const& list)
 
     {
@@ -208,8 +178,6 @@ namespace
 
     }
 
-
-
     std::wstring RemoteContentMode()
 
     {
@@ -219,8 +187,6 @@ namespace
         return mode == L"never" || mode == L"always" ? mode : L"trusted";
 
     }
-
-
 
     bool IsRemoteContentTrusted(hstring const& from)
 
@@ -236,23 +202,17 @@ namespace
 
             return false;
 
-
-
         auto address = SenderAddress(from);
 
         if (address.empty())
 
             return false;
 
-
-
         auto senders = ReadTrustList(TrustedSendersKey);
 
         if (std::find(senders.begin(), senders.end(), address) != senders.end())
 
             return true;
-
-
 
         auto domains = ReadTrustList(TrustedDomainsKey);
 
@@ -261,8 +221,6 @@ namespace
     }
 
 }
-
-
 
 namespace winrt::EvolutionWin::implementation
 
@@ -276,34 +234,27 @@ namespace winrt::EvolutionWin::implementation
 
         InitializeComponent();
 
-
-
         ExtendsContentIntoTitleBar(true);
 
         SetTitleBar(AppTitleBar());
 
         ::EvolutionWin::SetWindowIcon(AppWindow());
 
-
-
         RestoreWindowBounds();
 
         InitializeReaderAsync();
-
-
 
         Closed([this](auto const&, auto const&)
 
         {
 
             StopSpeech();
+
             SaveWindowBounds();
 
         });
 
     }
-
-
 
     /* Configure la fenêtre avec le pont vers le moteur, les comptes, le
 
@@ -375,8 +326,6 @@ namespace winrt::EvolutionWin::implementation
 
         m_on_moved = on_moved;
 
-
-
         /* Trouver l'index courant dans la liste pour la navigation */
 
         m_current_index = 0;
@@ -397,15 +346,11 @@ namespace winrt::EvolutionWin::implementation
 
         }
 
-
-
         UpdateNavigationButtons();
 
         LoadCurrentMessage();
 
     }
-
-
 
     /* Met à jour l'activation des boutons Précédent et Suivant */
 
@@ -419,8 +364,6 @@ namespace winrt::EvolutionWin::implementation
 
     }
 
-
-
     /* Charge et affiche le message courant via evo-core */
 
     void MessageWindow::LoadCurrentMessage()
@@ -433,14 +376,11 @@ namespace winrt::EvolutionWin::implementation
 
             return;
 
-
-
         MessageLoadingRing().IsActive(true);
+
         StopSpeech();
 
         uint64_t req = ++m_message_request;
-
-
 
         core->FetchMessage(m_account, m_folder, m_uid, [strong = get_strong(), req](hstring const& json, hstring const& error)
 
@@ -450,11 +390,7 @@ namespace winrt::EvolutionWin::implementation
 
                 return;
 
-
-
             strong->MessageLoadingRing().IsActive(false);
-
-
 
             if (!error.empty())
 
@@ -466,19 +402,13 @@ namespace winrt::EvolutionWin::implementation
 
             }
 
-
-
             JsonObject msg;
 
             if (!JsonObject::TryParse(json, msg))
 
                 return;
 
-
-
             strong->m_current_message = msg;
-
-
 
             /* Marquer automatiquement comme lu à l'ouverture si non lu */
 
@@ -508,15 +438,11 @@ namespace winrt::EvolutionWin::implementation
 
             }
 
-
-
             /* Mise à jour du bouton Lu / Non lu */
 
             strong->ToggleReadButton().Label(strong->m_seen ? L"Non lu" : L"Lu");
 
             strong->ToggleReadIcon().Glyph(strong->m_seen ? L"\xE715" : L"\xE8C3");
-
-
 
             /* Remplissage des champs d'en-tête */
 
@@ -528,13 +454,9 @@ namespace winrt::EvolutionWin::implementation
 
             strong->Title(subject);
 
-
-
             strong->FromText().Text(SenderName(msg.GetNamedString(L"from", L"")));
 
             strong->DateText().Text(FormatDate(msg.GetNamedNumber(L"date", 0)));
-
-
 
             hstring to = msg.GetNamedString(L"to", L"");
 
@@ -560,8 +482,6 @@ namespace winrt::EvolutionWin::implementation
 
             }
 
-
-
             strong->UpdateSecurityBanner(msg.GetNamedObject(L"security", JsonObject{}));
 
             strong->PopulateAttachments(msg.GetNamedArray(L"attachments", JsonArray{}));
@@ -573,8 +493,6 @@ namespace winrt::EvolutionWin::implementation
         });
 
     }
-
-
 
     /* Précédent : navigue vers le message précédent dans la liste */
 
@@ -598,8 +516,6 @@ namespace winrt::EvolutionWin::implementation
 
     }
 
-
-
     /* Suivant : navigue vers le message suivant dans la liste */
 
     void MessageWindow::OnNextClick(IInspectable const&, RoutedEventArgs const&)
@@ -622,8 +538,6 @@ namespace winrt::EvolutionWin::implementation
 
     }
 
-
-
     /* Répondre à l'expéditeur */
 
     void MessageWindow::OnReplyClick(IInspectable const&, RoutedEventArgs const&)
@@ -640,8 +554,6 @@ namespace winrt::EvolutionWin::implementation
 
             return;
 
-
-
         auto data = ::EvolutionWin::Helpers::BuildReplyComposeData(
 
             ::EvolutionWin::ReplyKind::Sender, m_current_message, m_account, m_accounts);
@@ -653,8 +565,6 @@ namespace winrt::EvolutionWin::implementation
         compose.Activate();
 
     }
-
-
 
     /* Répondre à tous */
 
@@ -672,8 +582,6 @@ namespace winrt::EvolutionWin::implementation
 
             return;
 
-
-
         auto data = ::EvolutionWin::Helpers::BuildReplyComposeData(
 
             ::EvolutionWin::ReplyKind::All, m_current_message, m_account, m_accounts);
@@ -685,8 +593,6 @@ namespace winrt::EvolutionWin::implementation
         compose.Activate();
 
     }
-
-
 
     /* Transférer */
 
@@ -704,8 +610,6 @@ namespace winrt::EvolutionWin::implementation
 
             return;
 
-
-
         auto data = ::EvolutionWin::Helpers::BuildReplyComposeData(
 
             ::EvolutionWin::ReplyKind::Forward, m_current_message, m_account, m_accounts);
@@ -717,8 +621,6 @@ namespace winrt::EvolutionWin::implementation
         compose.Activate();
 
     }
-
-
 
     /**
 
@@ -750,8 +652,6 @@ namespace winrt::EvolutionWin::implementation
 
             return;
 
-
-
         hstring first_subject;
 
         if (m_current_message)
@@ -761,8 +661,6 @@ namespace winrt::EvolutionWin::implementation
             first_subject = m_current_message.GetNamedString(L"subject", L"");
 
         }
-
-
 
         JsonObject req;
 
@@ -776,13 +674,9 @@ namespace winrt::EvolutionWin::implementation
 
         req.SetNamedValue(L"uids", uid_array);
 
-
-
         hstring account = m_account;
 
         ShowStatus(L"Préparation du courriel en pièce jointe…", InfoBarSeverity::Informational);
-
-
 
         core->ExportMessagesEml(req.Stringify(),
 
@@ -800,15 +694,11 @@ namespace winrt::EvolutionWin::implementation
 
             }
 
-
-
             JsonArray paths;
 
             if (!JsonArray::TryParse(json, paths))
 
                 return;
-
-
 
             ::EvolutionWin::ComposeData data;
 
@@ -836,13 +726,9 @@ namespace winrt::EvolutionWin::implementation
 
             }
 
-
-
             for (auto const& val : paths)
 
                 data.attachments.push_back(val.GetString());
-
-
 
             auto compose = make<ComposeWindow>();
 
@@ -853,8 +739,6 @@ namespace winrt::EvolutionWin::implementation
         });
 
     }
-
-
 
     /* Bascule Lu / Non lu */
 
@@ -868,15 +752,11 @@ namespace winrt::EvolutionWin::implementation
 
             return;
 
-
-
         m_seen = !m_seen;
 
         ToggleReadButton().Label(m_seen ? L"Non lu" : L"Lu");
 
         ToggleReadIcon().Glyph(m_seen ? L"\xE715" : L"\xE8C3");
-
-
 
         core->SetMessageFlags(m_account, m_folder, m_uid, L"seen", m_seen,
 
@@ -890,15 +770,11 @@ namespace winrt::EvolutionWin::implementation
 
         });
 
-
-
         if (m_on_seen_changed)
 
             m_on_seen_changed(m_uid, m_seen);
 
     }
-
-
 
     /* Remplit le sous-menu de déplacement avec les dossiers du compte */
 
@@ -913,8 +789,6 @@ namespace winrt::EvolutionWin::implementation
         if (it == m_account_folders.end() || !it->second)
 
             return;
-
-
 
         std::function<void(JsonArray const&, MenuFlyoutItemBase const&)> append_folders;
 
@@ -936,13 +810,9 @@ namespace winrt::EvolutionWin::implementation
 
                 auto children = f.GetNamedArray(L"children", JsonArray{});
 
-
-
                 if (full_name == m_folder)
 
                     continue;
-
-
 
                 if (children.Size() > 0)
 
@@ -1008,8 +878,6 @@ namespace winrt::EvolutionWin::implementation
 
                                 strong->m_on_moved(moved_uid, full_name);
 
-
-
                             /* Avancer au message suivant ou précédent, sinon fermer */
 
                             if (strong->m_current_index + 1 < strong->m_all_uids.size())
@@ -1028,8 +896,6 @@ namespace winrt::EvolutionWin::implementation
 
                     });
 
-
-
                     if (auto parent_sub = parent_menu.try_as<MenuFlyoutSubItem>())
 
                         parent_sub.Items().Append(menu_item);
@@ -1044,13 +910,9 @@ namespace winrt::EvolutionWin::implementation
 
         };
 
-
-
         append_folders(it->second, nullptr);
 
     }
-
-
 
     /* Supprime le message courant */
 
@@ -1063,8 +925,6 @@ namespace winrt::EvolutionWin::implementation
         if (!core || m_uid.empty())
 
             return;
-
-
 
         hstring deleted_uid = m_uid;
 
@@ -1088,8 +948,6 @@ namespace winrt::EvolutionWin::implementation
 
                 strong->m_on_deleted(deleted_uid);
 
-
-
             /* Avancer au message suivant ou précédent, sinon fermer */
 
             if (strong->m_current_index + 1 < strong->m_all_uids.size())
@@ -1107,8 +965,6 @@ namespace winrt::EvolutionWin::implementation
         });
 
     }
-
-
 
     /* Impression native du message */
 
@@ -1138,8 +994,6 @@ namespace winrt::EvolutionWin::implementation
 
     }
 
-
-
     /* Initialisation asynchrone du composant WebView2 */
 
     fire_and_forget MessageWindow::InitializeReaderAsync()
@@ -1147,8 +1001,6 @@ namespace winrt::EvolutionWin::implementation
     {
 
         auto strong = get_strong();
-
-
 
         wchar_t local_app_data[MAX_PATH];
 
@@ -1161,8 +1013,6 @@ namespace winrt::EvolutionWin::implementation
             SetEnvironmentVariableW(L"WEBVIEW2_USER_DATA_FOLDER", folder.c_str());
 
         }
-
-
 
         ReaderWebView().DefaultBackgroundColor(Microsoft::UI::Colors::White());
 
@@ -1184,19 +1034,13 @@ namespace winrt::EvolutionWin::implementation
 
         ReaderWebView().DefaultBackgroundColor(Microsoft::UI::Colors::White());
 
-
-
         auto core = ReaderWebView().CoreWebView2();
 
         if (!core)
 
             co_return;
 
-
-
         core.Profile().PreferredColorScheme(Microsoft::Web::WebView2::Core::CoreWebView2PreferredColorScheme::Light);
-
-
 
         auto settings = core.Settings();
 
@@ -1205,8 +1049,6 @@ namespace winrt::EvolutionWin::implementation
         settings.AreDevToolsEnabled(false);
 
         settings.IsStatusBarEnabled(true);
-
-
 
         core.AddWebResourceRequestedFilter(L"*", Microsoft::Web::WebView2::Core::CoreWebView2WebResourceContext::All);
 
@@ -1217,8 +1059,6 @@ namespace winrt::EvolutionWin::implementation
             OnReaderResourceRequested(sender, args);
 
         });
-
-
 
         core.NavigationStarting([this](auto const&, Microsoft::Web::WebView2::Core::CoreWebView2NavigationStartingEventArgs const& args)
 
@@ -1238,8 +1078,6 @@ namespace winrt::EvolutionWin::implementation
 
             }
 
-
-
             if (args.IsUserInitiated())
 
             {
@@ -1258,15 +1096,11 @@ namespace winrt::EvolutionWin::implementation
 
             }
 
-
-
             if (uri != L"about:blank")
 
                 args.Cancel(true);
 
         });
-
-
 
         core.ContentLoading([this](auto const&, Microsoft::Web::WebView2::Core::CoreWebView2ContentLoadingEventArgs const& args)
 
@@ -1275,8 +1109,6 @@ namespace winrt::EvolutionWin::implementation
             if (!m_reader_navigation_known || args.NavigationId() != m_reader_navigation_id)
 
                 return;
-
-
 
             m_reader_navigation_known = false;
 
@@ -1288,8 +1120,6 @@ namespace winrt::EvolutionWin::implementation
 
         });
 
-
-
         core.NewWindowRequested([](auto const&, Microsoft::Web::WebView2::Core::CoreWebView2NewWindowRequestedEventArgs const& args)
 
         {
@@ -1300,8 +1130,6 @@ namespace winrt::EvolutionWin::implementation
 
         });
 
-
-
         m_reader_ready = true;
 
         if (!m_reader_uri.empty())
@@ -1309,8 +1137,6 @@ namespace winrt::EvolutionWin::implementation
             core.Navigate(m_reader_uri);
 
     }
-
-
 
     void MessageWindow::ShowInReader(hstring const& html, bool allow_remote)
 
@@ -1336,13 +1162,9 @@ namespace winrt::EvolutionWin::implementation
 
         RemoteContentBar().IsOpen(false);
 
-
-
         if (!m_reader_ready)
 
             return;
-
-
 
         try
 
@@ -1362,8 +1184,6 @@ namespace winrt::EvolutionWin::implementation
 
     }
 
-
-
     void MessageWindow::ShowCurrentMessageInReader(bool force_remote)
 
     {
@@ -1372,15 +1192,11 @@ namespace winrt::EvolutionWin::implementation
 
             return;
 
-
-
         bool allow = force_remote || IsRemoteContentTrusted(m_current_message.GetNamedString(L"from", L""));
 
         ShowInReader(m_current_message.GetNamedString(L"html", L""), allow);
 
     }
-
-
 
     void MessageWindow::OnReaderResourceRequested(
 
@@ -1393,8 +1209,6 @@ namespace winrt::EvolutionWin::implementation
         hstring request_uri = args.Request().Uri();
 
         std::wstring_view uri{ request_uri };
-
-
 
         if (StartsWith(ToLower(uri.substr(0, ReaderOrigin.size())), ReaderOrigin))
 
@@ -1412,23 +1226,15 @@ namespace winrt::EvolutionWin::implementation
 
         }
 
-
-
         if (!IsRemoteUri(uri))
 
             return;
-
-
 
         if (m_reader_document_active && m_reader_remote_allowed)
 
             return;
 
-
-
         args.Response(sender.Environment().CreateWebResourceResponse(nullptr, 403, L"Blocked", L""));
-
-
 
         if (m_reader_document_active)
 
@@ -1441,8 +1247,6 @@ namespace winrt::EvolutionWin::implementation
         }
 
     }
-
-
 
     fire_and_forget MessageWindow::ServeReaderDocumentAsync(
 
@@ -1457,8 +1261,6 @@ namespace winrt::EvolutionWin::implementation
         auto deferral = args.GetDeferral();
 
         auto strong = get_strong();
-
-
 
         try
 
@@ -1482,8 +1284,6 @@ namespace winrt::EvolutionWin::implementation
 
             stream.Seek(0);
 
-
-
             auto response = sender.Environment().CreateWebResourceResponse(
 
                 stream, 200, L"OK", L"Content-Type: text/html; charset=utf-8\r\n");
@@ -1500,13 +1300,9 @@ namespace winrt::EvolutionWin::implementation
 
         }
 
-
-
         deferral.Complete();
 
     }
-
-
 
     void MessageWindow::UpdateRemoteContentBanner()
 
@@ -1526,8 +1322,6 @@ namespace winrt::EvolutionWin::implementation
 
     }
 
-
-
     void MessageWindow::OnAllowRemoteForMessageClick(IInspectable const&, RoutedEventArgs const&)
 
     {
@@ -1535,8 +1329,6 @@ namespace winrt::EvolutionWin::implementation
         ShowCurrentMessageInReader(true);
 
     }
-
-
 
     void MessageWindow::OnTrustSenderClick(IInspectable const&, RoutedEventArgs const&)
 
@@ -1569,8 +1361,6 @@ namespace winrt::EvolutionWin::implementation
         ShowCurrentMessageInReader(true);
 
     }
-
-
 
     void MessageWindow::OnTrustDomainClick(IInspectable const&, RoutedEventArgs const&)
 
@@ -1606,8 +1396,6 @@ namespace winrt::EvolutionWin::implementation
 
     }
 
-
-
     void MessageWindow::UpdateSecurityBanner(JsonObject const& sec)
 
     {
@@ -1622,8 +1410,6 @@ namespace winrt::EvolutionWin::implementation
 
         }
 
-
-
         bool encrypted = sec.GetNamedBoolean(L"encrypted", false);
 
         bool signed_msg = sec.GetNamedBoolean(L"signed", false);
@@ -1634,8 +1420,6 @@ namespace winrt::EvolutionWin::implementation
 
         hstring protocol = sec.GetNamedString(L"protocol", L"");
 
-
-
         if (!encrypted && !signed_msg)
 
         {
@@ -1645,8 +1429,6 @@ namespace winrt::EvolutionWin::implementation
             return;
 
         }
-
-
 
         std::wstring msg;
 
@@ -1668,8 +1450,6 @@ namespace winrt::EvolutionWin::implementation
 
         }
 
-
-
         SecurityBanner().Severity(valid ? InfoBarSeverity::Success : (signed_msg ? InfoBarSeverity::Warning : InfoBarSeverity::Informational));
 
         SecurityBanner().Title(encrypted ? L"Message chiffré" : L"Message signé");
@@ -1680,15 +1460,11 @@ namespace winrt::EvolutionWin::implementation
 
     }
 
-
-
     void MessageWindow::PopulateAttachments(JsonArray const& attachments)
 
     {
 
         AttachmentList().Children().Clear();
-
-
 
         if (!attachments || attachments.Size() == 0)
 
@@ -1699,8 +1475,6 @@ namespace winrt::EvolutionWin::implementation
             return;
 
         }
-
-
 
         for (auto const& item : attachments)
 
@@ -1713,8 +1487,6 @@ namespace winrt::EvolutionWin::implementation
             hstring filename = att.GetNamedString(L"filename", L"piece-jointe");
 
             int64_t size = static_cast<int64_t>(att.GetNamedNumber(L"size", 0));
-
-
 
             hstring size_label;
 
@@ -1730,8 +1502,6 @@ namespace winrt::EvolutionWin::implementation
 
                 size_label = L" (" + to_hstring(size) + L" o)";
 
-
-
             Button button;
 
             StackPanel content;
@@ -1739,8 +1509,6 @@ namespace winrt::EvolutionWin::implementation
             content.Orientation(Orientation::Horizontal);
 
             content.Spacing(6);
-
-
 
             FontIcon icon;
 
@@ -1750,29 +1518,69 @@ namespace winrt::EvolutionWin::implementation
 
             content.Children().Append(icon);
 
-
-
             TextBlock label;
 
             label.Text(filename + size_label);
 
             content.Children().Append(label);
 
-
-
             button.Content(content);
 
-            ToolTipService::SetToolTip(button, box_value(L"Enregistrer « " + filename + L" »"));
+            ToolTipService::SetToolTip(button, box_value(L"Aperçu de « " + filename + L" » (clic pour afficher, clic droit pour enregistrer)"));
 
 
+
+            // Clic direct : aperçu sécurisé
 
             button.Click([this, index, filename](IInspectable const&, RoutedEventArgs const&)
 
             {
 
+                PreviewAttachmentAsync(index, filename);
+
+            });
+
+
+
+            // Menu contextuel au clic droit
+
+            MenuFlyout flyout;
+
+            MenuFlyoutItem preview_item;
+
+            preview_item.Text(L"Aperçu");
+
+            preview_item.Icon(FontIcon{});
+
+            preview_item.Icon().as<FontIcon>().Glyph(L"\xE890");
+
+            preview_item.Click([this, index, filename](IInspectable const&, RoutedEventArgs const&)
+
+            {
+
+                PreviewAttachmentAsync(index, filename);
+
+            });
+
+            flyout.Items().Append(preview_item);
+
+
+
+            MenuFlyoutItem save_item;
+
+            save_item.Text(L"Enregistrer sous...");
+
+            save_item.Icon(FontIcon{});
+
+            save_item.Icon().as<FontIcon>().Glyph(L"\xE74E");
+
+            save_item.Click([this, index, filename](IInspectable const&, RoutedEventArgs const&)
+
+            {
+
                 auto core = m_core.lock();
 
-                if (!core)
+                if (!core || m_account.empty() || m_folder.empty() || m_uid.empty())
 
                     return;
 
@@ -1794,21 +1602,21 @@ namespace winrt::EvolutionWin::implementation
 
                 picker.SuggestedFileName(filename);
 
-                std::wstring ext = L".bin";
+                std::wstring_view view{ filename };
 
-                std::wstring_view sv{ filename };
+                auto dot = view.rfind(L'.');
 
-                auto dot = sv.find_last_of(L'.');
+                hstring ext = (dot != std::wstring_view::npos && dot + 1 < view.size())
 
-                if (dot != std::wstring_view::npos)
+                    ? hstring{ view.substr(dot) }
 
-                    ext = std::wstring{ sv.substr(dot) };
+                    : L".bin";
 
-                picker.FileTypeChoices().Insert(L"Fichier", single_threaded_vector<hstring>({ hstring{ ext } }));
+                picker.FileTypeChoices().Insert(L"Fichier", single_threaded_vector<hstring>({ ext }));
 
 
 
-                [this, core, index, picker]() -> fire_and_forget
+                [strong = get_strong(), index, filename, picker]() -> fire_and_forget
 
                 {
 
@@ -1818,45 +1626,55 @@ namespace winrt::EvolutionWin::implementation
 
                         co_return;
 
-                    hstring path = file.Path();
 
 
+                    hstring dest_path = file.Path();
 
-                    core->SaveAttachment(m_account, m_folder, m_uid, index, path,
-
-                        [strong = get_strong(), path](hstring const&, hstring const& error)
+                    if (auto c = strong->m_core.lock())
 
                     {
 
-                        if (!error.empty())
+                        c->SaveAttachment(strong->m_account, strong->m_folder, strong->m_uid, index, dest_path,
 
-                            strong->ShowStatus(L"Erreur d'enregistrement : " + error, InfoBarSeverity::Error);
+                            [strong, filename](hstring const&, hstring const& error)
 
-                        else
+                        {
 
-                            strong->ShowStatus(L"Pièce jointe enregistrée : « " + path + L" ».", InfoBarSeverity::Success);
+                            if (!error.empty())
 
-                    });
+                            {
+
+                                strong->ShowStatus(L"Erreur lors de l'enregistrement : " + error, InfoBarSeverity::Error);
+
+                                return;
+
+                            }
+
+                            strong->ShowStatus(L"Pièce jointe « " + filename + L" » enregistrée.", InfoBarSeverity::Success);
+
+                        });
+
+                    }
 
                 }();
 
             });
 
+            flyout.Items().Append(save_item);
 
+
+
+            button.ContextFlyout(flyout);
 
             AttachmentList().Children().Append(button);
 
         }
-
-
 
         SaveAllAttachmentsButton().Visibility(attachments.Size() > 1 ? Visibility::Visible : Visibility::Collapsed);
 
         AttachmentBar().Visibility(Visibility::Visible);
 
     }
-
-
 
     fire_and_forget MessageWindow::OnSaveAllAttachmentsClick(IInspectable const&, RoutedEventArgs const&)
 
@@ -1868,15 +1686,11 @@ namespace winrt::EvolutionWin::implementation
 
             co_return;
 
-
-
         auto attachments = m_current_message.GetNamedArray(L"attachments", JsonArray{});
 
         if (attachments.Size() == 0)
 
             co_return;
-
-
 
         Windows::Storage::Pickers::FolderPicker picker;
 
@@ -1890,8 +1704,6 @@ namespace winrt::EvolutionWin::implementation
 
             picker.as<::IInitializeWithWindow>()->Initialize(hwnd);
 
-
-
         picker.FileTypeFilter().Append(L"*");
 
         auto folder = co_await picker.PickSingleFolderAsync();
@@ -1899,8 +1711,6 @@ namespace winrt::EvolutionWin::implementation
         if (!folder)
 
             co_return;
-
-
 
         hstring dir = folder.Path();
 
@@ -1915,8 +1725,6 @@ namespace winrt::EvolutionWin::implementation
             hstring filename = att.GetNamedString(L"filename", L"piece-jointe");
 
             hstring target_path = dir + L"\\" + filename;
-
-
 
             core->SaveAttachment(m_account, m_folder, m_uid, index, target_path,
 
@@ -1936,8 +1744,6 @@ namespace winrt::EvolutionWin::implementation
 
     }
 
-
-
     void MessageWindow::ShowStatus(hstring const& message, InfoBarSeverity severity)
 
     {
@@ -1950,8 +1756,6 @@ namespace winrt::EvolutionWin::implementation
 
     }
 
-
-
     void MessageWindow::RestoreWindowBounds()
 
     {
@@ -1963,8 +1767,6 @@ namespace winrt::EvolutionWin::implementation
         int w = static_cast<int>(::EvolutionWin::Settings::Instance().GetNumber(L"window.message.width", 960));
 
         int h = static_cast<int>(::EvolutionWin::Settings::Instance().GetNumber(L"window.message.height", 720));
-
-
 
         if (w >= 400 && h >= 300)
 
@@ -1981,8 +1783,6 @@ namespace winrt::EvolutionWin::implementation
         }
 
     }
-
-
 
     void MessageWindow::SaveWindowBounds()
 
@@ -2008,8 +1808,6 @@ namespace winrt::EvolutionWin::implementation
 
     }
 
-
-
     /**
 
      * @brief Ouvre le message visualisé dans le navigateur web par défaut du système.
@@ -2032,8 +1830,6 @@ namespace winrt::EvolutionWin::implementation
 
             return;
 
-
-
         bool ok = ::EvolutionWin::Helpers::OpenInDefaultBrowser(m_current_message, m_reader_html);
 
         if (!ok)
@@ -2041,8 +1837,6 @@ namespace winrt::EvolutionWin::implementation
             ShowStatus(L"Impossible d'ouvrir le navigateur web par défaut.", InfoBarSeverity::Error);
 
     }
-
-
 
     /**
 
@@ -2096,8 +1890,6 @@ namespace winrt::EvolutionWin::implementation
 
     }
 
-
-
     /**
 
      * @brief Déclenche ou interrompt la lecture à voix haute du message courant via Windows.Media.SpeechSynthesis.
@@ -2128,8 +1920,6 @@ namespace winrt::EvolutionWin::implementation
 
         }
 
-
-
         if (!m_current_message)
 
         {
@@ -2139,8 +1929,6 @@ namespace winrt::EvolutionWin::implementation
             co_return;
 
         }
-
-
 
         std::wstring speech_text = ::EvolutionWin::Helpers::ExtractPlainTextForSpeech(m_current_message, m_reader_html);
 
@@ -2153,8 +1941,6 @@ namespace winrt::EvolutionWin::implementation
             co_return;
 
         }
-
-
 
         try
 
@@ -2190,8 +1976,6 @@ namespace winrt::EvolutionWin::implementation
 
             }
 
-
-
             auto stream = co_await m_speech_synth.SynthesizeTextToStreamAsync(hstring{ speech_text });
 
             auto source = Windows::Media::Core::MediaSource::CreateFromStream(stream, stream.ContentType());
@@ -2199,8 +1983,6 @@ namespace winrt::EvolutionWin::implementation
             m_speech_player.Source(source);
 
             m_speech_player.Play();
-
-
 
             m_is_speaking = true;
 
@@ -2229,6 +2011,408 @@ namespace winrt::EvolutionWin::implementation
             StopSpeech();
 
             ShowStatus(L"Erreur inattendue lors de la lecture vocale.", InfoBarSeverity::Error);
+
+        }
+
+    }
+
+
+
+    /**
+
+     * @brief Ferme le panneau d'aperçu de pièce jointe et réaffiche le corps du message.
+
+     */
+
+    void MessageWindow::CloseAttachmentPreview()
+
+    {
+
+        AttachmentPreviewContainer().Visibility(Visibility::Collapsed);
+
+        ReaderWebView().Visibility(Visibility::Visible);
+
+
+
+        PreviewImage().Source(nullptr);
+
+        PreviewText().Text(L"");
+
+        PreviewImageScroll().Visibility(Visibility::Collapsed);
+
+        PreviewTextScroll().Visibility(Visibility::Collapsed);
+
+        PreviewUnsupported().Visibility(Visibility::Collapsed);
+
+        PreviewLoadingRing().IsActive(false);
+
+
+
+        if (!m_preview_current_path.empty())
+
+        {
+
+            DeleteFileW(m_preview_current_path.c_str());
+
+            m_preview_current_path = L"";
+
+        }
+
+    }
+
+
+
+    /**
+
+     * @brief Gestionnaire de clic pour fermer l'aperçu et retourner au corps du message.
+
+     */
+
+    void MessageWindow::OnCloseAttachmentPreviewClick(
+
+        [[maybe_unused]] IInspectable const& sender,
+
+        [[maybe_unused]] RoutedEventArgs const& args)
+
+    {
+
+        CloseAttachmentPreview();
+
+    }
+
+
+
+    /**
+
+     * @brief Télécharge temporairement et affiche un aperçu sécurisé d'une pièce jointe dans la fenêtre indépendante.
+
+     * @param index Indice de la pièce jointe dans le message.
+
+     * @param filename Nom du fichier joint.
+
+     */
+
+    fire_and_forget MessageWindow::PreviewAttachmentAsync(uint32_t index, hstring filename)
+
+    {
+
+        auto strong = get_strong();
+
+        auto core = m_core.lock();
+
+        if (!core || m_account.empty() || m_folder.empty() || m_uid.empty())
+
+            co_return;
+
+
+
+        m_preview_current_index = index;
+
+        m_preview_current_filename = filename;
+
+
+
+        wchar_t temp_dir[MAX_PATH];
+
+        DWORD len = GetTempPathW(MAX_PATH, temp_dir);
+
+        if (len == 0 || len > MAX_PATH)
+
+            co_return;
+
+
+
+        std::wstring preview_dir = std::wstring{ temp_dir } + L"EvolutionWin\\Previews";
+
+        CreateDirectoryW((std::wstring{ temp_dir } + L"EvolutionWin").c_str(), nullptr);
+
+        CreateDirectoryW(preview_dir.c_str(), nullptr);
+
+
+
+        std::wstring temp_file = preview_dir + L"\\preview_msg_" + std::to_wstring(index) + L"_" + std::wstring{ SanitizeFileName(filename, L"piece-jointe") };
+
+        m_preview_current_path = hstring{ temp_file };
+
+
+
+        ReaderWebView().Visibility(Visibility::Collapsed);
+
+        AttachmentPreviewContainer().Visibility(Visibility::Visible);
+
+        PreviewFilenameText().Text(filename);
+
+
+
+        PreviewImageScroll().Visibility(Visibility::Collapsed);
+
+        PreviewTextScroll().Visibility(Visibility::Collapsed);
+
+        PreviewUnsupported().Visibility(Visibility::Collapsed);
+
+        PreviewLoadingRing().IsActive(true);
+
+
+
+        core->SaveAttachment(m_account, m_folder, m_uid, index, m_preview_current_path,
+
+            [this, strong, filename, temp_file](hstring const&, hstring const& error)
+
+        {
+
+            DispatcherQueue().TryEnqueue([this, strong, filename, temp_file, error]() -> fire_and_forget
+
+            {
+
+                PreviewLoadingRing().IsActive(false);
+
+
+
+                if (!error.empty())
+
+                {
+
+                    ShowStatus(L"Impossible de charger l'aperçu : " + error, InfoBarSeverity::Error);
+
+                    CloseAttachmentPreview();
+
+                    co_return;
+
+                }
+
+
+
+                auto kind = DetectAttachmentPreviewKind(filename);
+
+                if (kind == AttachmentPreviewKind::Image)
+
+                {
+
+                    try
+
+                    {
+
+                        auto file = co_await Windows::Storage::StorageFile::GetFileFromPathAsync(temp_file);
+
+                        auto stream = co_await file.OpenReadAsync();
+
+                        Microsoft::UI::Xaml::Media::Imaging::BitmapImage bitmap;
+
+                        bitmap.SetSource(stream);
+
+                        PreviewImage().Source(bitmap);
+
+                        PreviewImageScroll().Visibility(Visibility::Visible);
+
+                    }
+
+                    catch (...)
+
+                    {
+
+                        PreviewUnsupported().Visibility(Visibility::Visible);
+
+                    }
+
+                }
+
+                else if (kind == AttachmentPreviewKind::Text)
+
+                {
+
+                    try
+
+                    {
+
+                        auto file = co_await Windows::Storage::StorageFile::GetFileFromPathAsync(temp_file);
+
+                        hstring content = co_await Windows::Storage::FileIO::ReadTextAsync(file);
+
+                        PreviewText().Text(content);
+
+                        PreviewTextScroll().Visibility(Visibility::Visible);
+
+                    }
+
+                    catch (...)
+
+                    {
+
+                        HANDLE h = CreateFileW(temp_file.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+                        if (h != INVALID_HANDLE_VALUE)
+
+                        {
+
+                            DWORD size = GetFileSize(h, nullptr);
+
+                            if (size > 0 && size < 2 * 1024 * 1024)
+
+                            {
+
+                                std::string buf(size, '\0');
+
+                                DWORD read_bytes = 0;
+
+                                ReadFile(h, buf.data(), size, &read_bytes, nullptr);
+
+                                std::wstring wcontent(buf.begin(), buf.end());
+
+                                PreviewText().Text(hstring{ wcontent });
+
+                                PreviewTextScroll().Visibility(Visibility::Visible);
+
+                            }
+
+                            else
+
+                            {
+
+                                PreviewUnsupported().Visibility(Visibility::Visible);
+
+                            }
+
+                            CloseHandle(h);
+
+                        }
+
+                        else
+
+                        {
+
+                            PreviewUnsupported().Visibility(Visibility::Visible);
+
+                        }
+
+                    }
+
+                }
+
+                else
+
+                {
+
+                    PreviewUnsupported().Visibility(Visibility::Visible);
+
+                }
+
+            });
+
+        });
+
+    }
+
+
+
+    /**
+
+     * @brief Déclenche l'enregistrement sous de la pièce jointe prévisualisée.
+
+     */
+
+    void MessageWindow::OnPreviewSaveClick(
+
+        [[maybe_unused]] IInspectable const& sender,
+
+        [[maybe_unused]] RoutedEventArgs const& args)
+
+    {
+
+        Windows::Storage::Pickers::FileSavePicker picker;
+
+        HWND hwnd = nullptr;
+
+        if (auto native = try_as<::IWindowNative>())
+
+            native->get_WindowHandle(&hwnd);
+
+        if (hwnd)
+
+            picker.as<::IInitializeWithWindow>()->Initialize(hwnd);
+
+
+
+        picker.SuggestedFileName(m_preview_current_filename);
+
+        std::wstring_view view{ m_preview_current_filename };
+
+        auto dot = view.rfind(L'.');
+
+        hstring ext = (dot != std::wstring_view::npos && dot + 1 < view.size())
+
+            ? hstring{ view.substr(dot) }
+
+            : L".bin";
+
+        picker.FileTypeChoices().Insert(L"Fichier", single_threaded_vector<hstring>({ ext }));
+
+
+
+        [strong = get_strong(), picker]() -> fire_and_forget
+
+        {
+
+            auto file = co_await picker.PickSaveFileAsync();
+
+            if (!file)
+
+                co_return;
+
+
+
+            hstring dest_path = file.Path();
+
+            if (auto c = strong->m_core.lock())
+
+            {
+
+                c->SaveAttachment(strong->m_account, strong->m_folder, strong->m_uid, strong->m_preview_current_index, dest_path,
+
+                    [strong](hstring const&, hstring const& error)
+
+                {
+
+                    if (!error.empty())
+
+                    {
+
+                        strong->ShowStatus(L"Erreur lors de l'enregistrement : " + error, InfoBarSeverity::Error);
+
+                        return;
+
+                    }
+
+                    strong->ShowStatus(L"Pièce jointe enregistrée avec succès.", InfoBarSeverity::Success);
+
+                });
+
+            }
+
+        }();
+
+    }
+
+
+
+    /**
+
+     * @brief Ouvre le fichier prévisualisé dans l'application par défaut.
+
+     */
+
+    void MessageWindow::OnPreviewOpenClick(
+
+        [[maybe_unused]] IInspectable const& sender,
+
+        [[maybe_unused]] RoutedEventArgs const& args)
+
+    {
+
+        if (!m_preview_current_path.empty())
+
+        {
+
+            ShellExecuteW(nullptr, L"open", m_preview_current_path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 
         }
 

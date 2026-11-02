@@ -53,6 +53,11 @@ namespace winrt::EvolutionWin::implementation
         void OnOpenInBrowserClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         fire_and_forget OnReadAloudClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void StopSpeech();
+        void OnCloseAttachmentPreviewClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnPreviewSaveClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnPreviewOpenClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        fire_and_forget PreviewAttachmentAsync(uint32_t index, winrt::hstring filename);
+        void CloseAttachmentPreview();
 
         /* Gestion du contenu externe distant */
         void OnAllowRemoteForMessageClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -111,6 +116,11 @@ namespace winrt::EvolutionWin::implementation
         Windows::Media::SpeechSynthesis::SpeechSynthesizer m_speech_synth{ nullptr };
         Windows::Media::Playback::MediaPlayer m_speech_player{ nullptr };
         bool m_is_speaking{ false };
+
+        /* Aperçu sécurisé de pièces jointes */
+        winrt::hstring m_preview_current_path;
+        winrt::hstring m_preview_current_filename;
+        uint32_t m_preview_current_index{ 0 };
     };
 }
 
