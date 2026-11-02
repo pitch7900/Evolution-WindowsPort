@@ -1,0 +1,672 @@
+#include "pch.h"
+#include "MainWindow.xaml.h"
+#include "MainWindow.Helpers.h"
+#include "WindowIcon.h"
+#include "Settings.h"
+
+#include <winrt/Windows.System.h>
+#include <winrt/Windows.Storage.h>
+#include <winrt/Windows.Storage.Streams.h>
+#include <winrt/Windows.Security.Cryptography.h>
+#include <winrt/Windows.Security.Cryptography.Core.h>
+#include <winrt/Windows.Web.Http.h>
+#include <winrt/Windows.Web.Http.Headers.h>
+#include <winrt/Microsoft.UI.Input.h>
+#include <winrt/Microsoft.UI.Xaml.Input.h>
+#include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
+#include <winrt/Windows.ApplicationModel.DataTransfer.h>
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <cwctype>
+#include <utility>
+#include <vector>
+
+/* Liste des messages : chargement, affichage, sélection et rafraîchissement. */
+
+using namespace winrt;
+using namespace Microsoft::UI::Xaml;
+using namespace Microsoft::UI::Xaml::Controls;
+using namespace Microsoft::UI::Xaml::Media;
+using namespace Windows::Data::Json;
+using namespace Windows::Foundation;
+
+using namespace ::EvolutionWin::Helpers;
+
+namespace winrt::EvolutionWin::implementation
+{
+    void MainWindow::LoadMessages(bool keep_selection)
+    {
+        hstring account = m_account;
+        hstring folder = m_folder;
+        hstring selected;
+
+        if (account.empty() || folder.empty())
+            return;
+
+        if (keep_selection)
+        {
+            selected = SelectedMessageUid();
+        }
+        else
+        {
+            MessageList().Items().Clear();
+            m_message_states.clear();
+            ListProgress().IsActive(true);
+        }
+
+        m_core->ListMessages(account, folder, 500, [this, account, folder, selected](hstring const& json, hstring const& error)
+        {
+            /* another folder was chosen meanwhile */
+            if (account != m_account || folder != m_folder)
+                return;
+
+            ListProgress().IsActive(false);
+
+            if (!error.empty())
+            {
+                ShowStatus(L"Messages : " + error, InfoBarSeverity::Error);
+                return;
+            }
+
+            m_all_messages = JsonArray::Parse(json);
+
+            if (!SearchBox().Text().empty())
+                FilterLocalMessages(SearchBox().Text());
+            else
+                ShowMessages(m_all_messages);
+
+            /* the reader keeps its message: reselect it silently */
+            if (!selected.empty())
+            {
+                if (auto grid = FindMessageItem(selected))
+                {
+                    m_reselecting = true;
+                    MessageList().SelectedItem(grid);
+                    m_reselecting = false;
+                }
+            }
+        });
+    }
+
+    /* Construit et affiche les éléments de la liste de messages avec leurs
+     * indicateurs (non lu, suivi, pièce jointe) et leur menu contextuel.
+     * Paramètres :
+     *   messages : tableau JSON des résumés de messages à afficher */
+    void MainWindow::ShowMessages(JsonArray const& messages)
+    {
+        auto items = MessageList().Items();
+
+        /* Rechargement (nouveau message, suppression, filtre) : vider la
+         * liste désélectionne et effacerait l'aperçu ; la sélection est
+         * rétablie en silence à la fin si le message est encore affiché */
+        hstring selected = SelectedMessageUid();
+        bool was_reselecting = m_reselecting;
+        m_reselecting = true;
+
+        items.Clear();
+        m_message_states.clear();
+
+        std::vector<JsonObject> shown;
+        for (auto const& value : messages)
+        {
+            auto message = value.GetObject();
+            if (MatchesQuickFilters(message))
+                shown.push_back(message);
+        }
+        SortMessages(shown);
+
+        for (auto const& message : shown)
+        {
+            hstring uid = message.GetNamedString(L"uid");
+            bool seen = message.GetNamedBoolean(L"seen", true);
+            bool flagged = message.GetNamedBoolean(L"flagged", false);
+            bool attachments = message.GetNamedBoolean(L"attachments", false);
+
+            m_message_states[std::wstring{ uid }] = MessageState{ seen, flagged, attachments };
+
+            Grid item;
+            item.Padding(ThicknessHelper::FromLengths(8, 8, 8, 8));
+            item.HorizontalAlignment(HorizontalAlignment::Stretch);
+            /* Fond transparent explicite pour que le survol (PointerEntered/PointerExited)
+             * soit détecté sur toute la surface de la ligne et pas uniquement sur le texte */
+            item.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+            item.Tag(box_value(uid));
+            item.ColumnDefinitions().Append(ColumnDefinition{});
+            ColumnDefinition date_column;
+            date_column.Width(GridLengthHelper::Auto());
+            item.ColumnDefinitions().Append(date_column);
+            ColumnDefinition action_column;
+            action_column.Width(GridLengthHelper::Auto());
+            item.ColumnDefinitions().Append(action_column);
+            item.RowDefinitions().Append(RowDefinition{});
+            item.RowDefinitions().Append(RowDefinition{});
+
+            TextBlock from;
+            from.Text(SenderName(message.GetNamedString(L"from", L"")));
+            from.TextTrimming(TextTrimming::CharacterEllipsis);
+            item.Children().Append(from);
+
+            StackPanel meta;
+            meta.Orientation(Orientation::Horizontal);
+            meta.Spacing(6);
+            meta.VerticalAlignment(VerticalAlignment::Center);
+            meta.Margin(ThicknessHelper::FromLengths(8, 0, 0, 0));
+            Grid::SetColumn(meta, 1);
+
+            FontIcon flag_icon;
+            flag_icon.Glyph(L"\xE7C1");
+            flag_icon.FontSize(12);
+            flag_icon.Foreground(SolidColorBrush{ Windows::UI::Color{ 255, 247, 99, 12 } });
+            flag_icon.Visibility(flagged ? Visibility::Visible : Visibility::Collapsed);
+            meta.Children().Append(flag_icon);
+
+            FontIcon attachment_icon;
+            attachment_icon.Glyph(L"\xE723");
+            attachment_icon.FontSize(12);
+            attachment_icon.Visibility(attachments ? Visibility::Visible : Visibility::Collapsed);
+            meta.Children().Append(attachment_icon);
+
+            TextBlock date;
+            date.Text(FormatDate(message.GetNamedNumber(L"date", 0)));
+            date.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+            meta.Children().Append(date);
+
+            item.Children().Append(meta);
+
+            TextBlock subject;
+            subject.Text(message.GetNamedString(L"subject", L""));
+            subject.TextTrimming(TextTrimming::CharacterEllipsis);
+            Grid::SetRow(subject, 1);
+            Grid::SetColumnSpan(subject, 2);
+            item.Children().Append(subject);
+
+            /* Bouton corbeille de suppression rapide au survol (style Outlook) */
+            Button delete_button;
+            FontIcon trash_icon;
+            trash_icon.Glyph(L"\xE74D");
+            trash_icon.FontSize(14);
+            delete_button.Content(trash_icon);
+            delete_button.Width(32);
+            delete_button.Height(32);
+            delete_button.Padding(ThicknessHelper::FromUniformLength(0));
+            delete_button.Margin(ThicknessHelper::FromLengths(6, 0, 0, 0));
+            delete_button.VerticalAlignment(VerticalAlignment::Center);
+            delete_button.Visibility(Visibility::Collapsed);
+            ToolTipService::SetToolTip(delete_button, box_value(L"Supprimer"));
+            Grid::SetColumn(delete_button, 2);
+            Grid::SetRow(delete_button, 0);
+            Grid::SetRowSpan(delete_button, 2);
+            delete_button.Click([this, uid](IInspectable const&, RoutedEventArgs const&)
+            {
+                DeleteMessagesByUids(TargetMessageUids(uid));
+            });
+            item.Children().Append(delete_button);
+
+            item.PointerEntered([delete_button](IInspectable const&, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&)
+            {
+                delete_button.Visibility(Visibility::Visible);
+            });
+            item.PointerExited([delete_button](IInspectable const&, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&)
+            {
+                delete_button.Visibility(Visibility::Collapsed);
+            });
+
+            /* Barre de lecture rapide (style Outlook) dans la marge gauche :
+             * couleur d'accent si non lu ; un clic bascule lu / non lu sans
+             * ouvrir ni sélectionner le message */
+            Grid read_bar;
+            read_bar.Tag(box_value(L"read-bar"));
+            read_bar.Width(8);
+            read_bar.Margin(ThicknessHelper::FromLengths(-8, -8, 0, -8));
+            read_bar.HorizontalAlignment(HorizontalAlignment::Left);
+            read_bar.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+            Grid::SetRowSpan(read_bar, 2);
+            Border read_mark;
+            read_mark.Width(4);
+            read_mark.CornerRadius(CornerRadiusHelper::FromUniformRadius(2));
+            read_mark.Margin(ThicknessHelper::FromLengths(0, 6, 0, 6));
+            read_mark.HorizontalAlignment(HorizontalAlignment::Center);
+            read_bar.Children().Append(read_mark);
+            read_bar.PointerEntered([this, uid, read_mark](IInspectable const&, Input::PointerRoutedEventArgs const&)
+            {
+                auto it = m_message_states.find(std::wstring{ uid });
+                bool is_seen = it == m_message_states.end() || it->second.seen;
+                read_mark.Width(6);
+                if (is_seen)
+                    read_mark.Background(Application::Current().Resources()
+                        .Lookup(box_value(L"ControlStrongStrokeColorDefaultBrush")).as<Brush>());
+            });
+            read_bar.PointerExited([this, uid, read_mark](IInspectable const&, Input::PointerRoutedEventArgs const&)
+            {
+                auto it = m_message_states.find(std::wstring{ uid });
+                bool is_seen = it == m_message_states.end() || it->second.seen;
+                read_mark.Width(4);
+                if (is_seen)
+                    read_mark.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+            });
+            /* ni sélection ni ouverture : l'appui est consommé ici */
+            read_bar.PointerPressed([](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+            {
+                args.Handled(true);
+            });
+            read_bar.Tapped([this, uid](IInspectable const&, Input::TappedRoutedEventArgs const& args)
+            {
+                args.Handled(true);
+                auto it = m_message_states.find(std::wstring{ uid });
+                bool is_seen = it == m_message_states.end() || it->second.seen;
+                SetMessageFlag(uid, L"seen", !is_seen);
+            });
+            item.Children().Append(read_bar);
+
+            UpdateMessageItemVisual(item, seen, flagged);
+
+            /* Menu contextuel par clic droit sur chaque message (gère un ou plusieurs messages sélectionnés) */
+            MenuFlyout context_menu;
+            context_menu.Opening([this, uid, context_menu](IInspectable const&, IInspectable const&)
+            {
+                auto menu_items = context_menu.Items();
+                menu_items.Clear();
+
+                auto target_uids = TargetMessageUids(uid);
+                bool multi = target_uids.size() > 1;
+                std::wstring count_suffix = multi ? L" (" + std::to_wstring(target_uids.size()) + L" messages)" : L"";
+
+                MenuFlyoutItem reply_item;
+                reply_item.Text(multi
+                    ? hstring{ L"Répondre (1er mail + " + std::to_wstring(target_uids.size() - 1) + L" en PJ)" }
+                    : L"Répondre");
+                reply_item.Icon(FontIcon{});
+                reply_item.Icon().as<FontIcon>().Glyph(L"\xE97A");
+                reply_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
+                {
+                    ReplyToMessages(ReplyKind::Sender, target_uids);
+                });
+                menu_items.Append(reply_item);
+
+                MenuFlyoutItem reply_all_item;
+                reply_all_item.Text(multi
+                    ? hstring{ L"Répondre à tous (1er mail + " + std::to_wstring(target_uids.size() - 1) + L" en PJ)" }
+                    : L"Répondre à tous");
+                reply_all_item.Icon(FontIcon{});
+                reply_all_item.Icon().as<FontIcon>().Glyph(L"\xEE35");
+                reply_all_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
+                {
+                    ReplyToMessages(ReplyKind::All, target_uids);
+                });
+                menu_items.Append(reply_all_item);
+
+                MenuFlyoutItem forward_item;
+                forward_item.Text(multi
+                    ? hstring{ L"Transférer en pièces jointes" + count_suffix }
+                    : L"Transférer");
+                forward_item.Icon(FontIcon{});
+                forward_item.Icon().as<FontIcon>().Glyph(L"\xE72D");
+                forward_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
+                {
+                    ReplyToMessages(ReplyKind::Forward, target_uids);
+                });
+                menu_items.Append(forward_item);
+
+                if (!multi)
+                {
+                    MenuFlyoutItem forward_att_item;
+                    forward_att_item.Text(L"Transférer en pièce jointe (.eml)");
+                    forward_att_item.Icon(FontIcon{});
+                    forward_att_item.Icon().as<FontIcon>().Glyph(L"\xE723");
+                    forward_att_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
+                    {
+                        ForwardMessagesAsAttachments(target_uids);
+                    });
+                    menu_items.Append(forward_att_item);
+                }
+
+                menu_items.Append(MenuFlyoutSeparator{});
+
+                auto state_it = m_message_states.find(std::wstring{ target_uids.front() });
+                bool is_seen = state_it != m_message_states.end() ? state_it->second.seen : true;
+                bool is_flagged = state_it != m_message_states.end() ? state_it->second.flagged : false;
+
+                MenuFlyoutItem read_item;
+                read_item.Text(hstring{ (is_seen ? L"Marquer comme non lu" : L"Marquer comme lu") + count_suffix });
+                read_item.Icon(FontIcon{});
+                read_item.Icon().as<FontIcon>().Glyph(is_seen ? L"\xE715" : L"\xE8C3");
+                read_item.Click([this, target_uids, is_seen](IInspectable const&, RoutedEventArgs const&)
+                {
+                    SetMessagesFlag(target_uids, L"seen", !is_seen);
+                });
+                menu_items.Append(read_item);
+
+                MenuFlyoutItem flag_item;
+                flag_item.Text(hstring{ (is_flagged ? L"Retirer le drapeau" : L"Ajouter un drapeau") + count_suffix });
+                flag_item.Icon(FontIcon{});
+                flag_item.Icon().as<FontIcon>().Glyph(L"\xE7C1");
+                flag_item.Click([this, target_uids, is_flagged](IInspectable const&, RoutedEventArgs const&)
+                {
+                    SetMessagesFlag(target_uids, L"flagged", !is_flagged);
+                });
+                menu_items.Append(flag_item);
+
+                MenuFlyoutSubItem move_sub;
+                move_sub.Text(hstring{ L"Déplacer vers" + count_suffix });
+                move_sub.Icon(FontIcon{});
+                move_sub.Icon().as<FontIcon>().Glyph(L"\xE8DE");
+                PopulateMoveMenuItems(move_sub.Items(), target_uids);
+                menu_items.Append(move_sub);
+
+                MenuFlyoutSubItem copy_sub;
+                copy_sub.Text(hstring{ L"Copier vers" + count_suffix });
+                copy_sub.Icon(FontIcon{});
+                copy_sub.Icon().as<FontIcon>().Glyph(L"\xE8C8");
+                PopulateMoveMenuItems(copy_sub.Items(), target_uids, true);
+                menu_items.Append(copy_sub);
+
+                MenuFlyoutItem archive_item;
+                archive_item.Text(hstring{ L"Archiver" + count_suffix });
+                archive_item.Icon(FontIcon{});
+                archive_item.Icon().as<FontIcon>().Glyph(L"\xE7B8");
+                archive_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
+                {
+                    ArchiveMessagesByUids(target_uids);
+                });
+                menu_items.Append(archive_item);
+
+                menu_items.Append(MenuFlyoutSeparator{});
+
+                MenuFlyoutItem delete_item;
+                delete_item.Text(hstring{ L"Supprimer" + count_suffix });
+                delete_item.Icon(FontIcon{});
+                delete_item.Icon().as<FontIcon>().Glyph(L"\xE74D");
+                delete_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
+                {
+                    DeleteMessagesByUids(target_uids);
+                });
+                menu_items.Append(delete_item);
+            });
+            item.ContextFlyout(context_menu);
+
+            items.Append(item);
+        }
+
+        /* message affiché encore présent : resélectionné, l'aperçu reste ;
+         * sinon (supprimé, filtré) : aperçu vidé */
+        auto still_shown = selected.empty() ? nullptr : FindMessageItem(selected);
+        if (still_shown)
+            MessageList().SelectedItem(still_shown);
+        m_reselecting = was_reselecting;
+        if (!selected.empty() && !still_shown && !m_reselecting)
+            ClearReader();
+
+        if (messages.Size() == 0)
+        {
+            if (!SearchBox().Text().empty())
+                ShowStatus(L"Aucun message ne correspond à « " + SearchBox().Text() + L" ».", InfoBarSeverity::Informational);
+            else
+                ShowStatus(L"Ce dossier est vide.", InfoBarSeverity::Informational);
+        }
+    }
+
+    void MainWindow::OnMessageSelectionChanged(IInspectable const&, SelectionChangedEventArgs const&)
+    {
+        if (m_reselecting)
+            return;
+
+        auto item = MessageList().SelectedItem().try_as<Grid>();
+        if (!item)
+        {
+            ClearReader();
+            return;
+        }
+
+        hstring uid = unbox_value<hstring>(item.Tag());
+        if (uid == m_current_message_uid && m_current_message)
+        {
+            UpdateActionButtons(uid);
+            return;
+        }
+
+        uint64_t request = ++m_message_request;
+
+        auto state_it = m_message_states.find(std::wstring{ uid });
+        bool flagged = state_it != m_message_states.end() ? state_it->second.flagged : false;
+        m_message_states[std::wstring{ uid }].seen = true;
+        UpdateMessageItemVisual(item, true, flagged);
+        UpdateActionButtons(uid);
+
+        m_core->FetchMessage(m_account, m_folder, uid, [this, request, uid](hstring const& json, hstring const& error)
+        {
+            if (request != m_message_request)
+                return;
+
+            if (!error.empty())
+            {
+                ShowStatus(L"Message : " + error, InfoBarSeverity::Error);
+                return;
+            }
+
+            auto message = JsonObject::Parse(json);
+            m_current_message = message;
+            m_current_message_uid = uid;
+            hstring to = message.GetNamedString(L"to", L"");
+            hstring cc = message.GetNamedString(L"cc", L"");
+
+            MessageSubject().Text(message.GetNamedString(L"subject", L""));
+            MessageFrom().Text(message.GetNamedString(L"from", L""));
+            MessageTo().Text(L"À : " + to + (cc.empty() ? hstring{} : L"   Cc : " + cc));
+            MessageDate().Text(FormatDate(message.GetNamedNumber(L"date", 0)));
+            UpdateSecurityBanner(message.GetNamedObject(L"security", JsonObject{}));
+            PopulateAttachments(message.GetNamedArray(L"attachments", JsonArray{}));
+            MessageHeader().Visibility(Visibility::Visible);
+            ReaderPlaceholder().Visibility(Visibility::Collapsed);
+            ReaderContainer().Visibility(Visibility::Visible);
+            UpdateActionButtons(uid);
+
+            ShowCurrentMessageInReader(false);
+        });
+    }
+
+    void MainWindow::OnRefreshClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ShowStatus(L"Relève du courrier…", InfoBarSeverity::Informational);
+        m_core->Refresh();
+    }
+
+    void MainWindow::OnRefreshSplitClick(SplitButton const&, SplitButtonClickEventArgs const&)
+    {
+        OnRefreshClick(nullptr, nullptr);
+    }
+
+    /* F9 : tous les dossiers de tous les comptes (progression dans la barre d'état) */
+    void MainWindow::OnRefreshAllClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ShowStatus(L"Relève de tous les dossiers…", InfoBarSeverity::Informational);
+        m_core->RefreshAll();
+    }
+
+    /* Maj+F9 : le dossier affiché seulement (la liste interroge le serveur) */
+    void MainWindow::OnRefreshFolderClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (m_folder.empty())
+            return;
+        ShowStatus(L"Mise à jour de « " + FolderTitle().Text() + L" »…", InfoBarSeverity::Informational);
+        LoadMessages(true);
+    }
+
+    void MainWindow::OnRefreshAccelerator(Input::KeyboardAccelerator const& sender,
+        Input::KeyboardAcceleratorInvokedEventArgs const& args)
+    {
+        args.Handled(true);
+
+        if (sender.Key() == Windows::System::VirtualKey::F5)
+            OnRefreshClick(nullptr, nullptr);
+        else if ((sender.Modifiers() & Windows::System::VirtualKeyModifiers::Shift) == Windows::System::VirtualKeyModifiers::Shift)
+            OnRefreshFolderClick(nullptr, nullptr);
+        else
+            OnRefreshAllClick(nullptr, nullptr);
+    }
+
+    /* Retourne l'UID du premier message sélectionné dans la liste, ou ""
+     * s'il n'y a aucune sélection. */
+    hstring MainWindow::SelectedMessageUid()
+    {
+        if (auto item = MessageList().SelectedItem().try_as<Grid>())
+            return unbox_value_or<hstring>(item.Tag(), L"");
+        return L"";
+    }
+
+    /* Retourne la liste ordonnée des UID de tous les messages actuellement
+     * sélectionnés dans MessageList. */
+    std::vector<hstring> MainWindow::SelectedMessageUids()
+    {
+        std::vector<hstring> result;
+        for (auto const& obj : MessageList().SelectedItems())
+        {
+            if (auto grid = obj.try_as<Grid>())
+            {
+                hstring u = unbox_value_or<hstring>(grid.Tag(), L"");
+                if (!u.empty())
+                    result.push_back(u);
+            }
+        }
+        return result;
+    }
+
+    /* Détermine la liste des UID ciblés par une action (barre d'outils ou menu
+     * contextuel) : si context_uid fait partie de la sélection courante (ou est
+     * vide), retourne toute la sélection ; sinon retourne uniquement context_uid. */
+    std::vector<hstring> MainWindow::TargetMessageUids(hstring const& context_uid)
+    {
+        auto selected = SelectedMessageUids();
+        if (context_uid.empty())
+            return selected;
+
+        for (auto const& u : selected)
+        {
+            if (u == context_uid)
+                return selected;
+        }
+        return { context_uid };
+    }
+
+    /* Recherche dans la liste affichée l'élément Grid correspondant à un UID.
+     * Paramètres :
+     *   uid : identifiant du message recherché
+     * Retourne : l'élément Grid trouvé, ou nullptr. */
+    Grid MainWindow::FindMessageItem(hstring const& uid)
+    {
+        for (auto const& entry : MessageList().Items())
+        {
+            auto grid = entry.try_as<Grid>();
+            if (grid && unbox_value_or<hstring>(grid.Tag(), L"") == uid)
+                return grid;
+        }
+        return nullptr;
+    }
+
+    /* Met à jour l'apparence visuelle d'un élément de la liste de messages
+     * (graisse, couleur d'accentuation et icône de suivi).
+     * Paramètres :
+     *   item    : élément Grid du message dans MessageList
+     *   seen    : true si le message est lu, false s'il est non lu
+     *   flagged : true si le message porte un indicateur de suivi */
+    void MainWindow::UpdateMessageItemVisual(Grid const& item, bool seen, bool flagged)
+    {
+        if (!item)
+            return;
+
+        auto weight = seen ? Microsoft::UI::Text::FontWeights::Normal() : Microsoft::UI::Text::FontWeights::SemiBold();
+
+        for (auto const& child : item.Children())
+        {
+            /* barre de lecture rapide : accent si non lu, info-bulle de l'action */
+            if (auto bar = child.try_as<Grid>(); bar && unbox_value_or<hstring>(bar.Tag(), L"") == L"read-bar")
+            {
+                if (auto mark = bar.Children().GetAt(0).try_as<Border>())
+                    mark.Background(seen
+                        ? Brush{ SolidColorBrush{ Microsoft::UI::Colors::Transparent() } }
+                        : Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
+                ToolTipService::SetToolTip(bar, box_value(seen ? L"Marquer comme non lu" : L"Marquer comme lu"));
+            }
+            else if (auto text = child.try_as<TextBlock>(); text && Grid::GetColumn(text) == 0)
+            {
+                text.FontWeight(weight);
+                if (!seen && Grid::GetRow(text) == 1)
+                {
+                    bool dark = (item.ActualTheme() == ElementTheme::Dark);
+                    text.Foreground(SolidColorBrush{ dark
+                        ? Windows::UI::Color{ 255, 96, 205, 255 }
+                        : Windows::UI::Color{ 255, 0, 95, 184 } });
+                }
+                else
+                {
+                    text.ClearValue(TextBlock::ForegroundProperty());
+                }
+            }
+            else if (auto meta = child.try_as<StackPanel>(); meta && Grid::GetColumn(meta) == 1 && meta.Children().Size() > 0)
+            {
+                if (auto icon = meta.Children().GetAt(0).try_as<FontIcon>())
+                    icon.Visibility(flagged ? Visibility::Visible : Visibility::Collapsed);
+            }
+        }
+    }
+
+    /* Met à jour le libellé et l'icône des boutons d'action du volet de lecture
+     * selon l'état du message sélectionné.
+     * Paramètres :
+     *   uid : identifiant du message affiché */
+    void MainWindow::UpdateActionButtons(hstring const& uid)
+    {
+        auto it = m_message_states.find(std::wstring{ uid });
+        bool seen = it != m_message_states.end() ? it->second.seen : true;
+        bool flagged = it != m_message_states.end() ? it->second.flagged : false;
+
+        ToggleReadButton().Label(seen ? L"Non lu" : L"Lu");
+        ToggleReadIcon().Glyph(seen ? L"\xE715" : L"\xE8C3");
+
+        ToggleFlagButton().Label(flagged ? L"Retirer suivi" : L"Suivi");
+    }
+
+    /* -------------------------------------------------------------------- */
+    /* Étape 1 : Notifications Windows (toasts) et pièces jointes            */
+    /* -------------------------------------------------------------------- */
+
+    /* Affiche une notification système Windows (toast) ainsi qu'un message
+     * dans la barre d'état à l'arrivée de nouveaux courriers non lus.
+     * Paramètres :
+     *   object : objet JSON décrivant les nouveaux messages ("from", "subject", "count") */
+    void MainWindow::ShowNewMailNotification(JsonObject const& object)
+    {
+        int32_t count = static_cast<int32_t>(object.GetNamedNumber(L"count", 1));
+        hstring from = SenderName(object.GetNamedString(L"from", L"Nouveau message"));
+        hstring subject = object.GetNamedString(L"subject", L"(Sans objet)");
+
+        hstring title = count > 1
+            ? hstring{ std::to_wstring(count) + L" nouveaux messages" }
+            : L"Nouveau message de " + from;
+        hstring body = count > 1
+            ? from + L" — " + subject
+            : subject;
+
+        /* mode confidentiel : ni expéditeur ni objet (présentation, partage d'écran) */
+        if (::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.confidential", false))
+        {
+            title = count > 1 ? hstring{ std::to_wstring(count) + L" nouveaux messages" } : hstring{ L"Nouveau message" };
+            body = count > 1 ? L"Ouvrez Evolution pour les lire." : L"Ouvrez Evolution pour le lire.";
+        }
+
+        ShowStatus(title + L" : " + body, InfoBarSeverity::Informational);
+
+        try
+        {
+            Microsoft::Windows::AppNotifications::Builder::AppNotificationBuilder builder;
+            builder.AddText(title);
+            builder.AddText(body);
+            Microsoft::Windows::AppNotifications::AppNotificationManager::Default().Show(builder.BuildNotification());
+        }
+        catch (...)
+        {
+            /* Si l'application non empaquetée n'a pas pu enregistrer de canal toast,
+               l'InfoBar reste visible pour prévenir l'utilisateur. */
+        }
+    }
+}

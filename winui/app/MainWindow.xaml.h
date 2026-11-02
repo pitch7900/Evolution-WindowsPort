@@ -250,6 +250,8 @@ namespace winrt::EvolutionWin::implementation
         fire_and_forget ShowAccountDetectionDialogAsync();
         fire_and_forget ShowAddAccountDialogAsync(Windows::Data::Json::JsonObject prefill);
         fire_and_forget ShowAboutDialogAsync();
+        void CheckForUpdateOnStartup();
+        fire_and_forget ShowUpdateDialogAsync();
         fire_and_forget SaveMessageAsAsync();
         fire_and_forget SaveAllAttachmentsAsync(Windows::Data::Json::JsonArray attachments);
         void InitializePicker(Windows::Foundation::IInspectable const& picker);
@@ -331,6 +333,8 @@ namespace winrt::EvolutionWin::implementation
         bool m_initialized{ false };
         bool m_reader_ready{ false };
         bool m_dialog_open{ false };
+        hstring m_update_tag;	/* version plus récente disponible (vide : aucune connue) */
+        hstring m_update_page;
 
         /* Bandeau d'information (vues Courrier et Calendrier) : avis identifiés,
          * le dernier est affiché ; voir ShowBanner */

@@ -10,7 +10,23 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
-## [0.9.5] — en cours
+## [0.9.5] — 2026-11-02
+
+### Ajouté
+
+- **Recherche de mise à jour** dans *À propos* : la version installée est
+  comparée à la dernière version publiée sur GitHub (Releases) ; si une
+  version plus récente existe, un lien mène à sa page de téléchargement.
+  Une notification discrète au démarrage prévient également lorsqu'une
+  nouvelle version est disponible.
+  Aucune donnée n'est envoyée, seule la page publique de la dernière
+  version est lue.
+
+### Modifié
+
+- Code : `MainWindow.xaml.cpp` découpé en un fichier par domaine
+  (`MainWindow.<Domaine>.cpp`) ; compilation limitée à 4 processus
+  parallèles (chaque `cl.exe` charge le PCH d'environ 1 Go).
 
 ## [0.9.4] — 2026-11-01
 
