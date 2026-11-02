@@ -59,9 +59,35 @@ namespace winrt::EvolutionWin::implementation
             RefreshAccountsView();
             RefreshConnectionAccountsList();
 
+            std::vector<JsonObject> sorted_accounts;
             for (auto const& value : m_accounts)
+                sorted_accounts.push_back(value.GetObject());
+
+            /* Ordonnancement ergonomique des comptes :
+             * 1. Compte principal par défaut en tête de liste
+             * 2. Autres comptes distants par ordre alphabétique
+             * 3. Dossiers locaux ("Sur cet ordinateur") en fin de liste */
+            std::stable_sort(sorted_accounts.begin(), sorted_accounts.end(), [](JsonObject const& a, JsonObject const& b)
             {
-                auto account = value.GetObject();
+                bool def_a = a.GetNamedBoolean(L"default", false);
+                bool def_b = b.GetNamedBoolean(L"default", false);
+                if (def_a != def_b)
+                    return def_a > def_b;
+
+                bool loc_a = a.GetNamedBoolean(L"local", false);
+                bool loc_b = b.GetNamedBoolean(L"local", false);
+                if (loc_a != loc_b)
+                    return loc_a < loc_b;
+
+                hstring na = a.GetNamedString(L"name", L"");
+                hstring nb = b.GetNamedString(L"name", L"");
+                return CompareStringEx(LOCALE_NAME_USER_DEFAULT, NORM_IGNORECASE | SORT_DIGITSASNUMBERS,
+                    na.c_str(), static_cast<int>(na.size()), nb.c_str(), static_cast<int>(nb.size()),
+                    nullptr, nullptr, 0) == CSTR_LESS_THAN;
+            });
+
+            for (auto const& account : sorted_accounts)
+            {
                 hstring uid = account.GetNamedString(L"uid");
                 bool local = account.GetNamedBoolean(L"local", false);
 
@@ -122,12 +148,25 @@ namespace winrt::EvolutionWin::implementation
         for (auto const& value : folders)
             sorted.push_back(value.GetObject());
 
-        std::stable_sort(sorted.begin(), sorted.end(), [](JsonObject const& a, JsonObject const& b)
+        /* Respect de la préférence mail.folder-sort : "special-first" (défaut) ou "alphabetical" */
+        bool special_first = (::EvolutionWin::Settings::Instance().GetString(L"mail.folder-sort", L"special-first") != L"alphabetical");
+
+        std::stable_sort(sorted.begin(), sorted.end(), [special_first](JsonObject const& a, JsonObject const& b)
         {
-            int ra = SpecialFolderRank(a.GetNamedString(L"type", L"")), rb = SpecialFolderRank(b.GetNamedString(L"type", L""));
-            if (ra != rb)
-                return ra < rb;
-            hstring na = a.GetNamedString(L"name", L""), nb = b.GetNamedString(L"name", L"");
+            if (special_first)
+            {
+                int ra = SpecialFolderRank(a.GetNamedString(L"type", L"")), rb = SpecialFolderRank(b.GetNamedString(L"type", L""));
+                if (ra != rb)
+                    return ra < rb;
+            }
+            hstring type_a = a.GetNamedString(L"type", L"");
+            hstring na = SpecialFolderName(type_a);
+            if (na.empty()) na = a.GetNamedString(L"name", L"");
+
+            hstring type_b = b.GetNamedString(L"type", L"");
+            hstring nb = SpecialFolderName(type_b);
+            if (nb.empty()) nb = b.GetNamedString(L"name", L"");
+
             return CompareStringEx(LOCALE_NAME_USER_DEFAULT, NORM_IGNORECASE | SORT_DIGITSASNUMBERS,
                 na.c_str(), static_cast<int>(na.size()), nb.c_str(), static_cast<int>(nb.size()),
                 nullptr, nullptr, 0) == CSTR_LESS_THAN;

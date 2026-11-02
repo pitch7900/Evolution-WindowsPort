@@ -274,6 +274,14 @@ static void test_settings_mail_read_and_security_options(void)
         mgr.SetString("layout.folder-pane", "off");
         std::string pane_off = mgr.GetString("layout.folder-pane", "normal");
         ASSERT_EQ_STR("off", pane_off.c_str());
+
+        /* Tri des dossiers (special-first / alphabetical) : par defaut 'special-first' */
+        std::string sort_default = mgr.GetString("mail.folder-sort", "special-first");
+        ASSERT_EQ_STR("special-first", sort_default.c_str());
+
+        mgr.SetString("mail.folder-sort", "alphabetical");
+        std::string sort_alpha = mgr.GetString("mail.folder-sort", "special-first");
+        ASSERT_EQ_STR("alphabetical", sort_alpha.c_str());
     }
     TEST_CASE_END();
 }

@@ -145,6 +145,10 @@ namespace winrt::EvolutionWin::implementation
             combo.SelectedIndex(sel);
         }
 
+        hstring folder_sort = settings.GetString(L"mail.folder-sort", L"special-first");
+        if (auto combo = MailFolderSortCombo())
+            combo.SelectedIndex(folder_sort == L"alphabetical" ? 1 : 0);
+
         if (auto chk = MailEmptyTrashOnExitCheck())
             chk.IsChecked(settings.GetBoolean(L"mail.empty-trash-on-exit", false));
 
@@ -775,6 +779,10 @@ namespace winrt::EvolutionWin::implementation
                         if (key == L"layout.folder-pane")
                         {
                             ApplyFolderPaneState(val);
+                        }
+                        else if (key == L"mail.folder-sort")
+                        {
+                            LoadAccounts();
                         }
                         else if (std::wstring_view{ key }.rfind(L"calendar.", 0) == 0)
                         {

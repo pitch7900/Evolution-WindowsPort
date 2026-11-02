@@ -531,7 +531,7 @@ Trois notions distinctes, comme dans Outlook : le **suivi** (drapeau avec libell
   - [x] 🟢 Noms des dossiers spéciaux affichés dans la langue de l'interface (« INBOX » → « Boîte de réception », « Sent Items » → « Éléments envoyés »)
   - [ ] 🟡 **Ordre personnalisé** par glisser-déposer (ou _Monter_ / _Descendre_ dans le menu contextuel), mémorisé par compte, sans modifier les dossiers sur le serveur
   - [ ] 🟢 Choix du mode de tri par compte : dossiers spéciaux d'abord (défaut) / alphabétique (_Afficher tous les dossiers de A à Z_) / personnalisé ; _Rétablir l'ordre par défaut_
-  - [ ] 🟢 Ordre des **comptes** eux-mêmes dans le volet des dossiers (compte par défaut en premier, puis glisser-déposer)
+  - [x] 🟢 Ordre des **comptes** eux-mêmes dans le volet des dossiers (compte par défaut en premier, puis glisser-déposer)
   - Compteurs de messages non lus et barre de défilement (décalage à gauche) : cf. §2
 - [ ] 🟠 **Nettoyer le dossier** (et sous-dossiers) des messages redondants — même logique que §7
 - [ ] **Récupérer les éléments supprimés** :

@@ -29,7 +29,7 @@ Ces chantiers ne dépendent pas de refontes architecturales complexes et apporte
 - [x] **Volet des dossiers réductible** (Mail et Calendrier)
   - États : normal, réduit (icônes seules / mini-calendrier) ou masqué.
   - Libère de l'espace sur les écrans plus compacts.
-- [ ] **Ordre des comptes dans le volet des dossiers**
+- [x] **Ordre des comptes dans le volet des dossiers**
   - Placer par défaut le compte principal en haut de la liste.
   - Proposer une option pour trier les dossiers de A à Z ou dossiers spéciaux d'abord.
 

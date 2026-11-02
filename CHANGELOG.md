@@ -22,6 +22,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Ordre des comptes et tri des dossiers dans le volet latéral (Quickwin §1 / §6 / TODO ligne 534)** :
+  - **Priorité au compte principal** : le compte de messagerie par défaut est automatiquement positionné en tête de liste dans l'arborescence des dossiers, suivi des autres comptes distants par ordre alphabétique, et enfin des dossiers locaux (« Sur cet ordinateur »).
+  - **Tri paramétrable des dossiers** : option permettant de choisir entre l'affichage des dossiers spéciaux en premier (`special-first`, Boîte de réception, Brouillons, Éléments envoyés...) et le tri alphabétique complet de A à Z (`alphabetical`).
+  - **Réglage dédié dans les paramètres** : sélecteur direct `mail.folder-sort` dans *Paramètres › Courrier* avec actualisation dynamique de l'arborescence.
+  - **Validation par tests unitaires** : tests de persistance de `mail.folder-sort` dans `tests/unit/test_settings.cpp`.
+
 - **Volet des dossiers réductible en Mail et Calendrier (Quickwin §1 / §2 / TODO ligne 181)** :
   - **Trois modes d'affichage ergonomiques** : Normal (pleine largeur dépliée mémorisée), Réduit (bande compacte de 48px pour les icônes de dossiers ou affichage exclusif du mini-calendrier) et Désactivé (volet entièrement masqué à 0px pour maximiser l'espace d'affichage).
   - **Menu déroulant dans le ruban** : bouton `Volet des dossiers` avec options radio (Normal, Réduit, Désactivé) accessible aussi bien dans le ruban Courrier que dans le ruban Calendrier.

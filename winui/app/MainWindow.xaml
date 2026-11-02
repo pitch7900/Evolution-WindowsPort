@@ -2544,6 +2544,30 @@
 
 
 
+                                <!-- Ordre des dossiers dans le volet latéral -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8B7;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Ordre des dossiers dans le volet latéral" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Choisissez d'afficher les dossiers spéciaux en premier (Boîte de réception, etc.) ou de trier tous les dossiers par ordre alphabétique de A à Z."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="MailFolderSortCombo" Tag="mail.folder-sort"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="180">
+                                            <ComboBoxItem Content="Dossiers spéciaux en tête (recommandé)" Tag="special-first" />
+                                            <ComboBoxItem Content="Ordre alphabétique (A-Z)" Tag="alphabetical" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
                                 <!-- Vider la corbeille à la fermeture -->
 
                                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
