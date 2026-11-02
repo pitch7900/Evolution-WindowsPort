@@ -230,7 +230,17 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 - [ ] 🟢 **Rédaction** : signature par défaut (nouveaux messages / réponses), copie cachée automatique, demande d'accusé de lecture
 - [ ] 🟡 **Synchronisation** : intervalle de relève propre au compte (remplace la valeur globale des Paramètres, §19), dossiers synchronisés hors connexion et ancienneté (§4), compte activé / désactivé sans le supprimer
 - [x] 🟡 **Test de connexion** après modification, avec bouton dédié et rapport d'état
-- [x] 🟢 Action *Définir par défaut* directement accessible depuis la boîte de modification
+### Boîtes partagées et comptes délégués (Mail, Calendrier, Contacts) — 🟠
+
+En entreprise (Exchange Online / Microsoft 365, Exchange on-premise), les utilisateurs accèdent fréquemment à des boîtes aux lettres partagées (ex. support, info, boîtes de service), ainsi qu'aux calendriers et carnets d'adresses d'autres collaborateurs (délégation avec droits de lecture ou de gestion).
+
+- [ ] 🟠 **Ajouter un compte ou dossier partagé en visibilité (clic droit sur un compte)** :
+  - [ ] 🟡 **Menu contextuel du compte** : action *« Ouvrir le dossier / compte partagé d'un autre utilisateur… »* (accessible par clic droit sur un compte dans l'arborescence Mail, Calendrier et Contacts).
+  - [ ] 🟡 **Boîte de dialogue de sélection** : recherche de l'utilisateur ou de la boîte partagée par nom ou adresse email dans l'annuaire (GAL) ou saisie directe de l'adresse (ex. `equipe@entreprise.com` ou `collegue@entreprise.com`).
+  - [ ] 🟠 **Courrier (Mail)** : ajout de la boîte aux lettres partagée / déléguée sous l'arborescence (accès aux dossiers Boîte de réception, Éléments envoyés, etc. selon les autorisations Exchange `FullAccess` / `SendAs` ou délégation Camel / EWS / Graph).
+  - [ ] 🟡 **Calendrier** : ajout du calendrier partagé sous le groupe *Calendriers partagés* ou *Autres calendriers*, avec synchronisation et affichage superposé ou côte à côte.
+  - [ ] 🟡 **Contacts** : ajout du carnet d'adresses partagé de l'utilisateur sélectionné.
+  - [ ] 🟢 **Mémorisation et suppression** : persistance des comptes et dossiers partagés ouverts entre les sessions ; option *« Masquer / Fermer le compte partagé »* par clic droit.
 
 ### Compte par défaut
 
@@ -613,6 +623,16 @@ La vue actuelle se limite à un `CalendarView` mensuel et une liste d'événemen
   - [ ] 🟠 Invitation de partage avec niveaux de droits (disponibilités, titres et lieux, tous les détails, édition, délégué) — Exchange / M365
   - [ ] 🟡 Envoyer un extrait par email (plage de dates, niveau de détail)
   - [ ] 🔴 Publication en ligne (URL ICS publique)
+### Hiérarchie complète des groupes de calendriers Exchange Online / Microsoft 365 — 🟠
+
+Constat : sur un compte Exchange Online / Microsoft 365 (ex. EVAM), EvolutionWin n'affiche aujourd'hui qu'une liste plate et très partielle de calendriers découverts (quelques collègues seulement sous le compte), alors qu'Outlook reflète l'intégralité des calendriers organisés en groupes structurés (*Mes calendriers*, *Équipe : Manager*, *Équipe : Mes collaborateurs direct reports*, *Autres calendriers*, *Salles*).
+
+- [ ] 🟠 **Découverte exhaustive et reflet fidèle de tous les calendriers Exchange Online / M365 (Graph / EWS)** :
+  - [ ] 🟠 **Exploration complète de l'API Graph / EWS** : interroger tous les groupes de calendriers (`GET /me/calendarGroups` et `GET /me/calendarGroups/{id}/calendars` sous Microsoft Graph, ou `FindFolder` / `CalendarFolder` avec `calendarGroup` sous EWS) pour récupérer l'ensemble des calendriers personnels, souscrits, partagés, d'équipe et de ressources (salles de réunion), sans omission.
+  - [ ] 🟡 **Arborescence hiérarchique par groupes dans le volet latéral** : reproduire fidèlement l'organisation d'Outlook avec groupes repliables/dépliables (*Mes calendriers*, *Équipe : Nom du manager*, *Équipe : Mes collaborateurs*, *Autres calendriers*, *Salles*), au lieu d'une simple liste plate.
+  - [ ] 🟢 **Sélection et couleurs individuelles** : case à cocher par calendrier, couleur d'accent propre conservée, mémorisation des calendriers cochés entre les sessions.
+  - [ ] 🟡 **Gestion des groupes de calendriers** : création, renommage et suppression de groupes de calendriers répercutés sur le serveur Exchange Online.
+
 - Calendriers de groupes Microsoft 365 : cf. « Groupes Microsoft 365 », §7
 
 ## 15. Contacts — 🟡
