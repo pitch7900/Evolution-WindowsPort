@@ -82,6 +82,7 @@ namespace winrt::EvolutionWin::implementation
         });
 
         InitializeReaderAsync();
+        CheckForUpdateOnStartup();
 
         m_core = std::make_shared<::EvolutionWin::CoreBridge>(
             DispatcherQueue(),

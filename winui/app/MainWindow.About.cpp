@@ -20,6 +20,7 @@
 #include <cmath>
 #include <cwctype>
 #include <utility>
+#include <functional>
 #include <vector>
 
 /* version de l'application, depuis le fichier VERSION (généré par MSBuild) */
@@ -28,8 +29,8 @@
 #define EVO_WIDEN(text) EVO_WIDEN_(text)
 #define EVO_VERSION_W EVO_WIDEN(EVO_VERSION_STR)
 
-/* Boîte « À propos » : version, recherche de mise à jour (GitHub Releases),
- * composants et rapport de bug. */
+/* Boîte « À propos » : version, recherche de mise à jour (GitHub Releases,
+ * aussi au démarrage), composants et rapport de bug. */
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
@@ -65,6 +66,9 @@ namespace
 
         return std::wstring{ display } + L" (build " + build + L"." + std::to_wstring(ubr) + L")";
     }
+
+    /* préférence : dernière version dont l'utilisateur a été prévenu au démarrage */
+    constexpr wchar_t UpdateNotifiedKey[] = L"update.notified-version";
 
     constexpr wchar_t LatestReleaseApi[] = L"https://api.github.com/repos/pitch7900/Evolution-WindowsPort/releases/latest";
 
@@ -108,18 +112,24 @@ namespace
         return std::lexicographical_compare(b.begin(), b.end(), a.begin(), a.end());
     }
 
+    struct UpdateCheck
+    {
+        hstring failure;	/* non vide si la vérification a échoué */
+        hstring tag;	/* dernière version publiée (« v0.9.4 ») */
+        hstring page;	/* page de cette version */
+        bool newer{ false };	/* plus récente que la version installée */
+    };
+
     /* Compare la version locale à la dernière version publiée sur GitHub
-     * (Releases) et l'indique dans la boîte « À propos ».
+     * (Releases). Le rappel est appelé sur le thread de l'interface.
      * Paramètres :
-     *   status : texte du résultat (« Recherche… », « À jour », erreur)
-     *   link   : lien vers la page de la nouvelle version, affiché si elle existe */
-    fire_and_forget CheckForUpdateAsync(TextBlock status, HyperlinkButton link)
+     *   done : reçoit le résultat (succès ou raison de l'échec) */
+    fire_and_forget CheckForUpdate(std::function<void(UpdateCheck const&)> done)
     {
         apartment_context ui_thread;
 
-        /* co_await interdit dans un catch : l'erreur est notée puis affichée après */
-        hstring failure;
-        hstring tag, page;
+        /* co_await interdit dans un catch : l'erreur est notée puis traitée après */
+        UpdateCheck check;
         try
         {
             Windows::Web::Http::HttpClient http;
@@ -131,41 +141,59 @@ namespace
 
             JsonObject release;
             if (response.StatusCode() == Windows::Web::Http::HttpStatusCode::NotFound)
-                failure = L"aucune version publiée";
+                check.failure = L"aucune version publiée";
             else if (!response.IsSuccessStatusCode() || !JsonObject::TryParse(body, release))
-                failure = L"réponse GitHub " + to_hstring(static_cast<int>(response.StatusCode()));
+                check.failure = L"réponse GitHub " + to_hstring(static_cast<int>(response.StatusCode()));
             else
             {
-                tag = release.GetNamedString(L"tag_name", L"");
-                page = release.GetNamedString(L"html_url", L"");
+                check.tag = release.GetNamedString(L"tag_name", L"");
+                check.page = release.GetNamedString(L"html_url", L"");
+                if (check.tag.empty())
+                    check.failure = L"version inconnue";
+                else
+                    check.newer = IsNewerVersion(check.tag.c_str(), EVO_VERSION_W);
             }
         }
         catch (hresult_error const& e)
         {
-            failure = e.message();
+            check.failure = e.message();
         }
 
         co_await ui_thread;
-        if (!failure.empty() || tag.empty())
-        {
-            status.Text(L"Mise à jour : vérification impossible (" + (failure.empty() ? hstring{ L"version inconnue" } : failure) + L")");
-            co_return;
-        }
+        done(check);
+    }
 
-        if (!IsNewerVersion(tag.c_str(), EVO_VERSION_W))
+    /* Affiche le résultat dans la boîte « À propos ».
+     * Paramètres :
+     *   status : ligne sous le numéro de version
+     *   banner : bandeau mis en évidence, ouvert si une nouvelle version existe */
+    void ShowUpdateResult(UpdateCheck const& check, TextBlock const& status, InfoBar const& banner)
+    {
+        if (!check.failure.empty())
+        {
+            status.Text(L"Mise à jour : vérification impossible (" + check.failure + L")");
+            return;
+        }
+        if (!check.newer)
         {
             status.Text(L"Vous utilisez la dernière version.");
-            co_return;
+            return;
         }
 
-        status.Text(L"Nouvelle version disponible : " + tag);
-        link.Content(box_value(L"Télécharger la version " + tag));
+        status.Text(L"Nouvelle version disponible : " + check.tag);
+        status.FontWeight(Microsoft::UI::Text::FontWeights::SemiBold());
+        status.Opacity(1);
+        banner.Title(L"Nouvelle version disponible : " + check.tag);
+        banner.Message(L"Vous utilisez la version " EVO_VERSION_W L".");
         try
         {
-            link.NavigateUri(Uri{ page });
-            link.Visibility(Visibility::Visible);
+            HyperlinkButton download;
+            download.Content(box_value(L"Télécharger"));
+            download.NavigateUri(Uri{ check.page });
+            banner.ActionButton(download);
         }
         catch (hresult_error const&) {}
+        banner.IsOpen(true);
     }
 }
 
@@ -242,11 +270,13 @@ namespace winrt::EvolutionWin::implementation
         update_status.Text(L"Recherche de mises à jour…");
         update_status.Opacity(0.7);
         title.Children().Append(update_status);
-        HyperlinkButton update_link;
-        update_link.Padding(ThicknessHelper::FromUniformLength(0));
-        update_link.Visibility(Visibility::Collapsed);
-        title.Children().Append(update_link);
         header.Children().Append(title);
+
+        InfoBar update_banner;
+        update_banner.Severity(InfoBarSeverity::Success);
+        update_banner.IsClosable(false);
+        update_banner.IsOpen(false);
+        panel.Children().Append(update_banner);
         panel.Children().Append(header);
 
         TextBlock about;
@@ -303,8 +333,67 @@ namespace winrt::EvolutionWin::implementation
         panel.Children().Append(copy);
 
         dialog.Content(panel);
-        CheckForUpdateAsync(update_status, update_link);
+        /* résultat déjà connu (vérification au démarrage) : pas de nouvel appel */
+        if (!m_update_tag.empty())
+        {
+            UpdateCheck known;
+            known.tag = m_update_tag;
+            known.page = m_update_page;
+            known.newer = true;
+            ShowUpdateResult(known, update_status, update_banner);
+        }
+        else
+        {
+            CheckForUpdate([strong, update_status, update_banner](UpdateCheck const& check)
+            {
+                if (check.newer)
+                {
+                    strong->m_update_tag = check.tag;
+                    strong->m_update_page = check.page;
+                }
+                ShowUpdateResult(check, update_status, update_banner);
+            });
+        }
         co_await dialog.ShowAsync();
         m_dialog_open = false;
+    }
+
+    /* Au démarrage : vérifie en arrière-plan si une version plus récente est
+     * publiée ; la fenêtre d'information n'apparaît qu'une fois par version. */
+    void MainWindow::CheckForUpdateOnStartup()
+    {
+        CheckForUpdate([strong = get_strong()](UpdateCheck const& check)
+        {
+            if (!check.newer)
+                return;
+            strong->m_update_tag = check.tag;
+            strong->m_update_page = check.page;
+            if (::EvolutionWin::Settings::Instance().GetString(UpdateNotifiedKey, L"") != check.tag)
+                strong->ShowUpdateDialogAsync();
+        });
+    }
+
+    /* Fenêtre « nouvelle version disponible » ; « Voir les détails » ouvre
+     * la boîte « À propos » (bandeau et lien de téléchargement). */
+    fire_and_forget MainWindow::ShowUpdateDialogAsync()
+    {
+        auto strong = get_strong();
+        if (m_dialog_open || m_update_tag.empty() || !Content() || !Content().XamlRoot())
+            co_return;
+        m_dialog_open = true;
+        ::EvolutionWin::Settings::Instance().SetString(UpdateNotifiedKey, m_update_tag);
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(L"Nouvelle version disponible"));
+        dialog.Content(box_value(L"Evolution " + m_update_tag + L" est disponible. Vous utilisez la version " EVO_VERSION_W L"."));
+        dialog.PrimaryButtonText(L"Voir les détails");
+        dialog.CloseButtonText(L"Plus tard");
+        dialog.DefaultButton(ContentDialogButton::Primary);
+
+        auto result = co_await dialog.ShowAsync();
+        m_dialog_open = false;
+        if (result == ContentDialogResult::Primary)
+            ShowAboutDialogAsync();
     }
 }
