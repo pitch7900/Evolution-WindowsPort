@@ -247,6 +247,9 @@
     <ClCompile Include="MainWindow.Tasks.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="MainWindow.Settings.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
     <ClCompile Include="ComposeWindow.xaml.cpp">
       <DependentUpon>ComposeWindow.xaml</DependentUpon>
     </ClCompile>

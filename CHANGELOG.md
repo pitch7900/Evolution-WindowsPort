@@ -17,10 +17,14 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 - **Indicateur d'avancement dans la barre des tâches (`ITaskbarList3`)** :
   reflète l'état de synchronisation en arrière-plan directement sur l'icône de
   l'application (progression indéterminée, pourcentage ou rouge en cas d'erreur).
-- **Refonte planifiée des Paramètres (panneau et navigation par catégories)** :
-  cadrage de la réorganisation façon Windows 11 avec menu latéral à gauche et
-  panneau structuré à droite regroupant les paramètres par sections et cartes
-  thématiques (`SettingsGroup` / `SettingsCard`).
+- **Refonte complète de la page Paramètres (style Windows 11 Fluent)** :
+  - **Navigation par catégories** : volet latéral dédié à gauche proposant 11 catégories structurées (Comptes, Courrier, Calendrier, Contacts, Tâches, Notifications, Apparence, Confidentialité et sécurité, Mise à jour, Avancé, À propos) avec icônes Fluent adaptatives.
+  - **Panneau de cartes de réglages Windows 11 (`SettingsCard`)** : conteneur structuré à droite organisant chaque catégorie en sections thématiques et cartes visuelles épurées (titre, description sans jargon, icône, contrôle interactif aligné à droite).
+  - **Fil d'Ariane cliquable** : navigation hiérarchique en haut de page (« Paramètres › [Catégorie] ») facilitant le repérage et le retour rapide.
+  - **Recherche rapide en direct (`SettingsSearchBox`)** : barre de recherche intégrée avec auto-complétion instantanée filtrant parmi tous les réglages et ouvrant directement la catégorie concernée.
+  - **Enregistrement immédiat dans `settings.json`** : persistance automatique et directe des réglages via `Settings::Instance()` dès modification d'un interrupteur ou d'une liste déroulante.
+  - **Bascule dynamique du thème** : application immédiate des modes Clair, Sombre ou Système sur l'ensemble de l'interface (`RequestedTheme`) sans redémarrage.
+  - **Raccourci clavier universel `Ctrl+,`** et navigation contextuelle directe vers n'importe quelle catégorie (`SelectSettingsCategory`).
 - **Écran de démarrage fluide (`SplashWindow`) et robustesse au démarrage** :
   affichage instantané d'une fenêtre de démarrage épurée au lancement de l'application
   pendant l'initialisation du moteur et des services EDS. Transition fluide vers

@@ -572,6 +572,7 @@ La recherche dans le dossier courant existe déjà (filtrage instantané + reche
 - [ ] 🟡 **Contacts** : carnet d'adresses unifié, détection et regroupement des doublons (même email)
 - [ ] 🟠 **Recherche dans les vues unifiées** (simple et avancée) pour mails, événements et contacts, compte d'origine visible dans les résultats
 - [ ] 🟢 **Choix des comptes inclus** dans les vues unifiées (préférences)
+- Tâches : affichage du compte d'origine et de l'adresse email associée dans la vue Tâches : cf. §16
 
 ## 12. Calendrier – Vues et navigation — 🔴
 
@@ -686,6 +687,7 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 
 - [x] 🟡 **Accès aux tâches dans `evo-core`** : lister, créer, modifier, supprimer (`E_CAL_CLIENT_SOURCE_TYPE_TASKS`)
 - [x] 🟡 **Vue Tâches** (entrée *Tâches* de la barre latérale) : liste des tâches par liste / compte, avec colonnes objet, échéance, priorité, état, catégorie
+- [ ] 🟡 **Affichage du compte source dans la vue Tâches** : afficher pour chaque tâche le compte (nom du compte et adresse email associée à la tâche pour ce compte) duquel est issue la tâche affichée (colonne dédiée, badge ou sous-titre)
 - [x] 🟡 **Éditeur de tâche** : objet, description, date de début, échéance, priorité, état (non commencée, en cours, terminée, en attente, différée), pourcentage d'achèvement, catégories
 - [ ] 🟠 Tâches périodiques
 - [ ] 🟠 Rappel sur une tâche — dépend de la fenêtre des rappels (§2)
@@ -768,17 +770,17 @@ Page *Paramètres* regroupant les préférences générales (les réglages propr
 
 Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Comptes, Confidentialité, Signatures et Signature par compte, sans navigation ni regroupement logique ; elle deviendra illisible avec les réglages à venir.
 
-- [ ] 🟡 **Navigation par catégories** sur le modèle des Paramètres de Windows 11 : liste des catégories à gauche (`NavigationView` en mode gauche ou liste), contenu de la catégorie à droite, fil d'Ariane en haut (« Paramètres › Comptes › Compte X ») <a id="demo-parametres"></a>
-  - [ ] Panneau dédié regroupant les différents paramètres : conteneur structuré à droite organisant les options de la catégorie active sous forme de sections thématiques et de cartes de réglages (`SettingsGroup` / `SettingsCard`), avec titre, description, contrôle interactif et résumé d'état
-  - [ ] Catégories proposées : **Comptes**, **Courrier** (lecture, rédaction, signatures, contenu externe), **Calendrier**, **Contacts**, **Tâches**, **Notifications**, **Apparence** (thème, langue, disposition), **Confidentialité et sécurité**, **Mise à jour**, **Avancé** (caches, journaux, réinitialisation), **À propos**
+- [x] 🟡 **Navigation par catégories** sur le modèle des Paramètres de Windows 11 : liste des catégories à gauche (`NavigationView` en mode gauche ou liste), contenu de la catégorie à droite, fil d'Ariane en haut (« Paramètres › Comptes › Compte X ») <a id="demo-parametres"></a>
+  - [x] Panneau dédié regroupant les différents paramètres : conteneur structuré à droite organisant les options de la catégorie active sous forme de sections thématiques et de cartes de réglages (`SettingsGroup` / `SettingsCard`), avec titre, description, contrôle interactif et résumé d'état
+  - [x] Catégories proposées : **Comptes**, **Courrier** (lecture, rédaction, signatures, contenu externe), **Calendrier**, **Contacts**, **Tâches**, **Notifications**, **Apparence** (thème, langue, disposition), **Confidentialité et sécurité**, **Mise à jour**, **Avancé** (caches, journaux, réinitialisation), **À propos**
 - Page détaillée par compte (clic sur un compte dans la catégorie Comptes) : cf. « Modifier un compte existant », §3
-- [ ] 🟢 **Contrôles homogènes** : cartes de réglage façon Windows 11 (`SettingsCard` / `SettingsExpander` du Windows Community Toolkit, ou équivalent maison) — titre, description courte, contrôle aligné à droite ; réglages avancés repliés dans un expandeur
-- [ ] 🟢 **Recherche dans les Paramètres** : champ en haut de la page qui filtre les réglages par mots-clés et ouvre directement la bonne catégorie
-- [ ] 🟢 **Enregistrement immédiat** des modifications (pas de bouton *Enregistrer* global) avec confirmation discrète ; boutons *Annuler* / *Enregistrer* seulement dans les éditeurs (signature, compte)
-- [ ] 🟢 **Accès contextuel** : liens directs depuis l'interface vers le réglage concerné (ex. bandeau « contenu externe bloqué » → *Confidentialité*, icône d'état des connexions → page du compte, menu contextuel d'un compte → *Paramètres du compte*)
-- [ ] 🟢 **Rétablir les valeurs par défaut** par catégorie
-- [ ] 🟢 Ouverture des Paramètres par Ctrl+, et depuis *Fichier › Options*
-- [ ] 🟢 Textes d'aide courts sous chaque réglage, sans jargon technique (laisser les détails de protocole dans la page *Avancé*)
+- [x] 🟢 **Contrôles homogènes** : cartes de réglage façon Windows 11 (`SettingsCard` / `SettingsExpander` du Windows Community Toolkit, ou équivalent maison) — titre, description courte, contrôle aligné à droite ; réglages avancés repliés dans un expandeur
+- [x] 🟢 **Recherche dans les Paramètres** : champ en haut de la page qui filtre les réglages par mots-clés et ouvre directement la bonne catégorie
+- [x] 🟢 **Enregistrement immédiat** des modifications (pas de bouton *Enregistrer* global) avec confirmation discrète ; boutons *Annuler* / *Enregistrer* seulement dans les éditeurs (signature, compte)
+- [x] 🟢 **Accès contextuel** : liens directs depuis l'interface vers le réglage concerné (ex. bandeau « contenu externe bloqué » → *Confidentialité*, icône d'état des connexions → page du compte, menu contextuel d'un compte → *Paramètres du compte*)
+- [x] 🟢 **Rétablir les valeurs par défaut** par catégorie
+- [x] 🟢 Ouverture des Paramètres par Ctrl+, et depuis *Fichier › Options*
+- [x] 🟢 Textes d'aide courts sous chaque réglage, sans jargon technique (laisser les détails de protocole dans la page *Avancé*)
 
 ### Notifications
 

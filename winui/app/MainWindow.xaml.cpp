@@ -136,6 +136,17 @@ namespace winrt::EvolutionWin::implementation
         RebuildQuickAccess();
         SyncConfidentialControls();
         AppTitleBar().SizeChanged([this](IInspectable const&, SizeChangedEventArgs const&) { UpdateTitleBarPassthrough(); });
+        ApplyTheme(::EvolutionWin::Settings::Instance().GetString(L"appearance.theme", L"system"));
+
+        /* Accélérateur clavier global Ctrl+, pour ouvrir les Paramètres */
+        if (auto root = this->Content().try_as<FrameworkElement>())
+        {
+            Microsoft::UI::Xaml::Input::KeyboardAccelerator accel;
+            accel.Modifiers(Windows::System::VirtualKeyModifiers::Control);
+            accel.Key(static_cast<Windows::System::VirtualKey>(188)); // VK_OEM_COMMA
+            accel.Invoked({ this, &MainWindow::OnSettingsAccelerator });
+            root.KeyboardAccelerators().Append(accel);
+        }
         RestorePaneWidths();
         ApplyFolderPaneVisibility(::EvolutionWin::Settings::Instance().GetBoolean(L"layout.folders-visible", true));
         ApplyReadingPanePosition(::EvolutionWin::Settings::Instance().GetString(L"layout.reading-pane", L"right"));
@@ -375,9 +386,8 @@ namespace winrt::EvolutionWin::implementation
             ContactsViewPane().Visibility(Visibility::Collapsed);
             TasksViewPane().Visibility(Visibility::Collapsed);
             SettingsViewPane().Visibility(Visibility::Visible);
-            RefreshAccountsView();
-            RefreshPrivacyView();
-            RefreshSignaturesView();
+            InitSettingsView();
+            SelectSettingsCategory(m_current_settings_category);
             return;
         }
 

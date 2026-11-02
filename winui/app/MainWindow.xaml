@@ -875,133 +875,1084 @@
                 <ProgressRing x:Name="TaskProgress" Grid.Row="2" IsActive="False" Width="32" Height="32" />
             </Grid>
 
-            <!-- Vue Paramètres / Comptes -->
-            <ScrollViewer x:Name="SettingsViewPane" Grid.Row="2" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
-            <Grid Padding="32,24,32,24" RowSpacing="16">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <Grid Grid.Row="0">
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="Comptes de messagerie" Style="{StaticResource SubtitleTextBlockStyle}" />
-                        <TextBlock Text="Gérez vos comptes Microsoft 365, Exchange, Gmail et IMAP / SMTP."
-                                   Style="{StaticResource CaptionTextBlockStyle}"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    </StackPanel>
-                    <Button HorizontalAlignment="Right" VerticalAlignment="Center"
-                            Style="{StaticResource AccentButtonStyle}" Click="OnAddAccountClick">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE710;" FontSize="14" />
-                            <TextBlock Text="Ajouter un compte" />
-                        </StackPanel>
-                    </Button>
+            <!-- Vue Paramètres (Modèle Paramètres de Windows 11) -->
+            <Grid x:Name="SettingsViewPane" Grid.Row="2" Visibility="Collapsed">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="280" />
+                    <ColumnDefinition Width="1" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Volet gauche : Navigation par catégories et recherche rapide -->
+                <Grid Grid.Column="0" Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="16,20,16,16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="Paramètres" Style="{StaticResource TitleTextBlockStyle}" Margin="8,0,0,16" />
+
+                    <!-- Recherche rapide -->
+                    <AutoSuggestBox Grid.Row="1" x:Name="SettingsSearchBox"
+                                    PlaceholderText="Rechercher un paramètre"
+                                    QueryIcon="Find"
+                                    TextChanged="OnSettingsSearchTextChanged"
+                                    SuggestionChosen="OnSettingsSearchSuggestionChosen"
+                                    Margin="4,0,4,12" />
+
+                    <!-- Liste des catégories -->
+                    <ListView Grid.Row="2" x:Name="SettingsNavList"
+                              SelectionMode="Single"
+                              SelectionChanged="OnSettingsNavSelectionChanged">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="CornerRadius" Value="6" />
+                                <Setter Property="Margin" Value="0,2,0,2" />
+                                <Setter Property="Padding" Value="12,10,12,10" />
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                        <ListViewItem Tag="accounts">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE77B;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                <TextBlock Text="Comptes" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </ListViewItem>
+                        <ListViewItem Tag="mail">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE715;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                <TextBlock Text="Courrier" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </ListViewItem>
+                        <ListViewItem Tag="calendar">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE787;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                <TextBlock Text="Calendrier" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </ListViewItem>
+                        <ListViewItem Tag="contacts">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE716;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                <TextBlock Text="Contacts" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </ListViewItem>
+                        <ListViewItem Tag="tasks">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE9D5;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                <TextBlock Text="Tâches" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </ListViewItem>
+                        <ListViewItem Tag="notifications">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xEA8F;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                <TextBlock Text="Notifications" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </ListViewItem>
+                        <ListViewItem Tag="appearance">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE790;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                <TextBlock Text="Apparence" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </ListViewItem>
+                        <ListViewItem Tag="privacy">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE72E;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                <TextBlock Text="Confidentialité et sécurité" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </ListViewItem>
+                        <ListViewItem Tag="update">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE777;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                <TextBlock Text="Mise à jour" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </ListViewItem>
+                        <ListViewItem Tag="advanced">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE90F;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                <TextBlock Text="Avancé" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </ListViewItem>
+                        <ListViewItem Tag="about">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE946;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                <TextBlock Text="À propos" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </ListViewItem>
+                    </ListView>
                 </Grid>
-                <ListView x:Name="AccountList" Grid.Row="1" SelectionMode="None" />
 
-                <!-- Confidentialité : contenu externe des messages HTML -->
-                <StackPanel Grid.Row="2" Spacing="8" Margin="0,16,0,0">
-                    <TextBlock Text="Confidentialité" Style="{StaticResource SubtitleTextBlockStyle}" />
-                    <TextBlock Text="Les images et styles distants d'un message (dont les pixels de suivi) révèlent à l'expéditeur que vous l'avez ouvert, à quel moment et depuis quelle adresse IP."
-                               Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <ToggleSwitch x:Name="ConfidentialNotificationsSwitch" Header="Notifications confidentielles"
-                                  OffContent="Expéditeur et objet affichés dans les notifications"
-                                  OnContent="« Nouveau message » seulement, sans expéditeur ni objet (présentation, partage d'écran)"
-                                  Toggled="OnConfidentialToggled" />
-                    <RadioButtons x:Name="RemoteContentModeChoice" Header="Charger le contenu externe des messages"
-                                  SelectionChanged="OnRemoteContentModeChanged">
-                        <x:String>Jamais</x:String>
-                        <x:String>Expéditeurs et domaines de confiance seulement</x:String>
-                        <x:String>Toujours</x:String>
-                    </RadioButtons>
-                    <TextBlock Text="Expéditeurs et domaines de confiance" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
-                    <TextBlock x:Name="TrustedSendersEmpty"
-                               Text="Aucun expéditeur ni domaine de confiance. Utilisez le bandeau « Contenu externe bloqué » au-dessus d'un message pour en ajouter."
-                               Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <ListView x:Name="TrustedSenderList" SelectionMode="None" />
-                </StackPanel>
+                <!-- Séparateur vertical -->
+                <Border Grid.Column="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Width="1" />
 
-                <!-- Signatures : éditeur, choix par compte, position -->
-                <StackPanel Grid.Row="3" Spacing="8" Margin="0,16,0,0">
-                    <Grid>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Signatures" Style="{StaticResource SubtitleTextBlockStyle}" />
-                            <TextBlock Text="Signatures texte ou HTML (mise en forme, liens, images) ajoutées aux messages selon le compte expéditeur."
-                                       Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <!-- Volet droit : Contenu de la catégorie active -->
+                <Grid Grid.Column="2" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- En-tête avec fil d'Ariane -->
+                    <StackPanel Grid.Row="0" Padding="36,24,36,12" Spacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
+                            <HyperlinkButton Content="Paramètres" Click="OnSettingsBreadcrumbRootClick"
+                                             Padding="0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <FontIcon Glyph="&#xE76C;" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
+                            <TextBlock x:Name="SettingsBreadcrumbCategory" Text="Comptes"
+                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" />
                         </StackPanel>
-                        <Button HorizontalAlignment="Right" VerticalAlignment="Center" Click="OnNewSignatureClick">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <FontIcon Glyph="&#xE710;" FontSize="14" />
-                                <TextBlock Text="Nouvelle signature" />
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-                    <TextBlock x:Name="SignaturesEmpty" Visibility="Collapsed"
-                               Text="Aucune signature. La signature automatique (nom, organisation et adresse du compte) reste disponible."
-                               Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <ListView x:Name="SignatureList" SelectionMode="None" />
+                        <TextBlock x:Name="SettingsCategoryTitle" Text="Comptes" Style="{StaticResource TitleTextBlockStyle}" />
+                        <TextBlock x:Name="SettingsCategoryDescription"
+                                   Text="Gérez vos comptes de messagerie Microsoft 365, Exchange, Gmail et IMAP / SMTP."
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
 
-                    <!-- éditeur de la signature créée ou modifiée -->
-                    <Border x:Name="SignatureEditorPanel" Visibility="Collapsed" Padding="16" CornerRadius="8" BorderThickness="1"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                        <StackPanel Spacing="8">
-                            <TextBlock x:Name="SignatureEditorTitle" Text="Nouvelle signature" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                            <TextBox x:Name="SignatureNameBox" Header="Nom" PlaceholderText="Professionnelle, Personnelle…" />
-                            <RadioButtons x:Name="SignatureFormatChoice" Header="Format" MaxColumns="2"
-                                          SelectionChanged="OnSignatureFormatChanged">
-                                <x:String>HTML (mise en forme)</x:String>
-                                <x:String>Texte brut</x:String>
-                            </RadioButtons>
-                            <StackPanel x:Name="SignatureToolbar" Orientation="Horizontal" Spacing="4">
-                                <Button Tag="bold" Click="OnSignatureToolClick" ToolTipService.ToolTip="Gras">
-                                    <FontIcon Glyph="&#xE8DD;" FontSize="14" />
-                                </Button>
-                                <Button Tag="italic" Click="OnSignatureToolClick" ToolTipService.ToolTip="Italique">
-                                    <FontIcon Glyph="&#xE8DB;" FontSize="14" />
-                                </Button>
-                                <Button Tag="underline" Click="OnSignatureToolClick" ToolTipService.ToolTip="Souligné">
-                                    <FontIcon Glyph="&#xE8DC;" FontSize="14" />
-                                </Button>
-                                <AppBarSeparator />
-                                <Button Click="OnSignatureLinkClick" ToolTipService.ToolTip="Insérer un lien hypertexte">
-                                    <FontIcon Glyph="&#xE71B;" FontSize="14" />
-                                </Button>
-                                <Button Click="OnSignatureImageClick" ToolTipService.ToolTip="Insérer une image (intégrée au message)">
-                                    <FontIcon Glyph="&#xE8B9;" FontSize="14" />
-                                </Button>
-                                <Button Tag="removeFormat" Click="OnSignatureToolClick" ToolTipService.ToolTip="Effacer la mise en forme">
-                                    <FontIcon Glyph="&#xE8E6;" FontSize="14" />
-                                </Button>
+                    <!-- Conteneur avec défilement des différentes catégories -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="36,0,36,36">
+                        <StackPanel Spacing="24">
+
+                            <!-- ======================================================== -->
+                            <!-- CATÉGORIE 1 : COMPTES                                   -->
+                            <!-- ======================================================== -->
+                            <StackPanel x:Name="SettingsCategoryAccounts" Visibility="Visible" Spacing="16">
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE710;" FontSize="20" Foreground="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Ajouter un compte de messagerie" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Configurez une nouvelle boîte aux lettres Exchange Online, Gmail, Outlook ou IMAP / SMTP."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Style="{StaticResource AccentButtonStyle}" Click="OnAddAccountClick">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <FontIcon Glyph="&#xE710;" FontSize="14" />
+                                                <TextBlock Text="Ajouter un compte" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                                <TextBlock Text="Comptes configurés" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+                                <ListView x:Name="AccountList" SelectionMode="None" />
                             </StackPanel>
-                            <Border x:Name="SignatureHtmlContainer" Height="200" Background="White" RequestedTheme="Light"
-                                    CornerRadius="4" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                                <controls:WebView2 x:Name="SignatureHtmlEditor" RequestedTheme="Light" DefaultBackgroundColor="White" />
-                            </Border>
-                            <TextBox x:Name="SignatureTextBox" Visibility="Collapsed" Height="200"
-                                     AcceptsReturn="True" TextWrapping="Wrap" IsSpellCheckEnabled="True"
-                                     ScrollViewer.VerticalScrollBarVisibility="Auto" />
-                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                                <Button Content="Annuler" Click="OnSignatureEditorCancel" />
-                                <Button Content="Enregistrer" Style="{StaticResource AccentButtonStyle}" Click="OnSignatureEditorSave" />
+
+                            <!-- ======================================================== -->
+                            <!-- CATÉGORIE 2 : COURRIER                                  -->
+                            <!-- ======================================================== -->
+                            <StackPanel x:Name="SettingsCategoryMail" Visibility="Collapsed" Spacing="16">
+                                <TextBlock Text="Réception et synchronisation" Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                                <!-- Relève automatique -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE895;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Vérification automatique du nouveau courrier" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Fréquence à laquelle l'application interroge les serveurs pour relever vos messages."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="MailSyncIntervalCombo" Tag="mail.sync-interval"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+                                            <ComboBoxItem Content="Toutes les minutes" Tag="1" />
+                                            <ComboBoxItem Content="Toutes les 5 minutes" Tag="5" />
+                                            <ComboBoxItem Content="Toutes les 15 minutes" Tag="15" />
+                                            <ComboBoxItem Content="Toutes les 30 minutes" Tag="30" />
+                                            <ComboBoxItem Content="Manuellement uniquement" Tag="0" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Relève au démarrage -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE756;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Relever le courrier au démarrage" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Synchroniser immédiatement tous les comptes dès l'ouverture d'EvolutionWin."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="MailSyncOnStartupSwitch" Tag="mail.sync-on-startup"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <TextBlock Text="Lecture et affichage" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+
+                                <!-- Marquer comme lu -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8C3;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Marquer le message comme lu" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Délai avant que le message affiché dans le volet de lecture soit considéré comme lu."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="MailMarkAsReadCombo" Tag="mail.mark-as-read"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+                                            <ComboBoxItem Content="Immédiatement" Tag="immediate" />
+                                            <ComboBoxItem Content="Après 5 secondes" Tag="delayed" />
+                                            <ComboBoxItem Content="Manuellement seulement" Tag="never" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Vider la corbeille à la fermeture -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE74D;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Vider la corbeille en quittant l'application" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Purger définitivement les éléments supprimés à la fermeture d'EvolutionWin."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="MailEmptyTrashOnExitSwitch" Tag="mail.empty-trash-on-exit"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <TextBlock Text="Rédaction de messages" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+
+                                <!-- Format par défaut -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8D2;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Format par défaut des nouveaux messages" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Privilégier le texte enrichi HTML (mise en forme, liens) ou le format texte brut universel."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="MailDefaultFormatCombo" Tag="mail.default-format"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+                                            <ComboBoxItem Content="HTML (texte enrichi)" Tag="html" />
+                                            <ComboBoxItem Content="Texte brut" Tag="text" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Confirmation objet vide -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE7BA;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Avertir en cas d'envoi sans objet" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Demander une confirmation si vous tentez d'expédier un message avec la ligne d'objet vide."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="MailWarnEmptySubjectSwitch" Tag="mail.warn-empty-subject"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Confirmation suppression définitive -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE814;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Confirmer la suppression définitive" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Demander confirmation avant d'éliminer définitivement un élément sans passer par la corbeille."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="MailConfirmPermanentDeleteSwitch" Tag="mail.confirm-permanent-delete"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Signatures (intégration complète du bloc existant) -->
+                                <Grid Margin="0,12,0,0">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Signatures" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                        <TextBlock Text="Signatures texte ou HTML (mise en forme, liens, images) ajoutées aux messages selon le compte expéditeur."
+                                                   Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </StackPanel>
+                                    <Button HorizontalAlignment="Right" VerticalAlignment="Center" Click="OnNewSignatureClick">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE710;" FontSize="14" />
+                                            <TextBlock Text="Nouvelle signature" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                                <TextBlock x:Name="SignaturesEmpty" Visibility="Collapsed"
+                                           Text="Aucune signature. La signature automatique (nom, organisation et adresse du compte) reste disponible."
+                                           Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <ListView x:Name="SignatureList" SelectionMode="None" />
+
+                                <!-- Éditeur de signature -->
+                                <Border x:Name="SignatureEditorPanel" Visibility="Collapsed" Padding="16" CornerRadius="8" BorderThickness="1"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock x:Name="SignatureEditorTitle" Text="Nouvelle signature" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                        <TextBox x:Name="SignatureNameBox" Header="Nom" PlaceholderText="Professionnelle, Personnelle…" />
+                                        <RadioButtons x:Name="SignatureFormatChoice" Header="Format" MaxColumns="2"
+                                                      SelectionChanged="OnSignatureFormatChanged">
+                                            <x:String>HTML (mise en forme)</x:String>
+                                            <x:String>Texte brut</x:String>
+                                        </RadioButtons>
+                                        <StackPanel x:Name="SignatureToolbar" Orientation="Horizontal" Spacing="4">
+                                            <Button Tag="bold" Click="OnSignatureToolClick" ToolTipService.ToolTip="Gras">
+                                                <FontIcon Glyph="&#xE8DD;" FontSize="14" />
+                                            </Button>
+                                            <Button Tag="italic" Click="OnSignatureToolClick" ToolTipService.ToolTip="Italique">
+                                                <FontIcon Glyph="&#xE8DB;" FontSize="14" />
+                                            </Button>
+                                            <Button Tag="underline" Click="OnSignatureToolClick" ToolTipService.ToolTip="Souligné">
+                                                <FontIcon Glyph="&#xE8DC;" FontSize="14" />
+                                            </Button>
+                                            <AppBarSeparator />
+                                            <Button Click="OnSignatureLinkClick" ToolTipService.ToolTip="Insérer un lien hypertexte">
+                                                <FontIcon Glyph="&#xE71B;" FontSize="14" />
+                                            </Button>
+                                            <Button Click="OnSignatureImageClick" ToolTipService.ToolTip="Insérer une image (intégrée au message)">
+                                                <FontIcon Glyph="&#xE8B9;" FontSize="14" />
+                                            </Button>
+                                            <Button Tag="removeFormat" Click="OnSignatureToolClick" ToolTipService.ToolTip="Effacer la mise en forme">
+                                                <FontIcon Glyph="&#xE8E6;" FontSize="14" />
+                                            </Button>
+                                        </StackPanel>
+                                        <Border x:Name="SignatureHtmlContainer" Height="200" Background="White" RequestedTheme="Light"
+                                                CornerRadius="4" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                            <controls:WebView2 x:Name="SignatureHtmlEditor" RequestedTheme="Light" DefaultBackgroundColor="White" />
+                                        </Border>
+                                        <TextBox x:Name="SignatureTextBox" Visibility="Collapsed" Height="200"
+                                                 AcceptsReturn="True" TextWrapping="Wrap" IsSpellCheckEnabled="True"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                            <Button Content="Annuler" Click="OnSignatureEditorCancel" />
+                                            <Button Content="Enregistrer" Style="{StaticResource AccentButtonStyle}" Click="OnSignatureEditorSave" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <ToggleSwitch x:Name="SignatureAboveQuoteSwitch" Header="Position dans les réponses et transferts"
+                                              OnContent="Au-dessus du texte cité" OffContent="En dessous du texte cité"
+                                              Toggled="OnSignaturePlacementToggled" />
+                                <TextBlock Text="Signature par compte" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
+                                <ListView x:Name="SignatureAccountList" SelectionMode="None" />
                             </StackPanel>
+
+                            <!-- ======================================================== -->
+                            <!-- CATÉGORIE 3 : CALENDRIER                                -->
+                            <!-- ======================================================== -->
+                            <StackPanel x:Name="SettingsCategoryCalendar" Visibility="Collapsed" Spacing="16">
+                                <TextBlock Text="Semaine de travail et grille" Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                                <!-- Premier jour de la semaine -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE787;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Premier jour de la semaine" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Jour à afficher dans la première colonne des vues mensuelle et hebdomadaire."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="CalendarFirstDayCombo" Tag="calendar.first-day"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+                                            <ComboBoxItem Content="Lundi" Tag="0" />
+                                            <ComboBoxItem Content="Dimanche" Tag="1" />
+                                            <ComboBoxItem Content="Samedi" Tag="2" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Numéros de semaine -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8B7;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Afficher les numéros de semaine" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Affiche le numéro ISO de la semaine en marge gauche de la grille mensuelle."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="CalendarShowWeekNumbersSwitch" Tag="calendar.show-week-numbers"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <TextBlock Text="Rendez-vous et alertes" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+
+                                <!-- Durée par défaut -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE823;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Durée par défaut des nouveaux rendez-vous" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Durée attribuée automatiquement lors de la création d'un événement dans l'agenda."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="CalendarDefaultDurationCombo" Tag="calendar.default-duration"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+                                            <ComboBoxItem Content="15 minutes" Tag="15" />
+                                            <ComboBoxItem Content="30 minutes" Tag="30" />
+                                            <ComboBoxItem Content="1 heure" Tag="60" />
+                                            <ComboBoxItem Content="2 heures" Tag="120" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Rappel par défaut -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xEA8F;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Rappel automatique par défaut" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Délai d'alerte configuré pour les nouveaux rendez-vous créés."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="CalendarDefaultReminderCombo" Tag="calendar.default-reminder"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+                                            <ComboBoxItem Content="Aucun rappel" Tag="0" />
+                                            <ComboBoxItem Content="5 minutes avant" Tag="5" />
+                                            <ComboBoxItem Content="15 minutes avant" Tag="15" />
+                                            <ComboBoxItem Content="30 minutes avant" Tag="30" />
+                                            <ComboBoxItem Content="1 heure avant" Tag="60" />
+                                            <ComboBoxItem Content="1 jour avant" Tag="1440" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- ======================================================== -->
+                            <!-- CATÉGORIE 4 : CONTACTS                                  -->
+                            <!-- ======================================================== -->
+                            <StackPanel x:Name="SettingsCategoryContacts" Visibility="Collapsed" Spacing="16">
+                                <TextBlock Text="Affichage et classement des contacts" Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                                <!-- Format d'affichage des noms -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE716;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Format d'affichage des noms" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Ordre de présentation habituel des personnes dans la liste des contacts."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="ContactsNameFormatCombo" Tag="contacts.name-format"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+                                            <ComboBoxItem Content="Prénom Nom" Tag="first-last" />
+                                            <ComboBoxItem Content="Nom Prénom" Tag="last-first" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Ordre de tri des contacts -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8D5;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Trier les contacts par" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Critère de tri alphabétique utilisé dans le carnet d'adresses."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="ContactsSortOrderCombo" Tag="contacts.sort-order"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+                                            <ComboBoxItem Content="Nom de famille" Tag="last" />
+                                            <ComboBoxItem Content="Prénom" Tag="first" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- ======================================================== -->
+                            <!-- CATÉGORIE 5 : TÂCHES                                    -->
+                            <!-- ======================================================== -->
+                            <StackPanel x:Name="SettingsCategoryTasks" Visibility="Collapsed" Spacing="16">
+                                <TextBlock Text="Suivi et affichage des tâches" Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                                <!-- Tâches terminées par défaut -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE73E;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Afficher les tâches terminées" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Conserver les tâches déjà achevées visibles dans la liste avec une mise en forme barrée."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="TasksShowCompletedSwitch" Tag="tasks.show-completed"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Échéance par défaut -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE787;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Échéance par défaut des nouvelles tâches" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Date limite préremplie lors de l'ajout d'une tâche."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="TasksDefaultDueCombo" Tag="tasks.default-due"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+                                            <ComboBoxItem Content="Aucune échéance" Tag="none" />
+                                            <ComboBoxItem Content="Aujourd'hui" Tag="today" />
+                                            <ComboBoxItem Content="Demain" Tag="tomorrow" />
+                                            <ComboBoxItem Content="Dans 1 semaine" Tag="week" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- ======================================================== -->
+                            <!-- CATÉGORIE 6 : NOTIFICATIONS                             -->
+                            <!-- ======================================================== -->
+                            <StackPanel x:Name="SettingsCategoryNotifications" Visibility="Collapsed" Spacing="16">
+                                <TextBlock Text="Bannières et signaux d'alerte" Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                                <!-- Toasts Windows -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xEA8F;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Notifications Toast Windows" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Afficher des bannières d'alerte natives dans le Centre de notifications Windows lors de l'arrivée d'un message."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="NotificationsToastSwitch" Tag="notifications.toast"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Signal sonore -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE767;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Signal sonore de notification" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Émettre un son discret à chaque nouveau message reçu."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="NotificationsPlaySoundSwitch" Tag="notifications.sound"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Badge barre des tâches -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE7C3;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Pastille de non-lus sur la barre des tâches" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Afficher un indicateur visuel sur l'icône d'EvolutionWin dans la barre des tâches Windows."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="NotificationsTaskbarBadgeSwitch" Tag="notifications.taskbar-badge"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <TextBlock Text="Confidentialité des notifications" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+
+                                <!-- Mode confidentiel (contrôle existant conservé) -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE72E;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Mode confidentiel des notifications" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Masque l'expéditeur et l'objet dans les alertes (« Nouveau message » uniquement), idéal lors des partages d'écran."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="ConfidentialNotificationsSwitch"
+                                                      Toggled="OnConfidentialToggled" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- ======================================================== -->
+                            <!-- CATÉGORIE 7 : APPARENCE                                 -->
+                            <!-- ======================================================== -->
+                            <StackPanel x:Name="SettingsCategoryAppearance" Visibility="Collapsed" Spacing="16">
+                                <TextBlock Text="Thème et personnalisation visuelle" Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                                <!-- Thème de l'application -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE790;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Thème de l'application" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Choisissez entre le thème clair, le thème sombre ou suivez la préférence Windows."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <RadioButtons Grid.Column="2" x:Name="AppearanceThemeChoice" MaxColumns="3"
+                                                      SelectionChanged="OnThemeChoiceChanged" VerticalAlignment="Center">
+                                            <x:String>Système</x:String>
+                                            <x:String>Clair</x:String>
+                                            <x:String>Sombre</x:String>
+                                        </RadioButtons>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Vue par défaut au démarrage -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE756;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Vue affichée à l'ouverture" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Module ouvert automatiquement lors du lancement d'EvolutionWin."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="AppearanceStartupViewCombo" Tag="appearance.startup-view"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+                                            <ComboBoxItem Content="Courrier" Tag="mail" />
+                                            <ComboBoxItem Content="Calendrier" Tag="calendar" />
+                                            <ComboBoxItem Content="Contacts" Tag="contacts" />
+                                            <ComboBoxItem Content="Tâches" Tag="tasks" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Taille de police de lecture -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8D2;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Taille de texte pour la lecture" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Ajuster la taille de police par défaut pour le volet de lecture des messages."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="AppearanceFontSizeCombo" Tag="appearance.font-size"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+                                            <ComboBoxItem Content="Petite" Tag="small" />
+                                            <ComboBoxItem Content="Normale" Tag="normal" />
+                                            <ComboBoxItem Content="Grande" Tag="large" />
+                                            <ComboBoxItem Content="Très grande" Tag="extralarge" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Réduire dans la barre d'état (systray) -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE718;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Réduire dans la zone de notification Windows" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Masquer dans la boîte à miniatures près de l'horloge au lieu de quitter complètement."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="AppearanceMinimizeToTraySwitch" Tag="appearance.minimize-to-tray"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- ======================================================== -->
+                            <!-- CATÉGORIE 8 : CONFIDENTIALITÉ & SÉCURITÉ                -->
+                            <!-- ======================================================== -->
+                            <StackPanel x:Name="SettingsCategoryPrivacy" Visibility="Collapsed" Spacing="16">
+                                <TextBlock Text="Contenu externe et suivi des messages" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                <TextBlock Text="Les images et styles distants d'un message (dont les pixels espions) révèlent à l'expéditeur que vous l'avez ouvert, à quel moment et depuis quelle adresse IP."
+                                           Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                <!-- Mode de chargement du contenu distant (contrôle existant conservé) -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16" MinHeight="64">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="Charger le contenu externe des messages" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                        <RadioButtons x:Name="RemoteContentModeChoice" SelectionChanged="OnRemoteContentModeChanged">
+                                            <x:String>Jamais</x:String>
+                                            <x:String>Expéditeurs et domaines de confiance seulement</x:String>
+                                            <x:String>Toujours</x:String>
+                                        </RadioButtons>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Masquer les extraits de texte dans la liste -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE890;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Masquer l'extrait des messages dans la liste" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Ne pas afficher les lignes d'aperçu du texte des messages pour une discrétion totale."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="PrivacyHideSnippetsSwitch" Tag="privacy.hide-snippets"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <TextBlock Text="Expéditeurs et domaines de confiance" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+                                <TextBlock x:Name="TrustedSendersEmpty"
+                                           Text="Aucun expéditeur ni domaine de confiance. Utilisez le bandeau « Contenu externe bloqué » au-dessus d'un message pour en ajouter."
+                                           Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <ListView x:Name="TrustedSenderList" SelectionMode="None" />
+                            </StackPanel>
+
+                            <!-- ======================================================== -->
+                            <!-- CATÉGORIE 9 : MISE À JOUR                               -->
+                            <!-- ======================================================== -->
+                            <StackPanel x:Name="SettingsCategoryUpdate" Visibility="Collapsed" Spacing="16">
+                                <TextBlock Text="Recherche de nouvelles versions" Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                                <!-- Recherche automatique -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE777;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Vérifier les mises à jour au démarrage" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Interroger GitHub Releases au lancement pour vous avertir des nouvelles versions."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="UpdateAutoCheckSwitch" Tag="update.auto-check"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Canal de mise à jour -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8B7;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Canal de mise à jour" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Choisissez entre les publications stables recommandées ou les pré-versions de test."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="UpdateChannelCombo" Tag="update.channel"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+                                            <ComboBoxItem Content="Stable (Recommandé)" Tag="stable" />
+                                            <ComboBoxItem Content="Versions bêta préliminaires" Tag="beta" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Bouton de vérification manuelle -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE895;" FontSize="20" Foreground="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Vérifier la disponibilité immédiatement" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Version actuelle installée : 0.9.6 (Architecture Windows x64)"
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Content="Rechercher des mises à jour" Style="{StaticResource AccentButtonStyle}"
+                                                Click="OnCheckUpdateNowClick" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- ======================================================== -->
+                            <!-- CATÉGORIE 10 : AVANCÉ                                   -->
+                            <!-- ======================================================== -->
+                            <StackPanel x:Name="SettingsCategoryAdvanced" Visibility="Collapsed" Spacing="16">
+                                <TextBlock Text="Données locales et stockage" Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                                <!-- Emplacement des données -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8B7;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Dossier des données et préférences locales" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="%LOCALAPPDATA%\EvolutionWin (fichier settings.json, profils et caches)"
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Content="Ouvrir le dossier" Click="OnOpenDataFolderClick" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Vider le cache WebView2 -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE74D;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Cache de rendu HTML (WebView2)" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Libérer l'espace disque en purgeant les fichiers temporaires et les caches de lecture."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Content="Vider le cache" Click="OnClearWebViewCacheClick" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <TextBlock Text="Diagnostics et réinitialisation" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+
+                                <!-- Journalisation détaillée -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE90F;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Journalisation détaillée (Debug log)" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Enregistrer des traces détaillées dans evolution.log pour aider au diagnostic d'anomalies."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="AdvancedVerboseLogSwitch" Tag="advanced.verbose-log"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Réinitialiser tous les paramètres -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE7A7;" FontSize="20" Foreground="{ThemeResource SystemFillColorCautionBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Rétablir tous les paramètres par défaut" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Restaure les réglages initiaux de l'application sans toucher à vos comptes ni à vos courriels."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Content="Réinitialiser" Click="OnResetAllSettingsClick" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- ======================================================== -->
+                            <!-- CATÉGORIE 11 : À PROPOS                                 -->
+                            <!-- ======================================================== -->
+                            <StackPanel x:Name="SettingsCategoryAbout" Visibility="Collapsed" Spacing="16">
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="24" MinHeight="100">
+                                    <Grid ColumnSpacing="20">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE715;" FontSize="48" Foreground="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Top" Margin="0,4,0,0" />
+                                        <StackPanel Grid.Column="1" Spacing="6">
+                                            <TextBlock Text="EvolutionWin" Style="{StaticResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+                                            <TextBlock Text="Version 0.9.6 — Portage Windows 11 natif d'Evolution"
+                                                       Style="{StaticResource BodyStrongTextBlockStyle}"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            <TextBlock Text="Client de messagerie, calendrier, carnet d'adresses et gestionnaire de tâches complet pour Windows 11. Conçu avec WinUI 3, Windows App SDK et le moteur Evolution Data Server (EDS)."
+                                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,4,0,8" />
+                                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                                <HyperlinkButton Content="Dépôt GitHub du projet" NavigateUri="https://github.com/GNOME/evolution" Padding="0" />
+                                                <HyperlinkButton Content="Signaler une anomalie" NavigateUri="https://github.com/GNOME/evolution/issues" Padding="0" />
+                                                <HyperlinkButton Content="Licence libre (LGPL v2+ / MIT)" Padding="0" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+
                         </StackPanel>
-                    </Border>
-
-                    <ToggleSwitch x:Name="SignatureAboveQuoteSwitch" Header="Position dans les réponses et transferts"
-                                  OnContent="Au-dessus du texte cité" OffContent="En dessous du texte cité"
-                                  Toggled="OnSignaturePlacementToggled" />
-                    <TextBlock Text="Signature par compte" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
-                    <ListView x:Name="SignatureAccountList" SelectionMode="None" />
-                </StackPanel>
+                    </ScrollViewer>
+                </Grid>
             </Grid>
-            </ScrollViewer>
             </Grid>
         </NavigationView>
 

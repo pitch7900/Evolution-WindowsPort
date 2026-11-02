@@ -187,6 +187,47 @@ namespace winrt::EvolutionWin::implementation
         void OnTrustSenderClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnTrustDomainClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
+        /* Gestionnaires de la page Paramètres (MainWindow.Settings.cpp) */
+        void OnSettingsNavSelectionChanged(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+        void OnSettingsSearchTextChanged(
+            Microsoft::UI::Xaml::Controls::AutoSuggestBox const& sender,
+            Microsoft::UI::Xaml::Controls::AutoSuggestBoxTextChangedEventArgs const& args);
+        void OnSettingsSearchSuggestionChosen(
+            Microsoft::UI::Xaml::Controls::AutoSuggestBox const& sender,
+            Microsoft::UI::Xaml::Controls::AutoSuggestBoxSuggestionChosenEventArgs const& args);
+        void OnSettingsBreadcrumbRootClick(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnSettingsAccelerator(
+            Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender,
+            Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
+        void SelectSettingsCategory(winrt::hstring const& category_tag);
+        void InitSettingsView();
+        void OnThemeChoiceChanged(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+        void OnSettingToggleChanged(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnSettingComboChanged(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+        void OnCheckUpdateNowClick(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnOpenDataFolderClick(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnClearWebViewCacheClick(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnResetAllSettingsClick(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void ApplyTheme(winrt::hstring const& theme_name);
+
     private:
         using ReplyKind = ::EvolutionWin::ReplyKind;
 
@@ -526,6 +567,11 @@ namespace winrt::EvolutionWin::implementation
         winrt::EvolutionWin::SplashWindow m_splash{ nullptr };
         Microsoft::UI::Xaml::DispatcherTimer m_splash_timer{ nullptr };
         winrt::com_ptr<ITaskbarList3> m_taskbar_list{ nullptr };
+
+        /* État de la page Paramètres */
+        bool m_settings_initialized{ false };
+        bool m_updating_settings_view{ false };
+        winrt::hstring m_current_settings_category{ L"accounts" };
     };
 }
 
