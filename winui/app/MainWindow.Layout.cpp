@@ -200,6 +200,10 @@ namespace winrt::EvolutionWin::implementation
         ApplyFolderPaneVisibility(true);
         ::EvolutionWin::Settings::Instance().SetString(L"layout.reading-pane", L"right");
         ApplyReadingPanePosition(L"right");
+        ::EvolutionWin::Settings::Instance().SetNumber(L"layout.todobar-width", 300.0);
+        m_todobar_width = 300.0;
+        if (IsTodoBarVisible())
+            TodoBarColumn().Width(GridLengthHelper::FromPixels(300.0));
     }
 
     /* La barre de titre (SetTitleBar) sert à déplacer la fenêtre : la zone de

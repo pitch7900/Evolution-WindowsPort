@@ -165,6 +165,22 @@ namespace winrt::EvolutionWin::implementation
         void OnTaskItemClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& args);
         void OnCreateTaskFromMessageClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
+        /* Barre latérale des tâches (To-Do bar) */
+        void OnRibbonTodoBarToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTodoBarCloseClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTodoBarRefreshClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTodoBarQuickAddClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTodoBarQuickInputKeyDown(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args);
+        void OnTodoBarItemClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& args);
+        void OnTodoBarViewAllClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTodoBarSplitterPointerPressed(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
+        void OnTodoBarSplitterPointerMoved(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
+        void OnTodoBarSplitterPointerReleased(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
+        void OnTodoBarSplitterPointerCaptureLost(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
+        void OnTodoBarAccelerator(
+            Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender,
+            Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
+
         /* Gestionnaires des paramètres / comptes */
         void OnAddAccountClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRemoteContentModeChanged(
@@ -399,6 +415,14 @@ namespace winrt::EvolutionWin::implementation
         void DeleteTaskItem(Windows::Data::Json::JsonObject const& task);
         fire_and_forget ShowTaskEditorAsync(Windows::Data::Json::JsonObject task);
 
+        /* Volet latéral des tâches (To-Do bar façon Outlook) */
+        void RestoreTodoBarSettings();
+        void SetTodoBarVisible(bool visible, bool save = true);
+        void UpdateTodoBarVisibility();
+        void UpdateTodoBar();
+        bool IsTodoBarVisible();
+        Microsoft::UI::Xaml::UIElement BuildTodoBarRow(Windows::Data::Json::JsonObject const& task);
+
         /* Signatures (MainWindow.Signatures.cpp) */
         void RefreshSignaturesView();
         void RebuildSignatureLists();
@@ -503,6 +527,12 @@ namespace winrt::EvolutionWin::implementation
         bool m_task_view_restored{ false };
         bool m_updating_task_view{ false };
         uint64_t m_task_request{ 0 };
+        /* Volet latéral des tâches (To-Do bar) */
+        bool m_todobar_configured_visible{ false };
+        double m_todobar_width{ 300.0 };
+        bool m_todobar_dragging{ false };
+        double m_todobar_drag_start_x{ 0.0 };
+        double m_todobar_drag_start_width{ 0.0 };
         /* Document du lecteur : chaque affichage reçoit une adresse unique
          * (http://reader.evolution.invalid/…) servie par WebResourceRequested,
          * ce qui identifie sans ambiguïté le document chargé ; le contenu

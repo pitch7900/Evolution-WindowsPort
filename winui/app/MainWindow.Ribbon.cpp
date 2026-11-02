@@ -109,6 +109,12 @@ namespace winrt::EvolutionWin::implementation
             RibbonEmptyFolder().Label(type == L"trash" ? L"Vider la Corbeille" : type == L"junk" ? L"Vider les Indésirables" : L"Vider le dossier");
             RibbonDeleteFolder().IsEnabled(item && !special && !has_children);
         }
+
+        /* synchronisation de l'état du bouton bascule de la barre des tâches */
+        bool todobar_checked = IsTodoBarVisible();
+        RibbonMailTodoBarToggle().IsChecked(todobar_checked);
+        RibbonCalendarTodoBarToggle().IsChecked(todobar_checked);
+        RibbonContactsTodoBarToggle().IsChecked(todobar_checked);
     }
 
     void MainWindow::OnRibbonTabChanged(SelectorBar const&, SelectorBarSelectionChangedEventArgs const&)

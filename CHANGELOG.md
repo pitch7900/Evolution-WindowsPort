@@ -14,6 +14,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Volet latéral droit des tâches (To-Do bar façon Outlook)** :
+  - **Barre des tâches compacte toujours accessible** : disponible dans les vues Courrier, Calendrier et Contacts, permettant de garder ses tâches en vue sans quitter son travail en cours (repli automatique sur les vues Tâches et Paramètres).
+  - **Tri optimisé pour la productivité** : classement prioritaire des tâches en retard en tête (mise en évidence en rouge), suivi des tâches du jour, des échéances les plus proches, et des tâches sans date, avec départage par niveau de priorité.
+  - **Ligne de tâche compacte et interactive** : case à cocher pour achever la tâche en un clic, intitulé tronqué, échéance relative intelligente (« Aujourd'hui », « Demain », « En retard (X j) »), indicateur de priorité haute et compte de rattachement. Clic sur une tâche pour ouvrir l'éditeur complet.
+  - **Ajout rapide de tâche au clavier** : champ de saisie directe en haut de volet permettant de créer instantanément une tâche par simple appui sur la touche Entrée.
+  - **Gestion de la disposition et raccourci clavier** : affichage/masquage via le ruban *Affichage* (*Volet des tâches*) dans Courrier, Calendrier et Contacts, raccourci clavier universel `Alt+F2`, séparateur redimensionnable à la souris (`PaneSplitter`), et persistance automatique de la largeur et de l'état de visibilité dans `settings.json`.
 - **Affichage du compte source dans la vue Tâches** :
   - **Badge de compte dédié pour chaque tâche** : affichage pour chaque tâche d'un badge Fluent avec icône, nom du compte source et adresse email associée (ou mention « Sur cet ordinateur » si compte local).
   - **Résolution hiérarchique du compte** : intégration dans `evo-core` (`task_item_new` et `core_list_sources`) des métadonnées `account_name`, `account_email` et `account_uid`, complétée par une résolution WinUI transversale (`GetTaskAccountInfo`) croisant `m_task_lists` et `m_accounts`.

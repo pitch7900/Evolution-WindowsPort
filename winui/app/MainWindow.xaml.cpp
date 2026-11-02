@@ -138,7 +138,7 @@ namespace winrt::EvolutionWin::implementation
         AppTitleBar().SizeChanged([this](IInspectable const&, SizeChangedEventArgs const&) { UpdateTitleBarPassthrough(); });
         ApplyTheme(::EvolutionWin::Settings::Instance().GetString(L"appearance.theme", L"system"));
 
-        /* Accélérateur clavier global Ctrl+, pour ouvrir les Paramètres */
+        /* Accélérateurs clavier globaux (Ctrl+, pour Paramètres, Alt+F2 pour To-Do bar) */
         if (auto root = this->Content().try_as<FrameworkElement>())
         {
             Microsoft::UI::Xaml::Input::KeyboardAccelerator accel;
@@ -146,8 +146,15 @@ namespace winrt::EvolutionWin::implementation
             accel.Key(static_cast<Windows::System::VirtualKey>(188)); // VK_OEM_COMMA
             accel.Invoked({ this, &MainWindow::OnSettingsAccelerator });
             root.KeyboardAccelerators().Append(accel);
+
+            Microsoft::UI::Xaml::Input::KeyboardAccelerator todobar_accel;
+            todobar_accel.Modifiers(Windows::System::VirtualKeyModifiers::Menu); // Alt
+            todobar_accel.Key(Windows::System::VirtualKey::F2);
+            todobar_accel.Invoked({ this, &MainWindow::OnTodoBarAccelerator });
+            root.KeyboardAccelerators().Append(todobar_accel);
         }
         RestorePaneWidths();
+        RestoreTodoBarSettings();
         ApplyFolderPaneVisibility(::EvolutionWin::Settings::Instance().GetBoolean(L"layout.folders-visible", true));
         ApplyReadingPanePosition(::EvolutionWin::Settings::Instance().GetString(L"layout.reading-pane", L"right"));
         ApplyCalendarPreferences();
@@ -389,6 +396,7 @@ namespace winrt::EvolutionWin::implementation
             SettingsViewPane().Visibility(Visibility::Visible);
             InitSettingsView();
             SelectSettingsCategory(m_current_settings_category);
+            UpdateTodoBarVisibility();
             return;
         }
 
@@ -413,6 +421,7 @@ namespace winrt::EvolutionWin::implementation
         ContactsViewPane().Visibility(tag == L"contacts" ? Visibility::Visible : Visibility::Collapsed);
         TasksViewPane().Visibility(tag == L"tasks" ? Visibility::Visible : Visibility::Collapsed);
         SettingsViewPane().Visibility(Visibility::Collapsed);
+        UpdateTodoBarVisibility();
 
         if (tag == L"calendar")
             LoadCalendarSources();

@@ -163,6 +163,7 @@ namespace winrt::EvolutionWin::implementation
 
             m_updating_task_view = false;
             ShowTasks();
+            UpdateTodoBar();
         });
 
         m_core->ListTasks(L"", [this, request](hstring const& json, hstring const& error)
@@ -181,6 +182,7 @@ namespace winrt::EvolutionWin::implementation
 
             m_all_tasks = tasks;
             ShowTasks();
+            UpdateTodoBar();
         });
     }
 
@@ -1129,5 +1131,459 @@ namespace winrt::EvolutionWin::implementation
         preset_task.SetNamedValue(L"priority", JsonValue::CreateNumberValue(5.0));
 
         ShowTaskEditorAsync(preset_task);
+    }
+
+    /* -------------------------------------------------------------------- */
+    /* Barre latérale des tâches (To-Do bar façon Outlook)                 */
+    /* -------------------------------------------------------------------- */
+
+    /**
+     * @brief Formate une date d'échéance relative adaptée au volet compact des tâches.
+     * 
+     * Retourne « Aujourd'hui », « Demain », « En retard (X j) », ou la date formatée.
+     * 
+     * @param unix_time Date d'échéance en secondes Unix.
+     * @param date_only Indique si l'heure est ignorée.
+     * @param is_overdue Booléen positionné à true en sortie si l'échéance est dépassée.
+     * @return Libellé relatif en français.
+     */
+    static hstring FormatRelativeDueDate(double unix_time, bool /*date_only*/, bool& is_overdue)
+    {
+        if (unix_time <= 0)
+        {
+            is_overdue = false;
+            return L"Pas d'échéance";
+        }
+
+        int64_t now = static_cast<int64_t>(std::time(nullptr));
+        int64_t due = static_cast<int64_t>(unix_time);
+        int64_t today_start = LocalMidnight(now);
+        int64_t today_end = LocalMidnight(now, 1);
+        int64_t tomorrow_end = LocalMidnight(now, 2);
+
+        if (due < today_start)
+        {
+            is_overdue = true;
+            int days_late = static_cast<int>((today_start - due) / 86400) + 1;
+            if (days_late <= 1)
+                return L"Hier (En retard)";
+            return L"En retard (" + to_hstring(days_late) + L" j)";
+        }
+
+        is_overdue = false;
+        if (due >= today_start && due < today_end)
+            return L"Aujourd'hui";
+        if (due >= today_end && due < tomorrow_end)
+            return L"Demain";
+
+        Windows::Globalization::DateTimeFormatting::DateTimeFormatter formatter{ L"shortdate" };
+        return formatter.Format(winrt::clock::from_time_t(static_cast<time_t>(due)));
+    }
+
+    /**
+     * @brief Rétablit les réglages mémorisés de la barre latérale des tâches au démarrage.
+     * 
+     * Charge l'état de visibilité (layout.todobar-visible) et la largeur (layout.todobar-width),
+     * puis applique la disposition.
+     */
+    void MainWindow::RestoreTodoBarSettings()
+    {
+        auto& settings = ::EvolutionWin::Settings::Instance();
+        m_todobar_configured_visible = settings.GetBoolean(L"layout.todobar-visible", false);
+        m_todobar_width = std::clamp(settings.GetNumber(L"layout.todobar-width", 300.0), 220.0, 550.0);
+
+        SetTodoBarVisible(m_todobar_configured_visible, false);
+    }
+
+    /**
+     * @brief Indique si le volet latéral des tâches est actuellement visible.
+     * 
+     * @return true si le volet est affiché, false s'il est masqué.
+     */
+    bool MainWindow::IsTodoBarVisible()
+    {
+        return TodoBarPane().Visibility() == Visibility::Visible;
+    }
+
+    /**
+     * @brief Active ou masque le volet latéral des tâches.
+     * 
+     * Met à jour la largeur de colonne, la visibilité du panneau et du séparateur,
+     * l'état des boutons du ruban et enregistre le choix dans les préférences.
+     * 
+     * @param visible true pour afficher le volet, false pour le masquer.
+     * @param save true pour persister le réglage dans settings.json.
+     */
+    void MainWindow::SetTodoBarVisible(bool visible, bool save)
+    {
+        m_todobar_configured_visible = visible;
+        if (save)
+            ::EvolutionWin::Settings::Instance().SetBoolean(L"layout.todobar-visible", visible);
+
+        UpdateTodoBarVisibility();
+
+        if (visible)
+        {
+            if (!m_all_tasks)
+                LoadTasks();
+            else
+                UpdateTodoBar();
+        }
+    }
+
+    /**
+     * @brief Ajuste la visibilité du volet selon la vue active et la configuration utilisateur.
+     * 
+     * Le volet est visible dans Courrier, Calendrier et Contacts si l'utilisateur l'a activé.
+     * Il est automatiquement replié dans la vue Tâches complète et dans les Paramètres.
+     */
+    void MainWindow::UpdateTodoBarVisibility()
+    {
+        bool allowed_view = (m_view_tag == L"mail" || m_view_tag == L"calendar" || m_view_tag == L"contacts");
+        bool should_show = m_todobar_configured_visible && allowed_view;
+
+        TodoBarPane().Visibility(should_show ? Visibility::Visible : Visibility::Collapsed);
+        TodoBarSplitter().Visibility(should_show ? Visibility::Visible : Visibility::Collapsed);
+        TodoBarColumn().Width(should_show ? GridLengthHelper::FromPixels(m_todobar_width) : GridLengthHelper::FromPixels(0));
+
+        RibbonMailTodoBarToggle().IsChecked(should_show);
+        RibbonCalendarTodoBarToggle().IsChecked(should_show);
+        RibbonContactsTodoBarToggle().IsChecked(should_show);
+    }
+
+    /**
+     * @brief Met à jour le contenu de la liste des tâches dans la barre latérale.
+     * 
+     * Filtre les tâches non terminées, les trie (en retard, aujourd'hui, plus tard, sans date)
+     * et rafraîchit le compteur du volet.
+     */
+    void MainWindow::UpdateTodoBar()
+    {
+        if (!m_all_tasks || TodoBarPane().Visibility() != Visibility::Visible)
+            return;
+
+        auto items = TodoBarListView().Items();
+        items.Clear();
+
+        int64_t now = static_cast<int64_t>(std::time(nullptr));
+        std::vector<JsonObject> open_tasks;
+
+        for (auto const& val : m_all_tasks)
+        {
+            auto task = val.GetObject();
+            hstring status = task.GetNamedString(L"status", L"");
+            if (status == L"completed" || status == L"cancelled")
+                continue;
+            open_tasks.push_back(task);
+        }
+
+        /* Tri spécial To-Do bar : en retard en haut, puis par échéance la plus proche,
+         * puis priorité décroissante (1 haute -> 5 normale -> 9 basse) */
+        std::stable_sort(open_tasks.begin(), open_tasks.end(), [now](JsonObject const& a, JsonObject const& b)
+        {
+            bool overdue_a = IsTaskOverdue(a, now);
+            bool overdue_b = IsTaskOverdue(b, now);
+            if (overdue_a != overdue_b)
+                return overdue_a;
+
+            double due_a = a.GetNamedNumber(L"due", 0);
+            double due_b = b.GetNamedNumber(L"due", 0);
+            bool has_due_a = due_a > 0;
+            bool has_due_b = due_b > 0;
+
+            if (has_due_a != has_due_b)
+                return has_due_a;
+            if (has_due_a && has_due_b && due_a != due_b)
+                return due_a < due_b;
+
+            double prio_a = a.GetNamedNumber(L"priority", 0);
+            double prio_b = b.GetNamedNumber(L"priority", 0);
+            double key_a = prio_a > 0 ? prio_a : 10.0;
+            double key_b = prio_b > 0 ? prio_b : 10.0;
+            return key_a < key_b;
+        });
+
+        // Limite à 15 tâches dans la liste rapide
+        size_t display_count = (std::min)(open_tasks.size(), static_cast<size_t>(15));
+        for (size_t i = 0; i < display_count; ++i)
+        {
+            items.Append(BuildTodoBarRow(open_tasks[i]));
+        }
+
+        // Compteur en pied de volet
+        size_t total_open = open_tasks.size();
+        if (total_open == 0)
+        {
+            TodoBarCountText().Text(L"Aucune tâche en attente");
+        }
+        else if (total_open == 1)
+        {
+            TodoBarCountText().Text(L"1 tâche en cours");
+        }
+        else
+        {
+            TodoBarCountText().Text(to_hstring(total_open) + L" tâches en cours");
+        }
+    }
+
+    /**
+     * @brief Construit une ligne compacte de tâche pour la barre latérale To-Do bar.
+     * 
+     * Contient la case à cocher, le titre, l'échéance relative et le badge de compte.
+     * 
+     * @param task Données JSON de la tâche.
+     * @return Élément graphique Grid prêt pour la ListView.
+     */
+    UIElement MainWindow::BuildTodoBarRow(JsonObject const& task)
+    {
+        auto resources = Application::Current().Resources();
+        auto caption_style = resources.Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>();
+        auto secondary_brush = resources.Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>();
+
+        Grid row;
+        row.Padding(ThicknessHelper::FromLengths(4, 5, 4, 5));
+        row.ColumnSpacing(8);
+        row.Tag(box_value(task.Stringify()));
+
+        ColumnDefinition check_col;
+        check_col.Width(GridLengthHelper::Auto());
+        row.ColumnDefinitions().Append(check_col);
+        row.ColumnDefinitions().Append(ColumnDefinition{});
+
+        CheckBox done;
+        done.IsChecked(false);
+        done.MinWidth(0);
+        done.Padding(ThicknessHelper::FromUniformLength(0));
+        done.VerticalAlignment(VerticalAlignment::Center);
+        ToolTipService::SetToolTip(done, box_value(L"Marquer comme terminée"));
+        done.Click([this, task](IInspectable const&, RoutedEventArgs const&)
+        {
+            SetTaskCompleted(task, true);
+        });
+        row.Children().Append(done);
+
+        StackPanel details;
+        details.Spacing(1);
+        details.VerticalAlignment(VerticalAlignment::Center);
+        Grid::SetColumn(details, 1);
+
+        TextBlock title;
+        title.Text(task.GetNamedString(L"summary", L"(Sans titre)"));
+        title.Style(resources.Lookup(box_value(L"BodyTextBlockStyle")).as<Style>());
+        title.TextTrimming(TextTrimming::CharacterEllipsis);
+        title.MaxLines(1);
+        details.Children().Append(title);
+
+        StackPanel subline;
+        subline.Orientation(Orientation::Horizontal);
+        subline.Spacing(6);
+
+        double due = task.GetNamedNumber(L"due", 0);
+        bool is_overdue = false;
+        hstring relative_due = FormatRelativeDueDate(due, task.GetNamedBoolean(L"due_date_only", true), is_overdue);
+
+        TextBlock due_text;
+        due_text.Style(caption_style);
+        due_text.Text(relative_due);
+        if (is_overdue)
+            due_text.Foreground(resources.Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Brush>());
+        else
+            due_text.Foreground(secondary_brush);
+        subline.Children().Append(due_text);
+
+        double prio = task.GetNamedNumber(L"priority", 0);
+        if (prio > 0 && prio < 5)
+        {
+            FontIcon prio_icon;
+            prio_icon.Glyph(L"\xE7C1");
+            prio_icon.FontSize(10);
+            prio_icon.Foreground(resources.Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Brush>());
+            subline.Children().Append(prio_icon);
+        }
+
+        hstring acc_name, acc_email;
+        GetTaskAccountInfo(task, acc_name, acc_email);
+        if (!acc_name.empty())
+        {
+            TextBlock acc_text;
+            acc_text.Style(caption_style);
+            acc_text.Foreground(secondary_brush);
+            acc_text.Text(L"• " + acc_name);
+            acc_text.TextTrimming(TextTrimming::CharacterEllipsis);
+            acc_text.MaxWidth(110);
+            subline.Children().Append(acc_text);
+        }
+
+        details.Children().Append(subline);
+        row.Children().Append(details);
+
+        return row;
+    }
+
+    /**
+     * @brief Gestionnaire de clic du bouton bascule de la barre des tâches dans le ruban.
+     */
+    void MainWindow::OnRibbonTodoBarToggled(IInspectable const& sender, RoutedEventArgs const&)
+    {
+        bool is_checked = unbox_value_or<bool>(sender.as<AppBarToggleButton>().IsChecked(), false);
+        SetTodoBarVisible(is_checked, true);
+    }
+
+    /**
+     * @brief Gestionnaire de clic sur le bouton de fermeture de la barre des tâches.
+     */
+    void MainWindow::OnTodoBarCloseClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        SetTodoBarVisible(false, true);
+    }
+
+    /**
+     * @brief Gestionnaire de clic sur le bouton d'actualisation de la barre des tâches.
+     */
+    void MainWindow::OnTodoBarRefreshClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        LoadTasks();
+    }
+
+    /**
+     * @brief Gestionnaire du bouton d'ajout rapide d'une tâche.
+     */
+    void MainWindow::OnTodoBarQuickAddClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        hstring text{ Trim(TodoBarQuickInput().Text()) };
+        if (text.empty())
+            return;
+
+        JsonObject payload;
+        payload.SetNamedValue(L"summary", JsonValue::CreateStringValue(text));
+        payload.SetNamedValue(L"description", JsonValue::CreateStringValue(L""));
+
+        /* Échéance par défaut : aujourd'hui à minuit */
+        int64_t now = static_cast<int64_t>(std::time(nullptr));
+        payload.SetNamedValue(L"due", JsonValue::CreateNumberValue(static_cast<double>(LocalMidnight(now))));
+        payload.SetNamedValue(L"due_date_only", JsonValue::CreateBooleanValue(true));
+        payload.SetNamedValue(L"priority", JsonValue::CreateNumberValue(5.0));
+
+        if (!m_task_list_uid.empty())
+            payload.SetNamedValue(L"list_uid", JsonValue::CreateStringValue(m_task_list_uid));
+        else if (m_task_lists && m_task_lists.Size() > 0)
+            payload.SetNamedValue(L"list_uid", JsonValue::CreateStringValue(m_task_lists.GetObjectAt(0).GetNamedString(L"uid", L"")));
+
+        TodoBarQuickInput().Text(L"");
+
+        m_core->CreateTask(payload.Stringify(), [this](hstring const&, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                ShowStatus(L"Ajout de la tâche : " + error, InfoBarSeverity::Error);
+                return;
+            }
+            LoadTasks();
+        });
+    }
+
+    /**
+     * @brief Gestionnaire de touche sur le champ d'ajout rapide (validation par Entrée).
+     */
+    void MainWindow::OnTodoBarQuickInputKeyDown(IInspectable const&, Input::KeyRoutedEventArgs const& args)
+    {
+        if (args.Key() == Windows::System::VirtualKey::Enter)
+        {
+            args.Handled(true);
+            OnTodoBarQuickAddClick(nullptr, nullptr);
+        }
+    }
+
+    /**
+     * @brief Clic sur une tâche de la barre latérale pour ouvrir l'éditeur complet.
+     */
+    void MainWindow::OnTodoBarItemClick(IInspectable const&, ItemClickEventArgs const& args)
+    {
+        auto row = args.ClickedItem().try_as<Grid>();
+        JsonObject task;
+        if (row && JsonObject::TryParse(unbox_value_or<hstring>(row.Tag(), L""), task))
+        {
+            ShowTaskEditorAsync(task);
+        }
+    }
+
+    /**
+     * @brief Gestionnaire du lien « Voir tout » pour basculer vers la vue Tâches.
+     */
+    void MainWindow::OnTodoBarViewAllClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        for (auto const& item : Navigation().MenuItems())
+        {
+            if (auto nav_item = item.try_as<NavigationViewItem>())
+            {
+                if (unbox_value_or<hstring>(nav_item.Tag(), L"") == L"tasks")
+                {
+                    Navigation().SelectedItem(nav_item);
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
+     * @brief Début du glissement de redimensionnement de la barre latérale des tâches.
+     */
+    void MainWindow::OnTodoBarSplitterPointerPressed(IInspectable const& sender, Input::PointerRoutedEventArgs const& args)
+    {
+        auto splitter = sender.as<UIElement>();
+        if (!args.GetCurrentPoint(splitter).Properties().IsLeftButtonPressed())
+            return;
+        if (!splitter.CapturePointer(args.Pointer()))
+            return;
+
+        m_todobar_dragging = true;
+        m_todobar_drag_start_x = args.GetCurrentPoint(ViewsArea()).Position().X;
+        m_todobar_drag_start_width = TodoBarColumn().ActualWidth();
+    }
+
+    /**
+     * @brief Redimensionnement dynamique de la barre latérale des tâches.
+     */
+    void MainWindow::OnTodoBarSplitterPointerMoved(IInspectable const& sender, Input::PointerRoutedEventArgs const& args)
+    {
+        if (!m_todobar_dragging)
+            return;
+
+        double current_x = args.GetCurrentPoint(ViewsArea()).Position().X;
+        double delta = m_todobar_drag_start_x - current_x;
+        double new_width = std::clamp(m_todobar_drag_start_width + delta, 220.0, 550.0);
+
+        m_todobar_width = new_width;
+        TodoBarColumn().Width(GridLengthHelper::FromPixels(new_width));
+        ::EvolutionWin::Settings::Instance().SetNumber(L"layout.todobar-width", new_width);
+    }
+
+    /**
+     * @brief Fin du glissement de redimensionnement de la barre latérale.
+     */
+    void MainWindow::OnTodoBarSplitterPointerReleased(IInspectable const& sender, Input::PointerRoutedEventArgs const& args)
+    {
+        if (m_todobar_dragging)
+        {
+            m_todobar_dragging = false;
+            sender.as<UIElement>().ReleasePointerCapture(args.Pointer());
+        }
+    }
+
+    /**
+     * @brief Perte de capture du pointeur lors du redimensionnement.
+     */
+    void MainWindow::OnTodoBarSplitterPointerCaptureLost(IInspectable const& sender, Input::PointerRoutedEventArgs const& args)
+    {
+        m_todobar_dragging = false;
+    }
+
+    /**
+     * @brief Raccourci clavier Alt+F2 pour basculer l'affichage de la barre latérale des tâches.
+     */
+    void MainWindow::OnTodoBarAccelerator(Input::KeyboardAccelerator const&, Input::KeyboardAcceleratorInvokedEventArgs const& args)
+    {
+        args.Handled(true);
+        SetTodoBarVisible(!IsTodoBarVisible(), true);
     }
 }

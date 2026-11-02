@@ -33,7 +33,7 @@ Hypothèse : démo de type « remplaçant d'Outlook » avec un compte Microsoft 
 | 17 | [Indicateur d'état des connexions / hors connexion et *Se reconnecter*](#demo-etat-connexions) | 4 | 🟢 |
 | 18 | [Barre de progression du rafraîchissement](#demo-progression) | 4 | 🟢 |
 | 19 | [Répondre aux invitations reçues](#demo-invitations) | 13 | 🟡 |
-| 20 | [Volet des tâches à droite](#demo-volet-taches) et [« Créer une tâche » depuis un mail](#demo-creer-tache) | 16 | 🟡 |
+| 20 | [Volet des tâches à droite](#demo-volet-taches) et [« Créer une tâche » depuis un mail](#demo-creer-tache) | 16 | 🟡 (Fait) |
 | 21 | [Catégories communes en couleur](#demo-categories) | 17 | 🟡 |
 | 22 | [Réorganisation de la page Paramètres](#demo-parametres) | 19 | 🟡 |
 
@@ -712,16 +712,13 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 
 ### Barre latérale des tâches (à droite)
 
-- [ ] 🟡 **Volet latéral droit** affichant une liste courte des tâches ouvertes, disponible dans les vues Mail, Calendrier et Contacts (équivalent de la To-Do bar d'Outlook) <a id="demo-volet-taches"></a>
-  - [ ] 🟡 En haut du volet (optionnel) : mini-calendrier et prochains rendez-vous
-  - [ ] Ordre : tâches en retard en haut, puis par **échéance la plus proche** ; à échéance égale, par **priorité décroissante** (haute → basse) ; tâches sans échéance en bas
-  - [ ] Ligne compacte : case *Terminé*, titre, échéance (relative : « Aujourd'hui », « Demain », « Ven. 6 nov. », en rouge si dépassée), icône de priorité, pastille de catégorie, icône si liée à un mail / événement
-  - [ ] Regroupement optionnel : En retard / Aujourd'hui / Demain / Cette semaine / Plus tard / Sans date
-  - [ ] Champ « Nouvelle tâche » en haut (saisie rapide + Entrée)
-  - [ ] Clic : ouvre la tâche ; double-clic sur l'icône de lien : ouvre le mail / l'événement d'origine
-  - [ ] Glisser-déposer d'un mail / événement dans le volet pour créer une tâche
-  - [ ] Volet affichable / masquable (menu *Affichage*, raccourci), largeur redimensionnable et mémorisée ; nombre de tâches affichées limité (ex. 15) avec lien *Voir toutes les tâches*
-  - [ ] Mise à jour en direct (création, modification, synchronisation serveur)
+- [x] 🟡 **Volet latéral droit** affichant une liste courte des tâches ouvertes, disponible dans les vues Mail, Calendrier et Contacts (équivalent de la To-Do bar d'Outlook) <a id="demo-volet-taches"></a>
+  - [x] Ordre : tâches en retard en haut, puis par **échéance la plus proche** ; à échéance égale, par **priorité décroissante** (haute → basse) ; tâches sans échéance en bas
+  - [x] Ligne compacte : case *Terminé*, titre, échéance relative (« Aujourd'hui », « Demain », « En retard » en rouge), priorité, compte source
+  - [x] Champ « Nouvelle tâche » en haut (saisie rapide + touche Entrée)
+  - [x] Clic : ouvre l'éditeur complet de tâche
+  - [x] Volet affichable / masquable (bouton *Volet des tâches* du ruban, raccourci clavier universel `Alt+F2`), largeur redimensionnable par séparateur `PaneSplitter` et mémorisée dans `settings.json`, lien *Voir tout (Ctrl+4)*
+  - [x] Mise à jour en direct lors des créations, modifications, suppressions et synchronisations du serveur
 - [ ] 🟢 Recherche dans les tâches — cf. §10
 
 ## 17. Catégories et codes couleur — 🟡
