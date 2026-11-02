@@ -21,7 +21,7 @@ namespace EvolutionWin::Helpers
     inline hstring FolderGlyph(hstring const& type)
     {
         if (type == L"inbox") return L"\xE715";
-        if (type == L"outbox") return L"\x231B";
+        if (type == L"outbox") return L"\xEA03";
         if (type == L"sent") return L"\xE724";
         if (type == L"drafts") return L"\xE70F";
         if (type == L"trash") return L"\xE74D";
