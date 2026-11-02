@@ -41,7 +41,7 @@ Hypothèse : démo de type « remplaçant d'Outlook » avec un compte Microsoft 
 
 | # | Tâche | § | Difficulté |
 | --- | --- | --- | --- |
-| 23 | [Grille calendrier Jour / Semaine](#demo-grille-calendrier) — plus gros écart visible avec Outlook | 12 | 🔴 |
+| 23 | [Grille calendrier Jour / Semaine](#demo-grille-calendrier) — *réalisé dans MainWindow.Calendar.cpp* | 12 | 🔴 (Fait) |
 | 24 | [Éditeur d'événement complet](#demo-editeur-evenement) (périodicité, rappels) | 13 | 🟠 |
 | 25 | [Grouper par discussion](#demo-conversations) | 5 | 🟠 |
 | 26 | [Réponses automatiques](#demo-reponses-auto) Microsoft 365 / Exchange (si démo sur M365) | 3 | 🟡 |
@@ -575,12 +575,12 @@ La recherche dans le dossier courant existe déjà (filtrage instantané + reche
 
 ## 12. Calendrier – Vues et navigation — 🔴
 
-La vue actuelle se limite à un `CalendarView` mensuel et une liste d'événements.
+Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des chevauchements), Mois (6 semaines) et Liste sont déjà implémentées dans `MainWindow.Calendar.cpp`.
 
 ### Grille calendrier (brique préalable)
 
-- [x] 🔴 **Contrôle grille Jour / Semaine de travail / Semaine** (WinUI n'en fournit pas) : créneaux horaires, événements positionnés et chevauchements, journée entière en haut, défilement vertical <a id="demo-grille-calendrier"></a> — *blocs à la couleur du calendrier, ligne de l'heure actuelle, ouverture au clic, vue Liste conservée*
-- [x] 🟠 **Vue Mois** (détails faibles / moyens / élevés) — *six semaines, 3 événements par jour puis « +N », clic sur le jour = vue Jour ; un seul niveau de détail*
+- [x] 🔴 **Contrôle grille Jour / Semaine de travail / Semaine** (WinUI n'en fournit pas) : créneaux horaires (24 h), événements positionnés et chevauchements en couloirs (*lanes*), bandeau journée entière en haut, défilement vertical centré sur 7 h, ligne rouge en temps réel de l'heure courante <a id="demo-grille-calendrier"></a> — *blocs colorés selon le calendrier, titre, horaires, lieu et tooltip, ouverture au clic/tap*
+- [x] 🟠 **Vue Mois** : six semaines à partir du lundi précédent, jours hors mois estompés, 3 événements par jour puis « +N », clic sur un jour basculant en vue Jour
 - [ ] 🟢 Raccourcis Ctrl+Alt+1…5 entre les vues
 - [ ] 🟢 **Échelle de temps** : 5, 6, 10, 15, 30, 60 minutes
 - [ ] 🟢 **Heures de travail** : jours ouvrés, heures de début / fin, premier jour de la semaine (options)
