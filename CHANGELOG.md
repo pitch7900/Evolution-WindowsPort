@@ -12,8 +12,6 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [0.9.6] — en cours
 
-## [0.9.5] — 2026-11-02
-
 ### Ajouté
 
 - **Fenêtre de message indépendante (`MessageWindow`)** : ouverture d'un
@@ -30,6 +28,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   Texte d'aide dynamique, recherche récursive en profondeur dans le moteur
   `evo-core` (Camel), et affichage discret du dossier / compte d'origine
   sur chaque message trouvé lors d'une recherche transversale.
+
+## [0.9.5] — 2026-11-02
+
+### Ajouté
+
 - **Recherche de mise à jour** dans *À propos* : la version installée est
   comparée à la dernière version publiée sur GitHub (Releases) ; si une
   version plus récente existe, un lien mène à sa page de téléchargement.
