@@ -400,17 +400,17 @@
                 </Grid>
 
                 <!-- séparateurs déplaçables (double-clic : largeur par défaut) -->
-                <local:PaneSplitter x:Name="FoldersSplitter" Grid.Column="1" Grid.RowSpan="3" Width="6" Background="Transparent"
+                <local:PaneSplitter x:Name="FoldersSplitter" Grid.Column="1" Grid.RowSpan="3" Width="8" Background="Transparent"
                                     PointerPressed="OnSplitterPointerPressed" PointerMoved="OnSplitterPointerMoved"
                                     PointerReleased="OnSplitterPointerReleased" PointerCaptureLost="OnSplitterPointerCaptureLost"
                                     DoubleTapped="OnSplitterDoubleTapped">
-                    <Rectangle Width="1" HorizontalAlignment="Center" Fill="{ThemeResource CardStrokeColorDefaultBrush}" />
+                    <Rectangle Width="1" HorizontalAlignment="Center" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
                 </local:PaneSplitter>
-                <local:PaneSplitter x:Name="ListSplitter" Grid.Column="3" Grid.RowSpan="3" Width="6" Background="Transparent"
+                <local:PaneSplitter x:Name="ListSplitter" Grid.Column="3" Grid.RowSpan="3" Width="8" Background="Transparent"
                                     PointerPressed="OnSplitterPointerPressed" PointerMoved="OnSplitterPointerMoved"
                                     PointerReleased="OnSplitterPointerReleased" PointerCaptureLost="OnSplitterPointerCaptureLost"
                                     DoubleTapped="OnSplitterDoubleTapped">
-                    <Rectangle Width="1" HorizontalAlignment="Center" Fill="{ThemeResource CardStrokeColorDefaultBrush}" />
+                    <Rectangle Width="1" HorizontalAlignment="Center" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
                 </local:PaneSplitter>
 
                 <!-- messages of the selected folder -->
@@ -1006,8 +1006,45 @@
                                Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
                 </StackPanel>
 
-                <!-- À droite : indicateur d'état des connexions et bouton vers le panneau détaillé -->
-                <Button x:Name="ConnectionStatusButton" Grid.Column="3"
+                <!-- À droite : notifications et indicateur d'état des connexions -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <!-- Menu déroulant des notifications récentes -->
+                    <Button x:Name="NotificationsButton"
+                            Padding="6,3,6,3" VerticalAlignment="Center"
+                            ToolTipService.ToolTip="Notifications reçues">
+                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xEA8F;" FontSize="14" VerticalAlignment="Center" />
+                            <InfoBadge x:Name="NotificationsBadge" Value="0" Visibility="Collapsed"
+                                       Style="{StaticResource AttentionValueInfoBadgeStyle}" />
+                        </StackPanel>
+                        <Button.Flyout>
+                            <Flyout x:Name="NotificationsFlyout">
+                                <StackPanel Width="340" Spacing="8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Notifications" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+                                        <Button x:Name="ClearAllNotificationsButton" Grid.Column="1"
+                                                Content="Tout effacer" Style="{StaticResource SubtleButtonStyle}"
+                                                Click="OnClearAllNotificationsClick" />
+                                    </Grid>
+                                    <MenuFlyoutSeparator />
+                                    <ScrollViewer MaxHeight="300" HorizontalScrollBarVisibility="Disabled">
+                                        <StackPanel Spacing="6">
+                                            <TextBlock x:Name="NoNotificationsText" Text="Aucune notification"
+                                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                       HorizontalAlignment="Center" Margin="0,16,0,16" />
+                                            <StackPanel x:Name="NotificationsPanel" Spacing="6" />
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                <Button x:Name="ConnectionStatusButton"
                         Click="OnConnectionStatusButtonClick"
                         Padding="8,3,8,3" VerticalAlignment="Center"
                         ToolTipService.ToolTip="Afficher l'état des connexions réseau">
@@ -1035,6 +1072,7 @@
                         </Flyout>
                     </Button.Flyout>
                 </Button>
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>

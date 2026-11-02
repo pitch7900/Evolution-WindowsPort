@@ -719,8 +719,10 @@ namespace winrt::EvolutionWin::implementation
             body = count > 1 ? L"Ouvrez Evolution pour les lire." : L"Ouvrez Evolution pour le lire.";
         }
 
-        ShowStatus(title + L" : " + body, InfoBarSeverity::Informational);
+        /* Ajout dans l'historique du menu déroulant de la barre d'état (notifications discrètes) */
+        AddNotificationItem(title, body);
 
+        /* Émission exclusive de la notification via les Toasts système Windows */
         try
         {
             Microsoft::Windows::AppNotifications::Builder::AppNotificationBuilder builder;
@@ -730,8 +732,6 @@ namespace winrt::EvolutionWin::implementation
         }
         catch (...)
         {
-            /* Si l'application non empaquetée n'a pas pu enregistrer de canal toast,
-               l'InfoBar reste visible pour prévenir l'utilisateur. */
         }
     }
 
