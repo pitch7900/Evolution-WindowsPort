@@ -63,6 +63,7 @@ namespace winrt::EvolutionWin::implementation
         SetTitleBar(AppTitleBar());
         AppWindow().Resize({ 1500, 950 });
         ::EvolutionWin::SetWindowIcon(AppWindow());
+        UpdateSearchPlaceholder();
         RebuildQuickAccess();
         SyncConfidentialControls();
         AppTitleBar().SizeChanged([this](IInspectable const&, SizeChangedEventArgs const&) { UpdateTitleBarPassthrough(); });
@@ -237,8 +238,15 @@ namespace winrt::EvolutionWin::implementation
         RefreshBanner();
         UpdateRibbon();
 
-        SearchBox().PlaceholderText(tag == L"contacts" ? L"Rechercher un contact (Ctrl+E)"
-            : tag == L"mail" ? L"Rechercher dans le dossier (Ctrl+E)" : L"Rechercher dans le courrier (Ctrl+E)");
+        if (auto box = SearchBox())
+        {
+            if (tag == L"contacts")
+                box.PlaceholderText(L"Rechercher un contact (Ctrl+E)");
+            else if (tag == L"mail")
+                UpdateSearchPlaceholder();
+            else
+                box.PlaceholderText(L"Rechercher dans le courrier (Ctrl+E)");
+        }
 
         MailView().Visibility(tag == L"mail" ? Visibility::Visible : Visibility::Collapsed);
         CalendarViewPane().Visibility(tag == L"calendar" ? Visibility::Visible : Visibility::Collapsed);

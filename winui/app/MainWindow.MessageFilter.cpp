@@ -132,7 +132,11 @@ namespace winrt::EvolutionWin::implementation
      * Retourne : hstring correspondant au tag de l'option choisie. */
     hstring MainWindow::CurrentSearchScope()
     {
-        if (auto item = SearchScopeBox().SelectedItem().try_as<ComboBoxItem>())
+        auto scope_box = SearchScopeBox();
+        if (!scope_box)
+            return L"folder";
+
+        if (auto item = scope_box.SelectedItem().try_as<ComboBoxItem>())
             return unbox_value_or<hstring>(item.Tag(), L"folder");
         return L"folder";
     }
@@ -140,15 +144,19 @@ namespace winrt::EvolutionWin::implementation
     /* Met à jour le texte d'aide du champ de recherche en fonction de la portée active. */
     void MainWindow::UpdateSearchPlaceholder()
     {
+        auto box = SearchBox();
+        if (!box)
+            return;
+
         hstring scope = CurrentSearchScope();
         if (scope == L"subfolders")
-            SearchBox().PlaceholderText(L"Rechercher dans le dossier et sous-dossiers (Ctrl+E)");
+            box.PlaceholderText(L"Rechercher dans le dossier et sous-dossiers (Ctrl+E)");
         else if (scope == L"account")
-            SearchBox().PlaceholderText(L"Rechercher dans tout le compte (Ctrl+E)");
+            box.PlaceholderText(L"Rechercher dans tout le compte (Ctrl+E)");
         else if (scope == L"all")
-            SearchBox().PlaceholderText(L"Rechercher dans tous les comptes (Ctrl+E)");
+            box.PlaceholderText(L"Rechercher dans tous les comptes (Ctrl+E)");
         else
-            SearchBox().PlaceholderText(L"Rechercher dans le dossier (Ctrl+E)");
+            box.PlaceholderText(L"Rechercher dans le dossier (Ctrl+E)");
     }
 
     /* Changement de portée de la recherche : adapte le texte d'aide et relance
@@ -159,10 +167,11 @@ namespace winrt::EvolutionWin::implementation
     void MainWindow::OnSearchScopeChanged(IInspectable const&, SelectionChangedEventArgs const&)
     {
         UpdateSearchPlaceholder();
-        if (!SearchBox().Text().empty())
+        auto box = SearchBox();
+        if (box && !box.Text().empty())
         {
             AutoSuggestBoxQuerySubmittedEventArgs empty_args{ nullptr };
-            OnSearchQuerySubmitted(SearchBox(), empty_args);
+            OnSearchQuerySubmitted(box, empty_args);
         }
     }
 
