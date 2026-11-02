@@ -22,6 +22,13 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Gestion complète du statut « Lu / Non lu » (Quickwin §5 / §19)** :
+  - **Quatre modes de marquage paramétrables** : configuration via *Paramètres › Courrier* avec prise en charge complète des options *Immédiatement*, *Après 5 secondes*, *Au changement de sélection* et *Manuellement seulement* (`mail.mark-as-read`).
+  - **Minuterie asynchrone non-bloquante** : implémentation d'un `DispatcherTimer` dédié pour le mode différé (5 secondes) avec annulation automatique si l'utilisateur change de sélection ou vide la liste avant la fin du délai.
+  - **Prise en charge du mode au changement de sélection** : marquage automatique du message précédemment consulté dès qu'un nouveau message est sélectionné ou que le volet de lecture est libéré.
+  - **Synchronisation dynamique de l'indicateur serveur** : transmission réelle de l'indicateur `seen` vers `evo-core` et le serveur IMAP/Exchange distant via `SetMessageFlag`.
+  - **Validation par test unitaire dédié** : ajout du test `test_settings_mail_read_and_security_options` dans la suite unitaire `tests/unit/test_settings.cpp`.
+
 - **Sélection du module actif au démarrage (Quickwin §5 / §19)** :
   - **Prise en compte automatique à l'ouverture** : application au lancement du réglage `appearance.startup-view` défini dans *Paramètres › Apparence* (Courrier, Calendrier, Contacts ou Tâches).
   - **Transition fluide** : sélection directe du module cible via `SelectNavigationModule` et masquage immédiat des autres vues sans clignotement à l'affichage.

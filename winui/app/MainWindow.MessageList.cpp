@@ -50,6 +50,8 @@ namespace winrt::EvolutionWin::implementation
         }
         else
         {
+            CancelMarkAsReadTimer();
+            m_previous_selected_uid = L"";
             MessageList().Items().Clear();
             m_message_states.clear();
             ListProgress().IsActive(true);
@@ -477,14 +479,101 @@ namespace winrt::EvolutionWin::implementation
         return { m_account, m_folder, L"", L"" };
     }
 
+    /**
+     * @brief Planifie le marquage comme lu d'un message selon les préférences de l'utilisateur.
+     * @param uid Identifiant unique du courriel sélectionné.
+     */
+    void MainWindow::ScheduleMarkAsRead(hstring const& uid)
+    {
+        if (uid.empty())
+            return;
+
+        // Annule tout délai de lecture en cours
+        CancelMarkAsReadTimer();
+
+        hstring mode = ::EvolutionWin::Settings::Instance().GetString(L"mail.mark-as-read", L"immediate");
+
+        if (mode == L"immediate")
+        {
+            MarkMessageAsRead(uid);
+        }
+        else if (mode == L"delayed")
+        {
+            m_pending_read_uid = uid;
+            m_mark_read_timer = DispatcherTimer();
+            m_mark_read_timer.Interval(std::chrono::seconds(5));
+            auto token = std::make_shared<event_token>();
+            *token = m_mark_read_timer.Tick([this, token](IInspectable const&, IInspectable const&)
+            {
+                if (m_mark_read_timer)
+                {
+                    m_mark_read_timer.Tick(*token);
+                    m_mark_read_timer.Stop();
+                    m_mark_read_timer = nullptr;
+                }
+                if (!m_pending_read_uid.empty() && m_pending_read_uid == SelectedMessageUid())
+                {
+                    MarkMessageAsRead(m_pending_read_uid);
+                }
+                m_pending_read_uid = L"";
+            });
+            m_mark_read_timer.Start();
+        }
+        else if (mode == L"on-selection-change")
+        {
+            m_pending_read_uid = uid;
+        }
+    }
+
+    /**
+     * @brief Annule la minuterie de marquage automatique comme lu si elle est active.
+     */
+    void MainWindow::CancelMarkAsReadTimer()
+    {
+        if (m_mark_read_timer)
+        {
+            m_mark_read_timer.Stop();
+            m_mark_read_timer = nullptr;
+        }
+        m_pending_read_uid = L"";
+    }
+
+    /**
+     * @brief Marque effectivement un message comme lu et synchronise l'indicateur avec le serveur.
+     * @param uid Identifiant unique du courriel à marquer comme lu.
+     */
+    void MainWindow::MarkMessageAsRead(hstring const& uid)
+    {
+        if (uid.empty())
+            return;
+
+        auto it = m_message_states.find(std::wstring{ uid });
+        if (it != m_message_states.end() && it->second.seen)
+            return;
+
+        SetMessageFlag(uid, L"seen", true);
+    }
+
     void MainWindow::OnMessageSelectionChanged(IInspectable const&, SelectionChangedEventArgs const&)
     {
         if (m_reselecting)
             return;
 
+        hstring mode = ::EvolutionWin::Settings::Instance().GetString(L"mail.mark-as-read", L"immediate");
+
         auto item = MessageList().SelectedItem().try_as<Grid>();
         if (!item)
         {
+            CancelMarkAsReadTimer();
+            if (mode == L"on-selection-change" && !m_previous_selected_uid.empty())
+            {
+                auto prev_it = m_message_states.find(std::wstring{ m_previous_selected_uid });
+                if (prev_it != m_message_states.end() && !prev_it->second.seen)
+                {
+                    MarkMessageAsRead(m_previous_selected_uid);
+                }
+                m_previous_selected_uid = L"";
+            }
             ClearReader();
             return;
         }
@@ -496,13 +585,26 @@ namespace winrt::EvolutionWin::implementation
             return;
         }
 
+        // Mode au changement de sélection : marquer l'ancien message lu s'il a changé
+        if (mode == L"on-selection-change" && !m_previous_selected_uid.empty() && m_previous_selected_uid != uid)
+        {
+            auto prev_it = m_message_states.find(std::wstring{ m_previous_selected_uid });
+            if (prev_it != m_message_states.end() && !prev_it->second.seen)
+            {
+                MarkMessageAsRead(m_previous_selected_uid);
+            }
+        }
+        m_previous_selected_uid = uid;
+
         uint64_t request = ++m_message_request;
 
         auto state_it = m_message_states.find(std::wstring{ uid });
+        bool seen = state_it != m_message_states.end() ? state_it->second.seen : false;
         bool flagged = state_it != m_message_states.end() ? state_it->second.flagged : false;
-        m_message_states[std::wstring{ uid }].seen = true;
-        UpdateMessageItemVisual(item, true, flagged);
+        UpdateMessageItemVisual(item, seen, flagged);
         UpdateActionButtons(uid);
+
+        ScheduleMarkAsRead(uid);
 
         /* Si le volet de lecture est désactivé, conserver la sélection et les boutons sans charger le WebView2 */
         if (::EvolutionWin::Settings::Instance().GetString(L"layout.reading-pane", L"right") == L"off")

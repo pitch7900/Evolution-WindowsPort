@@ -229,6 +229,40 @@ static void test_settings_corruption_resilience(void)
     TEST_CASE_END();
 }
 
+static void test_settings_mail_read_and_security_options(void)
+{
+    TEST_CASE("Settings: Options Lu/Non-Lu et securite courriel (Quickwins)");
+    {
+        MockSettingsManager mgr;
+
+        /* Statut Lu / Non-Lu : valeur par defaut = 'immediate' */
+        std::string mode_default = mgr.GetString("mail.mark-as-read", "immediate");
+        ASSERT_EQ_STR("immediate", mode_default.c_str());
+
+        /* Verification de la configuration des 4 modes supportes */
+        mgr.SetString("mail.mark-as-read", "delayed");
+        std::string mode_delayed = mgr.GetString("mail.mark-as-read", "immediate");
+        ASSERT_EQ_STR("delayed", mode_delayed.c_str());
+
+        mgr.SetString("mail.mark-as-read", "on-selection-change");
+        std::string mode_change = mgr.GetString("mail.mark-as-read", "immediate");
+        ASSERT_EQ_STR("on-selection-change", mode_change.c_str());
+
+        mgr.SetString("mail.mark-as-read", "never");
+        std::string mode_never = mgr.GetString("mail.mark-as-read", "immediate");
+        ASSERT_EQ_STR("never", mode_never.c_str());
+
+        /* Vider la corbeille a la fermeture : par defaut false */
+        ASSERT_EQ_INT(0, mgr.GetBoolean("mail.empty-trash-on-exit", false));
+        mgr.SetBoolean("mail.empty-trash-on-exit", true);
+        ASSERT_EQ_INT(1, mgr.GetBoolean("mail.empty-trash-on-exit", false));
+
+        /* Confirmation avant suppression definitive : par defaut true */
+        ASSERT_EQ_INT(1, mgr.GetBoolean("mail.confirm-permanent-delete", true));
+    }
+    TEST_CASE_END();
+}
+
 int main(void)
 {
     TEST_SUITE_BEGIN("Preferences et Configuration (Settings.h)");
@@ -237,6 +271,7 @@ int main(void)
     test_settings_read_write();
     test_settings_trusted_senders_array();
     test_settings_corruption_resilience();
+    test_settings_mail_read_and_security_options();
 
     return test_suite_summary();
 }

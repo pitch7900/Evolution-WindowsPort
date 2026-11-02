@@ -1192,6 +1192,7 @@
                                                   SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
                                             <ComboBoxItem Content="Immédiatement" Tag="immediate" />
                                             <ComboBoxItem Content="Après 5 secondes" Tag="delayed" />
+                                            <ComboBoxItem Content="Au changement de sélection" Tag="on-selection-change" />
                                             <ComboBoxItem Content="Manuellement seulement" Tag="never" />
                                         </ComboBox>
                                     </Grid>

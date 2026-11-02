@@ -613,6 +613,17 @@ namespace winrt::EvolutionWin::implementation
         void ClearAllNotifications();
         void UpdateNotificationsUI();
 
+        /* Gestion automatique du statut Lu / Non lu */
+        Microsoft::UI::Xaml::DispatcherTimer m_mark_read_timer{ nullptr };
+        winrt::hstring m_pending_read_uid;
+        winrt::hstring m_previous_selected_uid;
+        void ScheduleMarkAsRead(winrt::hstring const& uid);
+        void CancelMarkAsReadTimer();
+        void MarkMessageAsRead(winrt::hstring const& uid);
+
+        /* Purge automatique de la Corbeille à la fermeture */
+        void EmptyAllTrashFolders();
+
         /* Splash screen et progression barre des tâches */
         winrt::EvolutionWin::SplashWindow m_splash{ nullptr };
         Microsoft::UI::Xaml::DispatcherTimer m_splash_timer{ nullptr };
