@@ -244,6 +244,7 @@ En entreprise (Exchange Online / Microsoft 365, Exchange on-premise), les utilis
   - [ ] 🟡 **Calendrier** : ajout du calendrier partagé sous le groupe *Calendriers partagés* ou *Autres calendriers*, avec synchronisation et affichage superposé ou côte à côte.
   - [ ] 🟡 **Contacts** : ajout du carnet d'adresses partagé de l'utilisateur sélectionné.
   - [ ] 🟢 **Mémorisation et suppression** : persistance des comptes et dossiers partagés ouverts entre les sessions ; option *« Masquer / Fermer le compte partagé »* par clic droit.
+  - Récupération des éléments supprimés du compte Exchange Online (Recoverable Items en self-service) : cf. §9
 
 ### Boîte d'archivage en ligne (Exchange Online Archiving / In-Place Archive) — 🟠
 
@@ -528,7 +529,11 @@ Trois notions distinctes, comme dans Outlook : le **suivi** (drapeau avec libell
 - [ ] 🟠 **Nettoyer le dossier** (et sous-dossiers) des messages redondants — même logique que §7
 - [ ] **Récupérer les éléments supprimés** :
   - [ ] 🟡 IMAP : messages marqués supprimés non purgés
-  - [ ] 🟠 Exchange : *Recoverable Items*
+  - [ ] 🟠 **Exchange Online / Microsoft 365 : Récupération des éléments supprimés (« Recoverable Items » en self-service)** :
+    - [ ] **Menu contextuel du compte** : option *« Récupérer les éléments supprimés du serveur… »* ouverte par clic droit sur le compte Exchange (et sur le dossier *Éléments supprimés* / *Corbeille* de ce compte)
+    - [ ] **Consultation du dossier des éléments récupérables** : fenêtre ou vue dédiée affichant la liste des messages présents dans le dossier de rétention serveur (`Recoverable Items` / `Deletions`, accessible via Microsoft Graph `/mailFolders/recoverableitemsdeletions/messages` ou EWS `recoverableitemsdeletions`) avec colonnes objet, expéditeur, date de suppression/réception, taille
+    - [ ] **Restauration en self-service** : sélection unitaire ou multiple d'éléments avec bouton *Restaurer les éléments sélectionnés* (rétablissement direct dans la Boîte de réception ou le dossier d'origine) et bouton *Supprimer définitivement* (purge manuelle si autorisée par la stratégie de rétention)
+    - [ ] **Recherche et tri** : filtrage par expéditeur, objet ou date de suppression pour localiser rapidement les courriels purgés par erreur
 - [ ] 🟡 **Favoris** : section *Favoris* en haut du volet des dossiers, réordonnable
 - [ ] 🟢 **Afficher dans le navigateur** (OWA / webmail du fournisseur)
 - [ ] 🟠 **Dossiers de recherche** (dossiers virtuels `CamelVeeFolder`, aujourd'hui ignorés par `evo-core`), avec modèles prédéfinis : non lus, marqués, de personnes spécifiques, gros messages…
