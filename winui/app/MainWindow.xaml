@@ -338,6 +338,9 @@
                         <AppBarButton Label="Aujourd'hui" Click="OnRibbonTodayClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8D1;" /></AppBarButton.Icon>
                         </AppBarButton>
+                        <AppBarButton Label="Atteindre la date" Click="OnGoToDateClick" ToolTipService.ToolTip="Atteindre une date dans le calendrier (Ctrl+G)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE787;" /></AppBarButton.Icon>
+                        </AppBarButton>
                         <AppBarSeparator />
                         <AppBarButton Label="Jour" Tag="day" Click="OnCalendarPeriodClick" ToolTipService.ToolTip="Affichage Jour (Ctrl+Alt+1)">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8BF;" /></AppBarButton.Icon>
@@ -771,6 +774,12 @@
                              affichée, période (MainWindow::LoadEvents) -->
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                             <Button Content="Aujourd'hui" Click="OnRibbonTodayClick" />
+                            <Button Click="OnGoToDateClick" ToolTipService.ToolTip="Atteindre une date (Ctrl+G)">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <FontIcon Glyph="&#xE787;" FontSize="12" />
+                                    <TextBlock Text="Aller au…" />
+                                </StackPanel>
+                            </Button>
                             <Button Click="OnCalendarPreviousClick" ToolTipService.ToolTip="Période précédente">
                                 <FontIcon Glyph="&#xE76B;" FontSize="12" />
                             </Button>

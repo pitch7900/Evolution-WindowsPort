@@ -67,7 +67,7 @@ Ces chantiers ne dépendent pas de refontes architecturales complexes et apporte
   - `Ctrl+Alt+2` : Calendrier
   - `Ctrl+Alt+3` : Contacts
   - `Ctrl+Alt+4` : Tâches
-- [ ] **Atteindre une date** (`Ctrl+G`)
+- [x] **Atteindre une date** (`Ctrl+G`)
   - Boîte de dialogue simple pour naviguer vers une date choisie.
   - Bouton rapide « Aujourd’hui ».
 - [ ] **Échelle de temps du calendrier**

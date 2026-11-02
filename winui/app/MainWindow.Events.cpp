@@ -44,6 +44,106 @@ namespace winrt::EvolutionWin::implementation
         LoadEvents();
     }
 
+    /**
+     * Positionne l'affichage du calendrier sur une date précise.
+     * Paramètres :
+     *   date : date cible sous forme de DateTime WinRT
+     */
+    void MainWindow::GoToCalendarDate(DateTime date)
+    {
+        time_t raw = winrt::clock::to_time_t(date);
+        struct tm local_tm{};
+        localtime_s(&local_tm, &raw);
+        local_tm.tm_hour = 0;
+        local_tm.tm_min = 0;
+        local_tm.tm_sec = 0;
+        m_selected_day_start = static_cast<int64_t>(mktime(&local_tm));
+        MonthCalendar().SelectedDates().Clear();
+        MonthCalendar().SelectedDates().Append(date);
+        MonthCalendar().SetDisplayDate(date);
+        LoadEvents();
+    }
+
+    /**
+     * Gestionnaire du clic sur le bouton "Atteindre la date".
+     * Ouvre la boîte de dialogue modale permettant de sélectionner une date.
+     * Paramètres :
+     *   sender : bouton émetteur
+     *   args   : arguments d'événement
+     */
+    void MainWindow::OnGoToDateClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ShowGoToDateDialogAsync();
+    }
+
+    /**
+     * Boîte de dialogue "Atteindre une date" (Ctrl+G).
+     * Propose un sélecteur de date graphique (CalendarDatePicker) ainsi que
+     * des raccourcis rapides ("Aujourd'hui" et "+7 jours").
+     */
+    fire_and_forget MainWindow::ShowGoToDateDialogAsync()
+    {
+        ContentDialog dialog;
+        dialog.XamlRoot(this->Content().XamlRoot());
+        dialog.Title(box_value(L"Atteindre une date"));
+        dialog.PrimaryButtonText(L"Atteindre");
+        dialog.CloseButtonText(L"Annuler");
+        dialog.DefaultButton(ContentDialogButton::Primary);
+
+        StackPanel panel;
+        panel.Spacing(12);
+        panel.MinWidth(320);
+
+        TextBlock desc;
+        desc.Text(L"Sélectionnez une date pour naviguer directement dans le calendrier :");
+        desc.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+        panel.Children().Append(desc);
+
+        CalendarDatePicker date_picker;
+        date_picker.HorizontalAlignment(HorizontalAlignment::Stretch);
+        time_t anchor = m_selected_day_start > 0 ? static_cast<time_t>(m_selected_day_start) : std::time(nullptr);
+        date_picker.Date(winrt::clock::from_time_t(anchor));
+        panel.Children().Append(date_picker);
+
+        // Raccourcis rapides : Aujourd'hui, 7 prochains jours
+        StackPanel shortcuts;
+        shortcuts.Orientation(Orientation::Horizontal);
+        shortcuts.Spacing(8);
+
+        Button today_btn;
+        today_btn.Content(box_value(L"Aujourd'hui"));
+        today_btn.Click([date_picker](IInspectable const&, RoutedEventArgs const&)
+        {
+            date_picker.Date(winrt::clock::now());
+        });
+        shortcuts.Children().Append(today_btn);
+
+        Button next_week_btn;
+        next_week_btn.Content(box_value(L"+7 jours"));
+        next_week_btn.Click([date_picker](IInspectable const&, RoutedEventArgs const&)
+        {
+            if (date_picker.Date())
+            {
+                time_t cur = winrt::clock::to_time_t(date_picker.Date().Value());
+                date_picker.Date(winrt::clock::from_time_t(cur + 7 * 86400));
+            }
+        });
+        shortcuts.Children().Append(next_week_btn);
+
+        panel.Children().Append(shortcuts);
+        dialog.Content(panel);
+
+        auto result = co_await dialog.ShowAsync();
+        if (result == ContentDialogResult::Primary && date_picker.Date())
+        {
+            if (m_view_tag != L"calendar")
+            {
+                SelectNavigationModule(L"calendar");
+            }
+            GoToCalendarDate(date_picker.Date().Value());
+        }
+    }
+
     /* Période affichée (jour / semaine / mois), mémorisée ; synchronise la
      * barre de navigation. */
     void MainWindow::SetCalendarPeriod(hstring const& period)

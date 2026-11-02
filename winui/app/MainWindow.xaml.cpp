@@ -153,6 +153,16 @@ namespace winrt::EvolutionWin::implementation
             todobar_accel.Invoked({ this, &MainWindow::OnTodoBarAccelerator });
             root.KeyboardAccelerators().Append(todobar_accel);
 
+            Microsoft::UI::Xaml::Input::KeyboardAccelerator gotodate_accel;
+            gotodate_accel.Modifiers(Windows::System::VirtualKeyModifiers::Control);
+            gotodate_accel.Key(Windows::System::VirtualKey::G);
+            gotodate_accel.Invoked([this](auto const&, auto const& args)
+            {
+                args.Handled(true);
+                ShowGoToDateDialogAsync();
+            });
+            root.KeyboardAccelerators().Append(gotodate_accel);
+
             // Raccourcis de navigation globale (Ctrl+1 à Ctrl+4) et vues calendrier (Ctrl+Alt+1 à Ctrl+Alt+5)
             auto add_nav_accel = [root, this](Windows::System::VirtualKey key, winrt::hstring const& module_tag, winrt::hstring const& cal_period, Windows::System::VirtualKeyModifiers mod)
             {

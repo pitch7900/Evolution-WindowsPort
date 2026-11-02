@@ -36,6 +36,9 @@ namespace winrt::EvolutionWin::implementation
         void OnRibbonFolderPaneToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRibbonResetLayoutClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRibbonTodayClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnGoToDateClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void GoToCalendarDate(Windows::Foundation::DateTime date);
+        winrt::fire_and_forget ShowGoToDateDialogAsync();
         void OnReadingPaneMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
         void OnRibbonCompactDensityToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void ApplyCompactDensity(bool compact);

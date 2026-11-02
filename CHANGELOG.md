@@ -14,6 +14,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Atteindre une date dans le Calendrier (Ctrl+G - Quickwin §4 / §12)** :
+  - **Boîte de dialogue modale Windows 11 Fluent** : accessible via le raccourci clavier global Ctrl+G, le ruban Calendrier (*Atteindre la date*) ou le bouton rapide « Aller au… » au-dessus de la grille des rendez-vous.
+  - **Sélecteur de date graphique (CalendarDatePicker)** : prépositionné sur la date actuellement visualisée pour une navigation rapide vers n'importe quelle date passée ou future.
+  - **Raccourcis en un clic** : boutons « Aujourd'hui » et « +7 jours » intégrés dans la boîte de dialogue pour une navigation ultra rapide.
+  - **Bascule automatique de module** : si la commande est appelée depuis Courrier, Contacts ou Tâches, l'application bascule automatiquement vers le Calendrier et se positionne directement sur la date choisie.
 - **Raccourcis de navigation globale et vues du calendrier (Quickwin §4 / §12)** :
   - **Navigation instantanée entre modules (Ctrl+1..4 et Ctrl+Alt+1..4)** : bascule directe depuis n'importe quelle vue vers Courrier (Ctrl+1), Calendrier (Ctrl+2), Contacts (Ctrl+3) et Tâches (Ctrl+4).
   - **Bascule rapide des vues Calendrier (Ctrl+Alt+1..5)** : dans la vue Calendrier, les combinaisons Ctrl+Alt commutent instantanément l'affichage entre Jour (Ctrl+Alt+1), Semaine de travail (Ctrl+Alt+2), Semaine (Ctrl+Alt+3), Mois (Ctrl+Alt+4) et Liste (Ctrl+Alt+5).
