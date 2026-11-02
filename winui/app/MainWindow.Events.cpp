@@ -134,15 +134,24 @@ namespace winrt::EvolutionWin::implementation
         int64_t month_unix = static_cast<int64_t>(mktime(&month_first));
         m_grid_month = month_first.tm_mon;
 
+        int first_day = static_cast<int>(::EvolutionWin::Settings::Instance().GetNumber(L"calendar.first-day", 0));
+        auto get_day_offset = [first_day](int tm_wday) {
+            if (first_day == 1) // Dimanche
+                return tm_wday;
+            if (first_day == 2) // Samedi
+                return (tm_wday + 1) % 7;
+            return (tm_wday + 6) % 7; // Lundi par défaut
+        };
+
         if (m_calendar_period == L"month")
         {
             first = month_first;
-            first.tm_mday -= (first.tm_wday + 6) % 7;
+            first.tm_mday -= get_day_offset(first.tm_wday);
             days = 42;
         }
         else if (m_calendar_period == L"week" || m_calendar_period == L"workweek")
         {
-            first.tm_mday -= (first.tm_wday + 6) % 7;
+            first.tm_mday -= get_day_offset(first.tm_wday);
             days = m_calendar_period == L"week" ? 7 : 5;
         }
         else if (m_calendar_period == L"list")

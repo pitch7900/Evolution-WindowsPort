@@ -584,7 +584,7 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
 - [x] 🟠 **Vue Mois** : six semaines à partir du lundi précédent, jours hors mois estompés, 3 événements par jour puis « +N », clic sur un jour basculant en vue Jour
 - [ ] 🟢 Raccourcis Ctrl+Alt+1…5 entre les vues
 - [ ] 🟢 **Échelle de temps** : 5, 6, 10, 15, 30, 60 minutes
-- [ ] 🟢 **Heures de travail** : jours ouvrés, heures de début / fin, premier jour de la semaine (options)
+- [x] 🟢 **Heures de travail** : jours ouvrés, heures de début / fin, premier jour de la semaine (options)
 - [ ] 🟡 **Second fuseau horaire** dans la grille
 - [ ] 🟠 **Glisser-déposer** d'un événement vers un autre créneau / jour / calendrier (déplacer, copier, redimensionner la durée) ; export par glisser-déposer vers l'extérieur : cf. §18
 
@@ -819,8 +819,8 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 
 ### Calendrier
 
-- [ ] 🟢 Heures et jours de travail, premier jour de la semaine, fuseau horaire, numéros de semaine — cf. §12
-- [ ] 🟢 Rappel par défaut des nouveaux événements, durée par défaut des réunions
+- [x] 🟢 Heures et jours de travail, premier jour de la semaine, fuseau horaire, numéros de semaine — cf. §12
+- [x] 🟢 Rappel par défaut des nouveaux événements, durée par défaut des réunions
 
 ### Confidentialité et sécurité
 

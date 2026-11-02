@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
+#include "Settings.h"
 
 #include <algorithm>
 #include <vector>
@@ -385,10 +386,11 @@ namespace winrt::EvolutionWin::implementation
         }
 
         scroll.Content(body);
-        /* début de journée visible (7 h) */
-        scroll.Loaded([scroll](IInspectable const&, RoutedEventArgs const&)
+        /* début de journée visible calé sur les heures de travail configurées */
+        double work_start = ::EvolutionWin::Settings::Instance().GetNumber(L"calendar.work-start", 8.0);
+        scroll.Loaded([scroll, work_start](IInspectable const&, RoutedEventArgs const&)
         {
-            scroll.ChangeView(nullptr, IReference<double>{ 7 * HourHeight }, nullptr, true);
+            scroll.ChangeView(nullptr, IReference<double>{ (std::max)(0.0, work_start - 1.0) * HourHeight }, nullptr, true);
         });
         host.Children().Append(scroll);
     }

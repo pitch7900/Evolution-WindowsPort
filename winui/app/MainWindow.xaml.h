@@ -227,6 +227,10 @@ namespace winrt::EvolutionWin::implementation
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void ApplyTheme(winrt::hstring const& theme_name);
+        void OnCalendarWorkDayToggled(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void ApplyCalendarPreferences();
 
     private:
         using ReplyKind = ::EvolutionWin::ReplyKind;

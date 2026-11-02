@@ -150,6 +150,7 @@ namespace winrt::EvolutionWin::implementation
         RestorePaneWidths();
         ApplyFolderPaneVisibility(::EvolutionWin::Settings::Instance().GetBoolean(L"layout.folders-visible", true));
         ApplyReadingPanePosition(::EvolutionWin::Settings::Instance().GetString(L"layout.reading-pane", L"right"));
+        ApplyCalendarPreferences();
         m_calendar_period = ::EvolutionWin::Settings::Instance().GetString(L"calendar.period", L"week");
         m_updating_period = true;
         for (auto const& item : CalendarPeriodBar().Items())

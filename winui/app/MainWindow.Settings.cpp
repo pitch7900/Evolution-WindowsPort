@@ -160,6 +160,7 @@ namespace winrt::EvolutionWin::implementation
             sw.IsOn(settings.GetBoolean(L"mail.confirm-permanent-delete", true));
 
         /* 2. Calendrier */
+        // Premier jour de la semaine
         hstring first_day = settings.GetString(L"calendar.first-day", L"0");
         if (auto combo = CalendarFirstDayCombo())
         {
@@ -178,8 +179,101 @@ namespace winrt::EvolutionWin::implementation
             combo.SelectedIndex(sel);
         }
 
+        // Jours de travail (jours ouvrés)
+        hstring work_days = settings.GetString(L"calendar.work-days", L"1,2,3,4,5");
+        std::wstring work_days_str{ work_days };
+        auto is_workday = [&](std::wstring const& d) {
+            return work_days_str.find(d) != std::wstring::npos;
+        };
+        if (auto btn = WorkDayMon()) btn.IsChecked(is_workday(L"1"));
+        if (auto btn = WorkDayTue()) btn.IsChecked(is_workday(L"2"));
+        if (auto btn = WorkDayWed()) btn.IsChecked(is_workday(L"3"));
+        if (auto btn = WorkDayThu()) btn.IsChecked(is_workday(L"4"));
+        if (auto btn = WorkDayFri()) btn.IsChecked(is_workday(L"5"));
+        if (auto btn = WorkDaySat()) btn.IsChecked(is_workday(L"6"));
+        if (auto btn = WorkDaySun()) btn.IsChecked(is_workday(L"0"));
+
+        // Heures de travail (début et fin)
+        hstring work_start = settings.GetString(L"calendar.work-start", L"8");
+        if (auto combo = CalendarWorkStartCombo())
+        {
+            int32_t sel = 2; // 08:00
+            for (uint32_t i = 0; i < combo.Items().Size(); ++i)
+            {
+                if (auto item = combo.Items().GetAt(i).try_as<ComboBoxItem>())
+                {
+                    if (unbox_value_or<hstring>(item.Tag(), L"") == work_start)
+                    {
+                        sel = static_cast<int32_t>(i);
+                        break;
+                    }
+                }
+            }
+            combo.SelectedIndex(sel);
+        }
+
+        hstring work_end = settings.GetString(L"calendar.work-end", L"18");
+        if (auto combo = CalendarWorkEndCombo())
+        {
+            int32_t sel = 3; // 18:00
+            for (uint32_t i = 0; i < combo.Items().Size(); ++i)
+            {
+                if (auto item = combo.Items().GetAt(i).try_as<ComboBoxItem>())
+                {
+                    if (unbox_value_or<hstring>(item.Tag(), L"") == work_end)
+                    {
+                        sel = static_cast<int32_t>(i);
+                        break;
+                    }
+                }
+            }
+            combo.SelectedIndex(sel);
+        }
+
+        // Numéros de semaine
         if (auto sw = CalendarShowWeekNumbersSwitch())
             sw.IsOn(settings.GetBoolean(L"calendar.show-week-numbers", false));
+
+        // Fuseau horaire principal
+        hstring timezone = settings.GetString(L"calendar.timezone", L"system");
+        if (auto combo = CalendarTimezoneCombo())
+        {
+            int32_t sel = 0;
+            for (uint32_t i = 0; i < combo.Items().Size(); ++i)
+            {
+                if (auto item = combo.Items().GetAt(i).try_as<ComboBoxItem>())
+                {
+                    if (unbox_value_or<hstring>(item.Tag(), L"") == timezone)
+                    {
+                        sel = static_cast<int32_t>(i);
+                        break;
+                    }
+                }
+            }
+            combo.SelectedIndex(sel);
+        }
+
+        // Second fuseau horaire
+        if (auto sw = CalendarSecondTimezoneSwitch())
+            sw.IsOn(settings.GetBoolean(L"calendar.second-timezone-enabled", false));
+
+        hstring second_tz = settings.GetString(L"calendar.second-timezone", L"UTC");
+        if (auto combo = CalendarSecondTimezoneCombo())
+        {
+            int32_t sel = 0;
+            for (uint32_t i = 0; i < combo.Items().Size(); ++i)
+            {
+                if (auto item = combo.Items().GetAt(i).try_as<ComboBoxItem>())
+                {
+                    if (unbox_value_or<hstring>(item.Tag(), L"") == second_tz)
+                    {
+                        sel = static_cast<int32_t>(i);
+                        break;
+                    }
+                }
+            }
+            combo.SelectedIndex(sel);
+        }
 
         hstring def_duration = settings.GetString(L"calendar.default-duration", L"30");
         if (auto combo = CalendarDefaultDurationCombo())
@@ -608,6 +702,10 @@ namespace winrt::EvolutionWin::implementation
             if (!key.empty())
             {
                 ::EvolutionWin::Settings::Instance().SetBoolean(key, toggle.IsOn());
+                if (std::wstring_view{ key }.rfind(L"calendar.", 0) == 0)
+                {
+                    ApplyCalendarPreferences();
+                }
             }
         }
     }
@@ -635,6 +733,10 @@ namespace winrt::EvolutionWin::implementation
                     if (!val.empty())
                     {
                         ::EvolutionWin::Settings::Instance().SetString(key, val);
+                        if (std::wstring_view{ key }.rfind(L"calendar.", 0) == 0)
+                        {
+                            ApplyCalendarPreferences();
+                        }
                     }
                 }
             }
@@ -736,5 +838,59 @@ namespace winrt::EvolutionWin::implementation
         });
 
         dialog.ShowAsync();
+    }
+
+    /**
+     * @brief Gestionnaire de bascule des jours de travail (Lun, Mar, Mer, Jeu, Ven, Sam, Dim).
+     * @param sender Bouton ToggleButton cliqué.
+     * @param args Arguments d'événement.
+     */
+    void MainWindow::OnCalendarWorkDayToggled(
+        [[maybe_unused]] IInspectable const& sender,
+        [[maybe_unused]] RoutedEventArgs const& args)
+    {
+        if (m_updating_settings_view)
+            return;
+
+        std::wstring days;
+        if (WorkDayMon() && WorkDayMon().IsChecked().Value()) days += L"1,";
+        if (WorkDayTue() && WorkDayTue().IsChecked().Value()) days += L"2,";
+        if (WorkDayWed() && WorkDayWed().IsChecked().Value()) days += L"3,";
+        if (WorkDayThu() && WorkDayThu().IsChecked().Value()) days += L"4,";
+        if (WorkDayFri() && WorkDayFri().IsChecked().Value()) days += L"5,";
+        if (WorkDaySat() && WorkDaySat().IsChecked().Value()) days += L"6,";
+        if (WorkDaySun() && WorkDaySun().IsChecked().Value()) days += L"0,";
+
+        if (!days.empty() && days.back() == L',')
+            days.pop_back();
+
+        ::EvolutionWin::Settings::Instance().SetString(L"calendar.work-days", hstring{ days });
+        ApplyCalendarPreferences();
+    }
+
+    /**
+     * @brief Applique dynamiquement les préférences du calendrier (premier jour, numéros de semaine, vue).
+     */
+    void MainWindow::ApplyCalendarPreferences()
+    {
+        auto& settings = ::EvolutionWin::Settings::Instance();
+
+        // 1. Premier jour de la semaine sur le mini-calendrier
+        if (auto cal = MonthCalendar())
+        {
+            hstring first_day = settings.GetString(L"calendar.first-day", L"0");
+            if (first_day == L"1")
+                cal.FirstDayOfWeek(Windows::Globalization::DayOfWeek::Sunday);
+            else if (first_day == L"2")
+                cal.FirstDayOfWeek(Windows::Globalization::DayOfWeek::Saturday);
+            else
+                cal.FirstDayOfWeek(Windows::Globalization::DayOfWeek::Monday);
+        }
+
+        // 2. Si la vue calendrier est active, recharger pour actualiser la grille
+        if (m_view_tag == L"calendar")
+        {
+            LoadEvents();
+        }
     }
 }

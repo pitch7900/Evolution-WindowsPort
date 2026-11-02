@@ -25,6 +25,7 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   - **Enregistrement immédiat dans `settings.json`** : persistance automatique et directe des réglages via `Settings::Instance()` dès modification d'un interrupteur ou d'une liste déroulante.
   - **Bascule dynamique du thème** : application immédiate des modes Clair, Sombre ou Système sur l'ensemble de l'interface (`RequestedTheme`) sans redémarrage.
   - **Raccourci clavier universel `Ctrl+,`** et navigation contextuelle directe vers n'importe quelle catégorie (`SelectSettingsCategory`).
+  - **Gestion complète du Calendrier dans les Paramètres** : personnalisation des jours de travail ouvrés (boutons Lun-Dim), plage des heures de bureau (début/fin avec cadrage automatique du défilement de la grille), premier jour de la semaine (Lundi, Dimanche ou Samedi avec répercussion instantanée sur le mini-calendrier et les calculs de période), affichage des numéros de semaine, et sélection du fuseau horaire (principal et second fuseau horaire).
 - **Écran de démarrage fluide (`SplashWindow`) et robustesse au démarrage** :
   affichage instantané d'une fenêtre de démarrage épurée au lancement de l'application
   pendant l'initialisation du moteur et des services EDS. Transition fluide vers
