@@ -51,6 +51,7 @@ Valide les fonctions pures issues de `MainWindow.Helpers.h` :
 - **Extraction et nettoyage de texte pour synthèse vocale (`ExtractPlainTextForSpeech`)** : extraction ordonnée (expéditeur, objet, corps), filtrage des balises HTML et décodage des entités courantes pour une lecture vocale fluide.
 - **Classification d'aperçu sécurisé de pièce jointe (`DetectAttachmentPreviewKind`)** : typage strict des extensions de fichiers (images décodables WIC, fichiers texte et code brut non interprétés, types exécutables ou à risque protégés sans aperçu).
 - **Formatage des suggestions de contacts (`FormatContactSuggestion`)** : présentation élégante des contacts ("Nom <email>" ou repli sur le champ disponible) pour la recherche rapide dans l'AutoSuggestBox du ruban.
+- **Hauteur des créneaux de calendrier (`GetCalendarHourHeight`)** : validation des calculs de hauteur d'affichage selon le pas horaire (60 min = 48px, 30 min = 72px, 15 min = 120px).
 
 ### Suite 2 : Contrats d'interface et robustesse `evo-core` (`test_evo_core_contracts.c`)
 Vérifie la robustesse du moteur C et ses échanges avec l'interface :

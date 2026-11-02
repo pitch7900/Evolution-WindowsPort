@@ -70,7 +70,7 @@ Ces chantiers ne dépendent pas de refontes architecturales complexes et apporte
 - [x] **Atteindre une date** (`Ctrl+G`)
   - Boîte de dialogue simple pour naviguer vers une date choisie.
   - Bouton rapide « Aujourd’hui ».
-- [ ] **Échelle de temps du calendrier**
+- [x] **Échelle de temps du calendrier**
   - Choix du pas horaire dans la grille Jour / Semaine : 15, 30 ou 60 minutes.
 - [x] **Recherche rapide de contacts**
   - Champ de saisie direct dans le ruban avec filtrage dynamique dans le carnet d'adresses.

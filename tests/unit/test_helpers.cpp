@@ -2518,6 +2518,45 @@ static void test_format_contact_suggestion(void)
     TEST_CASE_END();
 }
 
+
+static double GetCalendarHourHeight(int scale_minutes)
+{
+    switch (scale_minutes)
+    {
+    case 15:
+        return 120.0;
+    case 60:
+        return 48.0;
+    case 30:
+    default:
+        return 72.0;
+    }
+}
+
+/**
+ * @brief Test du calcul de la hauteur d'une heure selon l'échelle de temps de la grille.
+ */
+static void test_calendar_time_scale(void)
+{
+    TEST_CASE("CalendarHourHeight: Echelle 60 minutes");
+    {
+        ASSERT_EQ_INT(48, static_cast<int>(GetCalendarHourHeight(60)));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("CalendarHourHeight: Echelle 30 minutes (defaut)");
+    {
+        ASSERT_EQ_INT(72, static_cast<int>(GetCalendarHourHeight(30)));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("CalendarHourHeight: Echelle 15 minutes");
+    {
+        ASSERT_EQ_INT(120, static_cast<int>(GetCalendarHourHeight(15)));
+    }
+    TEST_CASE_END();
+}
+
 int main(void)
 
 
@@ -2570,6 +2609,7 @@ int main(void)
 
     test_attachment_preview_kind();
     test_format_contact_suggestion();
+    test_calendar_time_scale();
 
 
 

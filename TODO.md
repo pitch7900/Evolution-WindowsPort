@@ -600,7 +600,7 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
 - [x] 🔴 **Contrôle grille Jour / Semaine de travail / Semaine** (WinUI n'en fournit pas) : créneaux horaires (24 h), événements positionnés et chevauchements en couloirs (_lanes_), bandeau journée entière en haut, défilement vertical centré sur 7 h, ligne rouge en temps réel de l'heure courante <a id="demo-grille-calendrier"></a> — _blocs colorés selon le calendrier, titre, horaires, lieu et tooltip, ouverture au clic/tap_
 - [x] 🟠 **Vue Mois** : six semaines à partir du lundi précédent, jours hors mois estompés, 3 événements par jour puis « +N », clic sur un jour basculant en vue Jour
 - [x] 🟢 Raccourcis Ctrl+Alt+1…5 entre les vues
-- [ ] 🟢 **Échelle de temps** : 5, 6, 10, 15, 30, 60 minutes
+- [x] 🟢 **Échelle de temps** : 5, 6, 10, 15, 30, 60 minutes
 - [x] 🟢 **Heures de travail** : jours ouvrés, heures de début / fin, premier jour de la semaine (options)
 - [ ] 🟡 **Second fuseau horaire** dans la grille
 - [ ] 🟠 **Glisser-déposer** d'un événement vers un autre créneau / jour / calendrier (déplacer, copier, redimensionner la durée) ; export par glisser-déposer vers l'extérieur : cf. §18

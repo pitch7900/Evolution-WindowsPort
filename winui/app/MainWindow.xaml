@@ -726,6 +726,16 @@
 
                         </AppBarButton>
 
+                                                <AppBarButton x:Name="RibbonCalendarTimeScaleButton" Label="Échelle de temps" ToolTipService.ToolTip="Modifier le pas horaire de la grille (15, 30 ou 60 minutes)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE823;" /></AppBarButton.Icon>
+                            <AppBarButton.Flyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem Text="60 minutes" Tag="60" Click="OnCalendarTimeScaleClick" />
+                                    <MenuFlyoutItem Text="30 minutes (défaut)" Tag="30" Click="OnCalendarTimeScaleClick" />
+                                    <MenuFlyoutItem Text="15 minutes" Tag="15" Click="OnCalendarTimeScaleClick" />
+                                </MenuFlyout>
+                            </AppBarButton.Flyout>
+                        </AppBarButton>
                         <AppBarToggleButton x:Name="RibbonCalendarCompactDensityToggle" Label="Mode compact"
 
                                             Click="OnRibbonCompactDensityToggled"
@@ -2863,6 +2873,31 @@
                                 <TextBlock Text="Semaine de travail et jours ouvrés" Style="{StaticResource SubtitleTextBlockStyle}" />
 
 
+
+                                <!-- Échelle de temps de la grille -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE823;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Échelle de temps de la grille" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Pas horaire des sous-divisions pour les vues Jour et Semaine (15, 30 ou 60 minutes)."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="CalendarTimeScaleCombo" Tag="calendar.time-scale"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+                                            <ComboBoxItem Content="60 minutes" Tag="60" />
+                                            <ComboBoxItem Content="30 minutes (défaut)" Tag="30" />
+                                            <ComboBoxItem Content="15 minutes" Tag="15" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
 
                                 <!-- Premier jour de la semaine -->
 

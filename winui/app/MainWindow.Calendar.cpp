@@ -22,7 +22,38 @@ using namespace Windows::Foundation;
 
 namespace
 {
-    constexpr double HourHeight = 48;	/* hauteur d'une heure en vue Jour / Semaine */
+    /**
+     * @brief Retourne le pas horaire (en minutes) configuré pour la grille du calendrier.
+     * @return 15, 30 ou 60 (défaut : 30 minutes).
+     */
+    int GetCalendarTimeScale()
+    {
+        std::wstring scale_str{ ::EvolutionWin::Settings::Instance().GetString(L"calendar.time-scale", L"30") };
+        int scale = 30;
+        try { scale = std::stoi(scale_str); } catch (...) { scale = 30; }
+        if (scale != 15 && scale != 30 && scale != 60)
+            scale = 30;
+        return scale;
+    }
+
+    /**
+     * @brief Calcule la hauteur d'une heure en pixels selon le pas horaire choisi.
+     * @param scale_minutes Pas horaire (15, 30 ou 60 minutes).
+     * @return Hauteur d'une heure en pixels.
+     */
+    double GetCalendarHourHeight(int scale_minutes)
+    {
+        switch (scale_minutes)
+        {
+        case 15:
+            return 120.0;
+        case 60:
+            return 48.0;
+        case 30:
+        default:
+            return 72.0;
+        }
+    }
     constexpr double GutterWidth = 56;	/* colonne des heures */
     constexpr int MonthChips = 3;	/* événements affichés par jour en vue Mois */
 
@@ -251,6 +282,9 @@ namespace winrt::EvolutionWin::implementation
             }
         }
 
+        const int time_scale = GetCalendarTimeScale();
+        const double HourHeight = GetCalendarHourHeight(time_scale);
+
         /* corps : 24 heures dans une zone qui défile */
         ScrollViewer scroll;
         Grid::SetRow(scroll, 2);
@@ -260,6 +294,7 @@ namespace winrt::EvolutionWin::implementation
 
         for (int hour = 0; hour < 24; hour++)
         {
+            // Ligne principale d'heure
             Border line;
             line.BorderBrush(ThemeBrush(L"DividerStrokeColorDefaultBrush"));
             line.BorderThickness(ThicknessHelper::FromLengths(0, 1, 0, 0));
@@ -277,6 +312,55 @@ namespace winrt::EvolutionWin::implementation
             label.VerticalAlignment(VerticalAlignment::Top);
             label.Margin(ThicknessHelper::FromLengths(8, hour * HourHeight + 2, 0, 0));
             body.Children().Append(label);
+
+            // Graduations intermédiaires selon le pas horaire (15 ou 30 min)
+            if (time_scale == 30)
+            {
+                Border sub_line;
+                sub_line.BorderBrush(ThemeBrush(L"DividerStrokeColorDefaultBrush"));
+                sub_line.Opacity(0.4);
+                sub_line.BorderThickness(ThicknessHelper::FromLengths(0, 1, 0, 0));
+                sub_line.Height(HourHeight / 2);
+                sub_line.VerticalAlignment(VerticalAlignment::Top);
+                sub_line.Margin(ThicknessHelper::FromLengths(0, hour * HourHeight + HourHeight / 2, 0, 0));
+                Grid::SetColumn(sub_line, 1);
+                Grid::SetColumnSpan(sub_line, days);
+                body.Children().Append(sub_line);
+
+                TextBlock sub_label;
+                sub_label.Text(L":30");
+                sub_label.Style(ThemeStyle(L"CaptionTextBlockStyle"));
+                sub_label.Foreground(ThemeBrush(L"TextFillColorTertiaryBrush"));
+                sub_label.FontSize(10);
+                sub_label.VerticalAlignment(VerticalAlignment::Top);
+                sub_label.Margin(ThicknessHelper::FromLengths(28, hour * HourHeight + HourHeight / 2 + 1, 0, 0));
+                body.Children().Append(sub_label);
+            }
+            else if (time_scale == 15)
+            {
+                for (int slot = 1; slot <= 3; slot++)
+                {
+                    Border sub_line;
+                    sub_line.BorderBrush(ThemeBrush(L"DividerStrokeColorDefaultBrush"));
+                    sub_line.Opacity(slot == 2 ? 0.45 : 0.25);
+                    sub_line.BorderThickness(ThicknessHelper::FromLengths(0, 1, 0, 0));
+                    sub_line.Height(HourHeight / 4);
+                    sub_line.VerticalAlignment(VerticalAlignment::Top);
+                    sub_line.Margin(ThicknessHelper::FromLengths(0, hour * HourHeight + slot * (HourHeight / 4), 0, 0));
+                    Grid::SetColumn(sub_line, 1);
+                    Grid::SetColumnSpan(sub_line, days);
+                    body.Children().Append(sub_line);
+
+                    TextBlock sub_label;
+                    sub_label.Text(L":" + to_hstring(slot * 15));
+                    sub_label.Style(ThemeStyle(L"CaptionTextBlockStyle"));
+                    sub_label.Foreground(ThemeBrush(L"TextFillColorTertiaryBrush"));
+                    sub_label.FontSize(9);
+                    sub_label.VerticalAlignment(VerticalAlignment::Top);
+                    sub_label.Margin(ThicknessHelper::FromLengths(26, hour * HourHeight + slot * (HourHeight / 4) + 1, 0, 0));
+                    body.Children().Append(sub_label);
+                }
+            }
         }
 
         for (int day = 0; day < days; day++)
@@ -388,7 +472,7 @@ namespace winrt::EvolutionWin::implementation
         scroll.Content(body);
         /* début de journée visible calé sur les heures de travail configurées */
         double work_start = ::EvolutionWin::Settings::Instance().GetNumber(L"calendar.work-start", 8.0);
-        scroll.Loaded([scroll, work_start](IInspectable const&, RoutedEventArgs const&)
+        scroll.Loaded([scroll, work_start, HourHeight](IInspectable const&, RoutedEventArgs const&)
         {
             scroll.ChangeView(nullptr, IReference<double>{ (std::max)(0.0, work_start - 1.0) * HourHeight }, nullptr, true);
         });
@@ -542,6 +626,24 @@ namespace winrt::EvolutionWin::implementation
 
             cell.Child(content);
             host.Children().Append(cell);
+        }
+    }
+
+    /**
+     * @brief Modifie le pas horaire de la grille du calendrier (15, 30 ou 60 minutes).
+     * @param sender Élément de menu émetteur (MenuFlyoutItem).
+     * @param args Arguments de clic.
+     */
+    void MainWindow::OnCalendarTimeScaleClick(
+        IInspectable const& sender,
+        [[maybe_unused]] RoutedEventArgs const& args)
+    {
+        if (auto item = sender.try_as<MenuFlyoutItem>())
+        {
+            hstring scale = unbox_value_or<hstring>(item.Tag(), L"30");
+            ::EvolutionWin::Settings::Instance().SetString(L"calendar.time-scale", scale);
+            ApplyCalendarPreferences();
+            ShowStatus(L"Échelle de temps modifiée : " + scale + L" minutes.", InfoBarSeverity::Informational);
         }
     }
 }

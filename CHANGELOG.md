@@ -22,6 +22,13 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Échelle de temps du calendrier (Quickwin §4 / §12 / TODO ligne 603)** :
+  - **Intervalles configurables** : sélection rapide du pas horaire dans la grille Jour / Semaine de travail / Semaine (60 minutes, 30 minutes ou 15 minutes).
+  - **Commande dédiée dans le ruban Calendrier** : menu déroulant `RibbonCalendarTimeScale` avec icône d'horloge pour changer dynamiquement l'échelle d'affichage sans quitter la vue active.
+  - **Configuration dans les paramètres** : synchronisation bidirectionnelle avec la préférence `calendar.time-scale` dans les paramètres d'affichage du calendrier.
+  - **Calcul dynamique de la hauteur des créneaux** : fonction d'assistance `GetCalendarHourHeight` calculant la hauteur optimale de chaque créneau horaire (48px pour 60 min, 72px pour 30 min, 120px pour 15 min) et garantissant la lisibilité des événements courts.
+  - **Validation par tests unitaires** : ajout de la suite `CalendarHourHeight` dans `tests/unit/test_helpers.cpp` (36/36 tests validés).
+
 - **Recherche rapide de contacts et accès direct au carnet d'adresses (Quickwin §4 / §14)** :
   - **Champ dédié dans le ruban Accueil** : intégration d'une `AutoSuggestBox` dans le ruban principal de la messagerie (style Outlook) permettant de rechercher n'importe quel contact instantanément.
   - **Suggestions dynamiques en direct** : affichage en temps réel des correspondances avec nom complet et adresse électronique au fur et à mesure de la saisie via `ListBookContacts`.
