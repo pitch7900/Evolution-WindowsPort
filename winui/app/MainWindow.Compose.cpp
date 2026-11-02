@@ -239,7 +239,11 @@ namespace winrt::EvolutionWin::implementation
         }
         else
         {
-            m_core->FetchMessage(m_account, m_folder, first_uid,
+            auto loc = GetMessageLocation(first_uid);
+            hstring account = loc.account.empty() ? m_account : loc.account;
+            hstring folder = loc.folder.empty() ? m_folder : loc.folder;
+
+            m_core->FetchMessage(account, folder, first_uid,
                 [this, proceed_with_first](hstring const& json, hstring const& error)
             {
                 if (!error.empty())

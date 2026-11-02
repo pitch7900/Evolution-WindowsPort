@@ -94,6 +94,9 @@ namespace winrt::EvolutionWin::implementation
         void OnSearchQuerySubmitted(
             Microsoft::UI::Xaml::Controls::AutoSuggestBox const& sender,
             Microsoft::UI::Xaml::Controls::AutoSuggestBoxQuerySubmittedEventArgs const& args);
+        void OnSearchScopeChanged(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
 
         /* Séparateurs déplaçables entre dossiers, liste et volet de lecture */
         void OnSplitterPointerPressed(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
@@ -250,6 +253,19 @@ namespace winrt::EvolutionWin::implementation
         /* Fenêtre de lecture indépendante (Tâche 16) */
         void OpenMessageInWindow(hstring const& uid);
         bool IsDraftsFolder();
+
+        /* Portée de la recherche et localisation des messages (Tâche 20) */
+        struct MessageLocation
+        {
+            hstring account;
+            hstring folder;
+            hstring folder_name;
+            hstring account_name;
+        };
+        std::unordered_map<std::wstring, MessageLocation> m_message_locations;
+        MessageLocation GetMessageLocation(hstring const& uid);
+        hstring CurrentSearchScope();
+        void UpdateSearchPlaceholder();
 
         /* Étape 2 : Gestion des comptes, certificats TLS et authentification OAuth2 */
         fire_and_forget PromptPasswordAsync(hstring source_uid, hstring name, hstring user, bool rejected);

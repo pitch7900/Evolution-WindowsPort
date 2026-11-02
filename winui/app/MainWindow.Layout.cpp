@@ -213,7 +213,7 @@ namespace winrt::EvolutionWin::implementation
         double scale = QuickAccessBar().XamlRoot().RasterizationScale();
         std::vector<Windows::Graphics::RectInt32> rects;
 
-        for (FrameworkElement element : { QuickAccessBar().as<FrameworkElement>(), SearchBox().as<FrameworkElement>() })
+        for (FrameworkElement element : { QuickAccessBar().as<FrameworkElement>(), SearchContainer().as<FrameworkElement>() })
         {
             if (element.ActualWidth() <= 0)
                 continue;

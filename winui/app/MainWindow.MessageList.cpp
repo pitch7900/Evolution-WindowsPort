@@ -106,6 +106,7 @@ namespace winrt::EvolutionWin::implementation
 
         items.Clear();
         m_message_states.clear();
+        m_message_locations.clear();
 
         std::vector<JsonObject> shown;
         for (auto const& value : messages)
@@ -122,6 +123,12 @@ namespace winrt::EvolutionWin::implementation
             bool seen = message.GetNamedBoolean(L"seen", true);
             bool flagged = message.GetNamedBoolean(L"flagged", false);
             bool attachments = message.GetNamedBoolean(L"attachments", false);
+
+            hstring msg_account = message.GetNamedString(L"account", m_account);
+            hstring msg_folder = message.GetNamedString(L"folder", m_folder);
+            hstring msg_folder_name = message.GetNamedString(L"folder_name", L"");
+            hstring msg_account_name = message.GetNamedString(L"account_name", L"");
+            m_message_locations[std::wstring{ uid }] = { msg_account, msg_folder, msg_folder_name, msg_account_name };
 
             m_message_states[std::wstring{ uid }] = MessageState{ seen, flagged, attachments };
 
@@ -166,6 +173,27 @@ namespace winrt::EvolutionWin::implementation
             attachment_icon.FontSize(12);
             attachment_icon.Visibility(attachments ? Visibility::Visible : Visibility::Collapsed);
             meta.Children().Append(attachment_icon);
+
+            /* Affiche l'origine du message (dossier ou compte) pour les recherches transversales */
+            if (CurrentSearchScope() != L"folder" || msg_folder != m_folder || msg_account != m_account)
+            {
+                std::wstring origin_text = L"";
+                if (CurrentSearchScope() == L"all" && !msg_account_name.empty())
+                    origin_text = std::wstring{ msg_account_name } + L" › " + (!msg_folder_name.empty() ? std::wstring{ msg_folder_name } : std::wstring{ msg_folder });
+                else if (!msg_folder_name.empty())
+                    origin_text = std::wstring{ msg_folder_name };
+                else if (!msg_folder.empty())
+                    origin_text = std::wstring{ msg_folder };
+
+                if (!origin_text.empty())
+                {
+                    TextBlock origin;
+                    origin.Text(L"📁 " + origin_text);
+                    origin.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+                    origin.Opacity(0.65);
+                    meta.Children().Append(origin);
+                }
+            }
 
             TextBlock date;
             date.Text(FormatDate(message.GetNamedNumber(L"date", 0)));
@@ -421,6 +449,19 @@ namespace winrt::EvolutionWin::implementation
         }
     }
 
+    /* Renvoie le compte et le dossier associés à un UID de message,
+     * particulièrement utile pour les résultats de recherche transversale.
+     * Paramètres :
+     *   uid : identifiant unique du message
+     * Retourne : structure MessageLocation contenant compte, dossier et libellés. */
+    MainWindow::MessageLocation MainWindow::GetMessageLocation(hstring const& uid)
+    {
+        auto it = m_message_locations.find(std::wstring{ uid });
+        if (it != m_message_locations.end() && !it->second.account.empty())
+            return it->second;
+        return { m_account, m_folder, L"", L"" };
+    }
+
     void MainWindow::OnMessageSelectionChanged(IInspectable const&, SelectionChangedEventArgs const&)
     {
         if (m_reselecting)
@@ -448,7 +489,11 @@ namespace winrt::EvolutionWin::implementation
         UpdateMessageItemVisual(item, true, flagged);
         UpdateActionButtons(uid);
 
-        m_core->FetchMessage(m_account, m_folder, uid, [this, request, uid](hstring const& json, hstring const& error)
+        auto loc = GetMessageLocation(uid);
+        hstring target_account = loc.account.empty() ? m_account : loc.account;
+        hstring target_folder = loc.folder.empty() ? m_folder : loc.folder;
+
+        m_core->FetchMessage(target_account, target_folder, uid, [this, request, uid](hstring const& json, hstring const& error)
         {
             if (request != m_message_request)
                 return;
@@ -803,11 +848,15 @@ namespace winrt::EvolutionWin::implementation
         });
 
         /* Configuration et synchronisation de l'état avec la liste principale */
+        auto loc = GetMessageLocation(uid);
+        hstring target_account = loc.account.empty() ? m_account : loc.account;
+        hstring target_folder = loc.folder.empty() ? m_folder : loc.folder;
+
         get_self<MessageWindow>(window)->Setup(
             m_core,
             m_accounts,
-            m_account,
-            m_folder,
+            target_account,
+            target_folder,
             uid,
             all_uids,
             m_account_folders,

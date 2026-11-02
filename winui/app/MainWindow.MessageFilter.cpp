@@ -127,6 +127,45 @@ namespace winrt::EvolutionWin::implementation
         ReapplyMessageFilters();
     }
 
+    /* Renvoie l'identifiant de la portée actuellement sélectionnée
+     * ("folder", "subfolders", "account", "all").
+     * Retourne : hstring correspondant au tag de l'option choisie. */
+    hstring MainWindow::CurrentSearchScope()
+    {
+        if (auto item = SearchScopeBox().SelectedItem().try_as<ComboBoxItem>())
+            return unbox_value_or<hstring>(item.Tag(), L"folder");
+        return L"folder";
+    }
+
+    /* Met à jour le texte d'aide du champ de recherche en fonction de la portée active. */
+    void MainWindow::UpdateSearchPlaceholder()
+    {
+        hstring scope = CurrentSearchScope();
+        if (scope == L"subfolders")
+            SearchBox().PlaceholderText(L"Rechercher dans le dossier et sous-dossiers (Ctrl+E)");
+        else if (scope == L"account")
+            SearchBox().PlaceholderText(L"Rechercher dans tout le compte (Ctrl+E)");
+        else if (scope == L"all")
+            SearchBox().PlaceholderText(L"Rechercher dans tous les comptes (Ctrl+E)");
+        else
+            SearchBox().PlaceholderText(L"Rechercher dans le dossier (Ctrl+E)");
+    }
+
+    /* Changement de portée de la recherche : adapte le texte d'aide et relance
+     * automatiquement la recherche si des mots-clés sont déjà saisis.
+     * Paramètres :
+     *   sender : contrôle ComboBox émetteur
+     *   args   : arguments de changement de sélection */
+    void MainWindow::OnSearchScopeChanged(IInspectable const&, SelectionChangedEventArgs const&)
+    {
+        UpdateSearchPlaceholder();
+        if (!SearchBox().Text().empty())
+        {
+            AutoSuggestBoxQuerySubmittedEventArgs empty_args{ nullptr };
+            OnSearchQuerySubmitted(SearchBox(), empty_args);
+        }
+    }
+
     /* Gestionnaire de modification du texte de recherche : filtre la liste en
      * direct ou la restaure lorsque le champ est vidé. */
     void MainWindow::OnSearchTextChanged(AutoSuggestBox const& sender, AutoSuggestBoxTextChangedEventArgs const& args)
@@ -146,7 +185,17 @@ namespace winrt::EvolutionWin::implementation
             Navigation().SelectedItem(MailItem());
 
         ++m_search_request;
-        FilterLocalMessages(sender.Text());
+
+        /* Si la portée est le dossier courant, filtrage rapide en local */
+        if (CurrentSearchScope() == L"folder")
+        {
+            FilterLocalMessages(sender.Text());
+        }
+        else if (sender.Text().empty())
+        {
+            /* Si le texte est effacé hors dossier courant, rétablir les messages du dossier */
+            LoadMessages(false);
+        }
     }
 
     /* Ctrl+E : place le curseur dans la recherche de la barre de titre. */
@@ -171,25 +220,40 @@ namespace winrt::EvolutionWin::implementation
             return;
         }
         ++m_search_request;
-        FilterLocalMessages(L"");
+        if (CurrentSearchScope() == L"folder")
+            FilterLocalMessages(L"");
+        else
+            LoadMessages(false);
     }
 
-    /* Gestionnaire de validation de la recherche (touche Entrée ou icône
-     * loupe) : lance une recherche complète dans le dossier (en-têtes et corps
-     * des messages) via evo-core. */
+    /* Gestionnaire de validation de la recherche (touche Entrée ou icône loupe) :
+     * lance une recherche complète (en-têtes et corps) selon la portée choisie
+     * (dossier courant, sous-dossiers, compte courant ou tous les comptes).
+     * Paramètres :
+     *   sender : contrôle AutoSuggestBox émetteur
+     *   args   : arguments de validation contenant la requête */
     void MainWindow::OnSearchQuerySubmitted(AutoSuggestBox const&, AutoSuggestBoxQuerySubmittedEventArgs const& args)
     {
-        hstring query = args.QueryText();
+        hstring query = args ? args.QueryText() : SearchBox().Text();
         if (m_view_tag == L"contacts")
         {
             LoadContacts(query);
             return;
         }
-        if (query.empty() || m_account.empty() || m_folder.empty())
+
+        hstring scope = CurrentSearchScope();
+
+        if (query.empty())
         {
-            FilterLocalMessages(query);
+            if (scope == L"folder")
+                FilterLocalMessages(query);
+            else
+                LoadMessages(false);
             return;
         }
+
+        if (scope != L"all" && m_account.empty())
+            return;
 
         hstring account = m_account;
         hstring folder = m_folder;
@@ -197,10 +261,12 @@ namespace winrt::EvolutionWin::implementation
 
         ListProgress().IsActive(true);
 
-        m_core->SearchMessages(account, folder, query, 500,
-            [this, account, folder, request](hstring const& json, hstring const& error)
+        m_core->SearchMessagesScoped(account, folder, scope, query, 500,
+            [this, account, folder, scope, request](hstring const& json, hstring const& error)
         {
-            if (request != m_search_request || account != m_account || folder != m_folder)
+            if (request != m_search_request)
+                return;
+            if (scope == L"folder" && (account != m_account || folder != m_folder))
                 return;
 
             ListProgress().IsActive(false);
@@ -211,7 +277,14 @@ namespace winrt::EvolutionWin::implementation
                 return;
             }
 
-            ShowMessages(JsonArray::Parse(json));
+            JsonArray results;
+            if (JsonArray::TryParse(json, results))
+            {
+                m_all_messages = results;
+                ShowMessages(results);
+                if (results.Size() == 0)
+                    ShowStatus(L"Aucun message trouvé pour cette recherche.", InfoBarSeverity::Informational);
+            }
         });
     }
 
