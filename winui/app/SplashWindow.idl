@@ -1,0 +1,9 @@
+namespace EvolutionWin
+{
+    [default_interface]
+    runtimeclass SplashWindow : Microsoft.UI.Xaml.Window
+    {
+        SplashWindow();
+        void SetStatus(String status);
+    }
+}

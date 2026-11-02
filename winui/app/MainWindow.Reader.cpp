@@ -175,11 +175,21 @@ namespace winrt::EvolutionWin::implementation
            default reading pane), whatever the Windows theme */
         Reader().DefaultBackgroundColor(Microsoft::UI::Colors::White());
 
-        co_await Reader().EnsureCoreWebView2Async();
+        try
+        {
+            co_await Reader().EnsureCoreWebView2Async();
+        }
+        catch (...)
+        {
+            co_return;
+        }
 
         Reader().DefaultBackgroundColor(Microsoft::UI::Colors::White());
 
         auto core = Reader().CoreWebView2();
+        if (!core)
+            co_return;
+
         /* Force le schéma de couleurs clair dans Chromium pour éviter que le
          * mode sombre de Windows 11 n'active un fond noir sous un texte noir */
         core.Profile().PreferredColorScheme(Microsoft::Web::WebView2::Core::CoreWebView2PreferredColorScheme::Light);

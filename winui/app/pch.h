@@ -1,5 +1,10 @@
 #pragma once
 
+/* Désactive l'erreur STL1011 sous MSVC 14.51+ (Visual Studio 2026) pour les coroutines /await */
+#ifndef _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
+#define _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
+#endif
+
 #include <windows.h>
 #include <unknwn.h>
 #include <restrictederrorinfo.h>

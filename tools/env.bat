@@ -53,16 +53,63 @@ if not defined PERL set "PERL=%GTK_BUILD%\tools\perl-5.20.0\x64\bin\perl.exe"
 rem cmd.exe doit pouvoir exécuter les scripts du répertoire courant
 set NoDefaultCurrentDirectoryInExePath=
 
-rem Localisation automatique de Visual Studio 2022 avec vswhere
-set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
-for /f "usebackq delims=" %%I in (`"%VSWHERE%" -version [17.0^,18.0^) -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x64.x86 -property installationPath`) do set "VS_INSTALL=%%I"
-if not defined VS_INSTALL (
-	for /f "usebackq delims=" %%I in (`"%VSWHERE%" -version [17.0^,18.0^) -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VS_INSTALL=%%I"
+rem =========================================================================
+rem Localisation de Visual Studio (2026, 2022 ou personnalisé via VS_VERSION / VS_INSTALL)
+rem =========================================================================
+rem Variables configurables par l'utilisateur :
+rem   VS_VERSION : "2026" / "18" (VS 2026), "2022" / "17" (VS 2022), "latest" ou non défini (plus récente)
+rem   VS_INSTALL : chemin direct d'installation (ex: C:\Program Files\Microsoft Visual Studio\18\Community)
+
+if defined VS_VERSION (
+	for /f "tokens=1" %%V in ("%VS_VERSION%") do set "VS_VERSION=%%V"
 )
+
+if not defined VS_VERSION if defined VS_INSTALL (
+	if exist "%VS_INSTALL%\VC\Auxiliary\Build\vcvars64.bat" goto :vcvars_found
+)
+
+set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+if not exist "%VSWHERE%" (
+	if exist "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" (
+		set "VS_INSTALL=C:\Program Files\Microsoft Visual Studio\18\Community"
+		goto :vcvars_found
+	)
+	if exist "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat" (
+		set "VS_INSTALL=C:\Program Files\Microsoft Visual Studio\2022\Community"
+		goto :vcvars_found
+	)
+)
+
+set "VS_RANGE_ARG="
+if "%VS_VERSION:~0,4%"=="2026" set "VS_RANGE_ARG=-version [18.0^,19.0^)"
+if "%VS_VERSION:~0,2%"=="18" set "VS_RANGE_ARG=-version [18.0^,19.0^)"
+if "%VS_VERSION:~0,4%"=="2022" set "VS_RANGE_ARG=-version [17.0^,18.0^)"
+if "%VS_VERSION:~0,2%"=="17" set "VS_RANGE_ARG=-version [17.0^,18.0^)"
+
+set "VS_INSTALL="
+if not defined VS_RANGE_ARG (
+	rem Par défaut : la version la plus récente installée (VS 2026 en priorité si présent, sinon VS 2022)
+	for /f "usebackq delims=" %%I in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2^>nul`) do set "VS_INSTALL=%%I"
+	if not defined VS_INSTALL (
+		for /f "usebackq delims=" %%I in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x64.x86 -property installationPath 2^>nul`) do set "VS_INSTALL=%%I"
+	)
+) else (
+	for /f "usebackq delims=" %%I in (`"%VSWHERE%" %VS_RANGE_ARG% -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2^>nul`) do set "VS_INSTALL=%%I"
+	if not defined VS_INSTALL (
+		for /f "usebackq delims=" %%I in (`"%VSWHERE%" %VS_RANGE_ARG% -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x64.x86 -property installationPath 2^>nul`) do set "VS_INSTALL=%%I"
+	)
+)
+
 if not defined VS_INSTALL (
-	echo Visual Studio 2022 avec les outils C++ est introuvable >&2
+	if defined VS_VERSION (
+		echo Visual Studio version %VS_VERSION% avec les outils C++ est introuvable >&2
+	) else (
+		echo Visual Studio 2026/2022 avec les outils C++ est introuvable >&2
+	)
 	exit /b 1
 )
+
+:vcvars_found
 call "%VS_INSTALL%\VC\Auxiliary\Build\vcvars64.bat" >nul || exit /b 1
 
 set "PATH=%PREFIX%\bin;%APPDATA%\Python\Python313\Scripts;%ProgramFiles(x86)%\Microsoft Visual Studio\Installer;%PATH%"

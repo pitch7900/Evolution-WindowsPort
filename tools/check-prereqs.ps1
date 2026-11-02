@@ -95,12 +95,27 @@ function Get-PythonUserScripts {
 }
 
 function Get-VsInstallPath {
+    if ($env:VS_INSTALL -and (Test-Path (Join-Path $env:VS_INSTALL 'VC\Auxiliary\Build\vcvars64.bat'))) {
+        return $env:VS_INSTALL.Trim()
+    }
     $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
     if (-not (Test-Path $vswhere)) {
         return $null
     }
-    $path = & $vswhere -version '[17.0,18.0)' -products * -latest `
-        -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+    $verRange = switch ($env:VS_VERSION) {
+        '2026' { '[18.0,19.0)' }
+        '18'   { '[18.0,19.0)' }
+        '18.0' { '[18.0,19.0)' }
+        '2022' { '[17.0,18.0)' }
+        '17'   { '[17.0,18.0)' }
+        '17.0' { '[17.0,18.0)' }
+        default { $null }
+    }
+    $vswhereArgs = @('-products', '*', '-latest', '-requires', 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64', '-property', 'installationPath')
+    if ($verRange) {
+        $vswhereArgs = @('-version', $verRange) + $vswhereArgs
+    }
+    $path = & $vswhere @vswhereArgs
     if ($path) { return $path.Trim() }
     return $null
 }
@@ -161,13 +176,13 @@ Write-Host "  prefix    : $Prefix"
 Write-Host ''
 Write-Host '== Tools'
 
-Test-Prerequisite -Name 'Visual Studio 2022 with C++ tools' -Check {
+Test-Prerequisite -Name 'Visual Studio (2026/2022) with C++ tools' -Check {
     Get-VsInstallPath
 } -Installer {
     # Build Tools edition with the C++ workload; needs elevation (UAC prompt)
     Install-WithWinget 'Microsoft.VisualStudio.2022.BuildTools' @('--override',
         '--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended')
-} -Hint 'install Visual Studio 2022 (any edition) with the "Desktop development with C++" workload'
+} -Hint 'install Visual Studio 2026 or 2022 (any edition) with the "Desktop development with C++" workload'
 
 Test-Prerequisite -Name 'Windows 10/11 SDK' -Check {
     $inc = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\Include'

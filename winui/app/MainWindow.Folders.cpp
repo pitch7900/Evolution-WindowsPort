@@ -56,6 +56,7 @@ namespace winrt::EvolutionWin::implementation
             m_account_folders.clear();
             m_accounts = JsonArray::Parse(json);
             RefreshAccountsView();
+            RefreshConnectionAccountsList();
 
             for (auto const& value : m_accounts)
             {

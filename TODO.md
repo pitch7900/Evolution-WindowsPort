@@ -108,12 +108,12 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] Explorateur, barre des tâches, Alt+Tab, barre de titre (`AppWindow.SetIcon`)
   - [x] Raccourci du menu Démarrer (installeur MSI)
   - [x] *Paramètres › Applications installées* (propriété `ARPPRODUCTICON` du MSI)
-- [ ] 🟢 **Écran de démarrage (splash screen)** : affichage immédiat d'une fenêtre de démarrage au lancement de l'application pendant le chargement des composants <a id="demo-splash"></a>
-  - [ ] Fenêtre épurée et centrée sans bordures (`OverlappedPresenter` sans barre de titre ni boutons système), avec l'icône / logo d'Evolution, le nom de l'application et la version (issue de [VERSION](VERSION))
-  - [ ] Indicateur d'activité discret (`ProgressBar` indéterminée ou `ProgressRing`) et message d'état sur l'étape en cours (« Démarrage des services… », « Chargement des comptes… »)
-  - [ ] Affichage instantané dès `App::OnLaunched` avant l'initialisation lourde du moteur `CoreBridge` et des services EDS, pour offrir un retour visuel immédiat
-  - [ ] Fermeture automatique et transition fluide vers la fenêtre principale (`MainWindow`) dès que l'interface est prête (événement `ready`)
-  - [ ] Prise en compte du thème sombre / clair de Windows pour l'arrière-plan du splash screen
+- [x] 🟢 **Écran de démarrage (splash screen)** : affichage immédiat d'une fenêtre de démarrage au lancement de l'application pendant le chargement des composants <a id="demo-splash"></a>
+  - [x] Fenêtre épurée et centrée sans bordures (`OverlappedPresenter` sans barre de titre ni boutons système), avec l'icône / logo d'Evolution, le nom de l'application et la version (issue de [VERSION](VERSION))
+  - [x] Indicateur d'activité discret (`ProgressBar` indéterminée ou `ProgressRing`) et message d'état sur l'étape en cours (« Démarrage des services… », « Chargement des comptes… »)
+  - [x] Affichage instantané dès `App::OnLaunched` avant l'initialisation lourde du moteur `CoreBridge` et des services EDS, pour offrir un retour visuel immédiat
+  - [x] Fermeture automatique et transition fluide vers la fenêtre principale (`MainWindow`) dès que l'interface est prête (événement `ready`)
+  - [x] Prise en compte du thème sombre / clair de Windows pour l'arrière-plan du splash screen
 - [x] 🟢 **Mise à jour du MSI : erreur 1618** « Une autre installation est en cours d'exécution » à l'installation de la 0.9.1 par-dessus la 0.9.0 — cause : dialogue « fichiers en cours d'utilisation » caché (EvolutionWin et services EDS ouverts), une seconde installation lancée entre-temps échouait ; le MSI ferme désormais ces programmes (`util:CloseApplication`)
 - [ ] 🟡 **Option « installation silencieuse » du MSI avec fermeture forcée de l'application** — *existant : `util:CloseApplication` ferme déjà EvolutionWin et les services EDS / `gdbus` à chaque installation*
   - [ ] Propriété publique documentée (ex. `FORCECLOSE=1`), utilisable avec `/qn` ou `/passive` : `msiexec /i Evolution-<version>-x64.msi /qn FORCECLOSE=1` (déploiement GPO / Intune, mise à jour automatique) — *aujourd'hui `/qn` fonctionne déjà sans propriété : la fermeture est toujours forcée (vérifié sur la VM de test)*

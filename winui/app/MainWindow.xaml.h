@@ -4,6 +4,7 @@
 #include "CoreBridge.h"
 #include "ComposeWindow.xaml.h"
 #include "MessageWindow.xaml.h"
+#include "SplashWindow.xaml.h"
 
 #include <map>
 
@@ -104,10 +105,16 @@ namespace winrt::EvolutionWin::implementation
         void OnRetryConnectionsClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnToggleOfflineClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void UpdateStatusBarProgress(bool active, winrt::hstring const& message, int32_t percent);
+        void UpdateTaskbarProgress(bool active, int32_t percent, bool error);
         void UpdateConnectionStatus(winrt::hstring const& account, winrt::hstring const& status, winrt::hstring const& message);
         void RefreshConnectionAccountsList();
         void UpdateFolderStatusText();
         void RestoreSessionFolder();
+
+        /* Écran de démarrage (Splash screen) */
+        void SetSplashWindow(winrt::EvolutionWin::SplashWindow const& splash);
+        void CloseSplash();
+        void StartCore();
 
         /* Séparateurs déplaçables entre dossiers, liste et volet de lecture */
         void OnSplitterPointerPressed(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
@@ -514,6 +521,11 @@ namespace winrt::EvolutionWin::implementation
         void DismissNotificationItem(winrt::hstring const& id);
         void ClearAllNotifications();
         void UpdateNotificationsUI();
+
+        /* Splash screen et progression barre des tâches */
+        winrt::EvolutionWin::SplashWindow m_splash{ nullptr };
+        Microsoft::UI::Xaml::DispatcherTimer m_splash_timer{ nullptr };
+        winrt::com_ptr<ITaskbarList3> m_taskbar_list{ nullptr };
     };
 }
 
