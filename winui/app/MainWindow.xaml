@@ -2915,6 +2915,27 @@
 
 
 
+                                <!-- Calendrier par défaut -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE787;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Calendrier par défaut pour les nouveaux événements" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Agenda dans lequel les nouveaux rendez-vous et réunions seront créés par défaut."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="CalendarDefaultSourceCombo" Tag="calendar.active"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="200" />
+                                    </Grid>
+                                </Border>
+
                                 <!-- Échelle de temps de la grille -->
                                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -3457,6 +3478,27 @@
                                 <TextBlock Text="Affichage et classement des contacts" Style="{StaticResource SubtitleTextBlockStyle}" />
 
 
+
+                                <!-- Carnet d'adresses par défaut -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE716;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Carnet d'adresses par défaut" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Carnet dans lequel les nouveaux contacts seront enregistrés par défaut."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="ContactsDefaultBookCombo" Tag="contacts.active"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="200" />
+                                    </Grid>
+                                </Border>
 
                                 <!-- Format d'affichage des noms -->
 

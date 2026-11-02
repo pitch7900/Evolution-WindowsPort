@@ -268,7 +268,7 @@ Dans Microsoft 365 / Exchange Online, les utilisateurs disposent souvent d'une b
 
 - [x] 🟢 **Désigner le compte par défaut** dans la liste des comptes, avec indication visuelle (`e_source_registry_set_default_mail_account`)
 - [x] 🟢 Utilisé pour les nouveaux messages ; pour une réponse / un transfert, compte ayant reçu le message (repli sur le compte par défaut)
-- [ ] 🟢 Calendrier et carnet d'adresses par défaut pour les nouveaux événements et contacts — _les nouveaux éléments vont déjà dans le calendrier / carnet par défaut d'EDS ; reste : les choisir dans l'interface_
+- [x] 🟢 Calendrier et carnet d'adresses par défaut pour les nouveaux événements et contacts — _les nouveaux éléments vont déjà dans le calendrier / carnet par défaut d'EDS ; reste : les choisir dans l'interface_
 - [ ] 🟡 Gestionnaire des liens `mailto:` (inscription d'EvolutionWin comme application de messagerie Windows). Facultatif au moment de l'installation MSI et dans les menus de configuration de l'application par la suite.
 
 ### Signatures — 🟡

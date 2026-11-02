@@ -22,6 +22,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Calendrier et carnet d'adresses par défaut pour les nouveaux éléments (TODO ligne 271)** :
+  - **Sélecteur de calendrier par défaut** : ajout d'une option `calendar.active` dans *Paramètres › Calendrier* pour désigner l'agenda d'enregistrement par défaut des nouveaux rendez-vous et réunions parmi les sources configurées.
+  - **Sélecteur de carnet d'adresses par défaut** : ajout d'une option `contacts.active` dans *Paramètres › Contacts* pour choisir le carnet principal d'ajout des nouveaux contacts.
+  - **Synchronisation dynamique avec l'interface** : mise à jour instantanée des bandeaux d'indication et des panneaux de sources lors d'une modification des réglages.
+  - **Validation par tests unitaires** : ajout des assertions de persistance dans `tests/unit/test_settings.cpp`.
+
 - **Fermer tous les éléments ouverts (TODO ligne 188)** :
   - **Gestion unifiée des fenêtres secondaires** : recensement dynamique et suivi du cycle de vie de toutes les fenêtres de lecture indépendante (`MessageWindow`) et de rédaction de messages (`ComposeWindow`).
   - **Commande dédiée dans le ruban** : bouton `Fermer les fenêtres ouvertes` avec icône dans le ruban Affichage (Courrier et Calendrier) pour refermer instantanément toutes les fenêtres secondaires et ne conserver que la fenêtre principale.

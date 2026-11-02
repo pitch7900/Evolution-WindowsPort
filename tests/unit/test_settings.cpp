@@ -282,6 +282,17 @@ static void test_settings_mail_read_and_security_options(void)
         mgr.SetString("mail.folder-sort", "alphabetical");
         std::string sort_alpha = mgr.GetString("mail.folder-sort", "special-first");
         ASSERT_EQ_STR("alphabetical", sort_alpha.c_str());
+
+        /* Calendrier et carnet d'adresses par defaut (calendar.active / contacts.active) */
+        ASSERT_EQ_STR("", mgr.GetString("calendar.active", "").c_str());
+        mgr.SetString("calendar.active", "work-calendar-uid");
+        std::string active_cal = mgr.GetString("calendar.active", "");
+        ASSERT_EQ_STR("work-calendar-uid", active_cal.c_str());
+
+        ASSERT_EQ_STR("", mgr.GetString("contacts.active", "").c_str());
+        mgr.SetString("contacts.active", "personal-book-uid");
+        std::string active_book = mgr.GetString("contacts.active", "");
+        ASSERT_EQ_STR("personal-book-uid", active_book.c_str());
     }
     TEST_CASE_END();
 }
