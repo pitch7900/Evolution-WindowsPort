@@ -490,6 +490,7 @@ namespace winrt::EvolutionWin::implementation
         bool m_initialized{ false };
         bool m_reader_ready{ false };
         bool m_dialog_open{ false };
+        bool m_startup_synced{ false };
         hstring m_update_tag;	/* version plus récente disponible (vide : aucune connue) */
         hstring m_update_page;
         /* fenêtres indépendantes de lecture ouvertes par UID */

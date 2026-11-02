@@ -113,6 +113,13 @@ namespace winrt::EvolutionWin::implementation
                     RestoreSessionFolder();
                 });
             }
+
+            /* Relève automatique au démarrage si l'option mail.sync-on-startup est activée */
+            if (!m_startup_synced && ::EvolutionWin::Settings::Instance().GetBoolean(L"mail.sync-on-startup", true))
+            {
+                m_startup_synced = true;
+                m_core->RefreshAll();
+            }
         });
     }
 

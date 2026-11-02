@@ -301,6 +301,11 @@ static void test_settings_mail_read_and_security_options(void)
         mgr.SetString("notifications.sound-kind", "chime");
         std::string sound_chime = mgr.GetString("notifications.sound-kind", "windows");
         ASSERT_EQ_STR("chime", sound_chime.c_str());
+
+        /* Releve au demarrage (mail.sync-on-startup) : par defaut true */
+        ASSERT_EQ_INT(1, mgr.GetBoolean("mail.sync-on-startup", true));
+        mgr.SetBoolean("mail.sync-on-startup", false);
+        ASSERT_EQ_INT(0, mgr.GetBoolean("mail.sync-on-startup", true));
     }
     TEST_CASE_END();
 }

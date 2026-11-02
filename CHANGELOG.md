@@ -22,6 +22,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Relève automatique du courrier au démarrage de l'application (TODO ligne 829)** :
+  - **Exécution au lancement** : synchronisation immédiate de tous les dossiers de tous les comptes dès la fin de l'initialisation des comptes (`mail.sync-on-startup`).
+  - **Contrôle utilisateur** : case à cocher active dans *Paramètres › Courrier* pour activer ou désactiver cette relève initiale.
+  - **Validation par tests unitaires** : persistance de `mail.sync-on-startup` vérifiée dans `tests/unit/test_settings.cpp`.
+
 - **Signaux sonores de notification paramétrables (TODO ligne 816)** :
   - **Choix du signal sonore** : sélection entre le son système Windows officiel de nouveau courrier (`MailBeep` / `PlaySoundW`), un carillon discret (`chime`) ou aucun son.
   - **Bouton d'écoute directe** : commande « Tester » dans *Paramètres › Notifications* pour écouter immédiatement le son sélectionné.
