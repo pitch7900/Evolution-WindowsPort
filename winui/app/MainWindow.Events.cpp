@@ -450,6 +450,27 @@ namespace winrt::EvolutionWin::implementation
             panel.Children().Append(caption(L"Calendrier : " + event.GetNamedString(L"calendar_name", L"")));
             if (event.GetNamedBoolean(L"recurring", false))
                 panel.Children().Append(caption(L"Événement périodique : la modification s'applique à toute la série."));
+
+            Button create_task_btn;
+            StackPanel btn_content;
+            btn_content.Orientation(Orientation::Horizontal);
+            btn_content.Spacing(6);
+            FontIcon task_btn_icon;
+            task_btn_icon.Glyph(L"\xE9D5");
+            task_btn_icon.FontSize(13);
+            btn_content.Children().Append(task_btn_icon);
+            TextBlock btn_label;
+            btn_label.Text(L"Créer une tâche liée à cet événement");
+            btn_content.Children().Append(btn_label);
+            create_task_btn.Content(btn_content);
+            create_task_btn.HorizontalAlignment(HorizontalAlignment::Left);
+            create_task_btn.Margin(ThicknessHelper::FromLengths(0, 2, 0, 4));
+            create_task_btn.Click([this, event, &dialog](IInspectable const&, RoutedEventArgs const&)
+            {
+                dialog.Hide();
+                CreateTaskFromEvent(event);
+            });
+            panel.Children().Append(create_task_btn);
         }
 
         TextBox summary_box;

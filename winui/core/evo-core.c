@@ -9320,7 +9320,8 @@ compare_tasks (gconstpointer a,
  *   icomp  : composant VTODO
  * Retourne : élément de tâche nouvellement alloué. */
 static TaskItem *
-task_item_new (ECalClient *client,
+task_item_new (EvoCore *core,
+	       ECalClient *client,
 	       ESource *source,
 	       ICalComponent *icomp)
 {
@@ -9328,9 +9329,21 @@ task_item_new (ECalClient *client,
 	ICalProperty *prop;
 	TaskItem *item = g_new0 (TaskItem, 1);
 	const gchar *summary = i_cal_component_get_summary (icomp);
+	const gchar *parent_uid;
+	ESource *parent = NULL;
+	const gchar *account_name = "";
+	gchar *account_email = NULL;
 	gboolean start_date_only, due_date_only;
 	gint64 start, completed;
 	gint percent = 0;
+
+	parent_uid = e_source_get_parent (source);
+	if (parent_uid && *parent_uid)
+		parent = e_source_registry_ref_source (core->registry, parent_uid);
+	account_name = parent ? e_source_get_display_name (parent) : e_source_get_display_name (source);
+	account_email = parent_uid ? core_account_get_address (core, parent_uid) : NULL;
+	if (!account_email)
+		account_email = core_account_get_address (core, e_source_get_uid (source));
 
 	item->summary = g_strdup ((summary && *summary) ? summary : "(Sans titre)");
 	item->due = task_property_to_unix (client, icomp, I_CAL_DUE_PROPERTY, &due_date_only);
@@ -9375,9 +9388,15 @@ task_item_new (ECalClient *client,
 	task_add_categories (builder, icomp);
 	builder_add_string (builder, "list_uid", e_source_get_uid (source));
 	builder_add_string (builder, "list_name", e_source_get_display_name (source));
+	builder_add_string (builder, "account_name", account_name ? account_name : "");
+	builder_add_string (builder, "account_email", account_email ? account_email : "");
+	builder_add_string (builder, "account_uid", parent_uid ? parent_uid : "");
 	json_builder_set_member_name (builder, "readonly");
 	json_builder_add_boolean_value (builder, e_client_is_readonly (E_CLIENT (client)));
 	json_builder_end_object (builder);
+
+	g_free (account_email);
+	g_clear_object (&parent);
 
 	item->node = json_builder_get_root (builder);
 	g_object_unref (builder);
@@ -9434,7 +9453,7 @@ core_list_tasks_run (EvoCore *core,
 					continue;
 				}
 
-				g_ptr_array_add (items, task_item_new (E_CAL_CLIENT (client), source, icomp));
+				g_ptr_array_add (items, task_item_new (core, E_CAL_CLIENT (client), source, icomp));
 			}
 			g_slist_free_full (objects, g_object_unref);
 		}
@@ -10520,9 +10539,15 @@ core_list_sources_run (EvoCore *core,
 			builder_add_string (builder, "uid", e_source_get_uid (source));
 			builder_add_string (builder, "name", e_source_get_display_name (source));
 			builder_add_string (builder, "kind", source_kinds[ii].kind);
+			gchar *source_acc_email = parent_uid ? core_account_get_address (core, parent_uid) : NULL;
+			if (!source_acc_email)
+				source_acc_email = core_account_get_address (core, e_source_get_uid (source));
 			/* compte : collection ou source parente (« Sur cet ordinateur »...) */
 			builder_add_string (builder, "account", parent ? e_source_get_display_name (parent) : "");
+			builder_add_string (builder, "account_uid", parent_uid ? parent_uid : "");
+			builder_add_string (builder, "account_email", source_acc_email ? source_acc_email : "");
 			builder_add_string (builder, "color", color);
+			g_free (source_acc_email);
 			json_builder_set_member_name (builder, "default");
 			json_builder_add_boolean_value (builder, default_source && e_source_equal (source, default_source));
 			json_builder_end_object (builder);

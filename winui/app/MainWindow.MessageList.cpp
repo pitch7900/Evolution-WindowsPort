@@ -392,6 +392,17 @@ namespace winrt::EvolutionWin::implementation
                 });
                 menu_items.Append(flag_item);
 
+                MenuFlyoutItem create_task_item;
+                create_task_item.Text(hstring{ L"Créer une tâche à partir du message" + count_suffix });
+                create_task_item.Icon(FontIcon{});
+                create_task_item.Icon().as<FontIcon>().Glyph(L"\xE9D5");
+                create_task_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
+                {
+                    if (!target_uids.empty())
+                        CreateTaskFromMessage(target_uids.front());
+                });
+                menu_items.Append(create_task_item);
+
                 MenuFlyoutSubItem move_sub;
                 move_sub.Text(hstring{ L"Déplacer vers" + count_suffix });
                 move_sub.Icon(FontIcon{});

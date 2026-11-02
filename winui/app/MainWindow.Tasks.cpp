@@ -310,6 +310,67 @@ namespace winrt::EvolutionWin::implementation
      * Paramètres :
      *   task      : tâche au format JSON d'evo-core
      *   show_list : afficher le nom de la liste de tâches */
+        /**
+     * @brief Détermine le nom du compte et l'adresse email associée à une tâche.
+     * 
+     * Résout d'abord via les champs JSON de la tâche (account_name, account_email),
+     * puis via la source correspondante dans m_task_lists, et enfin par
+     * correspondance dans m_accounts (par UID de compte ou par nom).
+     * 
+     * @param task Données JSON de la tâche.
+     * @param out_name Nom du compte résolu en sortie.
+     * @param out_email Adresse email associée en sortie.
+     */
+    void MainWindow::GetTaskAccountInfo(JsonObject const& task, hstring& out_name, hstring& out_email)
+    {
+        out_name = task.GetNamedString(L"account_name", L"");
+        out_email = task.GetNamedString(L"account_email", L"");
+        hstring list_uid = task.GetNamedString(L"list_uid", L"");
+
+        if (out_name.empty() || out_email.empty())
+        {
+            if (m_task_lists)
+            {
+                for (auto const& item : m_task_lists)
+                {
+                    auto obj = item.GetObject();
+                    if (obj.GetNamedString(L"uid", L"") == list_uid)
+                    {
+                        if (out_name.empty())
+                            out_name = obj.GetNamedString(L"account", L"");
+                        if (out_email.empty())
+                            out_email = obj.GetNamedString(L"account_email", L"");
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (out_email.empty() && m_accounts)
+        {
+            hstring acc_uid = task.GetNamedString(L"account_uid", L"");
+            for (auto const& item : m_accounts)
+            {
+                auto acc = item.GetObject();
+                hstring a_name = acc.GetNamedString(L"name", L"");
+                hstring a_uid = acc.GetNamedString(L"uid", L"");
+                if ((!acc_uid.empty() && a_uid == acc_uid) ||
+                    (!out_name.empty() && a_name == out_name))
+                {
+                    out_email = acc.GetNamedString(L"address", L"");
+                    if (out_name.empty())
+                        out_name = a_name;
+                    break;
+                }
+            }
+        }
+
+        if (out_name.empty())
+        {
+            out_name = task.GetNamedString(L"list_name", L"Compte local");
+        }
+    }
+
     UIElement MainWindow::BuildTaskRow(JsonObject const& task, bool show_list)
     {
         auto resources = Application::Current().Resources();
@@ -359,6 +420,39 @@ namespace winrt::EvolutionWin::implementation
             title.Foreground(secondary_brush);
         }
         details.Children().Append(title);
+
+        /* Compte source de la tâche (nom du compte et adresse email associée) */
+        hstring account_name, account_email;
+        GetTaskAccountInfo(task, account_name, account_email);
+
+        Border account_badge;
+        account_badge.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));
+        account_badge.Padding(ThicknessHelper::FromLengths(6, 2, 6, 2));
+        account_badge.Background(resources.Lookup(box_value(L"CardBackgroundFillColorDefaultBrush")).as<Brush>());
+        account_badge.BorderBrush(resources.Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>());
+        account_badge.BorderThickness(ThicknessHelper::FromUniformLength(1));
+        account_badge.HorizontalAlignment(HorizontalAlignment::Left);
+        account_badge.Margin(ThicknessHelper::FromLengths(0, 1, 0, 2));
+
+        StackPanel badge_panel;
+        badge_panel.Orientation(Orientation::Horizontal);
+        badge_panel.Spacing(5);
+
+        FontIcon badge_icon;
+        badge_icon.FontSize(11);
+        badge_icon.Glyph(account_email.empty() ? L"\xE977" : L"\xE715");
+        badge_icon.Foreground(secondary_brush);
+        badge_panel.Children().Append(badge_icon);
+
+        TextBlock badge_text;
+        badge_text.Style(caption_style);
+        if (!account_email.empty())
+            badge_text.Text(account_name + L" • " + account_email);
+        else
+            badge_text.Text(account_name);
+        badge_panel.Children().Append(badge_text);
+        account_badge.Child(badge_panel);
+        details.Children().Append(account_badge);
 
         StackPanel line;
         line.Orientation(Orientation::Horizontal);
@@ -580,9 +674,11 @@ namespace winrt::EvolutionWin::implementation
 
         m_dialog_open = true;
 
-        bool is_new = !task;
+        bool is_preset_new = task && task.GetNamedBoolean(L"is_preset_new", false);
+        bool is_new = !task || is_preset_new;
         bool readonly = !is_new && task.GetNamedBoolean(L"readonly", false);
         auto caption_style = Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>();
+        auto secondary_brush = Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>();
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
@@ -614,7 +710,8 @@ namespace winrt::EvolutionWin::implementation
                     auto list = value.GetObject();
                     list_uids.push_back(list.GetNamedString(L"uid", L""));
                     list_box.Items().Append(box_value(list.GetNamedString(L"name", L"")));
-                    if (list_uids.back() == m_task_list_uid)
+                    hstring target_list = task ? task.GetNamedString(L"list_uid", m_task_list_uid) : m_task_list_uid;
+                    if (list_uids.back() == target_list)
                         selected = static_cast<int>(list_uids.size()) - 1;
                 }
             }
@@ -631,10 +728,25 @@ namespace winrt::EvolutionWin::implementation
             panel.Children().Append(list_text);
         }
 
+        /* Compte source associé à la tâche */
+        hstring ed_acc_name, ed_acc_email;
+        GetTaskAccountInfo(task ? task : JsonObject{}, ed_acc_name, ed_acc_email);
+        if (!ed_acc_name.empty())
+        {
+            TextBlock acc_info_block;
+            std::wstring acc_txt = L"Compte : " + std::wstring{ ed_acc_name };
+            if (!ed_acc_email.empty())
+                acc_txt += L" (" + std::wstring{ ed_acc_email } + L")";
+            acc_info_block.Text(hstring{ acc_txt });
+            acc_info_block.Style(caption_style);
+            acc_info_block.Foreground(secondary_brush);
+            panel.Children().Append(acc_info_block);
+        }
+
         TextBox summary_box;
         summary_box.Header(box_value(L"Objet"));
         summary_box.PlaceholderText(L"Que faut-il faire ?");
-        if (!is_new)
+        if (task)
             summary_box.Text(task.GetNamedString(L"summary", L""));
         panel.Children().Append(summary_box);
 
@@ -643,7 +755,7 @@ namespace winrt::EvolutionWin::implementation
         desc_box.AcceptsReturn(true);
         desc_box.TextWrapping(TextWrapping::Wrap);
         desc_box.Height(90);
-        if (!is_new)
+        if (task)
             desc_box.Text(task.GetNamedString(L"description", L""));
         panel.Children().Append(desc_box);
 
@@ -658,7 +770,7 @@ namespace winrt::EvolutionWin::implementation
             picker.Header(box_value(header));
             picker.PlaceholderText(L"Aucune");
             picker.HorizontalAlignment(HorizontalAlignment::Stretch);
-            double value = is_new ? 0 : task.GetNamedNumber(key, 0);
+            double value = (!task) ? 0 : task.GetNamedNumber(key, 0);
             if (value > 0)
                 picker.Date(winrt::clock::from_time_t(static_cast<time_t>(value)));
 
@@ -702,7 +814,7 @@ namespace winrt::EvolutionWin::implementation
         priority_box.HorizontalAlignment(HorizontalAlignment::Stretch);
         for (auto label : TaskPriorityLabels)
             priority_box.Items().Append(box_value(label));
-        int priority_index = is_new ? 0 : TaskPriorityIndex(static_cast<int>(task.GetNamedNumber(L"priority", 0)));
+        int priority_index = (!task) ? 0 : TaskPriorityIndex(static_cast<int>(task.GetNamedNumber(L"priority", 0)));
         priority_box.SelectedIndex(priority_index);
         state.Children().Append(priority_box);
 
@@ -858,5 +970,164 @@ namespace winrt::EvolutionWin::implementation
             m_core->CreateTask(payload.Stringify(), done);
         else
             m_core->ModifyTask(payload.Stringify(), done);
+    }
+
+    /**
+     * @brief Gestionnaire de clic du bouton « Créer une tâche » depuis un message.
+     * 
+     * Récupère le message actuellement sélectionné et déclenche la création d'une tâche.
+     * 
+     * @param sender Élément déclencheur.
+     * @param args Arguments d'événement de routage.
+     */
+    void MainWindow::OnCreateTaskFromMessageClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        hstring uid = SelectedMessageUid();
+        if (uid.empty())
+        {
+            ShowStatus(L"Veuillez d'abord sélectionner un message.", InfoBarSeverity::Warning);
+            return;
+        }
+        CreateTaskFromMessage(uid);
+    }
+
+    /**
+     * @brief Crée une nouvelle tâche préremplie à partir d'un message électronique.
+     * 
+     * Extrait l'objet, l'expéditeur, la date et le corps ou l'extrait du message pour
+     * initialiser le résumé, la description, l'échéance par défaut (J+1) et la priorité,
+     * puis ouvre l'éditeur de tâche pour validation par l'utilisateur.
+     * 
+     * @param message_uid Identifiant unique du message source.
+     */
+    void MainWindow::CreateTaskFromMessage(hstring const& message_uid)
+    {
+        if (message_uid.empty())
+            return;
+
+        JsonObject msg{ nullptr };
+        if (m_all_messages)
+        {
+            for (auto const& val : m_all_messages)
+            {
+                auto obj = val.GetObject();
+                if (obj.GetNamedString(L"uid", L"") == message_uid)
+                {
+                    msg = obj;
+                    break;
+                }
+            }
+        }
+
+        hstring subject = msg ? msg.GetNamedString(L"subject", L"(Sans objet)") : L"(Sans objet)";
+        hstring from = msg ? msg.GetNamedString(L"from", L"") : L"";
+        hstring date_str = msg ? msg.GetNamedString(L"date", L"") : L"";
+        hstring preview = msg ? msg.GetNamedString(L"preview", L"") : L"";
+
+        /* Si le message affiché est celui-ci, utiliser son sujet et texte détaillé */
+        if (m_current_message && m_current_message.GetNamedString(L"uid", L"") == message_uid)
+        {
+            if (subject.empty() || subject == L"(Sans objet)")
+                subject = m_current_message.GetNamedString(L"subject", subject);
+            if (from.empty())
+                from = m_current_message.GetNamedString(L"from", from);
+            hstring body = m_current_message.GetNamedString(L"body_text", L"");
+            if (!body.empty())
+                preview = body;
+        }
+
+        std::wstring desc;
+        if (!from.empty())
+            desc += L"De : " + std::wstring{ from } + L"\n";
+        if (!date_str.empty())
+            desc += L"Date : " + std::wstring{ date_str } + L"\n";
+        if (!subject.empty())
+            desc += L"Objet : " + std::wstring{ subject } + L"\n";
+        desc += L"\n--- Contenu du message ---\n";
+        if (!preview.empty())
+            desc += std::wstring{ preview };
+
+        bool is_flagged = false;
+        auto state_it = m_message_states.find(std::wstring{ message_uid });
+        if (state_it != m_message_states.end())
+            is_flagged = state_it->second.flagged;
+
+        /* Échéance par défaut : minuit du lendemain (J+1) */
+        int64_t now = static_cast<int64_t>(std::time(nullptr));
+        int64_t default_due = LocalMidnight(now, 1);
+
+        /* Liste de tâches associée au compte courant */
+        hstring target_list_uid = m_task_list_uid;
+        if (m_task_lists)
+        {
+            for (auto const& item : m_task_lists)
+            {
+                auto list_obj = item.GetObject();
+                hstring acc_name = list_obj.GetNamedString(L"account", L"");
+                hstring acc_uid = list_obj.GetNamedString(L"account_uid", L"");
+                if (acc_uid == m_account || acc_name == m_account)
+                {
+                    target_list_uid = list_obj.GetNamedString(L"uid", L"");
+                    break;
+                }
+            }
+        }
+
+        JsonObject preset_task;
+        preset_task.SetNamedValue(L"is_preset_new", JsonValue::CreateBooleanValue(true));
+        preset_task.SetNamedValue(L"summary", JsonValue::CreateStringValue(subject));
+        preset_task.SetNamedValue(L"description", JsonValue::CreateStringValue(hstring{ desc }));
+        preset_task.SetNamedValue(L"due", JsonValue::CreateNumberValue(static_cast<double>(default_due)));
+        preset_task.SetNamedValue(L"due_date_only", JsonValue::CreateBooleanValue(true));
+        preset_task.SetNamedValue(L"priority", JsonValue::CreateNumberValue(is_flagged ? 1.0 : 5.0));
+        if (!target_list_uid.empty())
+            preset_task.SetNamedValue(L"list_uid", JsonValue::CreateStringValue(target_list_uid));
+
+        ShowTaskEditorAsync(preset_task);
+    }
+
+    /**
+     * @brief Crée une nouvelle tâche préremplie à partir d'un événement de calendrier.
+     * 
+     * Extrait le titre, le lieu, la date et la description de l'événement pour
+     * initialiser le résumé, la description et l'échéance de la tâche, puis
+     * ouvre l'éditeur de tâche pour validation.
+     * 
+     * @param event_data Objet JSON décrivant l'événement du calendrier.
+     */
+    void MainWindow::CreateTaskFromEvent(JsonObject const& event_data)
+    {
+        if (!event_data)
+            return;
+
+        hstring summary = event_data.GetNamedString(L"summary", L"(Sans titre)");
+        hstring location = event_data.GetNamedString(L"location", L"");
+        hstring event_desc = event_data.GetNamedString(L"description", L"");
+        double start = event_data.GetNamedNumber(L"start", 0);
+
+        std::wstring desc;
+        if (!location.empty())
+            desc += L"Lieu : " + std::wstring{ location } + L"\n";
+        if (start > 0)
+            desc += L"Date de l'événement : " + std::wstring{ FormatTaskDate(start, false) } + L"\n";
+        if (!event_desc.empty())
+        {
+            if (!desc.empty())
+                desc += L"\n";
+            desc += std::wstring{ event_desc };
+        }
+
+        JsonObject preset_task;
+        preset_task.SetNamedValue(L"is_preset_new", JsonValue::CreateBooleanValue(true));
+        preset_task.SetNamedValue(L"summary", JsonValue::CreateStringValue(summary));
+        preset_task.SetNamedValue(L"description", JsonValue::CreateStringValue(hstring{ desc }));
+        if (start > 0)
+        {
+            preset_task.SetNamedValue(L"due", JsonValue::CreateNumberValue(start));
+            preset_task.SetNamedValue(L"due_date_only", JsonValue::CreateBooleanValue(event_data.GetNamedBoolean(L"all_day", false)));
+        }
+        preset_task.SetNamedValue(L"priority", JsonValue::CreateNumberValue(5.0));
+
+        ShowTaskEditorAsync(preset_task);
     }
 }

@@ -163,6 +163,7 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
         void OnShowCompletedTasksClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnTaskItemClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& args);
+        void OnCreateTaskFromMessageClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
         /* Gestionnaires des paramètres / comptes */
         void OnAddAccountClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -391,6 +392,9 @@ namespace winrt::EvolutionWin::implementation
         void ShowTasks();
         bool MatchesTaskFilter(Windows::Data::Json::JsonObject const& task, hstring const& filter);
         Microsoft::UI::Xaml::UIElement BuildTaskRow(Windows::Data::Json::JsonObject const& task, bool show_list);
+        void GetTaskAccountInfo(Windows::Data::Json::JsonObject const& task, hstring& out_name, hstring& out_email);
+        void CreateTaskFromMessage(hstring const& message_uid);
+        void CreateTaskFromEvent(Windows::Data::Json::JsonObject const& event_data);
         void SetTaskCompleted(Windows::Data::Json::JsonObject const& task, bool completed);
         void DeleteTaskItem(Windows::Data::Json::JsonObject const& task);
         fire_and_forget ShowTaskEditorAsync(Windows::Data::Json::JsonObject task);

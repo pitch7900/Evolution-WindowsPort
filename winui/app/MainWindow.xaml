@@ -204,6 +204,13 @@
                         <AppBarButton Label="Suivi" Click="OnToggleFlagClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE7C1;" /></AppBarButton.Icon>
                         </AppBarButton>
+                        <AppBarSeparator />
+                        <AppBarButton x:Name="RibbonCreateTaskFromMessage" Label="Créer une tâche" Click="OnCreateTaskFromMessageClick" ToolTipService.ToolTip="Créer une tâche à partir du message sélectionné (Ctrl+Maj+T)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE9D5;" /></AppBarButton.Icon>
+                            <AppBarButton.KeyboardAccelerators>
+                                <KeyboardAccelerator Modifiers="Control,Shift" Key="T" />
+                            </AppBarButton.KeyboardAccelerators>
+                        </AppBarButton>
                     </CommandBar>
                     <CommandBar x:Name="RibbonSendReceive" Visibility="Collapsed" DefaultLabelPosition="Right"
                                 HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
@@ -603,6 +610,11 @@
                             <AppBarButton x:Name="ToggleFlagButton" Label="Suivi" Click="OnToggleFlagClick">
                                 <AppBarButton.Icon>
                                     <FontIcon x:Name="ToggleFlagIcon" Glyph="&#xE7C1;" />
+                                </AppBarButton.Icon>
+                            </AppBarButton>
+                            <AppBarButton Label="Créer une tâche" Click="OnCreateTaskFromMessageClick" ToolTipService.ToolTip="Créer une tâche à partir de ce message">
+                                <AppBarButton.Icon>
+                                    <FontIcon Glyph="&#xE9D5;" />
                                 </AppBarButton.Icon>
                             </AppBarButton>
                             <AppBarButton Label="Déplacer">

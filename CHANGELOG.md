@@ -14,6 +14,13 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Affichage du compte source dans la vue Tâches** :
+  - **Badge de compte dédié pour chaque tâche** : affichage pour chaque tâche d'un badge Fluent avec icône, nom du compte source et adresse email associée (ou mention « Sur cet ordinateur » si compte local).
+  - **Résolution hiérarchique du compte** : intégration dans `evo-core` (`task_item_new` et `core_list_sources`) des métadonnées `account_name`, `account_email` et `account_uid`, complétée par une résolution WinUI transversale (`GetTaskAccountInfo`) croisant `m_task_lists` et `m_accounts`.
+  - **Affichage du compte dans l'éditeur de tâche** : indication contextuelle du compte et de son adresse email sous le choix de la liste de tâches.
+- **Action « Créer une tâche » depuis un courriel ou un événement** :
+  - **Création depuis un courriel** : accessible depuis le ruban Courrier (*Créer une tâche*, raccourci `Ctrl+Maj+T`), la barre d'outils du volet de lecture et le menu contextuel par clic droit sur un message. Préremplissage automatique du sujet, de la description structurée (expéditeur, date, objet et extrait du message), de l'échéance par défaut (J+1), de la priorité (Haute si le message est marqué d'un suivi, sinon Normale) et présélection de la liste de tâches du compte du message.
+  - **Création depuis un événement du calendrier** : bouton dédié dans la fenêtre de détails de l'événement permettant de générer instantanément une tâche liée avec reprise du titre, du lieu, de la description et de l'échéance synchronisée avec la date de l'événement.
 - **Indicateur d'avancement dans la barre des tâches (`ITaskbarList3`)** :
   reflète l'état de synchronisation en arrière-plan directement sur l'icône de
   l'application (progression indéterminée, pourcentage ou rouge en cas d'erreur).

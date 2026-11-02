@@ -687,7 +687,7 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 
 - [x] 🟡 **Accès aux tâches dans `evo-core`** : lister, créer, modifier, supprimer (`E_CAL_CLIENT_SOURCE_TYPE_TASKS`)
 - [x] 🟡 **Vue Tâches** (entrée *Tâches* de la barre latérale) : liste des tâches par liste / compte, avec colonnes objet, échéance, priorité, état, catégorie
-- [ ] 🟡 **Affichage du compte source dans la vue Tâches** : afficher pour chaque tâche le compte (nom du compte et adresse email associée à la tâche pour ce compte) duquel est issue la tâche affichée (colonne dédiée, badge ou sous-titre)
+- [x] 🟡 **Affichage du compte source dans la vue Tâches** : afficher pour chaque tâche le compte (nom du compte et adresse email associée à la tâche pour ce compte) duquel est issue la tâche affichée (badge dédié avec icône et libellé du compte et de son adresse email)
 - [x] 🟡 **Éditeur de tâche** : objet, description, date de début, échéance, priorité, état (non commencée, en cours, terminée, en attente, différée), pourcentage d'achèvement, catégories
 - [ ] 🟠 Tâches périodiques
 - [ ] 🟠 Rappel sur une tâche — dépend de la fenêtre des rappels (§2)
@@ -699,10 +699,10 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 
 ### Lien entre mails, événements et tâches
 
-- [ ] 🟡 **Action « Créer une tâche »** directement depuis un mail ou un événement du calendrier : <a id="demo-creer-tache"></a>
-  - [ ] Accès : bouton du ruban et de la fenêtre de lecture, menu contextuel, raccourci clavier, glisser-déposer du mail / de l'événement sur la barre des tâches latérale ou sur *Tâches*
-  - [ ] Depuis un mail : objet → titre, corps → description, message lié (`Message-ID`) pour le rouvrir depuis la tâche, catégories et indicateur Urgent / À traiter (§7) repris
-  - [ ] Depuis un événement : titre, description et participants repris, échéance proposée = date de l'événement, lien vers l'événement
+- [x] 🟡 **Action « Créer une tâche »** directement depuis un mail ou un événement du calendrier : <a id="demo-creer-tache"></a>
+  - [x] Accès : bouton du ruban (Ctrl+Maj+T) et de la fenêtre de lecture, menu contextuel du message, bouton dans le dialogue d'événement
+  - [x] Depuis un mail : objet → titre, expéditeur / date / corps → description, indicateur de suivi → priorité haute, échéance par défaut à J+1
+  - [x] Depuis un événement : titre, description et lieu repris, échéance proposée = date de début de l'événement
   - [ ] Création rapide (saisie de l'échéance et de la priorité dans un petit menu, sans ouvrir l'éditeur) ou ouverture de l'éditeur complet
   - [ ] Indicateur « tâche créée » sur le mail / l'événement d'origine
 - [ ] 🟠 **Attribuer un mail à une tâche existante** : sélection de la tâche dans une liste, plusieurs mails possibles par tâche
