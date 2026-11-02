@@ -455,7 +455,7 @@ Trois notions distinctes, comme dans Outlook : le **suivi** (drapeau avec libell
   - [ ] Filtres rapides « Urgents » et « À traiter » (§5) et dossiers de recherche correspondants (§9)
   - [ ] 🟠 Rappel sur un suivi — dépend de la fenêtre des rappels (§2)
 - [ ] 🟡 **Importance** (haute / normale / basse) : affichée dans la liste et le volet de lecture (en-têtes `Importance` / `X-Priority`), choisie à la rédaction ; filtre rapide « Importants » (§5)
-- Catégoriser le message : cf. §17 ; créer une tâche à partir du message : cf. §16
+- Catégoriser le message : cf. §17 ; créer une tâche à partir du message : cf. §16 ; export par glisser-déposer vers l'extérieur : cf. §18
 
 ### Actions rapides
 
@@ -559,7 +559,7 @@ La vue actuelle se limite à un `CalendarView` mensuel et une liste d'événemen
 - [ ] 🟢 **Échelle de temps** : 5, 6, 10, 15, 30, 60 minutes
 - [ ] 🟢 **Heures de travail** : jours ouvrés, heures de début / fin, premier jour de la semaine (options)
 - [ ] 🟡 **Second fuseau horaire** dans la grille
-- [ ] 🟠 **Glisser-déposer** d'un événement vers un autre créneau / jour / calendrier (déplacer, copier, redimensionner la durée)
+- [ ] 🟠 **Glisser-déposer** d'un événement vers un autre créneau / jour / calendrier (déplacer, copier, redimensionner la durée) ; export par glisser-déposer vers l'extérieur : cf. §18
 
 ### Navigation
 
@@ -618,7 +618,7 @@ La vue actuelle se limite à un `CalendarView` mensuel et une liste d'événemen
 ## 15. Contacts — 🟡
 
 - [ ] 🟡 **Carnet d'adresses global** (GAL) Exchange / M365 : recherche et sélection des destinataires (backend evolution-ews) <a id="demo-gal"></a>
-- Contacts unifiés et doublons : cf. §11 ; recherche rapide de contacts : cf. §10
+- Contacts unifiés et doublons : cf. §11 ; recherche rapide de contacts : cf. §10 ; export par glisser-déposer vers l'extérieur : cf. §18
 - [ ] 🟡 **Fenêtre de sélection de destinataires** (carnet d'adresses, comme le bouton *À…* d'Outlook) :
   - [ ] Ouverte par un bouton en face de chaque ligne *À*, *Cc*, *Cci* de la fenêtre de rédaction, et en face de la ligne des participants (*Obligatoires*, *Facultatifs*, *Ressources*) d'une invitation (§13)
   - [ ] Fenêtre indépendante redimensionnable : choix du carnet d'adresses (tous les carnets, carnet d'un compte, annuaire GAL Exchange / M365, listes de salles), champ de recherche (nom, prénom, adresse, société), liste des résultats (nom, adresse, société, téléphone)
@@ -701,6 +701,18 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 - [ ] 🟢 **Filtrer / trier / regrouper par catégorie** dans toutes les vues ; recherche par catégorie (§10)
 
 ## 18. Import / Export — 🟡
+
+### Export par glisser-déposer vers l'extérieur (Drag and drop)
+
+- [ ] 🟡 **Export d'un mail, d'un événement ou d'un contact par simple glisser-déposer vers l'extérieur (Explorateur Windows, Bureau)** :
+  - Déposer un ou plusieurs éléments depuis l'interface d'EvolutionWin vers l'Explorateur de fichiers Windows, le Bureau ou une autre application pour les exporter directement sous forme de fichiers natifs. Réutilise les fonctions d'export existantes en générant les fichiers dans un dossier temporaire avant de les transférer via le `DataPackage` (`SetStorageItems`).
+  - [ ] 🟡 **Courriels (format `.eml`)** : glisser un ou plusieurs messages sélectionnés depuis la liste des messages vers l'extérieur ; réutilisation de la fonction d'export EML existante (`evo_core_export_messages_eml` / `ExportMessagesEml`)
+  - [ ] 🟡 **Événements de calendrier (format `.ics`)** : glisser un événement depuis la vue calendrier vers l'extérieur pour générer un fichier iCalendar (`.ics`) ; réutilisation de l'export iCalendar existant
+  - [ ] 🟡 **Contacts (format `.vcf`)** : glisser un contact depuis la vue des contacts vers l'extérieur pour générer un fichier vCard (`.vcf`) ; réutilisation de l'export vCard existant
+  - [ ] 🟢 **Sélection multiple** : prise en charge du glisser-déposer de plusieurs éléments sélectionnés simultanément (génération par lot)
+  - [ ] 🟢 **Gestion des fichiers temporaires** : nettoyage automatique des fichiers temporaires créés après confirmation du dépôt ou annulation
+
+### Assistant et formats d'export
 
 - [ ] 🟡 **Assistant d'export** (*Fichier › Exporter*) : compte, éléments (emails, contacts, calendriers, tâches), dossier de destination
 - [ ] **Emails** :
