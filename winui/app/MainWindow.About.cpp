@@ -28,7 +28,8 @@
 #define EVO_WIDEN(text) EVO_WIDEN_(text)
 #define EVO_VERSION_W EVO_WIDEN(EVO_VERSION_STR)
 
-/* Boîte « À propos » : version, composants et rapport de bug. */
+/* Boîte « À propos » : version, recherche de mise à jour (GitHub Releases),
+ * composants et rapport de bug. */
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
@@ -64,12 +65,115 @@ namespace
 
         return std::wstring{ display } + L" (build " + build + L"." + std::to_wstring(ubr) + L")";
     }
+
+    constexpr wchar_t LatestReleaseApi[] = L"https://api.github.com/repos/pitch7900/Evolution-WindowsPort/releases/latest";
+
+    /* « v0.9.5 » ou « 0.9.5 » en { 0, 9, 5 } (les suffixes non numériques sont ignorés) */
+    std::vector<int> ParseVersion(std::wstring_view text)
+    {
+        std::vector<int> parts;
+        if (!text.empty() && (text[0] == L'v' || text[0] == L'V'))
+            text.remove_prefix(1);
+
+        int value = 0;
+        bool in_number = false;
+        for (wchar_t c : text)
+        {
+            if (c >= L'0' && c <= L'9')
+            {
+                value = value * 10 + (c - L'0');
+                in_number = true;
+                continue;
+            }
+            if (in_number)
+                parts.push_back(value);
+            if (c != L'.')
+                return parts;
+            value = 0;
+            in_number = false;
+        }
+        if (in_number)
+            parts.push_back(value);
+        return parts;
+    }
+
+    /* la version latest est-elle strictement plus récente que current ? */
+    bool IsNewerVersion(std::wstring_view latest, std::wstring_view current)
+    {
+        auto a = ParseVersion(latest);
+        auto b = ParseVersion(current);
+        size_t size = a.size() > b.size() ? a.size() : b.size();
+        a.resize(size);
+        b.resize(size);
+        return std::lexicographical_compare(b.begin(), b.end(), a.begin(), a.end());
+    }
+
+    /* Compare la version locale à la dernière version publiée sur GitHub
+     * (Releases) et l'indique dans la boîte « À propos ».
+     * Paramètres :
+     *   status : texte du résultat (« Recherche… », « À jour », erreur)
+     *   link   : lien vers la page de la nouvelle version, affiché si elle existe */
+    fire_and_forget CheckForUpdateAsync(TextBlock status, HyperlinkButton link)
+    {
+        apartment_context ui_thread;
+
+        /* co_await interdit dans un catch : l'erreur est notée puis affichée après */
+        hstring failure;
+        hstring tag, page;
+        try
+        {
+            Windows::Web::Http::HttpClient http;
+            auto headers = http.DefaultRequestHeaders();
+            headers.UserAgent().ParseAdd(L"EvolutionWin/" EVO_VERSION_W);
+            headers.Accept().ParseAdd(L"application/vnd.github+json");
+            auto response = co_await http.GetAsync(Uri{ LatestReleaseApi });
+            hstring body = co_await response.Content().ReadAsStringAsync();
+
+            JsonObject release;
+            if (response.StatusCode() == Windows::Web::Http::HttpStatusCode::NotFound)
+                failure = L"aucune version publiée";
+            else if (!response.IsSuccessStatusCode() || !JsonObject::TryParse(body, release))
+                failure = L"réponse GitHub " + to_hstring(static_cast<int>(response.StatusCode()));
+            else
+            {
+                tag = release.GetNamedString(L"tag_name", L"");
+                page = release.GetNamedString(L"html_url", L"");
+            }
+        }
+        catch (hresult_error const& e)
+        {
+            failure = e.message();
+        }
+
+        co_await ui_thread;
+        if (!failure.empty() || tag.empty())
+        {
+            status.Text(L"Mise à jour : vérification impossible (" + (failure.empty() ? hstring{ L"version inconnue" } : failure) + L")");
+            co_return;
+        }
+
+        if (!IsNewerVersion(tag.c_str(), EVO_VERSION_W))
+        {
+            status.Text(L"Vous utilisez la dernière version.");
+            co_return;
+        }
+
+        status.Text(L"Nouvelle version disponible : " + tag);
+        link.Content(box_value(L"Télécharger la version " + tag));
+        try
+        {
+            link.NavigateUri(Uri{ page });
+            link.Visibility(Visibility::Visible);
+        }
+        catch (hresult_error const&) {}
+    }
 }
 
 namespace winrt::EvolutionWin::implementation
 {
     /* Boîte « À propos » : version de l'application (fichier VERSION, comme
-     * l'exécutable et l'installeur), licence, liens, versions des composants
+     * l'exécutable et l'installeur), licence, liens, recherche d'une
+     * nouvelle version, versions des composants
      * et bouton de copie de ces informations pour les rapports de bug. */
     fire_and_forget MainWindow::ShowAboutDialogAsync()
     {
@@ -134,6 +238,14 @@ namespace winrt::EvolutionWin::implementation
         TextBlock version;
         version.Text(L"Version " EVO_VERSION_W);
         title.Children().Append(version);
+        TextBlock update_status;
+        update_status.Text(L"Recherche de mises à jour…");
+        update_status.Opacity(0.7);
+        title.Children().Append(update_status);
+        HyperlinkButton update_link;
+        update_link.Padding(ThicknessHelper::FromUniformLength(0));
+        update_link.Visibility(Visibility::Collapsed);
+        title.Children().Append(update_link);
         header.Children().Append(title);
         panel.Children().Append(header);
 
@@ -191,6 +303,7 @@ namespace winrt::EvolutionWin::implementation
         panel.Children().Append(copy);
 
         dialog.Content(panel);
+        CheckForUpdateAsync(update_status, update_link);
         co_await dialog.ShowAsync();
         m_dialog_open = false;
     }
