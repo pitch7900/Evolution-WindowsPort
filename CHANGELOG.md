@@ -53,6 +53,24 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   d'une relève (F9 ou vérification manuelle), les messages en attente sont
   automatiquement transmis via leurs serveurs SMTP respectifs, copiés dans
   *Éléments envoyés*, puis purgés de la Boîte d'envoi.
+- **Simplification de l'assistant d'ajout de compte** : interface moderne et
+  épurée présentant uniquement l'adresse, le nom et le mot de passe (ou le flux
+  moderne). Les détails techniques (hôtes, ports, nom d'utilisateur, chiffrement
+  TLS/STARTTLS) sont masqués sous un `Expander` replié par défaut, avec vérification
+  préalable de connectivité avant création effective de la source EDS.
+- **Boîte de dialogue complète de modification de compte** : accessible depuis
+  les paramètres (*Modifier*) et par clic droit sur l'arborescence (*Propriétés du
+  compte…*). Permet de modifier le nom, l'expéditeur, l'adresse, les serveurs entrants
+  et sortants, le mot de passe avec test de connectivité, ainsi que d'assigner
+  les rôles de dossiers spéciaux (`CAMEL_FOLDER_TYPE_*` : Envoyés, Brouillons,
+  Corbeille, Courrier indésirable, Archives) à partir des dossiers du compte.
+- **Connexion Google / Gmail OAuth2 conforme RFC 8252** : authentification Google
+  exécutée dans le navigateur par défaut avec redirection sur écouteur local
+  loopback (`http://127.0.0.1:<port>`), éliminant l'erreur `disallowed_useragent`
+  de WebView2. Prise en charge explicite du repli par « mot de passe d'application »
+  avec lien d'aide Google.
+- **Validation des portées OAuth2 M365 et Gmail** : intégration des portées
+  étendues pour la messagerie, les calendriers et les contacts en ligne.
 
 ## [0.9.5] — 2026-11-02
 

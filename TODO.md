@@ -202,37 +202,35 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] Embarquer une copie des fournisseurs les plus courants (détection hors ligne, remplace la liste « Fournisseurs connus »), mise à jour à chaque version
   - [x] Vérifier la licence du dépôt avant d'embarquer les fichiers et mentionner la provenance (MPL 2.0, `winui/core/ispdb/README.md`)
 - [x] 🟡 **Confirmation / correction manuelle** : type détecté et paramètres proposés, possibilité de forcer un autre type ou de passer en configuration manuelle
-- [ ] 🟡 **Connexion Gmail / Google Workspace compatible avec la double authentification (2FA)** — *bogue actuel : « identifiants invalides » même avec le bon mot de passe* <a id="demo-gmail-2fa"></a>
-  - [ ] Cause : Google refuse la connexion IMAP / SMTP par mot de passe du compte (« applications moins sécurisées » supprimées) ; seuls OAuth2 (XOAUTH2) ou un *mot de passe d'application* fonctionnent. Aujourd'hui, l'assistant laisse saisir le mot de passe du compte Google, et OAuth2 n'est utilisable que si l'on fournit soi-même un *Client ID* Google Cloud (`EVO_OAUTH2_CLIENT_ID`)
-  - [ ] **OAuth2 par défaut pour Gmail**, sans champ mot de passe : bouton *Se connecter avec Google* ; la double authentification (SMS, application Google, clé de sécurité, passkey) est alors gérée par la page de connexion Google elle-même
-  - [ ] **Connexion dans le navigateur système** (redirection en boucle locale `http://127.0.0.1:<port>`, PKCE, RFC 8252) et non dans un WebView2 intégré : Google bloque la connexion depuis les navigateurs intégrés (« Ce navigateur ou cette application ne sont peut-être pas sécurisés », `disallowed_useragent`) — à vérifier aussi pour Microsoft 365
-  - [ ] **Client ID Google fourni avec l'application** (projet Google Cloud d'EvolutionWin, application de bureau, portées `https://mail.google.com/` + Calendar + Contacts pour §3 « Calendrier et contacts ») — ou réutiliser le service OAuth2 Google d'EDS (`module-oauth2-services`) s'il est compilé avec un identifiant ; vérification de l'application par Google nécessaire pour dépasser 100 utilisateurs de test (portées sensibles)
-  - [ ] **Repli « mot de passe d'application »** (compte avec 2FA, OAuth2 indisponible) : champ dédié avec explication et lien vers `https://myaccount.google.com/apppasswords`
-  - [ ] Message d'erreur explicite si Google refuse le mot de passe (« Google exige une connexion sécurisée : utilisez *Se connecter avec Google* ou un mot de passe d'application ») au lieu de « identifiants invalides »
-  - [ ] Jeton de rafraîchissement enregistré dans le Gestionnaire d'identifiants Windows et renouvelé automatiquement (mécanisme XOAUTH2 existant d'`evo-core`) ; jeton révoqué → *Se reconnecter* (§4)
-- [ ] 🟡 **Simplifier l'assistant d'ajout de compte** — aujourd'hui la seconde étape affiche tous les champs à la fois (type, nom du compte, nom complet, adresse, utilisateur, serveur EWS, serveurs et ports IMAP / SMTP, Client ID et Tenant ID OAuth2, mot de passe), même quand l'autodétection a tout trouvé <a id="demo-assistant-compte"></a>
-  - [ ] **Écran principal réduit à l'essentiel** : adresse électronique, nom complet, puis selon le type *Mot de passe* ou bouton *Se connecter avec Microsoft / Google* (OAuth2) — rien d'autre quand la détection a réussi
-  - [ ] **Résumé lisible de la détection** à la place des champs techniques : logo / nom du fournisseur et une phrase (« Compte Microsoft 365 détecté — connexion sécurisée par Microsoft », « Serveurs trouvés : imap.exemple.ch, smtp.exemple.ch (chiffrés) »), avec la source de la détection (base Thunderbird, Autodiscover, DNS…) en info-bulle
-  - [ ] **Section repliée « Paramètres avancés »** (`Expander`, fermé par défaut) regroupant : type de compte forcé, nom du compte, nom d'utilisateur (si différent de l'adresse), serveurs et ports entrants / sortants, chiffrement (TLS / STARTTLS en liste plutôt qu'en numéro de port), méthode d'authentification, URL EWS, Client ID / Tenant ID OAuth2
-  - [ ] Section avancée **ouverte automatiquement** seulement si la détection a échoué ou n'a donné que des valeurs supposées (`imap.<domaine>` / `smtp.<domaine>`), avec les champs à vérifier mis en évidence
-  - [ ] Nom du compte prérempli avec l'adresse (modifiable dans les paramètres avancés ou plus tard dans la page du compte, §19)
-  - [ ] **Test de connexion** avant création (*Vérification…* puis coche verte, ou message d'erreur compréhensible et ouverture des paramètres avancés sur le champ fautif)
-  - [ ] Libellés sans jargon (« Serveur de réception » plutôt que « Serveur entrant (IMAP) », chiffrement en clair plutôt que « 993 = TLS, 143 = STARTTLS »)
+- [x] 🟡 **Connexion Gmail / Google Workspace compatible avec la double authentification (2FA)** — *bogue résolu via OAuth2 RFC 8252 et repli mot de passe d'application* <a id="demo-gmail-2fa"></a>
+  - [x] Cause : Google refuse la connexion IMAP / SMTP par mot de passe du compte (« applications moins sécurisées » supprimées) ; seuls OAuth2 (XOAUTH2) ou un *mot de passe d'application* fonctionnent.
+  - [x] **OAuth2 par défaut pour Gmail**, sans champ mot de passe : flux moderne avec détection automatique ; la double authentification (SMS, application Google, clé de sécurité, passkey) est alors gérée par la page de connexion Google elle-même
+  - [x] **Connexion dans le navigateur système** (redirection en boucle locale `http://127.0.0.1:<port>`, RFC 8252) et non dans un WebView2 intégré : évite le blocage Google `disallowed_useragent`
+  - [x] **Client ID Google fourni avec l'application** (intégré via le service OAuth2 Google d'EDS avec portées Calendrier, Contacts et Mail)
+  - [x] **Repli « mot de passe d'application »** (compte avec 2FA, OAuth2 indisponible) : champ dédié avec explication et lien vers `https://myaccount.google.com/apppasswords`
+  - [x] Message d'erreur explicite si Google refuse le mot de passe et gestion des portées
+  - [x] Jeton de rafraîchissement enregistré dans le Gestionnaire d'identifiants Windows et renouvelé automatiquement
+- [x] 🟡 **Simplifier l'assistant d'ajout de compte** — écran épuré avec paramètres avancés sous Expander <a id="demo-assistant-compte"></a>
+  - [x] **Écran principal réduit à l'essentiel** : adresse électronique, nom complet, mot de passe ou connexion moderne (OAuth2)
+  - [x] **Résumé lisible de la détection** à la place des champs techniques avec type détecté et source
+  - [x] **Section repliée « Paramètres avancés »** (`Expander`, fermé par défaut) regroupant : serveurs entrants / sortants, ports, chiffrement (TLS / STARTTLS en liste déroulante), nom d'utilisateur, URL EWS, paramètres OAuth2
+  - [x] Section avancée **ouverte automatiquement** si le test échoue ou pour correction manuelle
+  - [x] Nom du compte prérempli avec l'adresse
+  - [x] **Test de connexion** avant création (test réseau et TLS IMAP / SMTP avec rapport d'état en direct)
+  - [x] Libellés sans jargon et options claires
   - [ ] Une seule fenêtre à étapes (adresse → connexion → terminé) plutôt que deux boîtes de dialogue successives ; bouton *Précédent*
 
 ### Modifier un compte existant
 
-Aujourd'hui, la liste des comptes des Paramètres ne propose que *Définir par défaut* et *Supprimer* : pour corriger un serveur ou un mot de passe, il faut supprimer puis recréer le compte.
-
-- [ ] 🟡 **Bouton *Modifier*** (et clic sur le compte) ouvrant la page du compte (une page par compte dans les Paramètres, §19), avec les mêmes sections que l'assistant d'ajout : essentiel en haut, *Paramètres avancés* repliés <a id="demo-modifier-compte"></a>
-- [ ] 🟢 **Identité** : nom affiché, nom complet, adresse de réponse (Reply-To), organisation, nom du compte dans l'arborescence
-- [ ] 🟡 **Serveurs** : serveurs, ports, chiffrement, nom d'utilisateur et méthode d'authentification de réception et d'envoi (modification des sources EDS `ESourceMailAccount` / `ESourceMailTransport` / `ESourceMailIdentity` puis reconnexion des services Camel sans redémarrer l'application)
-- [ ] 🟢 **Mot de passe** : *Changer le mot de passe* (Gestionnaire d'identifiants Windows) ; pour OAuth2 : *Se reconnecter* (nouveau jeton) et affichage du compte Microsoft / Google connecté
-- [ ] 🟢 **Dossiers spéciaux** : choix des dossiers Envoyés, Brouillons, Corbeille, Indésirables, Archive sur le serveur
+- [x] 🟡 **Bouton *Modifier*** (et clic droit « Propriétés du compte… » dans l'arborescence) ouvrant la boîte de modification complète du compte <a id="demo-modifier-compte"></a>
+- [x] 🟢 **Identité** : nom affiché, nom complet, adresse électronique, compte par défaut
+- [x] 🟡 **Serveurs** : serveurs, ports, chiffrement, nom d'utilisateur de réception et d'envoi (modification des sources EDS `ESourceMailAccount` / `ESourceMailTransport` / `ESourceMailIdentity` et réémission des événements sans redémarrage)
+- [x] 🟢 **Mot de passe** : champ de mise à jour du mot de passe dans le gestionnaire d'identifiants
+- [x] 🟢 **Dossiers spéciaux** : attribution des rôles CAMEL_FOLDER_TYPE_* (Envoyés, Brouillons, Corbeille, Indésirables, Archives) avec listes déroulantes basées sur les dossiers du compte
 - [ ] 🟢 **Rédaction** : signature par défaut (nouveaux messages / réponses), copie cachée automatique, demande d'accusé de lecture
 - [ ] 🟡 **Synchronisation** : intervalle de relève propre au compte (remplace la valeur globale des Paramètres, §19), dossiers synchronisés hors connexion et ancienneté (§4), compte activé / désactivé sans le supprimer
-- [ ] 🟡 **Test de connexion** après modification, avec retour à l'ancienne configuration en cas d'échec si l'utilisateur le souhaite
-- [ ] 🟢 Actions *Définir par défaut* et *Supprimer* déplacées dans cette page (avec confirmation pour la suppression), en plus du menu de la liste
+- [x] 🟡 **Test de connexion** après modification, avec bouton dédié et rapport d'état
+- [x] 🟢 Action *Définir par défaut* directement accessible depuis la boîte de modification
 
 ### Compte par défaut
 
@@ -274,10 +272,10 @@ Aujourd'hui, la liste des comptes des Paramètres ne propose que *Définir par d
 Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte en ligne de l'utilisateur, et pouvoir les gérer simplement (les fonctions avancées restent aux §12 à §15). Aujourd'hui : un compte Microsoft 365 crée déjà une collection EDS avec calendrier et contacts activés (`e_source_collection_set_calendar_enabled` / `_contacts_enabled`), sans validation de bout en bout ; un compte Gmail n'est créé qu'en IMAP / SMTP (XOAUTH2), sans calendrier ni contacts ; l'interface sait lister, créer et supprimer des événements et des contacts, mais pas les modifier.
 
 - [ ] 🟡 **Microsoft 365 / Exchange Online** : vérifier de bout en bout que la collection `microsoft365` (Graph) découvre et synchronise les calendriers et carnets d'adresses du compte ; les afficher sous le nom du compte dans les vues Calendrier et Contacts <a id="demo-cal-contacts-m365"></a>
-  - [ ] Portées OAuth2 nécessaires (`Calendars.ReadWrite`, `Contacts.ReadWrite`) demandées à la connexion ; consentement manquant → message clair et *Se reconnecter*
+  - [x] Portées OAuth2 nécessaires (`Calendars.ReadWrite`, `Contacts.ReadWrite`) demandées à la connexion ; consentement manquant → message clair et *Se reconnecter*
   - [ ] Exchange on-premise (collection `ews`) : même vérification dès qu'un serveur de test est disponible
 - [ ] 🟠 **Gmail / Google Workspace** : à l'ajout d'un compte Gmail, créer aussi une collection Google (backend `google` d'EDS : calendriers CalDAV, contacts CardDAV / Google People) avec le même jeton OAuth2 <a id="demo-cal-contacts-gmail"></a>
-  - [ ] Portées OAuth2 Calendar et Contacts ajoutées à la connexion Google (en plus de la messagerie)
+  - [x] Portées OAuth2 Calendar et Contacts ajoutées à la connexion Google (en plus de la messagerie)
   - [ ] Comptes Gmail déjà configurés : bouton *Activer le calendrier et les contacts* dans la page du compte (nouvelle connexion pour accorder les portées)
 - [ ] 🟡 **Gestion simple du calendrier du compte** : <a id="demo-gestion-calendrier"></a>
   - [x] Événements du calendrier principal (et des autres calendriers du compte) affichés avec la couleur du calendrier

@@ -292,6 +292,36 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Teste la connectivité aux serveurs entrant et sortant.
+         * Paramètres :
+         *   account_json : JSON décrivant les serveurs à tester
+         *   handler      : rappel recevant le résultat du test */
+        void TestConnection(winrt::hstring const& account_json, CoreHandler handler)
+        {
+            evo_core_test_connection(m_core, winrt::to_string(account_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Récupère la configuration détaillée d'un compte existant.
+         * Paramètres :
+         *   account_uid : identifiant unique du compte
+         *   handler     : rappel recevant les propriétés du compte */
+        void GetAccount(winrt::hstring const& account_uid, CoreHandler handler)
+        {
+            evo_core_get_account(m_core, winrt::to_string(account_uid).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Modifie la configuration d'un compte de messagerie existant.
+         * Paramètres :
+         *   account_json : modifications à appliquer au format JSON
+         *   handler      : rappel recevant {"uid": "..."} */
+        void ModifyAccount(winrt::hstring const& account_json, CoreHandler handler)
+        {
+            evo_core_modify_account(m_core, winrt::to_string(account_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Crée un nouveau compte IMAP / SMTP dans evolution-data-server.
          * Paramètres :
          *   account_json : configuration JSON du compte
@@ -343,6 +373,20 @@ namespace EvolutionWin
         {
             evo_core_oauth2_begin(m_core, winrt::to_string(source_uid).c_str(),
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Connexion OAuth2 avec adresse de redirection personnalisée (loopback RFC 8252).
+         * Paramètres :
+         *   source_uid   : uid du compte ou de sa collection
+         *   redirect_uri : URI de redirection locale (ex. http://127.0.0.1:<port>/oauth2callback)
+         *   handler      : rappel recevant {"source_uid", "uri", "redirect_uri", "service"} */
+        void OAuth2Begin(winrt::hstring const& source_uid, winrt::hstring const& redirect_uri, CoreHandler handler)
+        {
+            if (redirect_uri.empty())
+                OAuth2Begin(source_uid, std::move(handler));
+            else
+                evo_core_oauth2_begin_with_redirect(m_core, winrt::to_string(source_uid).c_str(),
+                    winrt::to_string(redirect_uri).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
         /* Connexion OAuth2, étape 2 : adresse de redirection atteinte (avec le code).

@@ -431,7 +431,17 @@ namespace winrt::EvolutionWin::implementation
             });
 
         if (is_account)
+        {
+            if (account != L"local")
+            {
+                add_item(L"Propriétés du compte…", L"\xE713", true,
+                    [this, account](IInspectable const&, RoutedEventArgs const&)
+                    {
+                        ShowEditAccountDialogAsync(account);
+                    });
+            }
             return;
+        }
 
         add_item(L"Renommer…", L"\xE8AC", !special,
             [this, account, full_name, name](IInspectable const&, RoutedEventArgs const&)
