@@ -198,15 +198,18 @@ Ce fichier `LLM.md` ne contient volontairement **aucun listing statique de tâch
 
 ---
 
-## 8. Travail Multi-Agents en Parallèle & Stratégie Anti-Collision
+## 8. Travail Multi-Agents en Parallèle & Stratégie Anti-Collision (Verrous Locaux)
 
-Plusieurs agents IA indépendants peuvent travailler **en parallèle sur la même branche** sans communiquer directement entre eux. Afin d'éviter les collisions de code, les régressions et les écrasements involontaires, chaque agent doit appliquer rigoureusement le protocole de verrous légers via le dossier [`locks/`](locks/).
+Plusieurs agents IA indépendants peuvent travailler **en parallèle sur la machine locale dans ce même espace de travail**. Afin d'éviter les collisions de code, les régressions et les modifications concurrentes sur les mêmes fichiers, chaque agent applique un protocole de verrouillage local léger via le dossier [`locks/`](locks/).
 
-### 8.1. Registre décentralisé des verrous (`locks/`)
-Pour annoncer son travail sans générer de conflits Git, chaque agent dépose un fichier JSON indépendant dans `locks/` :
+> [!NOTE]
+> Les fichiers `locks/*.json` sont exclus du versionnement via [`.gitignore`](.gitignore). Ils vivent uniquement sur le disque local pour coordonner les agents en temps réel sans polluer l'historique Git.
+
+### 8.1. Registre local des verrous (`locks/`)
+Chaque agent actif signale sa tâche en créant directement sur disque un fichier JSON :
 `locks/<nom_agent>_<identifiant_tache>.json`
 
-**Exemple de structure de verrou :**
+**Exemple de structure d'un verrou :**
 ```json
 {
   "agent_id": "Agent-Calendar-1",
@@ -223,39 +226,23 @@ Pour annoncer son travail sans générer de conflits Git, chaque agent dépose u
 
 ### 8.2. Protocole obligatoire à chaque tâche (Cycle en 5 étapes) :
 
-1. **Synchronisation préalable (Pull)** :
-   Avant toute analyse ou choix de tâche, exécuter :
-   ```powershell
-   git pull --rebase origin <branche_active>
-   ```
-   Ceci garantit la récupération immédiate des commits récents et des verrous posés par les autres agents.
-
+1. **Vérification de l'espace de travail** :
+   S'assurer que le dépôt local est propre via `git status` et que la branche est à jour.
 2. **Vérification de non-collision** :
-   Inspecter le contenu du dossier `locks/` :
-   - Si un autre agent a réservé les mêmes fichiers (ou des fichiers dépendants), **choisir une autre tâche indépendante** dans `QUICKWINS.md` ou `TODO.md`.
-   - Si un verrou est inactif depuis plus de 6 heures sans nouveau commit, il peut être considéré comme abandonné et nettoyé.
-
-3. **Pose du verrou & Publication** :
-   - Créer son fichier `locks/<agent_id>_<task_id>.json`.
-   - Commiter et pousser la pose du verrou immédiatement :
-     ```powershell
-     git add locks/
-     git commit -m "chore(lock): reservation de la tache <id> par <agent>"
-     git push origin <branche_active>
-     ```
-   - Si le push est rejeté (un autre agent a poussé entre-temps), exécuter `git pull --rebase` et vérifier qu'aucune collision n'est apparue sur la tâche choisie.
-
+   Lire tous les fichiers `.json` présents dans le répertoire `locks/` :
+   - Si un autre agent a réservé les mêmes fichiers (ou des fichiers directement dépendants), **choisir une autre tâche indépendante** dans [`QUICKWINS.md`](QUICKWINS.md) ou [`TODO.md`](TODO.md).
+   - Si un fichier de verrou date de plus de 4 heures sans activité, il peut être considéré comme orphelin et nettoyé.
+3. **Pose immédiate du verrou local** :
+   - Créer le fichier `locks/<agent_id>_<task_id>.json` avec la liste exacte des fichiers ciblés. Pas besoin de commit Git (le fichier est ignoré).
 4. **Développement, Compilation & Tests** :
    - Réaliser les modifications de code sur le périmètre réservé.
-   - Toujours compiler le moteur C (`.\tools\build-winui-core.bat`) et l'application (`.\tools\build-winui-app.bat`).
-   - Valider la suite de tests unitaires complète (`.\tools\run-tests.bat`). **100% de réussite exigé**.
-
-5. **Libération du verrou, Validation & Push** :
-   - Cocher la tâche dans `QUICKWINS.md` ou `TODO.md` (`- [x]`).
-   - Ajouter l'entrée descriptive dans `CHANGELOG.md`.
+   - Compiler le moteur C (`.\tools\build-winui-core.bat`) et l'application (`.\tools\build-winui-app.bat`).
+   - Valider l'intégralité de la suite de tests (`.\tools\run-tests.bat`). **100% de réussite exigé**.
+5. **Libération du verrou, Documentation & Commit** :
    - **Supprimer son fichier de verrou** dans `locks/`.
-   - Commiter l'ensemble (`git add ... && git commit -m "feat(...): ..."`).
-   - Avant de pousser, exécuter un dernier `git pull --rebase` pour intégrer d'éventuels commits parallèles sans écraser le travail d'autrui.
-   - Pousser (`git push origin <branche_active>`).
+   - Cocher la tâche dans [`QUICKWINS.md`](QUICKWINS.md) ou [`TODO.md`](TODO.md) (`- [x]`).
+   - Ajouter l'entrée descriptive dans [`CHANGELOG.md`](CHANGELOG.md).
+   - Commiter la fonctionnalité (`git add ... && git commit -m "feat(...): ..."`).
+   - Pousser le commit vers `origin/<branche_active>`.
 
 

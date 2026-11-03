@@ -52,3 +52,6 @@ Desktop.ini
 *~
 logs/
 /Connexion_vm_test.md
+
+# Verrous locaux d'agents IA
+locks/*.json
