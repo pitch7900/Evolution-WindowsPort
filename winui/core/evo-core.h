@@ -181,6 +181,19 @@ void		evo_core_folder_action		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Récupère les informations de quota d'un dossier / compte (ex. IMAP QUOTA).
+ * Paramètres :
+ *   core             : instance du moteur evo-core
+ *   account_uid      : identifiant du compte
+ *   folder_full_name : chemin complet du dossier (ex. "INBOX")
+ *   func             : rappel recevant {"has_quota": bool, "name": str, "used": int64, "total": int64, "percent": int}
+ *   user_data        : données utilisateur transmises au rappel */
+void		evo_core_get_folder_quota	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Supprime un message : le déplace vers la corbeille du compte si elle existe
  * et que le message ne s'y trouve pas déjà, sinon le marque comme supprimé et
  * purge le dossier.

@@ -2154,5 +2154,136 @@ namespace winrt::EvolutionWin::implementation
             m_core->Refresh();
         });
     }
-}
+    /**
+     * @brief Affiche la boîte de dialogue d'espace de stockage et quota du compte actif.
+     * @param sender Bouton émetteur.
+     * @param args Arguments d'événement.
+     */
+    fire_and_forget MainWindow::OnRibbonAccountQuotaClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        auto strong = get_strong();
+        winrt::apartment_context ui_thread;
 
+        if (m_account.empty() || !m_core)
+        {
+            ShowStatus(L"Aucun compte n'est actuellement sélectionné.", InfoBarSeverity::Warning);
+            co_return;
+        }
+
+        hstring account_uid = m_account;
+        hstring account_name = account_uid;
+        if (m_accounts)
+        {
+            for (auto const& item : m_accounts)
+            {
+                if (auto obj = item.try_as<JsonObject>())
+                {
+                    if (obj.GetNamedString(L"uid", L"") == account_uid)
+                    {
+                        account_name = obj.GetNamedString(L"name", account_uid);
+                        break;
+                    }
+                }
+            }
+        }
+
+        ShowStatus(L"Interrogation du quota pour « " + account_name + L" »…", InfoBarSeverity::Informational);
+
+        auto quota_json = std::make_shared<hstring>();
+        auto quota_err = std::make_shared<hstring>();
+        winrt::handle done{ CreateEventW(nullptr, TRUE, FALSE, nullptr) };
+        HANDLE done_event = done.get();
+
+        m_core->GetFolderQuota(account_uid, L"INBOX", [quota_json, quota_err, done_event](hstring const& json, hstring const& err)
+        {
+            *quota_json = json;
+            *quota_err = err;
+            SetEvent(done_event);
+        });
+
+        co_await winrt::resume_on_signal(done_event);
+        co_await ui_thread;
+
+        JsonObject res;
+        bool has_quota = false;
+        int64_t used = 0;
+        int64_t total = 0;
+        int percent = 0;
+        hstring q_name = L"Espace de stockage";
+
+        if (quota_err->empty() && JsonObject::TryParse(*quota_json, res))
+        {
+            has_quota = res.GetNamedBoolean(L"has_quota", false);
+            if (has_quota)
+            {
+                used = static_cast<int64_t>(res.GetNamedNumber(L"used", 0));
+                total = static_cast<int64_t>(res.GetNamedNumber(L"total", 0));
+                percent = static_cast<int>(res.GetNamedNumber(L"percent", 0));
+                q_name = res.GetNamedString(L"name", L"Stockage");
+            }
+        }
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(L"Espace de stockage — " + account_name));
+        dialog.CloseButtonText(L"Fermer");
+        dialog.DefaultButton(ContentDialogButton::Close);
+
+        StackPanel panel;
+        panel.Spacing(12);
+        panel.MinWidth(400);
+
+        if (has_quota)
+        {
+            TextBlock info_txt;
+            info_txt.Text(q_name + L" sur le serveur :");
+            info_txt.Style(Application::Current().Resources().Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>());
+            panel.Children().Append(info_txt);
+
+            ProgressBar pbar;
+            pbar.Minimum(0);
+            pbar.Maximum(100);
+            pbar.Value(percent);
+            pbar.Height(8);
+            panel.Children().Append(pbar);
+
+            TextBlock usage_txt;
+            hstring used_str = FormatFileSize(used);
+            hstring total_str = FormatFileSize(total);
+            usage_txt.Text(used_str + L" utilisés sur " + total_str + L" (" + to_hstring(percent) + L" %)");
+            usage_txt.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+            panel.Children().Append(usage_txt);
+        }
+        else
+        {
+            TextBlock no_q;
+            no_q.Text(L"Le serveur de messagerie pour « " + account_name + L" » ne publie pas de limite de quota ou n'utilise pas l'extension IMAP QUOTA.");
+            no_q.TextWrapping(TextWrapping::Wrap);
+            panel.Children().Append(no_q);
+        }
+
+        TextBlock cleanup_hdr;
+        cleanup_hdr.Text(L"Outils de nettoyage rapide :");
+        cleanup_hdr.Style(Application::Current().Resources().Lookup(box_value(L"SubtitleTextBlockStyle")).as<Style>());
+        cleanup_hdr.Margin(ThicknessHelper::FromLengths(0, 8, 0, 0));
+        panel.Children().Append(cleanup_hdr);
+
+        Button empty_trash_btn;
+        empty_trash_btn.Content(box_value(L"Vider la Corbeille de ce compte"));
+        empty_trash_btn.Click([this, account_uid](IInspectable const&, RoutedEventArgs const&)
+        {
+            if (m_core)
+            {
+                m_core->FolderAction(account_uid, L"Trash", L"empty", [this](hstring const&, hstring const& err)
+                {
+                    if (err.empty())
+                        ShowStatus(L"Corbeille vidée avec succès.", InfoBarSeverity::Success);
+                });
+            }
+        });
+        panel.Children().Append(empty_trash_btn);
+
+        dialog.Content(panel);
+        co_await dialog.ShowAsync();
+    }
+}

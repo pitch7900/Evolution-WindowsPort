@@ -3000,6 +3000,41 @@ find_folder_type (CamelFolderInfo *fi,
  *   error : emplacement d'erreur GError
  * Retourne : {"count": n, "permanent": true|false}, ou NULL en cas d'erreur. */
 static gchar *
+core_get_folder_quota_run (EvoCore *core,
+			   gchar **args,
+			   GError **error)
+{
+	CamelFolder *folder;
+	CamelFolderQuotaInfo *quota;
+	gchar *json;
+
+	folder = core_ref_folder (core, args[0], args[1], error);
+	if (!folder)
+		return NULL;
+
+	quota = camel_folder_get_quota_info_sync (folder, core->cancellable, NULL);
+	if (quota) {
+		guint64 used = quota->used;
+		guint64 total = quota->total;
+		guint percent = 0;
+		if (total > 0) {
+			percent = (guint) ((used * 100) / total);
+			if (percent > 100)
+				percent = 100;
+		}
+		json = g_strdup_printf ("{\"has_quota\":true,\"name\":\"%s\",\"used\":%" G_GUINT64_FORMAT ",\"total\":%" G_GUINT64_FORMAT ",\"percent\":%u}",
+					quota->name ? quota->name : "Stockage",
+					used, total, percent);
+		camel_folder_quota_info_free (quota);
+	} else {
+		json = g_strdup ("{\"has_quota\":false,\"name\":\"\",\"used\":0,\"total\":0,\"percent\":0}");
+	}
+
+	g_object_unref (folder);
+	return json;
+}
+
+static gchar *
 core_folder_action_run (EvoCore *core,
 			gchar **args,
 			GError **error)
@@ -11376,6 +11411,21 @@ evo_core_folder_action (EvoCore *core,
 	g_return_if_fail (action != NULL);
 
 	core_submit (core, core_folder_action_run, g_strdupv (args), func, user_data);
+}
+
+void
+evo_core_get_folder_quota (EvoCore *core,
+			   const char *account_uid,
+			   const char *folder_full_name,
+			   EvoCoreResultFunc func,
+			   void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, (gchar *) folder_full_name, NULL };
+
+	g_return_if_fail (account_uid != NULL);
+	g_return_if_fail (folder_full_name != NULL);
+
+	core_submit (core, core_get_folder_quota_run, g_strdupv (args), func, user_data);
 }
 
 /* Soumet une requête de suppression d'un message (vers la corbeille ou

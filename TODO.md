@@ -318,7 +318,7 @@ Dans Microsoft 365 / Exchange Online, les utilisateurs disposent souvent d'une b
 
 ### Informations du compte (onglet Fichier)
 
-- [ ] 🟡 Quota du compte (`camel_folder_get_quota_info_sync`) et outils de nettoyage de la boîte aux lettres
+- [x] 🟡 Quota du compte (`camel_folder_get_quota_info_sync`) et outils de nettoyage de la boîte aux lettres
 - Paramètres du compte : cf. « Modifier un compte existant » ci-dessus ; options générales : cf. §19
 
 ### Calendrier et contacts des comptes Microsoft 365 et Gmail

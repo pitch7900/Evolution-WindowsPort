@@ -96,6 +96,17 @@ namespace EvolutionWin
             evo_core_cancel_operations(m_core);
         }
 
+        /* Récupère les informations de quota d'un dossier / compte (ex. IMAP QUOTA).
+         * Paramètres :
+         *   account : identifiant du compte
+         *   folder  : chemin complet du dossier (ex. "INBOX")
+         *   handler : rappel recevant le JSON avec has_quota, used, total, percent */
+        void GetFolderQuota(winrt::hstring const& account, winrt::hstring const& folder, CoreHandler handler)
+        {
+            evo_core_get_folder_quota(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* not SendMessage: a Win32 macro */
         void SendMail(winrt::hstring const& message_json, CoreHandler handler)
         {

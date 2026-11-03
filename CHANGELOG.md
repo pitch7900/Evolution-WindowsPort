@@ -14,6 +14,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Quickwin — Affichage du quota et espace de stockage (TODO section 3, QUICKWINS)** : nouvelle commande « Espace disque » dans le ruban Fichier pour afficher la jauge de remplissage du compte de messagerie (taux d'occupation, espace utilisé et total via `camel_folder_get_quota_info_sync`), avec outil de nettoyage rapide pour vider la corbeille du compte.
+
 - **Quickwin — Taille du texte de lecture (TODO section 19)** : le choix _Petite / Normale / Grande / Très grande_ de Paramètres › Apparence était enregistré sans effet ; il règle maintenant le zoom du lecteur (85 / 100 / 125 / 150 %), ajustable ensuite par `Ctrl++` / `Ctrl+-`.
 
 - **Quickwin — Ajout de calendriers (TODO section 14)** : bouton « + » dans le volet des calendriers ouvrant une boîte de dialogue (nom + adresse). Adresse vide : calendrier local ; adresse `http(s)://` ou `webcal://` : abonnement iCalendar (backend EDS `webcal`, actualisé toutes les 30 minutes). Nouvelle fonction `evo_core_create_calendar` dans `evo-core`, nouveau calendrier affiché immédiatement. Test de non-régression ajouté dans `test_evo_core_contracts.c`.

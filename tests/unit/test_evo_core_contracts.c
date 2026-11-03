@@ -322,6 +322,19 @@ static void test_account_enabled_contract(void)
         ASSERT_CONTAINS(sample_account, "true");
     }
     TEST_CASE_END();
+
+    TEST_CASE("Contrats JSON: Reponse de quota de stockage (evo_core_get_folder_quota)");
+    {
+        const char *sample_quota_active = "{\"has_quota\":true,\"name\":\"Stockage\",\"used\":1048576,\"total\":52428800,\"percent\":2}";
+        ASSERT_CONTAINS(sample_quota_active, "\"has_quota\":true");
+        ASSERT_CONTAINS(sample_quota_active, "\"used\":");
+        ASSERT_CONTAINS(sample_quota_active, "\"total\":");
+        ASSERT_CONTAINS(sample_quota_active, "\"percent\":");
+
+        const char *sample_quota_none = "{\"has_quota\":false,\"name\":\"\",\"used\":0,\"total\":0,\"percent\":0}";
+        ASSERT_CONTAINS(sample_quota_none, "\"has_quota\":false");
+    }
+    TEST_CASE_END();
 }
 
 static void test_calendar_url_validation(void)

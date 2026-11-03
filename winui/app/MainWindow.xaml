@@ -292,6 +292,9 @@
 
                         <AppBarSeparator />
 
+                        <AppBarButton Label="Espace disque" Click="OnRibbonAccountQuotaClick" ToolTipService.ToolTip="Afficher l'espace disque et le quota du compte">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xEDA2;" /></AppBarButton.Icon>
+                        </AppBarButton>
                         <AppBarButton Label="Paramètres" Click="OnRibbonSettingsClick">
 
                             <AppBarButton.Icon><FontIcon Glyph="&#xE713;" /></AppBarButton.Icon>
