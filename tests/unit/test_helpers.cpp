@@ -5152,6 +5152,55 @@ static int CalculateEquivalentHour(int local_hour, int local_offset, int target_
     return target;
 }
 
+static bool MatchesMessageSearch(
+    std::wstring_view query,
+    std::wstring_view subject,
+    std::wstring_view from,
+    std::vector<std::wstring> const& labels)
+{
+    if (query.empty())
+        return true;
+
+    std::wstring needle{ query };
+    for (auto& ch : needle) ch = static_cast<wchar_t>(std::towlower(ch));
+
+    std::wstring haystack = std::wstring{ subject } + L" " + std::wstring{ from };
+    for (auto const& label : labels)
+    {
+        haystack += L" cat:" + label + L" category:" + label + L" " + label;
+    }
+    for (auto& ch : haystack) ch = static_cast<wchar_t>(std::towlower(ch));
+
+    return haystack.find(needle) != std::wstring::npos;
+}
+
+static void test_message_category_search(void)
+{
+    std::vector<std::wstring> labels = { L"Urgent", L"Projet Alpha", L"Comptabilite" };
+
+    TEST_CASE("MatchesMessageSearch: Recherche standard sujet/expediteur");
+    {
+        ASSERT_EQ_INT(1, MatchesMessageSearch(L"facture", L"Facture #1234", L"compta@example.com", labels) ? 1 : 0);
+        ASSERT_EQ_INT(1, MatchesMessageSearch(L"compta", L"Facture #1234", L"compta@example.com", labels) ? 1 : 0);
+        ASSERT_EQ_INT(0, MatchesMessageSearch(L"devis", L"Facture #1234", L"compta@example.com", labels) ? 1 : 0);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("MatchesMessageSearch: Syntaxe cat: et category:");
+    {
+        ASSERT_EQ_INT(1, MatchesMessageSearch(L"cat:urgent", L"Point hebdomadaire", L"chef@example.com", labels) ? 1 : 0);
+        ASSERT_EQ_INT(1, MatchesMessageSearch(L"category:projet alpha", L"Reunion", L"chef@example.com", labels) ? 1 : 0);
+        ASSERT_EQ_INT(0, MatchesMessageSearch(L"cat:personnel", L"Reunion", L"chef@example.com", labels) ? 1 : 0);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("MatchesMessageSearch: Mot-cle direct de categorie");
+    {
+        ASSERT_EQ_INT(1, MatchesMessageSearch(L"urgent", L"Discussion", L"ami@example.com", labels) ? 1 : 0);
+    }
+    TEST_CASE_END();
+}
+
 static void test_second_timezone_helpers(void)
 {
     TEST_CASE("SecondTimezone: Decalage UTC des fuseaux");
@@ -5401,6 +5450,8 @@ int main(void)
 
     test_purge_directory_files();
     test_second_timezone_helpers();
+    test_message_category_search();
+
 
 
 

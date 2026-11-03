@@ -697,4 +697,35 @@ namespace EvolutionWin::Helpers
         }
         return offset;
     }
+
+    /**
+     * @brief Vérifie si un message correspond à une requête de recherche textuelle,
+     *        y compris les filtres par catégorie avec préfixe 'cat:' ou 'category:'.
+     * @param query Texte de recherche saisi.
+     * @param subject Objet du message.
+     * @param from Expéditeur du message.
+     * @param labels Liste des catégories ou étiquettes associées.
+     * @return true si le message correspond à la recherche, false sinon.
+     */
+    inline bool MatchesMessageSearch(
+        std::wstring_view query,
+        std::wstring_view subject,
+        std::wstring_view from,
+        std::vector<std::wstring> const& labels)
+    {
+        if (query.empty())
+            return true;
+
+        std::wstring needle{ query };
+        for (auto& ch : needle) ch = static_cast<wchar_t>(std::towlower(ch));
+
+        std::wstring haystack = std::wstring{ subject } + L" " + std::wstring{ from };
+        for (auto const& label : labels)
+        {
+            haystack += L" cat:" + label + L" category:" + label + L" " + label;
+        }
+        for (auto& ch : haystack) ch = static_cast<wchar_t>(std::towlower(ch));
+
+        return haystack.find(needle) != std::wstring::npos;
+    }
 }

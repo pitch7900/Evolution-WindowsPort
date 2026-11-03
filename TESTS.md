@@ -54,6 +54,7 @@ Valide les fonctions pures issues de `MainWindow.Helpers.h` :
 - **Hauteur des créneaux de calendrier (`GetCalendarHourHeight`)** : validation des calculs de hauteur d'affichage selon le pas horaire (60 min = 48px, 30 min = 72px, 15 min = 120px).
 - **Nettoyage de fichiers temporaires (`PurgeDirectoryFiles`)** : validation de la purge des répertoires de cache et calcul de l'espace libéré.
 - **Gestion du second fuseau horaire (`GetTimezoneUtcOffsetHours`, `GetTimezoneShortLabel`, `CalculateEquivalentHour`)** : décalages UTC, abréviations courtes et conversion d'heures avec gestion du passage de minuit.
+- **Recherche multicritère et par catégorie (`MatchesMessageSearch`)** : prise en charge des syntaxes `cat:`, `category:` et détection de mots-clés d'étiquettes en recherche locale et transversale.
 
 ### Suite 2 : Contrats d'interface et robustesse `evo-core` (`test_evo_core_contracts.c`)
 Vérifie la robustesse du moteur C et ses échanges avec l'interface :

@@ -22,6 +22,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Filtrage et recherche multicritère par catégorie (TODO ligne 754)** :
+  - **Syntaxe de recherche avancée** : prise en charge des sélecteurs cat:<nom> et category:<nom> dans le champ de recherche pour isoler instantanément les messages étiquetés d\'une catégorie.
+  - **Indexation des étiquettes dans evo-core** : intégration dynamique des drapeaux utilisateurs (CamelNamedFlags / étiquettes IMAP) dans la routine message_info_matches_query d\'evo-core pour les recherches transversales (dossiers, comptes).
+  - **Filtrage local en mémoire** : enrichissement de FilterLocalMessages (MainWindow.MessageFilter.cpp) via l\'algorithme MatchesMessageSearch qui corrèle les champs du message (labels, sujet, expéditeur) en insensibilité à la casse.
+  - **Validation par tests unitaires** : ajout d\'une batterie de tests de recherche par catégorie dans 	ests/unit/test_helpers.cpp (43/43 tests validés).
+
 - **Bandeau d\'alerte et gestion des réponses automatiques d\'absence du bureau (TODO ligne 295)** :
   - **Indicateur visible immédiat** : affichage automatique d\'un bandeau persistant InfoBanner (« Réponses automatiques activées pour le compte « X » ») dès la sélection d\'un dossier du compte si les réponses automatiques sont en cours.
   - **Bouton direct « Désactiver »** : bouton d\'action intégré dans le bandeau pour couper instantanément les réponses automatiques sans naviguer dans les réglages.

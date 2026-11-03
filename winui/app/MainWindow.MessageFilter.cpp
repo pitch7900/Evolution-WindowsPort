@@ -50,18 +50,19 @@ namespace winrt::EvolutionWin::implementation
             return;
         }
 
-        std::wstring needle{ query };
-        CharLowerBuffW(needle.data(), static_cast<DWORD>(needle.size()));
-
         JsonArray filtered;
         for (auto const& value : m_all_messages)
         {
             auto msg = value.GetObject();
-            std::wstring haystack = std::wstring{ msg.GetNamedString(L"subject", L"") } + L" " +
-                std::wstring{ msg.GetNamedString(L"from", L"") };
-            CharLowerBuffW(haystack.data(), static_cast<DWORD>(haystack.size()));
+            std::vector<std::wstring> labels;
+            if (msg.HasKey(L"labels"))
+            {
+                auto arr = msg.GetNamedArray(L"labels");
+                for (auto const& item : arr)
+                    labels.push_back(std::wstring{ item.GetString() });
+            }
 
-            if (haystack.find(needle) != std::wstring::npos)
+            if (MatchesMessageSearch(query, msg.GetNamedString(L"subject", L""), msg.GetNamedString(L"from", L""), labels))
                 filtered.Append(msg);
         }
 

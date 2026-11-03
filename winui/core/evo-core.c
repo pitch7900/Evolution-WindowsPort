@@ -2361,6 +2361,20 @@ message_info_matches_query (CamelMessageInfo *info,
 		fields[3] ? fields[3] : "",
 		NULL);
 
+	const CamelNamedFlags *user_flags = camel_message_info_get_user_flags (info);
+	if (user_flags && camel_named_flags_get_length (user_flags) > 0) {
+		GString *cat_buf = g_string_new (combined);
+		guint jj, n_flags = camel_named_flags_get_length (user_flags);
+		for (jj = 0; jj < n_flags; jj++) {
+			const gchar *fname = camel_named_flags_get (user_flags, jj);
+			if (fname && *fname && *fname != '$' && *fname != '\\') {
+				g_string_append_printf (cat_buf, " cat:%s category:%s %s", fname, fname, fname);
+			}
+		}
+		g_free (combined);
+		combined = g_string_free (cat_buf, FALSE);
+	}
+
 	/* g_str_match_string gère les équivalences sans accents (ex. "ecole" -> "École") */
 	if (g_str_match_string (query, combined, TRUE)) {
 		g_free (combined);
