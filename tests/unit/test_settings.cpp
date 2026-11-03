@@ -389,6 +389,20 @@ static void test_settings_mail_read_and_security_options(void)
         std::string fwd_p_saved = mgr.GetString("mail.forward-prefix", "");
         ASSERT_EQ_STR("WG: ", fwd_p_saved.c_str());
 
+        /* Delai personnalisable de marquage comme lu (mail.mark-read-delay-seconds) */
+        ASSERT_EQ_INT(5, static_cast<int>(mgr.GetNumber("mail.mark-read-delay-seconds", 5.0)));
+        mgr.SetNumber("mail.mark-read-delay-seconds", 15.0);
+        ASSERT_EQ_INT(15, static_cast<int>(mgr.GetNumber("mail.mark-read-delay-seconds", 5.0)));
+
+        /* Zoom de lecture et mode texte brut securise */
+        ASSERT_EQ_INT(100, static_cast<int>(mgr.GetNumber("mail.reading-zoom", 100.0)));
+        mgr.SetNumber("mail.reading-zoom", 125.0);
+        ASSERT_EQ_INT(125, static_cast<int>(mgr.GetNumber("mail.reading-zoom", 100.0)));
+
+        ASSERT_EQ_INT(0, mgr.GetBoolean("mail.reading-plain-text", false));
+        mgr.SetBoolean("mail.reading-plain-text", true);
+        ASSERT_EQ_INT(1, mgr.GetBoolean("mail.reading-plain-text", false));
+
         /* Format, police, taille et verification orthographique de redaction */
         std::string def_fmt = mgr.GetString("mail.default-format", "html");
         ASSERT_EQ_STR("html", def_fmt.c_str());

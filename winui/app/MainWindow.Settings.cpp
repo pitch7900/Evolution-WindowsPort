@@ -302,6 +302,25 @@ namespace winrt::EvolutionWin::implementation
 
 
 
+        // Délai de marquage comme lu (en secondes)
+        hstring mark_read_delay = settings.GetString(L"mail.mark-read-delay-seconds", L"5");
+        if (auto combo = MailMarkAsReadDelayCombo())
+        {
+            int32_t sel = 3; // 5 secondes par défaut
+            for (uint32_t i = 0; i < combo.Items().Size(); ++i)
+            {
+                if (auto item = combo.Items().GetAt(i).try_as<ComboBoxItem>())
+                {
+                    if (unbox_value_or<hstring>(item.Tag(), L"") == mark_read_delay)
+                    {
+                        sel = static_cast<int32_t>(i);
+                        break;
+                    }
+                }
+            }
+            combo.SelectedIndex(sel);
+        }
+
         hstring folder_sort = settings.GetString(L"mail.folder-sort", L"special-first");
 
         if (auto combo = MailFolderSortCombo())
@@ -2180,6 +2199,7 @@ namespace winrt::EvolutionWin::implementation
             s.SetBoolean(L"mail.sync-on-startup", true);
 
             s.SetString(L"mail.mark-as-read", L"immediate");
+            s.SetString(L"mail.mark-read-delay-seconds", L"5");
 
             s.SetBoolean(L"mail.empty-trash-on-exit", false);
 

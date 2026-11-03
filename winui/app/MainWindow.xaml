@@ -2615,16 +2615,43 @@
 
                                             <ComboBoxItem Content="Immédiatement" Tag="immediate" />
 
-                                            <ComboBoxItem Content="Après 5 secondes" Tag="delayed" />
+                                            <ComboBoxItem Content="Après un délai" Tag="delayed" />
 
                                             <ComboBoxItem Content="Au changement de sélection" Tag="on-selection-change" />
 
                                             <ComboBoxItem Content="Manuellement seulement" Tag="never" />
-
                                         </ComboBox>
-
                                     </Grid>
+                                </Border>
 
+                                <!-- Délai de marquage automatique comme lu -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE823;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Délai pour marquer comme lu" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Temps d'attente avant marquage automatique (lorsque l'option « Après un délai » est activée)."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="MailMarkAsReadDelayCombo" Tag="mail.mark-read-delay-seconds"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="180">
+                                            <ComboBoxItem Content="1 seconde" Tag="1" />
+                                            <ComboBoxItem Content="2 secondes" Tag="2" />
+                                            <ComboBoxItem Content="3 secondes" Tag="3" />
+                                            <ComboBoxItem Content="5 secondes (défaut)" Tag="5" />
+                                            <ComboBoxItem Content="10 secondes" Tag="10" />
+                                            <ComboBoxItem Content="15 secondes" Tag="15" />
+                                            <ComboBoxItem Content="30 secondes" Tag="30" />
+                                            <ComboBoxItem Content="60 secondes (1 min)" Tag="60" />
+                                        </ComboBox>
+                                    </Grid>
                                 </Border>
 
 

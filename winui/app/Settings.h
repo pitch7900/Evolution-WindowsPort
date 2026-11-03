@@ -23,10 +23,39 @@ namespace EvolutionWin
             return settings;
         }
 
+        /**
+         * @brief Recupere une valeur numerique depuis les parametres.
+         * @param key Cle du parametre recherche.
+         * @param fallback Valeur par defaut si le parametre n'existe pas.
+         * @return Valeur numerique lue ou valeur par defaut.
+         */
         double GetNumber(winrt::hstring const& key, double fallback)
         {
             auto value = Lookup(key);
-            return value && value.ValueType() == winrt::Windows::Data::Json::JsonValueType::Number ? value.GetNumber() : fallback;
+            if (!value)
+                return fallback;
+            if (value.ValueType() == winrt::Windows::Data::Json::JsonValueType::Number)
+                return value.GetNumber();
+            if (value.ValueType() == winrt::Windows::Data::Json::JsonValueType::String)
+            {
+                try
+                {
+                    return std::stod(std::wstring(value.GetString()));
+                }
+                catch (...) {}
+            }
+            return fallback;
+        }
+
+        /**
+         * @brief Recupere un entier depuis les parametres.
+         * @param key Cle du parametre recherche.
+         * @param fallback Valeur par defaut si le parametre n'existe pas.
+         * @return Entier lu ou valeur par defaut.
+         */
+        int GetInt(winrt::hstring const& key, int fallback)
+        {
+            return static_cast<int>(GetNumber(key, fallback));
         }
 
         bool GetBoolean(winrt::hstring const& key, bool fallback)
@@ -35,10 +64,27 @@ namespace EvolutionWin
             return value && value.ValueType() == winrt::Windows::Data::Json::JsonValueType::Boolean ? value.GetBoolean() : fallback;
         }
 
+        /**
+         * @brief Recupere une chaine depuis les parametres.
+         * @param key Cle du parametre recherche.
+         * @param fallback Valeur par defaut si le parametre n'existe pas.
+         * @return Chaine lue ou valeur par defaut.
+         */
         winrt::hstring GetString(winrt::hstring const& key, winrt::hstring const& fallback)
         {
             auto value = Lookup(key);
-            return value && value.ValueType() == winrt::Windows::Data::Json::JsonValueType::String ? value.GetString() : fallback;
+            if (!value)
+                return fallback;
+            if (value.ValueType() == winrt::Windows::Data::Json::JsonValueType::String)
+                return value.GetString();
+            if (value.ValueType() == winrt::Windows::Data::Json::JsonValueType::Number)
+            {
+                double num = value.GetNumber();
+                if (num == static_cast<int64_t>(num))
+                    return winrt::to_hstring(static_cast<int64_t>(num));
+                return winrt::to_hstring(num);
+            }
+            return fallback;
         }
 
         /* tableau JSON (ex. liste d'expéditeurs de confiance) ; vide si absent */

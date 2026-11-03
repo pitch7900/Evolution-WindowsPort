@@ -611,9 +611,15 @@ namespace winrt::EvolutionWin::implementation
         }
         else if (mode == L"delayed")
         {
+            int delay_seconds = ::EvolutionWin::Settings::Instance().GetInt(L"mail.mark-read-delay-seconds", 5);
+            if (delay_seconds < 1)
+                delay_seconds = 1;
+            if (delay_seconds > 60)
+                delay_seconds = 60;
+
             m_pending_read_uid = uid;
             m_mark_read_timer = DispatcherTimer();
-            m_mark_read_timer.Interval(std::chrono::seconds(5));
+            m_mark_read_timer.Interval(std::chrono::seconds(delay_seconds));
             auto token = std::make_shared<event_token>();
             *token = m_mark_read_timer.Tick([this, token](IInspectable const&, IInspectable const&)
             {

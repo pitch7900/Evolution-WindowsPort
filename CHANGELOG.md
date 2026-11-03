@@ -10,15 +10,28 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
-## [0.9.7] â en cours
+## [0.9.7] — en cours
 
-### AjoutÃ©
+### Ajouté
 
-- **Encapsulation Job Object et arrÃªt complet des processus d'arriÃ¨re-plan (TODO lignes 156-160)** :
-  - **Encapsulation dans un Job Object Windows au niveau noyau** : initialisation dÃ¨s le lancement (App::App) d'un Job Object configurÃ© avec JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE. Tout processus fils ou satellite lancÃ© par l'application (services EDS volution-source-registry.exe, volution-calendar-factory.exe, volution-addressbook-factory.exe, daemons D-Bus gdbus.exe, camel-index-control.exe, helpers gspawn-win64-helper.exe) est automatiquement rattachÃ© au job et garanti d'Ãªtre terminÃ© Ã  l'arrÃªt du programme, mÃªme en cas de fermeture inopinÃ©e ou forcÃ©e.
-  - **ArrÃªt ordonnÃ© des services EDS** : destruction propre de CoreBridge / vo-core sur l'Ã©vÃ©nement Closed de la fenÃªtre principale avant la fermeture de l'interface.
-  - **Nettoyage de sÃ©curitÃ© rÃ©siduel** : balayage de la session utilisateur (CreateToolhelp32Snapshot) Ã  la fermeture pour dÃ©tecter et terminer tout processus satellite persistant, assurant la libÃ©ration immÃ©diate de la mÃ©moire et la levÃ©e de tous les verrous de fichiers/bases de donnÃ©es.
-  - **Couverture par tests unitaires** : validation du Job Object et de la dÃ©tection exhaustive des satellites dans 	ests/unit/test_helpers.cpp.
+- **Lot 1 — Encapsulation Job Object et arrêt complet des processus d'arrière-plan (TODO lignes 156-160)** :
+  - **Encapsulation Job Object Windows au niveau noyau** : initialisation dès le démarrage (`App::App`) d'un Job Object configuré avec `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK`. Tous les processus satellites et daemons lancés par l'application (`evolution-source-registry.exe`, `evolution-calendar-factory.exe`, `evolution-addressbook-factory.exe`, `gdbus.exe`, `camel-index-control.exe`, `gspawn-win64-helper.exe`) sont automatiquement rattachés au Job Object et terminés instantanément à la fermeture de l'application, y compris en cas d'arrêt forcé.
+  - **Arrêt ordonné des services EDS** : destruction propre de `CoreBridge` / `evo-core` sur l'événement `Closed` de la fenêtre principale avant la fermeture de l'interface.
+  - **Nettoyage de sécurité résiduel** : balayage des processus de la session (`CreateToolhelp32Snapshot`) à l'extinction pour garantir la fermeture de tout résidu orphelin et libérer tous les verrous de base de données.
+  - **Couverture par tests unitaires** : validation du Job Object et de la détection exhaustive des satellites dans `tests/unit/test_helpers.cpp`.
+
+- **Lot 2 — Actions et Confort du Courrier (TODO sections 6, 9 et paramètres)** :
+  - **Zoom d'affichage et bascule Texte brut sécurisé / HTML (TODO section 6)** :
+    - Raccourcis clavier universels `Ctrl++` (Zoom avant), `Ctrl+-` (Zoom arrière) et `Ctrl+0` (Réinitialisation à 100%) dans le volet de lecture et la fenêtre indépendante (`MessageWindow`).
+    - Paliers de zoom précis de 50% à 300% avec persistance automatique dans les préférences (`mail.reading-zoom`).
+    - Basculement instantané entre rendu HTML enrichi et texte brut sécurisé (`mail.reading-plain-text`) via bouton dans la barre d'outils du volet de lecture et menu contextuel.
+  - **Dialogue et commande « Déplacer / Copier vers le dossier » multi-comptes (TODO ligne 571)** :
+    - Boîte de dialogue moderne `ContentDialog` avec champ de recherche en direct (`AutoSuggestBox`) permettant de naviguer et filtrer instantanément l'intégralité des dossiers de tous les comptes configurés (locaux, IMAP, Exchange/M365).
+    - Raccourci clavier dédié `Ctrl+Maj+V` et bouton ruban pour déclencher le déplacement ou la copie rapide vers n'importe quel dossier de destination.
+  - **Délai personnalisable de marquage automatique comme lu (TODO ligne 899)** :
+    - Sélecteur de délai d'attente (1s, 2s, 3s, 5s, 10s, 15s, 30s, 60s) dans *Paramètres > Courrier > Lecture* via la clé `mail.mark-read-delay-seconds`.
+    - Prise en compte dynamique dans le `DispatcherTimer` de `MainWindow.MessageList.cpp` lorsque le mode « Après un délai » est sélectionné.
+    - Fonctions d'accès typées et conversions fluides `GetInt` / `SetInt` dans `Settings.h` et couverture complète dans `tests/unit/test_settings.cpp`.
 
 ## [0.9.6] — 2026-11-03
 
