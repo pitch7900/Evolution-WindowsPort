@@ -40,6 +40,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Option d'activation et durée d'affichage des rappels de calendrier et de tâches (TODO ligne 841)** :
+  - **Bascule générale des alertes de rendez-vous** : nouvelle carte dans Paramètres > Notifications permettant d'activer ou de neutraliser l'émission de notifications pour les échéances d'agenda et de tâches (`calendar.reminders-enabled`).
+  - **Durée d'affichage configurable** : sélecteur de persistance à l'écran (`calendar.reminders-duration`) proposant 5s, 10s (recommandé), 30s, 1 minute ou persistant jusqu'à action de l'utilisateur.
+  - **Indexation de recherche et tests unitaires** : intégration dans le moteur de recherche rapide des paramètres et validation par test unitaire dans `test_settings.cpp`.
+
 - **Choix forcé de la langue dans les Paramètres (TODO ligne 899)** :
   - **Sélecteur de langue personnalisé** : ajout d'une carte dédiée dans Paramètres > Apparence proposant la langue de Windows (par défaut), Français, English, Deutsch, Español et Italiano.
   - **Prise en compte immédiate et au démarrage** : enregistrement de la préférence `general.language` et application via `ApplicationLanguages::PrimaryLanguageOverride` dès le lancement de l'application (`App.xaml.cpp`) et à la sélection.

@@ -119,6 +119,7 @@ namespace winrt::EvolutionWin::implementation
             { L"Badge de la barre des tâches", L"Compteur de messages non lus sur l'icône de l'application", L"notifications" },
 
             { L"Mode confidentiel des notifications", L"Masquer l'expéditeur et l'objet dans les alertes", L"notifications" },
+            { L"Rappels de calendrier et de tâches", L"Activer ou désactiver les alertes d'échéance et durée d'affichage", L"notifications" },
 
             { L"Thème de l'application", L"Mode sombre, mode clair ou thème du système Windows 11", L"appearance" },
 
@@ -821,8 +822,28 @@ namespace winrt::EvolutionWin::implementation
 
 
         if (auto sw = NotificationsTaskbarBadgeSwitch())
-
             sw.IsOn(settings.GetBoolean(L"notifications.taskbar-badge", true));
+
+        if (auto sw = CalendarRemindersEnabledSwitch())
+            sw.IsOn(settings.GetBoolean(L"calendar.reminders-enabled", true));
+
+        hstring reminder_dur = settings.GetString(L"calendar.reminders-duration", L"10");
+        if (auto combo = CalendarRemindersDurationCombo())
+        {
+            int32_t sel = 1; // 10 secondes par défaut
+            for (uint32_t i = 0; i < combo.Items().Size(); ++i)
+            {
+                if (auto item = combo.Items().GetAt(i).try_as<ComboBoxItem>())
+                {
+                    if (unbox_value_or<hstring>(item.Tag(), L"") == reminder_dur)
+                    {
+                        sel = static_cast<int32_t>(i);
+                        break;
+                    }
+                }
+            }
+            combo.SelectedIndex(sel);
+        }
 
 
 
@@ -2092,4 +2113,3 @@ namespace winrt::EvolutionWin::implementation
     }
 
 }
-

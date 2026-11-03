@@ -342,6 +342,17 @@ static void test_settings_mail_read_and_security_options(void)
         mgr.SetString("account.acc123.out-of-office-message", "En conges jusqu au 15.");
         std::string oof_saved_msg = mgr.GetString("account.acc123.out-of-office-message", "");
         ASSERT_EQ_STR("En conges jusqu au 15.", oof_saved_msg.c_str());
+
+        /* Rappels de calendrier et de taches (calendar.reminders-enabled / duration) */
+        ASSERT_EQ_INT(1, mgr.GetBoolean("calendar.reminders-enabled", true));
+        mgr.SetBoolean("calendar.reminders-enabled", false);
+        ASSERT_EQ_INT(0, mgr.GetBoolean("calendar.reminders-enabled", true));
+
+        std::string reminder_dur = mgr.GetString("calendar.reminders-duration", "10");
+        ASSERT_EQ_STR("10", reminder_dur.c_str());
+        mgr.SetString("calendar.reminders-duration", "30");
+        std::string saved_dur = mgr.GetString("calendar.reminders-duration", "10");
+        ASSERT_EQ_STR("30", saved_dur.c_str());
     }
     TEST_CASE_END();
 }
