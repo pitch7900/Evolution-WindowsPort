@@ -68,7 +68,7 @@ Propositions d'implémentations facilement réalisables, issues de la lecture du
 
 ## 5. Petits plus 🟡 « presque gratuits »
 
-- [ ] **Bouton _Annuler_ sur la barre de progression** (§4) : `GCancellable` déjà passé aux appels de relève, il manque l'exposition dans l'interface.
+- [x] **Bouton _Annuler_ sur la barre de progression** (§4) — fait (bouton croix dans StatusBarProgressPanel, evo_core_cancel_operations annulant le GCancellable de session)
 - [ ] **Réexécuter les règles / filtres** : hors périmètre tant que l'éditeur n'existe pas ; à laisser de côté.
 - [x] **Recherche dans le calendrier** (§12) : filtre local sur titre, lieu, description, à partir des événements déjà chargés — fait (champ CalendarSearchBox, liaison SearchBox Ctrl+E, filtrage instantané sur titre/lieu/description et tests unitaires)
 

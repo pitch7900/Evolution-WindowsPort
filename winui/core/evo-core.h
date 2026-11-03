@@ -104,6 +104,10 @@ void		evo_core_refresh		(EvoCore *core);
  * tous les autres dossiers de chaque compte. */
 void		evo_core_refresh_all		(EvoCore *core);
 
+/* Interrompt les opérations réseau ou de synchronisation actives
+ * en annulant le GCancellable de la session, puis le réinitialise. */
+void		evo_core_cancel_operations	(EvoCore *core);
+
 /* Active ou désactive le mode hors connexion global du moteur.
  * Paramètres :
  *   core    : instance du moteur

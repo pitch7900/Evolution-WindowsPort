@@ -18,6 +18,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 - **Quickwin — Ajout de calendriers (TODO section 14)** : bouton « + » dans le volet des calendriers ouvrant une boîte de dialogue (nom + adresse). Adresse vide : calendrier local ; adresse `http(s)://` ou `webcal://` : abonnement iCalendar (backend EDS `webcal`, actualisé toutes les 30 minutes). Nouvelle fonction `evo_core_create_calendar` dans `evo-core`, nouveau calendrier affiché immédiatement. Test de non-régression ajouté dans `test_evo_core_contracts.c`.
 
+- **Quickwin — Bouton d'annulation sur la barre de progression (TODO section 4, QUICKWINS)** : bouton d'arrêt d'urgence intégré dans le panneau de progression de la barre d'état, déclenchant l'annulation immédiate des opérations réseau en cours via l'annulation et la réinitialisation du `GCancellable` dans `evo-core`.
+
 - **Quickwin — Activation / désactivation de compte sans suppression (TODO section 3, QUICKWINS)** : option « Activer ce compte » intégrée dans les propriétés de compte pour activer ou suspendre la synchronisation sans perte de configuration ni suppression, propagation de l'extension `enabled` dans EDS et affichage distinctif « (Désactivé) » dans l'arborescence.
 
 - **Quickwin — Dates, heures et tailles de fichiers localisées (TODO section 20, QUICKWINS)** : centralisation du formatage des tailles de fichiers via l'API système `StrFormatByteSizeW` (respectant la locale Windows de l'utilisateur, ses séparateurs décimaux et ses unités Ko/Mo/Go ou KB/MB/GB), formatage intelligent de la liste des courriels (`FormatSmartDate` avec heure du jour ou date courte selon `DateTimeFormatting`), et suite de tests unitaires dédiée dans `tests/unit/test_helpers.cpp`.

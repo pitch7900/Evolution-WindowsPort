@@ -5520,6 +5520,11 @@
 
                                Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
 
+                    <Button x:Name="StatusBarCancelButton" Style="{StaticResource SubtleButtonStyle}"
+                            Padding="4,2,4,2" Click="OnCancelSyncClick" ToolTipService.ToolTip="Annuler l'opération en cours">
+                        <FontIcon Glyph="&#xE711;" FontSize="10" />
+                    </Button>
+
                 </StackPanel>
 
 

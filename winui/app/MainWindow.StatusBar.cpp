@@ -232,6 +232,23 @@ namespace winrt::EvolutionWin::implementation
         }
     }
 
+    /**
+     * @brief Gestionnaire du bouton d'annulation sur la barre de progression de la barre d'état.
+     * Interrompt l'opération réseau ou de synchronisation en cours via evo-core.
+     * @param sender Bouton émetteur.
+     * @param args Arguments d'événement.
+     */
+    void MainWindow::OnCancelSyncClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (m_core)
+        {
+            m_core->CancelOperations();
+            ShowStatus(L"Annulation de l'opération en cours demandée…", InfoBarSeverity::Informational);
+        }
+        if (StatusBarProgressPanel())
+            StatusBarProgressPanel().Visibility(Visibility::Collapsed);
+    }
+
     /* Met à jour l'état de connexion réseau d'un compte ou de la session globale.
      * Paramètres :
      *   account : identifiant du compte concerné (ou vide/global)

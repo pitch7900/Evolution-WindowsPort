@@ -91,6 +91,11 @@ namespace EvolutionWin
             evo_core_reconnect_account(m_core, winrt::to_string(account).c_str());
         }
 
+        void CancelOperations()
+        {
+            evo_core_cancel_operations(m_core);
+        }
+
         /* not SendMessage: a Win32 macro */
         void SendMail(winrt::hstring const& message_json, CoreHandler handler)
         {

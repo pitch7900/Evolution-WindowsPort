@@ -11208,6 +11208,24 @@ evo_core_refresh_all (EvoCore *core)
 	core_submit (core, core_refresh_run, g_strdupv (args), core_ignore_result, NULL);
 }
 
+void
+evo_core_cancel_operations (EvoCore *core)
+{
+	JsonBuilder *builder;
+
+	g_return_if_fail (core != NULL);
+
+	if (core->cancellable) {
+		g_cancellable_cancel (core->cancellable);
+		g_object_unref (core->cancellable);
+		core->cancellable = g_cancellable_new ();
+	}
+
+	builder = core_event_builder ();
+	builder_add_string (builder, "message", "Opération annulée");
+	core_emit_builder (core, "cancelled", builder);
+}
+
 /* Active ou désactive le mode hors connexion global du moteur.
  * Paramètres :
  *   core    : instance du moteur evo-core
