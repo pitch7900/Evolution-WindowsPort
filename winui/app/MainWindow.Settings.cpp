@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <winrt/Windows.Globalization.h>
 
 #include "MainWindow.xaml.h"
 
@@ -826,6 +827,24 @@ namespace winrt::EvolutionWin::implementation
 
 
         /* 6. Apparence */
+
+        hstring lang = settings.GetString(L"general.language", L"system");
+        if (auto combo = AppearanceLanguageCombo())
+        {
+            int32_t sel = 0;
+            for (uint32_t i = 0; i < combo.Items().Size(); ++i)
+            {
+                if (auto item = combo.Items().GetAt(i).try_as<ComboBoxItem>())
+                {
+                    if (unbox_value_or<hstring>(item.Tag(), L"") == lang)
+                    {
+                        sel = static_cast<int32_t>(i);
+                        break;
+                    }
+                }
+            }
+            combo.SelectedIndex(sel);
+        }
 
         hstring theme = settings.GetString(L"appearance.theme", L"system");
 
@@ -1677,6 +1696,15 @@ namespace winrt::EvolutionWin::implementation
 
                         }
 
+                        else if (key == L"general.language")
+                        {
+                            try
+                            {
+                                hstring override_lang = val == L"system" ? L"" : val;
+                                Windows::Globalization::ApplicationLanguages::PrimaryLanguageOverride(override_lang);
+                            }
+                            catch (...) {}
+                        }
                         else if (key == L"mail.folder-sort")
 
                         {

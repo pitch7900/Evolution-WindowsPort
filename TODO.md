@@ -896,7 +896,7 @@ Les textes d'EvolutionWin sont aujourd'hui écrits en dur en français dans le c
 ### Choix de la langue
 
 - [ ] 🟢 **Par défaut** : langue d'affichage de Windows, repli sur l'anglais si elle n'est pas traduite
-- [ ] 🟢 **Dans les Paramètres** (§19) : choix manuel de la langue, appliqué au redémarrage (`ApplicationLanguages.PrimaryLanguageOverride`)
+- [x] 🟢 **Dans les Paramètres** (§19) : choix manuel de la langue, appliqué au redémarrage (`ApplicationLanguages.PrimaryLanguageOverride`)
 - [ ] 🟡 **Dans le MSI** : choix de la langue par défaut à l'installation
   - [ ] Liste déroulante dans l'interface d'installation (boîte de dialogue WiX `WixUI` personnalisée), préremplie avec la langue de Windows
   - [ ] Propriété publique `UILANGUAGE` pour le déploiement silencieux (`msiexec /i Evolution-<version>-x64.msi /qn UILANGUAGE=de-DE`, GPO / Intune)

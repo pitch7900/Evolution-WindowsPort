@@ -40,6 +40,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Choix forcé de la langue dans les Paramètres (TODO ligne 899)** :
+  - **Sélecteur de langue personnalisé** : ajout d'une carte dédiée dans Paramètres > Apparence proposant la langue de Windows (par défaut), Français, English, Deutsch, Español et Italiano.
+  - **Prise en compte immédiate et au démarrage** : enregistrement de la préférence `general.language` et application via `ApplicationLanguages::PrimaryLanguageOverride` dès le lancement de l'application (`App.xaml.cpp`) et à la sélection.
+  - **Information claire utilisateur** : libellé explicatif indiquant que le changement de langue de l'environnement prendra pleinement effet au prochain redémarrage.
+
 - **Filtrage et recherche multicritère par catégorie (TODO ligne 754)** :
   - **Syntaxe de recherche avancée** : prise en charge des sélecteurs cat:<nom> et category:<nom> dans le champ de recherche pour isoler instantanément les messages étiquetés d\'une catégorie.
   - **Indexation des étiquettes dans evo-core** : intégration dynamique des drapeaux utilisateurs (CamelNamedFlags / étiquettes IMAP) dans la routine message_info_matches_query d\'evo-core pour les recherches transversales (dossiers, comptes).

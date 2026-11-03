@@ -3916,6 +3916,34 @@
 
 
 
+                                <!-- Langue de l'interface utilisateur -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE774;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Langue d'affichage de l'application" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Choisissez la langue de l'interface. La modification prendra effet au prochain démarrage."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="AppearanceLanguageCombo" Tag="general.language" MinWidth="200"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center">
+                                            <ComboBoxItem Content="Langue de Windows (par défaut)" Tag="system" />
+                                            <ComboBoxItem Content="Français (France)" Tag="fr-FR" />
+                                            <ComboBoxItem Content="English (United States)" Tag="en-US" />
+                                            <ComboBoxItem Content="Deutsch (Deutschland)" Tag="de-DE" />
+                                            <ComboBoxItem Content="Español (España)" Tag="es-ES" />
+                                            <ComboBoxItem Content="Italiano (Italia)" Tag="it-IT" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
                                 <!-- Thème de l'application -->
 
                                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"

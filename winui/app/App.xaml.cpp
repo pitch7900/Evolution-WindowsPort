@@ -1,7 +1,10 @@
 #include "pch.h"
 #include "App.xaml.h"
 #include "MainWindow.xaml.h"
+#include "Settings.h"
 #include "ErrorLog.h"
+
+#include <winrt/Windows.Globalization.h>
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
@@ -10,6 +13,18 @@ namespace winrt::EvolutionWin::implementation
 {
     App::App()
     {
+        /* Application du choix de langue forcé de l'utilisateur (PrimaryLanguageOverride) */
+        {
+            auto saved_lang = ::EvolutionWin::Settings::Instance().GetString(L"general.language", L"system");
+            if (saved_lang == L"system")
+                saved_lang = L"";
+            try
+            {
+                Windows::Globalization::ApplicationLanguages::PrimaryLanguageOverride(saved_lang);
+            }
+            catch (...) {}
+        }
+
         /* exception non gérée dans un gestionnaire d'événement : journalisée
            (errors.log) au lieu d'arrêter l'application */
         UnhandledException([](IInspectable const&, UnhandledExceptionEventArgs const& e)
