@@ -92,6 +92,7 @@ namespace winrt::EvolutionWin::implementation
 
             { L"Suppression définitive", L"Confirmation avant la suppression irréversible d'un message", L"mail" },
             { L"Accusé de lecture", L"Demande automatique de confirmation de lecture lors de l'envoi", L"mail" },
+            { L"Copie cachée automatique (Cci / Bcc)", L"Définir une adresse Bcc automatique sur les nouveaux messages", L"mail" },
 
             { L"Premier jour de la semaine", L"Lundi, dimanche ou samedi pour la grille du calendrier", L"calendar" },
 
@@ -341,6 +342,9 @@ namespace winrt::EvolutionWin::implementation
 
         if (auto sw = MailRequestReadReceiptSwitch())
             sw.IsOn(settings.GetBoolean(L"mail.request-read-receipt", false));
+
+        if (auto tb = MailAutoBccBox())
+            tb.Text(settings.GetString(L"mail.auto-bcc", L""));
 
 
 
@@ -2113,6 +2117,25 @@ namespace winrt::EvolutionWin::implementation
 
         }
 
+    }
+
+
+    /**
+     * @brief Gestionnaire de perte de focus sur un TextBox de réglage pour enregistrement immédiat.
+     */
+    void MainWindow::OnSettingTextBoxLostFocus(IInspectable const& sender, RoutedEventArgs const&)
+    {
+        if (!m_initialized || m_updating_settings_view)
+            return;
+
+        if (auto tb = sender.try_as<TextBox>())
+        {
+            hstring key = unbox_value_or<hstring>(tb.Tag(), L"");
+            if (!key.empty())
+            {
+                ::EvolutionWin::Settings::Instance().SetString(key, tb.Text());
+            }
+        }
     }
 
 }

@@ -358,6 +358,13 @@ static void test_settings_mail_read_and_security_options(void)
         ASSERT_EQ_INT(0, mgr.GetBoolean("mail.request-read-receipt", false));
         mgr.SetBoolean("mail.request-read-receipt", true);
         ASSERT_EQ_INT(1, mgr.GetBoolean("mail.request-read-receipt", false));
+
+        /* Copie cachee automatique (mail.auto-bcc) */
+        std::string bcc_default = mgr.GetString("mail.auto-bcc", "");
+        ASSERT_EQ_STR("", bcc_default.c_str());
+        mgr.SetString("mail.auto-bcc", "archive@societe.com");
+        std::string bcc_saved = mgr.GetString("mail.auto-bcc", "");
+        ASSERT_EQ_STR("archive@societe.com", bcc_saved.c_str());
     }
     TEST_CASE_END();
 }

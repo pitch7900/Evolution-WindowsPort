@@ -97,8 +97,21 @@ namespace winrt::EvolutionWin::implementation
         if (!m_account_uids.empty())
             FromBox().SelectedIndex(selected);
 
+        hstring current_acc = !m_account_uids.empty() ? m_account_uids[selected] : L"";
+
         ToBox().Text(data.to);
         CcBox().Text(data.cc);
+
+        // Copie cachée automatique (Cci / Bcc) configurée
+        hstring auto_bcc = ::EvolutionWin::Settings::Instance().GetString(L"account." + current_acc + L".auto-bcc",
+            ::EvolutionWin::Settings::Instance().GetString(L"mail.auto-bcc", L""));
+        if (!auto_bcc.empty())
+        {
+            if (BccBox().Text().empty())
+                BccBox().Text(auto_bcc);
+            else if (std::wstring{ BccBox().Text() }.find(auto_bcc) == std::wstring::npos)
+                BccBox().Text(BccBox().Text() + L"; " + auto_bcc);
+        }
         SubjectBox().Text(data.subject);
         BodyBox().Text(data.body);
 
@@ -109,7 +122,6 @@ namespace winrt::EvolutionWin::implementation
         m_focus_editor_on_ready = !data.to.empty();
 
         // Accusé de lecture par défaut selon les préférences utilisateur
-        hstring current_acc = !m_account_uids.empty() ? m_account_uids[selected] : L"";
         bool default_receipt = ::EvolutionWin::Settings::Instance().GetBoolean(L"account." + current_acc + L".request-read-receipt",
             ::EvolutionWin::Settings::Instance().GetBoolean(L"mail.request-read-receipt", false));
         if (auto btn = ReadReceiptButton())

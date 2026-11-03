@@ -40,6 +40,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Copie cachée automatique (Cci / Bcc) sur les messages (TODO ligne 239)** :
+  - **Champ de réglage dans Paramètres > Courrier** : configuration d'une ou plusieurs adresses en copie invisible automatique (`mail.auto-bcc` et surcharge par compte `account.<id>.auto-bcc`).
+  - **Insertion fluide dans ComposeWindow** : préremplissage automatique du champ Cci lors de l'ouverture de la fenêtre de rédaction d'un nouveau message.
+  - **Validation par tests unitaires** : persistance et tests de non-régression validés dans `test_settings.cpp`.
+
 - **Demande d'accusé de lecture par défaut et en rédaction (TODO ligne 239)** :
   - **Bouton d'action dans ComposeWindow** : ajout d'un bouton bascule « Accusé de lecture » dans la barre d'outils de rédaction pour activer ou désactiver la demande de confirmation sur chaque message.
   - **Option globale dans Paramètres > Courrier** : réglage `mail.request-read-receipt` et préférence par compte `account.<id>.request-read-receipt` pour solliciter systématiquement un accusé de réception.

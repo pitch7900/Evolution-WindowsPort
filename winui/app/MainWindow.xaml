@@ -2721,6 +2721,28 @@
 
 
 
+                                <!-- Copie cachée automatique (Cci / Bcc) -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE715;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Copie cachée automatique (Cci / Bcc)" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Adresse e-mail ajoutée automatiquement en copie invisible lors de la rédaction de nouveaux courriels."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <TextBox Grid.Column="2" x:Name="MailAutoBccBox" Tag="mail.auto-bcc" MinWidth="220"
+                                                 PlaceholderText="copie@exemple.com"
+                                                 LostFocus="OnSettingTextBoxLostFocus" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
                                 <!-- Demande d'accusé de lecture systématique -->
                                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
