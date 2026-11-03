@@ -240,18 +240,27 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 - [ ] 🟡 **Synchronisation** : intervalle de relève propre au compte (remplace la valeur globale des Paramètres, §19), dossiers synchronisés hors connexion et ancienneté (§4), compte activé / désactivé sans le supprimer
 - [x] 🟡 **Test de connexion** après modification, avec bouton dédié et rapport d'état
 
-### Boîtes partagées et comptes délégués (Mail, Calendrier, Contacts) — 🟠
+### Boîtes partagées et accès délégués Exchange Online (Mail, Calendrier, Contacts) — 🟠
 
-En entreprise (Exchange Online / Microsoft 365, Exchange on-premise), les utilisateurs accèdent fréquemment à des boîtes aux lettres partagées (ex. support, info, boîtes de service), ainsi qu'aux calendriers et carnets d'adresses d'autres collaborateurs (délégation avec droits de lecture ou de gestion).
+En entreprise (Exchange Online / Microsoft 365, Exchange on-premise), les utilisateurs accèdent fréquemment à des boîtes aux lettres partagées (ex. support, info, boîtes de service) et disposent d'accès délégués sur la boîte ou le calendrier d'autres collaborateurs (délégation avec droits de lecture, d'édition ou de gestion).
 
-- [ ] 🟠 **Ajouter un compte ou dossier partagé en visibilité (clic droit sur un compte)** :
-  - [ ] 🟡 **Menu contextuel du compte** : action _« Ouvrir le dossier / compte partagé d'un autre utilisateur… »_ (accessible par clic droit sur un compte dans l'arborescence Mail, Calendrier et Contacts).
+- [ ] 🟠 **Ouverture et ajout d'une boîte aux lettres ou d'un calendrier délégué (clic droit sur le compte Exchange)** :
+  - [ ] 🟡 **Menu contextuel du compte** : action _« Ouvrir le dossier / la boîte déléguée d'un autre utilisateur… »_ (accessible par clic droit sur le compte Exchange dans l'arborescence Mail, Calendrier et Contacts).
   - [ ] 🟡 **Boîte de dialogue de sélection** : recherche de l'utilisateur ou de la boîte partagée par nom ou adresse email dans l'annuaire (GAL) ou saisie directe de l'adresse (ex. `equipe@entreprise.com` ou `collegue@entreprise.com`).
-  - [ ] 🟠 **Courrier (Mail)** : ajout de la boîte aux lettres partagée / déléguée sous l'arborescence (accès aux dossiers Boîte de réception, Éléments envoyés, etc. selon les autorisations Exchange `FullAccess` / `SendAs` ou délégation Camel / EWS / Graph).
-  - [ ] 🟡 **Calendrier** : ajout du calendrier partagé sous le groupe _Calendriers partagés_ ou _Autres calendriers_, avec synchronisation et affichage superposé ou côte à côte.
-  - [ ] 🟡 **Contacts** : ajout du carnet d'adresses partagé de l'utilisateur sélectionné.
-  - [ ] 🟢 **Mémorisation et suppression** : persistance des comptes et dossiers partagés ouverts entre les sessions ; option _« Masquer / Fermer le compte partagé »_ par clic droit.
+  - [ ] 🟠 **Rattachement dynamique sous le compte Exchange principal** :
+    - [ ] **Courrier (Mail)** : arborescence complète de la boîte partagée / déléguée montée sous le compte principal (accès aux dossiers Boîte de réception, Éléments envoyés, dossiers personnalisés selon les autorisations Exchange `FullAccess` / délégation EWS ou Microsoft Graph `/users/{id}/mailFolders`).
+    - [ ] **Calendrier** : ajout du calendrier partagé / délégué sous le groupe _Calendriers partagés_ ou _Autres calendriers_, avec synchronisation et affichage superposé ou côte à côte.
+    - [ ] **Contacts** : ajout du carnet d'adresses partagé de l'utilisateur sélectionné.
+  - [ ] 🟢 **Mémorisation et retrait** : persistance des comptes et calendriers délégués ouverts entre les sessions ; option _« Masquer / Fermer la boîte partagée »_ par clic droit.
   - Récupération des éléments supprimés du compte Exchange Online (Recoverable Items en self-service) : cf. §9
+- [ ] 🟠 **Interactions avec la boîte et le calendrier selon les permissions accordées** :
+  - [ ] 🟡 **Droits sur les messages et dossiers** : adaptation dynamique des actions possibles selon le niveau de délégation effectif (lecture seule / relecture, auteur, éditeur, accès complet `FullAccess`) : lecture, déplacement, création / suppression de sous-dossiers, marquage lu/non lu.
+  - [ ] 🟡 **Droits sur le calendrier délégué** : création, modification, déplacement et suppression de rendez-vous ou invitations de réunion selon les autorisations accordées (Auteur, Éditeur, Délégué).
+- [ ] 🟡 **Envoi d'emails « En tant que » (Send As) et « De la part de » (Send on Behalf)** :
+  - [ ] **Sélecteur d'expéditeur étendu (`FromBox`)** : dans la fenêtre de rédaction (`ComposeWindow`), sélection automatique ou manuelle des adresses de boîtes déléguées / partagées autorisées dans le champ déroulant _De :_.
+  - [ ] **Envoi « En tant que » (`Send As`)** : émission directe avec l'adresse de la boîte déléguée en en-tête `From:`, sans mention de l'identité personnelle (droits `SendAs` Exchange Online / Graph).
+  - [ ] **Envoi « De la part de » (`Send on Behalf`)** : émission avec l'en-tête `Sender:` (adresse de l'utilisateur) et `From:` (adresse du titulaire), affichant « [Utilisateur] de la part de [Titulaire] ».
+  - [ ] 🟢 **Copie dans les Éléments envoyés** : enregistrement automatique de la copie du message envoyé dans le dossier *Éléments envoyés* de la boîte partagée / déléguée correspondante (respect des paramètres Exchange `MessageCopyForSentAsEnabled` et `MessageCopyForSendOnBehalfEnabled`).
 
 ### Boîte d'archivage en ligne (Exchange Online Archiving / In-Place Archive) — 🟠
 
@@ -471,6 +480,7 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
   - [ ] Récupération après plantage : copie locale écrite à chaque autosave, brouillons non synchronisés retrouvés au redémarrage
 - [ ] 🟡 **Répondre par une réunion** (réunion pré-remplie avec les participants) — dépend de §13
 - [x] 🟢 **Transférer en pièce jointe** pour un message seul (déjà fait en sélection multiple)
+- Envoi « En tant que » (Send As) et « De la part de » (Send on Behalf) pour les boîtes déléguées : cf. §3
 
 ### Supprimer, archiver, déplacer
 
@@ -653,6 +663,7 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
   - [ ] 🟠 À partir du carnet d'adresses / de l'annuaire : calendrier d'un autre utilisateur Exchange / M365 selon les droits accordés (disponibilités, détails limités, lecture complète, délégué)
   - [ ] 🟠 À partir d'une liste de salles
 - [ ] 🟡 Plusieurs calendriers partagés ouverts simultanément et conservés (groupe « Calendriers partagés »)
+- Rattachement et interaction avec les calendriers délégués Exchange Online : cf. §3
 - [ ] **Partager le calendrier** :
   - [ ] 🟠 Invitation de partage avec niveaux de droits (disponibilités, titres et lieux, tous les détails, édition, délégué) — Exchange / M365
   - [ ] 🟡 Envoyer un extrait par email (plage de dates, niveau de détail)
