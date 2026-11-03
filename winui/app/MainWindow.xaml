@@ -365,6 +365,9 @@
 
                         </AppBarButton>
 
+                        <AppBarButton Label="Indésirable" Click="OnJunkClick" ToolTipService.ToolTip="Marquer comme indésirable / non indésirable">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE7BA;" /></AppBarButton.Icon>
+                        </AppBarButton>
                         <AppBarButton Label="Archiver" Click="OnArchiveClick" ToolTipService.ToolTip="Archiver (Retour arrière)">
 
                             <AppBarButton.Icon><FontIcon Glyph="&#xE7B8;" /></AppBarButton.Icon>

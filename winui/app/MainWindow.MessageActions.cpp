@@ -653,6 +653,72 @@ namespace winrt::EvolutionWin::implementation
 
 
 
+    /**
+     * @brief Cherche, dans l'arborescence d'un compte, le premier dossier sélectionnable d'un type donné.
+     * @param folders Arborescence JSON des dossiers du compte.
+     * @param type Type de dossier recherché (« junk », « inbox »…, cf. evo-core).
+     * @return Chemin complet du dossier, ou chaîne vide s'il n'existe pas.
+     */
+    static hstring FindFolderByType(JsonArray const& folders, hstring const& type)
+    {
+        for (auto const& value : folders)
+        {
+            auto folder = value.GetObject();
+            if (folder.GetNamedString(L"type", L"") == type && folder.GetNamedBoolean(L"selectable", true))
+                return folder.GetNamedString(L"full_name");
+            if (auto found = FindFolderByType(folder.GetNamedArray(L"children", JsonArray{}), type); !found.empty())
+                return found;
+        }
+        return {};
+    }
+
+    /**
+     * @brief Marque des messages comme indésirables, ou comme non indésirables s'ils sont déjà dans le dossier Indésirables.
+     *        Déplace les messages vers le dossier Indésirables du compte (ou vers la Boîte de réception pour l'opération inverse).
+     * @param uids Identifiants des messages concernés (dossier courant).
+     */
+    void MainWindow::MarkAsJunkByUids(std::vector<hstring> const& uids)
+    {
+        if (uids.empty() || m_account.empty())
+            return;
+
+        hstring junk;
+        hstring inbox;
+        if (auto it = m_account_folders.find(std::wstring{ m_account }); it != m_account_folders.end() && it->second)
+        {
+            junk = FindFolderByType(it->second, L"junk");
+            inbox = FindFolderByType(it->second, L"inbox");
+        }
+
+        if (junk.empty())
+        {
+            ShowStatus(L"Ce compte n'a pas de dossier Courrier indésirable (voir Propriétés du compte › Dossiers spéciaux).", InfoBarSeverity::Warning);
+            return;
+        }
+
+        if (m_folder == junk)
+        {
+            /* Non indésirable : retour vers la Boîte de réception */
+            if (inbox.empty())
+            {
+                ShowStatus(L"Boîte de réception introuvable pour ce compte.", InfoBarSeverity::Warning);
+                return;
+            }
+            MoveMessagesByUids(uids, m_account, inbox);
+            return;
+        }
+
+        MoveMessagesByUids(uids, m_account, junk);
+    }
+
+    /**
+     * @brief Gestionnaire du bouton « Indésirable / Non indésirable » : applique l'action aux messages sélectionnés.
+     */
+    void MainWindow::OnJunkClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        MarkAsJunkByUids(SelectedMessageUids());
+    }
+
     void MainWindow::OnArchiveClick(IInspectable const&, RoutedEventArgs const&)
 
     {

@@ -33,7 +33,7 @@ Propositions d'implémentations facilement réalisables, issues de la lecture du
 
 - [ ] **Mémoriser par dossier l'affichage en conversations** (§5)
   - Dictionnaire `uid dossier → bool` dans les préférences, lu à la sélection du dossier.
-- [ ] **Marquer / démarquer comme indésirable** (§8)
+- [x] **Marquer / démarquer comme indésirable** (§8) — fait
   - Déplacement vers / depuis le dossier _Indésirables_ avec la fonction de déplacement existante ; entrée dans le menu contextuel et le ruban.
 - [ ] **Autosave du brouillon** (§7)
   - Minuteur (ex. 60 s) dans `MainWindow.Compose.cpp` qui réutilise l'enregistrement de brouillon existant.

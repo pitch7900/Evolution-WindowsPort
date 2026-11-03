@@ -543,6 +543,16 @@ namespace winrt::EvolutionWin::implementation
                 });
                 menu_items.Append(archive_item);
 
+                MenuFlyoutItem junk_item;
+                junk_item.Text(hstring{ L"Indésirable / Non indésirable" + count_suffix });
+                junk_item.Icon(FontIcon{});
+                junk_item.Icon().as<FontIcon>().Glyph(L"\xE7BA");
+                junk_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
+                {
+                    MarkAsJunkByUids(target_uids);
+                });
+                menu_items.Append(junk_item);
+
                 menu_items.Append(MenuFlyoutSeparator{});
 
                 MenuFlyoutItem delete_item;

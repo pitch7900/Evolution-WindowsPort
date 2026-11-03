@@ -14,6 +14,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Quickwin — Courrier indésirable (TODO section 8)** : bouton _Indésirable_ dans le ruban et entrée du menu contextuel des messages ; déplace la sélection vers le dossier Indésirables du compte, ou vers la Boîte de réception si elle s'y trouve déjà.
+
 - **Lot 1 — Encapsulation Job Object et arrêt complet des processus d'arrière-plan (TODO lignes 156-160)** :
   - **Encapsulation Job Object Windows au niveau noyau** : initialisation dès le démarrage (`App::App`) d'un Job Object configuré avec `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK`. Tous les processus satellites et daemons lancés par l'application (`evolution-source-registry.exe`, `evolution-calendar-factory.exe`, `evolution-addressbook-factory.exe`, `gdbus.exe`, `camel-index-control.exe`, `gspawn-win64-helper.exe`) sont automatiquement rattachés au Job Object et terminés instantanément à la fermeture de l'application, y compris en cas d'arrêt forcé.
   - **Arrêt ordonné des services EDS** : destruction propre de `CoreBridge` / `evo-core` sur l'événement `Closed` de la fenêtre principale avant la fermeture de l'interface.

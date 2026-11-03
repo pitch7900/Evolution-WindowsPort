@@ -561,7 +561,7 @@ Sécurisation de bout en bout des courriels par signature et chiffrement avec un
   - [ ] 🟡 Créer une règle à partir du message sélectionné (une fois l'éditeur en place)
   - [ ] 🟡 Exécuter les règles maintenant sur un dossier
 - [ ] 🔴 **Règles côté serveur** : Exchange (EWS / Graph `messageRules`), Sieve (ManageSieve)
-- [ ] 🟡 **Courrier indésirable** : marquer comme indésirable / non indésirable (déplacement vers / depuis le dossier Indésirables)
+- [x] 🟡 **Courrier indésirable** : marquer comme indésirable / non indésirable (déplacement vers / depuis le dossier Indésirables) — _bouton du ruban et menu contextuel_
 - [ ] 🟡 **Listes d'expéditeurs** bloqués / approuvés (expéditeur ou domaine), options du filtre ; 🟠 synchronisées avec Exchange
 - [ ] 🟡 **Signaler** un message comme hameçonnage / spam (transfert en pièce jointe vers une adresse configurable, ou API du fournisseur)
 
