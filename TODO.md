@@ -928,7 +928,7 @@ Les textes d'EvolutionWin sont aujourd'hui écrits en dur en français dans le c
 
 - [ ] 🟠 **Extraire tous les textes** du XAML et du C++ dans des fichiers de ressources (`Resources.resw` par langue, `x:Uid` dans le XAML, `ResourceLoader` / MRT Core dans le code) — prérequis à toute traduction
 - [ ] 🟡 Textes construits dynamiquement : pluriels (« 1 message » / « 3 messages »), paramètres insérés dans les phrases (« Compte {0} : {1} non lus »)
-- [ ] 🟢 Dates, heures, nombres et tailles formatés selon la langue (`Windows.Globalization`)
+- [x] 🟢 Dates, heures, nombres et tailles formatés selon la langue (`Windows.Globalization` et `StrFormatByteSizeW`)
 - [ ] 🟡 Messages d'erreur d'`evo-core` traduits (chaînes C passées par gettext avec un domaine `evo-core`, ou codes d'erreur traduits côté interface)
 - [x] 🟢 Préfixes de réponse / transfert selon la langue (« RE: » / « TR: », « AW: » / « WG: », « R: » / « I: »…) et en-tête de citation traduit
 

@@ -258,7 +258,7 @@ namespace winrt::EvolutionWin::implementation
             }
 
             TextBlock date;
-            date.Text(FormatDate(message.GetNamedNumber(L"date", 0)));
+            date.Text(FormatSmartDate(message.GetNamedNumber(L"date", 0)));
             date.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
             meta.Children().Append(date);
 

@@ -52,7 +52,7 @@ Propositions d'implémentations facilement réalisables, issues de la lecture du
   - Bascule de `ESourceExtension` _enabled_ dans la boîte de modification du compte.
 - [ ] **Quota du compte** dans l'onglet _Fichier_ (§3)
   - `camel_folder_get_quota_info_sync` + `ProgressBar` ; masqué si non supporté.
-- [ ] **Dates, heures et tailles localisées** (§20)
+- [x] **Dates, heures et tailles localisées** (§20) — fait
   - Remplacer les formats codés en dur par `Windows.Globalization.DateTimeFormatting`.
 
 ## 4. Installation et maintenance

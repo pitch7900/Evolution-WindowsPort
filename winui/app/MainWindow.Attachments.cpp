@@ -58,13 +58,8 @@ namespace winrt::EvolutionWin::implementation
             hstring filename = att.GetNamedString(L"filename", L"piece-jointe");
             int64_t size = static_cast<int64_t>(att.GetNamedNumber(L"size", 0));
 
-            hstring size_label;
-            if (size >= 1024 * 1024)
-                size_label = L" (" + to_hstring(size / (1024 * 1024)) + L" Mo)";
-            else if (size >= 1024)
-                size_label = L" (" + to_hstring(size / 1024) + L" Ko)";
-            else if (size > 0)
-                size_label = L" (" + to_hstring(size) + L" o)";
+            hstring size_str = FormatFileSize(size);
+            hstring size_label = size_str.empty() ? hstring{} : L" (" + size_str + L")";
 
             Button button;
             StackPanel content;

@@ -8,11 +8,13 @@
 #include <cwctype>
 #include <string>
 #include <shellapi.h>
+#include <shlwapi.h>
 #include <mmsystem.h>
 #include <tlhelp32.h>
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "advapi32.lib")
 #pragma comment(lib, "user32.lib")
+#pragma comment(lib, "shlwapi.lib")
 #include <string_view>
 #include <vector>
 #include <filesystem>
@@ -81,6 +83,32 @@ namespace EvolutionWin::Helpers
         return icon;
     }
 
+    /**
+     * @brief Formate une taille en octets selon les conventions et la localisation système (ex. "1,42 Mo" en FR, "1.42 MB" en EN).
+     * @param bytes Nombre d'octets.
+     * @return Chaîne localisée représentant la taille formatée.
+     */
+    inline hstring FormatFileSize(int64_t bytes)
+    {
+        if (bytes <= 0)
+            return L"";
+
+        wchar_t buf[64] = { 0 };
+        if (::StrFormatByteSizeW(bytes, buf, static_cast<UINT>(std::size(buf))))
+            return hstring{ buf };
+
+        if (bytes >= 1024 * 1024)
+            return to_hstring(bytes / (1024 * 1024)) + L" Mo";
+        if (bytes >= 1024)
+            return to_hstring(bytes / 1024) + L" Ko";
+        return to_hstring(bytes) + L" o";
+    }
+
+    /**
+     * @brief Formate une date et une heure selon la locale active (shortdate shorttime).
+     * @param unix_time Horodatage Unix en secondes.
+     * @return Chaîne formatée localisée.
+     */
     inline hstring FormatDate(double unix_time)
     {
         if (unix_time <= 0)
@@ -90,6 +118,61 @@ namespace EvolutionWin::Helpers
         Windows::Globalization::DateTimeFormatting::DateTimeFormatter formatter{ L"shortdate shorttime" };
 
         return formatter.Format(time);
+    }
+
+    /**
+     * @brief Formate uniquement la date selon la locale active (shortdate).
+     * @param unix_time Horodatage Unix en secondes.
+     * @return Date formatée localisée.
+     */
+    inline hstring FormatShortDate(double unix_time)
+    {
+        if (unix_time <= 0)
+            return L"";
+
+        auto time = winrt::clock::from_time_t(static_cast<time_t>(unix_time));
+        Windows::Globalization::DateTimeFormatting::DateTimeFormatter formatter{ L"shortdate" };
+
+        return formatter.Format(time);
+    }
+
+    /**
+     * @brief Formate uniquement l'heure selon la locale active (shorttime).
+     * @param unix_time Horodatage Unix en secondes.
+     * @return Heure formatée localisée.
+     */
+    inline hstring FormatTime(double unix_time)
+    {
+        if (unix_time <= 0)
+            return L"";
+
+        auto time = winrt::clock::from_time_t(static_cast<time_t>(unix_time));
+        Windows::Globalization::DateTimeFormatting::DateTimeFormatter formatter{ L"shorttime" };
+
+        return formatter.Format(time);
+    }
+
+    /**
+     * @brief Formatage intelligent de la date : affiche uniquement l'heure si le message date d'aujourd'hui,
+     * la date courte sinon.
+     * @param unix_time Horodatage Unix en secondes.
+     * @return Chaîne conviviale et localisée.
+     */
+    inline hstring FormatSmartDate(double unix_time)
+    {
+        if (unix_time <= 0)
+            return L"";
+
+        time_t msg_time = static_cast<time_t>(unix_time);
+        time_t now = std::time(nullptr);
+        struct tm msg_tm{}, now_tm{};
+        localtime_s(&msg_tm, &msg_time);
+        localtime_s(&now_tm, &now);
+
+        if (msg_tm.tm_year == now_tm.tm_year && msg_tm.tm_yday == now_tm.tm_yday)
+            return FormatTime(unix_time);
+
+        return FormatShortDate(unix_time);
     }
 
     /* display name of "Name <address>" */

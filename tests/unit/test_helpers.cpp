@@ -1,6 +1,8 @@
 #include <windows.h>
 #pragma comment(lib, "advapi32.lib")
 #pragma comment(lib, "user32.lib")
+#include <shlwapi.h>
+#pragma comment(lib, "shlwapi.lib")
 /**
 
 
@@ -5926,6 +5928,42 @@ static bool MatchCalendarEventTest(std::wstring_view summary, std::wstring_view 
     return false;
 }
 
+static std::wstring FormatFileSizeTest(int64_t bytes)
+{
+    if (bytes <= 0)
+        return L"";
+    wchar_t buf[64] = { 0 };
+    if (::StrFormatByteSizeW(bytes, buf, static_cast<UINT>(std::size(buf))))
+        return std::wstring{ buf };
+    if (bytes >= 1024 * 1024)
+        return std::to_wstring(bytes / (1024 * 1024)) + L" Mo";
+    if (bytes >= 1024)
+        return std::to_wstring(bytes / 1024) + L" Ko";
+    return std::to_wstring(bytes) + L" o";
+}
+
+static void test_localized_file_size_and_dates()
+{
+    TEST_CASE("Localization: Formatage de taille et de dates localisees");
+    {
+        ASSERT_TRUE(FormatFileSizeTest(0).empty());
+        ASSERT_TRUE(FormatFileSizeTest(-10).empty());
+
+        std::wstring s_kb = FormatFileSizeTest(1024);
+        ASSERT_TRUE(!s_kb.empty());
+        ASSERT_TRUE(s_kb.find(L"Ko") != std::wstring::npos || s_kb.find(L"KB") != std::wstring::npos);
+
+        std::wstring s_mb = FormatFileSizeTest(1500000);
+        ASSERT_TRUE(!s_mb.empty());
+        ASSERT_TRUE(s_mb.find(L"Mo") != std::wstring::npos || s_mb.find(L"MB") != std::wstring::npos);
+
+        std::wstring s_gb = FormatFileSizeTest(2147483648LL);
+        ASSERT_TRUE(!s_gb.empty());
+        ASSERT_TRUE(s_gb.find(L"Go") != std::wstring::npos || s_gb.find(L"GB") != std::wstring::npos);
+    }
+    TEST_CASE_END();
+}
+
 static void test_calendar_search_matching()
 {
     TEST_CASE("Calendar: Filtrage recherche titre, lieu et description");
@@ -6097,6 +6135,7 @@ int main(void)
         test_reading_zoom_helpers();
     test_message_importance_parsing();
     test_calendar_search_matching();
+    test_localized_file_size_and_dates();
         test_font_size_preset_to_zoom();
 return test_suite_summary();
 
