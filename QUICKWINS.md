@@ -1,90 +1,82 @@
-# Quickwins prioritaires — Evolution Windows
+# Quickwins proposés — Evolution Windows
 
-Ce document récapitule les tâches à fort impact et faible complexité technique (**difficulté 🟢**, réalisables en quelques heures à 1 jour) identifiées dans le [TODO.md](TODO.md).
-
-Ces chantiers ne dépendent pas de refontes architecturales complexes et apportent un gain immédiat en termes d’ergonomie, de parité avec Outlook et de confort utilisateur sous Windows 11.
+Propositions d'implémentations facilement réalisables, issues de la lecture du [TODO.md](TODO.md) : tâches 🟢 encore ouvertes, plus quelques 🟡 qui s'appuient sur du code déjà présent (EDS, `evo-core`, WinUI). Estimations : 🟢 ≈ quelques heures, 🟡 léger ≈ 1 à 2 jours.
 
 ---
 
-## 🎯 Top 3 des Quickwins immédiats
+## 🎯 Top 5 recommandé (meilleur rapport effet / coût)
 
-| # | Tâche | Référence TODO | Impact & Existant |
-|---|---|---|---|
-| 1 | **Option « Volet de lecture : Désactivé »** | [§2 Disposition des panneaux](TODO.md#demo-volet-lecture) | L'option est actuellement grisée. La fenêtre indépendante par double-clic étant déjà fonctionnelle, il suffit de permettre de masquer le volet et d'ouvrir les messages dans leur propre fenêtre. |
-| 2 | **Transférer en pièce jointe pour un message seul** | [§7 Actions sur les messages](TODO.md) | Fonctionnalité déjà codée pour la sélection multiple d'emails. Il s'agit simplement d'exposer l'action lorsqu'un seul message est sélectionné. |
-| 3 | **Mode compact (espacement plus étroit des listes)** | [§2 Disposition des panneaux](TODO.md) | Ajustement XAML pur sur les styles et paddings des `ListViewItem` (Mail et Calendrier) pour afficher plus d'éléments à l'écran. |
-
----
-
-## 1. Ergonomie et affichage (XAML / WinUI 3)
-
-- [x] **Volet de lecture désactivé** (menu *Affichage › Volet de lecture*)
-  - Activer l'entrée actuellement grisée dans le menu.
-  - Masquer le volet de lecture principal.
-  - Ouvrir directement le message en fenêtre indépendante lors de la sélection / double-clic.
-  - Mémoriser le choix dans les préférences locales.
-- [x] **Mode compact des listes** (Mail et Calendrier)
-  - Bascule dans le ruban ou les paramètres d'affichage.
-  - Réduction de la hauteur des lignes et des marges intérieures.
-- [x] **Volet des dossiers réductible** (Mail et Calendrier)
-  - États : normal, réduit (icônes seules / mini-calendrier) ou masqué.
-  - Libère de l'espace sur les écrans plus compacts.
-- [x] **Ordre des comptes dans le volet des dossiers**
-  - Placer par défaut le compte principal en haut de la liste.
-  - Proposer une option pour trier les dossiers de A à Z ou dossiers spéciaux d'abord.
+| # | Tâche | Réf. TODO | Pourquoi c'est rapide |
+|---|-------|-----------|-----------------------|
+| 1 | **Calendrier par URL ICS / webcal** | §14 — _À partir d'Internet_ | Le backend EDS `webcal` existe déjà : il suffit d'un champ URL + création de la source. |
+| 2 | **Sélection et couleurs individuelles des calendriers** (persistance des cases cochées) | §14 | Cases et couleurs déjà en place ; il reste à mémoriser l'état dans les préférences. |
+| 3 | **Choix mémorisé du mode « conversations » par dossier** | §5 | Simple clé de préférence par dossier (indépendante du moteur de regroupement). |
+| 4 | **Marquer / démarquer comme indésirable** | §8 | Déplacement vers / depuis _Indésirables_ avec la fonction de déplacement existante. |
+| 5 | **Export des messages au format EML** (dossier courant ou sélection) | §18 | L'export `.eml` unitaire existe dans `evo-core` : boucle + `FolderPicker`. |
 
 ---
 
-## 2. Actions et confort sur les messages
+## 1. Calendrier
 
-- [x] **Transférer en pièce jointe (message unique)**
-  - Ajouter l'option dans le menu contextuel et le ruban d'action d'un message sélectionné.
-  - Réutiliser la routine existante de génération de fichier `.eml` en pièce jointe.
-- [x] **Aperçus sécurisés de pièces jointes simples**
-  - **Images** (PNG, JPEG, GIF, BMP, WebP) : affichage direct dans le volet de lecture via `BitmapImage`.
-  - **Fichiers texte, JSON, CSV, logs** : affichage direct en texte brut non interprété dans un conteneur dédié.
-- [x] **Bouton « Afficher dans le navigateur »**
-  - Permettre d'ouvrir le courriel ou le portail webmail correspondant dans le navigateur système par défaut.
+- [ ] **Ajout d'un calendrier depuis une URL ICS / webcal** (§14)
+  - Entrée de menu _Ajouter un calendrier › À partir d'Internet_ ; `ContentDialog` avec URL, nom, couleur.
+  - Création d'un `ESource` de backend `webcal`, actualisation périodique.
+- [ ] **Nouveau calendrier vide** (§14)
+  - Création d'un `ESource` local (ou sur le compte) avec nom et couleur.
+- [ ] **Mémoriser les calendriers cochés et leur couleur** entre les sessions (§14)
+  - Clé de préférence par UID de source ; restauration au démarrage de la vue.
+- [ ] **Bascule superposé / côte à côte** : mémoriser le mode choisi (§12)
+- [ ] **Bloc « temps de travail individuel »** (§13)
+  - Raccourci du bouton _Nouvel événement_ : événement sans participants, `TRANSP:OPAQUE` (occupé), titre « Focus » prérempli.
+
+## 2. Courrier
+
+- [ ] **Mémoriser par dossier l'affichage en conversations** (§5)
+  - Dictionnaire `uid dossier → bool` dans les préférences, lu à la sélection du dossier.
+- [ ] **Marquer / démarquer comme indésirable** (§8)
+  - Déplacement vers / depuis le dossier _Indésirables_ avec la fonction de déplacement existante ; entrée dans le menu contextuel et le ruban.
+- [ ] **Autosave du brouillon** (§7)
+  - Minuteur (ex. 60 s) dans `MainWindow.Compose.cpp` qui réutilise l'enregistrement de brouillon existant.
+- [ ] **Importance (haute / basse)** : affichage d'une icône dans la liste à partir de l'en-tête `Importance` / `X-Priority` (§7)
+  - Choix à la rédaction : ajout de l'en-tête dans `ComposeWindow`.
+- [ ] **Afficher les en-têtes bruts / source du message** (§7)
+  - `ContentDialog` avec texte sélectionnable + bouton _Copier_, à partir de la source MIME déjà accessible pour l'export `.eml`.
+
+## 3. Interface et paramètres
+
+- [x] ~~**Thème clair / sombre / système** (§19)~~ — déjà fait
+- [ ] **Taille du texte** (§19)
+  - Échelle appliquée via une ressource XAML globale.
+- [ ] **Compte activé / désactivé sans suppression** (§3 — Synchronisation)
+  - Bascule de `ESourceExtension` _enabled_ dans la boîte de modification du compte.
+- [ ] **Quota du compte** dans l'onglet _Fichier_ (§3)
+  - `camel_folder_get_quota_info_sync` + `ProgressBar` ; masqué si non supporté.
+- [ ] **Dates, heures et tailles localisées** (§20)
+  - Remplacer les formats codés en dur par `Windows.Globalization.DateTimeFormatting`.
+
+## 4. Installation et maintenance
+
+- [ ] **Nettoyage des fichiers temporaires du glisser-déposer** (§18)
+  - Suppression à la fin du glisser ou à la fermeture (dossier temporaire dédié, purge au démarrage).
+- [ ] **`MSIRESTARTMANAGERCONTROL=Disable`** dans le MSI (§1)
+  - Une propriété à ajouter dans le WiX ; supprime toute boîte « fichiers en cours d'utilisation ».
+- [ ] **Relance de l'application après installation silencieuse** (`LAUNCHAPP=1`) (§1)
+  - Action personnalisée WiX conditionnelle, lancée dans la session de l'utilisateur.
+- [ ] **Journalisation des processus fermés** dans le journal MSI (§1)
+  - Ajout de lignes via `MsiProcessMessage` ou mention dans l'action de fermeture.
+
+## 5. Petits plus 🟡 « presque gratuits »
+
+- [ ] **Bouton _Annuler_ sur la barre de progression** (§4) : `GCancellable` déjà passé aux appels de relève, il manque l'exposition dans l'interface.
+- [ ] **Réexécuter les règles / filtres** : hors périmètre tant que l'éditeur n'existe pas ; à laisser de côté.
+- [ ] **Recherche dans le calendrier** (§12) : filtre local sur titre, lieu, description, à partir des événements déjà chargés.
 
 ---
 
-## 3. Intégration Windows 11
+## Ordre de réalisation suggéré
 
-- [x] **Progression et badge sur la barre des tâches** (`ITaskbarList3`)
-  - Jauge de progression verte lors des synchronisations / relèves de boîte.
-  - Jauge rouge en cas d'erreur de connexion ou d'échec d'envoi.
-  - Badge indiquant le nombre de messages non lus.
-- [x] **Lecture à voix haute du message**
-  - Utilisation de l'API native `Windows.Media.SpeechSynthesis`.
-  - Bouton dédié dans la barre d'outils du volet de lecture et de la fenêtre indépendante.
-
----
-
-## 4. Navigation et Calendrier
-
-- [x] **Raccourcis de navigation globale**
-  - `Ctrl+Alt+1` : Courrier
-  - `Ctrl+Alt+2` : Calendrier
-  - `Ctrl+Alt+3` : Contacts
-  - `Ctrl+Alt+4` : Tâches
-- [x] **Atteindre une date** (`Ctrl+G`)
-  - Boîte de dialogue simple pour naviguer vers une date choisie.
-  - Bouton rapide « Aujourd’hui ».
-- [x] **Échelle de temps du calendrier**
-  - Choix du pas horaire dans la grille Jour / Semaine : 15, 30 ou 60 minutes.
-- [x] **Recherche rapide de contacts**
-  - Champ de saisie direct dans le ruban avec filtrage dynamique dans le carnet d'adresses.
-
----
-
-## 5. Options utilisateur et paramètres de base ([§19](TODO.md))
-
-- [x] **Gestion du statut « Lu / Non lu »**
-  - Paramètre pour marquer automatiquement comme lu : immédiatement, après N secondes d'affichage, ou uniquement lors d'un changement de sélection.
-- [x] **Vider la Corbeille à la fermeture**
-  - Option dans les paramètres pour purger automatiquement les éléments supprimés à l'arrêt de l'application.
-- [x] **Confirmations de sécurité**
-  - Confirmation avant suppression définitive (`Maj+Suppr`).
-  - Avertissement si un message mentionne une pièce jointe mais qu'aucun fichier n'est joint.
-- [x] **Module actif au démarrage**
-  - Permettre de choisir d'ouvrir par défaut le Calendrier plutôt que le Courrier au lancement.
+1. Calendrier par URL ICS + persistance des calendriers cochés (visible en démo).
+2. Marquer comme indésirable + importance dans la liste.
+3. Taille du texte.
+4. Export EML + fichiers temporaires.
+5. Réglages MSI (`MSIRESTARTMANAGERCONTROL`, `LAUNCHAPP`).
