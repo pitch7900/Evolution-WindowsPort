@@ -193,6 +193,10 @@ namespace winrt::EvolutionWin::implementation
         void OnShowCompletedTasksClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnTaskItemClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& args);
         void OnCreateTaskFromMessageClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnCategorizeMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
+        void OnCategorizeQuickAccelerator(
+            Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender,
+            Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
         void OnTaskSearchTextChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::AutoSuggestBoxTextChangedEventArgs const& args);
         void OnTaskSearchQuerySubmitted(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::AutoSuggestBoxQuerySubmittedEventArgs const& args);
 
@@ -341,6 +345,11 @@ namespace winrt::EvolutionWin::implementation
         void MoveMessagesByUids(std::vector<hstring> const& uids, hstring const& dest_account, hstring const& dest_folder);
         void CopyMessagesByUids(std::vector<hstring> const& uids, hstring const& dest_account, hstring const& dest_folder);
         void ArchiveMessagesByUids(std::vector<hstring> const& uids);
+        void PopulateCategorizeMenuItems(
+            Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items,
+            std::vector<hstring> const& uids);
+        void ToggleCategoryForMessages(std::vector<hstring> const& uids, std::wstring const& category_name, bool apply);
+        void ClearCategoriesForMessages(std::vector<hstring> const& uids);
         void RememberRecentFolder(hstring const& account, hstring const& folder);
         void RemoveMessageFromList(hstring const& uid);
         void ClearReader();

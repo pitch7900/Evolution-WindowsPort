@@ -768,9 +768,9 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 - [ ] 🟡 **Catégories communes** à tous les types d'éléments : nom + couleur (palette d'une vingtaine de couleurs), gérées dans les Réglages (créer, renommer, changer la couleur, supprimer) <a id="demo-categories"></a>
   - [ ] Stockage : étiquettes Camel pour les mails, propriété `CATEGORIES` pour les contacts (vCard), les événements et les tâches (iCalendar)
   - [ ] 🟠 Synchronisation avec la liste de catégories principale Exchange / M365 (couleurs comprises)
-- [ ] 🟡 **Catégoriser** un élément (plusieurs catégories possibles) : menu contextuel, bouton _Catégoriser_ du ruban, catégories récentes ; raccourci vers une catégorie (Ctrl+F2…F12)
+- [x] 🟡 **Catégoriser** un élément (plusieurs catégories possibles) : menu contextuel, bouton _Catégoriser_ du ruban, catégories récentes ; raccourci vers une catégorie (Ctrl+F2…F12)
 - [ ] **Affichage des codes couleur** :
-  - [ ] 🟡 **Mails** : pastilles de couleur dans la liste des messages et dans l'en-tête du volet de lecture
+  - [x] 🟡 **Mails** : pastilles de couleur dans la liste des messages et dans l'en-tête du volet de lecture
   - [ ] 🟡 **Contacts** : pastilles dans la liste et sur la fiche
   - [ ] 🟡 **Événements** : couleur de la catégorie dans la grille du calendrier (à la place ou en complément de la couleur du calendrier, au choix)
   - [ ] 🟡 **Tâches** : pastilles dans la liste des tâches

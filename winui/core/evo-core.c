@@ -2802,22 +2802,26 @@ core_set_message_flags_run (EvoCore *core,
 	JsonBuilder *builder;
 	gchar *json;
 
-	if (g_strcmp0 (args[3], "seen") == 0) {
-		mask = CAMEL_MESSAGE_SEEN;
-	} else if (g_strcmp0 (args[3], "flagged") == 0) {
-		mask = CAMEL_MESSAGE_FLAGGED;
-	} else {
-		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
-			"Unknown message flag “%s”", args[3]);
-		return NULL;
-	}
-
 	folder = core_ref_folder (core, args[0], args[1], error);
 	if (!folder)
 		return NULL;
 
 	set_value = g_strcmp0 (args[4], "0") != 0;
-	camel_folder_set_message_flags (folder, args[2], mask, set_value ? mask : 0);
+
+	if (g_strcmp0 (args[3], "seen") == 0) {
+		mask = CAMEL_MESSAGE_SEEN;
+		camel_folder_set_message_flags (folder, args[2], mask, set_value ? mask : 0);
+	} else if (g_strcmp0 (args[3], "flagged") == 0) {
+		mask = CAMEL_MESSAGE_FLAGGED;
+		camel_folder_set_message_flags (folder, args[2], mask, set_value ? mask : 0);
+	} else {
+		/* Flag utilisateur / étiquette de catégorie (ex. "Rouge", "Travail", "Important") */
+		CamelMessageInfo *mi = camel_folder_get_message_info (folder, args[2]);
+		if (mi) {
+			camel_message_info_set_user_flag (mi, args[3], set_value);
+			g_clear_object (&mi);
+		}
+	}
 
 	/* Synchronise le changement d'indicateur avec le serveur sans bloquer
 	 * en cas d'erreur réseau temporaire (le cache local le conserve) */
@@ -2831,6 +2835,22 @@ core_set_message_flags_run (EvoCore *core,
 	json_builder_add_boolean_value (builder, (flags & CAMEL_MESSAGE_SEEN) != 0);
 	json_builder_set_member_name (builder, "flagged");
 	json_builder_add_boolean_value (builder, (flags & CAMEL_MESSAGE_FLAGGED) != 0);
+	json_builder_set_member_name (builder, "labels");
+	json_builder_begin_array (builder);
+	{
+		CamelMessageInfo *mi = camel_folder_get_message_info (folder, args[2]);
+		if (mi) {
+			const CamelNamedFlags *user_flags = camel_message_info_get_user_flags (mi);
+			guint jj, n_flags = user_flags ? camel_named_flags_get_length (user_flags) : 0;
+			for (jj = 0; jj < n_flags; jj++) {
+				const gchar *name = camel_named_flags_get (user_flags, jj);
+				if (name && *name && *name != '$' && *name != '\\')
+					json_builder_add_string_value (builder, name);
+			}
+			g_clear_object (&mi);
+		}
+	}
+	json_builder_end_array (builder);
 	json_builder_end_object (builder);
 	json = json_from_builder (builder);
 
@@ -9370,9 +9390,9 @@ task_item_new (EvoCore *core,
 	if (parent_uid && *parent_uid)
 		parent = e_source_registry_ref_source (core->registry, parent_uid);
 	account_name = parent ? e_source_get_display_name (parent) : e_source_get_display_name (source);
-	account_email = parent_uid ? core_account_get_address (core, parent_uid) : NULL;
+	account_email = parent_uid ? core_account_address (core, parent_uid) : NULL;
 	if (!account_email)
-		account_email = core_account_get_address (core, e_source_get_uid (source));
+		account_email = core_account_address (core, e_source_get_uid (source));
 
 	item->summary = g_strdup ((summary && *summary) ? summary : "(Sans titre)");
 	item->due = task_property_to_unix (client, icomp, I_CAL_DUE_PROPERTY, &due_date_only);
@@ -10568,9 +10588,9 @@ core_list_sources_run (EvoCore *core,
 			builder_add_string (builder, "uid", e_source_get_uid (source));
 			builder_add_string (builder, "name", e_source_get_display_name (source));
 			builder_add_string (builder, "kind", source_kinds[ii].kind);
-			gchar *source_acc_email = parent_uid ? core_account_get_address (core, parent_uid) : NULL;
+			gchar *source_acc_email = parent_uid ? core_account_address (core, parent_uid) : NULL;
 			if (!source_acc_email)
-				source_acc_email = core_account_get_address (core, e_source_get_uid (source));
+				source_acc_email = core_account_address (core, e_source_get_uid (source));
 			/* compte : collection ou source parente (« Sur cet ordinateur »...) */
 			builder_add_string (builder, "account", parent ? e_source_get_display_name (parent) : "");
 			builder_add_string (builder, "account_uid", parent_uid ? parent_uid : "");

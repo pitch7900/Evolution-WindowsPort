@@ -5498,6 +5498,101 @@ static void test_purge_directory_files(void)
 
 
 
+
+struct CategoryDefinition
+{
+    std::wstring name;
+    uint8_t r{ 0 };
+    uint8_t g{ 0 };
+    uint8_t b{ 0 };
+    std::wstring shortcut;
+};
+
+static std::vector<CategoryDefinition> GetDefaultCategories()
+{
+    return {
+        { L"Catégorie rouge",    232, 17,  35,  L"Ctrl+F2" },
+        { L"Catégorie orange",   255, 140, 0,   L"Ctrl+F3" },
+        { L"Catégorie jaune",    255, 185, 0,   L"Ctrl+F4" },
+        { L"Catégorie verte",    16,  124, 65,  L"Ctrl+F5" },
+        { L"Catégorie bleue",    0,   120, 212, L"Ctrl+F6" },
+        { L"Catégorie violette", 136, 23,  152, L"Ctrl+F7" },
+        { L"Important",          209, 52,  56,  L"" },
+        { L"Travail",            0,   99,  177, L"" },
+        { L"Personnel",          0,   130, 114, L"" },
+        { L"À suivre",           227, 0,   140, L"" }
+    };
+}
+
+static bool GetCategoryColor(std::wstring_view category_name, uint8_t& out_r, uint8_t& out_g, uint8_t& out_b)
+{
+    auto cats = GetDefaultCategories();
+    for (auto const& c : cats)
+    {
+        if (c.name.size() == category_name.size())
+        {
+            bool eq = true;
+            for (size_t i = 0; i < c.name.size(); ++i)
+            {
+                if (std::towlower(c.name[i]) != std::towlower(category_name[i]))
+                {
+                    eq = false;
+                    break;
+                }
+            }
+            if (eq)
+            {
+                out_r = c.r; out_g = c.g; out_b = c.b;
+                return true;
+            }
+        }
+    }
+
+    uint32_t hash = 5381;
+    for (wchar_t ch : category_name)
+        hash = ((hash << 5) + hash) + ch;
+
+    static const uint8_t fallback_palette[][3] = {
+        { 0, 120, 212 }, { 16, 124, 65 }, { 255, 140, 0 }, { 232, 17, 35 },
+        { 136, 23, 152 }, { 0, 153, 188 }, { 135, 100, 184 }, { 180, 0, 158 }
+    };
+    size_t idx = hash % (sizeof(fallback_palette) / sizeof(fallback_palette[0]));
+    out_r = fallback_palette[idx][0];
+    out_g = fallback_palette[idx][1];
+    out_b = fallback_palette[idx][2];
+    return false;
+}
+
+static void test_category_definitions_and_colors(void)
+{
+    TEST_CASE("Categories: Definitions standards et calcul des couleurs");
+    {
+        auto cats = GetDefaultCategories();
+        ASSERT_TRUE(cats.size() >= 10);
+
+        uint8_t r = 0, g = 0, b = 0;
+        bool found = GetCategoryColor(L"Catégorie rouge", r, g, b);
+        ASSERT_TRUE(found);
+        ASSERT_EQ_INT(232, r);
+        ASSERT_EQ_INT(17, g);
+        ASSERT_EQ_INT(35, b);
+
+        found = GetCategoryColor(L"catégorie rouge", r, g, b);
+        ASSERT_TRUE(found);
+
+        found = GetCategoryColor(L"Travail", r, g, b);
+        ASSERT_TRUE(found);
+        ASSERT_EQ_INT(0, r);
+        ASSERT_EQ_INT(99, g);
+        ASSERT_EQ_INT(177, b);
+
+        found = GetCategoryColor(L"Projet Inconnu 123", r, g, b);
+        ASSERT_FALSE(found);
+        ASSERT_TRUE(r != 0 || g != 0 || b != 0);
+    }
+    TEST_CASE_END();
+}
+
 int main(void)
 
 
@@ -5618,6 +5713,7 @@ int main(void)
 
 
 
+        test_category_definitions_and_colors();
     return test_suite_summary();
 
 

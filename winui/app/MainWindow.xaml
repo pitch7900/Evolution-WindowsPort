@@ -412,6 +412,24 @@
 
                         </AppBarButton>
 
+                        <AppBarButton x:Name="RibbonCategorizeButton" Label="Catégoriser" ToolTipService.ToolTip="Attribuer des catégories aux messages sélectionnés (Ctrl+F2)">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8EC;" /></AppBarButton.Icon>
+
+                            <AppBarButton.Flyout>
+
+                                <MenuFlyout x:Name="RibbonCategorizeMenu" Opening="OnCategorizeMenuOpening" />
+
+                            </AppBarButton.Flyout>
+
+                            <AppBarButton.KeyboardAccelerators>
+
+                                <KeyboardAccelerator Modifiers="Control" Key="F2" Invoked="OnCategorizeQuickAccelerator" />
+
+                            </AppBarButton.KeyboardAccelerators>
+
+                        </AppBarButton>
+
                         <AppBarSeparator />
 
                                                 <AppBarButton x:Name="RibbonCreateTaskFromMessage" Label="Créer une tâche" Click="OnCreateTaskFromMessageClick" ToolTipService.ToolTip="Créer une tâche à partir du message sélectionné (Ctrl+Maj+T)">

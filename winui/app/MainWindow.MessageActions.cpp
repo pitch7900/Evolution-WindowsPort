@@ -33,6 +33,7 @@
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
 
 #include <algorithm>
+#include <unordered_set>
 
 #include <chrono>
 
@@ -1228,5 +1229,265 @@ namespace winrt::EvolutionWin::implementation
 
     }
 
-}
 
+    /**
+     * @brief Remplit dynamiquement la liste des catégories dans un menu déroulant ou sous-menu.
+     * @param items Collection d'éléments de menu (MenuFlyout ou MenuFlyoutSubItem) à peupler.
+     * @param uids Liste des identifiants uniques des messages concernés par l'opération.
+     */
+    void MainWindow::PopulateCategorizeMenuItems(
+        Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items,
+        std::vector<hstring> const& uids)
+    {
+        items.Clear();
+
+        if (uids.empty())
+        {
+            MenuFlyoutItem empty_item;
+            empty_item.Text(L"Aucun message sélectionné");
+            empty_item.IsEnabled(false);
+            items.Append(empty_item);
+            return;
+        }
+
+        /* Compte les occurrences de chaque catégorie sur l'ensemble des messages cibles */
+        std::unordered_map<std::wstring, size_t> cat_counts;
+        if (m_all_messages)
+        {
+            std::unordered_set<std::wstring> target_set;
+            for (auto const& u : uids)
+                target_set.insert(std::wstring{ u });
+
+            for (auto const& entry : m_all_messages)
+            {
+                auto obj = entry.GetObject();
+                std::wstring uid{ obj.GetNamedString(L"uid", L"") };
+                if (target_set.count(uid) && obj.HasKey(L"labels"))
+                {
+                    auto arr = obj.GetNamedArray(L"labels");
+                    for (auto const& l : arr)
+                    {
+                        std::wstring label_str{ l.GetString() };
+                        cat_counts[label_str]++;
+                    }
+                }
+            }
+        }
+
+        auto categories = ::EvolutionWin::Helpers::GetDefaultCategories();
+
+        for (auto const& cat : categories)
+        {
+            ToggleMenuFlyoutItem item;
+            item.Text(hstring{ cat.name });
+            if (!cat.shortcut.empty())
+                item.KeyboardAcceleratorTextOverride(hstring{ cat.shortcut });
+
+            FontIcon icon;
+            icon.Glyph(L"\xF127");
+            icon.Foreground(SolidColorBrush{ Windows::UI::Color{ 255, cat.r, cat.g, cat.b } });
+            item.Icon(icon);
+
+            size_t count = cat_counts[cat.name];
+            bool all_have = (count == uids.size() && !uids.empty());
+            item.IsChecked(all_have);
+
+            std::wstring cat_name = cat.name;
+            item.Click([this, uids, cat_name, all_have](IInspectable const&, RoutedEventArgs const&)
+            {
+                ToggleCategoryForMessages(uids, cat_name, !all_have);
+            });
+
+            items.Append(item);
+        }
+
+        items.Append(MenuFlyoutSeparator{});
+
+        MenuFlyoutItem clear_item;
+        clear_item.Text(L"Effacer toutes les catégories");
+        FontIcon clear_icon;
+        clear_icon.Glyph(L"\xE74D");
+        clear_item.Icon(clear_icon);
+        clear_item.Click([this, uids](IInspectable const&, RoutedEventArgs const&)
+        {
+            ClearCategoriesForMessages(uids);
+        });
+        items.Append(clear_item);
+    }
+
+    /**
+     * @brief Attribue ou supprime une catégorie pour un ensemble de messages sélectionnés.
+     * @param uids Liste des UIDs des messages à mettre à jour.
+     * @param category_name Nom de la catégorie à attribuer ou retirer.
+     * @param apply true pour attribuer la catégorie, false pour la retirer.
+     */
+    void MainWindow::ToggleCategoryForMessages(
+        std::vector<hstring> const& uids,
+        std::wstring const& category_name,
+        bool apply)
+    {
+        if (uids.empty() || category_name.empty())
+            return;
+
+        std::unordered_set<std::wstring> target_set;
+        for (auto const& u : uids)
+            target_set.insert(std::wstring{ u });
+
+        /* 1. Mise à jour de la liste locale en mémoire pour réactivité immédiate */
+        if (m_all_messages)
+        {
+            for (auto const& entry : m_all_messages)
+            {
+                auto obj = entry.GetObject();
+                std::wstring uid{ obj.GetNamedString(L"uid", L"") };
+                if (target_set.count(uid))
+                {
+                    JsonArray labels = obj.GetNamedArray(L"labels", JsonArray{});
+                    JsonArray new_labels;
+                    bool exists = false;
+                    for (auto const& item : labels)
+                    {
+                        std::wstring val{ item.GetString() };
+                        if (val == category_name)
+                        {
+                            exists = true;
+                            if (apply)
+                                new_labels.Append(item);
+                        }
+                        else
+                        {
+                            new_labels.Append(item);
+                        }
+                    }
+
+                    if (apply && !exists)
+                    {
+                        new_labels.Append(JsonValue::CreateStringValue(hstring{ category_name }));
+                    }
+
+                    obj.SetNamedValue(L"labels", new_labels);
+                }
+            }
+        }
+
+        /* 2. Persistance et synchronisation via le moteur evo-core */
+        for (auto const& uid : uids)
+        {
+            auto loc = GetMessageLocation(uid);
+            hstring acc = loc.account.empty() ? m_account : loc.account;
+            hstring fld = loc.folder.empty() ? m_folder : loc.folder;
+
+            if (m_core && !acc.empty() && !fld.empty())
+            {
+                m_core->SetMessageFlags(acc, fld, uid, hstring{ category_name }, apply,
+                    [](hstring const&, hstring const&) {});
+            }
+        }
+
+        /* 3. Rechargement visuel de la liste des messages */
+        if (m_all_messages)
+        {
+            ShowMessages(m_all_messages);
+        }
+
+        std::wstring action_msg = apply
+            ? L"Catégorie « " + category_name + L" » attribuée."
+            : L"Catégorie « " + category_name + L" » retirée.";
+        ShowStatus(hstring{ action_msg }, InfoBarSeverity::Informational);
+    }
+
+    /**
+     * @brief Supprime toutes les catégories attribuées aux messages sélectionnés.
+     * @param uids Liste des UIDs des messages dont les catégories doivent être effacées.
+     */
+    void MainWindow::ClearCategoriesForMessages(std::vector<hstring> const& uids)
+    {
+        if (uids.empty())
+            return;
+
+        std::unordered_set<std::wstring> target_set;
+        for (auto const& u : uids)
+            target_set.insert(std::wstring{ u });
+
+        if (m_all_messages)
+        {
+            for (auto const& entry : m_all_messages)
+            {
+                auto obj = entry.GetObject();
+                std::wstring uid{ obj.GetNamedString(L"uid", L"") };
+                if (target_set.count(uid) && obj.HasKey(L"labels"))
+                {
+                    auto labels = obj.GetNamedArray(L"labels");
+                    for (auto const& item : labels)
+                    {
+                        std::wstring label{ item.GetString() };
+                        auto loc = GetMessageLocation(hstring{ uid });
+                        hstring acc = loc.account.empty() ? m_account : loc.account;
+                        hstring fld = loc.folder.empty() ? m_folder : loc.folder;
+                        if (m_core && !acc.empty() && !fld.empty())
+                        {
+                            m_core->SetMessageFlags(acc, fld, hstring{ uid }, hstring{ label }, false,
+                                [](hstring const&, hstring const&) {});
+                        }
+                    }
+                    obj.SetNamedValue(L"labels", JsonArray{});
+                }
+            }
+        }
+
+        if (m_all_messages)
+        {
+            ShowMessages(m_all_messages);
+        }
+
+        ShowStatus(L"Toutes les catégories ont été retirées des messages sélectionnés.", InfoBarSeverity::Informational);
+    }
+
+    /**
+     * @brief Gestionnaire de l'événement d'ouverture du menu déroulant de catégorisation du ruban.
+     * @param sender Élément déclencheur.
+     * @param args Arguments de l'événement d'ouverture.
+     */
+    void MainWindow::OnCategorizeMenuOpening(IInspectable const&, IInspectable const&)
+    {
+        if (auto menu = RibbonCategorizeMenu())
+        {
+            auto uids = SelectedMessageUids();
+            if (uids.empty())
+            {
+                hstring current = SelectedMessageUid();
+                if (!current.empty())
+                    uids.push_back(current);
+            }
+            PopulateCategorizeMenuItems(menu.Items(), uids);
+        }
+    }
+
+    /**
+     * @brief Gestionnaire du raccourci clavier rapide (Ctrl+F2) pour basculer la catégorie rapide.
+     * @param sender Contrôle accélérateur déclencheur.
+     * @param args Arguments de l'événement d'accélérateur clavier.
+     */
+    void MainWindow::OnCategorizeQuickAccelerator(
+        Microsoft::UI::Xaml::Input::KeyboardAccelerator const&,
+        Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args)
+    {
+        args.Handled(true);
+        auto uids = SelectedMessageUids();
+        if (uids.empty())
+        {
+            hstring current = SelectedMessageUid();
+            if (!current.empty())
+                uids.push_back(current);
+        }
+        if (!uids.empty())
+        {
+            auto cats = ::EvolutionWin::Helpers::GetDefaultCategories();
+            if (!cats.empty())
+            {
+                ToggleCategoryForMessages(uids, cats.front().name, true);
+            }
+        }
+    }
+
+}

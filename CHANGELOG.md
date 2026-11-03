@@ -40,6 +40,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Menu d'attribution rapide de catégories aux messages sélectionnés (TODO lignes 771 & 773)** :
+  - **Menu et raccourci dans le Ruban et le menu contextuel** : intégration du bouton « Catégoriser » dans le ruban Accueil (RibbonCategorizeButton, icône Tag \xE8EC) avec menu déroulant dynamique et raccourci clavier Ctrl+F2, ainsi que sous-menu contextuel dédié lors du clic-droit sur un ou plusieurs courriels.
+  - **Palette de catégories standards et synchronisation native** : palette standard de 10 catégories prédéfinies (Rouge, Orange, Jaune, Vert, Bleu, Violet, Important, Travail, Personnel, À suivre) avec pastilles de couleur carrées Fluent et indicateur d'état coché (ToggleMenuFlyoutItem).
+  - **Prise en charge moteur et persistance Camel** : extension du traitement des indicateurs dans evo-core pour enregistrer les catégories en tant que drapeaux utilisateur (camel_message_info_set_user_flag) avec synchronisation locale et distante.
+  - **Affichage visuel de badges colorés dans la liste des messages** : rendu de badges arrondis aux couleurs de chaque catégorie dans les métadonnées de la ligne de courriel. Option d'effacement complet (« Effacer toutes les catégories ») en un seul clic.
+
 - **Commande « Enregistrer sous (format .eml) » avec sélecteur de fichier FileSavePicker (TODO lignes 453 & 786)** :
   - **Exportation unitaire et par lot native** : intégration de Windows.Storage.Pickers.FileSavePicker avec filtre de fichier .eml et nom par défaut nettoyé (SanitizeFileName) pour le courriel unique, et de FolderPicker lors d'une sélection multiple pour exporter tous les courriels choisis en un seul clic.
   - **Accès direct multi-surfaces** : disponible dans le ruban principal, la barre d'outils du volet de lecture, le menu contextuel clic-droit de la liste des messages, ainsi que la barre d'outils de la fenêtre de lecture dédiée MessageWindow.

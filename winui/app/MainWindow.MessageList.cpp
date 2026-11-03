@@ -202,6 +202,37 @@ namespace winrt::EvolutionWin::implementation
                 }
             }
 
+            /* Badges colorés des catégories attribuées au message */
+            if (message.HasKey(L"labels"))
+            {
+                auto labels = message.GetNamedArray(L"labels");
+                for (auto const& l : labels)
+                {
+                    std::wstring label_str{ l.GetString() };
+                    if (!label_str.empty())
+                    {
+                        uint8_t cr = 0, cg = 0, cb = 0;
+                        ::EvolutionWin::Helpers::GetCategoryColor(label_str, cr, cg, cb);
+
+                        Border badge;
+                        badge.Background(SolidColorBrush{ Windows::UI::Color{ 255, cr, cg, cb } });
+                        badge.CornerRadius(CornerRadiusHelper::FromUniformRadius(3));
+                        badge.Padding(ThicknessHelper::FromLengths(4, 1, 4, 1));
+                        badge.VerticalAlignment(VerticalAlignment::Center);
+
+                        TextBlock badge_text;
+                        badge_text.Text(hstring{ label_str });
+                        badge_text.FontSize(10);
+                        badge_text.FontWeight(Microsoft::UI::Text::FontWeights::SemiBold());
+                        badge_text.Foreground(SolidColorBrush{ Microsoft::UI::Colors::White() });
+                        badge.Child(badge_text);
+
+                        ToolTipService::SetToolTip(badge, box_value(hstring{ label_str }));
+                        meta.Children().Append(badge);
+                    }
+                }
+            }
+
             TextBlock date;
             date.Text(FormatDate(message.GetNamedNumber(L"date", 0)));
             date.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
@@ -456,6 +487,13 @@ namespace winrt::EvolutionWin::implementation
                     SetMessagesFlag(target_uids, L"flagged", !is_flagged);
                 });
                 menu_items.Append(flag_item);
+
+                MenuFlyoutSubItem cat_sub;
+                cat_sub.Text(hstring{ L"Catégoriser" + count_suffix });
+                cat_sub.Icon(FontIcon{});
+                cat_sub.Icon().as<FontIcon>().Glyph(L"\xE8EC");
+                PopulateCategorizeMenuItems(cat_sub.Items(), target_uids);
+                menu_items.Append(cat_sub);
 
                 MenuFlyoutItem create_task_item;
                 create_task_item.Text(hstring{ L"Créer une tâche à partir du message" + count_suffix });
