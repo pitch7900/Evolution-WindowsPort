@@ -9,6 +9,7 @@
 #include <string>
 #include <shellapi.h>
 #include <mmsystem.h>
+#include <tlhelp32.h>
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "advapi32.lib")
 #include <string_view>
@@ -1115,5 +1116,103 @@ namespace EvolutionWin::Helpers
         std::error_code ec;
         std::filesystem::create_directories(path, ec);
         return path;
+    }
+
+    /**
+     * @brief Encapsule le processus courant et tous ses processus enfants (services EDS, D-Bus, etc.)
+     *        dans un Job Object Windows configuré avec JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.
+     *        Garantit que tous les processus satellites sont immédiatement et automatiquement
+     *        terminés si l'application s'arrête (normalement ou par arrêt inopiné).
+     * @return true si le Job Object a été initialisé et associé au processus, false sinon.
+     */
+    inline bool InitializeJobObject()
+    {
+        static HANDLE s_hJobObject = NULL;
+        if (!s_hJobObject)
+        {
+            s_hJobObject = CreateJobObjectW(NULL, NULL);
+            if (s_hJobObject)
+            {
+                JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli{};
+                jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK;
+                if (SetInformationJobObject(s_hJobObject, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli)))
+                {
+                    AssignProcessToJobObject(s_hJobObject, GetCurrentProcess());
+                    return true;
+                }
+            }
+        }
+        return s_hJobObject != NULL;
+    }
+
+    /**
+     * @brief Vérifie si un nom d'exécutable correspond à l'un des processus satellites
+     *        connus d'Evolution (services EDS, gdbus, helpers).
+     * @param exe_name Nom du fichier exécutable (ex. "evolution-source-registry.exe").
+     * @return true si l'exécutable est un satellite d'Evolution, false sinon.
+     */
+    inline bool IsSatelliteProcessName(std::wstring_view exe_name)
+    {
+        std::wstring name_lower{ exe_name };
+        for (auto& ch : name_lower) ch = static_cast<wchar_t>(std::towlower(ch));
+
+        static const std::wstring_view s_satellites[] = {
+            L"evolution-source-registry.exe",
+            L"evolution-addressbook-factory.exe",
+            L"evolution-calendar-factory.exe",
+            L"camel-index-control.exe",
+            L"gdbus.exe",
+            L"gspawn-win64-helper.exe"
+        };
+
+        for (auto const& sat : s_satellites)
+        {
+            if (name_lower == sat)
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Nettoyage de sécurité résiduel à la fermeture de l'application :
+     *        parcourt les processus actifs de la session utilisateur, identifie les processus
+     *        satellites orphelins (services EDS, gdbus...) et les termine proprement.
+     * @param timeout_ms Délai d'attente maximum en millisecondes avant terminaison forcée.
+     * @return Nombre de processus orphelins résiduels arrêtés.
+     */
+    inline int TerminateResidualSatelliteProcesses(DWORD timeout_ms = 500)
+    {
+        int terminated_count = 0;
+        HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if (hSnapshot == INVALID_HANDLE_VALUE)
+            return 0;
+
+        PROCESSENTRY32W pe{};
+        pe.dwSize = sizeof(pe);
+
+        DWORD current_pid = GetCurrentProcessId();
+
+        if (Process32FirstW(hSnapshot, &pe))
+        {
+            do
+            {
+                if (pe.th32ProcessID != current_pid && IsSatelliteProcessName(pe.szExeFile))
+                {
+                    HANDLE hProcess = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, FALSE, pe.th32ProcessID);
+                    if (hProcess)
+                    {
+                        if (TerminateProcess(hProcess, 0))
+                        {
+                            WaitForSingleObject(hProcess, timeout_ms);
+                            terminated_count++;
+                        }
+                        CloseHandle(hProcess);
+                    }
+                }
+            } while (Process32NextW(hSnapshot, &pe));
+        }
+
+        CloseHandle(hSnapshot);
+        return terminated_count;
     }
 }

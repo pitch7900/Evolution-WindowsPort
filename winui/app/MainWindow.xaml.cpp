@@ -241,8 +241,11 @@ namespace winrt::EvolutionWin::implementation
             /* Fermeture de toutes les fenêtres secondaires (messages, rédaction) */
             CloseAllSecondaryWindows();
 
-            /* stops the engine before the window goes away */
+            /* Arrêt propre du moteur CoreBridge / evo-core avant la destruction de la fenêtre */
             m_core.reset();
+
+            /* Nettoyage de sécurité résiduel : fermeture de tout processus satellite orphelin persistant */
+            ::EvolutionWin::Helpers::TerminateResidualSatelliteProcesses(300);
         });
     }
 

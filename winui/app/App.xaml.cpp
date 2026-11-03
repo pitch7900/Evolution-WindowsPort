@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "App.xaml.h"
 #include "MainWindow.xaml.h"
+#include "MainWindow.Helpers.h"
 #include "Settings.h"
 #include "ErrorLog.h"
 
@@ -13,6 +14,9 @@ namespace winrt::EvolutionWin::implementation
 {
     App::App()
     {
+        /* Encapsulation du processus et des futurs sous-processus EDS dans un Job Object Windows */
+        ::EvolutionWin::Helpers::InitializeJobObject();
+
         /* Application du choix de langue forcé de l'utilisateur (PrimaryLanguageOverride) */
         {
             auto saved_lang = ::EvolutionWin::Settings::Instance().GetString(L"general.language", L"system");

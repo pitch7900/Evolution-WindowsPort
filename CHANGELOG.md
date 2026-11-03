@@ -10,10 +10,15 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
-## [0.9.7] — en cours
+## [0.9.7] â en cours
 
-### Ajouté
+### AjoutÃ©
 
+- **Encapsulation Job Object et arrÃªt complet des processus d'arriÃ¨re-plan (TODO lignes 156-160)** :
+  - **Encapsulation dans un Job Object Windows au niveau noyau** : initialisation dÃ¨s le lancement (App::App) d'un Job Object configurÃ© avec JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE. Tout processus fils ou satellite lancÃ© par l'application (services EDS volution-source-registry.exe, volution-calendar-factory.exe, volution-addressbook-factory.exe, daemons D-Bus gdbus.exe, camel-index-control.exe, helpers gspawn-win64-helper.exe) est automatiquement rattachÃ© au job et garanti d'Ãªtre terminÃ© Ã  l'arrÃªt du programme, mÃªme en cas de fermeture inopinÃ©e ou forcÃ©e.
+  - **ArrÃªt ordonnÃ© des services EDS** : destruction propre de CoreBridge / vo-core sur l'Ã©vÃ©nement Closed de la fenÃªtre principale avant la fermeture de l'interface.
+  - **Nettoyage de sÃ©curitÃ© rÃ©siduel** : balayage de la session utilisateur (CreateToolhelp32Snapshot) Ã  la fermeture pour dÃ©tecter et terminer tout processus satellite persistant, assurant la libÃ©ration immÃ©diate de la mÃ©moire et la levÃ©e de tous les verrous de fichiers/bases de donnÃ©es.
+  - **Couverture par tests unitaires** : validation du Job Object et de la dÃ©tection exhaustive des satellites dans 	ests/unit/test_helpers.cpp.
 
 ## [0.9.6] — 2026-11-03
 

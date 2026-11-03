@@ -5756,6 +5756,67 @@ static void test_keyboard_shortcuts_helpers(void)
     TEST_CASE_END();
 }
 
+
+static bool InitializeJobObjectTest()
+{
+    static HANDLE s_hJobObject = NULL;
+    if (!s_hJobObject)
+    {
+        s_hJobObject = CreateJobObjectW(NULL, NULL);
+        if (s_hJobObject)
+        {
+            JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli{};
+            jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK;
+            if (SetInformationJobObject(s_hJobObject, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli)))
+            {
+                AssignProcessToJobObject(s_hJobObject, GetCurrentProcess());
+                return true;
+            }
+        }
+    }
+    return s_hJobObject != NULL;
+}
+
+static bool IsSatelliteProcessNameTest(std::wstring_view exe_name)
+{
+    std::wstring name_lower{ exe_name };
+    for (auto& ch : name_lower) ch = static_cast<wchar_t>(std::towlower(ch));
+
+    static const std::wstring_view s_satellites[] = {
+        L"evolution-source-registry.exe",
+        L"evolution-addressbook-factory.exe",
+        L"evolution-calendar-factory.exe",
+        L"camel-index-control.exe",
+        L"gdbus.exe",
+        L"gspawn-win64-helper.exe"
+    };
+
+    for (auto const& sat : s_satellites)
+    {
+        if (name_lower == sat)
+            return true;
+    }
+    return false;
+}
+
+static void test_process_lifecycle_job_object()
+{
+    TEST_CASE("ProcessLifecycle: Encapsulation Job Object et satellites");
+    {
+        ASSERT_TRUE(InitializeJobObjectTest());
+        ASSERT_TRUE(IsSatelliteProcessNameTest(L"evolution-source-registry.exe"));
+        ASSERT_TRUE(IsSatelliteProcessNameTest(L"EVOLUTION-SOURCE-REGISTRY.EXE"));
+        ASSERT_TRUE(IsSatelliteProcessNameTest(L"evolution-calendar-factory.exe"));
+        ASSERT_TRUE(IsSatelliteProcessNameTest(L"evolution-addressbook-factory.exe"));
+        ASSERT_TRUE(IsSatelliteProcessNameTest(L"gdbus.exe"));
+        ASSERT_TRUE(IsSatelliteProcessNameTest(L"camel-index-control.exe"));
+        ASSERT_FALSE(IsSatelliteProcessNameTest(L"explorer.exe"));
+        ASSERT_FALSE(IsSatelliteProcessNameTest(L"notepad.exe"));
+        ASSERT_FALSE(IsSatelliteProcessNameTest(L"EvolutionWin.exe"));
+    }
+    TEST_CASE_END();
+}
+
 int main(void)
 
 
@@ -5882,6 +5943,7 @@ int main(void)
         test_raw_mime_search();
         
         test_keyboard_shortcuts_helpers();
+        test_process_lifecycle_job_object();
 return test_suite_summary();
 
 

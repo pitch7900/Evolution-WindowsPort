@@ -1351,8 +1351,8 @@ namespace winrt::EvolutionWin::implementation
                 std::ofstream ofs(eml_path, std::ios::binary);
                 if (ofs.is_open())
                 {
-                    ofs << "Subject: " << std::string(subject.begin(), subject.end()) << "\r\n";
-                    ofs << "X-Evolution-UID: " << std::string(u.begin(), u.end()) << "\r\n";
+                    ofs << "Subject: " << winrt::to_string(subject) << "\r\n";
+                    ofs << "X-Evolution-UID: " << winrt::to_string(u) << "\r\n";
                     ofs << "MIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n";
                     ofs << "(Courriel exporté depuis Evolution)\r\n";
                     ofs.close();
