@@ -1011,4 +1011,94 @@ namespace EvolutionWin::Helpers
 
         return haystack_lower.find(needle_lower);
     }
+
+    /**
+     * @brief Définition structurée d'un raccourci clavier de l'application.
+     */
+    struct ShortcutItem
+    {
+        std::wstring category;        ///< Catégorie fonctionnelle (Navigation, Courrier, Calendrier, Contacts, Tâches)
+        std::wstring action;          ///< Libellé de l'action utilisateur
+        std::wstring keys_outlook;    ///< Combinaison de touches sous le profil Outlook (standard Windows)
+        std::wstring keys_evolution;  ///< Combinaison de touches sous le profil Evolution GNOME
+    };
+
+    /**
+     * @brief Fournit la liste de l'ensemble des raccourcis clavier disponibles.
+     * @return Vecteur contenant les définitions de tous les raccourcis.
+     */
+    inline std::vector<ShortcutItem> GetKeyboardShortcuts()
+    {
+        return {
+            /* Navigation globale */
+            { L"Navigation", L"Aller au module Courrier", L"Ctrl+Alt+1", L"Ctrl+1" },
+            { L"Navigation", L"Aller au module Calendrier", L"Ctrl+Alt+2", L"Ctrl+2" },
+            { L"Navigation", L"Aller au module Contacts", L"Ctrl+Alt+3", L"Ctrl+3" },
+            { L"Navigation", L"Aller au module Tâches", L"Ctrl+Alt+4", L"Ctrl+4" },
+            { L"Navigation", L"Rechercher dans les éléments", L"Ctrl+E", L"Ctrl+F" },
+            { L"Navigation", L"Afficher les raccourcis clavier", L"F1", L"F1" },
+
+            /* Courrier & Rédaction */
+            { L"Courrier", L"Nouveau message", L"Ctrl+N", L"Ctrl+N" },
+            { L"Courrier", L"Répondre à l'expéditeur", L"Ctrl+R", L"Ctrl+R" },
+            { L"Courrier", L"Répondre à tous les destinataires", L"Ctrl+Maj+R", L"Ctrl+Maj+R" },
+            { L"Courrier", L"Transférer le message", L"Ctrl+F", L"Ctrl+J" },
+            { L"Courrier", L"Transférer en pièce jointe (.eml)", L"Ctrl+Maj+F", L"Ctrl+Alt+F" },
+            { L"Courrier", L"Enregistrer sous le format .eml", L"Ctrl+S", L"Ctrl+S" },
+            { L"Courrier", L"Afficher la source brute MIME (RFC 822)", L"Ctrl+Maj+U", L"Ctrl+U" },
+            { L"Courrier", L"Attribuer rapidement une catégorie", L"Ctrl+F2", L"Ctrl+F2" },
+            { L"Courrier", L"Marquer comme lu", L"Ctrl+Q", L"Ctrl+K" },
+            { L"Courrier", L"Marquer comme non lu", L"Ctrl+U", L"Ctrl+Maj+K" },
+            { L"Courrier", L"Envoyer et recevoir (synchronisation)", L"F9", L"F9" },
+            { L"Courrier", L"Déplacer vers la Corbeille", L"Suppr", L"Suppr" },
+            { L"Courrier", L"Supprimer définitivement", L"Maj+Suppr", L"Maj+Suppr" },
+            { L"Courrier", L"Archiver le message sélectionné", L"Retour arrière", L"Ctrl+Alt+A" },
+            { L"Courrier", L"Imprimer le message", L"Ctrl+P", L"Ctrl+P" },
+
+            /* Calendrier & Rendez-vous */
+            { L"Calendrier", L"Nouveau rendez-vous / événement", L"Ctrl+N", L"Ctrl+Maj+E" },
+            { L"Calendrier", L"Atteindre une date précise", L"Ctrl+G", L"Ctrl+T" },
+            { L"Calendrier", L"Revenir à la date du jour", L"Ctrl+T", L"Ctrl+J" },
+            { L"Calendrier", L"Actualiser le calendrier", L"F5", L"F5" },
+
+            /* Contacts */
+            { L"Contacts", L"Nouveau contact", L"Ctrl+N", L"Ctrl+Maj+C" },
+            { L"Contacts", L"Écrire au contact sélectionné", L"Ctrl+Maj+C", L"Ctrl+N" },
+
+            /* Tâches & To-Do */
+            { L"Tâches", L"Nouvelle tâche", L"Ctrl+Maj+K", L"Ctrl+Maj+T" },
+            { L"Tâches", L"Afficher / masquer le volet des tâches", L"Alt+F2", L"F7" }
+        };
+    }
+
+    /**
+     * @brief Filtre la liste des raccourcis selon une requête textuelle (catégorie, action ou combinaison de touches).
+     * @param all Liste complète des raccourcis.
+     * @param query Chaîne de recherche (insensible à la casse).
+     * @return Liste filtrée des raccourcis correspondants.
+     */
+    inline std::vector<ShortcutItem> FilterKeyboardShortcuts(std::vector<ShortcutItem> const& all, std::wstring_view query)
+    {
+        if (query.empty())
+            return all;
+
+        std::wstring q_lower{ query };
+        for (auto& ch : q_lower) ch = static_cast<wchar_t>(std::towlower(ch));
+
+        std::vector<ShortcutItem> result;
+        for (auto const& item : all)
+        {
+            auto match = [&](std::wstring const& str) {
+                std::wstring s_lower{ str };
+                for (auto& ch : s_lower) ch = static_cast<wchar_t>(std::towlower(ch));
+                return s_lower.find(q_lower) != std::wstring::npos;
+            };
+
+            if (match(item.category) || match(item.action) || match(item.keys_outlook) || match(item.keys_evolution))
+            {
+                result.push_back(item);
+            }
+        }
+        return result;
+    }
 }

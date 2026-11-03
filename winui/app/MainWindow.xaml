@@ -34,6 +34,8 @@
 
             <KeyboardAccelerator Modifiers="Control" Key="E" Invoked="OnSearchAccelerator" />
 
+            <KeyboardAccelerator Key="F1" Invoked="OnKeyboardShortcutsAccelerator" />
+
         </Grid.KeyboardAccelerators>
 
         <Grid.RowDefinitions>
@@ -300,6 +302,9 @@
 
                             <AppBarButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarButton.Icon>
 
+                        </AppBarButton>
+                        <AppBarButton Label="Raccourcis clavier" Click="OnRibbonKeyboardShortcutsClick" ToolTipService.ToolTip="Afficher les raccourcis clavier (F1)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE765;" /></AppBarButton.Icon>
                         </AppBarButton>
 
                         <AppBarButton Label="Quitter" Click="OnRibbonQuitClick">
@@ -660,6 +665,9 @@
                             <AppBarButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarButton.Icon>
 
                         </AppBarButton>
+                        <AppBarButton Label="Raccourcis clavier" Click="OnRibbonKeyboardShortcutsClick" ToolTipService.ToolTip="Afficher les raccourcis clavier (F1)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE765;" /></AppBarButton.Icon>
+                        </AppBarButton>
 
                         <AppBarButton Label="Quitter" Click="OnRibbonQuitClick">
 
@@ -903,6 +911,9 @@
 
                             <AppBarButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarButton.Icon>
 
+                        </AppBarButton>
+                        <AppBarButton Label="Raccourcis clavier" Click="OnRibbonKeyboardShortcutsClick" ToolTipService.ToolTip="Afficher les raccourcis clavier (F1)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE765;" /></AppBarButton.Icon>
                         </AppBarButton>
 
                         <AppBarButton Label="Quitter" Click="OnRibbonQuitClick">
@@ -4353,7 +4364,27 @@
                                             <TextBlock Text="Langue d'affichage de l'application" Style="{StaticResource BodyStrongTextBlockStyle}" />
                                             <TextBlock Text="Choisissez la langue de l'interface. La modification prendra effet au prochain démarrage."
                                                        Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        
+                                <!-- Raccourcis clavier et profils -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE765;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Raccourcis clavier et profils" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Consulter la liste exhaustive des raccourcis et basculer entre le profil Outlook ou Evolution."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
+                                        <Button Grid.Column="2" Content="Afficher la liste (F1)" Click="OnRibbonKeyboardShortcutsClick" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+</StackPanel>
                                         <ComboBox Grid.Column="2" x:Name="AppearanceLanguageCombo" Tag="general.language" MinWidth="200"
                                                   SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center">
                                             <ComboBoxItem Content="Langue de Windows (par défaut)" Tag="system" />

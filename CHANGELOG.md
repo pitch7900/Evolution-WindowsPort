@@ -40,6 +40,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Boîte de dialogue complète des raccourcis clavier et profils Outlook / Evolution (TODO ligne 849)** :
+  - **Dialogue dédié et consultation ergonomique** : nouvelle fenêtre d'aide accessible via la touche `F1`, les rubans Fichier (`AppBarButton` avec icône clavier `\xE765`) et la section Paramètres > Général / Apparence.
+  - **Recherche interactive en temps réel (AutoSuggestBox)** : filtrage instantané par libellé d'action, catégorie fonctionnelle (Navigation, Courrier, Calendrier, Contacts, Tâches) ou combinaison de touches.
+  - **Sélecteur de profils de touches (Outlook / Evolution GNOME)** : affichage dynamique des correspondances de touches selon le profil sélectionné avec persistance dans les préférences (`general.shortcuts-profile`).
+  - **Badges typographiques Fluent** : rendu soigné des combinaisons de touches dans des conteneurs arrondis en police monospace haute lisibilité.
+
 - **Activation et désactivation des notifications Windows de nouveau courrier, globalement et par compte / dossier (TODO ligne 826)** :
   - **Gestion par compte dans Paramètres > Notifications** : nouvelle carte interactive permettant de choisir une boîte aux lettres et d'activer/désactiver indépendamment les notifications visuelles (`account.<id>.notifications-enabled`) et le signal sonore (`account.<id>.sound-enabled`).
   - **Menu contextuel dans l'arborescence des dossiers** : option à cocher « Notifications pour ce dossier » et « Notifications pour ce compte » directement accessible par clic droit pour couper le flux d'alertes sur des dossiers volumineux ou secondaires.

@@ -846,7 +846,7 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 - [x] 🟢 Démarrage avec Windows (via Registre HKCU\...\Run), réduction dans la zone de notification à la fermeture
   - Arrêt complet des modules et processus d'arrière-plan à la fermeture : cf. §1
 - [x] 🟢 Module affiché au démarrage (Mail, Calendrier, Contacts, Tâches)
-- [ ] 🟡 Raccourcis clavier (afficher la liste, profil Outlook / Evolution)
+- [x] 🟡 Raccourcis clavier (afficher la liste, profil Outlook / Evolution)
 
 ### Mail
 

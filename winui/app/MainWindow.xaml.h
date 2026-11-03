@@ -312,6 +312,13 @@ namespace winrt::EvolutionWin::implementation
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void PopulateNotificationAccounts();
+        void OnRibbonKeyboardShortcutsClick(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnKeyboardShortcutsAccelerator(
+            Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender,
+            Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
+        winrt::fire_and_forget ShowKeyboardShortcutsDialogAsync();
         void UpdateAccountNotificationControls();
 
     private:

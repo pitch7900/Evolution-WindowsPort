@@ -15,6 +15,7 @@
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
+#include <winrt/Windows.UI.Text.h>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -392,5 +393,202 @@ namespace winrt::EvolutionWin::implementation
             Navigation().SelectedItem(Navigation().SettingsItem());
             SelectSettingsCategory(L"about");
         }
+    }
+
+    /**
+     * @brief Ouvre la boîte de dialogue de consultation des raccourcis clavier depuis le ruban ou les paramètres.
+     * @param sender Élément graphique déclencheur.
+     * @param args Arguments d'événement de clic.
+     */
+    void MainWindow::OnRibbonKeyboardShortcutsClick(
+        [[maybe_unused]] IInspectable const& sender,
+        [[maybe_unused]] RoutedEventArgs const& args)
+    {
+        ShowKeyboardShortcutsDialogAsync();
+    }
+
+    /**
+     * @brief Gestionnaire de l'accélérateur universel F1 pour afficher instantanément la liste des raccourcis.
+     * @param sender Accélérateur clavier déclencheur.
+     * @param args Arguments d'invocation de l'accélérateur.
+     */
+    void MainWindow::OnKeyboardShortcutsAccelerator(
+        [[maybe_unused]] Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender,
+        Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args)
+    {
+        args.Handled(true);
+        ShowKeyboardShortcutsDialogAsync();
+    }
+
+    /**
+     * @brief Présente la boîte de dialogue complète des raccourcis clavier avec recherche interactive et choix de profil.
+     */
+    fire_and_forget MainWindow::ShowKeyboardShortcutsDialogAsync()
+    {
+        auto strong = get_strong();
+        if (m_dialog_open || !Content() || !Content().XamlRoot())
+            co_return;
+        m_dialog_open = true;
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(L"Raccourcis clavier d'Evolution"));
+        dialog.CloseButtonText(L"Fermer");
+        dialog.DefaultButton(ContentDialogButton::Close);
+
+        Grid root;
+        root.Width(620);
+        root.MaxHeight(540);
+        RowDefinition top_row;
+        top_row.Height(GridLengthHelper::Auto());
+        root.RowDefinitions().Append(top_row);
+        RowDefinition list_row;
+        list_row.Height(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+        root.RowDefinitions().Append(list_row);
+
+        /* Barre d'outils supérieure : recherche et profil (Outlook / Evolution) */
+        Grid top_bar;
+        top_bar.Margin(ThicknessHelper::FromLengths(0, 0, 0, 12));
+        top_bar.ColumnDefinitions().Append(ColumnDefinition{});
+        ColumnDefinition col_spacer;
+        col_spacer.Width(GridLengthHelper::FromPixels(16));
+        top_bar.ColumnDefinitions().Append(col_spacer);
+        ColumnDefinition col_combo;
+        col_combo.Width(GridLengthHelper::Auto());
+        top_bar.ColumnDefinitions().Append(col_combo);
+
+        AutoSuggestBox search_box;
+        search_box.PlaceholderText(L"Rechercher une action ou un raccourci...");
+        FontIcon search_icon;
+        search_icon.Glyph(L"\xE721");
+        search_box.QueryIcon(search_icon);
+        top_bar.Children().Append(search_box);
+        Grid::SetColumn(search_box, 0);
+
+        ComboBox profile_combo;
+        profile_combo.MinWidth(180);
+        ComboBoxItem item_outlook;
+        item_outlook.Content(box_value(L"Profil Outlook (défaut)"));
+        item_outlook.Tag(box_value(L"outlook"));
+        ComboBoxItem item_evo;
+        item_evo.Content(box_value(L"Profil Evolution GNOME"));
+        item_evo.Tag(box_value(L"evolution"));
+        profile_combo.Items().Append(item_outlook);
+        profile_combo.Items().Append(item_evo);
+
+        hstring saved_profile = ::EvolutionWin::Settings::Instance().GetString(L"general.shortcuts-profile", L"outlook");
+        profile_combo.SelectedIndex(saved_profile == L"evolution" ? 1 : 0);
+        top_bar.Children().Append(profile_combo);
+        Grid::SetColumn(profile_combo, 2);
+
+        root.Children().Append(top_bar);
+        Grid::SetRow(top_bar, 0);
+
+        ScrollViewer scroller;
+        scroller.VerticalScrollBarVisibility(ScrollBarVisibility::Auto);
+        scroller.HorizontalScrollBarVisibility(ScrollBarVisibility::Disabled);
+
+        StackPanel list_panel;
+        list_panel.Spacing(8);
+        scroller.Content(list_panel);
+
+        root.Children().Append(scroller);
+        Grid::SetRow(scroller, 1);
+
+        auto refresh_list = [this, list_panel, search_box, profile_combo]()
+        {
+            list_panel.Children().Clear();
+            std::wstring query{ search_box.Text() };
+            bool is_evo = profile_combo.SelectedIndex() == 1;
+
+            auto all = ::EvolutionWin::Helpers::GetKeyboardShortcuts();
+            auto filtered = ::EvolutionWin::Helpers::FilterKeyboardShortcuts(all, query);
+
+            if (filtered.empty())
+            {
+                TextBlock empty_txt;
+                empty_txt.Text(L"Aucun raccourci ne correspond à votre recherche.");
+                empty_txt.Margin(ThicknessHelper::FromLengths(0, 24, 0, 24));
+                empty_txt.HorizontalAlignment(HorizontalAlignment::Center);
+                empty_txt.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+                list_panel.Children().Append(empty_txt);
+                return;
+            }
+
+            std::wstring current_cat;
+            for (auto const& sc : filtered)
+            {
+                if (sc.category != current_cat)
+                {
+                    current_cat = sc.category;
+                    TextBlock cat_hdr;
+                    cat_hdr.Text(current_cat);
+                    cat_hdr.Style(Application::Current().Resources().Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>());
+                    cat_hdr.Margin(ThicknessHelper::FromLengths(0, list_panel.Children().Size() == 0 ? 0 : 8, 0, 4));
+                    cat_hdr.Foreground(Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
+                    list_panel.Children().Append(cat_hdr);
+                }
+
+                Border row_card;
+                row_card.Background(Application::Current().Resources().Lookup(box_value(L"CardBackgroundFillColorDefaultBrush")).as<Brush>());
+                row_card.BorderBrush(Application::Current().Resources().Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>());
+                row_card.BorderThickness(ThicknessHelper::FromLengths(1, 1, 1, 1));
+                row_card.CornerRadius(CornerRadiusHelper::FromRadii(4, 4, 4, 4));
+                row_card.Padding(ThicknessHelper::FromLengths(12, 8, 12, 8));
+
+                Grid row_grid;
+                row_grid.ColumnDefinitions().Append(ColumnDefinition{});
+                ColumnDefinition key_col;
+                key_col.Width(GridLengthHelper::Auto());
+                row_grid.ColumnDefinitions().Append(key_col);
+
+                TextBlock action_txt;
+                action_txt.Text(sc.action);
+                action_txt.VerticalAlignment(VerticalAlignment::Center);
+                row_grid.Children().Append(action_txt);
+                Grid::SetColumn(action_txt, 0);
+
+                Border key_badge;
+                key_badge.Background(Application::Current().Resources().Lookup(box_value(L"SubtleFillColorSecondaryBrush")).as<Brush>());
+                key_badge.BorderBrush(Application::Current().Resources().Lookup(box_value(L"ControlStrokeColorDefaultBrush")).as<Brush>());
+                key_badge.BorderThickness(ThicknessHelper::FromLengths(1, 1, 1, 1));
+                key_badge.CornerRadius(CornerRadiusHelper::FromRadii(4, 4, 4, 4));
+                key_badge.Padding(ThicknessHelper::FromLengths(8, 2, 8, 2));
+
+                TextBlock key_txt;
+                key_txt.Text(is_evo ? sc.keys_evolution : sc.keys_outlook);
+                key_txt.FontFamily(FontFamily{ L"Segoe UI Variable Display, Cascadia Mono, Consolas" });
+                key_txt.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
+                key_txt.FontSize(12);
+                key_badge.Child(key_txt);
+
+                row_grid.Children().Append(key_badge);
+                Grid::SetColumn(key_badge, 1);
+
+                row_card.Child(row_grid);
+                list_panel.Children().Append(row_card);
+            }
+        };
+
+        search_box.TextChanged([refresh_list](AutoSuggestBox const&, AutoSuggestBoxTextChangedEventArgs const&)
+        {
+            refresh_list();
+        });
+
+        profile_combo.SelectionChanged([refresh_list](IInspectable const&, SelectionChangedEventArgs const&)
+        {
+            refresh_list();
+        });
+
+        refresh_list();
+
+        dialog.Content(root);
+        co_await dialog.ShowAsync();
+
+        /* Persistance du profil sélectionné */
+        hstring chosen_profile = profile_combo.SelectedIndex() == 1 ? L"evolution" : L"outlook";
+        ::EvolutionWin::Settings::Instance().SetString(L"general.shortcuts-profile", chosen_profile);
+
+        m_dialog_open = false;
     }
 }

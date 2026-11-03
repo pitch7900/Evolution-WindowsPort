@@ -5629,6 +5629,123 @@ static void test_raw_mime_search(void)
     TEST_CASE_END();
 }
 
+struct ShortcutItem
+{
+    std::wstring category;
+    std::wstring action;
+    std::wstring keys_outlook;
+    std::wstring keys_evolution;
+};
+
+static std::vector<ShortcutItem> GetKeyboardShortcuts()
+{
+    return {
+        { L"Navigation", L"Aller au module Courrier", L"Ctrl+Alt+1", L"Ctrl+1" },
+        { L"Navigation", L"Aller au module Calendrier", L"Ctrl+Alt+2", L"Ctrl+2" },
+        { L"Navigation", L"Aller au module Contacts", L"Ctrl+Alt+3", L"Ctrl+3" },
+        { L"Navigation", L"Aller au module Tâches", L"Ctrl+Alt+4", L"Ctrl+4" },
+        { L"Navigation", L"Rechercher dans les éléments", L"Ctrl+E", L"Ctrl+F" },
+        { L"Navigation", L"Afficher les raccourcis clavier", L"F1", L"F1" },
+
+        { L"Courrier", L"Nouveau message", L"Ctrl+N", L"Ctrl+N" },
+        { L"Courrier", L"Répondre à l'expéditeur", L"Ctrl+R", L"Ctrl+R" },
+        { L"Courrier", L"Répondre à tous les destinataires", L"Ctrl+Maj+R", L"Ctrl+Maj+R" },
+        { L"Courrier", L"Transférer le message", L"Ctrl+F", L"Ctrl+J" },
+        { L"Courrier", L"Transférer en pièce jointe (.eml)", L"Ctrl+Maj+F", L"Ctrl+Alt+F" },
+        { L"Courrier", L"Enregistrer sous le format .eml", L"Ctrl+S", L"Ctrl+S" },
+        { L"Courrier", L"Afficher la source brute MIME (RFC 822)", L"Ctrl+Maj+U", L"Ctrl+U" },
+        { L"Courrier", L"Attribuer rapidement une catégorie", L"Ctrl+F2", L"Ctrl+F2" },
+        { L"Courrier", L"Marquer comme lu", L"Ctrl+Q", L"Ctrl+K" },
+        { L"Courrier", L"Marquer comme non lu", L"Ctrl+U", L"Ctrl+Maj+K" },
+        { L"Courrier", L"Envoyer et recevoir (synchronisation)", L"F9", L"F9" },
+        { L"Courrier", L"Déplacer vers la Corbeille", L"Suppr", L"Suppr" },
+        { L"Courrier", L"Supprimer définitivement", L"Maj+Suppr", L"Maj+Suppr" },
+        { L"Courrier", L"Archiver le message sélectionné", L"Retour arrière", L"Ctrl+Alt+A" },
+        { L"Courrier", L"Imprimer le message", L"Ctrl+P", L"Ctrl+P" },
+
+        { L"Calendrier", L"Nouveau rendez-vous / événement", L"Ctrl+N", L"Ctrl+Maj+E" },
+        { L"Calendrier", L"Atteindre une date précise", L"Ctrl+G", L"Ctrl+T" },
+        { L"Calendrier", L"Revenir à la date du jour", L"Ctrl+T", L"Ctrl+J" },
+        { L"Calendrier", L"Actualiser le calendrier", L"F5", L"F5" },
+
+        { L"Contacts", L"Nouveau contact", L"Ctrl+N", L"Ctrl+Maj+C" },
+        { L"Contacts", L"Écrire au contact sélectionné", L"Ctrl+Maj+C", L"Ctrl+N" },
+
+        { L"Tâches", L"Nouvelle tâche", L"Ctrl+Maj+K", L"Ctrl+Maj+T" },
+        { L"Tâches", L"Afficher / masquer le volet des tâches", L"Alt+F2", L"F7" }
+    };
+}
+
+static std::vector<ShortcutItem> FilterKeyboardShortcuts(std::vector<ShortcutItem> const& all, std::wstring_view query)
+{
+    if (query.empty())
+        return all;
+
+    std::wstring q_lower{ query };
+    for (auto& ch : q_lower) ch = static_cast<wchar_t>(std::towlower(ch));
+
+    std::vector<ShortcutItem> result;
+    for (auto const& item : all)
+    {
+        auto match = [&](std::wstring const& str) {
+            std::wstring s_lower{ str };
+            for (auto& ch : s_lower) ch = static_cast<wchar_t>(std::towlower(ch));
+            return s_lower.find(q_lower) != std::wstring::npos;
+        };
+
+        if (match(item.category) || match(item.action) || match(item.keys_outlook) || match(item.keys_evolution))
+        {
+            result.push_back(item);
+        }
+    }
+    return result;
+}
+
+static std::string WstringToNarrow(std::wstring const& wstr)
+{
+    std::string res;
+    for (wchar_t c : wstr) res.push_back(static_cast<char>(c));
+    return res;
+}
+
+static void test_keyboard_shortcuts_helpers(void)
+{
+    TEST_CASE("Shortcuts: Liste complete et recherche multi-criteres");
+    {
+        auto all = GetKeyboardShortcuts();
+        ASSERT_TRUE(all.size() >= 20);
+
+        /* Recherche globale F1 */
+        auto f1_list = FilterKeyboardShortcuts(all, L"F1");
+        ASSERT_TRUE(f1_list.size() >= 1);
+        std::string cat_str = WstringToNarrow(f1_list[0].category);
+        ASSERT_EQ_STR("Navigation", cat_str.c_str());
+
+        /* Recherche par categorie "Courrier" */
+        auto mail_list = FilterKeyboardShortcuts(all, L"courrier");
+        ASSERT_TRUE(mail_list.size() >= 10);
+
+        /* Recherche par combinaison de touches "Ctrl+S" */
+        auto save_list = FilterKeyboardShortcuts(all, L"Ctrl+S");
+        ASSERT_TRUE(save_list.size() >= 1);
+        std::string save_action = WstringToNarrow(save_list[0].action);
+        ASSERT_EQ_STR("Enregistrer sous le format .eml", save_action.c_str());
+
+        /* Verification de la divergence de profil Outlook vs Evolution pour Transferer */
+        auto forward_list = FilterKeyboardShortcuts(all, L"Transférer");
+        ASSERT_TRUE(forward_list.size() >= 1);
+        std::string fwd_outlook = WstringToNarrow(forward_list[0].keys_outlook);
+        std::string fwd_evo = WstringToNarrow(forward_list[0].keys_evolution);
+        ASSERT_EQ_STR("Ctrl+F", fwd_outlook.c_str());
+        ASSERT_EQ_STR("Ctrl+J", fwd_evo.c_str());
+
+        /* Recherche infructueuse */
+        auto empty_list = FilterKeyboardShortcuts(all, L"Inconnu_XYZ_999");
+        ASSERT_TRUE(empty_list.empty());
+    }
+    TEST_CASE_END();
+}
+
 int main(void)
 
 
@@ -5749,9 +5866,13 @@ int main(void)
 
 
 
+
+
         test_category_definitions_and_colors();
         test_raw_mime_search();
-    return test_suite_summary();
+        
+        test_keyboard_shortcuts_helpers();
+return test_suite_summary();
 
 
 
