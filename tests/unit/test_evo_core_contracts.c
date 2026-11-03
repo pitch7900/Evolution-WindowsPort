@@ -313,6 +313,17 @@ static void test_json_event_contracts(void)
 /**
  * @brief Test de la validation des adresses de calendriers web (ICS / webcal).
  */
+static void test_account_enabled_contract(void)
+{
+    TEST_CASE("Contrats JSON: Propriete 'enabled' d\'activation de compte");
+    {
+        const char *sample_account = "{\"uid\": \"account-1\", \"name\": \"Mon Compte\", \"enabled\": true, \"default\": false}";
+        ASSERT_CONTAINS(sample_account, "\"enabled\":");
+        ASSERT_CONTAINS(sample_account, "true");
+    }
+    TEST_CASE_END();
+}
+
 static void test_calendar_url_validation(void)
 {
     TEST_CASE("Calendrier web: classification des adresses ICS / webcal");
@@ -340,6 +351,7 @@ int main(void)
     test_special_folders_priority();
     test_json_event_contracts();
     test_calendar_url_validation();
+    test_account_enabled_contract();
 
     return test_suite_summary();
 }

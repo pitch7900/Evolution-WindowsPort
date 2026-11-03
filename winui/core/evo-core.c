@@ -1679,6 +1679,10 @@ core_list_accounts_run (EvoCore *core,
 		json_builder_set_member_name (builder, "default");
 		json_builder_add_boolean_value (builder, default_account &&
 			g_strcmp0 (e_source_get_uid (default_account), camel_service_get_uid (service)) == 0);
+		ESource *src = e_source_registry_ref_source (core->registry, camel_service_get_uid (service));
+		json_builder_set_member_name (builder, "enabled");
+		json_builder_add_boolean_value (builder, src ? e_source_get_enabled (src) : TRUE);
+		g_clear_object (&src);
 		core_builder_add_identity_signature (core, builder, camel_service_get_uid (service));
 		json_builder_end_object (builder);
 
@@ -6448,6 +6452,7 @@ core_get_account_run (EvoCore *core,
 	builder_add_string (builder, "backend", backend ? backend : "");
 	builder_add_boolean (builder, "default", is_default);
 	builder_add_boolean (builder, "local", g_strcmp0 (account_uid, "local") == 0);
+	builder_add_boolean (builder, "enabled", e_source_get_enabled (account));
 
 	builder_add_string (builder, "imap_host", imap_host ? imap_host : "");
 	builder_add_int (builder, "imap_port", (gint64) imap_port);
@@ -6565,6 +6570,15 @@ core_modify_account_run (EvoCore *core,
 
 	if (display_name && *display_name)
 		e_source_set_display_name (account, display_name);
+
+	if (json_object_has_member (object, "enabled")) {
+		gboolean enabled = json_object_get_boolean_member (object, "enabled");
+		e_source_set_enabled (account, enabled);
+		if (identity)
+			e_source_set_enabled (identity, enabled);
+		if (transport)
+			e_source_set_enabled (transport, enabled);
+	}
 
 	if (e_source_has_extension (account, E_SOURCE_EXTENSION_MAIL_ACCOUNT)) {
 		mail_account = e_source_get_extension (account, E_SOURCE_EXTENSION_MAIL_ACCOUNT);

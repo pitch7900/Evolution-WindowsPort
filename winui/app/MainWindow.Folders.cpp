@@ -91,9 +91,14 @@ namespace winrt::EvolutionWin::implementation
                 hstring uid = account.GetNamedString(L"uid");
                 bool local = account.GetNamedBoolean(L"local", false);
 
+                bool enabled = account.GetNamedBoolean(L"enabled", true);
+                hstring acc_name = account.GetNamedString(L"name", uid);
+                if (!enabled)
+                    acc_name = acc_name + L" (Désactivé)";
+
                 TreeViewNode node;
-                node.Content(EvolutionWin::FolderItem(account.GetNamedString(L"name", uid),
-                    local ? L"\xE7F8" : L"\xE715", 0, uid, L"", true));
+                node.Content(EvolutionWin::FolderItem(acc_name,
+                    local ? L"\xE7F8" : (enabled ? L"\xE715" : L"\xE8D8"), 0, uid, L"", true));
                 node.IsExpanded(true);
                 FolderTree().RootNodes().Append(node);
                 m_nodes[NodeKey(uid, L"")] = node;

@@ -1822,6 +1822,7 @@ namespace winrt::EvolutionWin::implementation
         hstring real_name = acct.GetNamedString(L"real_name", L"");
         hstring email = acct.GetNamedString(L"email", acct.GetNamedString(L"address", L""));
         bool is_default_initial = acct.GetNamedBoolean(L"default", false);
+        bool is_enabled_initial = acct.GetNamedBoolean(L"enabled", true);
 
         hstring imap_host = acct.GetNamedString(L"imap_host", L"");
         int imap_port = static_cast<int>(acct.GetNamedNumber(L"imap_port", 993));
@@ -1880,6 +1881,11 @@ namespace winrt::EvolutionWin::implementation
         email_box.Header(box_value(L"Adresse électronique"));
         email_box.Text(email);
         main_panel.Children().Append(email_box);
+
+        CheckBox is_enabled_check;
+        is_enabled_check.Content(box_value(L"Activer ce compte (synchronisation et relève des courriels)"));
+        is_enabled_check.IsChecked(is_enabled_initial);
+        main_panel.Children().Append(is_enabled_check);
 
         CheckBox is_default_check;
         is_default_check.Content(box_value(L"Définir comme compte par défaut pour les nouveaux messages"));
@@ -2117,6 +2123,7 @@ namespace winrt::EvolutionWin::implementation
         new_sf.SetNamedValue(L"junk", JsonValue::CreateStringValue(GetSelectedFolderChoice(junk_combo)));
         new_sf.SetNamedValue(L"archive", JsonValue::CreateStringValue(GetSelectedFolderChoice(archive_combo)));
         update.SetNamedValue(L"special_folders", new_sf);
+        update.SetNamedValue(L"enabled", JsonValue::CreateBooleanValue(is_enabled_check.IsChecked().Value()));
 
         bool new_default = is_default_check.IsChecked().Value();
 

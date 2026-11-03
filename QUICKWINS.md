@@ -48,7 +48,7 @@ Propositions d'implémentations facilement réalisables, issues de la lecture du
 - [x] ~~**Thème clair / sombre / système** (§19)~~ — déjà fait
 - [x] **Taille du texte** (§19) — fait pour la lecture (liste Paramètres › Apparence appliquée comme zoom du lecteur)
   - Échelle appliquée via une ressource XAML globale.
-- [ ] **Compte activé / désactivé sans suppression** (§3 — Synchronisation)
+- [x] **Compte activé / désactivé sans suppression** (§3 — Synchronisation) — fait
   - Bascule de `ESourceExtension` _enabled_ dans la boîte de modification du compte.
 - [ ] **Quota du compte** dans l'onglet _Fichier_ (§3)
   - `camel_folder_get_quota_info_sync` + `ProgressBar` ; masqué si non supporté.
