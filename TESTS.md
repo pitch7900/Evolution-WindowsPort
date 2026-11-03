@@ -53,6 +53,7 @@ Valide les fonctions pures issues de `MainWindow.Helpers.h` :
 - **Formatage des suggestions de contacts (`FormatContactSuggestion`)** : présentation élégante des contacts ("Nom <email>" ou repli sur le champ disponible) pour la recherche rapide dans l'AutoSuggestBox du ruban.
 - **Hauteur des créneaux de calendrier (`GetCalendarHourHeight`)** : validation des calculs de hauteur d'affichage selon le pas horaire (60 min = 48px, 30 min = 72px, 15 min = 120px).
 - **Nettoyage de fichiers temporaires (`PurgeDirectoryFiles`)** : validation de la purge des répertoires de cache et calcul de l'espace libéré.
+- **Gestion du second fuseau horaire (`GetTimezoneUtcOffsetHours`, `GetTimezoneShortLabel`, `CalculateEquivalentHour`)** : décalages UTC, abréviations courtes et conversion d'heures avec gestion du passage de minuit.
 
 ### Suite 2 : Contrats d'interface et robustesse `evo-core` (`test_evo_core_contracts.c`)
 Vérifie la robustesse du moteur C et ses échanges avec l'interface :

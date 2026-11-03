@@ -626,4 +626,75 @@ namespace EvolutionWin::Helpers
             ::MessageBeep(MB_ICONASTERISK);
         }
     }
+
+    /**
+     * @brief Calcule le décalage UTC en heures pour un fuseau horaire spécifié.
+     * @param tz Identifiant ou nom du fuseau horaire (ex: "UTC", "America/New_York", etc.).
+     * @param is_dst true si l'heure d'été est active, false sinon.
+     * @return Décalage en heures par rapport à UTC.
+     */
+    inline int GetTimezoneUtcOffsetHours(std::wstring_view tz, bool is_dst = false)
+    {
+        if (tz == L"UTC") return 0;
+        if (tz == L"Europe/London") return is_dst ? 1 : 0;
+        if (tz == L"America/New_York") return is_dst ? -4 : -5;
+        if (tz == L"America/Los_Angeles") return is_dst ? -7 : -8;
+        if (tz == L"Europe/Paris") return is_dst ? 2 : 1;
+        if (tz == L"Asia/Tokyo") return 9;
+        return 0;
+    }
+
+    /**
+     * @brief Renvoie le libellé court d'un fuseau horaire (ex: "UTC", "NYC", "PAR").
+     * @param tz Identifiant du fuseau horaire.
+     * @return Libellé court de 3 ou 4 lettres.
+     */
+    inline std::wstring GetTimezoneShortLabel(std::wstring_view tz)
+    {
+        if (tz == L"UTC") return L"UTC";
+        if (tz == L"America/New_York") return L"NYC";
+        if (tz == L"America/Los_Angeles") return L"LA";
+        if (tz == L"Europe/Paris") return L"PAR";
+        if (tz == L"Europe/London") return L"LON";
+        if (tz == L"Asia/Tokyo") return L"TYO";
+        return L"TZ2";
+    }
+
+    /**
+     * @brief Calcule l'heure correspondante dans un second fuseau horaire pour une heure locale donnée.
+     * @param local_hour Heure locale (0 à 23).
+     * @param local_offset Décalage UTC de l'heure locale en heures.
+     * @param target_offset Décalage UTC du second fuseau en heures.
+     * @return Heure dans le second fuseau (0 à 23).
+     */
+    inline int CalculateEquivalentHour(int local_hour, int local_offset, int target_offset)
+    {
+        int diff = target_offset - local_offset;
+        int target = (local_hour + diff) % 24;
+        if (target < 0)
+            target += 24;
+        return target;
+    }
+
+    /**
+     * @brief Détermine le décalage actuel en heures entre l'heure locale et le temps universel UTC.
+     * @return Décalage en heures par rapport à UTC.
+     */
+    inline int GetLocalUtcOffsetHours()
+    {
+        time_t now = time(nullptr);
+        struct tm local_tm{}, gm_tm{};
+        localtime_s(&local_tm, &now);
+        gmtime_s(&gm_tm, &now);
+
+        int offset = local_tm.tm_hour - gm_tm.tm_hour;
+        if (local_tm.tm_mday != gm_tm.tm_mday)
+        {
+            if (local_tm.tm_mday > gm_tm.tm_mday || (local_tm.tm_mon > gm_tm.tm_mon && local_tm.tm_mday == 1))
+                offset += 24;
+            else
+                offset -= 24;
+        }
+        return offset;
+    }
 }

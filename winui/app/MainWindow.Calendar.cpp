@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
+#include "MainWindow.Helpers.h"
 #include "Settings.h"
 
 #include <algorithm>
@@ -19,6 +20,7 @@ using namespace Microsoft::UI::Xaml::Controls;
 using namespace Microsoft::UI::Xaml::Media;
 using namespace Windows::Data::Json;
 using namespace Windows::Foundation;
+using namespace ::EvolutionWin::Helpers;
 
 namespace
 {
@@ -178,10 +180,18 @@ namespace winrt::EvolutionWin::implementation
         auto day_starts = DayStarts(start_unix, days);
         int64_t now = static_cast<int64_t>(std::time(nullptr));
 
-        auto add_columns = [days](Grid const& grid)
+        /* Configuration du second fuseau horaire dans la grille */
+        bool second_tz_enabled = ::EvolutionWin::Settings::Instance().GetBoolean(L"calendar.second-timezone-enabled", false);
+        std::wstring second_tz{ ::EvolutionWin::Settings::Instance().GetString(L"calendar.second-timezone", L"UTC") };
+        double gutter_width = second_tz_enabled ? 96.0 : GutterWidth;
+        int local_utc_offset = GetLocalUtcOffsetHours();
+        int target_utc_offset = GetTimezoneUtcOffsetHours(second_tz);
+        std::wstring target_tz_label = GetTimezoneShortLabel(second_tz);
+
+        auto add_columns = [days, gutter_width](Grid const& grid)
         {
             ColumnDefinition gutter;
-            gutter.Width(GridLengthHelper::FromPixels(GutterWidth));
+            gutter.Width(GridLengthHelper::FromPixels(gutter_width));
             grid.ColumnDefinitions().Append(gutter);
             for (int day = 0; day < days; day++)
                 grid.ColumnDefinitions().Append(ColumnDefinition{});
@@ -202,6 +212,34 @@ namespace winrt::EvolutionWin::implementation
         Grid headers;
         add_columns(headers);
         headers.Padding(ThicknessHelper::FromLengths(0, 0, 0, 4));
+
+        if (second_tz_enabled)
+        {
+            Grid tz_headers;
+            ColumnDefinition tz_c1, tz_c2;
+            tz_c1.Width(GridLengthHelper::FromPixels(46));
+            tz_c2.Width(GridLengthHelper::FromPixels(50));
+            tz_headers.ColumnDefinitions().Append(tz_c1);
+            tz_headers.ColumnDefinitions().Append(tz_c2);
+            tz_headers.Padding(ThicknessHelper::FromLengths(6, 4, 0, 0));
+
+            TextBlock tz2_title;
+            tz2_title.Text(hstring{ target_tz_label });
+            tz2_title.Style(ThemeStyle(L"CaptionTextBlockStyle"));
+            tz2_title.Foreground(ThemeBrush(L"TextFillColorTertiaryBrush"));
+            tz2_title.FontSize(10);
+            tz_headers.Children().Append(tz2_title);
+
+            TextBlock tz1_title;
+            tz1_title.Text(L"Local");
+            tz1_title.Style(ThemeStyle(L"CaptionTextBlockStyle"));
+            tz1_title.Foreground(ThemeBrush(L"TextFillColorSecondaryBrush"));
+            tz1_title.FontSize(10);
+            Grid::SetColumn(tz1_title, 1);
+            tz_headers.Children().Append(tz1_title);
+
+            headers.Children().Append(tz_headers);
+        }
         for (int day = 0; day < days; day++)
         {
             bool today = now >= day_starts[day] && now < day_starts[day + 1];
@@ -292,6 +330,17 @@ namespace winrt::EvolutionWin::implementation
         add_columns(body);
         body.Height(24 * HourHeight);
 
+        if (second_tz_enabled)
+        {
+            Border tz_sep;
+            tz_sep.BorderBrush(ThemeBrush(L"DividerStrokeColorDefaultBrush"));
+            tz_sep.BorderThickness(ThicknessHelper::FromLengths(1, 0, 0, 0));
+            tz_sep.Height(24 * HourHeight);
+            tz_sep.HorizontalAlignment(HorizontalAlignment::Left);
+            tz_sep.Margin(ThicknessHelper::FromLengths(46, 0, 0, 0));
+            body.Children().Append(tz_sep);
+        }
+
         for (int hour = 0; hour < 24; hour++)
         {
             // Ligne principale d'heure
@@ -305,12 +354,24 @@ namespace winrt::EvolutionWin::implementation
             Grid::SetColumnSpan(line, days);
             body.Children().Append(line);
 
+            if (second_tz_enabled)
+            {
+                int h2 = CalculateEquivalentHour(hour, local_utc_offset, target_utc_offset);
+                TextBlock label2;
+                label2.Text(h2 < 10 ? L"0" + to_hstring(h2) + L":00" : to_hstring(h2) + L":00");
+                label2.Style(ThemeStyle(L"CaptionTextBlockStyle"));
+                label2.Foreground(ThemeBrush(L"TextFillColorTertiaryBrush"));
+                label2.VerticalAlignment(VerticalAlignment::Top);
+                label2.Margin(ThicknessHelper::FromLengths(6, hour * HourHeight + 2, 0, 0));
+                body.Children().Append(label2);
+            }
+
             TextBlock label;
             label.Text(hour < 10 ? L"0" + to_hstring(hour) + L":00" : to_hstring(hour) + L":00");
             label.Style(ThemeStyle(L"CaptionTextBlockStyle"));
             label.Foreground(ThemeBrush(L"TextFillColorSecondaryBrush"));
             label.VerticalAlignment(VerticalAlignment::Top);
-            label.Margin(ThicknessHelper::FromLengths(8, hour * HourHeight + 2, 0, 0));
+            label.Margin(ThicknessHelper::FromLengths(second_tz_enabled ? 52 : 8, hour * HourHeight + 2, 0, 0));
             body.Children().Append(label);
 
             // Graduations intermédiaires selon le pas horaire (15 ou 30 min)
@@ -333,7 +394,7 @@ namespace winrt::EvolutionWin::implementation
                 sub_label.Foreground(ThemeBrush(L"TextFillColorTertiaryBrush"));
                 sub_label.FontSize(10);
                 sub_label.VerticalAlignment(VerticalAlignment::Top);
-                sub_label.Margin(ThicknessHelper::FromLengths(28, hour * HourHeight + HourHeight / 2 + 1, 0, 0));
+                sub_label.Margin(ThicknessHelper::FromLengths(second_tz_enabled ? 72 : 28, hour * HourHeight + HourHeight / 2 + 1, 0, 0));
                 body.Children().Append(sub_label);
             }
             else if (time_scale == 15)
@@ -357,7 +418,7 @@ namespace winrt::EvolutionWin::implementation
                     sub_label.Foreground(ThemeBrush(L"TextFillColorTertiaryBrush"));
                     sub_label.FontSize(9);
                     sub_label.VerticalAlignment(VerticalAlignment::Top);
-                    sub_label.Margin(ThicknessHelper::FromLengths(26, hour * HourHeight + slot * (HourHeight / 4) + 1, 0, 0));
+                    sub_label.Margin(ThicknessHelper::FromLengths(second_tz_enabled ? 70 : 26, hour * HourHeight + slot * (HourHeight / 4) + 1, 0, 0));
                     body.Children().Append(sub_label);
                 }
             }

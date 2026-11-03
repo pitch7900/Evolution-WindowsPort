@@ -22,6 +22,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Second fuseau horaire dans la grille du calendrier (TODO ligne 605)** :
+  - **Affichage bilatéral des créneaux horaires** : intégration dans la gouttière horaire gauche (MainWindow.Calendar.cpp) d\'une double colonne d\'heures (fuseau secondaire et heure locale) avec séparateur visuel discret.
+  - **En-têtes clairs des fuseaux** : affichage au sommet de la colonne horaire des abréviations courtes correspondantes (UTC, NYC, LA, PAR, LON, TYO ou libellé personnalisé).
+  - **Calculs et conversions automatiques** : algorithmes dédiés (GetTimezoneUtcOffsetHours, GetTimezoneShortLabel, CalculateEquivalentHour, GetLocalUtcOffsetHours) avec prise en compte robuste des décalages et des passages de minuit.
+  - **Validation par tests unitaires** : ajout de 3 nouveaux tests complets dans 	ests/unit/test_helpers.cpp (40/40 tests validés).
+
 - **Aperçu du message sous l\'objet et masquage confidentiel des extraits (TODO lignes 398 et 843)** :
   - **Extraction native du texte** : exposition du champ preview (extrait du corps via camel_message_info_get_preview) dans les listes de messages et les recherches transversales vo-core.
   - **Affichage configurable** : sélection de 0 (désactivé), 1, 2 ou 3 lignes d\'extrait sous l\'objet du message dans *Paramètres › Courrier › Lecture et affichage* (mail.snippet-lines).

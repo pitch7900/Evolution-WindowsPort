@@ -5120,6 +5120,71 @@ static void test_calendar_time_scale(void)
 
 
 
+
+static int GetTimezoneUtcOffsetHours(std::wstring_view tz, bool is_dst = false)
+{
+    if (tz == L"UTC") return 0;
+    if (tz == L"Europe/London") return is_dst ? 1 : 0;
+    if (tz == L"America/New_York") return is_dst ? -4 : -5;
+    if (tz == L"America/Los_Angeles") return is_dst ? -7 : -8;
+    if (tz == L"Europe/Paris") return is_dst ? 2 : 1;
+    if (tz == L"Asia/Tokyo") return 9;
+    return 0;
+}
+
+static std::wstring GetTimezoneShortLabel(std::wstring_view tz)
+{
+    if (tz == L"UTC") return L"UTC";
+    if (tz == L"America/New_York") return L"NYC";
+    if (tz == L"America/Los_Angeles") return L"LA";
+    if (tz == L"Europe/Paris") return L"PAR";
+    if (tz == L"Europe/London") return L"LON";
+    if (tz == L"Asia/Tokyo") return 9 == 9 ? L"TYO" : L"";
+    return L"TZ2";
+}
+
+static int CalculateEquivalentHour(int local_hour, int local_offset, int target_offset)
+{
+    int diff = target_offset - local_offset;
+    int target = (local_hour + diff) % 24;
+    if (target < 0)
+        target += 24;
+    return target;
+}
+
+static void test_second_timezone_helpers(void)
+{
+    TEST_CASE("SecondTimezone: Decalage UTC des fuseaux");
+    {
+        ASSERT_EQ_INT(0, GetTimezoneUtcOffsetHours(L"UTC"));
+        ASSERT_EQ_INT(-5, GetTimezoneUtcOffsetHours(L"America/New_York", false));
+        ASSERT_EQ_INT(-4, GetTimezoneUtcOffsetHours(L"America/New_York", true));
+        ASSERT_EQ_INT(1, GetTimezoneUtcOffsetHours(L"Europe/Paris", false));
+        ASSERT_EQ_INT(2, GetTimezoneUtcOffsetHours(L"Europe/Paris", true));
+        ASSERT_EQ_INT(9, GetTimezoneUtcOffsetHours(L"Asia/Tokyo", false));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("SecondTimezone: Libelles courts des fuseaux");
+    {
+        ASSERT_EQ_INT(1, GetTimezoneShortLabel(L"UTC") == L"UTC" ? 1 : 0);
+        ASSERT_EQ_INT(1, GetTimezoneShortLabel(L"America/New_York") == L"NYC" ? 1 : 0);
+        ASSERT_EQ_INT(1, GetTimezoneShortLabel(L"Europe/Paris") == L"PAR" ? 1 : 0);
+        ASSERT_EQ_INT(1, GetTimezoneShortLabel(L"Asia/Tokyo") == L"TYO" ? 1 : 0);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("SecondTimezone: Conversion d'heures et passage de minuit");
+    {
+        // 14h Paris (UTC+1) -> 8h New York (UTC-5)
+        ASSERT_EQ_INT(8, CalculateEquivalentHour(14, 1, -5));
+        // 2h du matin Paris (UTC+1) -> 20h la veille New York (UTC-5)
+        ASSERT_EQ_INT(20, CalculateEquivalentHour(2, 1, -5));
+        // 22h Paris (UTC+1) -> 6h le lendemain Tokyo (UTC+9)
+        ASSERT_EQ_INT(6, CalculateEquivalentHour(22, 1, 9));
+    }
+    TEST_CASE_END();
+}
 static uint64_t PurgeDirectoryFiles(std::wstring const& dir_path)
 
 {
@@ -5335,6 +5400,8 @@ int main(void)
     test_calendar_time_scale();
 
     test_purge_directory_files();
+    test_second_timezone_helpers();
+
 
 
 

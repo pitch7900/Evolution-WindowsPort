@@ -602,7 +602,7 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
 - [x] 🟢 Raccourcis Ctrl+Alt+1…5 entre les vues
 - [x] 🟢 **Échelle de temps** : 5, 6, 10, 15, 30, 60 minutes
 - [x] 🟢 **Heures de travail** : jours ouvrés, heures de début / fin, premier jour de la semaine (options)
-- [ ] 🟡 **Second fuseau horaire** dans la grille
+- [x] 🟡 **Second fuseau horaire** dans la grille
 - [ ] 🟠 **Glisser-déposer** d'un événement vers un autre créneau / jour / calendrier (déplacer, copier, redimensionner la durée) ; export par glisser-déposer vers l'extérieur : cf. §18
 
 ### Navigation
