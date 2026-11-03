@@ -160,10 +160,11 @@ Write-Host ("== DLL du préfixe copiées ({0}) : {1}" -f $copied.Count, (($copie
 
 # --- Runtime Visual C++ (copie locale, aucun prérequis système) ------------
 $Crt = Get-ChildItem (Join-Path $env:VS_INSTALL 'VC\Redist\MSVC') -Directory |
-	Where-Object { Test-Path (Join-Path $_.FullName 'x64\Microsoft.VC143.CRT') } |
+	Where-Object { (Get-ChildItem (Join-Path $_.FullName 'x64') -Directory -Filter 'Microsoft.VC*.CRT' -ErrorAction SilentlyContinue).Count -gt 0 } |
 	Sort-Object { [version] $_.Name } | Select-Object -Last 1
-if (-not $Crt) { throw 'Runtime Visual C++ (Microsoft.VC143.CRT) introuvable' }
-Get-ChildItem (Join-Path $Crt.FullName 'x64\Microsoft.VC143.CRT') -Filter *.dll | Copy-Item -Force -Destination $StageBin
+if (-not $Crt) { throw 'Runtime Visual C++ (Microsoft.VC*.CRT) introuvable' }
+$CrtDir = (Get-ChildItem (Join-Path $Crt.FullName 'x64') -Directory -Filter 'Microsoft.VC*.CRT' | Select-Object -Last 1).FullName
+Get-ChildItem $CrtDir -Filter *.dll | Copy-Item -Force -Destination $StageBin
 
 # --- Signature optionnelle -------------------------------------------------
 function Invoke-Sign([string[]] $Files) {
