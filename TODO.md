@@ -292,7 +292,7 @@ Dans Microsoft 365 / Exchange Online, les utilisateurs disposent souvent d'une b
   - [ ] 🟢 Messages distincts interne / externe (éditeur HTML)
   - [ ] 🟢 Externe : tous les expéditeurs ou seulement les contacts
   - [ ] 🟡 Exchange / M365 : bloquer le calendrier, refuser les nouvelles invitations, annuler les réunions de la période
-- [ ] 🟢 **Indicateur visible** : bandeau « Réponses automatiques activées pour ce compte » + _Désactiver_ ; rappel à l'ouverture si la période est expirée
+- [x] 🟢 **Indicateur visible** : bandeau « Réponses automatiques activées pour ce compte » + _Désactiver_ ; rappel à l'ouverture si la période est expirée
 
 ### Informations du compte (onglet Fichier)
 

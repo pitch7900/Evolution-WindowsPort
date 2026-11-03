@@ -533,6 +533,12 @@ namespace winrt::EvolutionWin::implementation
 
             if (account != L"local")
             {
+                add_item(L"Réponses automatiques (absence du bureau)…", L"\xE789", true,
+                    [this, account](IInspectable const&, RoutedEventArgs const&)
+                    {
+                        ShowOutOfOfficeDialogAsync(account);
+                    });
+
                 add_item(L"Propriétés du compte…", L"\xE713", true,
                     [this, account](IInspectable const&, RoutedEventArgs const&)
                     {
@@ -931,6 +937,7 @@ namespace winrt::EvolutionWin::implementation
         LoadFolderSort();
         UpdateRibbon();
         SearchBox().Text(L"");
+        UpdateOutOfOfficeBanner();
 
         LoadMessages(false);
     }
@@ -986,6 +993,7 @@ namespace winrt::EvolutionWin::implementation
             LoadFolderSort();
             UpdateRibbon();
             SearchBox().Text(L"");
+            UpdateOutOfOfficeBanner();
 
             LoadMessages(false);
         }
@@ -1091,6 +1099,172 @@ namespace winrt::EvolutionWin::implementation
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * @brief Met à jour le bandeau d'alerte des réponses automatiques d'absence du bureau pour le compte actif.
+     */
+    void MainWindow::UpdateOutOfOfficeBanner()
+    {
+        if (m_account.empty() || m_account == L"local")
+        {
+            ClearBanner(L"oof:banner");
+            return;
+        }
+
+        std::wstring banner_id = L"oof:" + std::wstring{ m_account };
+        hstring oof_key = L"account." + m_account + L".out-of-office-enabled";
+        bool oof_enabled = ::EvolutionWin::Settings::Instance().GetBoolean(oof_key, false);
+
+        if (!oof_enabled)
+        {
+            ClearBanner(banner_id);
+            return;
+        }
+
+        // Vérification de la date de fin (expiration éventuelle)
+        hstring until_key = L"account." + m_account + L".out-of-office-until";
+        std::wstring until_str{ ::EvolutionWin::Settings::Instance().GetString(until_key, L"") };
+        int64_t until_unix = 0;
+        if (!until_str.empty())
+        {
+            try { until_unix = std::stoll(until_str); } catch (...) {}
+        }
+
+        int64_t now_unix = static_cast<int64_t>(std::time(nullptr));
+        bool expired = (until_unix > 0 && now_unix > until_unix);
+
+        hstring acc_name = m_account;
+        if (m_accounts)
+        {
+            for (auto const& val : m_accounts)
+            {
+                auto acc_obj = val.GetObject();
+                if (acc_obj.GetNamedString(L"uid", L"") == m_account)
+                {
+                    acc_name = acc_obj.GetNamedString(L"name", m_account);
+                    break;
+                }
+            }
+        }
+
+        if (expired)
+        {
+            ShowBanner(
+                banner_id,
+                L"Réponses automatiques expirées",
+                L"La période d'absence programmée pour le compte « " + acc_name + L" » est terminée. Souhaitez-vous la désactiver ?",
+                InfoBarSeverity::Warning,
+                L"Désactiver",
+                [this, banner_id, oof_key, acc_name]()
+                {
+                    ::EvolutionWin::Settings::Instance().SetBoolean(oof_key, false);
+                    ClearBanner(banner_id);
+                    ShowStatus(L"Réponses automatiques désactivées pour « " + acc_name + L" »", InfoBarSeverity::Success);
+                }
+            );
+        }
+        else
+        {
+            ShowBanner(
+                banner_id,
+                L"Réponses automatiques activées",
+                L"Les réponses automatiques d'absence du bureau sont actives pour le compte « " + acc_name + L" ».",
+                InfoBarSeverity::Informational,
+                L"Désactiver",
+                [this, banner_id, oof_key, acc_name]()
+                {
+                    ::EvolutionWin::Settings::Instance().SetBoolean(oof_key, false);
+                    ClearBanner(banner_id);
+                    ShowStatus(L"Réponses automatiques désactivées pour « " + acc_name + L" »", InfoBarSeverity::Success);
+                }
+            );
+        }
+    }
+
+    /**
+     * @brief Affiche la boîte de dialogue de configuration des réponses automatiques (absence du bureau) pour un compte.
+     * @param account Identifiant du compte visé.
+     */
+    Windows::Foundation::IAsyncAction MainWindow::ShowOutOfOfficeDialogAsync(winrt::hstring account)
+    {
+        auto strong = get_strong();
+
+        if (m_dialog_open || !Content() || !Content().XamlRoot())
+            co_return;
+
+        m_dialog_open = true;
+
+        hstring acc_name = account;
+        if (m_accounts)
+        {
+            for (auto const& val : m_accounts)
+            {
+                auto acc_obj = val.GetObject();
+                if (acc_obj.GetNamedString(L"uid", L"") == account)
+                {
+                    acc_name = acc_obj.GetNamedString(L"name", account);
+                    break;
+                }
+            }
+        }
+
+        hstring oof_enabled_key = L"account." + account + L".out-of-office-enabled";
+        hstring oof_msg_key = L"account." + account + L".out-of-office-message";
+
+        bool is_enabled = ::EvolutionWin::Settings::Instance().GetBoolean(oof_enabled_key, false);
+        hstring msg = ::EvolutionWin::Settings::Instance().GetString(oof_msg_key,
+            L"Bonjour,\n\nJe suis actuellement absent(e) du bureau et je ne pourrai pas répondre immédiatement à votre message.\nJe prendrai connaissance de vos courriels dès mon retour.\n\nCordialement.");
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(L"Réponses automatiques (absence) - " + acc_name));
+        dialog.PrimaryButtonText(L"Enregistrer");
+        dialog.CloseButtonText(L"Annuler");
+        dialog.DefaultButton(ContentDialogButton::Primary);
+
+        StackPanel panel;
+        panel.Spacing(14);
+        panel.MinWidth(440);
+
+        ToggleSwitch enabled_switch;
+        enabled_switch.Header(box_value(L"Envoyer des réponses automatiques"));
+        enabled_switch.IsOn(is_enabled);
+        panel.Children().Append(enabled_switch);
+
+        TextBlock note;
+        note.Text(L"Répondre automatiquement aux messages entrants pendant votre période d'absence :");
+        note.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+        note.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+        note.TextWrapping(TextWrapping::Wrap);
+        panel.Children().Append(note);
+
+        TextBox msg_box;
+        msg_box.Header(box_value(L"Message de réponse d'absence"));
+        msg_box.Text(msg);
+        msg_box.AcceptsReturn(true);
+        msg_box.TextWrapping(TextWrapping::Wrap);
+        msg_box.MinHeight(100);
+        msg_box.MaxHeight(200);
+        panel.Children().Append(msg_box);
+
+        dialog.Content(panel);
+
+        auto result = co_await dialog.ShowAsync();
+        m_dialog_open = false;
+
+        if (result == ContentDialogResult::Primary)
+        {
+            ::EvolutionWin::Settings::Instance().SetBoolean(oof_enabled_key, enabled_switch.IsOn());
+            ::EvolutionWin::Settings::Instance().SetString(oof_msg_key, msg_box.Text());
+
+            UpdateOutOfOfficeBanner();
+
+            ShowStatus(enabled_switch.IsOn()
+                ? L"Réponses automatiques activées pour « " + acc_name + L" »"
+                : L"Réponses automatiques désactivées pour « " + acc_name + L" »",
+                InfoBarSeverity::Success);
         }
     }
 }

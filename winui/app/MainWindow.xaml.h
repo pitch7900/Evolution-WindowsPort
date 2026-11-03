@@ -136,6 +136,8 @@ namespace winrt::EvolutionWin::implementation
         void RefreshConnectionAccountsList();
         void UpdateFolderStatusText();
         void RestoreSessionFolder();
+        void UpdateOutOfOfficeBanner();
+        Windows::Foundation::IAsyncAction ShowOutOfOfficeDialogAsync(winrt::hstring account);
 
         /* Écran de démarrage (Splash screen) */
         void SetSplashWindow(winrt::EvolutionWin::SplashWindow const& splash);

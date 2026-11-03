@@ -22,6 +22,13 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Bandeau d\'alerte et gestion des réponses automatiques d\'absence du bureau (TODO ligne 295)** :
+  - **Indicateur visible immédiat** : affichage automatique d\'un bandeau persistant InfoBanner (« Réponses automatiques activées pour le compte « X » ») dès la sélection d\'un dossier du compte si les réponses automatiques sont en cours.
+  - **Bouton direct « Désactiver »** : bouton d\'action intégré dans le bandeau pour couper instantanément les réponses automatiques sans naviguer dans les réglages.
+  - **Avertissement de fin de période** : détection des dates d\'absence dépassées et affichage d\'une notification préventive (« Réponses automatiques expirées ») proposant la désactivation.
+  - **Boîte de dialogue de configuration** : ouverture de ShowOutOfOfficeDialogAsync depuis le menu contextuel du compte avec saisie du message personnalisé.
+  - **Validation par tests unitaires** : persistance des états et messages d\'absence dans 	ests/unit/test_settings.cpp.
+
 - **Bascule du mode de tri des dossiers depuis le menu contextuel du compte (TODO ligne 533)** :
   - **Menu contextuel enrichi** : ajout d\'un sous-menu « Ordre des dossiers » sur chaque compte dans l\'arborescence (MainWindow.Folders.cpp).
   - **Choix par compte** : bascule directe entre « Dossiers spéciaux d\'abord », « Trier tous les dossiers de A à Z » et « Rétablir l\'ordre global par défaut » avec coches d\'état visuelles (✔).

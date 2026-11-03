@@ -331,6 +331,17 @@ static void test_settings_mail_read_and_security_options(void)
         mgr.SetString("account.acc123.folder-sort", "");
         std::string acc_sort_reset = mgr.GetString("account.acc123.folder-sort", "");
         ASSERT_EQ_STR("", acc_sort_reset.c_str());
+
+        /* Reponses automatiques / Absence du bureau (account.<id>.out-of-office-enabled / message) */
+        ASSERT_EQ_INT(0, mgr.GetBoolean("account.acc123.out-of-office-enabled", false));
+        mgr.SetBoolean("account.acc123.out-of-office-enabled", true);
+        ASSERT_EQ_INT(1, mgr.GetBoolean("account.acc123.out-of-office-enabled", false));
+
+        std::string oof_default_msg = mgr.GetString("account.acc123.out-of-office-message", "Absence temporaire");
+        ASSERT_EQ_STR("Absence temporaire", oof_default_msg.c_str());
+        mgr.SetString("account.acc123.out-of-office-message", "En conges jusqu au 15.");
+        std::string oof_saved_msg = mgr.GetString("account.acc123.out-of-office-message", "");
+        ASSERT_EQ_STR("En conges jusqu au 15.", oof_saved_msg.c_str());
     }
     TEST_CASE_END();
 }
