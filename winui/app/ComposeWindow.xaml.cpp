@@ -24,6 +24,10 @@ namespace winrt::EvolutionWin::implementation
 {
     ComposeWindow::ComposeWindow()
     {
+        Closed([this](auto const&, auto const&)
+        {
+            StopAutoSaveTimer();
+        });
     }
 
     /* Convertit une chaîne de texte brut en fragment HTML sécurisé (échappement
@@ -156,6 +160,8 @@ namespace winrt::EvolutionWin::implementation
 
         if (data.to.empty())
             ToBox().Focus(FocusState::Programmatic);
+
+        StartAutoSaveTimer();
     }
 
     /* Initialise le contrôle WebView2 servant d'éditeur HTML riche
@@ -664,7 +670,177 @@ namespace winrt::EvolutionWin::implementation
 
     void ComposeWindow::OnDiscardClick(IInspectable const&, RoutedEventArgs const&)
     {
+        StopAutoSaveTimer();
         Close();
+    }
+
+    void ComposeWindow::OnSaveDraftClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        SaveDraftAsync(false);
+    }
+
+    void ComposeWindow::StartAutoSaveTimer()
+    {
+        if (m_autosave_timer)
+            return;
+
+        m_autosave_timer = Microsoft::UI::Xaml::DispatcherTimer();
+        m_autosave_timer.Interval(std::chrono::seconds(60));
+        auto weak = get_weak();
+        m_autosave_token = m_autosave_timer.Tick([weak](auto const&, auto const&)
+        {
+            if (auto self = weak.get())
+            {
+                self->SaveDraftAsync(true);
+            }
+        });
+        m_autosave_timer.Start();
+    }
+
+    void ComposeWindow::StopAutoSaveTimer()
+    {
+        if (m_autosave_timer)
+        {
+            if (m_autosave_token.value != 0)
+            {
+                m_autosave_timer.Tick(m_autosave_token);
+                m_autosave_token = {};
+            }
+            m_autosave_timer.Stop();
+            m_autosave_timer = nullptr;
+        }
+    }
+
+    fire_and_forget ComposeWindow::SaveDraftAsync(bool is_autosave)
+    {
+        auto strong = get_strong();
+        if (m_is_saving_draft)
+            co_return;
+
+        auto core = m_core.lock();
+        if (!core)
+            co_return;
+
+        int index = FromBox().SelectedIndex();
+        if (index < 0 || index >= static_cast<int>(m_account_uids.size()))
+            co_return;
+
+        hstring account_uid = m_account_uids[index];
+        hstring to_text = ToBox().Text();
+        hstring cc_text = CcBox().Text();
+        hstring bcc_text = BccBox().Text();
+        hstring subject_text = SubjectBox().Text();
+
+        hstring plain_body;
+        hstring html_document;
+
+        if (m_html_mode && m_editor_ready && HtmlEditor().CoreWebView2())
+        {
+            hstring raw = co_await HtmlEditor().CoreWebView2().ExecuteScriptAsync(L"window.evoGetPayload()");
+            JsonObject payload;
+            if (JsonObject::TryParse(raw, payload))
+            {
+                hstring inner_html = payload.GetNamedString(L"html", L"");
+                std::wstring text{ payload.GetNamedString(L"text", L"") };
+                for (auto& ch : text)
+                    if (ch == L'\r')
+                        ch = L'\n';
+                plain_body = hstring{ text };
+                html_document = L"<!DOCTYPE html><html><head><meta charset=\"utf-8\"></head>"
+                    L"<body style=\"font-family:'Segoe UI',sans-serif;font-size:11pt;color:#1a1a1a;\">" +
+                    inner_html + L"</body></html>";
+            }
+        }
+        else
+        {
+            std::wstring body{ BodyBox().Text() };
+            for (auto& ch : body)
+                if (ch == L'\r')
+                    ch = L'\n';
+            plain_body = hstring{ body };
+        }
+
+        if (is_autosave && to_text.empty() && cc_text.empty() && bcc_text.empty() && subject_text.empty() && plain_body.empty())
+        {
+            co_return;
+        }
+
+        std::wstring current_content = std::wstring{ to_text } + L"|" + std::wstring{ subject_text } + L"|" + std::wstring{ plain_body };
+        if (is_autosave && current_content == m_last_saved_content)
+        {
+            co_return;
+        }
+
+        m_is_saving_draft = true;
+
+        if (!is_autosave)
+        {
+            ShowStatus(L"Enregistrement du brouillon…", InfoBarSeverity::Informational);
+        }
+
+        JsonObject draft_obj;
+        draft_obj.SetNamedValue(L"account", JsonValue::CreateStringValue(account_uid));
+        draft_obj.SetNamedValue(L"to", JsonValue::CreateStringValue(to_text));
+        draft_obj.SetNamedValue(L"cc", JsonValue::CreateStringValue(cc_text));
+        draft_obj.SetNamedValue(L"bcc", JsonValue::CreateStringValue(bcc_text));
+        draft_obj.SetNamedValue(L"subject", JsonValue::CreateStringValue(subject_text.empty() ? L"(Sans objet)" : subject_text));
+        draft_obj.SetNamedValue(L"body", JsonValue::CreateStringValue(plain_body));
+        if (!html_document.empty())
+            draft_obj.SetNamedValue(L"html_body", JsonValue::CreateStringValue(html_document));
+
+        if (!m_saved_draft_uid.empty())
+        {
+            draft_obj.SetNamedValue(L"draft_uid", JsonValue::CreateStringValue(m_saved_draft_uid));
+        }
+
+        if (!m_attachments.empty())
+        {
+            JsonArray att_arr;
+            for (auto const& path : m_attachments)
+                att_arr.Append(JsonValue::CreateStringValue(path));
+            draft_obj.SetNamedValue(L"attachments", att_arr);
+        }
+
+        hstring payload_str = draft_obj.Stringify();
+        auto weak_self = get_weak();
+
+        core->SaveDraft(payload_str, [weak_self, current_content, is_autosave](hstring const& json, hstring const& err)
+        {
+            auto self = weak_self.get();
+            if (!self)
+                return;
+
+            self->m_is_saving_draft = false;
+
+            if (!err.empty())
+            {
+                if (!is_autosave)
+                    self->ShowStatus(L"Erreur d'enregistrement du brouillon : " + err, InfoBarSeverity::Error);
+                return;
+            }
+
+            JsonObject res;
+            if (JsonObject::TryParse(json, res) && res.GetNamedBoolean(L"saved", false))
+            {
+                self->m_saved_draft_uid = res.GetNamedString(L"uid", L"");
+                self->m_last_saved_content = current_content;
+
+                SYSTEMTIME st;
+                GetLocalTime(&st);
+                wchar_t time_buf[32];
+                swprintf_s(time_buf, L"Brouillon enregistré à %02d:%02d", st.wHour, st.wMinute);
+
+                if (auto status_txt = self->AutoSaveStatusText())
+                {
+                    status_txt.Text(time_buf);
+                }
+
+                if (!is_autosave)
+                {
+                    self->ShowStatus(L"Brouillon enregistré avec succès.", InfoBarSeverity::Success);
+                }
+            }
+        });
     }
 
     /* Ouvre le sélecteur de fichiers Windows pour joindre un ou plusieurs
@@ -913,6 +1089,7 @@ namespace winrt::EvolutionWin::implementation
             }
 
             self->RememberRecipients();
+            self->StopAutoSaveTimer();
             self->Close();
         });
     }

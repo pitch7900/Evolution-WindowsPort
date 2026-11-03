@@ -36,8 +36,8 @@ Propositions d'implémentations facilement réalisables, issues de la lecture du
   - Dictionnaire `uid dossier → bool` (`conversations.<compte>/<dossier>`) dans les préférences, lu à la sélection du dossier et bouton à bascule dans le ruban Affichage.
 - [x] **Marquer / démarquer comme indésirable** (§8) — fait
   - Déplacement vers / depuis le dossier _Indésirables_ avec la fonction de déplacement existante ; entrée dans le menu contextuel et le ruban.
-- [ ] **Autosave du brouillon** (§7)
-  - Minuteur (ex. 60 s) dans `MainWindow.Compose.cpp` qui réutilise l'enregistrement de brouillon existant.
+- [x] **Autosave du brouillon** (§7) — fait
+  - Minuteur périodique (60 s) dans ComposeWindow + bouton « Enregistrer » (Ctrl+S), enregistrement automatique dans le dossier Brouillons du compte via evo_core_save_draft et affichage de l'heure dans la barre de titre.
 - [x] **Importance (haute / basse)** : affichage d'une icône dans la liste à partir de l'en-tête `Importance` / `X-Priority` (§7) — fait
   - Choix à la rédaction : ajout des boutons d'importance haute / basse dans `ComposeWindow` et transmission dans le payload d'envoi.
 - [x] **Afficher les en-têtes bruts / source du message** (§7) — fait
@@ -50,8 +50,8 @@ Propositions d'implémentations facilement réalisables, issues de la lecture du
   - Échelle appliquée via une ressource XAML globale.
 - [x] **Compte activé / désactivé sans suppression** (§3 — Synchronisation) — fait
   - Bascule de `ESourceExtension` _enabled_ dans la boîte de modification du compte.
-- [ ] **Quota du compte** dans l'onglet _Fichier_ (§3)
-  - `camel_folder_get_quota_info_sync` + `ProgressBar` ; masqué si non supporté.
+- [x] **Quota du compte** dans l'onglet _Fichier_ (§3) — fait
+  - `camel_folder_get_quota_info_sync` + `ProgressBar` et bouton « Espace disque » dans le ruban Fichier.
 - [x] **Dates, heures et tailles localisées** (§20) — fait
   - Remplacer les formats codés en dur par `Windows.Globalization.DateTimeFormatting`.
 

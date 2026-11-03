@@ -45,6 +45,7 @@
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                 <FontIcon Glyph="&#xE70F;" FontSize="14" />
                 <TextBlock x:Name="TitleText" Text="Nouveau message" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                <TextBlock x:Name="AutoSaveStatusText" Text="" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="11" VerticalAlignment="Center" Margin="12,0,0,0" />
             </StackPanel>
         </Grid>
 
@@ -55,6 +56,14 @@
                 </AppBarButton.Icon>
                 <AppBarButton.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="Control" Key="Enter" />
+                </AppBarButton.KeyboardAccelerators>
+            </AppBarButton>
+            <AppBarButton x:Name="SaveDraftButton" Label="Enregistrer" ToolTipService.ToolTip="Enregistrer le brouillon (Ctrl+S)" Click="OnSaveDraftClick">
+                <AppBarButton.Icon>
+                    <FontIcon Glyph="&#xE74E;" />
+                </AppBarButton.Icon>
+                <AppBarButton.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Control" Key="S" />
                 </AppBarButton.KeyboardAccelerators>
             </AppBarButton>
             <AppBarButton Label="Joindre" Click="OnAttachClick">

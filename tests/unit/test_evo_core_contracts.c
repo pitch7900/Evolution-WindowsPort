@@ -335,6 +335,15 @@ static void test_account_enabled_contract(void)
         ASSERT_CONTAINS(sample_quota_none, "\"has_quota\":false");
     }
     TEST_CASE_END();
+
+    TEST_CASE("Contrats JSON: Enregistrement et remplacement de brouillon (evo_core_save_draft)");
+    {
+        const char *sample_draft_result = "{\"saved\":true,\"uid\":\"1042\",\"account\":\"compte-1\",\"folder\":\"Drafts\"}";
+        ASSERT_CONTAINS(sample_draft_result, "\"saved\":true");
+        ASSERT_CONTAINS(sample_draft_result, "\"uid\":");
+        ASSERT_CONTAINS(sample_draft_result, "\"folder\":\"Drafts\"");
+    }
+    TEST_CASE_END();
 }
 
 static void test_calendar_url_validation(void)

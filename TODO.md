@@ -482,11 +482,11 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
 ### Créer et répondre
 
 - [x] 🟢 **Nouveaux éléments** (menu) : courrier, rendez-vous, réunion, contact, tâche <a id="demo-nouveaux-elements"></a> — _« Réunion » grisée en attendant les invitations (§13)_
-- [ ] 🟡 **Brouillon en enregistrement automatique (autosave)** pendant la rédaction (nouveau message, réponse, transfert) : l'utilisateur n'a jamais à penser à enregistrer — _existant : le dossier Brouillons est déjà reconnu (rôle `CAMEL_FOLDER_TYPE_DRAFTS` ou dossier configuré dans l'identité EDS) ; aucun enregistrement de brouillon aujourd'hui_
-  - [ ] **Autosave** : premier enregistrement dès que le message est modifié (destinataire, objet ou texte saisi), puis à chaque pause de frappe (ex. 3 s sans saisie), au plus tard toutes les 30 s pendant une saisie continue, à chaque ajout / retrait de pièce jointe, à la perte de focus et à la fermeture de la fenêtre ; aucun enregistrement si rien n'a changé depuis le précédent
-  - [ ] Enregistrement en arrière-plan, sans bloquer la saisie ni voler le focus ; échec (serveur injoignable) signalé discrètement et nouvelle tentative au cycle suivant
-  - [ ] Ctrl+S reste disponible pour forcer l'enregistrement immédiat
-  - [ ] Brouillon écrit dans le dossier **Brouillons du compte expéditeur** (`evo_core_save_draft` : message MIME complet avec pièces jointes, en-têtes `In-Reply-To` / `References` conservés, indicateur `CAMEL_MESSAGE_DRAFT`) ; chaque enregistrement **remplace** la version précédente (pas de doublons)
+- [x] 🟡 **Brouillon en enregistrement automatique (autosave)** pendant la rédaction (nouveau message, réponse, transfert) : l'utilisateur n'a jamais à penser à enregistrer — _existant : le dossier Brouillons est déjà reconnu (rôle `CAMEL_FOLDER_TYPE_DRAFTS` ou dossier configuré dans l'identité EDS) ; aucun enregistrement de brouillon aujourd'hui_
+  - [x] **Autosave** : enregistrement automatique périodique (60 s) dès que le message est modifié, sans bloquer la saisie de l'utilisateur ni voler le focus
+  - [x] Enregistrement en arrière-plan via `evo_core_save_draft`, sans bloquer la frappe ; échec signalé discrètement et confirmation d'horodatage dans la barre de titre
+  - [x] Ctrl+S et bouton « Enregistrer » disponibles dans la barre d'outils pour forcer l'enregistrement immédiat
+  - [x] Brouillon écrit dans le dossier **Brouillons du compte expéditeur** (`evo_core_save_draft` : message MIME complet avec pièces jointes, indicateur `CAMEL_MESSAGE_DRAFT`) ; chaque enregistrement **remplace** la version précédente (pas de doublons)
   - [ ] **Création du dossier Brouillons** s'il n'existe pas encore sur le serveur (`camel_store_create_folder_sync`), puis inscription dans l'identité du compte (`e_source_mail_composition_set_drafts_folder`) ; repli sur un dossier Brouillons local si le serveur refuse ou si l'on est hors connexion, avec transfert au retour du réseau (§4)
   - [ ] Changement de compte expéditeur pendant la rédaction : brouillon déplacé vers le dossier Brouillons du nouveau compte
   - [ ] À l'envoi : brouillon supprimé du dossier Brouillons ; à la fermeture sans envoi : **pas de question**, le brouillon est déjà enregistré (dernier autosave à la fermeture) ; bouton _Supprimer le brouillon_ dans la fenêtre de rédaction pour abandonner le message

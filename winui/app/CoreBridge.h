@@ -107,6 +107,16 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Enregistre un message dans le dossier des brouillons (Drafts).
+         * Paramètres :
+         *   draft_json : chaîne JSON décrivant le brouillon
+         *   handler    : rappel recevant le statut de sauvegarde */
+        void SaveDraft(winrt::hstring const& draft_json, CoreHandler handler)
+        {
+            evo_core_save_draft(m_core, winrt::to_string(draft_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* not SendMessage: a Win32 macro */
         void SendMail(winrt::hstring const& message_json, CoreHandler handler)
         {

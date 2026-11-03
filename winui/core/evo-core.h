@@ -194,6 +194,17 @@ void		evo_core_get_folder_quota	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Enregistre un message dans le dossier Brouillons (Drafts) du compte ou en local.
+ * Paramètres :
+ *   core       : instance du moteur evo-core
+ *   draft_json : chaîne JSON (account, to, cc, bcc, subject, body, html_body, attachments, draft_uid)
+ *   func       : rappel recevant {"saved": true, "uid": str, "folder": str, "account": str}
+ *   user_data  : données utilisateur transmises au rappel */
+void		evo_core_save_draft		(EvoCore *core,
+						 const char *draft_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Supprime un message : le déplace vers la corbeille du compte si elle existe
  * et que le message ne s'y trouve pas déjà, sinon le marque comme supprimé et
  * purge le dossier.

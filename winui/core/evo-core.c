@@ -2897,109 +2897,6 @@ find_trash_folder_name (CamelFolderInfo *fi)
  *   error : emplacement d'erreur GError
  * Retourne : {"trashed": true|false}, ou NULL en cas d'erreur. */
 static gchar *
-core_delete_message_run (EvoCore *core,
-			 gchar **args,
-			 GError **error)
-{
-	CamelFolder *folder, *trash = NULL;
-	CamelStore *store;
-	gchar *trash_name = NULL;
-	gboolean trashed = FALSE;
-
-	folder = core_ref_folder (core, args[0], args[1], error);
-	if (!folder)
-		return NULL;
-
-	store = camel_folder_get_parent_store (folder);
-	if (store) {
-		CamelFolderInfo *fi = camel_store_get_folder_info_sync (store, NULL,
-			CAMEL_STORE_FOLDER_INFO_RECURSIVE | CAMEL_STORE_FOLDER_INFO_FAST,
-			core->cancellable, NULL);
-
-		if (fi) {
-			trash_name = find_trash_folder_name (fi);
-			camel_folder_info_free (fi);
-		}
-	}
-
-	if (trash_name && g_strcmp0 (args[1], trash_name) != 0)
-		trash = core_ref_folder (core, args[0], trash_name, NULL);
-
-	if (trash && trash != folder) {
-		GPtrArray *uids = g_ptr_array_new ();
-
-		g_ptr_array_add (uids, args[2]);
-		camel_folder_set_message_flags (folder, args[2], CAMEL_MESSAGE_SEEN, CAMEL_MESSAGE_SEEN);
-
-		if (!camel_folder_transfer_messages_to_sync (folder, uids, trash, TRUE, NULL, core->cancellable, error)) {
-			g_ptr_array_unref (uids);
-			g_object_unref (trash);
-			g_free (trash_name);
-			g_object_unref (folder);
-			return NULL;
-		}
-
-		g_ptr_array_unref (uids);
-		camel_folder_synchronize_sync (folder, TRUE, core->cancellable, NULL);
-		camel_folder_synchronize_sync (trash, FALSE, core->cancellable, NULL);
-		trashed = TRUE;
-	} else {
-		camel_folder_set_message_flags (folder, args[2],
-			CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_SEEN,
-			CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_SEEN);
-
-		if (!camel_folder_synchronize_sync (folder, TRUE, core->cancellable, error)) {
-			g_clear_object (&trash);
-			g_free (trash_name);
-			g_object_unref (folder);
-			return NULL;
-		}
-	}
-
-	{
-		JsonBuilder *builder = core_event_builder ();
-
-		builder_add_string (builder, "account", args[0]);
-		core_emit_builder (core, "folders-updated", builder);
-	}
-
-	g_clear_object (&trash);
-	g_free (trash_name);
-	g_object_unref (folder);
-
-	return g_strdup (trashed ? "{\"trashed\":true}" : "{\"trashed\":false}");
-}
-
-/* Type (CAMEL_FOLDER_TYPE_*) of a folder, from the folder tree. */
-static guint32
-find_folder_type (CamelFolderInfo *fi,
-		  const gchar *full_name)
-{
-	for (; fi; fi = fi->next) {
-		guint32 type;
-
-		if (g_strcmp0 (fi->full_name, full_name) == 0)
-			return fi->flags & CAMEL_FOLDER_TYPE_MASK;
-
-		type = find_folder_type (fi->child, full_name);
-		if (type != CAMEL_FOLDER_TYPE_NORMAL)
-			return type;
-	}
-
-	return CAMEL_FOLDER_TYPE_NORMAL;
-}
-
-/* Actions sur tout un dossier.
- * "mark-all-read" : tous les messages marqués lus.
- * "empty" : dossier Corbeille ou Indésirables (ou compte sans corbeille) :
- * messages supprimés définitivement ; autre dossier : messages déplacés
- * vers la corbeille du compte.
- * Paramètres :
- *   core  : instance du moteur evo-core
- *   args  : [0] account_uid, [1] folder_full_name, [2] action
- *   error : emplacement d'erreur GError
- * Retourne : {"count": n, "permanent": true|false}, ou NULL en cas d'erreur. */
-static gchar *
 core_get_folder_quota_run (EvoCore *core,
 			   gchar **args,
 			   GError **error)
@@ -5700,6 +5597,305 @@ core_send_message_run (EvoCore *core,
  *   args  : arguments (non utilisé)
  *   error : récepteur d'erreur éventuel
  * Retourne : chaîne JSON indiquant le résultat de l'opération. */
+static gchar *
+core_save_draft_run (EvoCore *core,
+		     gchar **args,
+		     GError **error)
+{
+	JsonNode *root;
+	JsonObject *object;
+	CamelFolder *drafts = NULL;
+	CamelMimeMessage *message = NULL;
+	const gchar *account_uid, *subject, *text, *html, *old_draft_uid;
+	gchar *appended_uid = NULL;
+	gchar *store_uid = NULL, *drafts_folder_name = NULL;
+	gchar *json = NULL;
+
+	root = json_from_string (args[0], error);
+	if (!root)
+		return NULL;
+
+	object = JSON_NODE_HOLDS_OBJECT (root) ? json_node_get_object (root) : NULL;
+	account_uid = object ? json_object_get_string_member_with_default (object, "account", NULL) : NULL;
+	old_draft_uid = object ? json_object_get_string_member_with_default (object, "draft_uid", NULL) : NULL;
+
+	/* 1. Recherche du dossier Brouillons associé au compte */
+	if (account_uid && *account_uid) {
+		ESource *identity = core_ref_identity (core, account_uid);
+		if (identity) {
+			if (e_source_has_extension (identity, E_SOURCE_EXTENSION_MAIL_COMPOSITION)) {
+				ESourceMailComposition *mc = e_source_get_extension (identity, E_SOURCE_EXTENSION_MAIL_COMPOSITION);
+				gchar *uri = e_source_mail_composition_dup_drafts_folder (mc);
+				if (uri) {
+					parse_folder_uri (uri, &store_uid, &drafts_folder_name);
+					g_free (uri);
+				}
+			}
+			g_object_unref (identity);
+		}
+
+		if (store_uid && drafts_folder_name) {
+			drafts = core_ref_folder (core, store_uid, drafts_folder_name, NULL);
+		}
+
+		if (!drafts) {
+			static const gchar *try_names[] = { "Drafts", "Brouillons", "INBOX/Drafts", "INBOX.Drafts", NULL };
+			guint i;
+			for (i = 0; try_names[i] && !drafts; i++) {
+				drafts = core_ref_folder (core, account_uid, try_names[i], NULL);
+				if (drafts) {
+					g_free (store_uid);
+					g_free (drafts_folder_name);
+					store_uid = g_strdup (account_uid);
+					drafts_folder_name = g_strdup (try_names[i]);
+					break;
+				}
+			}
+		}
+	}
+
+	if (!drafts) {
+		drafts = core_ref_folder (core, "local", "Drafts", error);
+		if (drafts) {
+			g_free (store_uid);
+			g_free (drafts_folder_name);
+			store_uid = g_strdup ("local");
+			drafts_folder_name = g_strdup ("Drafts");
+		}
+	}
+
+	if (!drafts) {
+		json_node_unref (root);
+		return NULL;
+	}
+
+	/* 2. Construction du CamelMimeMessage */
+	subject = object ? json_object_get_string_member_with_default (object, "subject", "") : "";
+	text = object ? json_object_get_string_member_with_default (object, "body", "") : "";
+	html = object ? json_object_get_string_member_with_default (object, "html_body", NULL) : NULL;
+
+	message = camel_mime_message_new ();
+	camel_mime_message_set_subject (message, subject);
+	camel_mime_message_set_date (message, CAMEL_MESSAGE_DATE_CURRENT, 0);
+	camel_medium_set_header (CAMEL_MEDIUM (message), "X-Mailer", "Evolution for Windows");
+
+	{
+		const gchar *to_str = object ? json_object_get_string_member_with_default (object, "to", "") : "";
+		const gchar *cc_str = object ? json_object_get_string_member_with_default (object, "cc", "") : "";
+		const gchar *bcc_str = object ? json_object_get_string_member_with_default (object, "bcc", "") : "";
+
+		if (to_str && *to_str) {
+			CamelInternetAddress *to_addr = camel_internet_address_new ();
+			camel_address_unformat (CAMEL_ADDRESS (to_addr), to_str);
+			camel_mime_message_set_recipients (message, CAMEL_RECIPIENT_TYPE_TO, to_addr);
+			g_object_unref (to_addr);
+		}
+		if (cc_str && *cc_str) {
+			CamelInternetAddress *cc_addr = camel_internet_address_new ();
+			camel_address_unformat (CAMEL_ADDRESS (cc_addr), cc_str);
+			camel_mime_message_set_recipients (message, CAMEL_RECIPIENT_TYPE_CC, cc_addr);
+			g_object_unref (cc_addr);
+		}
+		if (bcc_str && *bcc_str) {
+			CamelInternetAddress *bcc_addr = camel_internet_address_new ();
+			camel_address_unformat (CAMEL_ADDRESS (bcc_addr), bcc_str);
+			camel_mime_message_set_recipients (message, CAMEL_RECIPIENT_TYPE_BCC, bcc_addr);
+			g_object_unref (bcc_addr);
+		}
+	}
+
+	if (json_object_has_member (object, "attachments")) {
+		JsonArray *attachments = json_object_get_array_member (object, "attachments");
+		guint n_att = attachments ? json_array_get_length (attachments) : 0;
+
+		if (n_att > 0) {
+			CamelMultipart *multipart = camel_multipart_new ();
+			CamelMimePart *body_part = camel_mime_part_new ();
+			guint ii;
+
+			camel_data_wrapper_set_mime_type (CAMEL_DATA_WRAPPER (multipart), "multipart/mixed");
+			camel_multipart_set_boundary (multipart, NULL);
+
+			set_message_or_part_body (CAMEL_MEDIUM (body_part), text, html);
+			camel_multipart_add_part (multipart, body_part);
+			g_object_unref (body_part);
+
+			for (ii = 0; ii < n_att; ii++) {
+				const gchar *path = json_array_get_string_element (attachments, ii);
+				gchar *contents = NULL, *basename = NULL, *guessed = NULL, *mime_type = NULL;
+				gsize length = 0;
+				CamelMimePart *att_part;
+
+				if (!g_file_get_contents (path, &contents, &length, NULL))
+					continue;
+
+				basename = g_path_get_basename (path);
+				guessed = g_content_type_guess (path, (const guchar *) contents, length, NULL);
+				if (guessed)
+					mime_type = g_content_type_get_mime_type (guessed);
+				if (!mime_type)
+					mime_type = g_strdup ("application/octet-stream");
+
+				att_part = camel_mime_part_new ();
+				camel_mime_part_set_content (att_part, contents, (gint) length, mime_type);
+				camel_mime_part_set_disposition (att_part, "attachment");
+				camel_mime_part_set_filename (att_part, basename);
+				camel_mime_part_set_encoding (att_part, CAMEL_TRANSFER_ENCODING_BASE64);
+				camel_multipart_add_part (multipart, att_part);
+
+				g_object_unref (att_part);
+				g_free (mime_type);
+				g_free (guessed);
+				g_free (basename);
+				g_free (contents);
+			}
+
+			camel_medium_set_content (CAMEL_MEDIUM (message), CAMEL_DATA_WRAPPER (multipart));
+			g_object_unref (multipart);
+		} else {
+			set_message_or_part_body (CAMEL_MEDIUM (message), text, html);
+		}
+	} else {
+		set_message_or_part_body (CAMEL_MEDIUM (message), text, html);
+	}
+
+	/* 3. Remplacement de l'ancien brouillon auto-enregistré si spécifié */
+	if (old_draft_uid && *old_draft_uid) {
+		camel_folder_set_message_flags (drafts, old_draft_uid,
+						CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_SEEN,
+						CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_SEEN);
+	}
+
+	/* 4. Enregistrement du nouveau brouillon */
+	{
+		CamelMessageInfo *info = camel_message_info_new (NULL);
+		camel_message_info_set_flags (info, CAMEL_MESSAGE_SEEN | CAMEL_MESSAGE_DRAFT, CAMEL_MESSAGE_SEEN | CAMEL_MESSAGE_DRAFT);
+		if (camel_folder_append_message_sync (drafts, message, info, &appended_uid, core->cancellable, error)) {
+			camel_folder_synchronize_sync (drafts, FALSE, core->cancellable, NULL);
+			if (store_uid)
+				core_emit_folders_updated (core, store_uid);
+			json = g_strdup_printf ("{\"saved\":true,\"uid\":\"%s\",\"account\":\"%s\",\"folder\":\"%s\"}",
+						appended_uid ? appended_uid : "",
+						store_uid ? store_uid : "",
+						drafts_folder_name ? drafts_folder_name : "");
+		}
+		g_object_unref (info);
+	}
+
+	g_free (appended_uid);
+	g_free (store_uid);
+	g_free (drafts_folder_name);
+	g_object_unref (drafts);
+	g_object_unref (message);
+	json_node_unref (root);
+
+	return json;
+}
+
+
+static gchar *
+core_delete_message_run (EvoCore *core,
+			 gchar **args,
+			 GError **error)
+{
+	CamelFolder *folder, *trash = NULL;
+	CamelStore *store;
+	gchar *trash_name = NULL;
+	gboolean trashed = FALSE;
+
+	folder = core_ref_folder (core, args[0], args[1], error);
+	if (!folder)
+		return NULL;
+
+	store = camel_folder_get_parent_store (folder);
+	if (store) {
+		CamelFolderInfo *fi = camel_store_get_folder_info_sync (store, NULL,
+			CAMEL_STORE_FOLDER_INFO_RECURSIVE | CAMEL_STORE_FOLDER_INFO_FAST,
+			core->cancellable, NULL);
+
+		if (fi) {
+			trash_name = find_trash_folder_name (fi);
+			camel_folder_info_free (fi);
+		}
+	}
+
+	if (trash_name && g_strcmp0 (args[1], trash_name) != 0)
+		trash = core_ref_folder (core, args[0], trash_name, NULL);
+
+	if (trash && trash != folder) {
+		GPtrArray *uids = g_ptr_array_new ();
+
+		g_ptr_array_add (uids, args[2]);
+		camel_folder_set_message_flags (folder, args[2], CAMEL_MESSAGE_SEEN, CAMEL_MESSAGE_SEEN);
+
+		if (!camel_folder_transfer_messages_to_sync (folder, uids, trash, TRUE, NULL, core->cancellable, error)) {
+			g_ptr_array_unref (uids);
+			g_object_unref (trash);
+			g_free (trash_name);
+			g_object_unref (folder);
+			return NULL;
+		}
+
+		g_ptr_array_unref (uids);
+		camel_folder_synchronize_sync (folder, TRUE, core->cancellable, NULL);
+		camel_folder_synchronize_sync (trash, FALSE, core->cancellable, NULL);
+		trashed = TRUE;
+	} else {
+		camel_folder_set_message_flags (folder, args[2],
+			CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_SEEN,
+			CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_SEEN);
+
+		if (!camel_folder_synchronize_sync (folder, TRUE, core->cancellable, error)) {
+			g_clear_object (&trash);
+			g_free (trash_name);
+			g_object_unref (folder);
+			return NULL;
+		}
+	}
+
+	{
+		JsonBuilder *builder = core_event_builder ();
+
+		builder_add_string (builder, "account", args[0]);
+		core_emit_builder (core, "folders-updated", builder);
+	}
+
+	g_clear_object (&trash);
+	g_free (trash_name);
+	g_object_unref (folder);
+
+	return g_strdup (trashed ? "{\"trashed\":true}" : "{\"trashed\":false}");
+}
+
+/* Type (CAMEL_FOLDER_TYPE_*) of a folder, from the folder tree. */
+static guint32
+find_folder_type (CamelFolderInfo *fi,
+		  const gchar *full_name)
+{
+	for (; fi; fi = fi->next) {
+		guint32 type;
+
+		if (g_strcmp0 (fi->full_name, full_name) == 0)
+			return fi->flags & CAMEL_FOLDER_TYPE_MASK;
+
+		type = find_folder_type (fi->child, full_name);
+		if (type != CAMEL_FOLDER_TYPE_NORMAL)
+			return type;
+	}
+
+	return CAMEL_FOLDER_TYPE_NORMAL;
+}
+
+/* Actions sur tout un dossier.
+ * "mark-all-read" : tous les messages marqués lus.
+ * "empty" : dossier Corbeille ou Indésirables (ou compte sans corbeille) :
+ * messages supprimés définitivement ; autre dossier : messages déplacés
+ * vers la corbeille du compte.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] account_uid, [1] folder_full_name, [2] action
+ *   error : emplacement d'erreur GError
+ * Retourne : {"count": n, "permanent": true|false}, ou NULL en cas d'erreur. */
 static gchar *
 core_process_outbox_run (EvoCore *core,
 			 gchar **args,
@@ -11426,6 +11622,19 @@ evo_core_get_folder_quota (EvoCore *core,
 	g_return_if_fail (folder_full_name != NULL);
 
 	core_submit (core, core_get_folder_quota_run, g_strdupv (args), func, user_data);
+}
+
+void
+evo_core_save_draft (EvoCore *core,
+		     const char *draft_json,
+		     EvoCoreResultFunc func,
+		     void *user_data)
+{
+	gchar *args[] = { (gchar *) draft_json, NULL };
+
+	g_return_if_fail (draft_json != NULL);
+
+	core_submit (core, core_save_draft_run, g_strdupv (args), func, user_data);
 }
 
 /* Soumet une requête de suppression d'un message (vers la corbeille ou

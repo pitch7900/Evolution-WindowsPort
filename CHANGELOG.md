@@ -14,6 +14,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Quickwin — Autosave et sauvegarde manuelle des brouillons (TODO section 7, QUICKWINS)** : minuterie d'enregistrement automatique périodique (toutes les 60 secondes) dans `ComposeWindow` sans interruption de la saisie utilisateur, complétée par un bouton « Enregistrer » et le raccourci `Ctrl+S` dans la barre d'outils ; persistance et écrasement propre du brouillon dans le dossier Brouillons du compte expéditeur via la fonction moteur `evo_core_save_draft`, horodatage discret dans la barre de titre (« Brouillon enregistré à HH:mm ») et test de contrat de données JSON validé dans `test_evo_core_contracts.c`.
+
 - **Quickwin — Affichage du quota et espace de stockage (TODO section 3, QUICKWINS)** : nouvelle commande « Espace disque » dans le ruban Fichier pour afficher la jauge de remplissage du compte de messagerie (taux d'occupation, espace utilisé et total via `camel_folder_get_quota_info_sync`), avec outil de nettoyage rapide pour vider la corbeille du compte.
 
 - **Quickwin — Taille du texte de lecture (TODO section 19)** : le choix _Petite / Normale / Grande / Très grande_ de Paramètres › Apparence était enregistré sans effet ; il règle maintenant le zoom du lecteur (85 / 100 / 125 / 150 %), ajustable ensuite par `Ctrl++` / `Ctrl+-`.

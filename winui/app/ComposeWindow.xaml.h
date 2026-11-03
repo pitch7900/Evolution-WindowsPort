@@ -68,6 +68,7 @@ namespace winrt::EvolutionWin::implementation
                    ::EvolutionWin::ComposeData const& data);
 
         void OnSendClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnSaveDraftClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         fire_and_forget OnAttachClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnFormatModeToggle(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         /**
@@ -118,6 +119,9 @@ namespace winrt::EvolutionWin::implementation
         fire_and_forget ExecuteEditorCommandAsync(hstring command, hstring argument = L"");
         fire_and_forget SwitchFormatModeAsync(bool html_mode);
         fire_and_forget SendMessageAsync();
+        fire_and_forget SaveDraftAsync(bool is_autosave);
+        void StartAutoSaveTimer();
+        void StopAutoSaveTimer();
         static hstring PlainTextToHtml(std::wstring_view text);
 
         std::weak_ptr<::EvolutionWin::CoreBridge> m_core;
@@ -143,6 +147,11 @@ namespace winrt::EvolutionWin::implementation
         bool m_updating_signature{ false };
         /* bloc de signature inséré dans le texte brut, pour le remplacer */
         std::wstring m_plain_signature;
+        Microsoft::UI::Xaml::DispatcherTimer m_autosave_timer{ nullptr };
+        winrt::event_token m_autosave_token{};
+        hstring m_saved_draft_uid;
+        std::wstring m_last_saved_content;
+        bool m_is_saving_draft{ false };
     };
 }
 
