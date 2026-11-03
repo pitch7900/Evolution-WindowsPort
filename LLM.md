@@ -175,19 +175,20 @@ Les règles suivantes ont été définies par Pierre et doivent être respectée
 
 ---
 
-## 7. État Actuel du Projet (Version 0.9.7)
+## 7. Pilotage Dynamique des Tâches & Source de Vérité
 
-### 7.1. Ce qui a été accompli récemment
-- **QUICKWINS** : 100% des tâches du fichier `QUICKWINS.md` sont désormais réalisées et testées :
-  - Exportation complète de dossier au format `.eml` via sélecteur de répertoire.
-  - Recherche et filtrage instantané dans le Calendrier (titre, lieu, description).
-  - Formatage localisé des tailles de fichiers et dates intelligentes.
-  - Activation et désactivation de compte sans suppression dans les propriétés.
-  - Bouton d'annulation d'urgence sur la barre de progression (`evo_core_cancel_operations`).
-  - Quota du compte dans le ruban Fichier (`camel_folder_get_quota_info_sync`) avec jauge et nettoyage.
-  - Autosave périodique (60s) et manuel (`Ctrl+S`) dans la fenêtre de rédaction (`ComposeWindow`).
-  - Améliorations de l'installeur MSI (désactivation de Restart Manager, relance `LAUNCHAPP=1`).
+Ce fichier `LLM.md` ne contient volontairement **aucun listing statique de tâches faites ou à faire** afin d'éviter toute désynchronisation. L'état du projet et les fonctionnalités sont pilotés dynamiquement par quatre fichiers clés que l'agent IA doit obligatoirement consulter à chaque prise en main :
 
-### 7.2. Prochaine Étape pour l'Agent IA
-- Poursuivre le traitement des tâches ouvertes de **[`TODO.md`](TODO.md)** par lots cohérents (créer, tester, commiter, mettre à jour le changelog et pousser sur `0.9.7`).
+### 7.1. Fichiers sources à lire obligatoirement :
+1. **[`VERSION`](VERSION)** : Indique la version SemVer courante du projet (ainsi que le nom de la branche de développement active, ex. `0.9.7`).
+2. **[`CHANGELOG.md`](CHANGELOG.md)** : Registre historique officiel listant l'ensemble des fonctionnalités déjà réalisées, testées et validées, regroupées par version.
+3. **[`QUICKWINS.md`](QUICKWINS.md)** : Liste des tâches prioritaires à fort impact utilisateur et faible coût d'implémentation. Pierre peut y ajouter de nouveaux éléments à tout moment. L'agent doit toujours prioriser les tâches ouvertes de ce fichier.
+4. **[`TODO.md`](TODO.md)** : Feuille de route globale et exhaustive du projet, détaillant les spécifications complètes, les contraintes métier et l'état d'avancement de chaque module.
+
+### 7.2. Règles de traitement des tâches pour l'agent IA :
+- **Identification des besoins** : L'agent doit rechercher les tâches **non cochées** (`- [ ]`) en consultant en priorité `QUICKWINS.md`, puis les sections ouvertes de `TODO.md`.
+- **Mise à jour obligatoire lors de la complétion** :
+  - Dès qu'une tâche est développée et validée par la suite de tests (`tools\run-tests.bat`), elle doit **obligatoirement être cochée** (`- [x]`) dans le fichier source (`QUICKWINS.md` et/ou `TODO.md`).
+  - L'entrée correspondante doit **obligatoirement être consignée dans [`CHANGELOG.md`](CHANGELOG.md)** sous la section `## [<version>] — en cours` avec une description claire de l'apport fonctionnel et technique.
+  - La tâche fait l'objet d'un **commit atomique dédié** avant de passer à la tâche suivante.
 
