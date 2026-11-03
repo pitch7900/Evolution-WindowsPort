@@ -93,6 +93,8 @@ namespace winrt::EvolutionWin::implementation
             { L"Suppression définitive", L"Confirmation avant la suppression irréversible d'un message", L"mail" },
             { L"Accusé de lecture", L"Demande automatique de confirmation de lecture lors de l'envoi", L"mail" },
             { L"Copie cachée automatique (Cci / Bcc)", L"Définir une adresse Bcc automatique sur les nouveaux messages", L"mail" },
+            { L"Police de rédaction", L"Police et taille de caractères par défaut des nouveaux courriels", L"mail" },
+            { L"Vérificateur d'orthographe", L"Surligner et corriger les fautes d'orthographe pendant la rédaction", L"mail" },
 
             { L"Premier jour de la semaine", L"Lundi, dimanche ou samedi pour la grille du calendrier", L"calendar" },
 
@@ -345,6 +347,48 @@ namespace winrt::EvolutionWin::implementation
 
         if (auto sw = MailRequestReadReceiptSwitch())
             sw.IsOn(settings.GetBoolean(L"mail.request-read-receipt", false));
+
+        // Police de rédaction par défaut
+        hstring compose_font = settings.GetString(L"mail.compose-font-family", L"Segoe UI");
+        if (auto combo = MailComposeFontCombo())
+        {
+            int32_t sel = 0;
+            for (uint32_t i = 0; i < combo.Items().Size(); ++i)
+            {
+                if (auto item = combo.Items().GetAt(i).try_as<ComboBoxItem>())
+                {
+                    if (unbox_value_or<hstring>(item.Tag(), L"") == compose_font)
+                    {
+                        sel = static_cast<int32_t>(i);
+                        break;
+                    }
+                }
+            }
+            combo.SelectedIndex(sel);
+        }
+
+        // Taille de police par défaut
+        hstring compose_size = settings.GetString(L"mail.compose-font-size", L"11pt");
+        if (auto combo = MailComposeFontSizeCombo())
+        {
+            int32_t sel = 2; // 11pt
+            for (uint32_t i = 0; i < combo.Items().Size(); ++i)
+            {
+                if (auto item = combo.Items().GetAt(i).try_as<ComboBoxItem>())
+                {
+                    if (unbox_value_or<hstring>(item.Tag(), L"") == compose_size)
+                    {
+                        sel = static_cast<int32_t>(i);
+                        break;
+                    }
+                }
+            }
+            combo.SelectedIndex(sel);
+        }
+
+        // Vérificateur d'orthographe
+        if (auto sw = MailComposeSpellcheckSwitch())
+            sw.IsOn(settings.GetBoolean(L"mail.compose-spellcheck", true));
 
         // Préfixe de réponse
         hstring reply_p = settings.GetString(L"mail.reply-prefix", L"Re: ");
@@ -2002,6 +2046,9 @@ namespace winrt::EvolutionWin::implementation
             s.SetBoolean(L"mail.empty-trash-on-exit", false);
 
             s.SetString(L"mail.default-format", L"html");
+            s.SetString(L"mail.compose-font-family", L"Segoe UI");
+            s.SetString(L"mail.compose-font-size", L"11pt");
+            s.SetBoolean(L"mail.compose-spellcheck", true);
 
             s.SetBoolean(L"mail.warn-empty-subject", true);
 

@@ -388,6 +388,29 @@ static void test_settings_mail_read_and_security_options(void)
         mgr.SetString("mail.forward-prefix", "WG: ");
         std::string fwd_p_saved = mgr.GetString("mail.forward-prefix", "");
         ASSERT_EQ_STR("WG: ", fwd_p_saved.c_str());
+
+        /* Format, police, taille et verification orthographique de redaction */
+        std::string def_fmt = mgr.GetString("mail.default-format", "html");
+        ASSERT_EQ_STR("html", def_fmt.c_str());
+        mgr.SetString("mail.default-format", "text");
+        std::string saved_fmt = mgr.GetString("mail.default-format", "");
+        ASSERT_EQ_STR("text", saved_fmt.c_str());
+
+        std::string def_font = mgr.GetString("mail.compose-font-family", "Segoe UI");
+        ASSERT_EQ_STR("Segoe UI", def_font.c_str());
+        mgr.SetString("mail.compose-font-family", "Calibri");
+        std::string saved_font = mgr.GetString("mail.compose-font-family", "");
+        ASSERT_EQ_STR("Calibri", saved_font.c_str());
+
+        std::string def_size = mgr.GetString("mail.compose-font-size", "11pt");
+        ASSERT_EQ_STR("11pt", def_size.c_str());
+        mgr.SetString("mail.compose-font-size", "14pt");
+        std::string saved_size = mgr.GetString("mail.compose-font-size", "");
+        ASSERT_EQ_STR("14pt", saved_size.c_str());
+
+        ASSERT_EQ_INT(1, mgr.GetBoolean("mail.compose-spellcheck", true));
+        mgr.SetBoolean("mail.compose-spellcheck", false);
+        ASSERT_EQ_INT(0, mgr.GetBoolean("mail.compose-spellcheck", true));
     }
     TEST_CASE_END();
 }

@@ -40,6 +40,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Format de rédaction, police, taille et correcteur orthographique par défaut (TODO ligne 855)** :
+  - **Préférences de rédaction enrichie dans Paramètres > Courrier** : nouvelles options Fluent pour choisir la police par défaut (« Segoe UI », « Calibri », « Aptos », « Arial », etc.), la taille de police par défaut (9pt à 18pt), et activer ou désactiver le vérificateur d'orthographe.
+  - **Application automatique dans l'éditeur de rédaction** : injection dynamique de la police et de la taille choisies dans le gabarit HTML/CSS de l'éditeur WebView2 (ComposeWindow), configuration de la zone texte brut BodyBox (FontFamily, FontSize), et basculement automatique au format texte brut lors de la création d'un nouveau message si le réglage est configuré.
+  - **Activation conditionnelle du correcteur Windows** : le commutateur active ou désactive en temps réel la correction orthographique intégrée (IsSpellCheckEnabled) sur la zone de texte.
+
+
 - **Visualiseur du flux brut RFC 822 / source MIME intégrale (TODO lignes 473 & 475)** :
   - **Dialogue de diagnostic et inspection technique** : affichage du flux brut non interprété du courriel (en-têtes complets RFC 5322, délimiteurs multi-parties MIME, encodages Base64/Quoted-Printable d'origine) dans une boîte de dialogue dédiée grand format avec police monospace (Cascadia Mono / Consolas).
   - **Recherche textuelle interactive (Ctrl+F)** : barre d'outils supérieure intégrant une recherche dynamique en temps réel avec sélection et défilement automatique sur le motif recherché dans la source.

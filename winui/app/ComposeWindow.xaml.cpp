@@ -115,6 +115,30 @@ namespace winrt::EvolutionWin::implementation
         SubjectBox().Text(data.subject);
         BodyBox().Text(data.body);
 
+        // Configuration par défaut : format, police, taille et vérificateur d'orthographe
+        hstring default_format = ::EvolutionWin::Settings::Instance().GetString(L"mail.default-format", L"html");
+        hstring font_family = ::EvolutionWin::Settings::Instance().GetString(L"mail.compose-font-family", L"Segoe UI");
+        hstring font_size_str = ::EvolutionWin::Settings::Instance().GetString(L"mail.compose-font-size", L"11pt");
+        bool spellcheck_enabled = ::EvolutionWin::Settings::Instance().GetBoolean(L"mail.compose-spellcheck", true);
+
+        BodyBox().FontFamily(Microsoft::UI::Xaml::Media::FontFamily(font_family));
+        double fs = 14.0;
+        if (font_size_str == L"9pt") fs = 12.0;
+        else if (font_size_str == L"10pt") fs = 13.0;
+        else if (font_size_str == L"11pt") fs = 14.5;
+        else if (font_size_str == L"12pt") fs = 16.0;
+        else if (font_size_str == L"14pt") fs = 18.5;
+        else if (font_size_str == L"16pt") fs = 21.0;
+        BodyBox().FontSize(fs);
+        BodyBox().IsSpellCheckEnabled(spellcheck_enabled);
+
+        // Format texte brut par défaut si configuré et s'il s'agit d'un nouveau message
+        if (default_format == L"text" && data.html_body.empty())
+        {
+            HtmlModeButton().IsChecked(false);
+            SwitchFormatModeAsync(false);
+        }
+
         m_attachments = data.attachments;
         RebuildAttachmentPanel();
 
@@ -187,16 +211,20 @@ namespace winrt::EvolutionWin::implementation
             }
         });
 
-        static constexpr wchar_t kEditorPage[] =
+        hstring compose_font = ::EvolutionWin::Settings::Instance().GetString(L"mail.compose-font-family", L"Segoe UI");
+        hstring compose_size = ::EvolutionWin::Settings::Instance().GetString(L"mail.compose-font-size", L"11pt");
+        bool compose_spell = ::EvolutionWin::Settings::Instance().GetBoolean(L"mail.compose-spellcheck", true);
+
+        std::wstring kEditorPage =
             L"<!DOCTYPE html><html><head><meta charset=\"utf-8\">"
             L"<style>"
             L"html, body { height: 100%; margin: 0; background: #ffffff; color: #1a1a1a; "
-            L"font-family: 'Segoe UI', sans-serif; font-size: 11pt; line-height: 1.45; }"
+            L"font-family: '" + std::wstring{ compose_font } + L"', sans-serif; font-size: " + std::wstring{ compose_size } + L"; line-height: 1.45; }"
             L"#editor { box-sizing: border-box; min-height: 100%; padding: 12px 14px; outline: none; word-wrap: break-word; }"
             L"blockquote { margin: 4px 0 4px 8px; padding-left: 12px; border-left: 2px solid #999; color: #444; }"
             L"a { color: #0067c0; }"
             L"</style></head><body>"
-            L"<div id=\"editor\" contenteditable=\"true\" spellcheck=\"true\"><div><br></div></div>"
+            L"<div id=\"editor\" contenteditable=\"true\" spellcheck=\"" + std::wstring{ compose_spell ? L"true" : L"false" } + L"\"><div><br></div></div>"
             L"<script>"
             L"const ed = document.getElementById('editor');"
             L"window.evoInit = function(cfg) {"
@@ -233,7 +261,7 @@ namespace winrt::EvolutionWin::implementation
             L"window.chrome.webview.postMessage('ready');"
             L"</script></body></html>";
 
-        HtmlEditor().NavigateToString(kEditorPage);
+        HtmlEditor().NavigateToString(hstring{ kEditorPage });
     }
 
     /* Exécute une commande d'édition HTML (execCommand) dans le WebView2.
