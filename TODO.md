@@ -342,7 +342,7 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
   - [x] Créer un contact dans le carnet choisi (carnet du compte par défaut) : nom, prénom, adresses email, téléphones, société, fonction, notes
   - [ ] **Modifier** un contact existant (manquant aujourd'hui) et le supprimer, avec envoi au serveur
   - [ ] Contacts utilisables dans l'autocomplétion des destinataires (§15)
-- [ ] 🟢 Erreurs de synchronisation du calendrier / des contacts remontées dans l'indicateur d'état des connexions (§4)
+- [x] 🟢 Erreurs de synchronisation du calendrier / des contacts remontées dans l'indicateur d'état des connexions (§4)
 
 ## 4. Synchronisation et mode hors connexion — 🟠
 

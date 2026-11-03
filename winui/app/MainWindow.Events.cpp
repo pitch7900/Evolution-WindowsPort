@@ -316,7 +316,18 @@ namespace winrt::EvolutionWin::implementation
             if (!error.empty())
             {
                 ShowStatus(L"Calendrier : " + error, InfoBarSeverity::Error);
+                UpdateConnectionStatus(m_account.empty() ? L"global" : m_account, L"error", L"Anomalie de synchronisation du calendrier : " + error);
                 return;
+            }
+
+            // Rétablissement du statut si l'anomalie calendrier précédente est résolue
+            if (!m_is_offline)
+            {
+                auto it = m_account_states.find(std::wstring{ m_account.empty() ? L"global" : m_account });
+                if (it != m_account_states.end() && it->second.status == L"error" && std::wstring_view(it->second.message).find(L"calendrier") != std::wstring_view::npos)
+                {
+                    UpdateConnectionStatus(m_account.empty() ? L"global" : m_account, L"connected", L"Synchronisé");
+                }
             }
 
             if (m_calendar_period != L"list")

@@ -40,6 +40,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Remontée des anomalies de synchronisation calendrier et contacts dans la barre d'état (TODO ligne 345)** :
+  - **Détection des erreurs de chargement** : signalement direct dans l'indicateur d'état des connexions en cas d'échec de récupération des événements ou des contacts, avec pastille d'état rouge et message d'explication dans le menu contextuel.
+  - **Rétablissement automatique** : réinitialisation transparente du statut de connexion à l'état nominal dès que les données de calendrier ou de contacts sont à nouveau récupérées avec succès.
+
 - **Copie cachée automatique (Cci / Bcc) sur les messages (TODO ligne 239)** :
   - **Champ de réglage dans Paramètres > Courrier** : configuration d'une ou plusieurs adresses en copie invisible automatique (`mail.auto-bcc` et surcharge par compte `account.<id>.auto-bcc`).
   - **Insertion fluide dans ComposeWindow** : préremplissage automatique du champ Cci lors de l'ouverture de la fenêtre de rédaction d'un nouveau message.
