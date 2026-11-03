@@ -421,6 +421,16 @@ namespace winrt::EvolutionWin::implementation
                 });
                 menu_items.Append(browser_item);
 
+                MenuFlyoutItem save_eml_item;
+                save_eml_item.Text(target_uids.size() > 1 ? L"Enregistrer sous (dossier .eml)..." : L"Enregistrer sous (.eml)...");
+                save_eml_item.Icon(FontIcon{});
+                save_eml_item.Icon().as<FontIcon>().Glyph(L"\xE74E");
+                save_eml_item.Click([this](IInspectable const&, RoutedEventArgs const&)
+                {
+                    SaveMessageAsAsync();
+                });
+                menu_items.Append(save_eml_item);
+
                 menu_items.Append(MenuFlyoutSeparator{});
 
                 auto state_it = m_message_states.find(std::wstring{ target_uids.front() });

@@ -2409,5 +2409,69 @@ namespace winrt::EvolutionWin::implementation
 
     }
 
-}
 
+    /**
+     * @brief Gestionnaire de clic du bouton « Enregistrer sous » de la fenêtre autonome de message.
+     * @param sender Bouton déclencheur.
+     * @param args Arguments d'événement routé.
+     */
+    void MessageWindow::OnSaveAsClick([[maybe_unused]] IInspectable const& sender, [[maybe_unused]] RoutedEventArgs const& args)
+    {
+        SaveMessageAsAsync();
+    }
+
+    /**
+     * @brief Exporte le message affiché au format .eml (RFC 822) vers l'emplacement choisi par l'utilisateur.
+     */
+    fire_and_forget MessageWindow::SaveMessageAsAsync()
+    {
+        auto strong = get_strong();
+        winrt::apartment_context ui_thread;
+
+        if (m_uid.empty() || m_account.empty() || m_folder.empty())
+            co_return;
+
+        auto core = m_core.lock();
+        if (!core)
+            co_return;
+
+        hstring name = m_current_message ? m_current_message.GetNamedString(L"subject", L"") : hstring{};
+        hstring sanitized = ::EvolutionWin::Helpers::SanitizeFileName(name, L"message");
+
+        Windows::Storage::Pickers::FileSavePicker picker;
+        HWND hwnd = nullptr;
+        if (auto native = try_as<::IWindowNative>())
+            native->get_WindowHandle(&hwnd);
+        if (hwnd)
+            picker.as<::IInitializeWithWindow>()->Initialize(hwnd);
+
+        picker.SuggestedFileName(sanitized);
+        picker.FileTypeChoices().Insert(L"Message électronique", single_threaded_vector<hstring>({ L".eml" }));
+
+        auto file = co_await picker.PickSaveFileAsync();
+        if (!file)
+            co_return;
+
+        hstring dest = file.Path();
+
+        JsonObject request;
+        request.SetNamedValue(L"account", JsonValue::CreateStringValue(m_account));
+        request.SetNamedValue(L"folder", JsonValue::CreateStringValue(m_folder));
+        JsonArray uids;
+        uids.Append(JsonValue::CreateStringValue(m_uid));
+        request.SetNamedValue(L"uids", uids);
+
+        core->ExportMessagesEml(request.Stringify(), [this, dest](hstring const& json, hstring const& error)
+        {
+            JsonArray paths;
+            if (!error.empty() || !JsonArray::TryParse(json, paths) || paths.Size() == 0)
+                return;
+
+            hstring exported = paths.GetStringAt(0);
+            if (CopyFileW(exported.c_str(), dest.c_str(), FALSE))
+            {
+                DeleteFileW(exported.c_str());
+            }
+        });
+    }
+}

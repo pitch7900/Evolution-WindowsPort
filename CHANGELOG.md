@@ -40,6 +40,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Commande « Enregistrer sous (format .eml) » avec sélecteur de fichier FileSavePicker (TODO lignes 453 & 786)** :
+  - **Exportation unitaire et par lot native** : intégration de Windows.Storage.Pickers.FileSavePicker avec filtre de fichier .eml et nom par défaut nettoyé (SanitizeFileName) pour le courriel unique, et de FolderPicker lors d'une sélection multiple pour exporter tous les courriels choisis en un seul clic.
+  - **Accès direct multi-surfaces** : disponible dans le ruban principal, la barre d'outils du volet de lecture, le menu contextuel clic-droit de la liste des messages, ainsi que la barre d'outils de la fenêtre de lecture dédiée MessageWindow.
+  - **Raccourci clavier universel** : assignation du raccourci Ctrl+S (KeyboardAccelerator) dans la fenêtre principale et dans la fenêtre de lecture dédiée pour un enregistrement instantané.
+
 - **Préfixes de réponse et transfert personnalisables et multilingues (TODO ligne 885)** :
   - **Détection multilingue intelligente** : identification des préfixes standards internationaux et régionaux pour éviter la duplication des en-têtes (réponse : `Re:`, `RE:`, `AW:`, `Antw:`, `R:`, `SV:` ; transfert : `TR:`, `Fwd:`, `FW:`, `WG:`, `I:`, `ENC:`).
   - **Options de personnalisation dans Paramètres > Courrier** : sélecteurs Fluent `MailReplyPrefixCombo` (`mail.reply-prefix`) et `MailForwardPrefixCombo` (`mail.forward-prefix`) permettant de choisir les préfixes par défaut.

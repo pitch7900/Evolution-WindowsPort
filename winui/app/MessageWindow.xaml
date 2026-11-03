@@ -250,6 +250,22 @@
 
             </AppBarButton>
 
+            <AppBarButton x:Name="SaveAsButton" Label="Enregistrer sous" Click="OnSaveAsClick" ToolTipService.ToolTip="Enregistrer ce message au format .eml (Ctrl+S)">
+
+                <AppBarButton.Icon>
+
+                    <FontIcon Glyph="&#xE74E;" />
+
+                </AppBarButton.Icon>
+
+                <AppBarButton.KeyboardAccelerators>
+
+                    <KeyboardAccelerator Modifiers="Control" Key="S" />
+
+                </AppBarButton.KeyboardAccelerators>
+
+            </AppBarButton>
+
         </CommandBar>
 
 

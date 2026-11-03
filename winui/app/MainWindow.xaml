@@ -270,9 +270,15 @@
 
                                 HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
 
-                        <AppBarButton Label="Enregistrer sous" Click="OnSaveMessageClick">
+                        <AppBarButton Label="Enregistrer sous" Click="OnSaveMessageClick" ToolTipService.ToolTip="Enregistrer le message au format .eml (Ctrl+S)">
 
-                            <AppBarButton.Icon><FontIcon Glyph="&#xE792;" /></AppBarButton.Icon>
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE74E;" /></AppBarButton.Icon>
+
+                            <AppBarButton.KeyboardAccelerators>
+
+                                <KeyboardAccelerator Modifiers="Control" Key="S" />
+
+                            </AppBarButton.KeyboardAccelerators>
 
                         </AppBarButton>
 
@@ -1435,13 +1441,15 @@
 
                             </AppBarButton>
 
-                            <AppBarButton Label="Enregistrer sous" Click="OnSaveMessageClick">
+                            <AppBarButton Label="Enregistrer sous" Click="OnSaveMessageClick" ToolTipService.ToolTip="Enregistrer le message au format .eml (Ctrl+S)">
 
                                 <AppBarButton.Icon>
 
-                                    <FontIcon Glyph="&#xE792;" />
+                                    <FontIcon Glyph="&#xE74E;" />
 
                                 </AppBarButton.Icon>
+
+                                
 
                                 <AppBarButton.KeyboardAccelerators>
 

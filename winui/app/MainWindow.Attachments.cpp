@@ -156,30 +156,78 @@ namespace winrt::EvolutionWin::implementation
         SaveMessageAsAsync();
     }
 
-    /* Enregistre le message affiché au format .eml (RFC 822) : export par
-     * evo-core dans un dossier temporaire, puis copie à l'emplacement choisi. */
+    /**
+     * @brief Enregistre les messages sélectionnés au format .eml (RFC 822).
+     *        Pour un message unique, ouvre un FileSavePicker proposant l'objet comme nom de fichier.
+     *        Pour une sélection multiple, ouvre un FolderPicker et y exporte tous les courriels.
+     */
     fire_and_forget MainWindow::SaveMessageAsAsync()
     {
         auto strong = get_strong();
         winrt::apartment_context ui_thread;
-        hstring uid = SelectedMessageUid();
+
+        auto sel_uids = SelectedMessageUids();
+        hstring uid = sel_uids.empty() ? SelectedMessageUid() : sel_uids.front();
         hstring account = m_account;
         hstring folder = m_folder;
 
         if (uid.empty() || account.empty() || folder.empty())
             co_return;
 
-        /* nom proposé : l'objet, sans caractères interdits dans un nom de fichier */
-        std::wstring name{ m_current_message ? m_current_message.GetNamedString(L"subject", L"") : hstring{} };
-        for (auto& c : name)
-            if (wcschr(L"\\/:*?\"<>|", c) || c < 32)
-                c = L'_';
-        if (name.empty())
-            name = L"message";
+        /* Export multiple : sélection d'un dossier de destination via FolderPicker */
+        if (sel_uids.size() > 1)
+        {
+            Windows::Storage::Pickers::FolderPicker picker;
+            InitializePicker(picker);
+            picker.SuggestedStartLocation(Windows::Storage::Pickers::PickerLocationId::DocumentsLibrary);
+            picker.FileTypeFilter().Append(L"*");
+
+            auto folder_dest = co_await picker.PickSingleFolderAsync();
+            if (!folder_dest)
+                co_return;
+
+            hstring dest_dir = folder_dest.Path();
+            JsonObject request;
+            request.SetNamedValue(L"account", JsonValue::CreateStringValue(account));
+            request.SetNamedValue(L"folder", JsonValue::CreateStringValue(folder));
+            JsonArray uids;
+            for (auto const& u : sel_uids)
+                uids.Append(JsonValue::CreateStringValue(u));
+            request.SetNamedValue(L"uids", uids);
+
+            ShowStatus(L"Exportation de " + hstring{ std::to_wstring(sel_uids.size()) } + L" messages en cours…", InfoBarSeverity::Informational);
+            m_core->ExportMessagesEml(request.Stringify(), [this, dest_dir](hstring const& json, hstring const& error)
+            {
+                JsonArray paths;
+                if (!error.empty() || !JsonArray::TryParse(json, paths) || paths.Size() == 0)
+                {
+                    ShowStatus(L"Enregistrement des messages : " + error, InfoBarSeverity::Error);
+                    return;
+                }
+                uint32_t saved = 0;
+                for (auto const& p : paths)
+                {
+                    hstring src_path = p.GetString();
+                    std::filesystem::path src_fs{ src_path.c_str() };
+                    std::filesystem::path dest_fs = std::filesystem::path{ dest_dir.c_str() } / src_fs.filename();
+                    if (CopyFileW(src_fs.c_str(), dest_fs.c_str(), FALSE))
+                    {
+                        ++saved;
+                        DeleteFileW(src_fs.c_str());
+                    }
+                }
+                ShowStatus(hstring{ std::to_wstring(saved) + L" messages enregistrés dans « " + std::wstring{ dest_dir } + L" »." }, InfoBarSeverity::Success);
+            });
+            co_return;
+        }
+
+        /* Export unitaire : sélection du fichier via FileSavePicker */
+        hstring name = m_current_message ? m_current_message.GetNamedString(L"subject", L"") : hstring{};
+        hstring sanitized = ::EvolutionWin::Helpers::SanitizeFileName(name, L"message");
 
         Windows::Storage::Pickers::FileSavePicker picker;
         InitializePicker(picker);
-        picker.SuggestedFileName(hstring{ name });
+        picker.SuggestedFileName(sanitized);
         picker.FileTypeChoices().Insert(L"Message électronique", single_threaded_vector<hstring>({ L".eml" }));
 
         auto file = co_await picker.PickSaveFileAsync();
