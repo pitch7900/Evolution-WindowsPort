@@ -882,7 +882,7 @@ Les textes d'EvolutionWin sont aujourd'hui écrits en dur en français dans le c
 - [ ] 🟡 Textes construits dynamiquement : pluriels (« 1 message » / « 3 messages »), paramètres insérés dans les phrases (« Compte {0} : {1} non lus »)
 - [ ] 🟢 Dates, heures, nombres et tailles formatés selon la langue (`Windows.Globalization`)
 - [ ] 🟡 Messages d'erreur d'`evo-core` traduits (chaînes C passées par gettext avec un domaine `evo-core`, ou codes d'erreur traduits côté interface)
-- [ ] 🟢 Préfixes de réponse / transfert selon la langue (« RE: » / « TR: », « AW: » / « WG: », « R: » / « I: »…) et en-tête de citation traduit
+- [x] 🟢 Préfixes de réponse / transfert selon la langue (« RE: » / « TR: », « AW: » / « WG: », « R: » / « I: »…) et en-tête de citation traduit
 
 ### Langues
 

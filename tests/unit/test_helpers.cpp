@@ -5327,6 +5327,94 @@ static bool SetAutoStartupEnabled(bool enable)
     return (res == ERROR_SUCCESS);
 }
 
+
+static bool HasReplyPrefix(std::wstring_view subject)
+{
+    static const std::vector<std::wstring_view> prefixes = {
+        L"re:", L"aw:", L"antw:", L"r:", L"rif:", L"sv:", L"vs:", L"res:"
+    };
+    for (auto const& p : prefixes)
+    {
+        if (StartsWithNoCase(subject, p))
+            return true;
+    }
+    return false;
+}
+
+static bool HasForwardPrefix(std::wstring_view subject)
+{
+    static const std::vector<std::wstring_view> prefixes = {
+        L"tr:", L"fwd:", L"fw:", L"wg:", L"doorst:", L"i:", L"vb:", L"vl:", L"enc:"
+    };
+    for (auto const& p : prefixes)
+    {
+        if (StartsWithNoCase(subject, p))
+            return true;
+    }
+    return false;
+}
+
+static std::wstring FormatReplySubject(std::wstring_view subject, std::wstring_view prefix = L"Re: ")
+{
+    if (HasReplyPrefix(subject))
+        return std::wstring{ subject };
+    std::wstring p{ prefix.empty() ? L"Re: " : prefix };
+    if (p.back() != L' ' && p.back() != L':')
+        p += L": ";
+    else if (p.back() == L':')
+        p += L" ";
+    return p + std::wstring{ subject };
+}
+
+static std::wstring FormatForwardSubject(std::wstring_view subject, std::wstring_view prefix = L"TR: ")
+{
+    if (HasForwardPrefix(subject))
+        return std::wstring{ subject };
+    std::wstring p{ prefix.empty() ? L"TR: " : prefix };
+    if (p.back() != L' ' && p.back() != L':')
+        p += L": ";
+    else if (p.back() == L':')
+        p += L" ";
+    return p + std::wstring{ subject };
+}
+
+static void test_multilingual_subject_prefixes(void)
+{
+    TEST_CASE("Prefixes: Detection multilingue et formatage reponse / transfert");
+    {
+        /* Detection des prefixes de reponse multilingues */
+        ASSERT_TRUE(HasReplyPrefix(L"Re: Reunion projet"));
+        ASSERT_TRUE(HasReplyPrefix(L"RE: Important"));
+        ASSERT_TRUE(HasReplyPrefix(L"AW: Projektplan"));      /* Allemand (Antwort) */
+        ASSERT_TRUE(HasReplyPrefix(L"Antw: Vraag"));          /* Neerlandais (Antwoord) */
+        ASSERT_TRUE(HasReplyPrefix(L"R: Aggiornamento"));     /* Italien (Risposta) */
+        ASSERT_TRUE(HasReplyPrefix(L"SV: Status"));           /* Scandinave (Svar) */
+        ASSERT_FALSE(HasReplyPrefix(L"Remise des prix"));      /* Faux positif evite */
+
+        /* Detection des prefixes de transfert multilingues */
+        ASSERT_TRUE(HasForwardPrefix(L"TR: Document joint"));
+        ASSERT_TRUE(HasForwardPrefix(L"Fwd: Monthly report"));
+        ASSERT_TRUE(HasForwardPrefix(L"FW: Invoice"));
+        ASSERT_TRUE(HasForwardPrefix(L"WG: Unterlagen"));      /* Allemand (Weiterleitung) */
+        ASSERT_TRUE(HasForwardPrefix(L"I: Documento"));        /* Italien (Inoltro) */
+        ASSERT_TRUE(HasForwardPrefix(L"ENC: Resumen"));        /* Espagnol (Encaminado) */
+        ASSERT_FALSE(HasForwardPrefix(L"Travaux en cours"));   /* Faux positif evite */
+
+        /* Formatage intelligent de reponse : ne pas dupliquer si deja present */
+        ASSERT_TRUE(FormatReplySubject(L"Re: Reunion projet") == L"Re: Reunion projet");
+        ASSERT_TRUE(FormatReplySubject(L"AW: Projektplan") == L"AW: Projektplan");
+        ASSERT_TRUE(FormatReplySubject(L"Nouveau sujet") == L"Re: Nouveau sujet");
+        ASSERT_TRUE(FormatReplySubject(L"Nouveau sujet", L"AW: ") == L"AW: Nouveau sujet");
+
+        /* Formatage intelligent de transfert */
+        ASSERT_TRUE(FormatForwardSubject(L"TR: Document") == L"TR: Document");
+        ASSERT_TRUE(FormatForwardSubject(L"Fwd: Document") == L"Fwd: Document");
+        ASSERT_TRUE(FormatForwardSubject(L"Bilan annuel") == L"TR: Bilan annuel");
+        ASSERT_TRUE(FormatForwardSubject(L"Bilan annuel", L"WG: ") == L"WG: Bilan annuel");
+    }
+    TEST_CASE_END();
+}
+
 static void test_auto_startup_registry(void)
 {
     TEST_CASE("AutoStartup: Inscription et desinscription dans HKCU\\...\\Run");
@@ -5518,6 +5606,7 @@ int main(void)
 
     test_purge_directory_files();
     test_auto_startup_registry();
+    test_multilingual_subject_prefixes();
     test_second_timezone_helpers();
     test_message_category_search();
 

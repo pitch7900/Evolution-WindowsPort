@@ -177,15 +177,14 @@ namespace winrt::EvolutionWin::implementation
             ::EvolutionWin::ComposeData data;
             data.account = account;
             data.reply = true;
+            std::wstring fwd_p{ ::EvolutionWin::Settings::Instance().GetString(L"mail.forward-prefix", L"TR: ") };
             if (!first_subject.empty())
             {
-                data.subject = StartsWithNoCase(first_subject, L"TR:") || StartsWithNoCase(first_subject, L"Fwd:")
-                    ? first_subject
-                    : L"TR: " + first_subject;
+                data.subject = hstring{ FormatForwardSubject(first_subject, fwd_p) };
             }
             else
             {
-                data.subject = L"TR: Messages transférés";
+                data.subject = hstring{ FormatForwardSubject(L"Messages transférés", fwd_p) };
             }
 
             for (auto const& val : paths)

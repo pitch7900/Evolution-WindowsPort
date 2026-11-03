@@ -706,23 +706,14 @@ namespace winrt::EvolutionWin::implementation
 
             data.reply = true;
 
+            std::wstring fwd_p{ ::EvolutionWin::Settings::Instance().GetString(L"mail.forward-prefix", L"TR: ") };
             if (!first_subject.empty())
-
             {
-
-                data.subject = StartsWithNoCase(first_subject, L"TR:") || StartsWithNoCase(first_subject, L"Fwd:")
-
-                    ? first_subject
-
-                    : L"TR: " + first_subject;
-
+                data.subject = hstring{ FormatForwardSubject(first_subject, fwd_p) };
             }
-
             else
-
             {
-
-                data.subject = L"TR: Message transféré";
+                data.subject = hstring{ FormatForwardSubject(L"Message transféré", fwd_p) };
 
             }
 

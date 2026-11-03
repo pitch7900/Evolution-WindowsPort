@@ -375,6 +375,19 @@ static void test_settings_mail_read_and_security_options(void)
         ASSERT_EQ_INT(0, mgr.GetBoolean("general.auto-startup", false));
         mgr.SetBoolean("general.auto-startup", true);
         ASSERT_EQ_INT(1, mgr.GetBoolean("general.auto-startup", false));
+
+        /* Prefixes personnalises de reponse et transfert (mail.reply-prefix / forward-prefix) */
+        std::string reply_p_default = mgr.GetString("mail.reply-prefix", "Re: ");
+        ASSERT_EQ_STR("Re: ", reply_p_default.c_str());
+        mgr.SetString("mail.reply-prefix", "AW: ");
+        std::string reply_p_saved = mgr.GetString("mail.reply-prefix", "");
+        ASSERT_EQ_STR("AW: ", reply_p_saved.c_str());
+
+        std::string fwd_p_default = mgr.GetString("mail.forward-prefix", "TR: ");
+        ASSERT_EQ_STR("TR: ", fwd_p_default.c_str());
+        mgr.SetString("mail.forward-prefix", "WG: ");
+        std::string fwd_p_saved = mgr.GetString("mail.forward-prefix", "");
+        ASSERT_EQ_STR("WG: ", fwd_p_saved.c_str());
     }
     TEST_CASE_END();
 }

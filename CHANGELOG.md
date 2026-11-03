@@ -40,6 +40,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Préfixes de réponse et transfert personnalisables et multilingues (TODO ligne 885)** :
+  - **Détection multilingue intelligente** : identification des préfixes standards internationaux et régionaux pour éviter la duplication des en-têtes (réponse : `Re:`, `RE:`, `AW:`, `Antw:`, `R:`, `SV:` ; transfert : `TR:`, `Fwd:`, `FW:`, `WG:`, `I:`, `ENC:`).
+  - **Options de personnalisation dans Paramètres > Courrier** : sélecteurs Fluent `MailReplyPrefixCombo` (`mail.reply-prefix`) et `MailForwardPrefixCombo` (`mail.forward-prefix`) permettant de choisir les préfixes par défaut.
+  - **En-têtes de citation localisés** : adaptation multilingue automatique des en-têtes de citation (texte brut et HTML) selon la langue d'interface active (français, anglais, allemand, italien, espagnol).
+  - **Couverture par tests unitaires** : 100% des règles de détection, d'isolation et de persistance validées dans `test_helpers.cpp` et `test_settings.cpp`.
+
 - **Option « Démarrer automatiquement avec Windows » via le Registre utilisateur (TODO ligne 846)** :
   - **Gestion native du Registre HKCU\\...\\Run** : implémentation sécurisée des utilitaires `IsAutoStartupEnabled()` et `SetAutoStartupEnabled()` ciblant `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` sans nécessiter de privilèges administrateur.
   - **Carte de configuration dans Paramètres > Apparence** : interrupteur ergonomique avec icône et libellé explicite mémorisant l'état dans `general.auto-startup` et répercutant immédiatement l'inscription Windows.

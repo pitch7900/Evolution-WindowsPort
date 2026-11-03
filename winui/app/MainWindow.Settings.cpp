@@ -132,6 +132,8 @@ namespace winrt::EvolutionWin::implementation
             { L"Zone de notification (Systray)", L"Réduire dans la zone de notification Windows à la fermeture", L"appearance" },
             { L"Démarrer avec Windows", L"Lancement automatique à l'ouverture de session utilisateur (Registre)", L"appearance" },
 
+            { L"Préfixe de réponse", L"Préfixe d'objet de réponse (Re:, RE:, AW:, R:)", L"mail" },
+            { L"Préfixe de transfert", L"Préfixe d'objet de transfert (TR:, Fwd:, FW:, WG:)", L"mail" },
             { L"Contenu externe et images distantes", L"Bloquer ou autoriser les images et pixels de suivi", L"privacy" },
 
             { L"Expéditeurs de confiance", L"Gérer la liste blanche des expéditeurs autorisés", L"privacy" },
@@ -343,6 +345,44 @@ namespace winrt::EvolutionWin::implementation
 
         if (auto sw = MailRequestReadReceiptSwitch())
             sw.IsOn(settings.GetBoolean(L"mail.request-read-receipt", false));
+
+        // Préfixe de réponse
+        hstring reply_p = settings.GetString(L"mail.reply-prefix", L"Re: ");
+        if (auto combo = MailReplyPrefixCombo())
+        {
+            int32_t sel = 0;
+            for (uint32_t i = 0; i < combo.Items().Size(); ++i)
+            {
+                if (auto item = combo.Items().GetAt(i).try_as<ComboBoxItem>())
+                {
+                    if (unbox_value_or<hstring>(item.Tag(), L"") == reply_p)
+                    {
+                        sel = static_cast<int32_t>(i);
+                        break;
+                    }
+                }
+            }
+            combo.SelectedIndex(sel);
+        }
+
+        // Préfixe de transfert
+        hstring fwd_p = settings.GetString(L"mail.forward-prefix", L"TR: ");
+        if (auto combo = MailForwardPrefixCombo())
+        {
+            int32_t sel = 0;
+            for (uint32_t i = 0; i < combo.Items().Size(); ++i)
+            {
+                if (auto item = combo.Items().GetAt(i).try_as<ComboBoxItem>())
+                {
+                    if (unbox_value_or<hstring>(item.Tag(), L"") == fwd_p)
+                    {
+                        sel = static_cast<int32_t>(i);
+                        break;
+                    }
+                }
+            }
+            combo.SelectedIndex(sel);
+        }
 
         if (auto tb = MailAutoBccBox())
             tb.Text(settings.GetString(L"mail.auto-bcc", L""));
@@ -1998,6 +2038,8 @@ namespace winrt::EvolutionWin::implementation
 
             s.SetBoolean(L"appearance.minimize-to-tray", false);
             s.SetBoolean(L"general.auto-startup", false);
+            s.SetString(L"mail.reply-prefix", L"Re: ");
+            s.SetString(L"mail.forward-prefix", L"TR: ");
             ::EvolutionWin::Helpers::SetAutoStartupEnabled(false);
 
             s.SetBoolean(L"privacy.hide-snippets", false);

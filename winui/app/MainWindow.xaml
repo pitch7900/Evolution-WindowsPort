@@ -2772,6 +2772,61 @@
                                     </Grid>
                                 </Border>
 
+                                <!-- Préfixe de réponse personnalisé / multilingue -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE97A;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Préfixe de réponse" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Préfixe ajouté au sujet lors de la réponse (Re:, RE:, AW:, R:, SV:…)."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="MailReplyPrefixCombo" Tag="mail.reply-prefix" MinWidth="170"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center">
+                                            <ComboBoxItem Content="Re: (standard / FR / EN)" Tag="Re: " />
+                                            <ComboBoxItem Content="RE: (majuscules)" Tag="RE: " />
+                                            <ComboBoxItem Content="AW: (allemand)" Tag="AW: " />
+                                            <ComboBoxItem Content="R: (italien)" Tag="R: " />
+                                            <ComboBoxItem Content="SV: (scandinave)" Tag="SV: " />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Préfixe de transfert personnalisé / multilingue -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE72D;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Préfixe de transfert" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Préfixe ajouté au sujet lors du transfert (TR:, Fwd:, FW:, WG:, I:…)."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="MailForwardPrefixCombo" Tag="mail.forward-prefix" MinWidth="170"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center">
+                                            <ComboBoxItem Content="TR: (français)" Tag="TR: " />
+                                            <ComboBoxItem Content="Fwd: (anglais)" Tag="Fwd: " />
+                                            <ComboBoxItem Content="FW: (anglais court)" Tag="FW: " />
+                                            <ComboBoxItem Content="WG: (allemand)" Tag="WG: " />
+                                            <ComboBoxItem Content="I: (italien)" Tag="I: " />
+                                            <ComboBoxItem Content="ENC: (espagnol / port.)" Tag="ENC: " />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
                                 <!-- Confirmation suppression définitive -->
 
                                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"

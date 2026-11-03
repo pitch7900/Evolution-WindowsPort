@@ -4,6 +4,7 @@
  * (formatage des expéditeurs, dates, listes de confiance, réponses/transferts…). */
 
 #include "ComposeWindow.xaml.h"
+#include "Settings.h"
 #include <cwctype>
 #include <string>
 #include <shellapi.h>
@@ -192,6 +193,78 @@ namespace EvolutionWin::Helpers
      *   account_uid : identifiant du compte d'envoi
      *   accounts    : liste JSON des comptes configurés (pour l'adresse de l'utilisateur)
      * Retourne : la structure ComposeData prête pour OpenCompose. */
+        /**
+     * @brief Verifie si un objet commence par un prefixe de reponse standard ou multilingue (Re:, AW:, Antw:, R:, SV:...).
+     * @param subject Objet du courriel.
+     * @return true si un prefixe de reponse est detecte, false sinon.
+     */
+    inline bool HasReplyPrefix(std::wstring_view subject)
+    {
+        static const std::vector<std::wstring_view> prefixes = {
+            L"re:", L"aw:", L"antw:", L"r:", L"rif:", L"sv:", L"vs:", L"res:"
+        };
+        for (auto const& p : prefixes)
+        {
+            if (StartsWithNoCase(subject, p))
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Verifie si un objet commence par un prefixe de transfert standard ou multilingue (TR:, Fwd:, FW:, WG:, I:, ENC:...).
+     * @param subject Objet du courriel.
+     * @return true si un prefixe de transfert est detecte, false sinon.
+     */
+    inline bool HasForwardPrefix(std::wstring_view subject)
+    {
+        static const std::vector<std::wstring_view> prefixes = {
+            L"tr:", L"fwd:", L"fw:", L"wg:", L"doorst:", L"i:", L"vb:", L"vl:", L"enc:"
+        };
+        for (auto const& p : prefixes)
+        {
+            if (StartsWithNoCase(subject, p))
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Formate l'objet pour une reponse selon le prefixe configure.
+     * @param subject Objet d'origine.
+     * @param prefix Prefixe a appliquer si absent (defaut L"Re: ").
+     * @return Objet formate avec le prefixe de reponse.
+     */
+    inline std::wstring FormatReplySubject(std::wstring_view subject, std::wstring_view prefix = L"Re: ")
+    {
+        if (HasReplyPrefix(subject))
+            return std::wstring{ subject };
+        std::wstring p{ prefix.empty() ? L"Re: " : prefix };
+        if (p.back() != L' ' && p.back() != L':')
+            p += L": ";
+        else if (p.back() == L':')
+            p += L" ";
+        return p + std::wstring{ subject };
+    }
+
+    /**
+     * @brief Formate l'objet pour un transfert selon le prefixe configure.
+     * @param subject Objet d'origine.
+     * @param prefix Prefixe a appliquer si absent (defaut L"TR: ").
+     * @return Objet formate avec le prefixe de transfert.
+     */
+    inline std::wstring FormatForwardSubject(std::wstring_view subject, std::wstring_view prefix = L"TR: ")
+    {
+        if (HasForwardPrefix(subject))
+            return std::wstring{ subject };
+        std::wstring p{ prefix.empty() ? L"TR: " : prefix };
+        if (p.back() != L' ' && p.back() != L':')
+            p += L": ";
+        else if (p.back() == L':')
+            p += L" ";
+        return p + std::wstring{ subject };
+    }
+
     inline ::EvolutionWin::ComposeData BuildReplyComposeData(
         ::EvolutionWin::ReplyKind kind,
         JsonObject const& message,
@@ -210,21 +283,56 @@ namespace EvolutionWin::Helpers
         data.account = account_uid;
         data.reply = true;
 
+        std::wstring lang{ ::EvolutionWin::Settings::Instance().GetString(L"general.language", L"system") };
+        if (lang.empty() || lang == L"system")
+            lang = L"fr";
+
         if (kind == ::EvolutionWin::ReplyKind::Forward)
         {
-            data.subject = StartsWithNoCase(subject, L"TR:") || StartsWithNoCase(subject, L"Fwd:") ? subject : L"TR: " + subject;
-            data.body = L"\r\r-------- Message transféré --------\rDe : " + from + L"\rDate : " + date +
-                L"\rObjet : " + subject + L"\rÀ : " + to + (cc.empty() ? hstring{} : L"\rCc : " + cc) +
+            std::wstring fwd_p{ ::EvolutionWin::Settings::Instance().GetString(L"mail.forward-prefix", L"TR: ") };
+            data.subject = hstring{ FormatForwardSubject(subject, fwd_p) };
+
+            std::wstring header_title = L"-------- Message transféré --------";
+            std::wstring lbl_from = L"De : ";
+            std::wstring lbl_date = L"Date : ";
+            std::wstring lbl_subj = L"Objet : ";
+            std::wstring lbl_to = L"À : ";
+            std::wstring lbl_cc = L"Cc : ";
+
+            if (lang == L"en" || lang.find(L"en-") == 0)
+            {
+                header_title = L"-------- Forwarded Message --------";
+                lbl_from = L"From: "; lbl_date = L"Date: "; lbl_subj = L"Subject: "; lbl_to = L"To: "; lbl_cc = L"Cc: ";
+            }
+            else if (lang == L"de" || lang.find(L"de-") == 0)
+            {
+                header_title = L"-------- Weitergeleitete Nachricht --------";
+                lbl_from = L"Von: "; lbl_date = L"Datum: "; lbl_subj = L"Betreff: "; lbl_to = L"An: "; lbl_cc = L"Cc: ";
+            }
+            else if (lang == L"it" || lang.find(L"it-") == 0)
+            {
+                header_title = L"-------- Messaggio Inoltrato --------";
+                lbl_from = L"Da: "; lbl_date = L"Data: "; lbl_subj = L"Oggetto: "; lbl_to = L"A: "; lbl_cc = L"Cc: ";
+            }
+            else if (lang == L"es" || lang.find(L"es-") == 0)
+            {
+                header_title = L"-------- Mensaje reenviado --------";
+                lbl_from = L"De: "; lbl_date = L"Fecha: "; lbl_subj = L"Asunto: "; lbl_to = L"Para: "; lbl_cc = L"Cc: ";
+            }
+
+            data.body = L"\r\r" + hstring{ header_title } + L"\r" + hstring{ lbl_from } + from + L"\r" + hstring{ lbl_date } + date +
+                L"\r" + hstring{ lbl_subj } + subject + L"\r" + hstring{ lbl_to } + to + (cc.empty() ? hstring{} : L"\r" + hstring{ lbl_cc } + cc) +
                 L"\r\r" + text;
+
             data.html_body = hstring{
                 L"<div><br></div><hr style=\"border:none;border-top:1px solid #ccc;\">"
                 L"<div style=\"color:#444;font-size:10pt;\">"
-                L"<b>-------- Message transféré --------</b><br>"
-                L"<b>De :</b> " + EscapeHtml(from) + L"<br>"
-                L"<b>Date :</b> " + EscapeHtml(date) + L"<br>"
-                L"<b>Objet :</b> " + EscapeHtml(subject) + L"<br>"
-                L"<b>À :</b> " + EscapeHtml(to) +
-                (cc.empty() ? std::wstring{} : L"<br><b>Cc :</b> " + EscapeHtml(cc)) +
+                L"<b>" + header_title + L"</b><br>"
+                L"<b>" + lbl_from + L"</b>" + EscapeHtml(from) + L"<br>"
+                L"<b>" + lbl_date + L"</b>" + EscapeHtml(date) + L"<br>"
+                L"<b>" + lbl_subj + L"</b>" + EscapeHtml(subject) + L"<br>"
+                L"<b>" + lbl_to + L"</b>" + EscapeHtml(to) +
+                (cc.empty() ? std::wstring{} : L"<br><b>" + lbl_cc + L"</b>" + EscapeHtml(cc)) +
                 L"</div><br><div>" + EscapeHtml(text) + L"</div>" };
         }
         else
@@ -232,7 +340,8 @@ namespace EvolutionWin::Helpers
             hstring reply_to = message.GetNamedString(L"reply_to", L"");
 
             data.to = reply_to.empty() ? from : reply_to;
-            data.subject = StartsWithNoCase(subject, L"Re:") ? subject : L"Re: " + subject;
+            std::wstring reply_p{ ::EvolutionWin::Settings::Instance().GetString(L"mail.reply-prefix", L"Re: ") };
+            data.subject = hstring{ FormatReplySubject(subject, reply_p) };
             data.in_reply_to = message_id;
 
             hstring references = message.GetNamedString(L"references", L"");
@@ -256,13 +365,37 @@ namespace EvolutionWin::Helpers
             }
 
             std::wstring quoted = Quote(text);
-            for (auto& c : quoted)
-                if (c == L'\n')
-                    c = L'\r';
+            for (auto& ch : quoted)
+                if (ch == L'\n')
+                    ch = L'\r';
 
-            data.body = L"\r\rLe " + date + L", " + from + L" a écrit :\r" + hstring{ quoted };
+            std::wstring quote_lead = L"Le " + std::wstring{ date } + L", " + std::wstring{ from } + L" a écrit :";
+            std::wstring html_quote_lead = L"Le " + EscapeHtml(date) + L", " + EscapeHtml(from) + L" a écrit :";
+
+            if (lang == L"en" || lang.find(L"en-") == 0)
+            {
+                quote_lead = L"On " + std::wstring{ date } + L", " + std::wstring{ from } + L" wrote:";
+                html_quote_lead = L"On " + EscapeHtml(date) + L", " + EscapeHtml(from) + L" wrote:";
+            }
+            else if (lang == L"de" || lang.find(L"de-") == 0)
+            {
+                quote_lead = L"Am " + std::wstring{ date } + L" schrieb " + std::wstring{ from } + L":";
+                html_quote_lead = L"Am " + EscapeHtml(date) + L" schrieb " + EscapeHtml(from) + L":";
+            }
+            else if (lang == L"it" || lang.find(L"it-") == 0)
+            {
+                quote_lead = L"Il " + std::wstring{ date } + L", " + std::wstring{ from } + L" ha scritto:";
+                html_quote_lead = L"Il " + EscapeHtml(date) + L", " + EscapeHtml(from) + L" ha scritto:";
+            }
+            else if (lang == L"es" || lang.find(L"es-") == 0)
+            {
+                quote_lead = L"El " + std::wstring{ date } + L", " + std::wstring{ from } + L" escribió:";
+                html_quote_lead = L"El " + EscapeHtml(date) + L", " + EscapeHtml(from) + L" escribió:";
+            }
+
+            data.body = L"\r\r" + hstring{ quote_lead } + L"\r" + hstring{ quoted };
             data.html_body = hstring{
-                L"<div><br></div><div>Le " + EscapeHtml(date) + L", " + EscapeHtml(from) + L" a écrit :</div>"
+                L"<div><br></div><div>" + html_quote_lead + L"</div>"
                 L"<blockquote>" + EscapeHtml(text) + L"</blockquote>" };
         }
 
