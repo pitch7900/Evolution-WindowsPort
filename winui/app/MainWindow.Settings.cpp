@@ -1174,15 +1174,14 @@ namespace winrt::EvolutionWin::implementation
         }
 
         else if (category_tag == L"about")
-
         {
-
             title = L"À propos";
-
             desc = L"Informations sur le portage Windows natif d'Evolution, technologies et mentions légales.";
-
-            if (auto s = SettingsCategoryAbout()) s.Visibility(Visibility::Visible);
-
+            if (auto s = SettingsCategoryAbout())
+            {
+                s.Visibility(Visibility::Visible);
+                PopulateAboutSettingsView(false);
+            }
         }
 
 

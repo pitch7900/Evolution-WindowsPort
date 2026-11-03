@@ -5,8 +5,12 @@
 
 #include <winrt/Microsoft.UI.Xaml.Media.h>
 #include <winrt/Microsoft.UI.Xaml.Shapes.h>
+#include <algorithm>
+#include <objidl.h>
+#include <gdiplus.h>
 
 #pragma comment(lib, "gdi32.lib")
+#pragma comment(lib, "gdiplus.lib")
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
@@ -103,70 +107,84 @@ namespace winrt::EvolutionWin::implementation
             return;
         }
 
-        // Crée une icône dynamique 16x16 représentant le badge chiffré
-        HDC screen_dc = GetDC(nullptr);
-        HDC mem_dc = CreateCompatibleDC(screen_dc);
+        // Initialisation unique du sous-système GDI+ pour le tracé vectoriel avec canal alpha
+        static bool s_gdiplus_inited = false;
+        if (!s_gdiplus_inited)
+        {
+            Gdiplus::GdiplusStartupInput gsi;
+            ULONG_PTR token = 0;
+            Gdiplus::GdiplusStartup(&token, &gsi, nullptr);
+            s_gdiplus_inited = true;
+        }
 
-        BITMAPINFO bmi = {};
-        bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-        bmi.bmiHeader.biWidth = 16;
-        bmi.bmiHeader.biHeight = 16;
-        bmi.bmiHeader.biPlanes = 1;
-        bmi.bmiHeader.biBitCount = 32;
-        bmi.bmiHeader.biCompression = BI_RGB;
+        // Détermine la taille optimale selon l'échelle DPI de la barre des tâches Windows (16, 20, 24, 32...)
+        int icon_size = GetSystemMetrics(SM_CXSMICON);
+        if (icon_size < 16) icon_size = 16;
+        if (icon_size > 48) icon_size = 48;
 
-        void* bits = nullptr;
-        HBITMAP hColor = CreateDIBSection(mem_dc, &bmi, DIB_RGB_COLORS, &bits, nullptr, 0);
-        HBITMAP hMono = CreateBitmap(16, 16, 1, 1, nullptr);
+        HICON overlay_icon = nullptr;
+        {
+            // Bitmap 32-bit ARGB avec transparence native (aucun contour noir)
+            Gdiplus::Bitmap bmp(icon_size, icon_size, PixelFormat32bppARGB);
+            Gdiplus::Graphics g(&bmp);
 
-        HGDIOBJ old_bmp = SelectObject(mem_dc, hColor);
+            g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+            g.SetTextRenderingHint(Gdiplus::TextRenderingHintAntiAliasGridFit);
+            g.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
 
-        // Dessine une pastille circulaire bleue Fluent
-        HBRUSH brush = CreateSolidBrush(RGB(0, 120, 215));
-        HBRUSH old_brush = static_cast<HBRUSH>(SelectObject(mem_dc, brush));
-        HPEN pen = CreatePen(PS_SOLID, 1, RGB(255, 255, 255));
-        HPEN old_pen = static_cast<HPEN>(SelectObject(mem_dc, pen));
+            // Fond totalement transparent
+            g.Clear(Gdiplus::Color(0, 0, 0, 0));
 
-        ::Ellipse(mem_dc, 0, 0, 16, 16);
+            float fsize = static_cast<float>(icon_size);
+            float pad = 1.0f;
+            float circle_d = fsize - 2.0f * pad;
 
-        SelectObject(mem_dc, old_pen);
-        DeleteObject(pen);
-        SelectObject(mem_dc, old_brush);
-        DeleteObject(brush);
+            // Pastille circulaire bleue Fluent (#0078D4)
+            Gdiplus::SolidBrush badge_brush(Gdiplus::Color(255, 0, 120, 215));
+            g.FillEllipse(&badge_brush, pad, pad, circle_d, circle_d);
 
-        // Dessine le nombre de non lus en blanc centré
-        SetBkMode(mem_dc, TRANSPARENT);
-        SetTextColor(mem_dc, RGB(255, 255, 255));
-        HFONT font = CreateFontW(10, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Segoe UI");
-        HGDIOBJ old_font = SelectObject(mem_dc, font);
+            // Fine bordure blanche anti-aliasée pour détacher la pastille sur tout type de fond
+            Gdiplus::Pen border_pen(Gdiplus::Color(255, 255, 255, 255), 1.25f);
+            g.DrawEllipse(&border_pen, pad, pad, circle_d, circle_d);
 
-        std::wstring text = count > 99 ? L"99+" : std::to_wstring(count);
-        RECT rc = { 0, 1, 16, 16 };
-        DrawTextW(mem_dc, text.c_str(), -1, &rc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+            // Texte centré lisible et net adapté à la taille de l'icône
+            std::wstring badge_text = count > 99 ? L"99+" : std::to_wstring(count);
 
-        SelectObject(mem_dc, old_font);
-        DeleteObject(font);
+            float font_size = fsize * 0.48f;
+            if (badge_text.size() > 2)
+                font_size = fsize * 0.38f;
 
-        SelectObject(mem_dc, old_bmp);
-        DeleteDC(mem_dc);
-        ReleaseDC(nullptr, screen_dc);
+            Gdiplus::Font font(L"Segoe UI Variable Text", font_size, Gdiplus::FontStyleBold, Gdiplus::UnitPixel);
+            if (font.GetLastStatus() != Gdiplus::Ok)
+            {
+                // Fallback sur Segoe UI standard si Segoe UI Variable n'est pas trouvée
+                Gdiplus::Font fallback_font(L"Segoe UI", font_size, Gdiplus::FontStyleBold, Gdiplus::UnitPixel);
+                Gdiplus::SolidBrush text_brush(Gdiplus::Color(255, 255, 255, 255));
+                Gdiplus::StringFormat format;
+                format.SetAlignment(Gdiplus::StringAlignmentCenter);
+                format.SetLineAlignment(Gdiplus::StringAlignmentCenter);
+                Gdiplus::RectF rect(0.0f, 0.0f, fsize, fsize);
+                g.DrawString(badge_text.c_str(), -1, &fallback_font, rect, &format, &text_brush);
+            }
+            else
+            {
+                Gdiplus::SolidBrush text_brush(Gdiplus::Color(255, 255, 255, 255));
+                Gdiplus::StringFormat format;
+                format.SetAlignment(Gdiplus::StringAlignmentCenter);
+                format.SetLineAlignment(Gdiplus::StringAlignmentCenter);
+                Gdiplus::RectF rect(0.0f, 0.0f, fsize, fsize);
+                g.DrawString(badge_text.c_str(), -1, &font, rect, &format, &text_brush);
+            }
 
-        ICONINFO ii = {};
-        ii.fIcon = TRUE;
-        ii.hbmMask = hMono;
-        ii.hbmColor = hColor;
-
-        HICON overlay_icon = CreateIconIndirect(&ii);
+            // Génération de l'icône Windows HICON 32-bit ARGB
+            bmp.GetHICON(&overlay_icon);
+        }
 
         std::wstring desc = std::to_wstring(count) + L" messages non lus";
         m_taskbar_list->SetOverlayIcon(hwnd, overlay_icon, desc.c_str());
 
         if (overlay_icon)
             DestroyIcon(overlay_icon);
-        if (hColor)
-            DeleteObject(hColor);
-        if (hMono)
-            DeleteObject(hMono);
     }
 
     /* Met à jour la barre de progression permanente et son texte indicatif.

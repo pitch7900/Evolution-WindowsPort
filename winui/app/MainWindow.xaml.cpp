@@ -523,12 +523,9 @@ namespace winrt::EvolutionWin::implementation
             LoadTasks();
     }
 
-    /* Entrées sans sélection de la barre latérale (pied) : « À propos ». */
-    void MainWindow::OnNavigationItemInvoked(NavigationView const&, NavigationViewItemInvokedEventArgs const& args)
+    /* Entrées de navigation invoquées. */
+    void MainWindow::OnNavigationItemInvoked(NavigationView const&, NavigationViewItemInvokedEventArgs const& /*args*/)
     {
-        auto item = args.InvokedItemContainer().try_as<NavigationViewItem>();
-        if (item && unbox_value_or<hstring>(item.Tag(), L"") == L"about")
-            ShowAboutDialogAsync();
     }
 
     /* Affiche ou remplace un avis du bandeau d'information (vues Courrier et

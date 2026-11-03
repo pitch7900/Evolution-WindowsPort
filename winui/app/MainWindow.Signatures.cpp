@@ -82,16 +82,36 @@ namespace winrt::EvolutionWin::implementation
             hstring name = signature.GetNamedString(L"name", L"");
             bool html = signature.GetNamedString(L"mime_type", L"") == L"text/html";
 
+            Border card;
+            card.Background(Application::Current().Resources().Lookup(box_value(L"SubtleFillColorSecondaryBrush")).as<Brush>());
+            card.BorderBrush(Application::Current().Resources().Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>());
+            card.BorderThickness(ThicknessHelper::FromUniformLength(1));
+            card.CornerRadius(CornerRadiusHelper::FromUniformRadius(6));
+            card.Padding(ThicknessHelper::FromLengths(14, 10, 14, 10));
+            card.Margin(ThicknessHelper::FromLengths(0, 0, 0, 6));
+
             Grid row;
-            row.Padding(ThicknessHelper::FromLengths(12, 6, 12, 6));
+            row.ColumnSpacing(12);
+            ColumnDefinition icon_col;
+            icon_col.Width(GridLengthHelper::Auto());
+            row.ColumnDefinitions().Append(icon_col);
             row.ColumnDefinitions().Append(ColumnDefinition{});
             ColumnDefinition action_col;
             action_col.Width(GridLengthHelper::Auto());
             row.ColumnDefinitions().Append(action_col);
 
+            FontIcon icon;
+            icon.Glyph(L"\xE70B");
+            icon.FontSize(18);
+            icon.Foreground(Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
+            icon.VerticalAlignment(VerticalAlignment::Center);
+            Grid::SetColumn(icon, 0);
+            row.Children().Append(icon);
+
             StackPanel info;
             info.Spacing(2);
             info.VerticalAlignment(VerticalAlignment::Center);
+            Grid::SetColumn(info, 1);
             TextBlock title;
             title.Text(name);
             title.Style(LookupStyle(L"BodyStrongTextBlockStyle"));
@@ -99,6 +119,7 @@ namespace winrt::EvolutionWin::implementation
             TextBlock detail;
             detail.Text((html ? L"HTML  •  " : L"Texte brut  •  ") + hstring{ SignaturePreview(signature) });
             detail.Style(LookupStyle(L"CaptionTextBlockStyle"));
+            detail.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
             detail.TextTrimming(TextTrimming::CharacterEllipsis);
             info.Children().Append(detail);
             row.Children().Append(info);
@@ -107,10 +128,20 @@ namespace winrt::EvolutionWin::implementation
             actions.Orientation(Orientation::Horizontal);
             actions.Spacing(8);
             actions.VerticalAlignment(VerticalAlignment::Center);
-            Grid::SetColumn(actions, 1);
+            Grid::SetColumn(actions, 2);
 
             Button edit_btn;
-            edit_btn.Content(box_value(L"Modifier"));
+            StackPanel edit_content;
+            edit_content.Orientation(Orientation::Horizontal);
+            edit_content.Spacing(6);
+            FontIcon edit_icon;
+            edit_icon.Glyph(L"\xE70F");
+            edit_icon.FontSize(12);
+            edit_content.Children().Append(edit_icon);
+            TextBlock edit_text;
+            edit_text.Text(L"Modifier");
+            edit_content.Children().Append(edit_text);
+            edit_btn.Content(edit_content);
             edit_btn.Click([this, signature](IInspectable const&, RoutedEventArgs const&)
             {
                 OpenSignatureEditor(signature);
@@ -118,7 +149,17 @@ namespace winrt::EvolutionWin::implementation
             actions.Children().Append(edit_btn);
 
             Button remove_btn;
-            remove_btn.Content(box_value(L"Supprimer"));
+            StackPanel remove_content;
+            remove_content.Orientation(Orientation::Horizontal);
+            remove_content.Spacing(6);
+            FontIcon remove_icon;
+            remove_icon.Glyph(L"\xE74D");
+            remove_icon.FontSize(12);
+            remove_content.Children().Append(remove_icon);
+            TextBlock remove_text;
+            remove_text.Text(L"Supprimer");
+            remove_content.Children().Append(remove_text);
+            remove_btn.Content(remove_content);
             remove_btn.Click([this, uid, name](IInspectable const&, RoutedEventArgs const&)
             {
                 ConfirmDeleteSignatureAsync(uid, name);
@@ -126,7 +167,8 @@ namespace winrt::EvolutionWin::implementation
             actions.Children().Append(remove_btn);
             row.Children().Append(actions);
 
-            items.Append(row);
+            card.Child(row);
+            items.Append(card);
         }
 
         bool empty = items.Size() == 0;
@@ -158,9 +200,19 @@ namespace winrt::EvolutionWin::implementation
             hstring name = account.GetNamedString(L"name", uid);
             hstring address = account.GetNamedString(L"address", L"");
 
+            Border card;
+            card.Background(Application::Current().Resources().Lookup(box_value(L"SubtleFillColorSecondaryBrush")).as<Brush>());
+            card.BorderBrush(Application::Current().Resources().Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>());
+            card.BorderThickness(ThicknessHelper::FromUniformLength(1));
+            card.CornerRadius(CornerRadiusHelper::FromUniformRadius(6));
+            card.Padding(ThicknessHelper::FromLengths(14, 10, 14, 10));
+            card.Margin(ThicknessHelper::FromLengths(0, 0, 0, 8));
+
             Grid row;
-            row.Padding(ThicknessHelper::FromLengths(12, 6, 12, 6));
-            row.ColumnSpacing(12);
+            row.ColumnSpacing(16);
+            ColumnDefinition icon_col;
+            icon_col.Width(GridLengthHelper::Auto());
+            row.ColumnDefinitions().Append(icon_col);
             row.ColumnDefinitions().Append(ColumnDefinition{});
             for (int i = 0; i < 2; ++i)
             {
@@ -169,9 +221,18 @@ namespace winrt::EvolutionWin::implementation
                 row.ColumnDefinitions().Append(col);
             }
 
+            FontIcon icon;
+            icon.Glyph(L"\xE77B");
+            icon.FontSize(20);
+            icon.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+            icon.VerticalAlignment(VerticalAlignment::Center);
+            Grid::SetColumn(icon, 0);
+            row.Children().Append(icon);
+
             StackPanel info;
             info.Spacing(2);
             info.VerticalAlignment(VerticalAlignment::Center);
+            Grid::SetColumn(info, 1);
             TextBlock title;
             title.Text(name);
             title.Style(LookupStyle(L"BodyStrongTextBlockStyle"));
@@ -181,6 +242,7 @@ namespace winrt::EvolutionWin::implementation
                 TextBlock subtitle;
                 subtitle.Text(address);
                 subtitle.Style(LookupStyle(L"CaptionTextBlockStyle"));
+                subtitle.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
                 info.Children().Append(subtitle);
             }
             row.Children().Append(info);
@@ -193,7 +255,7 @@ namespace winrt::EvolutionWin::implementation
                 new_box.Items().Append(box_value(label));
             auto current = std::find(uids.begin(), uids.end(), account.GetNamedString(L"signature_uid", Sig::None));
             new_box.SelectedIndex(current == uids.end() ? 0 : static_cast<int32_t>(current - uids.begin()));
-            Grid::SetColumn(new_box, 1);
+            Grid::SetColumn(new_box, 2);
             new_box.SelectionChanged([this, account, uid, name, uids](IInspectable const& sender, SelectionChangedEventArgs const&)
             {
                 int32_t index = sender.as<ComboBox>().SelectedIndex();
@@ -227,7 +289,7 @@ namespace winrt::EvolutionWin::implementation
             auto reply_current = std::find(reply_uids.begin(), reply_uids.end(),
                 ::EvolutionWin::Settings::Instance().GetString(Sig::ReplyKey(uid), L""));
             reply_box.SelectedIndex(reply_current == reply_uids.end() ? 0 : static_cast<int32_t>(reply_current - reply_uids.begin()));
-            Grid::SetColumn(reply_box, 2);
+            Grid::SetColumn(reply_box, 3);
             reply_box.SelectionChanged([uid, reply_uids](IInspectable const& sender, SelectionChangedEventArgs const&)
             {
                 int32_t index = sender.as<ComboBox>().SelectedIndex();
@@ -236,7 +298,8 @@ namespace winrt::EvolutionWin::implementation
             });
             row.Children().Append(reply_box);
 
-            account_items.Append(row);
+            card.Child(row);
+            account_items.Append(card);
         }
     }
 

@@ -220,23 +220,7 @@
 
 
 
-            <NavigationView.FooterMenuItems>
 
-                <!-- ouvre une boîte de dialogue : la vue affichée ne change pas -->
-
-                <NavigationViewItem Content="À propos" Tag="about" SelectsOnInvoked="False"
-
-                                    ToolTipService.ToolTip="À propos d'Evolution">
-
-                    <NavigationViewItem.Icon>
-
-                        <FontIcon Glyph="&#xE946;" />
-
-                    </NavigationViewItem.Icon>
-
-                </NavigationViewItem>
-
-            </NavigationView.FooterMenuItems>
 
 
 
@@ -2779,155 +2763,131 @@
 
 
 
-                                <!-- Signatures (intégration complète du bloc existant) -->
+                                <!-- Signatures de courrier : gestion, éditeur et attribution -->
+                                <TextBlock Text="Signatures" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,16,0,0" />
 
-                                <Grid Margin="0,12,0,0">
-
-                                    <StackPanel Spacing="4">
-
-                                        <TextBlock Text="Signatures" Style="{StaticResource SubtitleTextBlockStyle}" />
-
-                                        <TextBlock Text="Signatures texte ou HTML (mise en forme, liens, images) ajoutées aux messages selon le compte expéditeur."
-
-                                                   Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
-
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-
-                                    </StackPanel>
-
-                                    <Button HorizontalAlignment="Right" VerticalAlignment="Center" Click="OnNewSignatureClick">
-
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-
-                                            <FontIcon Glyph="&#xE710;" FontSize="14" />
-
-                                            <TextBlock Text="Nouvelle signature" />
-
-                                        </StackPanel>
-
-                                    </Button>
-
-                                </Grid>
-
-                                <TextBlock x:Name="SignaturesEmpty" Visibility="Collapsed"
-
-                                           Text="Aucune signature. La signature automatique (nom, organisation et adresse du compte) reste disponible."
-
-                                           Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
-
-                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-
-                                <ListView x:Name="SignatureList" SelectionMode="None" />
-
-
-
-                                <!-- Éditeur de signature -->
-
-                                <Border x:Name="SignatureEditorPanel" Visibility="Collapsed" Padding="16" CornerRadius="8" BorderThickness="1"
-
+                                <!-- Carte 1 : Liste des signatures configurées et création -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="16">
+                                    <StackPanel Spacing="12">
+                                        <Grid>
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="Mes signatures" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                                <TextBlock Text="Signatures personnalisées en texte brut ou HTML avec mise en forme et images intégrées."
+                                                           Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            </StackPanel>
+                                            <Button HorizontalAlignment="Right" VerticalAlignment="Center" Click="OnNewSignatureClick" Style="{StaticResource AccentButtonStyle}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <FontIcon Glyph="&#xE710;" FontSize="14" />
+                                                    <TextBlock Text="Nouvelle signature" />
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
 
+                                        <Border x:Name="SignaturesEmpty" Visibility="Collapsed" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="6" Padding="16">
+                                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                                <FontIcon Glyph="&#xE946;" FontSize="18" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                <TextBlock Text="Aucune signature personnalisée. La signature automatique du compte reste disponible."
+                                                           Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <ListView x:Name="SignatureList" SelectionMode="None" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Éditeur de signature (panneau dépliable) -->
+                                <Border x:Name="SignatureEditorPanel" Visibility="Collapsed" Padding="20" CornerRadius="8" BorderThickness="1"
+                                        BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
                                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock x:Name="SignatureEditorTitle" Text="Nouvelle signature" Style="{StaticResource SubtitleTextBlockStyle}" />
 
-                                    <StackPanel Spacing="8">
+                                        <TextBox x:Name="SignatureNameBox" Header="Nom de la signature" PlaceholderText="Professionnelle, Personnelle…" />
 
-                                        <TextBlock x:Name="SignatureEditorTitle" Text="Nouvelle signature" Style="{StaticResource BodyStrongTextBlockStyle}" />
-
-                                        <TextBox x:Name="SignatureNameBox" Header="Nom" PlaceholderText="Professionnelle, Personnelle…" />
-
-                                        <RadioButtons x:Name="SignatureFormatChoice" Header="Format" MaxColumns="2"
-
+                                        <RadioButtons x:Name="SignatureFormatChoice" Header="Format du contenu" MaxColumns="2"
                                                       SelectionChanged="OnSignatureFormatChanged">
-
-                                            <x:String>HTML (mise en forme)</x:String>
-
+                                            <x:String>HTML (mise en forme avancée)</x:String>
                                             <x:String>Texte brut</x:String>
-
                                         </RadioButtons>
 
                                         <StackPanel x:Name="SignatureToolbar" Orientation="Horizontal" Spacing="4">
-
                                             <Button Tag="bold" Click="OnSignatureToolClick" ToolTipService.ToolTip="Gras">
-
                                                 <FontIcon Glyph="&#xE8DD;" FontSize="14" />
-
                                             </Button>
-
                                             <Button Tag="italic" Click="OnSignatureToolClick" ToolTipService.ToolTip="Italique">
-
                                                 <FontIcon Glyph="&#xE8DB;" FontSize="14" />
-
                                             </Button>
-
                                             <Button Tag="underline" Click="OnSignatureToolClick" ToolTipService.ToolTip="Souligné">
-
                                                 <FontIcon Glyph="&#xE8DC;" FontSize="14" />
-
                                             </Button>
-
                                             <AppBarSeparator />
-
                                             <Button Click="OnSignatureLinkClick" ToolTipService.ToolTip="Insérer un lien hypertexte">
-
                                                 <FontIcon Glyph="&#xE71B;" FontSize="14" />
-
                                             </Button>
-
-                                            <Button Click="OnSignatureImageClick" ToolTipService.ToolTip="Insérer une image (intégrée au message)">
-
+                                            <Button Click="OnSignatureImageClick" ToolTipService.ToolTip="Insérer une image">
                                                 <FontIcon Glyph="&#xE8B9;" FontSize="14" />
-
                                             </Button>
-
                                             <Button Tag="removeFormat" Click="OnSignatureToolClick" ToolTipService.ToolTip="Effacer la mise en forme">
-
                                                 <FontIcon Glyph="&#xE8E6;" FontSize="14" />
-
                                             </Button>
-
                                         </StackPanel>
 
                                         <Border x:Name="SignatureHtmlContainer" Height="200" Background="White" RequestedTheme="Light"
-
-                                                CornerRadius="4" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-
+                                                CornerRadius="6" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
                                             <controls:WebView2 x:Name="SignatureHtmlEditor" RequestedTheme="Light" DefaultBackgroundColor="White" />
-
                                         </Border>
 
                                         <TextBox x:Name="SignatureTextBox" Visibility="Collapsed" Height="200"
-
                                                  AcceptsReturn="True" TextWrapping="Wrap" IsSpellCheckEnabled="True"
-
                                                  ScrollViewer.VerticalScrollBarVisibility="Auto" />
 
-                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-
+                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,4,0,0">
                                             <Button Content="Annuler" Click="OnSignatureEditorCancel" />
-
                                             <Button Content="Enregistrer" Style="{StaticResource AccentButtonStyle}" Click="OnSignatureEditorSave" />
-
                                         </StackPanel>
-
                                     </StackPanel>
-
                                 </Border>
 
+                                <!-- Carte 2 : Position de la signature dans les réponses et transferts -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE890;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Position de la signature dans les réponses" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Placer la signature au-dessus du texte cité ou en bas de la chaîne de messages."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="SignatureAboveQuoteSwitch"
+                                                      OnContent="Au-dessus de la citation" OffContent="En dessous de la citation"
+                                                      Toggled="OnSignaturePlacementToggled" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
 
+                                <!-- Carte 3 : Attribution des signatures par compte -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="16">
+                                    <StackPanel Spacing="12">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Signature par compte" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Choisissez la signature à insérer automatiquement pour chaque compte de messagerie."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
 
-                                <ToggleSwitch x:Name="SignatureAboveQuoteSwitch" Header="Position dans les réponses et transferts"
-
-                                              OnContent="Au-dessus du texte cité" OffContent="En dessous du texte cité"
-
-                                              Toggled="OnSignaturePlacementToggled" />
-
-                                <TextBlock Text="Signature par compte" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
-
-                                <ListView x:Name="SignatureAccountList" SelectionMode="None" />
+                                        <ListView x:Name="SignatureAccountList" SelectionMode="None" />
+                                    </StackPanel>
+                                </Border>
 
                             </StackPanel>
-
-
 
                             <!-- ======================================================== -->
 
@@ -4659,54 +4619,94 @@
 
                             <StackPanel x:Name="SettingsCategoryAbout" Visibility="Collapsed" Spacing="16">
 
+                                <!-- Carte 1 : En-tête version et recherche de mise à jour -->
                                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-
                                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="20">
+                                    <StackPanel Spacing="16">
+                                        <Grid ColumnSpacing="20">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
 
-                                        BorderThickness="1" CornerRadius="8" Padding="24" MinHeight="100">
+                                            <!-- Logo de l'application -->
+                                            <Border Grid.Column="0" Width="64" Height="64" CornerRadius="8" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                                                <Image x:Name="AboutAppLogo" Source="Assets/EvolutionWin.png" Width="64" Height="64" Stretch="UniformToFill" />
+                                            </Border>
 
-                                    <Grid ColumnSpacing="20">
-
-                                        <Grid.ColumnDefinitions>
-
-                                            <ColumnDefinition Width="Auto" />
-
-                                            <ColumnDefinition Width="*" />
-
-                                        </Grid.ColumnDefinitions>
-
-                                        <FontIcon Grid.Column="0" Glyph="&#xE715;" FontSize="48" Foreground="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Top" Margin="0,4,0,0" />
-
-                                        <StackPanel Grid.Column="1" Spacing="6">
-
-                                            <TextBlock Text="EvolutionWin" Style="{StaticResource SubtitleTextBlockStyle}" FontWeight="Bold" />
-
-                                            <TextBlock Text="Version 0.9.6 — Portage Windows 11 natif d'Evolution"
-
-                                                       Style="{StaticResource BodyStrongTextBlockStyle}"
-
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-
-                                            <TextBlock Text="Client de messagerie, calendrier, carnet d'adresses et gestionnaire de tâches complet pour Windows 11. Conçu avec WinUI 3, Windows App SDK et le moteur Evolution Data Server (EDS)."
-
-                                                       Style="{StaticResource CaptionTextBlockStyle}"
-
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,4,0,8" />
-
-                                            <StackPanel Orientation="Horizontal" Spacing="16">
-
-                                                <HyperlinkButton Content="Dépôt GitHub du projet" NavigateUri="https://github.com/GNOME/evolution" Padding="0" />
-
-                                                <HyperlinkButton Content="Signaler une anomalie" NavigateUri="https://github.com/GNOME/evolution/issues" Padding="0" />
-
-                                                <HyperlinkButton Content="Licence libre (LGPL v2+ / MIT)" Padding="0" />
-
+                                            <!-- Titre et informations de version -->
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                                                <TextBlock Text="Evolution pour Windows" Style="{StaticResource SubtitleTextBlockStyle}" FontWeight="Bold" FontSize="20" />
+                                                <TextBlock x:Name="AboutVersionText" Text="Version 0.9.6"
+                                                           Style="{StaticResource BodyStrongTextBlockStyle}"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                <TextBlock x:Name="AboutUpdateStatusText" Text="Recherche de mises à jour…"
+                                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
 
+                                            <!-- Action manuelle de vérification -->
+                                            <Button Grid.Column="2" x:Name="AboutCheckUpdateButton" VerticalAlignment="Center" Click="OnAboutCheckUpdateClick">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <FontIcon Glyph="&#xE777;" FontSize="14" />
+                                                    <TextBlock Text="Rechercher des mises à jour" />
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
+
+                                        <!-- Bandeau d'information si une mise à jour est trouvée ou en cas d'erreur -->
+                                        <InfoBar x:Name="AboutUpdateInfoBar" IsClosable="True" IsOpen="False" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Carte 2 : Présentation et mentions légales -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="20">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Text="Présentation et mentions légales" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                        <TextBlock Text="Client de messagerie, calendrier et contacts complet natif pour Windows 11, bâti sur le moteur robuste de GNOME Evolution (evolution-data-server, Camel), Windows App SDK et WinUI 3. Logiciel libre sous licence GNU LGPL 2.1 ou ultérieure."
+                                                   Style="{StaticResource BodyTextBlockStyle}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+
+                                        <StackPanel Orientation="Horizontal" Spacing="24" Margin="0,4,0,0">
+                                            <HyperlinkButton Content="Dépôt GitHub du portage" NavigateUri="https://github.com/pitch7900/Evolution-WindowsPort" Padding="0" />
+                                            <HyperlinkButton Content="Journal des modifications (CHANGELOG)" NavigateUri="https://github.com/pitch7900/Evolution-WindowsPort/blob/main/CHANGELOG.md" Padding="0" />
+                                            <HyperlinkButton Content="Signaler une anomalie" NavigateUri="https://github.com/pitch7900/Evolution-WindowsPort/issues" Padding="0" />
+                                            <HyperlinkButton Content="Dépôt amont GNOME Evolution" NavigateUri="https://github.com/GNOME/evolution" Padding="0" />
                                         </StackPanel>
+                                    </StackPanel>
+                                </Border>
 
-                                    </Grid>
+                                <!-- Carte 3 : Composants du moteur et environnement technique -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="20">
+                                    <StackPanel Spacing="16">
+                                        <Grid>
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="Composants et environnement système" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                                <TextBlock Text="Versions des bibliothèques intégrées et du système d'exploitation pour le diagnostic."
+                                                           Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            </StackPanel>
+                                            <Button x:Name="AboutCopySystemInfoButton" HorizontalAlignment="Right" VerticalAlignment="Center" Click="OnAboutCopySystemInfoClick">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <FontIcon Glyph="&#xE8C8;" FontSize="14" />
+                                                    <TextBlock x:Name="AboutCopySystemInfoButtonText" Text="Copier les informations" />
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
 
+                                        <!-- Grille des composants (peuplée dynamiquement) -->
+                                        <Grid x:Name="AboutComponentsGrid" ColumnSpacing="24" RowSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="220" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                        </Grid>
+                                    </StackPanel>
                                 </Border>
 
                             </StackPanel>

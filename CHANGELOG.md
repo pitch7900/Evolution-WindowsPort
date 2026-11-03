@@ -14,6 +14,24 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Corrigé
 
+- **Pastille de notification de la barre des tâches (Overlay Icon)** :
+  - **Élimination des coins noirs et des artefacts graphiques** : remplacement du tracé GDI monochrome par un rendu vectoriel 32-bit ARGB avec transparence alpha native via GDI+ (`SmoothingModeAntiAlias`, `TextRenderingHintAntiAliasGridFit`), éliminant tout artefact noir dans les angles de la pastille.
+  - **Adaptation automatique à l'échelle DPI** : calcul dynamique de la taille de l'icône (`GetSystemMetrics(SM_CXSMICON)`) pour s'ajuster parfaitement aux résolutions High-DPI Windows 11 (100%, 125%, 150%, 200%).
+  - **Lisibilité et typographie Fluent** : centrage et ajustement proportionnel de la police (« Segoe UI Variable Text » / « Segoe UI ») avec bordure blanche anti-aliasée pour détacher nettement le compteur (ex. « 99+ » ou nombre de courriels non lus) sur l'icône d'Evolution.
+
+### Modifié
+
+- **Unification de la section « À Propos » dans les Paramètres** :
+  - **Intégration complète dans Paramètres > À Propos** : transfert de l'ensemble des éléments de l'ancienne fenêtre dédiée (logo grand format, version dynamique, statut et recherche GitHub des mises à jour, bandeau InfoBar avec lien de téléchargement, tableau détaillé des composants du moteur et de l'environnement système, bouton de copie pour le support).
+  - **Suppression du doublon** : retrait du bouton « i » (À propos) dans le pied de la barre latérale de navigation et suppression de la boîte de dialogue `ShowAboutDialogAsync`.
+  - **Redirection unifiée** : le bouton « À propos » du ruban et l'action « Voir les détails » du dialogue de nouvelle version disponible ouvrent directement la section « Paramètres > À Propos ».
+
+- **Refactoring et homogénéisation de « Paramètres > Courrier > Signatures »** :
+  - **Alignement sur le design Fluent des paramètres** : restructuration complète sous forme de cartes standardisées (`CardBackgroundFillColorDefaultBrush`, bordures `CardStrokeColorDefaultBrush`, espacement régulier).
+  - **Présentation moderne des signatures** : cartes d'éléments avec icônes graphiques de signature, typographie hiérarchisée et boutons d'action ergonomiques (« Modifier », « Supprimer »).
+  - **Carte de positionnement** : intégration du choix de position dans les réponses (« Au-dessus de la citation ») dans une carte standardisée avec icône dédiée.
+  - **Cartes d'attribution par compte** : alignement soigné des choix de signatures par compte avec icône de compte et sélecteurs synchronisés.
+
 - **Stabilité au démarrage et élimination définitive du crash post-splashscreen (0x80004002 / 0xc0000005)** :
   - **Correction du gabarit XAML de MessageList et EventList** : suppression des setters `MinHeight` et `Padding` dans `ItemContainerStyle` qui provoquaient une incompatibilité d'interface (`E_NOINTERFACE 0x80004002`) lors de la mesure des conteneurs par le dispatcher XAML.
   - **Protection contre les événements prématurés et la réentrance** : ajout systématique de gardes `if (!m_initialized)` dans les gestionnaires de paramètres (`MainWindow.Settings.cpp`) et de mise en page (`MainWindow.Layout.cpp`) pour neutraliser tout déclenchement d'événement XAML (`Toggled`, `SelectionChanged`) avant la finalisation de l'initialisation de la fenêtre.

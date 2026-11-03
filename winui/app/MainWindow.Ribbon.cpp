@@ -129,7 +129,8 @@ namespace winrt::EvolutionWin::implementation
 
     void MainWindow::OnRibbonAboutClick(IInspectable const&, RoutedEventArgs const&)
     {
-        ShowAboutDialogAsync();
+        Navigation().SelectedItem(Navigation().SettingsItem());
+        SelectSettingsCategory(L"about");
     }
 
     void MainWindow::OnRibbonQuitClick(IInspectable const&, RoutedEventArgs const&)
