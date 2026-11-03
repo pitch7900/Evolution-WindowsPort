@@ -115,6 +115,8 @@ namespace winrt::EvolutionWin::implementation
         void OnZoomResetClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnTogglePlainTextClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnMoveFolderDialogClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnMoveFolderAccelerator(Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender, Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
+        fire_and_forget ShowMoveFolderDialogAsync(std::vector<winrt::hstring> uids, bool copy);
         void ApplyReaderZoom(double zoom);
         void OnMoveMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
         void OnSearchTextChanged(

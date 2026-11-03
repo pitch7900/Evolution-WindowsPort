@@ -795,13 +795,229 @@ namespace winrt::EvolutionWin::implementation
 
      *   uids  : identifiants des messages à déplacer */
 
-    void MainWindow::PopulateMoveMenuItems(Collections::IVector<MenuFlyoutItemBase> const& items, std::vector<hstring> const& uids, bool copy)
-
+    void MainWindow::OnMoveFolderDialogClick(IInspectable const&, RoutedEventArgs const&)
     {
+        auto uids = SelectedMessageUids();
+        if (uids.empty())
+        {
+            auto sel_uid = SelectedMessageUid();
+            if (!sel_uid.empty())
+                uids.push_back(sel_uid);
+        }
+        if (uids.empty())
+            return;
+        ShowMoveFolderDialogAsync(uids, false);
+    }
 
+    void MainWindow::OnMoveFolderAccelerator(Microsoft::UI::Xaml::Input::KeyboardAccelerator const&, Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args)
+    {
+        args.Handled(true);
+        OnMoveFolderDialogClick(nullptr, nullptr);
+    }
+
+    fire_and_forget MainWindow::ShowMoveFolderDialogAsync(std::vector<hstring> uids, bool copy)
+    {
+        if (uids.empty() || m_dialog_open || !Content() || !Content().XamlRoot())
+            co_return;
+
+        m_dialog_open = true;
+        auto strong = get_strong();
+
+        struct FolderOption
+        {
+            hstring account_id;
+            hstring account_name;
+            hstring full_name;
+            hstring display_label;
+            hstring type;
+        };
+
+        std::vector<FolderOption> all_folders;
+        std::function<void(JsonArray const&, hstring const&, hstring const&, hstring const&)> collect_folders;
+        collect_folders = [&](JsonArray const& list, hstring const& acc_id, hstring const& acc_name, hstring const& prefix)
+        {
+            for (auto const& val : list)
+            {
+                auto f = val.GetObject();
+                hstring full = f.GetNamedString(L"full_name", L"");
+                hstring name = f.GetNamedString(L"name", full);
+                hstring type = f.GetNamedString(L"type", L"");
+                bool selectable = f.GetNamedBoolean(L"selectable", true);
+                hstring label = prefix.empty() ? name : prefix + L" / " + name;
+
+                if (selectable && !(acc_id == m_account && full == m_folder))
+                {
+                    all_folders.push_back({ acc_id, acc_name, full, label, type });
+                }
+                collect_folders(f.GetNamedArray(L"children", JsonArray{}), acc_id, acc_name, label);
+            }
+        };
+
+        auto get_account_name = [this](hstring const& acc_uid) -> hstring
+        {
+            if (m_accounts)
+            {
+                for (auto const& item : m_accounts)
+                {
+                    auto obj = item.GetObject();
+                    if (obj.GetNamedString(L"uid", L"") == acc_uid)
+                        return obj.GetNamedString(L"name", obj.GetNamedString(L"display_name", acc_uid));
+                }
+            }
+            return acc_uid;
+        };
+
+        for (auto const& [acc_key, f_arr] : m_account_folders)
+        {
+            hstring acc_id{ acc_key };
+            hstring acc_name = get_account_name(acc_id);
+            collect_folders(f_arr, acc_id, acc_name, L"");
+        }
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(copy ? L"Copier vers le dossier" : L"Déplacer vers le dossier"));
+        dialog.PrimaryButtonText(copy ? L"Copier" : L"Déplacer");
+        dialog.CloseButtonText(L"Annuler");
+        dialog.DefaultButton(ContentDialogButton::Primary);
+        dialog.IsPrimaryButtonEnabled(false);
+
+        StackPanel panel;
+        panel.Spacing(12);
+        panel.Width(440);
+
+        AutoSuggestBox search_box;
+        search_box.PlaceholderText(L"Rechercher un dossier...");
+        search_box.QueryIcon(FontIcon{});
+        search_box.QueryIcon().as<FontIcon>().Glyph(L"\xE721");
+
+        ListView folder_list;
+        folder_list.Height(300);
+        folder_list.SelectionMode(ListViewSelectionMode::Single);
+
+        auto populate_list = [&](std::wstring_view query)
+        {
+            folder_list.Items().Clear();
+            std::wstring q_lower{ query };
+            for (auto& ch : q_lower) ch = static_cast<wchar_t>(std::towlower(ch));
+
+            for (auto const& opt : all_folders)
+            {
+                std::wstring lbl_lower{ opt.display_label };
+                for (auto& ch : lbl_lower) ch = static_cast<wchar_t>(std::towlower(ch));
+                std::wstring acc_lower{ opt.account_name };
+                for (auto& ch : acc_lower) ch = static_cast<wchar_t>(std::towlower(ch));
+
+                if (!query.empty() && lbl_lower.find(q_lower) == std::wstring::npos && acc_lower.find(q_lower) == std::wstring::npos)
+                    continue;
+
+                StackPanel item_panel;
+                item_panel.Orientation(Orientation::Horizontal);
+                item_panel.Spacing(10);
+                item_panel.Padding(Thickness{ 4, 6, 4, 6 });
+
+                FontIcon icon = ::EvolutionWin::Helpers::CreateFolderIcon(opt.type);
+                icon.FontSize(16);
+
+                StackPanel text_panel;
+                text_panel.Spacing(2);
+
+                TextBlock title_block;
+                title_block.Text(opt.display_label);
+                title_block.FontWeight(Microsoft::UI::Text::FontWeights::SemiBold());
+
+                TextBlock acc_block;
+                acc_block.Text(opt.account_name);
+                acc_block.FontSize(11);
+                acc_block.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Microsoft::UI::Xaml::Media::Brush>());
+
+                text_panel.Children().Append(title_block);
+                text_panel.Children().Append(acc_block);
+
+                item_panel.Children().Append(icon);
+                item_panel.Children().Append(text_panel);
+
+                ListViewItem lvi;
+                lvi.Content(item_panel);
+                lvi.Tag(box_value(opt.account_id + L"|" + opt.full_name));
+
+                folder_list.Items().Append(lvi);
+            }
+        };
+
+        populate_list(L"");
+
+        search_box.TextChanged([&](AutoSuggestBox const& s, AutoSuggestBoxTextChangedEventArgs const&)
+        {
+            populate_list(std::wstring_view{ s.Text() });
+        });
+
+        folder_list.SelectionChanged([&](IInspectable const&, SelectionChangedEventArgs const&)
+        {
+            dialog.IsPrimaryButtonEnabled(folder_list.SelectedItem() != nullptr);
+        });
+
+        folder_list.DoubleTapped([&](IInspectable const&, Microsoft::UI::Xaml::Input::DoubleTappedRoutedEventArgs const&)
+        {
+            if (folder_list.SelectedItem())
+            {
+                dialog.Hide();
+                auto lvi = folder_list.SelectedItem().as<ListViewItem>();
+                hstring tag = unbox_value<hstring>(lvi.Tag());
+                std::wstring tag_w{ tag };
+                auto sep = tag_w.find(L'|');
+                if (sep != std::wstring::npos)
+                {
+                    hstring dest_acc{ tag_w.substr(0, sep) };
+                    hstring dest_fold{ tag_w.substr(sep + 1) };
+                    if (copy)
+                        CopyMessagesByUids(uids, dest_acc, dest_fold);
+                    else
+                        MoveMessagesByUids(uids, dest_acc, dest_fold);
+                }
+            }
+        });
+
+        panel.Children().Append(search_box);
+        panel.Children().Append(folder_list);
+        dialog.Content(panel);
+
+        auto res = co_await dialog.ShowAsync();
+        m_dialog_open = false;
+
+        if (res == ContentDialogResult::Primary && folder_list.SelectedItem())
+        {
+            auto lvi = folder_list.SelectedItem().as<ListViewItem>();
+            hstring tag = unbox_value<hstring>(lvi.Tag());
+            std::wstring tag_w{ tag };
+            auto sep = tag_w.find(L'|');
+            if (sep != std::wstring::npos)
+            {
+                hstring dest_acc{ tag_w.substr(0, sep) };
+                hstring dest_fold{ tag_w.substr(sep + 1) };
+                if (copy)
+                    CopyMessagesByUids(uids, dest_acc, dest_fold);
+                else
+                    MoveMessagesByUids(uids, dest_acc, dest_fold);
+            }
+        }
+    }
+
+    void MainWindow::PopulateMoveMenuItems(Collections::IVector<MenuFlyoutItemBase> const& items, std::vector<hstring> const& uids, bool copy)
+    {
         items.Clear();
 
-
+        /* Option de sélection par boîte de dialogue avancée (Ctrl+Maj+V) */
+        MenuFlyoutItem dialog_item;
+        dialog_item.Text(copy ? L"Autre dossier... (Ctrl+Maj+V)" : L"Autre dossier... (Ctrl+Maj+V)");
+        dialog_item.Icon(FontIcon{});
+        dialog_item.Icon().as<FontIcon>().Glyph(L"\xE8DE");
+        dialog_item.Click([this, uids, copy](IInspectable const&, RoutedEventArgs const&)
+        {
+            ShowMoveFolderDialogAsync(uids, copy);
+        });
+        items.Append(dialog_item);
+        items.Append(MenuFlyoutSeparator{});
 
         auto it = m_account_folders.find(std::wstring{ m_account });
 
@@ -874,8 +1090,42 @@ namespace winrt::EvolutionWin::implementation
 
 
         if (it != m_account_folders.end() && it->second)
-
             AppendFolderMoveItems(items, it->second, m_account, L"", uids, copy);
+
+        /* Dossiers des autres comptes enregistrés */
+        auto get_account_name = [this](hstring const& acc_uid) -> hstring
+        {
+            if (m_accounts)
+            {
+                for (auto const& item : m_accounts)
+                {
+                    auto obj = item.GetObject();
+                    if (obj.GetNamedString(L"uid", L"") == acc_uid)
+                        return obj.GetNamedString(L"name", obj.GetNamedString(L"display_name", acc_uid));
+                }
+            }
+            return acc_uid;
+        };
+
+        for (auto const& [acc_key, folders_arr] : m_account_folders)
+        {
+            if (acc_key == std::wstring{ m_account })
+                continue;
+
+            hstring other_account{ acc_key };
+            hstring acc_display = get_account_name(other_account);
+
+            MenuFlyoutSubItem account_sub;
+            account_sub.Text(acc_display);
+            account_sub.Icon(FontIcon{});
+            account_sub.Icon().as<FontIcon>().Glyph(L"\xE779");
+
+            AppendFolderMoveItems(account_sub.Items(), folders_arr, other_account, L"", uids, copy);
+            if (account_sub.Items().Size() > 0)
+            {
+                items.Append(account_sub);
+            }
+        }
 
 
 

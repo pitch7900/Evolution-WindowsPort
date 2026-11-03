@@ -370,6 +370,15 @@
                             <AppBarButton.Icon><FontIcon Glyph="&#xE7B8;" /></AppBarButton.Icon>
 
                         </AppBarButton>
+                        <AppBarButton x:Name="RibbonMoveButton" Label="Déplacer" ToolTipService.ToolTip="Déplacer vers un dossier (Ctrl+Maj+V)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8DE;" /></AppBarButton.Icon>
+                            <AppBarButton.Flyout>
+                                <MenuFlyout Opening="OnMoveMenuOpening" />
+                            </AppBarButton.Flyout>
+                            <AppBarButton.KeyboardAccelerators>
+                                <KeyboardAccelerator Modifiers="Control,Shift" Key="V" Invoked="OnMoveFolderAccelerator" />
+                            </AppBarButton.KeyboardAccelerators>
+                        </AppBarButton>
 
                         <AppBarSeparator />
 

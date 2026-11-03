@@ -50,6 +50,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Menu et dialogue « Déplacer / Copier vers le dossier » multi-comptes (TODO ligne 571)** :
+  - **Prise en charge multi-comptes complète** : intégration dans les menus contextuels des sous-menus pour l'ensemble des comptes configurés, permettant de transférer un message ou une sélection vers un dossier d'un autre compte (ex. IMAP vers Microsoft 365).
+  - **Boîte de dialogue complète de sélection (Ctrl+Maj+V)** : dialogue Fluent avec champ de recherche en temps réel (`AutoSuggestBox`), liste interactive de tous les dossiers avec nom de compte et icône de type, support de la validation au double-clic ou par bouton.
+  - **Bouton d'action dans le ruban Accueil** : bouton `RibbonMoveButton` avec menu déroulant dynamique et raccourci clavier `Ctrl+Maj+V`.
+
 - **Zoom d'affichage et bascule Texte brut / HTML dans le volet de lecture et MessageWindow (TODO section 6)** :
   - **Paliers de zoom d'affichage et raccourcis universels** : commandes d'agrandissement (`Ctrl++`), réduction (`Ctrl+-`) et réinitialisation (`Ctrl+0`) avec bornes sécurisées (50% à 300%) et mémorisation dans les préférences (`mail.reading-zoom`).
   - **Bascule instantanée Texte brut / HTML** : bouton dédié dans la barre d'outils du volet de lecture et de la fenêtre indépendante permettant de neutraliser tout code HTML et d'afficher le message en texte brut sécurisé formaté (`<pre style="...">`) avec mémorisation (`mail.reading-plain-text`).
