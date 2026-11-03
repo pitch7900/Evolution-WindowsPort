@@ -40,6 +40,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Commande ruban et option pour afficher / masquer le mini-calendrier latéral (TODO ligne 635)** :
+  - **Bouton bascule dans le ruban Calendrier > Affichage** : ajout de la commande « Mini-calendrier » permettant d'afficher ou masquer d'un clic le sélecteur de date mensuel dans le volet latéral gauche.
+  - **Option dédiée dans Paramètres > Calendrier** : nouvelle carte avec interrupteur bascule pour configurer la visibilité par défaut (`calendar.show-mini-calendar`).
+  - **Synchronisation dynamique et tests unitaires** : synchronisation immédiate entre le ruban, le panneau de configuration et le layout XAML, avec validation unitaire de la clé dans `test_settings.cpp`.
+
 - **Remontée des anomalies de synchronisation calendrier et contacts dans la barre d'état (TODO ligne 345)** :
   - **Détection des erreurs de chargement** : signalement direct dans l'indicateur d'état des connexions en cas d'échec de récupération des événements ou des contacts, avec pastille d'état rouge et message d'explication dans le menu contextuel.
   - **Rétablissement automatique** : réinitialisation transparente du statut de connexion à l'état nominal dès que les données de calendrier ou de contacts sont à nouveau récupérées avec succès.

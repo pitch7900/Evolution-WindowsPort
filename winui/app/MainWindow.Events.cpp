@@ -910,4 +910,21 @@ namespace winrt::EvolutionWin::implementation
                 L" dans « " + std::wstring{ dest } + L" »." }, InfoBarSeverity::Success);
         });
     }
+
+    /**
+     * @brief Gestionnaire de clic du bouton bascule du mini-calendrier dans le ruban.
+     * @param sender Bouton bascule du ruban (AppBarToggleButton).
+     * @param args Arguments d'evenement route.
+     * Bascule l'affichage du mini-calendrier dans le volet lateral du calendrier,
+     * memorise la preference dans les reglages et synchronise l'interrupteur des parametres.
+     */
+    void MainWindow::OnRibbonMiniCalendarToggled(IInspectable const& sender, RoutedEventArgs const&)
+    {
+        bool is_checked = unbox_value_or<bool>(sender.as<AppBarToggleButton>().IsChecked(), true);
+        ::EvolutionWin::Settings::Instance().SetBoolean(L"calendar.show-mini-calendar", is_checked);
+        if (auto cal = MonthCalendar())
+            cal.Visibility(is_checked ? Visibility::Visible : Visibility::Collapsed);
+        if (auto sw = CalendarShowMiniCalendarSwitch())
+            sw.IsOn(is_checked);
+    }
 }

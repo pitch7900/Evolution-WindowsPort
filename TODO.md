@@ -632,7 +632,7 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
 
 - [x] 🟢 **Barre de navigation** : _Aujourd'hui_, précédent / suivant, plage affichée (« 26 – 30 octobre 2026 ») <a id="demo-cal-navigation"></a> — _périodes Jour / Semaine / Mois, mémorisée_
 - [x] 🟢 **Atteindre** : Aujourd'hui, 7 prochains jours, aller à une date (Ctrl+G)
-- [ ] 🟡 **Mini-calendrier** dans le volet des dossiers (jours avec événements en gras)
+- [x] 🟡 **Mini-calendrier** dans le volet des dossiers — _commande ruban afficher / masquer, mémorisation et synchronisation Paramètres_
 - [ ] 🟡 Météo (optionnelle)
 
 ### Plusieurs calendriers

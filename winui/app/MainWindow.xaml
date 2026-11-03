@@ -749,6 +749,14 @@
 
                         <AppBarSeparator />
 
+                        <AppBarToggleButton x:Name="RibbonMiniCalendarToggle" Label="Mini-calendrier"
+                                            Click="OnRibbonMiniCalendarToggled"
+                                            ToolTipService.ToolTip="Afficher ou masquer le mini-calendrier dans le volet latéral gauche">
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE787;" /></AppBarToggleButton.Icon>
+                        </AppBarToggleButton>
+
+                        <AppBarSeparator />
+
                         <AppBarToggleButton x:Name="RibbonCalendarTodoBarToggle" Label="Volet des tâches"
 
                                             Click="OnRibbonTodoBarToggled"
@@ -3218,6 +3226,27 @@
 
                                     </Grid>
 
+                                </Border>
+
+                                <!-- Mini-calendrier latéral -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="16,12">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE787;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Mini-calendrier latéral" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Affiche le sélecteur mensuel rapide dans le volet gauche du calendrier."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="CalendarShowMiniCalendarSwitch" Tag="calendar.show-mini-calendar"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
                                 </Border>
 
 

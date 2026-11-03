@@ -543,6 +543,8 @@ namespace winrt::EvolutionWin::implementation
         if (auto sw = CalendarShowWeekNumbersSwitch())
 
             sw.IsOn(settings.GetBoolean(L"calendar.show-week-numbers", false));
+        if (auto sw_mini = CalendarShowMiniCalendarSwitch())
+            sw_mini.IsOn(settings.GetBoolean(L"calendar.show-mini-calendar", true));
 
 
 
@@ -1957,6 +1959,7 @@ namespace winrt::EvolutionWin::implementation
             s.SetString(L"calendar.first-day", L"0");
 
             s.SetBoolean(L"calendar.show-week-numbers", false);
+            s.SetBoolean(L"calendar.show-mini-calendar", true);
 
             s.SetString(L"calendar.default-duration", L"30");
 
@@ -2082,6 +2085,13 @@ namespace winrt::EvolutionWin::implementation
         auto& settings = ::EvolutionWin::Settings::Instance();
 
 
+
+        // 0. Affichage / masquage du mini-calendrier lateral
+        bool show_mini = settings.GetBoolean(L"calendar.show-mini-calendar", true);
+        if (auto cal = MonthCalendar())
+            cal.Visibility(show_mini ? Visibility::Visible : Visibility::Collapsed);
+        if (auto toggle = RibbonMiniCalendarToggle())
+            toggle.IsChecked(show_mini);
 
         // 1. Premier jour de la semaine sur le mini-calendrier
 

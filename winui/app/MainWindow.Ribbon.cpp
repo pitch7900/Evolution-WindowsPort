@@ -114,6 +114,8 @@ namespace winrt::EvolutionWin::implementation
         bool todobar_checked = IsTodoBarVisible();
         RibbonMailTodoBarToggle().IsChecked(todobar_checked);
         RibbonCalendarTodoBarToggle().IsChecked(todobar_checked);
+        if (auto mini_cal_toggle = RibbonMiniCalendarToggle())
+            mini_cal_toggle.IsChecked(MonthCalendar() && MonthCalendar().Visibility() == Visibility::Visible);
         RibbonContactsTodoBarToggle().IsChecked(todobar_checked);
     }
 

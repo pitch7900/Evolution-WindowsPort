@@ -365,6 +365,11 @@ static void test_settings_mail_read_and_security_options(void)
         mgr.SetString("mail.auto-bcc", "archive@societe.com");
         std::string bcc_saved = mgr.GetString("mail.auto-bcc", "");
         ASSERT_EQ_STR("archive@societe.com", bcc_saved.c_str());
+
+        /* Affichage du mini-calendrier lateral (calendar.show-mini-calendar) */
+        ASSERT_EQ_INT(1, mgr.GetBoolean("calendar.show-mini-calendar", true));
+        mgr.SetBoolean("calendar.show-mini-calendar", false);
+        ASSERT_EQ_INT(0, mgr.GetBoolean("calendar.show-mini-calendar", true));
     }
     TEST_CASE_END();
 }
