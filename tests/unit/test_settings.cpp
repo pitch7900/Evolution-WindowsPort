@@ -353,6 +353,11 @@ static void test_settings_mail_read_and_security_options(void)
         mgr.SetString("calendar.reminders-duration", "30");
         std::string saved_dur = mgr.GetString("calendar.reminders-duration", "10");
         ASSERT_EQ_STR("30", saved_dur.c_str());
+
+        /* Demande d'accuse de lecture (mail.request-read-receipt) */
+        ASSERT_EQ_INT(0, mgr.GetBoolean("mail.request-read-receipt", false));
+        mgr.SetBoolean("mail.request-read-receipt", true);
+        ASSERT_EQ_INT(1, mgr.GetBoolean("mail.request-read-receipt", false));
     }
     TEST_CASE_END();
 }

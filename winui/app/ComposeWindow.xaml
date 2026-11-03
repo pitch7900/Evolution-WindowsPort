@@ -90,6 +90,12 @@
                 </AppBarToggleButton.Icon>
             </AppBarToggleButton>
             <AppBarSeparator />
+            <AppBarToggleButton x:Name="ReadReceiptButton" Label="Accusé de lecture" ToolTipService.ToolTip="Demander une confirmation de lecture aux destinataires (Disposition-Notification-To)">
+                <AppBarToggleButton.Icon>
+                    <FontIcon Glyph="&#xE73E;" />
+                </AppBarToggleButton.Icon>
+            </AppBarToggleButton>
+            <AppBarSeparator />
             <AppBarButton Label="Abandonner" Click="OnDiscardClick">
                 <AppBarButton.Icon>
                     <FontIcon Glyph="&#xE74D;" />

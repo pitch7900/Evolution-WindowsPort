@@ -91,6 +91,7 @@ namespace winrt::EvolutionWin::implementation
             { L"Avertir si objet vide", L"Demander confirmation avant d'envoyer un message sans objet", L"mail" },
 
             { L"Suppression définitive", L"Confirmation avant la suppression irréversible d'un message", L"mail" },
+            { L"Accusé de lecture", L"Demande automatique de confirmation de lecture lors de l'envoi", L"mail" },
 
             { L"Premier jour de la semaine", L"Lundi, dimanche ou samedi pour la grille du calendrier", L"calendar" },
 
@@ -336,8 +337,10 @@ namespace winrt::EvolutionWin::implementation
 
 
         if (auto sw = MailConfirmPermanentDeleteSwitch())
-
             sw.IsOn(settings.GetBoolean(L"mail.confirm-permanent-delete", true));
+
+        if (auto sw = MailRequestReadReceiptSwitch())
+            sw.IsOn(settings.GetBoolean(L"mail.request-read-receipt", false));
 
 
 

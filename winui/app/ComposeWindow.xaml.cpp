@@ -108,6 +108,13 @@ namespace winrt::EvolutionWin::implementation
         m_pending_editor_html = !data.html_body.empty() ? data.html_body : PlainTextToHtml(data.body);
         m_focus_editor_on_ready = !data.to.empty();
 
+        // Accusé de lecture par défaut selon les préférences utilisateur
+        hstring current_acc = !m_account_uids.empty() ? m_account_uids[selected] : L"";
+        bool default_receipt = ::EvolutionWin::Settings::Instance().GetBoolean(L"account." + current_acc + L".request-read-receipt",
+            ::EvolutionWin::Settings::Instance().GetBoolean(L"mail.request-read-receipt", false));
+        if (auto btn = ReadReceiptButton())
+            btn.IsChecked(default_receipt);
+
         InitializeEditorAsync();
         LoadSignatures();
 
@@ -793,6 +800,9 @@ namespace winrt::EvolutionWin::implementation
             message.SetNamedValue(L"html", JsonValue::CreateStringValue(html_document));
         message.SetNamedValue(L"in_reply_to", JsonValue::CreateStringValue(m_data.in_reply_to));
         message.SetNamedValue(L"references", JsonValue::CreateStringValue(m_data.references));
+
+        bool read_receipt = ReadReceiptButton().IsChecked() && ReadReceiptButton().IsChecked().Value();
+        message.SetNamedValue(L"request_read_receipt", JsonValue::CreateBooleanValue(read_receipt));
 
         /* Options cryptographiques OpenPGP / S/MIME */
         bool pgp_sign = PgpSignButton().IsChecked() && PgpSignButton().IsChecked().Value();

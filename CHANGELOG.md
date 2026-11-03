@@ -40,6 +40,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Demande d'accusé de lecture par défaut et en rédaction (TODO ligne 239)** :
+  - **Bouton d'action dans ComposeWindow** : ajout d'un bouton bascule « Accusé de lecture » dans la barre d'outils de rédaction pour activer ou désactiver la demande de confirmation sur chaque message.
+  - **Option globale dans Paramètres > Courrier** : réglage `mail.request-read-receipt` et préférence par compte `account.<id>.request-read-receipt` pour solliciter systématiquement un accusé de réception.
+  - **Support standard RFC 3798 / 2298 dans evo-core** : émission des en-têtes MIME `Disposition-Notification-To` et `Return-Receipt-To` basés sur l'identité de l'expéditeur lors de l'envoi SMTP.
+  - **Validation par tests unitaires** : persistance et tests de non-régression dans `test_settings.cpp`.
+
 - **Option d'activation et durée d'affichage des rappels de calendrier et de tâches (TODO ligne 841)** :
   - **Bascule générale des alertes de rendez-vous** : nouvelle carte dans Paramètres > Notifications permettant d'activer ou de neutraliser l'émission de notifications pour les échéances d'agenda et de tâches (`calendar.reminders-enabled`).
   - **Durée d'affichage configurable** : sélecteur de persistance à l'écran (`calendar.reminders-duration`) proposant 5s, 10s (recommandé), 30s, 1 minute ou persistant jusqu'à action de l'utilisateur.

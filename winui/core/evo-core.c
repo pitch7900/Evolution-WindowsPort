@@ -5288,6 +5288,15 @@ core_send_message_run (EvoCore *core,
 
 	camel_medium_set_header (CAMEL_MEDIUM (message), "X-Mailer", "Evolution for Windows");
 
+	/* Accusé de réception et confirmation de lecture (RFC 3798 / RFC 2298) */
+	if (json_object_get_boolean_member_with_default (object, "request_read_receipt", FALSE)) {
+		const gchar *sender_addr = e_source_mail_identity_get_address (identity_extension);
+		if (sender_addr && *sender_addr) {
+			camel_medium_set_header (CAMEL_MEDIUM (message), "Disposition-Notification-To", sender_addr);
+			camel_medium_set_header (CAMEL_MEDIUM (message), "Return-Receipt-To", sender_addr);
+		}
+	}
+
 	if (json_object_has_member (object, "attachments")) {
 		JsonArray *attachments = json_object_get_array_member (object, "attachments");
 		guint n_att = attachments ? json_array_get_length (attachments) : 0;

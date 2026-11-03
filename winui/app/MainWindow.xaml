@@ -2721,6 +2721,27 @@
 
 
 
+                                <!-- Demande d'accusé de lecture systématique -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE73E;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Demander systématiquement un accusé de lecture" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Ajoute l'en-tête de confirmation de lecture (Disposition-Notification-To) à tous les messages sortants."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="MailRequestReadReceiptSwitch" Tag="mail.request-read-receipt"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
                                 <!-- Confirmation suppression définitive -->
 
                                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"

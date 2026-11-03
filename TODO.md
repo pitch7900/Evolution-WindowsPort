@@ -236,7 +236,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 - [x] 🟡 **Serveurs** : serveurs, ports, chiffrement, nom d'utilisateur de réception et d'envoi (modification des sources EDS `ESourceMailAccount` / `ESourceMailTransport` / `ESourceMailIdentity` et réémission des événements sans redémarrage)
 - [x] 🟢 **Mot de passe** : champ de mise à jour du mot de passe dans le gestionnaire d'identifiants
 - [x] 🟢 **Dossiers spéciaux** : attribution des rôles CAMEL*FOLDER_TYPE*\* (Envoyés, Brouillons, Corbeille, Indésirables, Archives) avec listes déroulantes basées sur les dossiers du compte
-- [ ] 🟢 **Rédaction** : signature par défaut (nouveaux messages / réponses), copie cachée automatique, demande d'accusé de lecture
+- [ ] 🟢 **Rédaction** : signature par défaut (nouveaux messages / réponses), copie cachée automatique, demande d'accusé de lecture (✔ accusé de lecture par défaut et dans ComposeWindow)
 - [ ] 🟡 **Synchronisation** : intervalle de relève propre au compte (remplace la valeur globale des Paramètres, §19), dossiers synchronisés hors connexion et ancienneté (§4), compte activé / désactivé sans le supprimer
 - [x] 🟡 **Test de connexion** après modification, avec bouton dédié et rapport d'état
 
