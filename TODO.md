@@ -669,7 +669,7 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
 - [x] 🟢 **Couleur par calendrier** (couleur EDS `ESourceSelectable`), dans la liste et dans la grille <a id="demo-cal-couleurs"></a> — _liste des événements, volet des calendriers et blocs/barres colorés de la grille_
 - [x] 🟠 **Superposé (vue globale)** : calendriers sélectionnés fusionnés dans une même grille — _déjà fonctionnel : événements des calendriers cochés regroupés et synchronisés dans la même vue_
 - [ ] 🟠 **Côte à côte** : une colonne par calendrier, même période, défilement commun
-- [ ] 🟢 Bascule superposé / côte à côte ; mémorisation du mode et des calendriers affichés — _fait : calendriers affichés mémorisés, calendrier actif des nouveaux événements_
+- [x] 🟢 Bascule superposé / côte à côte ; mémorisation du mode (`calendar.layout-mode`) et des calendriers affichés — _bouton à bascule dans le ruban Affichage_
 - [ ] 🟡 **Groupes de calendriers** nommés (« Équipe », « Salles 2e étage ») pour en ouvrir plusieurs d'un coup
 
 ### Autres affichages
@@ -704,7 +704,7 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
     - [ ] Bouton bascule **« Privé »** (icône cadenas) : marque l'événement avec `CLASS:PRIVATE` (ou `sensitivity: private` Exchange) pour masquer les détails (titre, lieu, participants) aux autres utilisateurs lors du partage de calendrier ou de l'accès délégué.
     - [ ] Menu déroulant **« Classer »** (icône 4 carrés de couleur) : attribution de catégories avec codes couleur (synchronisées avec la liste principale Exchange Online).
     - [ ] Boutons d'importance : **! Importance haute** et **↓ Importance faible** (propriété `PRIORITY`).
-- [ ] 🟢 **Ajouter du temps de travail individuel** (bloc « focus » marqué occupé, sans participants)
+- [x] 🟢 **Ajouter du temps de travail individuel** (bloc « focus » sans participants, bouton ruban dédié et durée 2h préremplie)
 - [ ] 🟡 **Répondre aux invitations reçues** depuis le volet de lecture du Mail (Accepter / Provisoire / Refuser / Proposer un nouvel horaire) <a id="demo-invitations"></a>
 - [ ] 🔴 **Affichage Planification** (Scheduling Assistant) : une ligne par personne / ressource, heures en abscisse, créneaux libres / occupés / provisoires / absent (EWS `GetUserAvailability`, Graph `getSchedule`, CalDAV free-busy), suggestion de créneau commun
 - [ ] 🟡 **Glisser-déposer d'un email vers le calendrier** pour créer un rendez-vous

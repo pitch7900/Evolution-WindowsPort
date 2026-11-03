@@ -707,4 +707,23 @@ namespace winrt::EvolutionWin::implementation
             ShowStatus(L"Échelle de temps modifiée : " + scale + L" minutes.", InfoBarSeverity::Informational);
         }
     }
+
+    /**
+     * @brief Bascule l'affichage des calendriers entre mode superposé et côte à côte.
+     * @param sender Bouton à bascule émetteur.
+     * @param args Arguments d'événement.
+     */
+    void MainWindow::OnCalendarLayoutModeToggled(
+        IInspectable const&,
+        [[maybe_unused]] RoutedEventArgs const& args)
+    {
+        if (auto toggle = RibbonCalendarSideBySideToggle())
+        {
+            bool is_side_by_side = toggle.IsChecked() && toggle.IsChecked().Value();
+            ::EvolutionWin::Settings::Instance().SetString(
+                L"calendar.layout-mode", is_side_by_side ? L"side-by-side" : L"overlay");
+            ApplyCalendarPreferences();
+            ShowStatus(is_side_by_side ? L"Affichage des calendriers côte à côte." : L"Affichage des calendriers superposés.", InfoBarSeverity::Informational);
+        }
+    }
 }

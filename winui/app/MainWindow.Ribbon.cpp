@@ -117,6 +117,15 @@ namespace winrt::EvolutionWin::implementation
         if (auto mini_cal_toggle = RibbonMiniCalendarToggle())
             mini_cal_toggle.IsChecked(MonthCalendar() && MonthCalendar().Visibility() == Visibility::Visible);
         RibbonContactsTodoBarToggle().IsChecked(todobar_checked);
+        if (auto sbs_toggle = RibbonCalendarSideBySideToggle())
+        {
+            bool is_sbs = ::EvolutionWin::Settings::Instance().GetString(L"calendar.layout-mode", L"overlay") == L"side-by-side";
+            sbs_toggle.IsChecked(is_sbs);
+        }
+        if (auto conv_toggle = RibbonMailConversationToggle())
+        {
+            conv_toggle.IsChecked(m_conversations_enabled);
+        }
     }
 
     void MainWindow::OnRibbonTabChanged(SelectorBar const&, SelectorBarSelectionChangedEventArgs const&)

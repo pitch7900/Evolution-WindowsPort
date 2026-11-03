@@ -371,6 +371,13 @@ static void test_settings_mail_read_and_security_options(void)
         mgr.SetBoolean("calendar.show-mini-calendar", false);
         ASSERT_EQ_INT(0, mgr.GetBoolean("calendar.show-mini-calendar", true));
 
+        /* Mode d'affichage superpose ou cote a cote des calendriers (calendar.layout-mode) */
+        std::string cal_layout_def = mgr.GetString("calendar.layout-mode", "overlay");
+        ASSERT_EQ_STR("overlay", cal_layout_def.c_str());
+        mgr.SetString("calendar.layout-mode", "side-by-side");
+        std::string cal_layout_saved = mgr.GetString("calendar.layout-mode", "overlay");
+        ASSERT_EQ_STR("side-by-side", cal_layout_saved.c_str());
+
         /* Demarrage automatique avec Windows (general.auto-startup) */
         ASSERT_EQ_INT(0, mgr.GetBoolean("general.auto-startup", false));
         mgr.SetBoolean("general.auto-startup", true);

@@ -491,6 +491,22 @@ namespace winrt::EvolutionWin::implementation
         co_return;
     }
 
+    /**
+     * @brief Gestionnaire de création d'un temps de travail individuel (Focus).
+     * @param sender Bouton émetteur.
+     * @param args Arguments d'événement.
+     */
+    void MainWindow::OnNewFocusEventClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ShowNewFocusEventDialogAsync();
+    }
+
+    fire_and_forget MainWindow::ShowNewFocusEventDialogAsync()
+    {
+        ShowEventDialogAsync(nullptr, L"Temps de concentration", true);
+        co_return;
+    }
+
     /* Clic sur un événement de la liste : détail lu par evo-core, puis
      * fenêtre de l'événement. */
     void MainWindow::OnEventItemClick(IInspectable const&, ItemClickEventArgs const& args)
@@ -523,7 +539,7 @@ namespace winrt::EvolutionWin::implementation
      * organisateur et participants, suppression).
      * Paramètres :
      *   event : détail renvoyé par evo_core_get_event (), ou nullptr */
-    fire_and_forget MainWindow::ShowEventDialogAsync(JsonObject event)
+    fire_and_forget MainWindow::ShowEventDialogAsync(JsonObject event, hstring const& summary_preset, bool is_focus)
     {
         auto strong = get_strong();
         if (m_dialog_open || !Content() || !Content().XamlRoot())
@@ -537,7 +553,7 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(existing ? (readonly ? L"Événement (lecture seule)" : L"Événement") : L"Nouvel événement"));
+        dialog.Title(box_value(existing ? (readonly ? L"Événement (lecture seule)" : L"Événement") : (is_focus ? L"Temps individuel (Focus)" : L"Nouvel événement")));
         if (!readonly)
             dialog.PrimaryButtonText(L"Enregistrer");
         if (existing && !readonly)
@@ -593,6 +609,8 @@ namespace winrt::EvolutionWin::implementation
         summary_box.IsReadOnly(readonly);
         if (existing)
             summary_box.Text(event.GetNamedString(L"summary", L""));
+        else if (!summary_preset.empty())
+            summary_box.Text(summary_preset);
         panel.Children().Append(summary_box);
 
         TextBox location_box;
@@ -605,7 +623,7 @@ namespace winrt::EvolutionWin::implementation
         /* début / fin : date et heure */
         time_t start_t = existing ? static_cast<time_t>(event.GetNamedNumber(L"start", 0))
             : static_cast<time_t>(m_selected_day_start > 0 ? m_selected_day_start + 9 * 3600 : 0);
-        time_t end_t = existing ? static_cast<time_t>(event.GetNamedNumber(L"end", 0)) : start_t + 3600;
+        time_t end_t = existing ? static_cast<time_t>(event.GetNamedNumber(L"end", 0)) : start_t + (is_focus ? 7200 : 3600);
         if (!existing && start_t == 0)
         {
             time_t now = std::time(nullptr);

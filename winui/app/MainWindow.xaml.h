@@ -176,6 +176,18 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::CalendarViewSelectedDatesChangedEventArgs const& args);
         void OnRefreshCalendarClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnNewEventClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        /**
+         * @brief Gestionnaire pour la création rapide d'un temps de travail individuel (Focus).
+         * @param sender Bouton émetteur de l'action.
+         * @param args Arguments d'événement.
+         */
+        void OnNewFocusEventClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        /**
+         * @brief Bascule entre le mode superposé et le mode côte à côte pour les calendriers.
+         * @param sender Bouton émetteur.
+         * @param args Arguments d'événement.
+         */
+        void OnCalendarLayoutModeToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnExportCalendarClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
         /* Gestionnaires des contacts */
@@ -497,6 +509,7 @@ namespace winrt::EvolutionWin::implementation
         /* Étape 3 : Calendrier et Contacts */
         void LoadEvents();
         fire_and_forget ShowNewEventDialogAsync();
+        fire_and_forget ShowNewFocusEventDialogAsync();
         void LoadContacts(hstring const& query);
         fire_and_forget ShowNewContactDialogAsync();
 
@@ -611,7 +624,7 @@ namespace winrt::EvolutionWin::implementation
         hstring m_calendar_period{ L"week" };	/* "day", "week" ou "month" (calendar.period) */
         bool m_updating_period{ false };
         void SetCalendarPeriod(hstring const& period);
-        fire_and_forget ShowEventDialogAsync(Windows::Data::Json::JsonObject event);
+        fire_and_forget ShowEventDialogAsync(Windows::Data::Json::JsonObject event, hstring const& summary_preset = L"", bool is_focus = false);
         /* grille du calendrier (MainWindow.Calendar.cpp) */
         void OpenCalendarEvent(hstring const& calendar_uid, hstring const& uid);
         void RenderCalendarGrid(Windows::Data::Json::JsonArray const& events, int64_t start_unix, int days);

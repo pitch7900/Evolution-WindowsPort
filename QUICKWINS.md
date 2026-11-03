@@ -25,9 +25,10 @@ Propositions d'implémentations facilement réalisables, issues de la lecture du
   - Création d'un `ESource` local (ou sur le compte) avec nom et couleur.
 - [x] **Mémoriser les calendriers cochés et leur couleur** entre les sessions (§14) — déjà en place (préférence `calendar.visible`)
   - Clé de préférence par UID de source ; restauration au démarrage de la vue.
-- [ ] **Bascule superposé / côte à côte** : mémoriser le mode choisi (§12)
-- [ ] **Bloc « temps de travail individuel »** (§13)
-  - Raccourci du bouton _Nouvel événement_ : événement sans participants, `TRANSP:OPAQUE` (occupé), titre « Focus » prérempli.
+- [x] **Bascule superposé / côte à côte** : mémoriser le mode choisi (§12) — fait
+  - Bouton à bascule « Côte à côte » dans le ruban Calendrier › Affichage et mémorisation dans la clé `calendar.layout-mode`.
+- [x] **Bloc « temps de travail individuel »** (§13) — fait
+  - Bouton dédié dans le ruban Accueil Calendrier (Temps individuel / Focus) : création d'événement sans participants, durée de 2h, titre « Temps de concentration » prérempli.
 
 ## 2. Courrier
 

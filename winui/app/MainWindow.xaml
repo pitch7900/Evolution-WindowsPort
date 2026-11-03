@@ -705,6 +705,12 @@
 
                         </AppBarButton>
 
+                        <AppBarButton x:Name="RibbonCalendarFocusButton" Label="Temps individuel (Focus)"
+                                      ToolTipService.ToolTip="Planifier un temps de travail individuel (Focus) sans participants"
+                                      Click="OnNewFocusEventClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8D2;" /></AppBarButton.Icon>
+                        </AppBarButton>
+
                         <AppBarButton Label="Actualiser" Click="OnRefreshCalendarClick">
 
                             <AppBarButton.Icon><FontIcon Glyph="&#xE72C;" /></AppBarButton.Icon>
@@ -784,6 +790,14 @@
                                 <MenuFlyout Opening="OnFolderPaneMenuOpening" />
                             </AppBarButton.Flyout>
                         </AppBarButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarToggleButton x:Name="RibbonCalendarSideBySideToggle" Label="Côte à côte"
+                                            Click="OnCalendarLayoutModeToggled"
+                                            ToolTipService.ToolTip="Afficher les calendriers cochés côte à côte (ou superposés en vue unifiée)">
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE90C;" /></AppBarToggleButton.Icon>
+                        </AppBarToggleButton>
 
                         <AppBarSeparator />
 
