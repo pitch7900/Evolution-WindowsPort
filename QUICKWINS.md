@@ -8,11 +8,11 @@ Propositions d'implémentations facilement réalisables, issues de la lecture du
 
 | # | Tâche | Réf. TODO | Pourquoi c'est rapide |
 |---|-------|-----------|-----------------------|
-| 1 | **Calendrier par URL ICS / webcal** | §14 — _À partir d'Internet_ | Le backend EDS `webcal` existe déjà : il suffit d'un champ URL + création de la source. |
-| 2 | **Sélection et couleurs individuelles des calendriers** (persistance des cases cochées) | §14 | Cases et couleurs déjà en place ; il reste à mémoriser l'état dans les préférences. |
-| 3 | **Choix mémorisé du mode « conversations » par dossier** | §5 | Simple clé de préférence par dossier (indépendante du moteur de regroupement). |
-| 4 | **Marquer / démarquer comme indésirable** | §8 | Déplacement vers / depuis _Indésirables_ avec la fonction de déplacement existante. |
-| 5 | **Export des messages au format EML** (dossier courant ou sélection) | §18 | L'export `.eml` unitaire existe dans `evo-core` : boucle + `FolderPicker`. |
+| 1 | **Calendrier par URL ICS / webcal** | §14 — _À partir d'Internet_ | Fait (`evo_core_create_calendar`, bouton « + » du volet des calendriers) |
+| 2 | **Sélection et couleurs individuelles des calendriers** (persistance des cases cochées) | §14 | Fait (mémorisation de l'état et couleurs dans les préférences) |
+| 3 | **Choix mémorisé du mode « conversations » par dossier** | §5 | Fait (`conversations.<compte>/<dossier>`, bouton ruban Affichage) |
+| 4 | **Marquer / démarquer comme indésirable** | §8 | Fait (déplacement vers / depuis _Indésirables_ dans ruban et menu contextuel) |
+| 5 | **Export des messages au format EML** (dossier courant ou sélection) | §18 | Fait (unitaire via FileSavePicker, sélection et dossier complet via FolderPicker) |
 
 ---
 

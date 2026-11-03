@@ -476,6 +476,7 @@ namespace winrt::EvolutionWin::implementation
         void CheckForUpdateOnStartup();
         fire_and_forget ShowUpdateDialogAsync();
         fire_and_forget SaveMessageAsAsync();
+        fire_and_forget ExportFolderEmlAsync(hstring account, hstring folder, hstring folder_name);
         fire_and_forget SaveAllAttachmentsAsync(Windows::Data::Json::JsonArray attachments);
         void InitializePicker(Windows::Foundation::IInspectable const& picker);
         void ShowFolderContextMenu(

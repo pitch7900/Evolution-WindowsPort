@@ -638,6 +638,13 @@ namespace winrt::EvolutionWin::implementation
             {
                 DeleteFolderAsync(account, full_name, name, static_cast<int32_t>(folder.GetNamedNumber(L"total", 0)));
             });
+
+        menu.Items().Append(MenuFlyoutSeparator{});
+        add_item(L"Exporter tous les messages (.eml)…", L"\xEDE1", true,
+            [this, account, full_name, name](IInspectable const&, RoutedEventArgs const&)
+            {
+                ExportFolderEmlAsync(account, full_name, name);
+            });
     }
 
     /* Demande un nom de dossier (ContentDialog avec une zone de texte).

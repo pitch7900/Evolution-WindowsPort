@@ -263,6 +263,93 @@ namespace winrt::EvolutionWin::implementation
         });
     }
 
+    /**
+     * @brief Exporte la totalité des courriels d'un dossier sous forme de fichiers .eml dans un répertoire choisi.
+     * @param account Identifiant du compte.
+     * @param folder Chemin complet du dossier.
+     * @param folder_name Nom convivial du dossier affiché.
+     */
+    fire_and_forget MainWindow::ExportFolderEmlAsync(hstring account, hstring folder, hstring folder_name)
+    {
+        auto strong = get_strong();
+        winrt::apartment_context ui_thread;
+
+        if (!m_core || account.empty() || folder.empty())
+            co_return;
+
+        Windows::Storage::Pickers::FolderPicker picker;
+        InitializePicker(picker);
+        picker.SuggestedStartLocation(Windows::Storage::Pickers::PickerLocationId::DocumentsLibrary);
+        picker.FileTypeFilter().Append(L"*");
+
+        auto folder_dest = co_await picker.PickSingleFolderAsync();
+        if (!folder_dest)
+            co_return;
+
+        hstring dest_dir = folder_dest.Path();
+        ShowStatus(L"Récupération de la liste des messages de « " + folder_name + L" »…", InfoBarSeverity::Informational);
+
+        m_core->ListMessages(account, folder, 0, [this, account, folder, folder_name, dest_dir](hstring const& json, hstring const& error)
+        {
+            DispatcherQueue().TryEnqueue([this, account, folder, folder_name, dest_dir, json, error]() -> fire_and_forget
+            {
+                JsonArray msgs;
+                if (!error.empty() || !JsonArray::TryParse(json, msgs) || msgs.Size() == 0)
+                {
+                    ShowStatus(L"Aucun message à exporter dans « " + folder_name + L" ».", InfoBarSeverity::Warning);
+                    co_return;
+                }
+
+                JsonArray uids;
+                for (auto const& item : msgs)
+                {
+                    if (auto obj = item.try_as<JsonObject>())
+                    {
+                        hstring u = obj.GetNamedString(L"uid", L"");
+                        if (!u.empty())
+                            uids.Append(JsonValue::CreateStringValue(u));
+                    }
+                }
+
+                if (uids.Size() == 0)
+                {
+                    ShowStatus(L"Aucun identifiant de message trouvé pour l'export.", InfoBarSeverity::Warning);
+                    co_return;
+                }
+
+                JsonObject req;
+                req.SetNamedValue(L"account", JsonValue::CreateStringValue(account));
+                req.SetNamedValue(L"folder", JsonValue::CreateStringValue(folder));
+                req.SetNamedValue(L"uids", uids);
+
+                ShowStatus(L"Exportation de " + hstring{ std::to_wstring(uids.Size()) } + L" messages de « " + folder_name + L" »…", InfoBarSeverity::Informational);
+                m_core->ExportMessagesEml(req.Stringify(), [this, dest_dir, folder_name](hstring const& res_json, hstring const& res_err)
+                {
+                    JsonArray paths;
+                    if (!res_err.empty() || !JsonArray::TryParse(res_json, paths) || paths.Size() == 0)
+                    {
+                        ShowStatus(L"Erreur lors de l'exportation : " + res_err, InfoBarSeverity::Error);
+                        return;
+                    }
+
+                    uint32_t count = 0;
+                    for (auto const& p : paths)
+                    {
+                        hstring src = p.GetString();
+                        std::filesystem::path src_path(src.c_str());
+                        std::filesystem::path target = std::filesystem::path(dest_dir.c_str()) / src_path.filename();
+                        std::error_code ec;
+                        std::filesystem::copy_file(src_path, target, std::filesystem::copy_options::overwrite_existing, ec);
+                        DeleteFileW(src.c_str());
+                        if (!ec)
+                            count++;
+                    }
+                    ShowStatus(L"Exportation réussie : " + hstring{ std::to_wstring(count) } + L" messages de « " + folder_name + L" » enregistrés sous format .eml.", InfoBarSeverity::Success);
+                });
+            });
+        });
+    }
+
     /* Enregistre toutes les pièces jointes du message affiché dans un dossier
      * choisi ; les noms en double reçoivent un suffixe « (2) », « (3) »… */
     fire_and_forget MainWindow::SaveAllAttachmentsAsync(JsonArray attachments)

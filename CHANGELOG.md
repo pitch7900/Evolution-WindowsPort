@@ -28,6 +28,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 - **Quickwin — Robustesse de l'installeur MSI et relance post-installation (TODO section 1, QUICKWINS)** : intégration de `MSIRESTARTMANAGERCONTROL=Disable` dans WiX pour éliminer les invites bloquantes de Restart Manager, et configuration de l'action personnalisée `LaunchApplication` conditionnée à la propriété `LAUNCHAPP=1` pour les déploiements silencieux.
 
+- **Quickwin — Exportation complète de dossier au format .eml (TODO section 18, QUICKWINS Top 5)** : nouvelle commande « Exporter tous les messages (.eml)… » dans le menu contextuel par clic droit sur n'importe quel dossier de l'arborescence, permettant d'extraire et sauvegarder en un clic tous ses courriels via un sélecteur de répertoire `FolderPicker`.
+
 - **Quickwin — Courrier indésirable (TODO section 8)** : bouton _Indésirable_ dans le ruban et entrée du menu contextuel des messages ; déplace la sélection vers le dossier Indésirables du compte, ou vers la Boîte de réception si elle s'y trouve déjà.
 
 - **Lot 1 — Encapsulation Job Object et arrêt complet des processus d'arrière-plan (TODO lignes 156-160)** :
