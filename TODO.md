@@ -470,9 +470,9 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
   - [x] Brouillon (dossier Brouillons) : double-clic ouvre la fenêtre de rédaction pour reprendre le message
   - [x] Message marqué comme lu à l'ouverture
 - [ ] 🟡 **Affichage du contenu brut et des en-têtes détaillés (source MIME / Propriétés du message)** :
-  - [ ] **Accès rapide** : clic droit › _Propriétés_ sur un mail dans la liste des messages, raccourci clavier (ex. Ctrl+U ou Alt+Entrée), et commande dédiée dans le volet de lecture et la fenêtre indépendante
+  - [x] **Accès rapide** : clic droit › _Propriétés_ sur un mail dans la liste des messages, raccourci clavier (ex. Ctrl+U ou Alt+Entrée), et commande dédiée dans le volet de lecture et la fenêtre indépendante
   - [ ] **En-têtes Internet complets** : affichage exhaustif de la totalité des en-têtes RFC 5322 bruts (`Received`, `Authentication-Results`, `DKIM-Signature`, `SPF`, `Message-ID`, en-têtes `X-*`), avec sélection, recherche et bouton de copie rapide vers le presse-papiers (équivalent des « Options du message / Propriétés » d'Outlook)
-  - [ ] **Contenu complet brut (source MIME / RFC 822)** : visualiseur du flux brut intégral non interprété du courriel (en-têtes et corps multi-parties avec frontières MIME, codages Base64 / Quoted-Printable d'origine) avec police monospace, recherche textuelle (Ctrl+F) et boutons de copie / export `.eml`
+  - [x] **Contenu complet brut (source MIME / RFC 822)** : visualiseur du flux brut intégral non interprété du courriel (en-têtes et corps multi-parties avec frontières MIME, codages Base64 / Quoted-Printable d'origine) avec police monospace, recherche textuelle (Ctrl+F) et boutons de copie / export `.eml`
   - [ ] **Métadonnées techniques de diagnostic** : taille exacte en octets, compte et dossier d'origine, UID Camel / IMAP, encodage des caractères (charset), état de synchronisation
 
 ## 7. Mail – Actions sur les messages — 🟠

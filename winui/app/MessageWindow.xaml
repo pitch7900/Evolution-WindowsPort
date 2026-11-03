@@ -266,6 +266,22 @@
 
             </AppBarButton>
 
+            <AppBarButton x:Name="RawSourceButton" Label="Source MIME" Click="OnRawSourceClick" ToolTipService.ToolTip="Afficher le flux brut intégral du message RFC 822 (Ctrl+Maj+U)">
+
+                <AppBarButton.Icon>
+
+                    <FontIcon Glyph="&#xE943;" />
+
+                </AppBarButton.Icon>
+
+                <AppBarButton.KeyboardAccelerators>
+
+                    <KeyboardAccelerator Modifiers="Control,Shift" Key="U" />
+
+                </AppBarButton.KeyboardAccelerators>
+
+            </AppBarButton>
+
         </CommandBar>
 
 

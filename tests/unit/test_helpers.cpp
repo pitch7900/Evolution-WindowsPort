@@ -5593,6 +5593,42 @@ static void test_category_definitions_and_colors(void)
     TEST_CASE_END();
 }
 
+
+static size_t FindInRawMime(std::wstring_view raw_content, std::wstring_view needle)
+{
+    if (needle.empty() || raw_content.empty())
+        return std::wstring::npos;
+
+    std::wstring haystack_lower{ raw_content };
+    for (auto& ch : haystack_lower) ch = static_cast<wchar_t>(std::towlower(ch));
+
+    std::wstring needle_lower{ needle };
+    for (auto& ch : needle_lower) ch = static_cast<wchar_t>(std::towlower(ch));
+
+    return haystack_lower.find(needle_lower);
+}
+
+static void test_raw_mime_search(void)
+{
+    TEST_CASE("RawMime: Recherche d'en-tetes et frontieres MIME RFC 822");
+    {
+        std::wstring raw = L"From: alice@example.com\r\nTo: bob@example.com\r\nSubject: Test MIME\r\nContent-Type: multipart/mixed; boundary=\"--boundary-123\"\r\n\r\n----boundary-123\r\nContent-Type: text/plain\r\n\r\nHello World\r\n";
+
+        size_t pos_sub = FindInRawMime(raw, L"subject:");
+        ASSERT_TRUE(pos_sub != std::wstring::npos);
+
+        size_t pos_sub_case = FindInRawMime(raw, L"SUBJECT: TEST");
+        ASSERT_TRUE(pos_sub_case != std::wstring::npos);
+
+        size_t pos_bound = FindInRawMime(raw, L"--boundary-123");
+        ASSERT_TRUE(pos_bound != std::wstring::npos);
+
+        size_t pos_not_found = FindInRawMime(raw, L"X-Custom-Header: None");
+        ASSERT_TRUE(pos_not_found == std::wstring::npos);
+    }
+    TEST_CASE_END();
+}
+
 int main(void)
 
 
@@ -5714,6 +5750,7 @@ int main(void)
 
 
         test_category_definitions_and_colors();
+        test_raw_mime_search();
     return test_suite_summary();
 
 

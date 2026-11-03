@@ -9,6 +9,7 @@
 #include "WindowIcon.h"
 
 #include "Settings.h"
+#include <fstream>
 
 #include <microsoft.ui.xaml.window.h>
 
@@ -21,6 +22,7 @@
 #include <winrt/Windows.Storage.Pickers.h>
 
 #include <winrt/Windows.Storage.Streams.h>
+#include <winrt/Windows.ApplicationModel.DataTransfer.h>
 
 #include <winrt/Microsoft.UI.Input.h>
 
@@ -2473,5 +2475,161 @@ namespace winrt::EvolutionWin::implementation
                 DeleteFileW(exported.c_str());
             }
         });
+    }
+
+    /**
+     * @brief Gestionnaire de clic pour afficher le flux brut MIME du message dans la fenêtre dédiée.
+     * @param sender Contrôle bouton déclencheur.
+     * @param args Arguments de l'événement de clic.
+     */
+    void MessageWindow::OnRawSourceClick(
+        [[maybe_unused]] IInspectable const& sender,
+        [[maybe_unused]] RoutedEventArgs const& args)
+    {
+        ShowRawMimeSourceAsync();
+    }
+
+    /**
+     * @brief Affiche la source MIME brute du message affiché dans un dialogue avec recherche et copie.
+     */
+    fire_and_forget MessageWindow::ShowRawMimeSourceAsync()
+    {
+        if (m_dialog_open || !Content() || !Content().XamlRoot())
+            co_return;
+
+        auto core = m_core.lock();
+        if (!core || m_account.empty() || m_folder.empty() || m_uid.empty())
+            co_return;
+
+        JsonObject request;
+        request.SetNamedValue(L"account", JsonValue::CreateStringValue(m_account));
+        request.SetNamedValue(L"folder", JsonValue::CreateStringValue(m_folder));
+        JsonArray uids;
+        uids.Append(JsonValue::CreateStringValue(m_uid));
+        request.SetNamedValue(L"uids", uids);
+
+        core->ExportMessagesEml(request.Stringify(), [this](hstring const& json, hstring const& error)
+        {
+            DispatcherQueue().TryEnqueue([this, json, error]() -> fire_and_forget
+            {
+                JsonArray paths;
+                if (!error.empty() || !JsonArray::TryParse(json, paths) || paths.Size() == 0)
+                {
+                    ShowStatus(L"Impossible d'extraire la source brute : " + error, InfoBarSeverity::Error);
+                    co_return;
+                }
+
+                hstring eml_path = paths.GetStringAt(0);
+                std::wstring raw_content;
+                {
+                    std::ifstream in(std::filesystem::path(eml_path.c_str()), std::ios::binary);
+                    if (in)
+                    {
+                        std::string s((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+                        int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
+                        if (len > 0)
+                        {
+                            raw_content.resize(len - 1);
+                            MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, raw_content.data(), len);
+                        }
+                        else
+                        {
+                            int len_a = MultiByteToWideChar(CP_ACP, 0, s.c_str(), -1, nullptr, 0);
+                            if (len_a > 0)
+                            {
+                                raw_content.resize(len_a - 1);
+                                MultiByteToWideChar(CP_ACP, 0, s.c_str(), -1, raw_content.data(), len_a);
+                            }
+                        }
+                    }
+                    DeleteFileW(eml_path.c_str());
+                }
+
+                if (raw_content.empty())
+                {
+                    ShowStatus(L"Flux brut du message vide.", InfoBarSeverity::Warning);
+                    co_return;
+                }
+
+                ContentDialog dialog;
+                dialog.XamlRoot(Content().XamlRoot());
+                dialog.Title(box_value(L"Source brute MIME du message (RFC 822)"));
+                dialog.CloseButtonText(L"Fermer");
+                dialog.DefaultButton(ContentDialogButton::Close);
+
+                Grid root;
+                root.RowDefinitions().Append(RowDefinition{});
+                root.RowDefinitions().Append(RowDefinition{});
+                root.RowDefinitions().GetAt(0).Height(GridLengthHelper::Auto());
+                RowDefinition body_row;
+                body_row.Height(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+                root.RowDefinitions().Append(body_row);
+
+                StackPanel toolbar;
+                toolbar.Orientation(Orientation::Horizontal);
+                toolbar.Spacing(8);
+                toolbar.Margin(ThicknessHelper::FromLengths(0, 0, 0, 8));
+
+                TextBox search_box;
+                search_box.PlaceholderText(L"Rechercher dans la source (Ctrl+F)...");
+                search_box.Width(280);
+
+                Button copy_btn;
+                copy_btn.Content(box_value(L"Copier tout"));
+
+                Button save_btn;
+                save_btn.Content(box_value(L"Enregistrer sous (.eml)..."));
+
+                toolbar.Children().Append(search_box);
+                toolbar.Children().Append(copy_btn);
+                toolbar.Children().Append(save_btn);
+
+                TextBox editor;
+                editor.Text(hstring{ raw_content });
+                editor.IsReadOnly(true);
+                editor.AcceptsReturn(true);
+                editor.TextWrapping(TextWrapping::NoWrap);
+                editor.FontFamily(Microsoft::UI::Xaml::Media::FontFamily(L"Cascadia Mono, Consolas, Courier New"));
+                editor.FontSize(11);
+                editor.Width(750);
+                editor.Height(440);
+
+                search_box.TextChanged([editor, raw_content, search_box](IInspectable const&, Controls::TextChangedEventArgs const&)
+                {
+                    std::wstring q{ search_box.Text() };
+                    if (q.empty()) return;
+                    size_t pos = ::EvolutionWin::Helpers::FindInRawMime(raw_content, q);
+                    if (pos != std::wstring::npos)
+                    {
+                        editor.Select(static_cast<int32_t>(pos), static_cast<int32_t>(q.size()));
+                    }
+                });
+
+                copy_btn.Click([raw_content](IInspectable const&, RoutedEventArgs const&)
+                {
+                    Windows::ApplicationModel::DataTransfer::DataPackage pkg;
+                    pkg.SetText(hstring{ raw_content });
+                    Windows::ApplicationModel::DataTransfer::Clipboard::SetContent(pkg);
+                });
+
+                save_btn.Click([this](IInspectable const&, RoutedEventArgs const&)
+                {
+                    SaveMessageAsAsync();
+                });
+
+                Grid::SetRow(toolbar, 0);
+                Grid::SetRow(editor, 1);
+                root.Children().Append(toolbar);
+                root.Children().Append(editor);
+
+                dialog.Content(root);
+
+                m_dialog_open = true;
+                co_await dialog.ShowAsync();
+                m_dialog_open = false;
+            });
+        });
+
+        co_return;
     }
 }

@@ -40,6 +40,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Visualiseur du flux brut RFC 822 / source MIME intégrale (TODO lignes 473 & 475)** :
+  - **Dialogue de diagnostic et inspection technique** : affichage du flux brut non interprété du courriel (en-têtes complets RFC 5322, délimiteurs multi-parties MIME, encodages Base64/Quoted-Printable d'origine) dans une boîte de dialogue dédiée grand format avec police monospace (Cascadia Mono / Consolas).
+  - **Recherche textuelle interactive (Ctrl+F)** : barre d'outils supérieure intégrant une recherche dynamique en temps réel avec sélection et défilement automatique sur le motif recherché dans la source.
+  - **Boutons d'action rapide** : commande « Copier tout » transférant l'intégralité du flux RFC 822 dans le presse-papiers Windows, et commande « Enregistrer sous (.eml)... » pour exporter le message sur disque via FileSavePicker.
+  - **Raccourci clavier universel** : accessible via Ctrl+Maj+U dans le volet de lecture, dans la fenêtre de lecture indépendante MessageWindow, et via le menu contextuel clic-droit de la liste des messages.
+
 - **Menu d'attribution rapide de catégories aux messages sélectionnés (TODO lignes 771 & 773)** :
   - **Menu et raccourci dans le Ruban et le menu contextuel** : intégration du bouton « Catégoriser » dans le ruban Accueil (RibbonCategorizeButton, icône Tag \xE8EC) avec menu déroulant dynamique et raccourci clavier Ctrl+F2, ainsi que sous-menu contextuel dédié lors du clic-droit sur un ou plusieurs courriels.
   - **Palette de catégories standards et synchronisation native** : palette standard de 10 catégories prédéfinies (Rouge, Orange, Jaune, Vert, Bleu, Violet, Important, Travail, Personnel, À suivre) avec pastilles de couleur carrées Fluent et indicateur d'état coché (ToggleMenuFlyoutItem).

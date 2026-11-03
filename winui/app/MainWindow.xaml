@@ -1487,6 +1487,22 @@
 
                             </AppBarButton>
 
+                            <AppBarButton Label="Source MIME" Click="OnViewRawMimeClick" ToolTipService.ToolTip="Afficher le flux brut intégral du message RFC 822 (Ctrl+Maj+U)">
+
+                                <AppBarButton.Icon>
+
+                                    <FontIcon Glyph="&#xE943;" />
+
+                                </AppBarButton.Icon>
+
+                                <AppBarButton.KeyboardAccelerators>
+
+                                    <KeyboardAccelerator Modifiers="Control,Shift" Key="U" />
+
+                                </AppBarButton.KeyboardAccelerators>
+
+                            </AppBarButton>
+
                             <AppBarButton x:Name="ReadAloudButton" Label="Lire à voix haute" Click="OnReadAloudClick" ToolTipService.ToolTip="Lire à voix haute le message (Synthèse vocale Windows)">
 
                                 <AppBarButton.Icon>

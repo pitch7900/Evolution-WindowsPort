@@ -53,6 +53,8 @@ namespace winrt::EvolutionWin::implementation
         void OnOpenInBrowserClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnSaveAsClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         fire_and_forget SaveMessageAsAsync();
+        void OnRawSourceClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        fire_and_forget ShowRawMimeSourceAsync();
         fire_and_forget OnReadAloudClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void StopSpeech();
         void OnCloseAttachmentPreviewClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -123,6 +125,7 @@ namespace winrt::EvolutionWin::implementation
         winrt::hstring m_preview_current_path;
         winrt::hstring m_preview_current_filename;
         uint32_t m_preview_current_index{ 0 };
+        bool m_dialog_open{ false };
     };
 }
 

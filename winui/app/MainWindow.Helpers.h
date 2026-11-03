@@ -991,4 +991,24 @@ namespace EvolutionWin::Helpers
         out_b = fallback_palette[idx][2];
         return false;
     }
+
+    /**
+     * @brief Recherche la position d'un en-tête RFC 822 ou d'une frontière MIME dans un flux brut.
+     * @param raw_content Contenu textuel intégral du message RFC 822.
+     * @param needle Motif textuel recherché (insensible à la casse).
+     * @return Indice du début de l'occurrence trouvée, ou std::wstring::npos si absente.
+     */
+    inline size_t FindInRawMime(std::wstring_view raw_content, std::wstring_view needle)
+    {
+        if (needle.empty() || raw_content.empty())
+            return std::wstring::npos;
+
+        std::wstring haystack_lower{ raw_content };
+        for (auto& ch : haystack_lower) ch = static_cast<wchar_t>(std::towlower(ch));
+
+        std::wstring needle_lower{ needle };
+        for (auto& ch : needle_lower) ch = static_cast<wchar_t>(std::towlower(ch));
+
+        return haystack_lower.find(needle_lower);
+    }
 }

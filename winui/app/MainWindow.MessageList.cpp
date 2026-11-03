@@ -462,6 +462,19 @@ namespace winrt::EvolutionWin::implementation
                 });
                 menu_items.Append(save_eml_item);
 
+                MenuFlyoutItem raw_source_item;
+                raw_source_item.Text(L"Afficher la source brute (MIME)...");
+                raw_source_item.Icon(FontIcon{});
+                raw_source_item.Icon().as<FontIcon>().Glyph(L"\xE943");
+                raw_source_item.KeyboardAcceleratorTextOverride(L"Ctrl+Maj+U");
+                raw_source_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
+                {
+                    hstring target_uid = target_uids.empty() ? SelectedMessageUid() : target_uids.front();
+                    if (!target_uid.empty())
+                        ShowRawMimeSourceAsync(target_uid);
+                });
+                menu_items.Append(raw_source_item);
+
                 menu_items.Append(MenuFlyoutSeparator{});
 
                 auto state_it = m_message_states.find(std::wstring{ target_uids.front() });
