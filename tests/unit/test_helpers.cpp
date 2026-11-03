@@ -5864,6 +5864,28 @@ static void test_reading_zoom_helpers()
     TEST_CASE_END();
 }
 
+static double FontSizePresetToZoomTest(std::wstring_view name)
+{
+    if (name == L"small") return 0.85;
+    if (name == L"large") return 1.25;
+    if (name == L"extralarge") return 1.5;
+    return 1.0;
+}
+
+static void test_font_size_preset_to_zoom()
+{
+    TEST_CASE("FontSize: Correspondance taille de texte de lecture / zoom du lecteur");
+    {
+        ASSERT_TRUE(FontSizePresetToZoomTest(L"small") == 0.85);
+        ASSERT_TRUE(FontSizePresetToZoomTest(L"normal") == 1.0);
+        ASSERT_TRUE(FontSizePresetToZoomTest(L"large") == 1.25);
+        ASSERT_TRUE(FontSizePresetToZoomTest(L"extralarge") == 1.5);
+        ASSERT_TRUE(FontSizePresetToZoomTest(L"inconnu") == 1.0);
+        ASSERT_TRUE(FontSizePresetToZoomTest(L"") == 1.0);
+    }
+    TEST_CASE_END();
+}
+
 int main(void)
 
 
@@ -5992,6 +6014,7 @@ int main(void)
         test_keyboard_shortcuts_helpers();
         test_process_lifecycle_job_object();
         test_reading_zoom_helpers();
+        test_font_size_preset_to_zoom();
 return test_suite_summary();
 
 

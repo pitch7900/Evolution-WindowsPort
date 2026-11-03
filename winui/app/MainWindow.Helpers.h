@@ -1119,6 +1119,19 @@ namespace EvolutionWin::Helpers
     }
 
     /**
+     * @brief Convertit le choix « Taille de texte pour la lecture » (Paramètres › Apparence) en facteur de zoom du lecteur.
+     * @param name Valeur mémorisée : « small », « normal », « large » ou « extralarge ».
+     * @return Facteur de zoom correspondant (0.85, 1.0, 1.25 ou 1.5) ; 1.0 pour toute valeur inconnue.
+     */
+    inline double FontSizePresetToZoom(std::wstring_view name)
+    {
+        if (name == L"small") return 0.85;
+        if (name == L"large") return 1.25;
+        if (name == L"extralarge") return 1.5;
+        return 1.0;
+    }
+
+    /**
      * @brief Borne le facteur d'échelle de zoom du volet de lecture entre 50% et 300%.
      * @param factor Facteur de zoom souhaité (1.0 = 100%).
      * @return Facteur de zoom normalisé et sécurisé.

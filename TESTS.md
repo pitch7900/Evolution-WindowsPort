@@ -55,6 +55,7 @@ Valide les fonctions pures issues de `MainWindow.Helpers.h` :
 - **Nettoyage de fichiers temporaires (`PurgeDirectoryFiles`)** : validation de la purge des répertoires de cache et calcul de l'espace libéré.
 - **Gestion du second fuseau horaire (`GetTimezoneUtcOffsetHours`, `GetTimezoneShortLabel`, `CalculateEquivalentHour`)** : décalages UTC, abréviations courtes et conversion d'heures avec gestion du passage de minuit.
 - **Recherche multicritère et par catégorie (`MatchesMessageSearch`)** : prise en charge des syntaxes `cat:`, `category:` et détection de mots-clés d'étiquettes en recherche locale et transversale.
+- **Taille de texte de lecture (`FontSizePresetToZoom`)** : correspondance des choix _Petite / Normale / Grande / Très grande_ avec le facteur de zoom du lecteur (0,85 / 1,0 / 1,25 / 1,5), repli à 1,0 pour une valeur inconnue.
 
 ### Suite 2 : Contrats d'interface et robustesse `evo-core` (`test_evo_core_contracts.c`)
 Vérifie la robustesse du moteur C et ses échanges avec l'interface :

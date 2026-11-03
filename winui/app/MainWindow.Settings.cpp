@@ -1987,6 +1987,11 @@ namespace winrt::EvolutionWin::implementation
                             }
                             catch (...) {}
                         }
+                        else if (key == L"appearance.font-size")
+                        {
+                            /* taille de texte de lecture : prérègle le zoom du lecteur (Ctrl+molette / Ctrl+± l'ajustent ensuite) */
+                            ApplyReaderZoom(::EvolutionWin::Helpers::FontSizePresetToZoom(std::wstring_view{ val }));
+                        }
                         else if (key == L"mail.folder-sort")
 
                         {

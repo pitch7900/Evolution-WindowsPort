@@ -888,7 +888,8 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 ### Général
 
 - [x] 🟢 Thème (clair / sombre / système)
-- [ ] 🟢 Langue de l'interface (cf. §20), taille du texte
+- [x] 🟢 Taille du texte de lecture (Petite / Normale / Grande / Très grande, appliquée comme zoom du lecteur)
+- [ ] 🟢 Langue de l'interface (cf. §20) ; taille du texte du reste de l'interface
 - [x] 🟢 Démarrage avec Windows (via Registre HKCU\...\Run), réduction dans la zone de notification à la fermeture
   - Arrêt complet des modules et processus d'arrière-plan à la fermeture : cf. §1
 - [x] 🟢 Module affiché au démarrage (Mail, Calendrier, Contacts, Tâches)

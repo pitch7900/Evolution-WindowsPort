@@ -45,7 +45,7 @@ Propositions d'implémentations facilement réalisables, issues de la lecture du
 ## 3. Interface et paramètres
 
 - [x] ~~**Thème clair / sombre / système** (§19)~~ — déjà fait
-- [ ] **Taille du texte** (§19)
+- [x] **Taille du texte** (§19) — fait pour la lecture (liste Paramètres › Apparence appliquée comme zoom du lecteur)
   - Échelle appliquée via une ressource XAML globale.
 - [ ] **Compte activé / désactivé sans suppression** (§3 — Synchronisation)
   - Bascule de `ESourceExtension` _enabled_ dans la boîte de modification du compte.
