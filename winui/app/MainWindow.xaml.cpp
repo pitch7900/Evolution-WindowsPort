@@ -508,6 +508,11 @@ namespace winrt::EvolutionWin::implementation
                 UpdateSearchPlaceholder();
             else if (tag == L"tasks")
                 box.PlaceholderText(L"Rechercher dans les tâches (Ctrl+E)");
+            else if (tag == L"calendar")
+            {
+                box.PlaceholderText(L"Rechercher un événement (Ctrl+E)");
+                box.Text(m_calendar_search_query);
+            }
             else
                 box.PlaceholderText(L"Rechercher (Ctrl+E)");
         }

@@ -58,6 +58,9 @@ namespace winrt::EvolutionWin::implementation
         void OnRibbonMiniCalendarToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnCalendarTimeScaleClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnCalendarPeriodChanged(Microsoft::UI::Xaml::Controls::SelectorBar const& sender, Microsoft::UI::Xaml::Controls::SelectorBarSelectionChangedEventArgs const& args);
+        void OnCalendarSearchTextChanged(Microsoft::UI::Xaml::Controls::AutoSuggestBox const& sender, Microsoft::UI::Xaml::Controls::AutoSuggestBoxTextChangedEventArgs const& args);
+        void OnCalendarSearchQuerySubmitted(Microsoft::UI::Xaml::Controls::AutoSuggestBox const& sender, Microsoft::UI::Xaml::Controls::AutoSuggestBoxQuerySubmittedEventArgs const& args);
+        void FilterAndRenderCalendarEvents();
         void OnCalendarPreviousClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnCalendarNextClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnConfidentialToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -633,6 +636,8 @@ namespace winrt::EvolutionWin::implementation
         int64_t m_grid_start{ 0 };
         int m_grid_days{ 7 };
         int m_grid_month{ 0 };
+        Windows::Data::Json::JsonArray m_all_calendar_events{ nullptr };
+        hstring m_calendar_search_query;
         /* calendriers affichés (calendar.visible) et actif (calendar.active) */
         Windows::Data::Json::JsonArray m_calendar_sources{ nullptr };
         void LoadCalendarSources();

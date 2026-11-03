@@ -1,5 +1,6 @@
 #include <windows.h>
 #pragma comment(lib, "advapi32.lib")
+#pragma comment(lib, "user32.lib")
 /**
 
 
@@ -5902,6 +5903,49 @@ static MessageImportanceLevelTest ParseMessageImportanceTest(std::wstring_view i
     return MessageImportanceLevelTest::Normal;
 }
 
+static bool MatchCalendarEventTest(std::wstring_view summary, std::wstring_view location, std::wstring_view description, std::wstring_view query)
+{
+    if (query.empty())
+        return true;
+
+    auto to_lower = [](std::wstring_view s) {
+        std::wstring res{ s };
+        if (!res.empty())
+            ::CharLowerBuffW(res.data(), static_cast<DWORD>(res.size()));
+        return res;
+    };
+
+    std::wstring q = to_lower(query);
+    if (to_lower(summary).find(q) != std::wstring::npos)
+        return true;
+    if (to_lower(location).find(q) != std::wstring::npos)
+        return true;
+    if (to_lower(description).find(q) != std::wstring::npos)
+        return true;
+
+    return false;
+}
+
+static void test_calendar_search_matching()
+{
+    TEST_CASE("Calendar: Filtrage recherche titre, lieu et description");
+    {
+        std::wstring summary = L"Réunion de cadrage trimestriel";
+        std::wstring location = L"Salle Concorde A";
+        std::wstring desc = L"Présentation des résultats et roadmap Q4";
+
+        ASSERT_TRUE(MatchCalendarEventTest(summary, location, desc, L""));
+        ASSERT_TRUE(MatchCalendarEventTest(summary, location, desc, L"cadrage"));
+        ASSERT_TRUE(MatchCalendarEventTest(summary, location, desc, L"RÉUNION"));
+        ASSERT_TRUE(MatchCalendarEventTest(summary, location, desc, L"concorde"));
+        ASSERT_TRUE(MatchCalendarEventTest(summary, location, desc, L"roadmap"));
+        ASSERT_TRUE(MatchCalendarEventTest(summary, location, desc, L"Q4"));
+        ASSERT_FALSE(MatchCalendarEventTest(summary, location, desc, L"budget"));
+        ASSERT_FALSE(MatchCalendarEventTest(summary, location, desc, L"Zénith"));
+    }
+    TEST_CASE_END();
+}
+
 static void test_message_importance_parsing()
 {
     TEST_CASE("MessageImportance: Evaluation haute, basse et normale");
@@ -6052,6 +6096,7 @@ int main(void)
         test_process_lifecycle_job_object();
         test_reading_zoom_helpers();
     test_message_importance_parsing();
+    test_calendar_search_matching();
         test_font_size_preset_to_zoom();
 return test_suite_summary();
 

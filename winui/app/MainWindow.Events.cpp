@@ -330,125 +330,191 @@ namespace winrt::EvolutionWin::implementation
                 }
             }
 
-            if (m_calendar_period != L"list")
+            JsonArray occurrences;
+            if (JsonArray::TryParse(json, occurrences))
             {
-                auto occurrences = JsonArray::Parse(json);
-                if (m_calendar_period == L"month")
-                    RenderMonthGrid(occurrences, m_grid_start, m_grid_month);
-                else
-                    RenderCalendarGrid(occurrences, m_grid_start, m_grid_days);
-                return;
+                m_all_calendar_events = occurrences;
             }
-
-            auto items = EventList().Items();
-            items.Clear();
-
-            auto events = JsonArray::Parse(json);
-            for (auto const& value : events)
+            else
             {
-                auto ev = value.GetObject();
-                hstring uid = ev.GetNamedString(L"uid", L"");
-                hstring calendar_uid = ev.GetNamedString(L"calendar_uid", L"");
-                hstring summary = ev.GetNamedString(L"summary", L"(Sans titre)");
-                hstring location = ev.GetNamedString(L"location", L"");
-                hstring description = ev.GetNamedString(L"description", L"");
-                double start_t = ev.GetNamedNumber(L"start", 0);
-                double end_t = ev.GetNamedNumber(L"end", 0);
-
-                Grid row;
-                if (m_compact_density)
-                    row.Padding(ThicknessHelper::FromLengths(10, 3, 10, 3));
-                else
-                    row.Padding(ThicknessHelper::FromLengths(12, 10, 12, 10));
-                row.ColumnSpacing(12);
-                ColumnDefinition color_col;
-                color_col.Width(GridLengthHelper::Auto());
-                row.ColumnDefinitions().Append(color_col);
-                row.ColumnDefinitions().Append(ColumnDefinition{});
-                ColumnDefinition del_col;
-                del_col.Width(GridLengthHelper::Auto());
-                row.ColumnDefinitions().Append(del_col);
-
-                /* couleur du calendrier (EDS), sinon couleur d'accent */
-                Border color_bar;
-                color_bar.Width(4);
-                color_bar.CornerRadius(CornerRadiusHelper::FromUniformRadius(2));
-                std::wstring color{ ev.GetNamedString(L"calendar_color", L"") };
-                if (color.size() == 7 && color[0] == L'#')
-                {
-                    auto channel = [&](size_t at) { return static_cast<uint8_t>(std::wcstoul(color.substr(at, 2).c_str(), nullptr, 16)); };
-                    color_bar.Background(SolidColorBrush{ Microsoft::UI::ColorHelper::FromArgb(255, channel(1), channel(3), channel(5)) });
-                }
-                else
-                {
-                    color_bar.Background(Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
-                }
-                ToolTipService::SetToolTip(color_bar, box_value(ev.GetNamedString(L"calendar_name", L"")));
-                row.Children().Append(color_bar);
-
-                StackPanel details;
-                details.Spacing(2);
-
-                TextBlock title;
-                title.Text(summary);
-                title.Style(Application::Current().Resources().Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>());
-                details.Children().Append(title);
-
-                hstring time_str = FormatDate(start_t) + (end_t > start_t ? L" → " + FormatDate(end_t) : hstring{});
-                if (!location.empty())
-                    time_str = time_str + L"  •  Lieu : " + location;
-
-                TextBlock sub;
-                sub.Text(time_str);
-                sub.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
-                details.Children().Append(sub);
-
-                if (!description.empty())
-                {
-                    TextBlock desc;
-                    desc.Text(description);
-                    desc.TextWrapping(TextWrapping::Wrap);
-                    details.Children().Append(desc);
-                }
-
-                Grid::SetColumn(details, 1);
-                row.Children().Append(details);
-
-                Button del_btn;
-                FontIcon del_icon;
-                del_icon.Glyph(L"\xE74D");
-                del_icon.FontSize(14);
-                del_btn.Content(del_icon);
-                del_btn.VerticalAlignment(VerticalAlignment::Center);
-                Grid::SetColumn(del_btn, 2);
-                ToolTipService::SetToolTip(del_btn, box_value(L"Supprimer l'événement"));
-                del_btn.Click([this, calendar_uid, uid](IInspectable const&, RoutedEventArgs const&)
-                {
-                    m_core->DeleteEvent(calendar_uid, uid, [this](hstring const&, hstring const& err)
-                    {
-                        if (!err.empty())
-                        {
-                            ShowStatus(L"Suppression de l'événement : " + err, InfoBarSeverity::Error);
-                            return;
-                        }
-                        LoadEvents();
-                    });
-                });
-                row.Children().Append(del_btn);
-
-                /* ouverture au clic (OnEventItemClick) : "<agenda>\x1F<événement>" */
-                row.Tag(box_value(calendar_uid + L"\x1F" + uid));
-                items.Append(row);
+                m_all_calendar_events = JsonArray{};
             }
-
-            if (events.Size() == 0)
-            {
-                TextBlock empty;
-                empty.Text(L"Aucun événement sur cette période.");
-                empty.Padding(ThicknessHelper::FromLengths(12, 12, 12, 12));
-                items.Append(empty);
-            }
+            FilterAndRenderCalendarEvents();
         });
+    }
+
+    /**
+     * @brief Filtre localement les événements de calendrier chargés selon la requête textuelle et met à jour l'affichage.
+     */
+    void MainWindow::FilterAndRenderCalendarEvents()
+    {
+        if (!m_all_calendar_events)
+            return;
+
+        std::wstring query{ m_calendar_search_query };
+
+        JsonArray filtered_events;
+        for (auto const& value : m_all_calendar_events)
+        {
+            auto ev = value.GetObject();
+            hstring summary = ev.GetNamedString(L"summary", L"");
+            hstring location = ev.GetNamedString(L"location", L"");
+            hstring description = ev.GetNamedString(L"description", L"");
+            if (MatchCalendarEvent(summary, location, description, query))
+            {
+                filtered_events.Append(value);
+            }
+        }
+
+        if (m_calendar_period != L"list")
+        {
+            if (m_calendar_period == L"month")
+                RenderMonthGrid(filtered_events, m_grid_start, m_grid_month);
+            else
+                RenderCalendarGrid(filtered_events, m_grid_start, m_grid_days);
+            return;
+        }
+
+        auto items = EventList().Items();
+        items.Clear();
+
+        for (auto const& value : filtered_events)
+        {
+            auto ev = value.GetObject();
+            hstring uid = ev.GetNamedString(L"uid", L"");
+            hstring calendar_uid = ev.GetNamedString(L"calendar_uid", L"");
+            hstring summary = ev.GetNamedString(L"summary", L"(Sans titre)");
+            hstring location = ev.GetNamedString(L"location", L"");
+            hstring description = ev.GetNamedString(L"description", L"");
+            double start_t = ev.GetNamedNumber(L"start", 0);
+            double end_t = ev.GetNamedNumber(L"end", 0);
+
+            Grid row;
+            if (m_compact_density)
+                row.Padding(ThicknessHelper::FromLengths(10, 3, 10, 3));
+            else
+                row.Padding(ThicknessHelper::FromLengths(12, 10, 12, 10));
+            row.ColumnSpacing(12);
+            ColumnDefinition color_col;
+            color_col.Width(GridLengthHelper::Auto());
+            row.ColumnDefinitions().Append(color_col);
+            row.ColumnDefinitions().Append(ColumnDefinition{});
+            ColumnDefinition del_col;
+            del_col.Width(GridLengthHelper::Auto());
+            row.ColumnDefinitions().Append(del_col);
+
+            /* couleur du calendrier (EDS), sinon couleur d'accent */
+            Border color_bar;
+            color_bar.Width(4);
+            color_bar.CornerRadius(CornerRadiusHelper::FromUniformRadius(2));
+            std::wstring color{ ev.GetNamedString(L"calendar_color", L"") };
+            if (color.size() == 7 && color[0] == L'#')
+            {
+                auto channel = [&](size_t at) { return static_cast<uint8_t>(std::wcstoul(color.substr(at, 2).c_str(), nullptr, 16)); };
+                color_bar.Background(SolidColorBrush{ Microsoft::UI::ColorHelper::FromArgb(255, channel(1), channel(3), channel(5)) });
+            }
+            else
+            {
+                color_bar.Background(Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
+            }
+            ToolTipService::SetToolTip(color_bar, box_value(ev.GetNamedString(L"calendar_name", L"")));
+            row.Children().Append(color_bar);
+
+            StackPanel details;
+            details.Spacing(2);
+
+            TextBlock title;
+            title.Text(summary);
+            title.Style(Application::Current().Resources().Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>());
+            details.Children().Append(title);
+
+            hstring time_str = FormatDate(start_t) + (end_t > start_t ? L" → " + FormatDate(end_t) : hstring{});
+            if (!location.empty())
+                time_str = time_str + L"  •  Lieu : " + location;
+
+            TextBlock sub;
+            sub.Text(time_str);
+            sub.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+            details.Children().Append(sub);
+
+            if (!description.empty())
+            {
+                TextBlock desc;
+                desc.Text(description);
+                desc.TextWrapping(TextWrapping::Wrap);
+                details.Children().Append(desc);
+            }
+
+            Grid::SetColumn(details, 1);
+            row.Children().Append(details);
+
+            Button del_btn;
+            FontIcon del_icon;
+            del_icon.Glyph(L"\xE74D");
+            del_icon.FontSize(14);
+            del_btn.Content(del_icon);
+            del_btn.VerticalAlignment(VerticalAlignment::Center);
+            Grid::SetColumn(del_btn, 2);
+            ToolTipService::SetToolTip(del_btn, box_value(L"Supprimer l'événement"));
+            del_btn.Click([this, calendar_uid, uid](IInspectable const&, RoutedEventArgs const&)
+            {
+                m_core->DeleteEvent(calendar_uid, uid, [this](hstring const&, hstring const& err)
+                {
+                    if (!err.empty())
+                    {
+                        ShowStatus(L"Suppression de l'événement : " + err, InfoBarSeverity::Error);
+                        return;
+                    }
+                    LoadEvents();
+                });
+            });
+            row.Children().Append(del_btn);
+
+            /* ouverture au clic (OnEventItemClick) : "<agenda>\x1F<événement>" */
+            row.Tag(box_value(calendar_uid + L"\x1F" + uid));
+            items.Append(row);
+        }
+
+        if (filtered_events.Size() == 0)
+        {
+            TextBlock empty;
+            if (!query.empty())
+                empty.Text(L"Aucun événement ne correspond à « " + hstring{ query } + L" ».");
+            else
+                empty.Text(L"Aucun événement sur cette période.");
+            empty.Padding(ThicknessHelper::FromLengths(12, 12, 12, 12));
+            items.Append(empty);
+        }
+    }
+
+    /**
+     * @brief Gestionnaire de modification du texte du champ de recherche de calendrier.
+     * @param sender Champ AutoSuggestBox émetteur.
+     * @param args Arguments d'événement de changement de texte.
+     */
+    void MainWindow::OnCalendarSearchTextChanged(AutoSuggestBox const& sender, AutoSuggestBoxTextChangedEventArgs const& args)
+    {
+        if (args.Reason() != AutoSuggestionBoxTextChangeReason::UserInput)
+            return;
+
+        m_calendar_search_query = sender.Text();
+        if (SearchBox() && SearchBox().Text() != sender.Text())
+            SearchBox().Text(sender.Text());
+        FilterAndRenderCalendarEvents();
+    }
+
+    /**
+     * @brief Gestionnaire de validation de la recherche dans le calendrier.
+     * @param sender Champ AutoSuggestBox émetteur.
+     * @param args Arguments de validation contenant la requête saisie.
+     */
+    void MainWindow::OnCalendarSearchQuerySubmitted(AutoSuggestBox const&, AutoSuggestBoxQuerySubmittedEventArgs const& args)
+    {
+        hstring query = args ? args.QueryText() : (CalendarSearchBox() ? CalendarSearchBox().Text() : hstring{});
+        m_calendar_search_query = query;
+        if (SearchBox() && SearchBox().Text() != query)
+            SearchBox().Text(query);
+        FilterAndRenderCalendarEvents();
     }
 
     /* Gestionnaire de sélection d'une date sur le calendrier mensuel. */

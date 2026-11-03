@@ -199,6 +199,14 @@ namespace winrt::EvolutionWin::implementation
             ShowTasks();
             return;
         }
+        if (m_view_tag == L"calendar")
+        {
+            m_calendar_search_query = sender.Text();
+            if (CalendarSearchBox() && CalendarSearchBox().Text() != sender.Text())
+                CalendarSearchBox().Text(sender.Text());
+            FilterAndRenderCalendarEvents();
+            return;
+        }
         if (m_view_tag != L"mail")
             Navigation().SelectedItem(MailItem());
 
@@ -245,6 +253,14 @@ namespace winrt::EvolutionWin::implementation
             ShowTasks();
             return;
         }
+        if (m_view_tag == L"calendar")
+        {
+            m_calendar_search_query = L"";
+            if (CalendarSearchBox())
+                CalendarSearchBox().Text(L"");
+            FilterAndRenderCalendarEvents();
+            return;
+        }
         ++m_search_request;
         if (CurrentSearchScope() == L"folder")
             FilterLocalMessages(L"");
@@ -270,6 +286,14 @@ namespace winrt::EvolutionWin::implementation
         {
             m_task_search_query = query;
             ShowTasks();
+            return;
+        }
+        if (m_view_tag == L"calendar")
+        {
+            m_calendar_search_query = query;
+            if (CalendarSearchBox() && CalendarSearchBox().Text() != query)
+                CalendarSearchBox().Text(query);
+            FilterAndRenderCalendarEvents();
             return;
         }
 

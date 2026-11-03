@@ -12,6 +12,7 @@
 #include <tlhelp32.h>
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "advapi32.lib")
+#pragma comment(lib, "user32.lib")
 #include <string_view>
 #include <vector>
 #include <filesystem>
@@ -35,6 +36,37 @@ namespace EvolutionWin::Helpers
         if (type == L"junk") return L"\xE7BA";
         if (type == L"archive") return L"\xE7B8";
         return L"\xE8B7";
+    }
+
+    /**
+     * @brief Vérifie si un événement de calendrier correspond à une requête de recherche textuelle.
+     * @param summary Titre ou résumé de l\'événement.
+     * @param location Lieu de l\'événement.
+     * @param description Description détaillée de l\'événement.
+     * @param query Terme recherché par l\'utilisateur.
+     * @return true si le terme est trouvé (insensible à la casse) dans le titre, lieu ou description, ou si la requête est vide.
+     */
+    inline bool MatchCalendarEvent(std::wstring_view summary, std::wstring_view location, std::wstring_view description, std::wstring_view query)
+    {
+        if (query.empty())
+            return true;
+
+        auto to_lower = [](std::wstring_view s) {
+            std::wstring res{ s };
+            if (!res.empty())
+                ::CharLowerBuffW(res.data(), static_cast<DWORD>(res.size()));
+            return res;
+        };
+
+        std::wstring q = to_lower(query);
+        if (to_lower(summary).find(q) != std::wstring::npos)
+            return true;
+        if (to_lower(location).find(q) != std::wstring::npos)
+            return true;
+        if (to_lower(description).find(q) != std::wstring::npos)
+            return true;
+
+        return false;
     }
 
     inline FontIcon CreateFolderIcon(hstring const& type)
