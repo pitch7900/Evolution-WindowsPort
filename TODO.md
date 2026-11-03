@@ -261,6 +261,19 @@ En entreprise (Exchange Online / Microsoft 365, Exchange on-premise), les utilis
   - [ ] **Envoi « En tant que » (`Send As`)** : émission directe avec l'adresse de la boîte déléguée en en-tête `From:`, sans mention de l'identité personnelle (droits `SendAs` Exchange Online / Graph).
   - [ ] **Envoi « De la part de » (`Send on Behalf`)** : émission avec l'en-tête `Sender:` (adresse de l'utilisateur) et `From:` (adresse du titulaire), affichant « [Utilisateur] de la part de [Titulaire] ».
   - [ ] 🟢 **Copie dans les Éléments envoyés** : enregistrement automatique de la copie du message envoyé dans le dossier *Éléments envoyés* de la boîte partagée / déléguée correspondante (respect des paramètres Exchange `MessageCopyForSentAsEnabled` et `MessageCopyForSendOnBehalfEnabled`).
+- [ ] 🟠 **Gestion des permissions et délégations d'accès à la boîte mail depuis l'interface (Exchange Online et Gmail)** :
+  - Permettre à l'utilisateur de visualiser, modifier et révoquer directement depuis EvolutionWin les autorisations d'accès accordées à des tiers sur sa boîte mail ou ses dossiers, sans recourir aux interfaces d'administration web.
+  - [ ] **Accès depuis l'interface** : onglet ou section dédiée *« Délégations et autorisations »* dans la boîte de modification du compte (accessible par clic droit sur le compte › *Propriétés du compte* ou depuis les Paramètres).
+  - [ ] **Gestion pour Exchange Online / Microsoft 365** :
+    - [ ] Affichage de la liste des délégués existants et de leurs autorisations (accès complet `FullAccess`, `SendAs`, `SendOnBehalf` et permissions spécifiques aux dossiers Boîte de réception, Calendrier, Contacts via EWS `GetDelegate` / `FolderPermissionSet` ou Microsoft Graph).
+    - [ ] Ajout d'un délégué avec sélection dans l'annuaire GAL (recherche par nom ou adresse) et attribution du niveau de privilèges (Relecteur / lecture seule, Auteur, Éditeur, Délégué).
+    - [ ] Modification des autorisations d'un délégué existant (ajustement des droits de lecture, modification, suppression).
+    - [ ] Révocation et suppression d'un délégué en un clic.
+  - [ ] **Gestion pour Gmail / Google Workspace** :
+    - [ ] Consultation de la liste des délégués de la boîte via l'API Gmail (`GET /gmail/v1/users/me/settings/delegates`).
+    - [ ] Ajout d'un délégué (`POST .../delegates`) avec affichage du statut (en attente de confirmation / accepté).
+    - [ ] Suppression / révocation d'un délégué existant (`DELETE .../delegates/{delegateEmail}`).
+  - [ ] 🟢 **Interface de gestion intuitive** : liste structurée récapitulant nom, adresse email, niveau de permissions et statut, avec boutons d'édition des droits et de suppression (icône de corbeille / révocation avec confirmation).
 
 ### Boîte d'archivage en ligne (Exchange Online Archiving / In-Place Archive) — 🟠
 
