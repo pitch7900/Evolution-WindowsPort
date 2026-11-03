@@ -110,6 +110,12 @@ namespace winrt::EvolutionWin::implementation
         void OnDeleteClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnArchiveClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnPrintClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnZoomInClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnZoomOutClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnZoomResetClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTogglePlainTextClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnMoveFolderDialogClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void ApplyReaderZoom(double zoom);
         void OnMoveMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
         void OnSearchTextChanged(
             Microsoft::UI::Xaml::Controls::AutoSuggestBox const& sender,
@@ -538,6 +544,8 @@ namespace winrt::EvolutionWin::implementation
         std::map<std::wstring, MessageState> m_message_states;
         bool m_initialized{ false };
         bool m_reader_ready{ false };
+        double m_reader_zoom{ 1.0 };
+        bool m_view_plain_text{ false };
         bool m_dialog_open{ false };
         bool m_startup_synced{ false };
         hstring m_update_tag;	/* version plus récente disponible (vide : aucune connue) */

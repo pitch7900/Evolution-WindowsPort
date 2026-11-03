@@ -281,6 +281,28 @@
                 </AppBarButton.KeyboardAccelerators>
 
             </AppBarButton>
+            <AppBarSeparator />
+            <AppBarButton Label="Texte brut / HTML" Click="OnTogglePlainTextClick" ToolTipService.ToolTip="Basculer entre texte brut et HTML">
+                <AppBarButton.Icon><FontIcon Glyph="&#xE8C4;" /></AppBarButton.Icon>
+            </AppBarButton>
+            <AppBarButton Label="Zoom avant" Click="OnZoomInClick" ToolTipService.ToolTip="Agrandir l'affichage (Ctrl++)">
+                <AppBarButton.Icon><FontIcon Glyph="&#xE710;" /></AppBarButton.Icon>
+                <AppBarButton.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Control" Key="Add" />
+                </AppBarButton.KeyboardAccelerators>
+            </AppBarButton>
+            <AppBarButton Label="Zoom arrière" Click="OnZoomOutClick" ToolTipService.ToolTip="Réduire l'affichage (Ctrl+-)">
+                <AppBarButton.Icon><FontIcon Glyph="&#xE738;" /></AppBarButton.Icon>
+                <AppBarButton.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Control" Key="Subtract" />
+                </AppBarButton.KeyboardAccelerators>
+            </AppBarButton>
+            <AppBarButton Label="100 %" Click="OnZoomResetClick" ToolTipService.ToolTip="Réinitialiser le zoom à 100 % (Ctrl+0)">
+                <AppBarButton.Icon><FontIcon Glyph="&#xE777;" /></AppBarButton.Icon>
+                <AppBarButton.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Control" Key="Number0" />
+                </AppBarButton.KeyboardAccelerators>
+            </AppBarButton>
 
         </CommandBar>
 

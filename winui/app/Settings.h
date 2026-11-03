@@ -50,6 +50,16 @@ namespace EvolutionWin
             return winrt::Windows::Data::Json::JsonArray{};
         }
 
+        double GetDouble(winrt::hstring const& key, double fallback)
+        {
+            return GetNumber(key, fallback);
+        }
+
+        void SetDouble(winrt::hstring const& key, double value)
+        {
+            SetNumber(key, value);
+        }
+
         void SetNumber(winrt::hstring const& key, double value)
         {
             Set(key, winrt::Windows::Data::Json::JsonValue::CreateNumberValue(value));

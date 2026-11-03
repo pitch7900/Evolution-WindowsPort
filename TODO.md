@@ -451,6 +451,7 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
 - [x] 🟢 **Liste des expéditeurs / domaines de confiance** gérée dans les préférences
 - [x] 🟢 **Option globale** : jamais / expéditeurs de confiance seulement / toujours charger le contenu externe
 - [x] 🟢 **Enregistrer sous** (`.eml`, fonction `evo-core` existante), **Enregistrer toutes les pièces jointes**
+- [x] 🟢 **Zoom d'affichage et bascule Texte brut / HTML** : commandes de zoom (Ctrl++, Ctrl+-, Ctrl+0, facteur 50% à 300%) et basculement instantané en texte brut sécurisé dans le volet de lecture et MessageWindow avec persistance des préférences
 - [ ] 🟡 **Impression** : aperçu et styles mémo / tableau (l'impression simple existe déjà)
 - [ ] 🟠 **Aperçu des pièces jointes** directement dans le volet de lecture (et dans la fenêtre indépendante), sans les enregistrer ni les ouvrir dans une application externe ; même fonction pour les pièces jointes des événements du calendrier (§13) et des tâches (§16)
   - [x] Clic sur une pièce jointe → aperçu à la place du corps du message, bouton _Retour au message_, navigation entre pièces jointes

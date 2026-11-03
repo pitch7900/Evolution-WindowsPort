@@ -50,6 +50,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Zoom d'affichage et bascule Texte brut / HTML dans le volet de lecture et MessageWindow (TODO section 6)** :
+  - **Paliers de zoom d'affichage et raccourcis universels** : commandes d'agrandissement (`Ctrl++`), réduction (`Ctrl+-`) et réinitialisation (`Ctrl+0`) avec bornes sécurisées (50% à 300%) et mémorisation dans les préférences (`mail.reading-zoom`).
+  - **Bascule instantanée Texte brut / HTML** : bouton dédié dans la barre d'outils du volet de lecture et de la fenêtre indépendante permettant de neutraliser tout code HTML et d'afficher le message en texte brut sécurisé formaté (`<pre style="...">`) avec mémorisation (`mail.reading-plain-text`).
+  - **Couverture unitaire** : validation des calculs de zoom, des incréments et du formatage dans `tests/unit/test_helpers.cpp`.
+
 - **Exportation par glisser-déposer (Drag & Drop) de courriels vers l'Explorateur Windows et le bureau (TODO lignes 786, 789, 790)** :
   - **Glisser-déposer natif Windows 11 vers l'extérieur** : activation de `CanDragItems` et gestionnaire `DragItemsStarting` sur `MessageList` permettant de glisser un ou plusieurs courriels vers l'Explorateur de fichiers, le bureau ou une autre application.
   - **Prise en charge de la sélection multiple** : glisser plusieurs courriels sélectionnés simultanément pour générer et transférer un lot complet de fichiers `.eml` en une seule manipulation.

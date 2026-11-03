@@ -1119,6 +1119,49 @@ namespace EvolutionWin::Helpers
     }
 
     /**
+     * @brief Borne le facteur d'échelle de zoom du volet de lecture entre 50% et 300%.
+     * @param factor Facteur de zoom souhaité (1.0 = 100%).
+     * @return Facteur de zoom normalisé et sécurisé.
+     */
+    inline double ClampZoomFactor(double factor)
+    {
+        if (factor < 0.5) return 0.5;
+        if (factor > 3.0) return 3.0;
+        return factor;
+    }
+
+    /**
+     * @brief Calcule le palier supérieur de zoom (+10%).
+     * @param current Facteur de zoom actuel.
+     * @return Nouveau facteur de zoom incrémenté.
+     */
+    inline double StepZoomIn(double current)
+    {
+        return ClampZoomFactor(std::round((current + 0.10) * 100.0) / 100.0);
+    }
+
+    /**
+     * @brief Calcule le palier inférieur de zoom (-10%).
+     * @param current Facteur de zoom actuel.
+     * @return Nouveau facteur de zoom décrémenté.
+     */
+    inline double StepZoomOut(double current)
+    {
+        return ClampZoomFactor(std::round((current - 0.10) * 100.0) / 100.0);
+    }
+
+    /**
+     * @brief Formate un facteur de zoom sous forme de pourcentage lisible (ex. "100 %").
+     * @param factor Facteur de zoom (1.0 = 100%).
+     * @return Chaîne textuelle du pourcentage.
+     */
+    inline std::wstring FormatZoomPercentage(double factor)
+    {
+        int percent = static_cast<int>(std::round(ClampZoomFactor(factor) * 100.0));
+        return std::to_wstring(percent) + L" %";
+    }
+
+    /**
      * @brief Encapsule le processus courant et tous ses processus enfants (services EDS, D-Bus, etc.)
      *        dans un Job Object Windows configuré avec JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.
      *        Garantit que tous les processus satellites sont immédiatement et automatiquement

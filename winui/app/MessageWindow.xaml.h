@@ -50,6 +50,11 @@ namespace winrt::EvolutionWin::implementation
         void OnMoveMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
         void OnDeleteClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnPrintClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnZoomInClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnZoomOutClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnZoomResetClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTogglePlainTextClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void ApplyReaderZoom(double zoom);
         void OnOpenInBrowserClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnSaveAsClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         fire_and_forget SaveMessageAsAsync();
@@ -105,6 +110,8 @@ namespace winrt::EvolutionWin::implementation
 
         bool m_seen{ false };
         bool m_reader_ready{ false };
+        double m_reader_zoom{ 1.0 };
+        bool m_view_plain_text{ false };
         winrt::hstring m_reader_uri;
         winrt::hstring m_reader_html;
         uint64_t m_reader_generation{ 0 };

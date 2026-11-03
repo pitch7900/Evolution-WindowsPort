@@ -1123,6 +1123,18 @@ namespace winrt::EvolutionWin::implementation
 
         });
 
+        
+        m_reader_zoom = ::EvolutionWin::Settings::Instance().GetDouble(L"mail.reading-zoom", 1.0);
+        m_view_plain_text = ::EvolutionWin::Settings::Instance().GetBoolean(L"mail.reading-plain-text", false);
+
+        core.NavigationCompleted([this](auto const&, Microsoft::Web::WebView2::Core::CoreWebView2NavigationCompletedEventArgs const&)
+        {
+            if (m_reader_zoom != 1.0)
+            {
+                ApplyReaderZoom(m_reader_zoom);
+            }
+        });
+
         m_reader_ready = true;
 
         if (!m_reader_uri.empty())
@@ -1178,17 +1190,28 @@ namespace winrt::EvolutionWin::implementation
     }
 
     void MessageWindow::ShowCurrentMessageInReader(bool force_remote)
-
     {
-
         if (!m_current_message)
-
             return;
 
+        if (m_view_plain_text)
+        {
+            hstring body_text = m_current_message.GetNamedString(L"body", L"");
+            if (body_text.empty())
+                body_text = m_current_message.GetNamedString(L"text", L"");
+            if (body_text.empty())
+                body_text = ::EvolutionWin::Helpers::ExtractPlainTextForSpeech(m_current_message);
+
+            std::wstring plain_html = L"<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>"
+                L"body { margin:0; padding:16px; background:#fff; color:#1a1a1a; font-family:'Segoe UI Variable Text','Segoe UI',sans-serif; font-size:14px; line-height:1.6; word-break:break-word; white-space:pre-wrap; }"
+                L"</style></head><body>" + std::wstring{ ::EvolutionWin::Helpers::EscapeHtml(body_text) } + L"</body></html>";
+
+            ShowInReader(hstring{ plain_html }, false);
+            return;
+        }
+
         bool allow = force_remote || IsRemoteContentTrusted(m_current_message.GetNamedString(L"from", L""));
-
         ShowInReader(m_current_message.GetNamedString(L"html", L""), allow);
-
     }
 
     void MessageWindow::OnReaderResourceRequested(
@@ -2631,5 +2654,47 @@ namespace winrt::EvolutionWin::implementation
         });
 
         co_return;
+    }
+
+    void MessageWindow::ApplyReaderZoom(double zoom)
+    {
+        m_reader_zoom = ::EvolutionWin::Helpers::ClampZoomFactor(zoom);
+        ::EvolutionWin::Settings::Instance().SetDouble(L"mail.reading-zoom", m_reader_zoom);
+
+        if (m_reader_ready && ReaderWebView().CoreWebView2())
+        {
+            std::wstring js = L"if (document.body) { document.body.style.zoom = '" + std::to_wstring(m_reader_zoom) + L"'; }";
+            ReaderWebView().CoreWebView2().ExecuteScriptAsync(js);
+        }
+    }
+
+    void MessageWindow::OnZoomInClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ApplyReaderZoom(::EvolutionWin::Helpers::StepZoomIn(m_reader_zoom));
+        ShowStatus(L"Niveau de zoom : " + hstring{ ::EvolutionWin::Helpers::FormatZoomPercentage(m_reader_zoom) }, Microsoft::UI::Xaml::Controls::InfoBarSeverity::Informational);
+    }
+
+    void MessageWindow::OnZoomOutClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ApplyReaderZoom(::EvolutionWin::Helpers::StepZoomOut(m_reader_zoom));
+        ShowStatus(L"Niveau de zoom : " + hstring{ ::EvolutionWin::Helpers::FormatZoomPercentage(m_reader_zoom) }, Microsoft::UI::Xaml::Controls::InfoBarSeverity::Informational);
+    }
+
+    void MessageWindow::OnZoomResetClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ApplyReaderZoom(1.0);
+        ShowStatus(L"Zoom reinitialise a 100 %", Microsoft::UI::Xaml::Controls::InfoBarSeverity::Informational);
+    }
+
+    void MessageWindow::OnTogglePlainTextClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        m_view_plain_text = !m_view_plain_text;
+        ::EvolutionWin::Settings::Instance().SetBoolean(L"mail.reading-plain-text", m_view_plain_text);
+
+        if (m_current_message)
+        {
+            ShowCurrentMessageInReader(false);
+            ShowStatus(m_view_plain_text ? L"Affichage en texte brut active" : L"Affichage HTML active", Microsoft::UI::Xaml::Controls::InfoBarSeverity::Informational);
+        }
     }
 }

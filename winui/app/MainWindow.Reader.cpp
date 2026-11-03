@@ -259,6 +259,17 @@ namespace winrt::EvolutionWin::implementation
             Windows::System::Launcher::LaunchUriAsync(Uri{ args.Uri() });
         });
 
+        m_reader_zoom = ::EvolutionWin::Settings::Instance().GetDouble(L"mail.reading-zoom", 1.0);
+        m_view_plain_text = ::EvolutionWin::Settings::Instance().GetBoolean(L"mail.reading-plain-text", false);
+
+        core.NavigationCompleted([this](auto const&, Microsoft::Web::WebView2::Core::CoreWebView2NavigationCompletedEventArgs const&)
+        {
+            if (m_reader_zoom != 1.0)
+            {
+                ApplyReaderZoom(m_reader_zoom);
+            }
+        });
+
         m_reader_ready = true;
 
         /* document demandé avant la fin de l'initialisation */
@@ -308,6 +319,22 @@ namespace winrt::EvolutionWin::implementation
     {
         if (!m_current_message)
             return;
+
+        if (m_view_plain_text)
+        {
+            hstring body_text = m_current_message.GetNamedString(L"body", L"");
+            if (body_text.empty())
+                body_text = m_current_message.GetNamedString(L"text", L"");
+            if (body_text.empty())
+                body_text = ::EvolutionWin::Helpers::ExtractPlainTextForSpeech(m_current_message);
+
+            std::wstring plain_html = L"<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>"
+                L"body { margin:0; padding:16px; background:#fff; color:#1a1a1a; font-family:'Segoe UI Variable Text','Segoe UI',sans-serif; font-size:14px; line-height:1.6; word-break:break-word; white-space:pre-wrap; }"
+                L"</style></head><body>" + std::wstring{ ::EvolutionWin::Helpers::EscapeHtml(body_text) } + L"</body></html>";
+
+            ShowInReader(hstring{ plain_html }, false);
+            return;
+        }
 
         bool allow = force_remote || IsRemoteContentTrusted(m_current_message.GetNamedString(L"from", L""));
         ShowInReader(m_current_message.GetNamedString(L"html", L""), allow);
@@ -626,5 +653,54 @@ namespace winrt::EvolutionWin::implementation
         ::EvolutionWin::Settings::Instance().SetString(RemoteContentKey, mode);
         /* le message affiché suit la nouvelle option */
         ShowCurrentMessageInReader(false);
+    }
+
+    /**
+     * @brief Applique un facteur d'echelle de zoom au volet de lecture WebView2.
+     * @param zoom Facteur de zoom (1.0 = 100%, borne entre 0.5 et 3.0).
+     */
+    void MainWindow::ApplyReaderZoom(double zoom)
+    {
+        m_reader_zoom = ::EvolutionWin::Helpers::ClampZoomFactor(zoom);
+        ::EvolutionWin::Settings::Instance().SetDouble(L"mail.reading-zoom", m_reader_zoom);
+
+        if (m_reader_ready && Reader().CoreWebView2())
+        {
+            std::wstring js = L"if (document.body) { document.body.style.zoom = '" + std::to_wstring(m_reader_zoom) + L"'; }";
+            Reader().CoreWebView2().ExecuteScriptAsync(js);
+        }
+    }
+
+    void MainWindow::OnZoomInClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ApplyReaderZoom(::EvolutionWin::Helpers::StepZoomIn(m_reader_zoom));
+        ShowStatus(L"Niveau de zoom : " + hstring{ ::EvolutionWin::Helpers::FormatZoomPercentage(m_reader_zoom) }, InfoBarSeverity::Informational);
+    }
+
+    void MainWindow::OnZoomOutClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ApplyReaderZoom(::EvolutionWin::Helpers::StepZoomOut(m_reader_zoom));
+        ShowStatus(L"Niveau de zoom : " + hstring{ ::EvolutionWin::Helpers::FormatZoomPercentage(m_reader_zoom) }, InfoBarSeverity::Informational);
+    }
+
+    void MainWindow::OnZoomResetClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ApplyReaderZoom(1.0);
+        ShowStatus(L"Zoom reinitialise a 100 %", InfoBarSeverity::Informational);
+    }
+
+    /**
+     * @brief Bascule l'affichage du courriel entre rendu HTML enrichi et texte brut securise.
+     */
+    void MainWindow::OnTogglePlainTextClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        m_view_plain_text = !m_view_plain_text;
+        ::EvolutionWin::Settings::Instance().SetBoolean(L"mail.reading-plain-text", m_view_plain_text);
+
+        if (m_current_message)
+        {
+            ShowCurrentMessageInReader(false);
+            ShowStatus(m_view_plain_text ? L"Affichage en texte brut active" : L"Affichage HTML active", InfoBarSeverity::Informational);
+        }
     }
 }

@@ -5817,6 +5817,53 @@ static void test_process_lifecycle_job_object()
     TEST_CASE_END();
 }
 
+
+static double ClampZoomFactorTest(double factor)
+{
+    if (factor < 0.5) return 0.5;
+    if (factor > 3.0) return 3.0;
+    return factor;
+}
+
+static double StepZoomInTest(double current)
+{
+    return ClampZoomFactorTest(std::round((current + 0.10) * 100.0) / 100.0);
+}
+
+static double StepZoomOutTest(double current)
+{
+    return ClampZoomFactorTest(std::round((current - 0.10) * 100.0) / 100.0);
+}
+
+static std::wstring FormatZoomPercentageTest(double factor)
+{
+    int percent = static_cast<int>(std::round(ClampZoomFactorTest(factor) * 100.0));
+    return std::to_wstring(percent) + L" %";
+}
+
+static void test_reading_zoom_helpers()
+{
+    TEST_CASE("ReadingZoom: Calculs de paliers et bornes min/max");
+    {
+        // Bornes
+        ASSERT_TRUE(ClampZoomFactorTest(0.2) == 0.5);
+        ASSERT_TRUE(ClampZoomFactorTest(4.5) == 3.0);
+        ASSERT_TRUE(ClampZoomFactorTest(1.25) == 1.25);
+
+        // Paliers
+        ASSERT_TRUE(StepZoomInTest(1.0) == 1.10);
+        ASSERT_TRUE(StepZoomInTest(2.95) == 3.0);
+        ASSERT_TRUE(StepZoomOutTest(1.0) == 0.90);
+        ASSERT_TRUE(StepZoomOutTest(0.55) == 0.50);
+
+        // Formatage pourcentage
+        ASSERT_TRUE(FormatZoomPercentageTest(1.0) == L"100 %");
+        ASSERT_TRUE(FormatZoomPercentageTest(1.5) == L"150 %");
+        ASSERT_TRUE(FormatZoomPercentageTest(0.75) == L"75 %");
+    }
+    TEST_CASE_END();
+}
+
 int main(void)
 
 
@@ -5944,6 +5991,7 @@ int main(void)
         
         test_keyboard_shortcuts_helpers();
         test_process_lifecycle_job_object();
+        test_reading_zoom_helpers();
 return test_suite_summary();
 
 
