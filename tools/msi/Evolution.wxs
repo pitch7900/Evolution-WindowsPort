@@ -66,6 +66,20 @@
     <Property Id="ARPPRODUCTICON" Value="EvolutionWin.ico" />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/pitch7900/Evolution-WindowsPort" />
     <Property Id="ARPNOMODIFY" Value="1" />
+    <!-- Désactivation de Restart Manager pour éviter les invites bloquantes lors des mises à jour silencieuses -->
+    <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+
+    <!-- Lancement automatique post-installation si demandé (ex: msiexec /i ... LAUNCHAPP=1) -->
+    <Property Id="LAUNCHAPP" Value="0" />
+    <CustomAction Id="LaunchApplication"
+                  Directory="BINFOLDER"
+                  ExeCommand="[#EvolutionWinExe]"
+                  Execute="immediate"
+                  Impersonate="yes"
+                  Return="asyncNoWait" />
+    <InstallExecuteSequence>
+      <Custom Action="LaunchApplication" After="InstallFinalize" Condition='LAUNCHAPP = "1" AND NOT Installed' />
+    </InstallExecuteSequence>
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="Evolution">

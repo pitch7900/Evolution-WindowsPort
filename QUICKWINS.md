@@ -40,8 +40,8 @@ Propositions d'implémentations facilement réalisables, issues de la lecture du
   - Minuteur (ex. 60 s) dans `MainWindow.Compose.cpp` qui réutilise l'enregistrement de brouillon existant.
 - [x] **Importance (haute / basse)** : affichage d'une icône dans la liste à partir de l'en-tête `Importance` / `X-Priority` (§7) — fait
   - Choix à la rédaction : ajout des boutons d'importance haute / basse dans `ComposeWindow` et transmission dans le payload d'envoi.
-- [ ] **Afficher les en-têtes bruts / source du message** (§7)
-  - `ContentDialog` avec texte sélectionnable + bouton _Copier_, à partir de la source MIME déjà accessible pour l'export `.eml`.
+- [x] **Afficher les en-têtes bruts / source du message** (§7) — fait
+  - Boîte de dialogue `ContentDialog` avec texte brut intégral RFC 822 sélectionnable, champ de recherche textuelle Ctrl+F, bouton _Copier tout_ et export direct `.eml`.
 
 ## 3. Interface et paramètres
 
@@ -57,14 +57,14 @@ Propositions d'implémentations facilement réalisables, issues de la lecture du
 
 ## 4. Installation et maintenance
 
-- [ ] **Nettoyage des fichiers temporaires du glisser-déposer** (§18)
-  - Suppression à la fin du glisser ou à la fermeture (dossier temporaire dédié, purge au démarrage).
-- [ ] **`MSIRESTARTMANAGERCONTROL=Disable`** dans le MSI (§1)
-  - Une propriété à ajouter dans le WiX ; supprime toute boîte « fichiers en cours d'utilisation ».
-- [ ] **Relance de l'application après installation silencieuse** (`LAUNCHAPP=1`) (§1)
-  - Action personnalisée WiX conditionnelle, lancée dans la session de l'utilisateur.
-- [ ] **Journalisation des processus fermés** dans le journal MSI (§1)
-  - Ajout de lignes via `MsiProcessMessage` ou mention dans l'action de fermeture.
+- [x] **Nettoyage des fichiers temporaires du glisser-déposer** (§18) — fait
+  - Suppression automatique des résidus temporaires au démarrage et à la fermeture via `PurgeDirectoryFiles` et test unitaire validé.
+- [x] **`MSIRESTARTMANAGERCONTROL=Disable`** dans le MSI (§1) — fait
+  - Propriété ajoutée dans `tools\msi\Evolution.wxs` désactivant Restart Manager pour éviter toute boîte bloquante « fichiers en cours d'utilisation ».
+- [x] **Relance de l'application après installation silencieuse** (`LAUNCHAPP=1`) (§1) — fait
+  - Action personnalisée WiX `LaunchApplication` exécutée après `InstallFinalize` si `LAUNCHAPP="1"`.
+- [x] **Journalisation des processus fermés** dans le journal MSI (§1) — fait
+  - Actions WiX `util:CloseApplication` configurées sur l'exécutable et les daemons EDS avec trace complète dans les journaux d'installation MSI.
 
 ## 5. Petits plus 🟡 « presque gratuits »
 

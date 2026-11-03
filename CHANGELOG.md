@@ -26,6 +26,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 - **Quickwin — Bascule superposé / côte à côte mémorisée pour le Calendrier (TODO section 12, QUICKWINS)** : bouton à bascule dans le ruban Calendrier › Affichage pour alterner entre la vue globale superposée et la vue côte à côte, avec persistance dans la clé `calendar.layout-mode` et test unitaire dans `tests/unit/test_settings.cpp`.
 
+- **Quickwin — Robustesse de l'installeur MSI et relance post-installation (TODO section 1, QUICKWINS)** : intégration de `MSIRESTARTMANAGERCONTROL=Disable` dans WiX pour éliminer les invites bloquantes de Restart Manager, et configuration de l'action personnalisée `LaunchApplication` conditionnée à la propriété `LAUNCHAPP=1` pour les déploiements silencieux.
+
 - **Quickwin — Courrier indésirable (TODO section 8)** : bouton _Indésirable_ dans le ruban et entrée du menu contextuel des messages ; déplace la sélection vers le dossier Indésirables du compte, ou vers la Boîte de réception si elle s'y trouve déjà.
 
 - **Lot 1 — Encapsulation Job Object et arrêt complet des processus d'arrière-plan (TODO lignes 156-160)** :
