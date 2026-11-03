@@ -653,16 +653,31 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
 
 ## 13. Calendrier – Rendez-vous, réunions et ressources — 🔴
 
-- [ ] 🟠 **Éditeur d'événement complet** (brique préalable) : journée entière, périodicité (règles RRULE, exceptions), rappels, disponibilité (libre / occupé / provisoire / absent), catégories, privé, pièces jointes, description HTML <a id="demo-editeur-evenement"></a>
+### Éditeur d'événement et organisation de réunions (fenêtre indépendante)
+
+- [ ] 🔴 **Fenêtre indépendante redimensionnable de création / édition d'événement (`EventWindow`)** (comme pour les nouveaux courriels) : <a id="demo-editeur-evenement"></a>
+  - [ ] **Fenêtre autonome (`EventWindow`)** : fenêtre indépendante redimensionnable (`OverlappedPresenter`), non modale, permettant de créer et modifier plusieurs événements en parallèle tout en conservant sa taille et position d'une session à l'autre.
+  - [ ] **Invitation de participants et organisation de réunion** :
+    - [ ] Bouton *« Inviter des personnes »* transformant le rendez-vous individuel en réunion avec champs *Obligatoires*, *Facultatifs*, *Ressources*.
+    - [ ] Autocomplétion dynamique des destinataires depuis les contacts locaux et l'annuaire d'entreprise (GAL Exchange Online / Microsoft 365).
+    - [ ] Envoi automatique des invitations / annulations (iTIP / iMIP) et suivi des réponses (accepté, provisoire, refusé).
+  - [ ] 🟠 **Réunion en ligne Microsoft Teams (compte Exchange Online / O365)** :
+    - [ ] Bouton dédié *« Réunion Teams »* dans la barre d'outils / ruban pour générer automatiquement une réunion en ligne Microsoft Teams via Microsoft Graph (`isOnlineMeeting: true`, `onlineMeetingProvider: teamsForBusiness`).
+    - [ ] Insertion automatique du lien de visio, de l'ID de réunion, du code secret et des coordonnées de connexion dans le corps de l'invitation.
+  - [ ] 🟠 **Emplacements et réservation des ressources de l'entreprise (salles et équipements)** :
+    - [ ] Champ *Emplacement* relié aux listes de salles Exchange Online (_room lists_ et boîtes de ressources).
+    - [ ] Consultation en direct de la disponibilité des salles et réservation automatique lors de l'enregistrement de la réunion (acceptation / refus automatique par la ressource).
+  - [ ] 🟡 **Options d'affichage et de disponibilité (façon Outlook)** :
+    - [ ] Sélecteur déroulant **« Afficher comme : »** avec icône et motifs visuels : *Libre / Disponible*, *Provisoire*, *Occupé(e)*, *Absent(e) / Congé (Out of Office)*, *Travaille ailleurs (Working Elsewhere)*.
+    - [ ] Report visuel du statut sur la grille du calendrier (bandeau latéral coloré ou hachuré selon le statut : blanc pour libre, rayures bleues pour provisoire, plein pour occupé, rayures violettes pour absent, pointillés pour travaille ailleurs).
+    - [ ] Sélecteur de **Rappel** (aucun, 0 min, 5 min, 10 min, 15 min, 30 min, 1 h, etc.) et bouton de **Périodicité** (règles RRULE iCalendar : récurrence quotidienne, hebdomadaire, mensuelle, annuelle avec gestion des exceptions).
+  - [ ] 🟡 **Indicateurs, confidentialité et classement par couleur** :
+    - [ ] Bouton bascule **« Privé »** (icône cadenas) : marque l'événement avec `CLASS:PRIVATE` (ou `sensitivity: private` Exchange) pour masquer les détails (titre, lieu, participants) aux autres utilisateurs lors du partage de calendrier ou de l'accès délégué.
+    - [ ] Menu déroulant **« Classer »** (icône 4 carrés de couleur) : attribution de catégories avec codes couleur (synchronisées avec la liste principale Exchange Online).
+    - [ ] Boutons d'importance : **! Importance haute** et **↓ Importance faible** (propriété `PRIORITY`).
 - [ ] 🟢 **Ajouter du temps de travail individuel** (bloc « focus » marqué occupé, sans participants)
-- [ ] 🔴 **Nouvelle réunion** : participants (obligatoires / facultatifs), envoi des invitations, suivi des réponses (accepté / provisoire / refusé), mise à jour et annulation (iTIP / iMIP ; géré par le serveur pour Exchange)
 - [ ] 🟡 **Répondre aux invitations reçues** depuis le volet de lecture du Mail (Accepter / Provisoire / Refuser / Proposer un nouvel horaire) <a id="demo-invitations"></a>
 - [ ] 🔴 **Affichage Planification** (Scheduling Assistant) : une ligne par personne / ressource, heures en abscisse, créneaux libres / occupés / provisoires / absent (EWS `GetUserAvailability`, Graph `getSchedule`, CalDAV free-busy), suggestion de créneau commun
-- [ ] **Calendriers de ressources** (salles, équipements) :
-  - [ ] 🟠 Parcourir / rechercher les listes de salles Exchange (_room lists_)
-  - [ ] 🟡 Disponibilité en vue Planification
-  - [ ] 🟡 Réserver une ressource à la création d'une réunion (participant ressource, acceptation / refus automatique)
-- [ ] 🟠 **Réunion en ligne** : bouton « Réunion instantanée » / lien de visioconférence, générique et extensible par fournisseur (Teams via Graph en priorité pour M365)
 - [ ] 🟡 **Glisser-déposer d'un email vers le calendrier** pour créer un rendez-vous
 - [ ] 🟠 **Emplacement de travail** par jour / créneau (bureau, télétravail, hors ligne), synchronisé avec Exchange Online si disponible, visible en vue Planification
 
@@ -765,14 +780,15 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 
 ## 17. Catégories et codes couleur — 🟡
 
-- [ ] 🟡 **Catégories communes** à tous les types d'éléments : nom + couleur (palette d'une vingtaine de couleurs), gérées dans les Réglages (créer, renommer, changer la couleur, supprimer) <a id="demo-categories"></a>
+- [ ] 🟡 **Catégories communes et classements personnalisés** : nom + code couleur (palette de couleurs configurables par l'utilisateur), gérées dans les Réglages (créer, renommer, choisir la couleur, supprimer) <a id="demo-categories"></a>
   - [ ] Stockage : étiquettes Camel pour les mails, propriété `CATEGORIES` pour les contacts (vCard), les événements et les tâches (iCalendar)
-  - [ ] 🟠 Synchronisation avec la liste de catégories principale Exchange / M365 (couleurs comprises)
-- [x] 🟡 **Catégoriser** un élément (plusieurs catégories possibles) : menu contextuel, bouton _Catégoriser_ du ruban, catégories récentes ; raccourci vers une catégorie (Ctrl+F2…F12)
-- [ ] **Affichage des codes couleur** :
-  - [x] 🟡 **Mails** : pastilles de couleur dans la liste des messages et dans l'en-tête du volet de lecture
+  - [ ] 🟠 **Réutilisation et synchronisation avec Exchange Online / Microsoft 365** : synchronisation bidirectionnelle avec la liste principale des catégories (*Master Category List* via Graph `/me/outlook/masterCategories` ou EWS `GetUserSettings`) ; si des catégories préexistantes sont présentes sur le compte O365, elles sont automatiquement récupérées et réutilisées avec leurs intitulés et codes couleur d'origine.
+  - [ ] Possibilité pour chaque utilisateur de créer des classements personnalisés supplémentaires et d'adapter les catégories selon ses besoins.
+- [x] 🟡 **Catégoriser** un élément (plusieurs catégories possibles) : menu contextuel, bouton _Catégoriser_ / _Classer_ du ruban (courriels et événements d'agenda), catégories récentes ; raccourci vers une catégorie (Ctrl+F2…F12)
+- [ ] **Affichage des codes couleur sur les courriels et les événements de l'agenda** :
+  - [x] 🟡 **Mails** : pastilles et badges de couleur dans la liste des messages (`MainWindow.MessageList`) et dans l'en-tête du volet / de la fenêtre de lecture (`MessageWindow`)
+  - [ ] 🟡 **Événements de l'agenda** : affichage de la couleur de la catégorie dans la grille du calendrier (Jour / Semaine / Mois : bande latérale ou bloc d'événement coloré) et dans la vue Liste
   - [ ] 🟡 **Contacts** : pastilles dans la liste et sur la fiche
-  - [ ] 🟡 **Événements** : couleur de la catégorie dans la grille du calendrier (à la place ou en complément de la couleur du calendrier, au choix)
   - [ ] 🟡 **Tâches** : pastilles dans la liste des tâches
 - [ ] 🟠 **Mise en forme conditionnelle** : couleur automatique selon des règles (expéditeur, domaine, mots de l'objet, importance, organisateur…), pour la liste des messages (§5) comme pour le calendrier (§12)
 - [x] 🟢 **Filtrer / trier / regrouper par catégorie** dans toutes les vues ; recherche par catégorie (§10)
