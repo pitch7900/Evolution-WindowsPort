@@ -411,6 +411,19 @@ static void test_settings_mail_read_and_security_options(void)
         ASSERT_EQ_INT(1, mgr.GetBoolean("mail.compose-spellcheck", true));
         mgr.SetBoolean("mail.compose-spellcheck", false);
         ASSERT_EQ_INT(0, mgr.GetBoolean("mail.compose-spellcheck", true));
+
+        /* Notifications par compte et par dossier */
+        ASSERT_EQ_INT(1, mgr.GetBoolean("account.pro123.notifications-enabled", true));
+        mgr.SetBoolean("account.pro123.notifications-enabled", false);
+        ASSERT_EQ_INT(0, mgr.GetBoolean("account.pro123.notifications-enabled", true));
+
+        ASSERT_EQ_INT(1, mgr.GetBoolean("account.pro123.sound-enabled", true));
+        mgr.SetBoolean("account.pro123.sound-enabled", false);
+        ASSERT_EQ_INT(0, mgr.GetBoolean("account.pro123.sound-enabled", true));
+
+        ASSERT_EQ_INT(1, mgr.GetBoolean("folder.pro123.INBOX.notifications-enabled", true));
+        mgr.SetBoolean("folder.pro123.INBOX.notifications-enabled", false);
+        ASSERT_EQ_INT(0, mgr.GetBoolean("folder.pro123.INBOX.notifications-enabled", true));
     }
     TEST_CASE_END();
 }

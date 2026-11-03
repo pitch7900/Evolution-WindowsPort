@@ -937,6 +937,25 @@ namespace winrt::EvolutionWin::implementation
      *   object : objet JSON décrivant les nouveaux messages ("from", "subject", "count") */
     void MainWindow::ShowNewMailNotification(JsonObject const& object)
     {
+        hstring msg_account = object.GetNamedString(L"account", L"");
+        hstring msg_folder = object.GetNamedString(L"folder", L"");
+
+        /* 1. Filtrage par compte : vérifie si les notifications sont activées pour ce compte */
+        if (!msg_account.empty())
+        {
+            hstring acc_key = L"account." + msg_account + L".notifications-enabled";
+            if (!::EvolutionWin::Settings::Instance().GetBoolean(acc_key, true))
+                return;
+        }
+
+        /* 2. Filtrage par dossier : vérifie si les notifications sont activées pour ce dossier */
+        if (!msg_account.empty() && !msg_folder.empty())
+        {
+            hstring fld_key = L"folder." + msg_account + L"." + msg_folder + L".notifications-enabled";
+            if (!::EvolutionWin::Settings::Instance().GetBoolean(fld_key, true))
+                return;
+        }
+
         int32_t count = static_cast<int32_t>(object.GetNamedNumber(L"count", 1));
         hstring from = SenderName(object.GetNamedString(L"from", L"Nouveau message"));
         hstring subject = object.GetNamedString(L"subject", L"(Sans objet)");
@@ -948,7 +967,7 @@ namespace winrt::EvolutionWin::implementation
             ? from + L" — " + subject
             : subject;
 
-        /* mode confidentiel : ni expéditeur ni objet (présentation, partage d'écran) */
+        /* Mode confidentiel : ni expéditeur ni objet (présentation, partage d'écran) */
         if (::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.confidential", false))
         {
             title = count > 1 ? hstring{ std::to_wstring(count) + L" nouveaux messages" } : hstring{ L"Nouveau message" };
@@ -958,29 +977,39 @@ namespace winrt::EvolutionWin::implementation
         /* Ajout dans l'historique du menu déroulant de la barre d'état (notifications discrètes) */
         AddNotificationItem(title, body);
 
-        /* Émission du signal sonore configuré si activé */
-        if (::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.sound", true))
+        /* Émission du signal sonore configuré si activé globalement et pour le compte */
+        bool sound_global = ::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.sound", true);
+        bool sound_account = msg_account.empty() ? true : ::EvolutionWin::Settings::Instance().GetBoolean(L"account." + msg_account + L".sound-enabled", true);
+        if (sound_global && sound_account)
         {
             hstring sound_kind = ::EvolutionWin::Settings::Instance().GetString(L"notifications.sound-kind", L"windows");
             hstring custom_path = ::EvolutionWin::Settings::Instance().GetString(L"notifications.custom-sound-path", L"");
             ::EvolutionWin::Helpers::PlayNewMailSound(sound_kind, custom_path);
         }
 
-        /* Émission exclusive de la notification via les Toasts système Windows */
-        try
+        /* Émission exclusive de la notification via les Toasts système Windows si activé globalement */
+        if (::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.toast", true))
         {
-            Microsoft::Windows::AppNotifications::Builder::AppNotificationBuilder builder;
-            builder.AddText(title);
-            builder.AddText(body);
-            Microsoft::Windows::AppNotifications::AppNotificationManager::Default().Show(builder.BuildNotification());
-        }
-        catch (...)
-        {
+            try
+            {
+                Microsoft::Windows::AppNotifications::Builder::AppNotificationBuilder builder;
+                builder.AddText(title);
+                builder.AddText(body);
+                if (!msg_account.empty())
+                    builder.AddArgument(L"account", msg_account);
+                if (!msg_folder.empty())
+                    builder.AddArgument(L"folder", msg_folder);
+                hstring uid = object.GetNamedString(L"uid", L"");
+                if (!uid.empty())
+                    builder.AddArgument(L"uid", uid);
+                Microsoft::Windows::AppNotifications::AppNotificationManager::Default().Show(builder.BuildNotification());
+            }
+            catch (...)
+            {
+            }
         }
     }
 
-    /* Détermine si le dossier actuellement affiché est le dossier des brouillons.
-     * Retourne : true s'il s'agit du dossier Brouillons. */
     bool MainWindow::IsDraftsFolder()
     {
         if (m_account.empty() || m_folder.empty())

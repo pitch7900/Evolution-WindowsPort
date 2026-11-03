@@ -823,7 +823,7 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 
 ### Notifications
 
-- [ ] 🟢 **Activer / désactiver les notifications Windows** (toasts) de nouveau courrier, globalement et par compte / dossier
+- [x] 🟢 **Activer / désactiver les notifications Windows** (toasts) de nouveau courrier, globalement et par compte / dossier
 - [x] 🟢 **Notifications discrètes : Toasts système et liste déroulante dans la barre d'état** :
   - [x] **Suppression du bandeau intrusif en bas de fenêtre** : suppression de l'InfoBar temporaire en bas de l'application pour les nouveaux messages reçus afin de préserver l'espace de travail.
   - [x] **Émission exclusive via les Toasts système Windows** : notification par le Centre de notifications Windows (`Microsoft.Windows.AppNotifications`), respectant le mode confidentiel et le paramétrage du système.

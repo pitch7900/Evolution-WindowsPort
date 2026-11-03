@@ -4267,6 +4267,61 @@
 
                                 </Border>
 
+                                <TextBlock Text="Notifications par compte de messagerie" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+
+                                <!-- Carte de sélection du compte et options individuelles -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12">
+                                    <StackPanel Spacing="12">
+                                        <Grid ColumnSpacing="16">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Grid.Column="0" Glyph="&#xE779;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                                <TextBlock Text="Compte à configurer" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                                <TextBlock Text="Personnalisez les alertes et les signaux sonores pour chaque boîte de messagerie."
+                                                           Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            </StackPanel>
+                                            <ComboBox Grid.Column="2" x:Name="NotificationAccountCombo"
+                                                      SelectionChanged="OnNotificationAccountSelectionChanged" VerticalAlignment="Center" MinWidth="220" />
+                                        </Grid>
+
+                                        <MenuFlyoutSeparator />
+
+                                        <Grid ColumnSpacing="16">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                                                <TextBlock Text="Activer les notifications pour ce compte" Style="{StaticResource BodyTextBlockStyle}" />
+                                                <TextBlock Text="Affiche des alertes visuelles (Toasts et historique) pour les messages reçus sur ce compte."
+                                                           Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            </StackPanel>
+                                            <ToggleSwitch Grid.Column="1" x:Name="AccountNotificationSwitch"
+                                                          Toggled="OnAccountNotificationSwitchToggled" VerticalAlignment="Center" />
+                                        </Grid>
+
+                                        <Grid ColumnSpacing="16">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                                                <TextBlock Text="Émettre un son pour ce compte" Style="{StaticResource BodyTextBlockStyle}" />
+                                                <TextBlock Text="Joue le son de notification lors de l'arrivée d'un message sur ce compte."
+                                                           Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            </StackPanel>
+                                            <ToggleSwitch Grid.Column="1" x:Name="AccountSoundSwitch"
+                                                          Toggled="OnAccountSoundSwitchToggled" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
                             </StackPanel>
 
 

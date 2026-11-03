@@ -301,6 +301,19 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void ApplyCalendarPreferences();
 
+        /* Notifications par compte */
+        void OnNotificationAccountSelectionChanged(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+        void OnAccountNotificationSwitchToggled(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnAccountSoundSwitchToggled(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void PopulateNotificationAccounts();
+        void UpdateAccountNotificationControls();
+
     private:
         using ReplyKind = ::EvolutionWin::ReplyKind;
 

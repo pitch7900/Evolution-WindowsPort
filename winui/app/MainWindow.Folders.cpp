@@ -252,6 +252,27 @@ namespace winrt::EvolutionWin::implementation
         /* compte ou dossier non sélectionnable : gestion des dossiers seule */
         if (item.IsAccount() || item.Folder().empty())
         {
+            if (item.IsAccount())
+            {
+                ToggleMenuFlyoutItem notif_account_item;
+                notif_account_item.Text(L"Notifications pour ce compte");
+                FontIcon notif_icon;
+                notif_icon.Glyph(L"\xEA8F");
+                notif_account_item.Icon(notif_icon);
+                hstring account_key = L"account." + item.Account() + L".notifications-enabled";
+                bool notif_acc_active = ::EvolutionWin::Settings::Instance().GetBoolean(account_key, true);
+                notif_account_item.IsChecked(notif_acc_active);
+                notif_account_item.Click([this, account_key](IInspectable const& sender, RoutedEventArgs const&)
+                {
+                    if (auto toggle = sender.try_as<ToggleMenuFlyoutItem>())
+                    {
+                        ::EvolutionWin::Settings::Instance().SetBoolean(account_key, toggle.IsChecked());
+                    }
+                });
+                menu.Items().Append(notif_account_item);
+                menu.Items().Append(MenuFlyoutSeparator{});
+            }
+
             AppendFolderManagementItems(menu, item, NodeFolderName(node));
             if (menu.Items().Size() > 0)
                 menu.ShowAt(container, options);
@@ -278,6 +299,22 @@ namespace winrt::EvolutionWin::implementation
             RunFolderActionAsync(item, L"empty");
         });
         menu.Items().Append(empty);
+        ToggleMenuFlyoutItem notif_folder_item;
+        notif_folder_item.Text(L"Notifications pour ce dossier");
+        FontIcon notif_icon_fld;
+        notif_icon_fld.Glyph(L"\xEA8F");
+        notif_folder_item.Icon(notif_icon_fld);
+        hstring folder_key = L"folder." + item.Account() + L"." + item.Folder() + L".notifications-enabled";
+        bool notif_fld_active = ::EvolutionWin::Settings::Instance().GetBoolean(folder_key, true);
+        notif_folder_item.IsChecked(notif_fld_active);
+        notif_folder_item.Click([this, folder_key](IInspectable const& sender, RoutedEventArgs const&)
+        {
+            if (auto toggle = sender.try_as<ToggleMenuFlyoutItem>())
+            {
+                ::EvolutionWin::Settings::Instance().SetBoolean(folder_key, toggle.IsChecked());
+            }
+        });
+        menu.Items().Append(notif_folder_item);
 
         menu.Items().Append(MenuFlyoutSeparator{});
         AppendFolderManagementItems(menu, item, NodeFolderName(node));

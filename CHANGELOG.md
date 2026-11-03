@@ -40,6 +40,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Activation et désactivation des notifications Windows de nouveau courrier, globalement et par compte / dossier (TODO ligne 826)** :
+  - **Gestion par compte dans Paramètres > Notifications** : nouvelle carte interactive permettant de choisir une boîte aux lettres et d'activer/désactiver indépendamment les notifications visuelles (`account.<id>.notifications-enabled`) et le signal sonore (`account.<id>.sound-enabled`).
+  - **Menu contextuel dans l'arborescence des dossiers** : option à cocher « Notifications pour ce dossier » et « Notifications pour ce compte » directement accessible par clic droit pour couper le flux d'alertes sur des dossiers volumineux ou secondaires.
+  - **Filtrage et métadonnées Toasts** : respect scrupuleux des préférences lors de l'arrivée d'un message (`ShowNewMailNotification`), blocage des Toasts et bips sonores pour les dossiers ou comptes mis en sourdine, et injection des arguments `account` et `folder` dans le Toast pour la navigation au clic.
+
 - **Format de rédaction, police, taille et correcteur orthographique par défaut (TODO ligne 855)** :
   - **Préférences de rédaction enrichie dans Paramètres > Courrier** : nouvelles options Fluent pour choisir la police par défaut (« Segoe UI », « Calibri », « Aptos », « Arial », etc.), la taille de police par défaut (9pt à 18pt), et activer ou désactiver le vérificateur d'orthographe.
   - **Application automatique dans l'éditeur de rédaction** : injection dynamique de la police et de la taille choisies dans le gabarit HTML/CSS de l'éditeur WebView2 (ComposeWindow), configuration de la zone texte brut BodyBox (FontFamily, FontSize), et basculement automatique au format texte brut lors de la création d'un nouveau message si le réglage est configuré.

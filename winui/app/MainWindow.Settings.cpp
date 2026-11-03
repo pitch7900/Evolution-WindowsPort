@@ -941,6 +941,9 @@ namespace winrt::EvolutionWin::implementation
 
 
 
+        // Notifications personnalisées par compte de messagerie
+        PopulateNotificationAccounts();
+
         /* 6. Apparence */
 
         hstring lang = settings.GetString(L"general.language", L"system");
@@ -1625,6 +1628,141 @@ namespace winrt::EvolutionWin::implementation
      * @param theme_name Nom du thème (L"system", L"light", L"dark").
 
      */
+
+    /**
+     * @brief Remplit la liste déroulante des comptes pour la configuration des notifications par compte.
+     */
+    void MainWindow::PopulateNotificationAccounts()
+    {
+        auto combo = NotificationAccountCombo();
+        if (!combo)
+            return;
+
+        combo.Items().Clear();
+        if (!m_accounts)
+            return;
+
+        for (auto const& val : m_accounts)
+        {
+            auto account = val.GetObject();
+            if (account.GetNamedBoolean(L"local", false))
+                continue;
+
+            hstring uid = account.GetNamedString(L"uid", L"");
+            hstring name = account.GetNamedString(L"name", uid);
+            hstring address = account.GetNamedString(L"address", L"");
+            hstring label = address.empty() ? name : (name + L" (" + address + L")");
+
+            ComboBoxItem item;
+            item.Content(box_value(label));
+            item.Tag(box_value(uid));
+            combo.Items().Append(item);
+        }
+
+        if (combo.Items().Size() > 0)
+        {
+            combo.SelectedIndex(0);
+            UpdateAccountNotificationControls();
+        }
+    }
+
+    /**
+     * @brief Met à jour l'état des commutateurs de notification et de son pour le compte sélectionné.
+     */
+    void MainWindow::UpdateAccountNotificationControls()
+    {
+        auto combo = NotificationAccountCombo();
+        if (!combo)
+            return;
+
+        auto selected_item = combo.SelectedItem().try_as<ComboBoxItem>();
+        if (!selected_item)
+            return;
+
+        hstring uid = unbox_value_or<hstring>(selected_item.Tag(), L"");
+        if (uid.empty())
+            return;
+
+        auto& settings = ::EvolutionWin::Settings::Instance();
+        bool notif_enabled = settings.GetBoolean(L"account." + uid + L".notifications-enabled", true);
+        bool sound_enabled = settings.GetBoolean(L"account." + uid + L".sound-enabled", true);
+
+        if (auto sw = AccountNotificationSwitch())
+            sw.IsOn(notif_enabled);
+
+        if (auto sw = AccountSoundSwitch())
+            sw.IsOn(sound_enabled);
+    }
+
+    /**
+     * @brief Gestionnaire de sélection d'un compte différent dans les paramètres de notification.
+     * @param sender Contrôle ComboBox émetteur.
+     * @param args Arguments d'événement de sélection.
+     */
+    void MainWindow::OnNotificationAccountSelectionChanged(
+        [[maybe_unused]] IInspectable const& sender,
+        [[maybe_unused]] SelectionChangedEventArgs const& args)
+    {
+        if (!m_initialized || m_updating_settings_view)
+            return;
+        UpdateAccountNotificationControls();
+    }
+
+    /**
+     * @brief Gestionnaire de bascule des notifications pour le compte sélectionné.
+     * @param sender Contrôle ToggleSwitch émetteur.
+     * @param args Arguments d'événement de clic/bascule.
+     */
+    void MainWindow::OnAccountNotificationSwitchToggled(
+        [[maybe_unused]] IInspectable const& sender,
+        [[maybe_unused]] RoutedEventArgs const& args)
+    {
+        if (!m_initialized || m_updating_settings_view)
+            return;
+
+        auto combo = NotificationAccountCombo();
+        auto sw = AccountNotificationSwitch();
+        if (!combo || !sw)
+            return;
+
+        auto selected_item = combo.SelectedItem().try_as<ComboBoxItem>();
+        if (!selected_item)
+            return;
+
+        hstring uid = unbox_value_or<hstring>(selected_item.Tag(), L"");
+        if (uid.empty())
+            return;
+
+        ::EvolutionWin::Settings::Instance().SetBoolean(L"account." + uid + L".notifications-enabled", sw.IsOn());
+    }
+
+    /**
+     * @brief Gestionnaire de bascule du signal sonore pour le compte sélectionné.
+     * @param sender Contrôle ToggleSwitch émetteur.
+     * @param args Arguments d'événement de clic/bascule.
+     */
+    void MainWindow::OnAccountSoundSwitchToggled(
+        [[maybe_unused]] IInspectable const& sender,
+        [[maybe_unused]] RoutedEventArgs const& args)
+    {
+        if (!m_initialized || m_updating_settings_view)
+            return;
+
+        auto combo = NotificationAccountCombo();
+        auto sw = AccountSoundSwitch();
+        if (!combo || !sw)
+            return;
+
+        auto selected_item = combo.SelectedItem().try_as<ComboBoxItem>();
+        if (!selected_item)
+            return;
+
+        hstring uid = unbox_value_or<hstring>(selected_item.Tag(), L"");
+        if (uid.empty())
+            return;
+
+        ::EvolutionWin::Settings::Instance().SetBoolean(L"account." + uid + L".sound-enabled", sw.IsOn());
+    }
 
     void MainWindow::ApplyTheme(winrt::hstring const& theme_name)
 
