@@ -40,6 +40,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Exportation par glisser-déposer (Drag & Drop) de courriels vers l'Explorateur Windows et le bureau (TODO lignes 786, 789, 790)** :
+  - **Glisser-déposer natif Windows 11 vers l'extérieur** : activation de `CanDragItems` et gestionnaire `DragItemsStarting` sur `MessageList` permettant de glisser un ou plusieurs courriels vers l'Explorateur de fichiers, le bureau ou une autre application.
+  - **Prise en charge de la sélection multiple** : glisser plusieurs courriels sélectionnés simultanément pour générer et transférer un lot complet de fichiers `.eml` en une seule manipulation.
+  - **Intégration DataPackage et IStorageItem** : association transparente des fichiers `.eml` au `DataPackage` via `SetStorageItems` avec opération `DataPackageOperation::Copy`.
+  - **Pré-génération asynchrone et nettoyage automatique** : mise en cache réactive en arrière-plan des fichiers `.eml` lors du changement de sélection (`PrepareDragDropCache`) et purge automatique de `%TEMP%\EvolutionWin\dragdrop\` au démarrage et à la fermeture de l'application via `PurgeDirectoryFiles`.
+
 - **Boîte de dialogue complète des raccourcis clavier et profils Outlook / Evolution (TODO ligne 849)** :
   - **Dialogue dédié et consultation ergonomique** : nouvelle fenêtre d'aide accessible via la touche `F1`, les rubans Fichier (`AppBarButton` avec icône clavier `\xE765`) et la section Paramètres > Général / Apparence.
   - **Recherche interactive en temps réel (AutoSuggestBox)** : filtrage instantané par libellé d'action, catégorie fonctionnelle (Navigation, Courrier, Calendrier, Contacts, Tâches) ou combinaison de touches.

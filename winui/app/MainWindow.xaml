@@ -1266,7 +1266,9 @@
 
                               DoubleTapped="OnMessageListDoubleTapped"
 
-                              KeyDown="OnMessageListKeyDown">
+                              KeyDown="OnMessageListKeyDown"
+                              CanDragItems="True"
+                              DragItemsStarting="OnMessageListDragItemsStarting">
 
                         <ListView.ItemContainerStyle>
 

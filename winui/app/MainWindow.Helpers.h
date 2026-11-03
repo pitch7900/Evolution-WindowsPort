@@ -1101,4 +1101,19 @@ namespace EvolutionWin::Helpers
         }
         return result;
     }
+
+    /**
+     * @brief Obtient le chemin absolu du dossier temporaire réservé à l'exportation par glisser-déposer (Drag & Drop).
+     * @return Chemin complet terminé par une barre oblique inverse.
+     */
+    inline std::wstring GetDragDropTempDir()
+    {
+        wchar_t temp_buf[MAX_PATH]{};
+        DWORD len = GetTempPathW(MAX_PATH, temp_buf);
+        std::wstring path = (len > 0) ? std::wstring(temp_buf, len) : L"C:\\Temp\\";
+        path += L"EvolutionWin\\dragdrop\\";
+        std::error_code ec;
+        std::filesystem::create_directories(path, ec);
+        return path;
+    }
 }

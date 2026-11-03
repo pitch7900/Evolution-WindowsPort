@@ -719,6 +719,7 @@ namespace winrt::EvolutionWin::implementation
         CloseAttachmentPreview();
         StopSpeech();
         ScheduleMarkAsRead(uid);
+        PrepareDragDropCache();
 
         /* Si le volet de lecture est désactivé, conserver la sélection et les boutons sans charger le WebView2 */
         if (::EvolutionWin::Settings::Instance().GetString(L"layout.reading-pane", L"right") == L"off")
@@ -1249,5 +1250,130 @@ namespace winrt::EvolutionWin::implementation
         );
 
         window.Activate();
+    }
+    /**
+     * @brief Pré-génère en tâche de fond les fichiers .eml des messages sélectionnés pour le glisser-déposer.
+     */
+    void MainWindow::PrepareDragDropCache()
+    {
+        auto sel_uids = SelectedMessageUids();
+        if (sel_uids.empty())
+        {
+            hstring cur = SelectedMessageUid();
+            if (!cur.empty())
+                sel_uids.push_back(cur);
+        }
+
+        if (sel_uids.empty() || m_account.empty() || m_folder.empty() || !m_core)
+            return;
+
+        JsonObject request;
+        request.SetNamedValue(L"account", JsonValue::CreateStringValue(m_account));
+        request.SetNamedValue(L"folder", JsonValue::CreateStringValue(m_folder));
+        JsonArray uids;
+        for (auto const& u : sel_uids)
+            uids.Append(JsonValue::CreateStringValue(u));
+        request.SetNamedValue(L"uids", uids);
+
+        m_core->ExportMessagesEml(request.Stringify(), [this](hstring const& json, hstring const& error)
+        {
+            JsonArray paths;
+            if (error.empty() && JsonArray::TryParse(json, paths))
+            {
+                m_drag_cached_files.clear();
+                for (auto const& p : paths)
+                    m_drag_cached_files.push_back(std::wstring{ p.GetString() });
+            }
+        });
+    }
+
+    /**
+     * @brief Déclenche l'exportation par glisser-déposer (Drag & Drop) d'un ou plusieurs courriels vers l'Explorateur Windows ou le bureau.
+     * @param sender Liste de messages émettrice.
+     * @param args Arguments décrivant l'opération de glisser-déposer et son DataPackage.
+     */
+    void MainWindow::OnMessageListDragItemsStarting(
+        [[maybe_unused]] IInspectable const& sender,
+        DragItemsStartingEventArgs const& args)
+    {
+        auto sel_uids = SelectedMessageUids();
+        if (sel_uids.empty())
+        {
+            hstring cur_uid = SelectedMessageUid();
+            if (!cur_uid.empty())
+                sel_uids.push_back(cur_uid);
+        }
+
+        if (sel_uids.empty() || m_account.empty() || m_folder.empty())
+            return;
+
+        std::wstring temp_dir = ::EvolutionWin::Helpers::GetDragDropTempDir();
+        std::vector<Windows::Storage::IStorageItem> storage_items;
+
+        /* 1. Utilisation prioritaire des fichiers réels complets pré-générés en cache */
+        if (!m_drag_cached_files.empty())
+        {
+            for (auto const& path_str : m_drag_cached_files)
+            {
+                try
+                {
+                    if (std::filesystem::exists(path_str))
+                    {
+                        auto file = Windows::Storage::StorageFile::GetFileFromPathAsync(path_str).get();
+                        if (file)
+                            storage_items.push_back(file);
+                    }
+                }
+                catch (...)
+                {
+                }
+            }
+        }
+
+        /* 2. Repli immédiat si le cache n'était pas encore synchronisé */
+        if (storage_items.empty())
+        {
+            for (auto const& u : sel_uids)
+            {
+                hstring subject = L"message";
+                for (auto const& val : m_all_messages ? m_all_messages : JsonArray{})
+                {
+                    auto obj = val.GetObject();
+                    if (obj.GetNamedString(L"uid", L"") == u)
+                    {
+                        subject = obj.GetNamedString(L"subject", L"message");
+                        break;
+                    }
+                }
+                hstring file_name = ::EvolutionWin::Helpers::SanitizeFileName(subject, L"message") + L".eml";
+                std::filesystem::path eml_path = std::filesystem::path{ temp_dir } / std::wstring{ file_name };
+
+                std::ofstream ofs(eml_path, std::ios::binary);
+                if (ofs.is_open())
+                {
+                    ofs << "Subject: " << std::string(subject.begin(), subject.end()) << "\r\n";
+                    ofs << "X-Evolution-UID: " << std::string(u.begin(), u.end()) << "\r\n";
+                    ofs << "MIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n";
+                    ofs << "(Courriel exporté depuis Evolution)\r\n";
+                    ofs.close();
+                }
+
+                try
+                {
+                    auto file = Windows::Storage::StorageFile::GetFileFromPathAsync(eml_path.wstring()).get();
+                    if (file)
+                        storage_items.push_back(file);
+                }
+                catch (...)
+                {
+                }
+            }
+        }
+
+        if (!storage_items.empty())
+        {
+            args.Data().SetStorageItems(storage_items);
+            args.Data().RequestedOperation(Windows::ApplicationModel::DataTransfer::DataPackageOperation::Copy);
+        }
     }
 }

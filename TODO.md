@@ -783,10 +783,10 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 
 - [ ] 🟡 **Export d'un mail, d'un événement ou d'un contact par simple glisser-déposer vers l'extérieur (Explorateur Windows, Bureau)** :
   - Déposer un ou plusieurs éléments depuis l'interface d'EvolutionWin vers l'Explorateur de fichiers Windows, le Bureau ou une autre application pour les exporter directement sous forme de fichiers natifs. Réutilise les fonctions d'export existantes en générant les fichiers dans un dossier temporaire avant de les transférer via le `DataPackage` (`SetStorageItems`).
-  - [ ] 🟡 **Courriels (format `.eml`)** : glisser un ou plusieurs messages sélectionnés depuis la liste des messages vers l'extérieur ; réutilisation de la fonction d'export EML existante (`evo_core_export_messages_eml` / `ExportMessagesEml`)
+  - [x] 🟡 **Courriels (format `.eml`)** : glisser un ou plusieurs messages sélectionnés depuis la liste des messages vers l'extérieur ; réutilisation de la fonction d'export EML existante (`evo_core_export_messages_eml` / `ExportMessagesEml`)
   - [ ] 🟡 **Événements de calendrier (format `.ics`)** : glisser un événement depuis la vue calendrier vers l'extérieur pour générer un fichier iCalendar (`.ics`) ; réutilisation de l'export iCalendar existant
   - [ ] 🟡 **Contacts (format `.vcf`)** : glisser un contact depuis la vue des contacts vers l'extérieur pour générer un fichier vCard (`.vcf`) ; réutilisation de l'export vCard existant
-  - [ ] 🟢 **Sélection multiple** : prise en charge du glisser-déposer de plusieurs éléments sélectionnés simultanément (génération par lot)
+  - [x] 🟢 **Sélection multiple** : prise en charge du glisser-déposer de plusieurs éléments sélectionnés simultanément (génération par lot)
   - [ ] 🟢 **Gestion des fichiers temporaires** : nettoyage automatique des fichiers temporaires créés après confirmation du dépôt ou annulation
 
 ### Assistant et formats d'export

@@ -5488,6 +5488,16 @@ static void test_purge_directory_files(void)
 
 
 
+        /* Verification du repertoire dedie au glisser-deposer (Drag & Drop) */
+        std::wstring dnd_dir = test_dir.wstring() + L"\\dragdrop\\";
+        std::filesystem::create_directories(dnd_dir);
+        auto eml_test = std::filesystem::path(dnd_dir) / L"message_export.eml";
+        { std::ofstream out(eml_test); out << "From: me@example.com\r\nSubject: Test EML\r\n\r\nCorps"; }
+        ASSERT_TRUE(std::filesystem::exists(eml_test));
+        uint64_t dnd_freed = PurgeDirectoryFiles(dnd_dir);
+        ASSERT_TRUE(dnd_freed > 0);
+        ASSERT_FALSE(std::filesystem::exists(eml_test));
+
         std::filesystem::remove_all(test_dir);
 
     }

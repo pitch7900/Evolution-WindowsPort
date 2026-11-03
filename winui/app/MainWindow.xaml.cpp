@@ -47,6 +47,7 @@ namespace winrt::EvolutionWin::implementation
             if (!m_initialized)
             {
                 m_initialized = true;
+                ::EvolutionWin::Helpers::PurgeDirectoryFiles(::EvolutionWin::Helpers::GetDragDropTempDir());
                 Initialize();
             }
             UpdateTitleBarPassthrough();
@@ -58,6 +59,7 @@ namespace winrt::EvolutionWin::implementation
      */
     MainWindow::~MainWindow()
     {
+        ::EvolutionWin::Helpers::PurgeDirectoryFiles(::EvolutionWin::Helpers::GetDragDropTempDir());
         CloseSplash();
         m_core.reset();
     }

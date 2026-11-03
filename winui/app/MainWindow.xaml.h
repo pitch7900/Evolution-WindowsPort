@@ -320,6 +320,10 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
         winrt::fire_and_forget ShowKeyboardShortcutsDialogAsync();
         void UpdateAccountNotificationControls();
+        void OnMessageListDragItemsStarting(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::Controls::DragItemsStartingEventArgs const& args);
+        void PrepareDragDropCache();
 
     private:
         using ReplyKind = ::EvolutionWin::ReplyKind;
@@ -330,6 +334,8 @@ namespace winrt::EvolutionWin::implementation
             bool flagged{ false };
             bool attachments{ false };
         };
+
+        std::vector<std::wstring> m_drag_cached_files;
 
         void OpenCompose(::EvolutionWin::ComposeData const& data);
         void Reply(ReplyKind kind);
