@@ -299,6 +299,16 @@ namespace winrt::EvolutionWin::implementation
 
             combo.SelectedIndex(folder_sort == L"alphabetical" ? 1 : 0);
 
+        hstring snippet_lines = settings.GetString(L"mail.snippet-lines", L"1");
+        if (auto combo = MailSnippetLinesCombo())
+        {
+            int idx = 1;
+            if (snippet_lines == L"0") idx = 0;
+            else if (snippet_lines == L"2") idx = 2;
+            else if (snippet_lines == L"3") idx = 3;
+            combo.SelectedIndex(idx);
+        }
+
 
 
         if (auto chk = MailEmptyTrashOnExitCheck())
@@ -1554,6 +1564,11 @@ namespace winrt::EvolutionWin::implementation
                     ApplyCalendarPreferences();
 
                 }
+                else if (key == L"privacy.hide-snippets")
+                {
+                    if (m_all_messages.Size() > 0)
+                        ShowMessages(m_all_messages);
+                }
 
             }
 
@@ -1669,6 +1684,11 @@ namespace winrt::EvolutionWin::implementation
 
                             LoadAccounts();
 
+                        }
+                        else if (key == L"mail.snippet-lines")
+                        {
+                            if (m_all_messages.Size() > 0)
+                                ShowMessages(m_all_messages);
                         }
 
                         else if (key == L"calendar.active")
@@ -1910,6 +1930,7 @@ namespace winrt::EvolutionWin::implementation
             s.SetBoolean(L"appearance.minimize-to-tray", false);
 
             s.SetBoolean(L"privacy.hide-snippets", false);
+            s.SetString(L"mail.snippet-lines", L"1");
 
             s.SetBoolean(L"update.auto-check", true);
 

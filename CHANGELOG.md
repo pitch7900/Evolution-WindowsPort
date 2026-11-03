@@ -22,6 +22,13 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Aperçu du message sous l\'objet et masquage confidentiel des extraits (TODO lignes 398 et 843)** :
+  - **Extraction native du texte** : exposition du champ preview (extrait du corps via camel_message_info_get_preview) dans les listes de messages et les recherches transversales vo-core.
+  - **Affichage configurable** : sélection de 0 (désactivé), 1, 2 ou 3 lignes d\'extrait sous l\'objet du message dans *Paramètres › Courrier › Lecture et affichage* (mail.snippet-lines).
+  - **Mode confidentialité instantané** : prise en compte directe de l\'interrupteur privacy.hide-snippets pour masquer tous les extraits et préserver la discrétion à l\'écran.
+  - **Mise à jour visuelle en direct** : rafraîchissement immédiat de la liste de messages lors de la modification des réglages sans rechargement lourd.
+  - **Validation par tests unitaires** : couverture des préférences mail.snippet-lines et privacy.hide-snippets dans 	ests/unit/test_settings.cpp.
+
 - **Relève automatique du courrier au démarrage de l'application (TODO ligne 829)** :
   - **Exécution au lancement** : synchronisation immédiate de tous les dossiers de tous les comptes dès la fin de l'initialisation des comptes (`mail.sync-on-startup`).
   - **Contrôle utilisateur** : case à cocher active dans *Paramètres › Courrier* pour activer ou désactiver cette relève initiale.

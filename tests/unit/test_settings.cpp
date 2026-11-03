@@ -306,6 +306,17 @@ static void test_settings_mail_read_and_security_options(void)
         ASSERT_EQ_INT(1, mgr.GetBoolean("mail.sync-on-startup", true));
         mgr.SetBoolean("mail.sync-on-startup", false);
         ASSERT_EQ_INT(0, mgr.GetBoolean("mail.sync-on-startup", true));
+
+        /* Extraits de messages dans la liste (mail.snippet-lines et privacy.hide-snippets) */
+        std::string snippet_default = mgr.GetString("mail.snippet-lines", "1");
+        ASSERT_EQ_STR("1", snippet_default.c_str());
+        mgr.SetString("mail.snippet-lines", "2");
+        std::string snippet_two = mgr.GetString("mail.snippet-lines", "1");
+        ASSERT_EQ_STR("2", snippet_two.c_str());
+
+        ASSERT_EQ_INT(0, mgr.GetBoolean("privacy.hide-snippets", false));
+        mgr.SetBoolean("privacy.hide-snippets", true);
+        ASSERT_EQ_INT(1, mgr.GetBoolean("privacy.hide-snippets", false));
     }
     TEST_CASE_END();
 }

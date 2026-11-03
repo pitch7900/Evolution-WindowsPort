@@ -2575,6 +2575,32 @@
                                     </Grid>
                                 </Border>
 
+                                <!-- Lignes d'aperçu du message sous l'objet -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8BD;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Aperçu du message sous l'objet" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Nombre de lignes d'extrait du message affichées sous l'objet dans la liste des messages (masqué en mode confidentialité)."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="MailSnippetLinesCombo" Tag="mail.snippet-lines"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="180">
+                                            <ComboBoxItem Content="Désactivé (aucune ligne)" Tag="0" />
+                                            <ComboBoxItem Content="1 ligne d'extrait (défaut)" Tag="1" />
+                                            <ComboBoxItem Content="2 lignes d'extrait" Tag="2" />
+                                            <ComboBoxItem Content="3 lignes d'extrait" Tag="3" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
                                 <!-- Vider la corbeille à la fermeture -->
 
                                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"

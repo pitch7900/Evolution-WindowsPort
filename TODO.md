@@ -389,7 +389,7 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
 - [ ] 🟡 **Ajouter / retirer des colonnes**
 - [ ] 🟡 **Changer l'affichage** : Compact, Unique, Aperçu ; 🟢 Rétablir l'affichage par défaut
 - [ ] 🟡 **Paramètres d'affichage avancés** : polices, tailles (mise en forme conditionnelle : cf. §17)
-- [ ] 🟡 **Aperçu du message** : désactivé, 1, 2 ou 3 lignes sous l'objet (extrait du corps à stocker dans le résumé)
+- [x] 🟡 **Aperçu du message** : désactivé, 1, 2 ou 3 lignes sous l'objet (extrait du corps à stocker dans le résumé)
 
 ### Barre de lecture rapide
 
@@ -840,7 +840,7 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 
 ### Confidentialité et sécurité
 
-- [ ] 🟢 Masquer l'aperçu du message dans la liste (lignes d'extrait, §5) en même temps que le mode confidentiel des notifications
+- [x] 🟢 Masquer l'aperçu du message dans la liste (lignes d'extrait, §5) en même temps que le mode confidentiel des notifications
 - [ ] 🟡 Verrouiller l'application après inactivité (Windows Hello)
 - [x] 🟢 Effacer les caches (WebView2, aperçus de pièces jointes)
 

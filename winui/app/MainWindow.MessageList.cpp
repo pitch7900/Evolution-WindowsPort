@@ -216,6 +216,34 @@ namespace winrt::EvolutionWin::implementation
             Grid::SetColumnSpan(subject, 2);
             item.Children().Append(subject);
 
+            /* Aperçu / extrait du message sous l'objet (configurable en nombre de lignes,
+             * masqué si le mode confidentialité privacy.hide-snippets est actif). */
+            bool hide_snippets = ::EvolutionWin::Settings::Instance().GetBoolean(L"privacy.hide-snippets", false);
+            std::wstring snippet_lines_str{ ::EvolutionWin::Settings::Instance().GetString(L"mail.snippet-lines", L"1") };
+            int snippet_lines = _wtoi(snippet_lines_str.c_str());
+            hstring preview = message.GetNamedString(L"preview", L"");
+
+            int row_count = 2;
+            if (!hide_snippets && snippet_lines > 0 && !preview.empty())
+            {
+                RowDefinition preview_row;
+                item.RowDefinitions().Append(preview_row);
+
+                TextBlock snippet;
+                snippet.Text(preview);
+                snippet.MaxLines(snippet_lines);
+                snippet.TextTrimming(TextTrimming::CharacterEllipsis);
+                snippet.TextWrapping(TextWrapping::Wrap);
+                snippet.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+                snippet.Opacity(0.7);
+                snippet.Margin(ThicknessHelper::FromLengths(0, 2, 0, 0));
+                Grid::SetRow(snippet, 2);
+                Grid::SetColumnSpan(snippet, 2);
+                item.Children().Append(snippet);
+
+                row_count = 3;
+            }
+
             /* Bouton corbeille de suppression rapide au survol (style Outlook) */
             Button delete_button;
             FontIcon trash_icon;
@@ -231,7 +259,7 @@ namespace winrt::EvolutionWin::implementation
             ToolTipService::SetToolTip(delete_button, box_value(L"Supprimer"));
             Grid::SetColumn(delete_button, 2);
             Grid::SetRow(delete_button, 0);
-            Grid::SetRowSpan(delete_button, 2);
+            Grid::SetRowSpan(delete_button, row_count);
             delete_button.Click([this, uid](IInspectable const&, RoutedEventArgs const&)
             {
                 ConfirmAndDeleteMessages(TargetMessageUids(uid), IsTrashFolder());
@@ -256,7 +284,7 @@ namespace winrt::EvolutionWin::implementation
             read_bar.Margin(ThicknessHelper::FromLengths(-8, -8, 0, -8));
             read_bar.HorizontalAlignment(HorizontalAlignment::Left);
             read_bar.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
-            Grid::SetRowSpan(read_bar, 2);
+            Grid::SetRowSpan(read_bar, row_count);
             Border read_mark;
             read_mark.Width(4);
             read_mark.CornerRadius(CornerRadiusHelper::FromUniformRadius(2));
@@ -799,7 +827,7 @@ namespace winrt::EvolutionWin::implementation
                         : Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
                 ToolTipService::SetToolTip(bar, box_value(seen ? L"Marquer comme non lu" : L"Marquer comme lu"));
             }
-            else if (auto text = child.try_as<TextBlock>(); text && Grid::GetColumn(text) == 0)
+            else if (auto text = child.try_as<TextBlock>(); text && Grid::GetColumn(text) == 0 && Grid::GetRow(text) < 2)
             {
                 text.FontWeight(weight);
                 if (!seen && Grid::GetRow(text) == 1)

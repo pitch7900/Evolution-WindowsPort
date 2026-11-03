@@ -2222,6 +2222,9 @@ json_from_message_infos (GPtrArray *infos,
 		json_builder_set_member_name (builder, "due_by");
 		json_builder_add_string_value (builder, camel_message_info_get_user_tag (info, "due-by") ?
 			camel_message_info_get_user_tag (info, "due-by") : "");
+		json_builder_set_member_name (builder, "preview");
+		json_builder_add_string_value (builder, camel_message_info_get_preview (info) ?
+			camel_message_info_get_preview (info) : "");
 		json_builder_end_object (builder);
 	}
 
@@ -2743,6 +2746,9 @@ core_search_messages_run (EvoCore *core,
 		json_builder_add_string_value (builder, m->folder_full_name ? m->folder_full_name : "");
 		json_builder_set_member_name (builder, "folder_name");
 		json_builder_add_string_value (builder, m->folder_display_name ? m->folder_display_name : "");
+		json_builder_set_member_name (builder, "preview");
+		json_builder_add_string_value (builder, camel_message_info_get_preview (info) ?
+			camel_message_info_get_preview (info) : "");
 
 		json_builder_end_object (builder);
 	}
