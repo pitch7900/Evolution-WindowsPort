@@ -784,6 +784,19 @@ void		evo_core_list_sources		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Crée un agenda : local vide, ou abonnement à une URL iCalendar (backend
+ * EDS « webcal », actualisé toutes les 30 minutes).
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   request_json : {"name": "...", "url": "https://..." ou "webcal://..." ("" pour
+ *                  un agenda local), "color": "#rrggbb" (optionnel)}
+ *   func         : rappel recevant {"uid": "..."}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_create_calendar	(EvoCore *core,
+						 const char *request_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Exporte des contacts au format vCard 3.0. Format attendu pour request_json :
  * {"book_uid": "..." ("" pour tous les carnets d'adresses activés),
  *  "path": "C:\\...\\contacts.vcf", "per_contact": false}

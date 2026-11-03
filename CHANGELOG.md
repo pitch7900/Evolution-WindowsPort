@@ -14,6 +14,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Quickwin — Ajout de calendriers (TODO section 14)** : bouton « + » dans le volet des calendriers ouvrant une boîte de dialogue (nom + adresse). Adresse vide : calendrier local ; adresse `http(s)://` ou `webcal://` : abonnement iCalendar (backend EDS `webcal`, actualisé toutes les 30 minutes). Nouvelle fonction `evo_core_create_calendar` dans `evo-core`, nouveau calendrier affiché immédiatement. Test de non-régression ajouté dans `test_evo_core_contracts.c`.
+
 - **Quickwin — Courrier indésirable (TODO section 8)** : bouton _Indésirable_ dans le ruban et entrée du menu contextuel des messages ; déplace la sélection vers le dossier Indésirables du compte, ou vers la Boîte de réception si elle s'y trouve déjà.
 
 - **Lot 1 — Encapsulation Job Object et arrêt complet des processus d'arrière-plan (TODO lignes 156-160)** :

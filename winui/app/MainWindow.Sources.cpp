@@ -233,6 +233,12 @@ namespace winrt::EvolutionWin::implementation
         return VisibleUids(m_calendar_sources, L"calendar.visible");
     }
 
+    /* Bouton « + » du volet des calendriers : ouvre la boîte d'ajout d'un calendrier. */
+    void MainWindow::OnAddCalendarClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        ShowAddCalendarDialogAsync();
+    }
+
     hstring MainWindow::ActiveCalendarUid()
     {
         return ActiveUid(m_calendar_sources, L"calendar.active");
@@ -321,5 +327,80 @@ namespace winrt::EvolutionWin::implementation
 
         ActiveBookText().Text(active_name.empty() ? hstring{}
             : L"Nouveaux contacts dans : " + active_name);
+    }
+
+    /* Ajoute un calendrier : calendrier local vide, ou abonnement à une URL
+     * iCalendar (.ics / webcal://) actualisé périodiquement. Le nouveau
+     * calendrier est affiché immédiatement dans la vue Calendrier. */
+    fire_and_forget MainWindow::ShowAddCalendarDialogAsync()
+    {
+        auto strong = get_strong();
+        if (m_dialog_open || !Content() || !Content().XamlRoot())
+            co_return;
+
+        auto trimmed = [](hstring const& text)
+        {
+            std::wstring value{ text };
+            auto first = value.find_first_not_of(L" \t\r\n");
+            auto last = value.find_last_not_of(L" \t\r\n");
+            return first == std::wstring::npos ? std::wstring{} : value.substr(first, last - first + 1);
+        };
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(L"Ajouter un calendrier"));
+
+        StackPanel panel;
+        panel.Spacing(12);
+        TextBox name_box;
+        name_box.Header(box_value(L"Nom du calendrier"));
+        name_box.MinWidth(360);
+        panel.Children().Append(name_box);
+        TextBox url_box;
+        url_box.Header(box_value(L"Adresse Internet (ICS / webcal) — laisser vide pour un calendrier local vide"));
+        url_box.PlaceholderText(L"https://exemple.fr/agenda.ics");
+        panel.Children().Append(url_box);
+        dialog.Content(panel);
+
+        dialog.PrimaryButtonText(L"Ajouter");
+        dialog.CloseButtonText(L"Annuler");
+        dialog.DefaultButton(ContentDialogButton::Primary);
+        dialog.IsPrimaryButtonEnabled(false);
+        name_box.TextChanged([dialog, trimmed](IInspectable const& sender, TextChangedEventArgs const&)
+        {
+            dialog.IsPrimaryButtonEnabled(!trimmed(sender.as<TextBox>().Text()).empty());
+        });
+
+        m_dialog_open = true;
+        auto result = co_await dialog.ShowAsync();
+        m_dialog_open = false;
+        if (result != ContentDialogResult::Primary)
+            co_return;
+
+        JsonObject request;
+        request.SetNamedValue(L"name", JsonValue::CreateStringValue(trimmed(name_box.Text())));
+        request.SetNamedValue(L"url", JsonValue::CreateStringValue(trimmed(url_box.Text())));
+
+        ShowStatus(L"Création du calendrier…", InfoBarSeverity::Informational);
+        m_core->CreateCalendar(request.Stringify(), [this](hstring const& json, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                ShowStatus(L"Ajout du calendrier : " + error, InfoBarSeverity::Error);
+                return;
+            }
+
+            /* affiche le nouveau calendrier puis recharge la liste */
+            JsonObject created;
+            if (JsonObject::TryParse(json, created))
+            {
+                auto& settings = ::EvolutionWin::Settings::Instance();
+                JsonArray visible = settings.GetArray(L"calendar.visible");
+                visible.Append(JsonValue::CreateStringValue(created.GetNamedString(L"uid", L"")));
+                settings.Set(L"calendar.visible", visible);
+            }
+            ShowStatus(L"Calendrier ajouté.", InfoBarSeverity::Success);
+            LoadCalendarSources();
+        });
     }
 }

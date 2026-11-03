@@ -62,6 +62,7 @@ Vérifie la robustesse du moteur C et ses échanges avec l'interface :
 - **Validation syntaxique des adresses** : contrôle du format avant interrogation des résolveurs DNS et Autodiscover.
 - **Priorité des dossiers spéciaux** : respect de la classification et de l'ordre d'affichage standardisé d'Outlook (Boîte de réception, Brouillons, Éléments envoyés, Éléments supprimés, Archive, Courrier indésirable, Boîte d'envoi locale).
 - **Schémas JSON des événements** : vérification de la présence des champs obligatoires pour les événements `progress`, `connection-status`, `folder-changed` et `new-mail`.
+- **Adresses de calendriers web** : classification des adresses saisies pour `evo_core_create_calendar` (`http(s)://`, `webcal://`, vide = calendrier local, autres schémas refusés).
 
 ### Suite 3 : Préférences de l'application (`test_settings.cpp`)
 Teste la persistance du fichier `settings.json` :

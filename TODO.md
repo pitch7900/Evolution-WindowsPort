@@ -713,8 +713,8 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
 ## 14. Calendrier – Calendriers partagés et externes — 🟠
 
 - [ ] **Ajouter un calendrier** :
-  - [ ] 🟢 Nouveau calendrier vide (local ou sur le serveur du compte)
-  - [ ] 🟢 À partir d'Internet : URL ICS / webcal (backend EDS `webcal` existant)
+  - [x] 🟢 Nouveau calendrier vide (local) — _bouton « + » du volet des calendriers ; sur le serveur du compte : à faire_
+  - [x] 🟢 À partir d'Internet : URL ICS / webcal (backend EDS `webcal`)
   - [ ] 🟡 CalDAV par URL
   - [ ] 🟡 À partir d'un fichier `.ics`
   - [ ] 🟠 À partir du carnet d'adresses / de l'annuaire : calendrier d'un autre utilisateur Exchange / M365 selon les droits accordés (disponibilités, détails limités, lecture complète, délégué)

@@ -590,6 +590,16 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Crée un calendrier local vide ou un abonnement à une URL iCalendar.
+         * Paramètres :
+         *   request_json : JSON {"name": "...", "url": "..." ("" : local), "color": "#rrggbb"}
+         *   handler      : rappel recevant {"uid": "..."} */
+        void CreateCalendar(winrt::hstring const& request_json, CoreHandler handler)
+        {
+            evo_core_create_calendar(m_core, winrt::to_string(request_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Liste les signatures de courrier.
          * Paramètres :
          *   handler : rappel recevant [{"uid", "name", "mime_type", "content"}, ...] */

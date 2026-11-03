@@ -110,6 +110,7 @@ namespace winrt::EvolutionWin::implementation
         void OnDeleteClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnArchiveClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnJunkClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnAddCalendarClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnPrintClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnZoomInClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnZoomOutClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -612,6 +613,7 @@ namespace winrt::EvolutionWin::implementation
         /* calendriers affichés (calendar.visible) et actif (calendar.active) */
         Windows::Data::Json::JsonArray m_calendar_sources{ nullptr };
         void LoadCalendarSources();
+        fire_and_forget ShowAddCalendarDialogAsync();
         /* carnets d'adresses affichés (contacts.visible) et actif (contacts.active) */
         Windows::Data::Json::JsonArray m_contact_books{ nullptr };
         void LoadContactBooks();

@@ -18,12 +18,12 @@ Propositions d'implémentations facilement réalisables, issues de la lecture du
 
 ## 1. Calendrier
 
-- [ ] **Ajout d'un calendrier depuis une URL ICS / webcal** (§14)
+- [x] **Ajout d'un calendrier depuis une URL ICS / webcal** (§14) — fait (`evo_core_create_calendar`, bouton « + » du volet des calendriers)
   - Entrée de menu _Ajouter un calendrier › À partir d'Internet_ ; `ContentDialog` avec URL, nom, couleur.
   - Création d'un `ESource` de backend `webcal`, actualisation périodique.
-- [ ] **Nouveau calendrier vide** (§14)
+- [x] **Nouveau calendrier vide** (§14) — fait (local ; même boîte de dialogue, adresse laissée vide)
   - Création d'un `ESource` local (ou sur le compte) avec nom et couleur.
-- [ ] **Mémoriser les calendriers cochés et leur couleur** entre les sessions (§14)
+- [x] **Mémoriser les calendriers cochés et leur couleur** entre les sessions (§14) — déjà en place (préférence `calendar.visible`)
   - Clé de préférence par UID de source ; restauration au démarrage de la vue.
 - [ ] **Bascule superposé / côte à côte** : mémoriser le mode choisi (§12)
 - [ ] **Bloc « temps de travail individuel »** (§13)

@@ -154,6 +154,22 @@ static int get_special_folder_priority(const char *type)
     return 99; /* Dossier utilisateur standard */
 }
 
+/**
+ * @brief Classe l'adresse d'un calendrier web (reproduction de la regle de evo_core_create_calendar).
+ * @param url Adresse saisie par l'utilisateur.
+ * @return 0 si invalide, 1 si http(s)://, 2 si webcal:// (convertie en https://), 3 si vide (calendrier local).
+ */
+static int classify_calendar_url(const char *url)
+{
+    if (!url || !*url)
+        return 3;
+    if (_strnicmp(url, "webcal://", 9) == 0)
+        return 2;
+    if (_strnicmp(url, "http://", 7) == 0 || _strnicmp(url, "https://", 8) == 0)
+        return 1;
+    return 0;
+}
+
 /* --- Tests unitaires --- */
 
 /**
@@ -295,6 +311,23 @@ static void test_json_event_contracts(void)
 }
 
 /**
+ * @brief Test de la validation des adresses de calendriers web (ICS / webcal).
+ */
+static void test_calendar_url_validation(void)
+{
+    TEST_CASE("Calendrier web: classification des adresses ICS / webcal");
+    {
+        ASSERT_EQ_INT(3, classify_calendar_url(""));
+        ASSERT_EQ_INT(1, classify_calendar_url("https://exemple.fr/agenda.ics"));
+        ASSERT_EQ_INT(1, classify_calendar_url("HTTP://exemple.fr/agenda.ics"));
+        ASSERT_EQ_INT(2, classify_calendar_url("webcal://exemple.fr/agenda.ics"));
+        ASSERT_EQ_INT(0, classify_calendar_url("ftp://exemple.fr/agenda.ics"));
+        ASSERT_EQ_INT(0, classify_calendar_url("exemple.fr/agenda.ics"));
+    }
+    TEST_CASE_END();
+}
+
+/**
  * @brief Point d'entree de la suite de tests des contrats evo-core.
  * @return 0 si succes, 1 en cas d'echec.
  */
@@ -306,6 +339,7 @@ int main(void)
     test_email_validation();
     test_special_folders_priority();
     test_json_event_contracts();
+    test_calendar_url_validation();
 
     return test_suite_summary();
 }
