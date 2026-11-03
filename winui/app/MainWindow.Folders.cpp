@@ -155,8 +155,14 @@ namespace winrt::EvolutionWin::implementation
         for (auto const& value : folders)
             sorted.push_back(value.GetObject());
 
-        /* Respect de la préférence mail.folder-sort : "special-first" (défaut) ou "alphabetical" */
-        bool special_first = (::EvolutionWin::Settings::Instance().GetString(L"mail.folder-sort", L"special-first") != L"alphabetical");
+        /* Respect de la préférence de tri : surcharge spécifique au compte account.<account>.folder-sort
+         * avec repli sur le paramètre global mail.folder-sort ("special-first" par défaut ou "alphabetical"). */
+        hstring acc_sort_key = L"account." + account + L".folder-sort";
+        hstring account_sort = ::EvolutionWin::Settings::Instance().GetString(acc_sort_key, L"");
+        hstring effective_sort = !account_sort.empty()
+            ? account_sort
+            : ::EvolutionWin::Settings::Instance().GetString(L"mail.folder-sort", L"special-first");
+        bool special_first = (effective_sort != L"alphabetical");
 
         std::stable_sort(sorted.begin(), sorted.end(), [special_first](JsonObject const& a, JsonObject const& b)
         {
@@ -479,6 +485,52 @@ namespace winrt::EvolutionWin::implementation
 
         if (is_account)
         {
+            // Sous-menu de tri des dossiers pour ce compte
+            MenuFlyoutSubItem sort_sub;
+            sort_sub.Text(L"Ordre des dossiers");
+            sort_sub.Icon(FontIcon{});
+            sort_sub.Icon().as<FontIcon>().Glyph(L"\xE8CB");
+
+            hstring acc_sort_key = L"account." + account + L".folder-sort";
+            hstring acc_sort = ::EvolutionWin::Settings::Instance().GetString(acc_sort_key, L"");
+            hstring effective_sort = !acc_sort.empty()
+                ? acc_sort
+                : ::EvolutionWin::Settings::Instance().GetString(L"mail.folder-sort", L"special-first");
+
+            MenuFlyoutItem special_first_item;
+            special_first_item.Text((effective_sort != L"alphabetical" ? L"✔ " : L"    ") + hstring{ L"Dossiers spéciaux d'abord" });
+            special_first_item.Click([this, acc_sort_key](IInspectable const&, RoutedEventArgs const&)
+            {
+                ::EvolutionWin::Settings::Instance().SetString(acc_sort_key, L"special-first");
+                LoadAccounts();
+            });
+            sort_sub.Items().Append(special_first_item);
+
+            MenuFlyoutItem alpha_item;
+            alpha_item.Text((effective_sort == L"alphabetical" ? L"✔ " : L"    ") + hstring{ L"Trier tous les dossiers de A à Z" });
+            alpha_item.Click([this, acc_sort_key](IInspectable const&, RoutedEventArgs const&)
+            {
+                ::EvolutionWin::Settings::Instance().SetString(acc_sort_key, L"alphabetical");
+                LoadAccounts();
+            });
+            sort_sub.Items().Append(alpha_item);
+
+            if (!acc_sort.empty())
+            {
+                sort_sub.Items().Append(MenuFlyoutSeparator{});
+                MenuFlyoutItem reset_item;
+                reset_item.Text(L"Rétablir l'ordre global par défaut");
+                reset_item.Click([this, acc_sort_key](IInspectable const&, RoutedEventArgs const&)
+                {
+                    ::EvolutionWin::Settings::Instance().SetString(acc_sort_key, L"");
+                    LoadAccounts();
+                });
+                sort_sub.Items().Append(reset_item);
+            }
+
+            menu.Items().Append(sort_sub);
+            menu.Items().Append(MenuFlyoutSeparator{});
+
             if (account != L"local")
             {
                 add_item(L"Propriétés du compte…", L"\xE713", true,

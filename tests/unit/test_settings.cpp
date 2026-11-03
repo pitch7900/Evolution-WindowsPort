@@ -317,6 +317,20 @@ static void test_settings_mail_read_and_security_options(void)
         ASSERT_EQ_INT(0, mgr.GetBoolean("privacy.hide-snippets", false));
         mgr.SetBoolean("privacy.hide-snippets", true);
         ASSERT_EQ_INT(1, mgr.GetBoolean("privacy.hide-snippets", false));
+
+        /* Tri des dossiers par compte (account.<id>.folder-sort avec repli mail.folder-sort) */
+        mgr.SetString("mail.folder-sort", "special-first");
+        std::string global_sort = mgr.GetString("mail.folder-sort", "special-first");
+        ASSERT_EQ_STR("special-first", global_sort.c_str());
+
+        std::string acc_sort = mgr.GetString("account.acc123.folder-sort", "");
+        ASSERT_EQ_STR("", acc_sort.c_str());
+        mgr.SetString("account.acc123.folder-sort", "alphabetical");
+        std::string acc_sort_custom = mgr.GetString("account.acc123.folder-sort", "");
+        ASSERT_EQ_STR("alphabetical", acc_sort_custom.c_str());
+        mgr.SetString("account.acc123.folder-sort", "");
+        std::string acc_sort_reset = mgr.GetString("account.acc123.folder-sort", "");
+        ASSERT_EQ_STR("", acc_sort_reset.c_str());
     }
     TEST_CASE_END();
 }

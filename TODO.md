@@ -530,7 +530,7 @@ Trois notions distinctes, comme dans Outlook : le **suivi** (drapeau avec libell
   - [x] 🟢 **Icône de la Boîte de réception** : remplacer le glyphe plein `\xE8A8` (enveloppe pleine, rendue comme un carré noir à cette taille) par une icône au trait cohérente avec les autres dossiers (ex. `\xE715`, enveloppe) — `FolderGlyph()` dans [MainWindow.xaml.cpp](winui/app/MainWindow.xaml.cpp) ; vérifier aussi `inbox_glyph`, qui sert à repérer le nœud Boîte de réception par son glyphe
   - [x] 🟢 Noms des dossiers spéciaux affichés dans la langue de l'interface (« INBOX » → « Boîte de réception », « Sent Items » → « Éléments envoyés »)
   - [ ] 🟡 **Ordre personnalisé** par glisser-déposer (ou _Monter_ / _Descendre_ dans le menu contextuel), mémorisé par compte, sans modifier les dossiers sur le serveur
-  - [ ] 🟢 Choix du mode de tri par compte : dossiers spéciaux d'abord (défaut) / alphabétique (_Afficher tous les dossiers de A à Z_) / personnalisé ; _Rétablir l'ordre par défaut_
+  - [x] 🟢 Choix du mode de tri par compte : dossiers spéciaux d'abord (défaut) / alphabétique (_Afficher tous les dossiers de A à Z_) / personnalisé ; _Rétablir l'ordre par défaut_
   - [x] 🟢 Ordre des **comptes** eux-mêmes dans le volet des dossiers (compte par défaut en premier, puis glisser-déposer)
   - Compteurs de messages non lus et barre de défilement (décalage à gauche) : cf. §2
 - [ ] 🟠 **Nettoyer le dossier** (et sous-dossiers) des messages redondants — même logique que §7

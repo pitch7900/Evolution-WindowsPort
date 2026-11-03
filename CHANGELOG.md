@@ -22,6 +22,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Bascule du mode de tri des dossiers depuis le menu contextuel du compte (TODO ligne 533)** :
+  - **Menu contextuel enrichi** : ajout d\'un sous-menu « Ordre des dossiers » sur chaque compte dans l\'arborescence (MainWindow.Folders.cpp).
+  - **Choix par compte** : bascule directe entre « Dossiers spéciaux d\'abord », « Trier tous les dossiers de A à Z » et « Rétablir l\'ordre global par défaut » avec coches d\'état visuelles (✔).
+  - **Priorité de configuration** : prise en compte de la surcharge par compte (ccount.<account>.folder-sort) avec repli fluide sur la préférence globale mail.folder-sort.
+  - **Validation par tests unitaires** : vérification de la persistance et de la réinitialisation du tri par compte dans 	ests/unit/test_settings.cpp.
+
 - **Second fuseau horaire dans la grille du calendrier (TODO ligne 605)** :
   - **Affichage bilatéral des créneaux horaires** : intégration dans la gouttière horaire gauche (MainWindow.Calendar.cpp) d\'une double colonne d\'heures (fuseau secondaire et heure locale) avec séparateur visuel discret.
   - **En-têtes clairs des fuseaux** : affichage au sommet de la colonne horaire des abréviations courtes correspondantes (UTC, NYC, LA, PAR, LON, TYO ou libellé personnalisé).
