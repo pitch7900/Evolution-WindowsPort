@@ -38,6 +38,52 @@ Le projet s'articule autour de deux couches principales :
 
 ---
 
+## Principales fonctionnalités disponibles
+
+EvolutionWin intègre l'ensemble des capacités éprouvées du moteur GNOME Evolution au sein d'une expérience utilisateur moderne et fluide, spécialement conçue pour Windows 11 :
+
+### ✉️ Messagerie & Courrier
+- **Comptes multiples et protocoles standards** : prise en charge complète des protocoles IMAP, POP3, SMTP et des comptes Microsoft 365 / Exchange Online via Microsoft Graph (`evolution-ews`).
+- **Affichage moderne et sécurisé** : rendu HTML propulsé par Microsoft Edge WebView2, avec blocage automatique des images et contenus distants pour préserver la confidentialité, et bandeau de déblocage interactif.
+- **Éditeur de rédaction enrichi** : rédaction en HTML ou texte brut, formatage riche, sélection de la police et de la taille par défaut, vérification orthographique native Windows, accusés de lecture (Disposition-Notification-To) et copie cachée automatique (Cci / Bcc).
+- **Gestion intelligente des citations** : détection et personnalisation multilingue des préfixes de réponse et transfert (Re:, TR:, Fwd:, etc.) avec citation contextualisée selon la langue d'interface.
+- **Gestionnaire de signatures** : signatures multiples avec attribution par compte et positionnement au-dessus ou en dessous de la citation.
+- **Pièces jointes & Aperçu intégré** : barre d'accès rapide avec icônes par type MIME, aperçu intégré pour les images et documents texte, enregistrement et ouverture d'un clic.
+- **Exportation et interopérabilité** :
+  - **Export au format standard .eml** : enregistrement unitaire ou par lot avec sélecteur de fichier natif Windows (Ctrl+S).
+  - **Glisser-déposer (Drag & Drop) vers Windows** : glissez un ou plusieurs courriels directement vers l'Explorateur Windows ou le Bureau.
+- **Catégories visuelles** : attribution rapide de catégories colorées Fluent (10 teintes standards avec badges visuels dans la liste) synchronisées avec les drapeaux Camel.
+- **Outils avancés** : visualiseur du flux brut RFC 822 / source MIME intégrale avec recherche instantanée (Ctrl+Maj+U), synthèse vocale native pour la lecture audio des courriels et impression native via WebView2.
+
+### 📅 Calendrier & Agendas
+- **Moteur éprouvé Evolution Data Server** : stockage haute performance et synchronisation locale et distante des événements.
+- **Vues temporelles multiples** : bascule dynamique entre les vues Jour, Semaine de travail, Semaine complète et Mois.
+- **Mini-calendrier latéral** : sélecteur de date mensuel dans le volet latéral avec commande ruban et option d'affichage/masquage dédiée.
+- **Gestion du double fuseau horaire** : affichage simultané de deux fuseaux horaires configurables pour la coordination d'équipes distantes.
+- **Rappels & Alertes** : système de notifications d'échéances avec possibilité d'activation ou de désactivation globale.
+
+### 👥 Carnet d'adresses & Contacts
+- **Carnets d'adresses multiples** : gestion centralisée des contacts locaux et d'entreprise.
+- **Autocomplétion intelligente** : suggestions instantanées de destinataires dans les champs d'envoi (À, Cc, Cci).
+- **Fiches complètes** : consultation et édition des coordonnées, adresses, téléphones et informations professionnelles.
+
+### 📋 Tâches & Mémos
+- **Suivi des activités** : gestion des tâches avec statuts, priorités et dates d'échéance.
+- **Volet latéral To-Do Bar** : consultation et gestion rapide des tâches urgentes sans quitter la vue de messagerie.
+
+### 💻 Expérience Windows 11 & Intégration Système
+- **Design Fluent & Effet Mica** : interface moderne avec matériaux translucides Mica, coins arrondis et typographie Segoe UI Variable.
+- **Thème système et personnalisation** : prise en charge complète des modes Clair et Sombre (automatique selon Windows ou forcé) et choix forcé de la langue d'interface.
+- **Pastille de notification sur la barre des tâches** : compteur de messages non lus rendu en ARGB 32-bit haute définition avec transparence alpha parfaite et adaptation automatique à l'échelle DPI.
+- **Notifications système Windows (Toasts)** : alertes de nouveau courrier personnalisables globalement, par compte ou par dossier, avec signal sonore commutable.
+- **Sécurité et chiffrement DPAPI** : stockage protégé de tous les identifiants et mots de passe dans le Gestionnaire d'identifiants Windows.
+- **Démarrage automatique** : option d'activation au lancement de Windows via le Registre utilisateur (HKCU\Software\Microsoft\\Windows\\CurrentVersion\\Run).
+- **Aide et raccourcis clavier (F1)** : centre de documentation interactif des raccourcis clavier avec recherche instantanée et profils commutables (Outlook vs Evolution GNOME).
+- **Surveillance réseau et santé** : barre d'état avec pastille dynamique et détection des anomalies de synchronisation.
+- **Maintenance facilitée** : option de vidage automatique de la Corbeille à la fermeture de l'application.
+
+---
+
 ## Organisation du dépôt
 
 | Répertoire / Fichier | Rôle |
