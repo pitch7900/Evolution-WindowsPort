@@ -179,11 +179,15 @@ Les règles suivantes ont été définies par Pierre et doivent être respectée
 
 Ce fichier `LLM.md` ne contient volontairement **aucun listing statique de tâches faites ou à faire** afin d'éviter toute désynchronisation. L'état du projet et les fonctionnalités sont pilotés dynamiquement par quatre fichiers clés que l'agent IA doit obligatoirement consulter à chaque prise en main :
 
+> [!IMPORTANT]
+> **Nature vivante et évolutive des fichiers de tâches** :
+> Les fichiers [`TODO.md`](TODO.md) et [`QUICKWINS.md`](QUICKWINS.md) **ne sont jamais statiques ni figés**. Pierre peut les modifier ou y injecter régulièrement de nouvelles tâches, exigences ou priorités au fil de l'eau. L'agent IA doit toujours relire l'état réel et à jour de ces fichiers plutôt que de se baser sur un souvenir ou une supposition.
+
 ### 7.1. Fichiers sources à lire obligatoirement :
 1. **[`VERSION`](VERSION)** : Indique la version SemVer courante du projet (ainsi que le nom de la branche de développement active, ex. `0.9.7`).
 2. **[`CHANGELOG.md`](CHANGELOG.md)** : Registre historique officiel listant l'ensemble des fonctionnalités déjà réalisées, testées et validées, regroupées par version.
-3. **[`QUICKWINS.md`](QUICKWINS.md)** : Liste des tâches prioritaires à fort impact utilisateur et faible coût d'implémentation. Pierre peut y ajouter de nouveaux éléments à tout moment. L'agent doit toujours prioriser les tâches ouvertes de ce fichier.
-4. **[`TODO.md`](TODO.md)** : Feuille de route globale et exhaustive du projet, détaillant les spécifications complètes, les contraintes métier et l'état d'avancement de chaque module.
+3. **[`QUICKWINS.md`](QUICKWINS.md)** : Liste des tâches prioritaires à fort impact utilisateur et faible coût d'implémentation. Ce fichier évolue régulièrement avec de nouveaux ajouts de Pierre ; l'agent doit toujours y traiter en priorité absolue les tâches ouvertes (`- [ ]`).
+4. **[`TODO.md`](TODO.md)** : Feuille de route globale et exhaustive du projet, détaillant les spécifications complètes, les contraintes métier et l'état d'avancement de chaque module. Pierre y ajoute régulièrement de nouvelles fonctionnalités à développer.
 
 ### 7.2. Règles de traitement des tâches pour l'agent IA :
 - **Identification des besoins** : L'agent doit rechercher les tâches **non cochées** (`- [ ]`) en consultant en priorité `QUICKWINS.md`, puis les sections ouvertes de `TODO.md`.
