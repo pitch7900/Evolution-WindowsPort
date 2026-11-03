@@ -474,6 +474,7 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
   - [ ] **En-têtes Internet complets** : affichage exhaustif de la totalité des en-têtes RFC 5322 bruts (`Received`, `Authentication-Results`, `DKIM-Signature`, `SPF`, `Message-ID`, en-têtes `X-*`), avec sélection, recherche et bouton de copie rapide vers le presse-papiers (équivalent des « Options du message / Propriétés » d'Outlook)
   - [x] **Contenu complet brut (source MIME / RFC 822)** : visualiseur du flux brut intégral non interprété du courriel (en-têtes et corps multi-parties avec frontières MIME, codages Base64 / Quoted-Printable d'origine) avec police monospace, recherche textuelle (Ctrl+F) et boutons de copie / export `.eml`
   - [ ] **Métadonnées techniques de diagnostic** : taille exacte en octets, compte et dossier d'origine, UID Camel / IMAP, encodage des caractères (charset), état de synchronisation
+- Déchiffrement et vérification des signatures numériques (S/MIME, OpenPGP, Exchange IRM) : cf. §7
 
 ## 7. Mail – Actions sur les messages — 🟠
 
@@ -494,6 +495,7 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
 - [ ] 🟡 **Répondre par une réunion** (réunion pré-remplie avec les participants) — dépend de §13
 - [x] 🟢 **Transférer en pièce jointe** pour un message seul (déjà fait en sélection multiple)
 - Envoi « En tant que » (Send As) et « De la part de » (Send on Behalf) pour les boîtes déléguées : cf. §3
+- Signature numérique et chiffrement à l'envoi : cf. « Chiffrement et signature numérique » ci-dessous
 
 ### Supprimer, archiver, déplacer
 
@@ -525,6 +527,32 @@ Trois notions distinctes, comme dans Outlook : le **suivi** (drapeau avec libell
 ### Groupes Microsoft 365
 
 - [ ] 🟠 **Groupes Microsoft 365** (Graph, comptes M365) : Nouveau groupe, Parcourir les groupes ; boîte aux lettres **et** calendrier de groupe (le calendrier apparaît aussi dans la liste des calendriers, §14)
+
+### Chiffrement et signature numérique (S/MIME, OpenPGP / GPG, Exchange et Gmail natifs) — 🟠
+
+Sécurisation de bout en bout des courriels par signature et chiffrement avec une ergonomie « zéro friction » réduisant les interactions manuelles au strict minimum.
+
+- [ ] 🟠 **Chiffrement et signature adaptés automatiquement au type de compte (Exchange Online, Gmail, IMAP)** :
+  - [ ] **Comptes Exchange Online / Microsoft 365** :
+    - [ ] Utilisation des fonctions natives de chiffrement de Microsoft 365 / Purview (OME / IRM : options *Chiffrer*, *Ne pas transférer*, *Confidentiel*) via Microsoft Graph et EWS.
+    - [ ] Prise en charge native du S/MIME d'entreprise avec récupération transparente des certificats publics des collaborateurs directement depuis l'annuaire d'entreprise GAL (aucune importation manuelle nécessaire).
+  - [ ] **Comptes Gmail / Google Workspace** :
+    - [ ] Intégration du chiffrement côté client natif (Client-Side Encryption - CSE) de Google Workspace et gestion S/MIME associée via l'API Gmail.
+  - [ ] **Comptes IMAP génériques (outils libres et gratuits, sans complexité)** :
+    - [ ] **S/MIME transparent via le magasin Windows** : reconnaissance automatique des certificats personnels de l'utilisateur installés dans le magasin de certificats natif de Windows (`CertOpenSystemStore("MY")` / CryptoAPI / CNG) ou fichiers PKCS#12 (`.p12` / `.pfx`) sans configuration manuelle laborieuse.
+    - [ ] **OpenPGP / GPG libre** : intégration transparente avec GnuPG (Gpg4win / `gpg.exe`) ou bibliothèque libre OpenPGP intégrée.
+    - [ ] **Découverte automatique des clés (zéro manipulation)** : interrogation automatique des serveurs de clés publics libres et du protocole WKD (*Web Key Directory*, `keys.openpgp.org`) pour récupérer la clé publique du destinataire dès la saisie de son adresse email.
+    - [ ] **Génération de clé en 1 clic** : proposition automatique d'un assistant minimaliste générant une paire de clés personnelle pour l'adresse du compte si aucune clé n'existe encore.
+- [ ] 🟡 **Expérience utilisateur simplifiée à la rédaction (`ComposeWindow`)** :
+  - [ ] Deux boutons à bascule clairs et accessibles dans le ruban : **« Signer »** (icône sceau / ruban) et **« Chiffrer »** (icône cadenas).
+  - [ ] Détection et bascule automatique : sélection transparente du meilleur protocole (S/MIME, PGP ou OME selon le compte et les clés publiques connues des destinataires).
+  - [ ] Notification préventive discrète si un destinataire ne dispose d'aucune clé/certificat public connu, avec proposition de recherche WKD / annuaire en un clic sans bloquer la saisie.
+- [ ] 🟡 **Lecture, déchiffrement et vérification (`MainWindow.Reader`, `MessageWindow`)** :
+  - [ ] **Déchiffrement automatique** des messages reçus dès leur sélection si la clé privée ou le certificat est accessible, sans boîte de dialogue inutile (mémorisation de la phrase de passe / code PIN pour toute la session).
+  - [ ] **Bandeau de sécurité contextuel** au-dessus du message :
+    - [ ] Signature valide (vert) : *« Message signé numériquement par [Nom / Adresse] (vérifié) »*, avec lien d'inspection du certificat.
+    - [ ] Message chiffré (vert) : *« Message chiffré de bout en bout »*.
+    - [ ] Avertissement clair (orange / rouge) uniquement en cas d'incohérence, d'expiration de certificat ou d'altération du contenu.
 
 ## 8. Mail – Règles et courrier indésirable — 🔴
 
@@ -883,6 +911,7 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 - [x] 🟢 Masquer l'aperçu du message dans la liste (lignes d'extrait, §5) en même temps que le mode confidentiel des notifications
 - [ ] 🟡 Verrouiller l'application après inactivité (Windows Hello)
 - [x] 🟢 Effacer les caches (WebView2, aperçus de pièces jointes)
+- Gestion des certificats S/MIME, clés OpenPGP et chiffrement natif : cf. §7
 
 ### Sauvegarde des préférences
 
