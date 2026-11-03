@@ -20,7 +20,7 @@ Ce document constitue le manuel de référence complet destiné à tout agent IA
 - **Système d'exploitation** : Windows 11 x64 (22H2 ou ultérieur).
   > **Note impérative** : Il s'agit d'une machine Windows 11. Ne jamais exécuter de commandes de type Linux/Bash (utiliser PowerShell `pwsh` ou des scripts `.bat`).
 - **Compilateur & Outils** :
-  - Visual Studio 2022 Community (MSVC v143 / v180, C++20).
+  - Visual Studio 2026 Community (MSVC v180, C++20 / C++latest).
   - CMake 3.25+ & Ninja.
   - Windows App SDK 1.7 (packages NuGet natifs intégrés dans `winui/packages/`).
   - WiX Toolset v3.14 (pour la génération des installeurs MSI).
@@ -190,3 +190,4 @@ Les règles suivantes ont été définies par Pierre et doivent être respectée
 
 ### 7.2. Prochaine Étape pour l'Agent IA
 - Poursuivre le traitement des tâches ouvertes de **[`TODO.md`](TODO.md)** par lots cohérents (créer, tester, commiter, mettre à jour le changelog et pousser sur `0.9.7`).
+
