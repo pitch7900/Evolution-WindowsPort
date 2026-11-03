@@ -1271,4 +1271,29 @@ namespace EvolutionWin::Helpers
         CloseHandle(hSnapshot);
         return terminated_count;
     }
+
+    /**
+     * @brief Niveaux d'importance d'un message électronique.
+     */
+    enum class MessageImportanceLevel
+    {
+        Normal = 0,
+        High = 1,
+        Low = 2
+    };
+
+    /**
+     * @brief Détermine le niveau d'importance d'un message selon ses en-têtes ou propriétés.
+     * @param importance Chaîne indicative d'importance ("high", "urgent", "low", etc.).
+     * @param priority Valeur numérique de priorité (1-2: haute, 3: normale, 4-5: basse).
+     * @return Niveau d'importance normalisé (Normal, High ou Low).
+     */
+    inline MessageImportanceLevel ParseMessageImportance(std::wstring_view importance, double priority = 3.0)
+    {
+        if (importance == L"high" || importance == L"urgent" || (priority > 0 && priority < 3.0))
+            return MessageImportanceLevel::High;
+        if (importance == L"low" || priority > 3.0)
+            return MessageImportanceLevel::Low;
+        return MessageImportanceLevel::Normal;
+    }
 }

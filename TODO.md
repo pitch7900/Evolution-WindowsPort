@@ -518,7 +518,7 @@ Trois notions distinctes, comme dans Outlook : le **suivi** (drapeau avec libell
   - [ ] _Marquer comme terminé_ en un clic (avec date de fin), _Effacer l'indicateur_
   - [ ] Filtres rapides « Urgents » et « À traiter » (§5) et dossiers de recherche correspondants (§9)
   - [ ] 🟠 Rappel sur un suivi — dépend de la fenêtre des rappels (§2)
-- [ ] 🟡 **Importance** (haute / normale / basse) : affichée dans la liste et le volet de lecture (en-têtes `Importance` / `X-Priority`), choisie à la rédaction ; filtre rapide « Importants » (§5)
+- [x] 🟡 **Importance** (haute / normale / basse) : affichée dans la liste (icône d'exclamation rouge ou flèche bleue) et choisie à la rédaction dans ComposeWindow ; filtre rapide « Importants » (§5)
 - Catégoriser le message : cf. §17 ; créer une tâche à partir du message : cf. §16 ; export par glisser-déposer vers l'extérieur : cf. §18 ; propriétés et contenu brut du message : cf. §6
 
 ### Actions rapides

@@ -70,6 +70,18 @@ namespace winrt::EvolutionWin::implementation
         void OnSendClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         fire_and_forget OnAttachClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnFormatModeToggle(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        /**
+         * @brief Bascule l'indicateur d'importance haute pour le message en cours de rédaction.
+         * @param sender Bouton émetteur de l'action.
+         * @param args Arguments associés à l'événement de clic.
+         */
+        void OnHighImportanceClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        /**
+         * @brief Bascule l'indicateur d'importance basse pour le message en cours de rédaction.
+         * @param sender Bouton émetteur de l'action.
+         * @param args Arguments associés à l'événement de clic.
+         */
+        void OnLowImportanceClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnDiscardClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRecipientTextChanged(Microsoft::UI::Xaml::Controls::AutoSuggestBox const& sender, Microsoft::UI::Xaml::Controls::AutoSuggestBoxTextChangedEventArgs const& args);
         void OnRecipientQuerySubmitted(Microsoft::UI::Xaml::Controls::AutoSuggestBox const& sender, Microsoft::UI::Xaml::Controls::AutoSuggestBoxQuerySubmittedEventArgs const& args);

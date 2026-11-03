@@ -18,6 +18,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 - **Quickwin — Ajout de calendriers (TODO section 14)** : bouton « + » dans le volet des calendriers ouvrant une boîte de dialogue (nom + adresse). Adresse vide : calendrier local ; adresse `http(s)://` ou `webcal://` : abonnement iCalendar (backend EDS `webcal`, actualisé toutes les 30 minutes). Nouvelle fonction `evo_core_create_calendar` dans `evo-core`, nouveau calendrier affiché immédiatement. Test de non-régression ajouté dans `test_evo_core_contracts.c`.
 
+- **Quickwin — Importance haute et basse des messages (TODO section 7, QUICKWINS)** : boutons d'importance haute (!) et basse (↓) ajoutés dans la barre d'outils de `ComposeWindow` avec bascule exclusive, transmission de la propriété `importance` à l'envoi, affichage d'icônes visuelles dans la liste des messages (exclamation rouge pour haute priorité, flèche bleue pour basse priorité) et couverture par tests unitaires dans `tests/unit/test_helpers.cpp`.
+
 - **Quickwin — Courrier indésirable (TODO section 8)** : bouton _Indésirable_ dans le ruban et entrée du menu contextuel des messages ; déplace la sélection vers le dossier Indésirables du compte, ou vers la Boîte de réception si elle s'y trouve déjà.
 
 - **Lot 1 — Encapsulation Job Object et arrêt complet des processus d'arrière-plan (TODO lignes 156-160)** :

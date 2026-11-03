@@ -168,6 +168,30 @@ namespace winrt::EvolutionWin::implementation
             meta.Margin(ThicknessHelper::FromLengths(8, 0, 0, 0));
             Grid::SetColumn(meta, 1);
 
+            /* Indicateur d'importance (haute ou basse) */
+            hstring importance_str = message.GetNamedString(L"importance", L"normal");
+            double priority_num = message.GetNamedNumber(L"priority", 3.0);
+            auto importance_level = ::EvolutionWin::Helpers::ParseMessageImportance(importance_str, priority_num);
+
+            if (importance_level == ::EvolutionWin::Helpers::MessageImportanceLevel::High)
+            {
+                FontIcon high_prio_icon;
+                high_prio_icon.Glyph(L"\xE7BA");
+                high_prio_icon.FontSize(12);
+                high_prio_icon.Foreground(SolidColorBrush{ Windows::UI::Color{ 255, 232, 17, 35 } });
+                ToolTipService::SetToolTip(high_prio_icon, box_value(L"Importance haute"));
+                meta.Children().Append(high_prio_icon);
+            }
+            else if (importance_level == ::EvolutionWin::Helpers::MessageImportanceLevel::Low)
+            {
+                FontIcon low_prio_icon;
+                low_prio_icon.Glyph(L"\xE74B");
+                low_prio_icon.FontSize(12);
+                low_prio_icon.Foreground(SolidColorBrush{ Windows::UI::Color{ 255, 0, 120, 212 } });
+                ToolTipService::SetToolTip(low_prio_icon, box_value(L"Importance basse"));
+                meta.Children().Append(low_prio_icon);
+            }
+
             FontIcon flag_icon;
             flag_icon.Glyph(L"\xE7C1");
             flag_icon.FontSize(12);

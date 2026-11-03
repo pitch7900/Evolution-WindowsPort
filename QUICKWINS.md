@@ -37,8 +37,8 @@ Propositions d'implémentations facilement réalisables, issues de la lecture du
   - Déplacement vers / depuis le dossier _Indésirables_ avec la fonction de déplacement existante ; entrée dans le menu contextuel et le ruban.
 - [ ] **Autosave du brouillon** (§7)
   - Minuteur (ex. 60 s) dans `MainWindow.Compose.cpp` qui réutilise l'enregistrement de brouillon existant.
-- [ ] **Importance (haute / basse)** : affichage d'une icône dans la liste à partir de l'en-tête `Importance` / `X-Priority` (§7)
-  - Choix à la rédaction : ajout de l'en-tête dans `ComposeWindow`.
+- [x] **Importance (haute / basse)** : affichage d'une icône dans la liste à partir de l'en-tête `Importance` / `X-Priority` (§7) — fait
+  - Choix à la rédaction : ajout des boutons d'importance haute / basse dans `ComposeWindow` et transmission dans le payload d'envoi.
 - [ ] **Afficher les en-têtes bruts / source du message** (§7)
   - `ContentDialog` avec texte sélectionnable + bouton _Copier_, à partir de la source MIME déjà accessible pour l'export `.eml`.
 

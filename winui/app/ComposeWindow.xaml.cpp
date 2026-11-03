@@ -634,6 +634,34 @@ namespace winrt::EvolutionWin::implementation
     }
 
     /* Ferme la fenêtre de rédaction sans envoyer le message. */
+    /**
+     * @brief Gestionnaire de bascule d'importance haute.
+     * @param sender Bouton émetteur.
+     * @param args Arguments d'événement.
+     */
+    void ComposeWindow::OnHighImportanceClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (HighImportanceButton() && HighImportanceButton().IsChecked() && HighImportanceButton().IsChecked().Value())
+        {
+            if (auto low = LowImportanceButton())
+                low.IsChecked(false);
+        }
+    }
+
+    /**
+     * @brief Gestionnaire de bascule d'importance basse.
+     * @param sender Bouton émetteur.
+     * @param args Arguments d'événement.
+     */
+    void ComposeWindow::OnLowImportanceClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (LowImportanceButton() && LowImportanceButton().IsChecked() && LowImportanceButton().IsChecked().Value())
+        {
+            if (auto high = HighImportanceButton())
+                high.IsChecked(false);
+        }
+    }
+
     void ComposeWindow::OnDiscardClick(IInspectable const&, RoutedEventArgs const&)
     {
         Close();
@@ -843,6 +871,14 @@ namespace winrt::EvolutionWin::implementation
 
         bool read_receipt = ReadReceiptButton().IsChecked() && ReadReceiptButton().IsChecked().Value();
         message.SetNamedValue(L"request_read_receipt", JsonValue::CreateBooleanValue(read_receipt));
+
+        /* Définition de l'importance du message */
+        hstring importance_val = L"normal";
+        if (HighImportanceButton() && HighImportanceButton().IsChecked() && HighImportanceButton().IsChecked().Value())
+            importance_val = L"high";
+        else if (LowImportanceButton() && LowImportanceButton().IsChecked() && LowImportanceButton().IsChecked().Value())
+            importance_val = L"low";
+        message.SetNamedValue(L"importance", JsonValue::CreateStringValue(importance_val));
 
         /* Options cryptographiques OpenPGP / S/MIME */
         bool pgp_sign = PgpSignButton().IsChecked() && PgpSignButton().IsChecked().Value();

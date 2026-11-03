@@ -90,6 +90,17 @@
                 </AppBarToggleButton.Icon>
             </AppBarToggleButton>
             <AppBarSeparator />
+            <AppBarToggleButton x:Name="HighImportanceButton" Label="Importance haute" ToolTipService.ToolTip="Définir une importance haute pour ce message (priorité urgente)" Click="OnHighImportanceClick">
+                <AppBarToggleButton.Icon>
+                    <FontIcon Glyph="&#xE7BA;" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                </AppBarToggleButton.Icon>
+            </AppBarToggleButton>
+            <AppBarToggleButton x:Name="LowImportanceButton" Label="Importance basse" ToolTipService.ToolTip="Définir une importance basse pour ce message (priorité faible)" Click="OnLowImportanceClick">
+                <AppBarToggleButton.Icon>
+                    <FontIcon Glyph="&#xE74B;" Foreground="{ThemeResource SystemFillColorNeutralBrush}" />
+                </AppBarToggleButton.Icon>
+            </AppBarToggleButton>
+            <AppBarSeparator />
             <AppBarToggleButton x:Name="ReadReceiptButton" Label="Accusé de lecture" ToolTipService.ToolTip="Demander une confirmation de lecture aux destinataires (Disposition-Notification-To)">
                 <AppBarToggleButton.Icon>
                     <FontIcon Glyph="&#xE73E;" />

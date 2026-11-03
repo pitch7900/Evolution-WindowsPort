@@ -5886,6 +5886,43 @@ static void test_font_size_preset_to_zoom()
     TEST_CASE_END();
 }
 
+enum class MessageImportanceLevelTest
+{
+    Normal = 0,
+    High = 1,
+    Low = 2
+};
+
+static MessageImportanceLevelTest ParseMessageImportanceTest(std::wstring_view importance, double priority = 3.0)
+{
+    if (importance == L"high" || importance == L"urgent" || (priority > 0 && priority < 3.0))
+        return MessageImportanceLevelTest::High;
+    if (importance == L"low" || priority > 3.0)
+        return MessageImportanceLevelTest::Low;
+    return MessageImportanceLevelTest::Normal;
+}
+
+static void test_message_importance_parsing()
+{
+    TEST_CASE("MessageImportance: Evaluation haute, basse et normale");
+    {
+        // En-têtes textuels
+        ASSERT_TRUE(ParseMessageImportanceTest(L"high") == MessageImportanceLevelTest::High);
+        ASSERT_TRUE(ParseMessageImportanceTest(L"urgent") == MessageImportanceLevelTest::High);
+        ASSERT_TRUE(ParseMessageImportanceTest(L"low") == MessageImportanceLevelTest::Low);
+        ASSERT_TRUE(ParseMessageImportanceTest(L"normal") == MessageImportanceLevelTest::Normal);
+        ASSERT_TRUE(ParseMessageImportanceTest(L"") == MessageImportanceLevelTest::Normal);
+
+        // Priorités numériques RFC (1: haute, 3: normale, 5: basse)
+        ASSERT_TRUE(ParseMessageImportanceTest(L"", 1.0) == MessageImportanceLevelTest::High);
+        ASSERT_TRUE(ParseMessageImportanceTest(L"", 2.0) == MessageImportanceLevelTest::High);
+        ASSERT_TRUE(ParseMessageImportanceTest(L"", 3.0) == MessageImportanceLevelTest::Normal);
+        ASSERT_TRUE(ParseMessageImportanceTest(L"", 4.0) == MessageImportanceLevelTest::Low);
+        ASSERT_TRUE(ParseMessageImportanceTest(L"", 5.0) == MessageImportanceLevelTest::Low);
+    }
+    TEST_CASE_END();
+}
+
 int main(void)
 
 
@@ -6014,6 +6051,7 @@ int main(void)
         test_keyboard_shortcuts_helpers();
         test_process_lifecycle_job_object();
         test_reading_zoom_helpers();
+    test_message_importance_parsing();
         test_font_size_preset_to_zoom();
 return test_suite_summary();
 
