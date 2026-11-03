@@ -1,3 +1,5 @@
+#include <windows.h>
+#pragma comment(lib, "advapi32.lib")
 /**
 
 
@@ -5282,6 +5284,72 @@ static uint64_t PurgeDirectoryFiles(std::wstring const& dir_path)
 
 
 
+
+
+static bool IsAutoStartupEnabled()
+{
+    HKEY hKey = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_READ, &hKey) == ERROR_SUCCESS)
+    {
+        wchar_t buffer[MAX_PATH] = { 0 };
+        DWORD size = sizeof(buffer);
+        DWORD type = 0;
+        LONG res = RegQueryValueExW(hKey, L"EvolutionWin", nullptr, &type, reinterpret_cast<LPBYTE>(buffer), &size);
+        RegCloseKey(hKey);
+        return (res == ERROR_SUCCESS);
+    }
+    return false;
+}
+
+static bool SetAutoStartupEnabled(bool enable)
+{
+    HKEY hKey = nullptr;
+    LONG res = RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_SET_VALUE, &hKey);
+    if (res != ERROR_SUCCESS)
+        return false;
+
+    if (enable)
+    {
+        wchar_t exe_path[MAX_PATH] = { 0 };
+        GetModuleFileNameW(nullptr, exe_path, MAX_PATH);
+        std::wstring command = L"\"" + std::wstring{ exe_path } + L"\"";
+        res = RegSetValueExW(hKey, L"EvolutionWin", 0, REG_SZ,
+            reinterpret_cast<const BYTE*>(command.c_str()),
+            static_cast<DWORD>((command.size() + 1) * sizeof(wchar_t)));
+    }
+    else
+    {
+        res = RegDeleteValueW(hKey, L"EvolutionWin");
+        if (res == ERROR_FILE_NOT_FOUND)
+            res = ERROR_SUCCESS;
+    }
+    RegCloseKey(hKey);
+    return (res == ERROR_SUCCESS);
+}
+
+static void test_auto_startup_registry(void)
+{
+    TEST_CASE("AutoStartup: Inscription et desinscription dans HKCU\\...\\Run");
+    {
+        bool initial_state = IsAutoStartupEnabled();
+
+        /* Test d'activation */
+        bool set_ok = SetAutoStartupEnabled(true);
+        ASSERT_TRUE(set_ok);
+        ASSERT_TRUE(IsAutoStartupEnabled());
+
+        /* Test de desactivation */
+        bool unset_ok = SetAutoStartupEnabled(false);
+        ASSERT_TRUE(unset_ok);
+        ASSERT_FALSE(IsAutoStartupEnabled());
+
+        /* Restauration de l'etat d'origine */
+        SetAutoStartupEnabled(initial_state);
+        ASSERT_EQ_INT(initial_state ? 1 : 0, IsAutoStartupEnabled() ? 1 : 0);
+    }
+    TEST_CASE_END();
+}
+
 static void test_purge_directory_files(void)
 
 {
@@ -5449,6 +5517,7 @@ int main(void)
     test_calendar_time_scale();
 
     test_purge_directory_files();
+    test_auto_startup_registry();
     test_second_timezone_helpers();
     test_message_category_search();
 

@@ -40,6 +40,11 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Option « Démarrer automatiquement avec Windows » via le Registre utilisateur (TODO ligne 846)** :
+  - **Gestion native du Registre HKCU\\...\\Run** : implémentation sécurisée des utilitaires `IsAutoStartupEnabled()` et `SetAutoStartupEnabled()` ciblant `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` sans nécessiter de privilèges administrateur.
+  - **Carte de configuration dans Paramètres > Apparence** : interrupteur ergonomique avec icône et libellé explicite mémorisant l'état dans `general.auto-startup` et répercutant immédiatement l'inscription Windows.
+  - **Recherche et tests unitaires** : intégration dans le moteur de recherche rapide des réglages et couverture unitaire complète dans `test_helpers.cpp` et `test_settings.cpp`.
+
 - **Commande ruban et option pour afficher / masquer le mini-calendrier latéral (TODO ligne 635)** :
   - **Bouton bascule dans le ruban Calendrier > Affichage** : ajout de la commande « Mini-calendrier » permettant d'afficher ou masquer d'un clic le sélecteur de date mensuel dans le volet latéral gauche.
   - **Option dédiée dans Paramètres > Calendrier** : nouvelle carte avec interrupteur bascule pour configurer la visibilité par défaut (`calendar.show-mini-calendar`).

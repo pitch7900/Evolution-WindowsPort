@@ -130,6 +130,7 @@ namespace winrt::EvolutionWin::implementation
             { L"Taille de police", L"Ajuster la taille de texte pour la lecture des courriels", L"appearance" },
 
             { L"Zone de notification (Systray)", L"Réduire dans la zone de notification Windows à la fermeture", L"appearance" },
+            { L"Démarrer avec Windows", L"Lancement automatique à l'ouverture de session utilisateur (Registre)", L"appearance" },
 
             { L"Contenu externe et images distantes", L"Bloquer ou autoriser les images et pixels de suivi", L"privacy" },
 
@@ -983,6 +984,12 @@ namespace winrt::EvolutionWin::implementation
         if (auto sw = AppearanceMinimizeToTraySwitch())
 
             sw.IsOn(settings.GetBoolean(L"appearance.minimize-to-tray", false));
+        if (auto sw_startup = AppearanceAutoStartupSwitch())
+        {
+            bool startup_on = ::EvolutionWin::Helpers::IsAutoStartupEnabled();
+            sw_startup.IsOn(startup_on);
+            settings.SetBoolean(L"general.auto-startup", startup_on);
+        }
 
 
 
@@ -1612,6 +1619,10 @@ namespace winrt::EvolutionWin::implementation
                     ApplyCalendarPreferences();
 
                 }
+                else if (key == L"general.auto-startup")
+                {
+                    ::EvolutionWin::Helpers::SetAutoStartupEnabled(toggle.IsOn());
+                }
                 else if (key == L"privacy.hide-snippets")
                 {
                     if (m_all_messages.Size() > 0)
@@ -1986,6 +1997,8 @@ namespace winrt::EvolutionWin::implementation
             s.SetString(L"appearance.font-size", L"normal");
 
             s.SetBoolean(L"appearance.minimize-to-tray", false);
+            s.SetBoolean(L"general.auto-startup", false);
+            ::EvolutionWin::Helpers::SetAutoStartupEnabled(false);
 
             s.SetBoolean(L"privacy.hide-snippets", false);
             s.SetString(L"mail.snippet-lines", L"1");

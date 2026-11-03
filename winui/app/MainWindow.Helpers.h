@@ -9,6 +9,7 @@
 #include <shellapi.h>
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib")
+#pragma comment(lib, "advapi32.lib")
 #include <string_view>
 #include <vector>
 #include <filesystem>
@@ -707,6 +708,56 @@ namespace EvolutionWin::Helpers
      * @param labels Liste des catégories ou étiquettes associées.
      * @return true si le message correspond à la recherche, false sinon.
      */
+    /**
+     * @brief Verifie si l'application est configuree pour demarrer automatiquement avec Windows.
+     * @return true si la cle de registre HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run contient EvolutionWin.
+     */
+    inline bool IsAutoStartupEnabled()
+    {
+        HKEY hKey = nullptr;
+        if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_READ, &hKey) == ERROR_SUCCESS)
+        {
+            wchar_t buffer[MAX_PATH] = { 0 };
+            DWORD size = sizeof(buffer);
+            DWORD type = 0;
+            LONG res = RegQueryValueExW(hKey, L"EvolutionWin", nullptr, &type, reinterpret_cast<LPBYTE>(buffer), &size);
+            RegCloseKey(hKey);
+            return (res == ERROR_SUCCESS);
+        }
+        return false;
+    }
+
+    /**
+     * @brief Configure le demarrage automatique d'EvolutionWin lors de l'ouverture de session Windows.
+     * @param enable true pour inscrire l'application dans HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run, false pour supprimer l'entree.
+     * @return true si l'operation dans le registre Windows a reussi, false en cas d'erreur.
+     */
+    inline bool SetAutoStartupEnabled(bool enable)
+    {
+        HKEY hKey = nullptr;
+        LONG res = RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_SET_VALUE, &hKey);
+        if (res != ERROR_SUCCESS)
+            return false;
+
+        if (enable)
+        {
+            wchar_t exe_path[MAX_PATH] = { 0 };
+            GetModuleFileNameW(nullptr, exe_path, MAX_PATH);
+            std::wstring command = L"\"" + std::wstring{ exe_path } + L"\"";
+            res = RegSetValueExW(hKey, L"EvolutionWin", 0, REG_SZ,
+                reinterpret_cast<const BYTE*>(command.c_str()),
+                static_cast<DWORD>((command.size() + 1) * sizeof(wchar_t)));
+        }
+        else
+        {
+            res = RegDeleteValueW(hKey, L"EvolutionWin");
+            if (res == ERROR_FILE_NOT_FOUND)
+                res = ERROR_SUCCESS;
+        }
+        RegCloseKey(hKey);
+        return (res == ERROR_SUCCESS);
+    }
+
     inline bool MatchesMessageSearch(
         std::wstring_view query,
         std::wstring_view subject,

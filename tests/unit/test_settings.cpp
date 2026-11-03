@@ -370,6 +370,11 @@ static void test_settings_mail_read_and_security_options(void)
         ASSERT_EQ_INT(1, mgr.GetBoolean("calendar.show-mini-calendar", true));
         mgr.SetBoolean("calendar.show-mini-calendar", false);
         ASSERT_EQ_INT(0, mgr.GetBoolean("calendar.show-mini-calendar", true));
+
+        /* Demarrage automatique avec Windows (general.auto-startup) */
+        ASSERT_EQ_INT(0, mgr.GetBoolean("general.auto-startup", false));
+        mgr.SetBoolean("general.auto-startup", true);
+        ASSERT_EQ_INT(1, mgr.GetBoolean("general.auto-startup", false));
     }
     TEST_CASE_END();
 }
