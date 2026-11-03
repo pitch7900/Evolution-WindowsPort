@@ -972,6 +972,7 @@ namespace winrt::EvolutionWin::implementation
 
         FolderTitle().Text(item.Name());
         LoadFolderSort();
+        LoadFolderConversations();
         UpdateRibbon();
         SearchBox().Text(L"");
         UpdateOutOfOfficeBanner();
@@ -1028,6 +1029,7 @@ namespace winrt::EvolutionWin::implementation
             FolderTree().SelectedNode(target_node);
             FolderTitle().Text(target_item.Name());
             LoadFolderSort();
+        LoadFolderConversations();
             UpdateRibbon();
             SearchBox().Text(L"");
             UpdateOutOfOfficeBanner();

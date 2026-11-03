@@ -31,8 +31,8 @@ Propositions d'implémentations facilement réalisables, issues de la lecture du
 
 ## 2. Courrier
 
-- [ ] **Mémoriser par dossier l'affichage en conversations** (§5)
-  - Dictionnaire `uid dossier → bool` dans les préférences, lu à la sélection du dossier.
+- [x] **Mémoriser par dossier l'affichage en conversations** (§5) — fait
+  - Dictionnaire `uid dossier → bool` (`conversations.<compte>/<dossier>`) dans les préférences, lu à la sélection du dossier et bouton à bascule dans le ruban Affichage.
 - [x] **Marquer / démarquer comme indésirable** (§8) — fait
   - Déplacement vers / depuis le dossier _Indésirables_ avec la fonction de déplacement existante ; entrée dans le menu contextuel et le ruban.
 - [ ] **Autosave du brouillon** (§7)

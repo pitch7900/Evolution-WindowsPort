@@ -433,7 +433,7 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
   - [ ] Regroupement par `Message-ID` / `In-Reply-To` / `References` (`CamelFolderThread`), repli sur l'objet normalisé « RE: / TR: »
   - [ ] Fil réductible / développable, nombre de messages et de non lus
   - [ ] 🟠 Inclure les messages d'autres dossiers (réponses envoyées)
-  - [ ] 🟢 Choix mémorisé par dossier
+  - [x] 🟢 Choix mémorisé par dossier : préférence booléenne `conversations.<compte>/<dossier>` et bouton à bascule dans le ruban Affichage
 - [ ] 🟡 **Paramètres de conversation** : expéditeurs au-dessus de l'objet, toujours développer la conversation sélectionnée, retrait classique
 
 ### Boîte de réception Prioritaire

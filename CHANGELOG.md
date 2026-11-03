@@ -20,6 +20,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 - **Quickwin — Importance haute et basse des messages (TODO section 7, QUICKWINS)** : boutons d'importance haute (!) et basse (↓) ajoutés dans la barre d'outils de `ComposeWindow` avec bascule exclusive, transmission de la propriété `importance` à l'envoi, affichage d'icônes visuelles dans la liste des messages (exclamation rouge pour haute priorité, flèche bleue pour basse priorité) et couverture par tests unitaires dans `tests/unit/test_helpers.cpp`.
 
+- **Quickwin — Affichage en conversations mémorisé par dossier (TODO section 5, QUICKWINS)** : bouton à bascule « Conversations » ajouté dans le ruban Courrier › Affichage, persistance de l'état individuel par dossier sous la clé `conversations.<compte>/<dossier>`, synchronisation automatique lors du changement de dossier et couverture par test unitaire dans `tests/unit/test_settings.cpp`.
+
 - **Quickwin — Courrier indésirable (TODO section 8)** : bouton _Indésirable_ dans le ruban et entrée du menu contextuel des messages ; déplace la sélection vers le dossier Indésirables du compte, ou vers la Boîte de réception si elle s'y trouve déjà.
 
 - **Lot 1 — Encapsulation Job Object et arrêt complet des processus d'arrière-plan (TODO lignes 156-160)** :

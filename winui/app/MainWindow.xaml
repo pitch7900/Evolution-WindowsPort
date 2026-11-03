@@ -583,6 +583,12 @@
 
                         </AppBarButton>
 
+                        <AppBarToggleButton x:Name="RibbonMailConversationToggle" Label="Conversations"
+                                            Click="OnRibbonConversationToggled"
+                                            ToolTipService.ToolTip="Afficher les courriels sous forme de conversations pour ce dossier">
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE8BD;" /></AppBarToggleButton.Icon>
+                        </AppBarToggleButton>
+
                         <AppBarSeparator />
 
                         <AppBarButton x:Name="RibbonFolderPaneButton" Label="Volet des dossiers"

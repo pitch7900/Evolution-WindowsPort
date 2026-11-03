@@ -394,6 +394,12 @@ static void test_settings_mail_read_and_security_options(void)
         mgr.SetNumber("mail.mark-read-delay-seconds", 15.0);
         ASSERT_EQ_INT(15, static_cast<int>(mgr.GetNumber("mail.mark-read-delay-seconds", 5.0)));
 
+        /* Mode conversations memorise par dossier */
+        ASSERT_EQ_INT(0, mgr.GetBoolean("conversations.acc123/INBOX", false));
+        mgr.SetBoolean("conversations.acc123/INBOX", true);
+        ASSERT_EQ_INT(1, mgr.GetBoolean("conversations.acc123/INBOX", false));
+        ASSERT_EQ_INT(0, mgr.GetBoolean("conversations.acc123/Sent", false));
+
         /* Zoom de lecture et mode texte brut securise */
         ASSERT_EQ_INT(100, static_cast<int>(mgr.GetNumber("mail.reading-zoom", 100.0)));
         mgr.SetNumber("mail.reading-zoom", 125.0);

@@ -374,6 +374,54 @@ namespace winrt::EvolutionWin::implementation
         UpdateSortHeader();
     }
 
+    /**
+     * @brief Charge la préférence d'affichage en conversations pour le dossier actif.
+     */
+    void MainWindow::LoadFolderConversations()
+    {
+        if (m_account.empty() || m_folder.empty())
+        {
+            m_conversations_enabled = false;
+        }
+        else
+        {
+            m_conversations_enabled = ::EvolutionWin::Settings::Instance().GetBoolean(
+                L"conversations." + m_account + L"/" + m_folder, false);
+        }
+
+        if (auto toggle = RibbonMailConversationToggle())
+            toggle.IsChecked(m_conversations_enabled);
+    }
+
+    /**
+     * @brief Enregistre la préférence d'affichage en conversations pour le dossier actif.
+     * @param enabled Indique si les courriels doivent être regroupés en fils de discussion.
+     */
+    void MainWindow::SaveFolderConversations(bool enabled)
+    {
+        m_conversations_enabled = enabled;
+        if (!m_account.empty() && !m_folder.empty())
+        {
+            ::EvolutionWin::Settings::Instance().SetBoolean(
+                L"conversations." + m_account + L"/" + m_folder, enabled);
+        }
+        ReapplyMessageFilters();
+    }
+
+    /**
+     * @brief Gestionnaire du bouton à bascule « Conversations » du ruban.
+     * @param sender Bouton émetteur.
+     * @param args Arguments d'événement.
+     */
+    void MainWindow::OnRibbonConversationToggled(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (auto toggle = RibbonMailConversationToggle())
+        {
+            bool is_checked = toggle.IsChecked() && toggle.IsChecked().Value();
+            SaveFolderConversations(is_checked);
+        }
+    }
+
     void MainWindow::SaveFolderSort()
     {
         if (!m_account.empty() && !m_folder.empty())

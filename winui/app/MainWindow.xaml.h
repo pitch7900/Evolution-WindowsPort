@@ -44,6 +44,12 @@ namespace winrt::EvolutionWin::implementation
         void OnCloseAllSecondaryWindowsClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void CloseAllSecondaryWindows();
         void OnRibbonCompactDensityToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        /**
+         * @brief Bascule l'affichage en conversations pour le dossier actif.
+         * @param sender Bouton à bascule émetteur.
+         * @param args Arguments d'événement.
+         */
+        void OnRibbonConversationToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void ApplyCompactDensity(bool compact);
         void OnSearchAccelerator(Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender, Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
         void OnSearchKeyDown(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args);
@@ -584,6 +590,9 @@ namespace winrt::EvolutionWin::implementation
         bool m_sort_descending{ true };
         void LoadFolderSort();
         void SaveFolderSort();
+        bool m_conversations_enabled{ false };
+        void LoadFolderConversations();
+        void SaveFolderConversations(bool enabled);
         void UpdateSortHeader();
         void SortMessages(std::vector<Windows::Data::Json::JsonObject>& messages);
         void RebuildQuickAccess();
