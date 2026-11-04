@@ -10991,6 +10991,25 @@ core_list_sources_run (EvoCore *core,
 			builder_add_string (builder, "account_email", source_acc_email ? source_acc_email : "");
 			builder_add_string (builder, "color", color);
 			g_free (source_acc_email);
+			{
+				/* protocole de la collection (microsoft365, ews, google...) et nom du
+				 * groupe de calendriers Exchange Online (« Équipe de ... ») */
+				gchar *collection_backend = NULL, *group_name = NULL;
+
+				if (parent && e_source_has_extension (parent, E_SOURCE_EXTENSION_COLLECTION))
+					collection_backend = e_source_backend_dup_backend_name (E_SOURCE_BACKEND (
+						e_source_get_extension (parent, E_SOURCE_EXTENSION_COLLECTION)));
+				if (e_source_has_extension (source, "Microsoft365 Folder")) {
+					GObject *folder_ext = G_OBJECT (e_source_get_extension (source, "Microsoft365 Folder"));
+
+					if (g_object_class_find_property (G_OBJECT_GET_CLASS (folder_ext), "group-name"))
+						g_object_get (folder_ext, "group-name", &group_name, NULL);
+				}
+				builder_add_string (builder, "backend", collection_backend ? collection_backend : "");
+				builder_add_string (builder, "group_name", group_name ? group_name : "");
+				g_free (collection_backend);
+				g_free (group_name);
+			}
 			json_builder_set_member_name (builder, "default");
 			json_builder_add_boolean_value (builder, default_source && e_source_equal (source, default_source));
 			json_builder_end_object (builder);
@@ -11585,6 +11604,17 @@ core_refresh_calendars_run (EvoCore *core,
 			    GError **error)
 {
 	GList *sources, *link;
+
+	/* demande d'abord aux collections (Exchange Online, Google...) de
+	 * redécouvrir leurs agendas, groupes d'agendas compris */
+	sources = e_source_registry_list_enabled (core->registry, E_SOURCE_EXTENSION_COLLECTION);
+	for (link = sources; link; link = g_list_next (link)) {
+		ESource *collection = link->data;
+
+		if (e_source_collection_get_calendar_enabled (e_source_get_extension (collection, E_SOURCE_EXTENSION_COLLECTION)))
+			e_source_registry_refresh_backend_sync (core->registry, e_source_get_uid (collection), core->cancellable, NULL);
+	}
+	g_list_free_full (sources, g_object_unref);
 
 	sources = e_source_registry_list_enabled (core->registry, E_SOURCE_EXTENSION_CALENDAR);
 	for (link = sources; link && !g_cancellable_is_cancelled (core->cancellable); link = g_list_next (link)) {

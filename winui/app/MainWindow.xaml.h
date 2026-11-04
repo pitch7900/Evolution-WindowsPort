@@ -646,6 +646,7 @@ namespace winrt::EvolutionWin::implementation
         Windows::Data::Json::JsonArray m_calendar_sources{ nullptr };
         void LoadCalendarSources();
         fire_and_forget ShowAddCalendarDialogAsync();
+        fire_and_forget ShowAddExchangeCalendarDialogAsync();
         /* carnets d'adresses affichés (contacts.visible) et actif (contacts.active) */
         Windows::Data::Json::JsonArray m_contact_books{ nullptr };
         void LoadContactBooks();

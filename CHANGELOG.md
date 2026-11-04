@@ -22,6 +22,7 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   - Boîte de dialogue modale `ShowEditContactDialogAsync` avec préremplissage des données actuelles du contact et rafraîchissement immédiat de la liste après sauvegarde.
   - Couverture par test unitaire de contrat JSON dans `tests/unit/test_evo_core_contracts.c` et validation de l'ABI DLL (68 symboles exportés).
 
+- **Groupes de calendriers Exchange Online / Microsoft 365 (TODO section 13)** : l'extension de source `Microsoft365 Folder` conserve le nom du groupe de calendriers Graph (`group-name`) ; `evo_core_list_sources` expose `backend` et `group_name` ; l'actualisation des agendas redécouvre d'abord les calendriers côté serveur ; le volet des calendriers regroupe les sources par compte et par groupe (« Équipe de ... ») et la boîte « Depuis Exchange Online… » permet de cocher les calendriers à afficher.
 ### Prévu (cf. ROADMAP.md)
 
 - **Comptes & Services distants (TODO section 3, ROADMAP v0.9.8)** : validation de bout en bout de la synchronisation des calendriers et contacts Microsoft 365 (Microsoft Graph) et Google Workspace (Google People API / CardDAV).

@@ -730,10 +730,10 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
 
 Constat : sur un compte Exchange Online / Microsoft 365 (ex. EVAM), EvolutionWin n'affiche aujourd'hui qu'une liste plate et très partielle de calendriers découverts (quelques collègues seulement sous le compte), alors qu'Outlook reflète l'intégralité des calendriers organisés en groupes structurés (_Mes calendriers_, _Équipe : Manager_, _Équipe : Mes collaborateurs direct reports_, _Autres calendriers_, _Salles_).
 
-- [ ] 🟠 **Découverte exhaustive et reflet fidèle de tous les calendriers Exchange Online / M365 (Graph / EWS)** :
-  - [ ] 🟠 **Exploration complète de l'API Graph / EWS** : interroger tous les groupes de calendriers (`GET /me/calendarGroups` et `GET /me/calendarGroups/{id}/calendars` sous Microsoft Graph, ou `FindFolder` / `CalendarFolder` avec `calendarGroup` sous EWS) pour récupérer l'ensemble des calendriers personnels, souscrits, partagés, d'équipe et de ressources (salles de réunion), sans omission.
-  - [ ] 🟡 **Arborescence hiérarchique par groupes dans le volet latéral** : reproduire fidèlement l'organisation d'Outlook avec groupes repliables/dépliables (_Mes calendriers_, _Équipe : Nom du manager_, _Équipe : Mes collaborateurs_, _Autres calendriers_, _Salles_), au lieu d'une simple liste plate.
-  - [ ] 🟢 **Sélection et couleurs individuelles** : case à cocher par calendrier, couleur d'accent propre conservée, mémorisation des calendriers cochés entre les sessions.
+- [x] 🟠 **Découverte exhaustive et reflet fidèle de tous les calendriers Exchange Online / M365 (Graph / EWS)** :
+  - [x] 🟠 **Exploration complète de l'API Graph / EWS** : interroger tous les groupes de calendriers (`GET /me/calendarGroups` et `GET /me/calendarGroups/{id}/calendars` sous Microsoft Graph, ou `FindFolder` / `CalendarFolder` avec `calendarGroup` sous EWS) pour récupérer l'ensemble des calendriers personnels, souscrits, partagés, d'équipe et de ressources (salles de réunion), sans omission.
+  - [x] 🟡 **Arborescence hiérarchique par groupes dans le volet latéral** : reproduire fidèlement l'organisation d'Outlook avec groupes repliables/dépliables (_Mes calendriers_, _Équipe : Nom du manager_, _Équipe : Mes collaborateurs_, _Autres calendriers_, _Salles_), au lieu d'une simple liste plate.
+  - [x] 🟢 **Sélection et couleurs individuelles** : case à cocher par calendrier, couleur d'accent propre conservée, mémorisation des calendriers cochés entre les sessions.
   - [ ] 🟡 **Gestion des groupes de calendriers** : création, renommage et suppression de groupes de calendriers répercutés sur le serveur Exchange Online.
 
 - Calendriers de groupes Microsoft 365 : cf. « Groupes Microsoft 365 », §7
