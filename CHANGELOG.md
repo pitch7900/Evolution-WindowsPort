@@ -10,6 +10,14 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
+## [0.9.8] — en cours
+
+### Prévu (cf. ROADMAP.md)
+
+- **Comptes & Services distants (TODO section 3, ROADMAP v0.9.8)** : validation de bout en bout de la synchronisation des calendriers et contacts Microsoft 365 (Microsoft Graph) et Google Workspace (Google People API / CardDAV).
+- **Calendrier & Événements (TODO section 13, ROADMAP v0.9.8)** : fenêtre d'édition d'événement complète, gestion des fuseaux horaires, alertes et actualisation bidirectionnelle.
+- **Application & Déploiement (TODO section 1, ROADMAP v0.9.8)** : téléchargement en tâche de fond des mises à jour MSI depuis GitHub Releases avec vérification d'intégrité SHA-256.
+
 ## [0.9.7] — 2026-11-04
 
 ### Ajouté
