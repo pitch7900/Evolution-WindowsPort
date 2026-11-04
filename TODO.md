@@ -458,8 +458,8 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
   - [ ] **Rendu sécurisé, sans exécution de code actif** :
     - [x] 🟢 Images (PNG, JPEG, GIF, BMP, WebP, SVG converti en image fixe) : décodage natif (`BitmapImage` / WIC), SVG sans scripts
     - [x] 🟢 Texte, CSV, JSON, XML, code : affichage en texte brut (jamais interprété)
-    - [ ] 🟡 PDF : rendu page par page en images avec `Windows.Data.Pdf` (aucun JavaScript, formulaire, lien de lancement ni pièce jointe imbriquée exécutés), zoom et défilement
-    - [ ] 🟡 HTML / EML / MSG joint : WebView2 isolé avec scripts désactivés et contenu distant bloqué (même règles que le lecteur, §6)
+    - [x] 🟡 PDF : rendu page par page en images avec `Windows.Data.Pdf` (aucun JavaScript, formulaire, lien de lancement ni pièce jointe imbriquée exécutés), zoom et défilement
+    - [x] 🟡 HTML / EML / MSG joint : WebView2 isolé avec scripts désactivés et contenu distant bloqué (même règles que le lecteur, §6)
     - [ ] 🟠 Office (Word, Excel, PowerPoint, OpenDocument) : rendu en lecture seule **sans macros ni contenu actif** — conversion en PDF / image hors processus, ou gestionnaires d'aperçu Windows (`IPreviewHandler`) exécutés dans un processus isolé à faibles privilèges ; macros VBA, objets OLE / ActiveX, liens externes et DDE jamais exécutés
     - [x] 🟢 Types non pris en charge ou à risque (`.exe`, `.js`, `.vbs`, `.ps1`, `.lnk`, `.hta`, archives…) : pas d'aperçu, simple fiche (nom, type, taille) avec avertissement
   - [x] 🟡 Fichiers d'aperçu temporaires dans un dossier privé, supprimés à la fermeture ; taille maximale configurable pour l'aperçu

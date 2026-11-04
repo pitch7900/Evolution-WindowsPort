@@ -1713,6 +1713,18 @@
 
                                 </ScrollViewer>
 
+                                <!-- PDF : pages rendues en images (Windows.Data.Pdf) -->
+
+                                <ScrollViewer x:Name="PreviewPdfScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+
+                                    <StackPanel x:Name="PreviewPdfPages" Spacing="12" Margin="16" HorizontalAlignment="Center" />
+
+                                </ScrollViewer>
+
+                                <!-- HTML : WebView2 isole, sans script ni contenu distant -->
+
+                                <controls:WebView2 x:Name="PreviewWeb" Visibility="Collapsed" RequestedTheme="Light" DefaultBackgroundColor="White" />
+
                                 <!-- Fichier non supporté / fiche sécurisée -->
 
                                 <StackPanel x:Name="PreviewUnsupported" Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">

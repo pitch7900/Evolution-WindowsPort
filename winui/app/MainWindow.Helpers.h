@@ -774,6 +774,8 @@ namespace EvolutionWin::Helpers
     {
         Image,       ///< Fichier image décodable directement par BitmapImage
         Text,        ///< Fichier texte brut, code source, CSV, JSON, logs
+        Pdf,         ///< Document PDF rendu page par page (Windows.Data.Pdf)
+        Html,        ///< Page HTML affichée dans un WebView2 isolé (sans script ni contenu distant)
         Unsupported  ///< Type non pris en charge ou exécutable à risque
     };
 
@@ -797,8 +799,16 @@ namespace EvolutionWin::Helpers
             return AttachmentPreviewKind::Image;
         }
 
+        // PDF : rendu en images, aucun code actif exécuté
+        if (ext == L".pdf")
+            return AttachmentPreviewKind::Pdf;
+
+        // HTML : WebView2 isolé (scripts désactivés, contenu distant bloqué)
+        if (ext == L".html" || ext == L".htm")
+            return AttachmentPreviewKind::Html;
+
         // Fichiers texte brut affichés sans interprétation de code
-        if (ext == L".txt" || ext == L".csv" || ext == L".tsv" || ext == L".log" ||
+        if (ext == L".eml" || ext == L".txt" || ext == L".csv" || ext == L".tsv" || ext == L".log" ||
             ext == L".json" || ext == L".xml" || ext == L".ini" || ext == L".cfg" ||
             ext == L".conf" || ext == L".md" || ext == L".patch" || ext == L".diff" ||
             ext == L".yaml" || ext == L".yml" || ext == L".sql" || ext == L".c" ||

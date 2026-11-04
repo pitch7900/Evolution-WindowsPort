@@ -18,6 +18,8 @@
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.ApplicationModel.Activation.h>
 #include <winrt/Windows.Data.Json.h>
+#include <winrt/Windows.Data.Pdf.h>
+#include <winrt/Windows.Storage.Streams.h>
 #include <winrt/Windows.Globalization.DateTimeFormatting.h>
 #include <winrt/Windows.Globalization.NumberFormatting.h>
 #include <winrt/Microsoft.UI.h>

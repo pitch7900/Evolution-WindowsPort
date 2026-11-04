@@ -15,6 +15,7 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 ### Ajouté
 
 - Dossiers : les dossiers spéciaux sont affichés en tête dans l'ordre Boîte de réception, Éléments envoyés, Brouillons (puis Corbeille, Archives, Indésirables), avec leurs icônes distinctives.
+- **Aperçu PDF et HTML des pièces jointes (ROADMAP v1.0.0, TODO section 6)** : les PDF sont rendus page par page en images (`Windows.Data.Pdf`, 60 pages max, aucun code actif) ; les pages HTML / HTM s'affichent dans un WebView2 isolé (scripts désactivés, navigation et ressources distantes bloquées par CSP) ; les `.eml` joints s'affichent en texte brut. Nouveaux types `Pdf` et `Html` dans `DetectAttachmentPreviewKind`, 1 test unitaire de plus.
 
 ## [0.9.8] — 2026-11-04
 

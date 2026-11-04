@@ -4691,6 +4691,14 @@ enum class AttachmentPreviewKind
 
 
 
+    Pdf,
+
+
+
+    Html,
+
+
+
     Unsupported
 
 
@@ -4767,7 +4775,23 @@ static AttachmentPreviewKind DetectAttachmentPreviewKind(std::wstring_view filen
 
 
 
-    if (ext == L".txt" || ext == L".csv" || ext == L".tsv" || ext == L".log" ||
+    if (ext == L".pdf")
+
+
+
+        return AttachmentPreviewKind::Pdf;
+
+
+
+    if (ext == L".html" || ext == L".htm")
+
+
+
+        return AttachmentPreviewKind::Html;
+
+
+
+    if (ext == L".eml" || ext == L".txt" || ext == L".csv" || ext == L".tsv" || ext == L".log" ||
 
 
 
@@ -4910,6 +4934,40 @@ static void test_attachment_preview_kind(void)
     TEST_CASE_END();
 
 
+
+
+
+
+
+    TEST_CASE("DetectAttachmentPreviewKind: PDF, HTML et EML");
+
+
+
+    {
+
+
+
+        ASSERT_TRUE(DetectAttachmentPreviewKind(L"facture.PDF") == AttachmentPreviewKind::Pdf);
+
+
+
+        ASSERT_TRUE(DetectAttachmentPreviewKind(L"page.html") == AttachmentPreviewKind::Html);
+
+
+
+        ASSERT_TRUE(DetectAttachmentPreviewKind(L"page.htm") == AttachmentPreviewKind::Html);
+
+
+
+        ASSERT_TRUE(DetectAttachmentPreviewKind(L"message.eml") == AttachmentPreviewKind::Text);
+
+
+
+    }
+
+
+
+    TEST_CASE_END();
 
 
 
