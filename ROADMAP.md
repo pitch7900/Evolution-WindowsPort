@@ -30,7 +30,7 @@ flowchart LR
 - [x] **Gestion des contacts en ligne** : modification et synchronisation bidirectionnelle des fiches contacts distantes (`#demo-gestion-contacts`).
 
 ### 2. Calendrier (§13)
-- [ ] **Fenêtre d\'édition d\'événement** : fenêtre modifiable complète pour créer, modifier et supprimer des événements (dates, participants, lieu, description).
+- [x] **Fenêtre d\'édition d\'événement** : fenêtre modifiable complète pour créer, modifier et supprimer des événements (dates, participants, lieu, description).
 - [x] **Prise en charge des fuseaux horaires et alertes** : enregistrement des rappels d\'événements et prise en compte propre des fuseaux horaires.
 - [x] **Actualisation manuelle et automatique** : bouton d\'actualisation et intégration des modifications effectuées sur d\'autres clients (Outlook Web, Google Agenda).
 
