@@ -45,7 +45,7 @@ flowchart LR
 > **Objectif :** Finaliser tous les points indispensables de la liste de priorités Démo et offrir une expérience utilisateur fluide au quotidien.
 
 ### 1. Mail & Lecture (§5, §6, §7)
-- [ ] **Regroupement par discussion** : affichage hiérarchique sous forme de conversations / fils de discussion (`#demo-conversations`).
+- [x] **Regroupement par discussion** : affichage hiérarchique sous forme de conversations / fils de discussion (`#demo-conversations`).
 - [ ] **Gestion des dossiers** : réorganisation ordonnée des dossiers spéciaux en tête (Boîte de réception, Envoyés, Brouillons) avec icônes distinctives (`#demo-dossiers`).
 - [ ] **Pièces jointes** : prévisualisation intégrée, enregistrement groupé et glisser-déposer sortant.
 - [ ] **Suivi des messages** : options de marquage d\'importance, drapeaux avec date d\'échéance et rappels associés.
