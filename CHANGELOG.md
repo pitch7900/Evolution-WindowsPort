@@ -10,8 +10,8 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
-## [0.9.8] — en cours
-
+## [0.9.8] — 2026-11-04
+`n> Note : la validation de bout en bout de la collection `microsoft365` (calendriers et contacts) exige un tenant réel et reste à faire ; la création de la collection et les paramètres sont déjà en place.`n
 ### Ajouté
 
 - Calendrier : bouton _Actualiser_ qui synchronise les agendas distants (`evo_core_refresh_calendars`) et sélecteur de rappel (VALARM) dans la fenêtre d'événement.
