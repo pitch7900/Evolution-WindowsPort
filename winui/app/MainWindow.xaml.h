@@ -582,6 +582,10 @@ namespace winrt::EvolutionWin::implementation
         bool m_startup_synced{ false };
         hstring m_update_tag;	/* version plus récente disponible (vide : aucune connue) */
         hstring m_update_page;
+        hstring m_update_msi_url;	/* installeur MSI de la version plus récente */
+        hstring m_update_msi_name;
+        hstring m_update_sha_url;	/* fichier .sha256 correspondant */
+        fire_and_forget DownloadAndInstallUpdateAsync();
         /* fenêtres indépendantes de lecture ouvertes par UID */
         std::map<std::wstring, winrt::EvolutionWin::MessageWindow> m_open_message_windows;
         /* fenêtres de rédaction ouvertes */

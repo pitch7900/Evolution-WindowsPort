@@ -138,8 +138,8 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] **Vérification de version** : dernière Release lue par l'API `https://api.github.com/repos/pitch7900/Evolution-WindowsPort/releases/latest` (champ `tag_name` pour la version, `assets` pour l'URL du MSI et de son `.sha256`), comparée à la version compilée dans l'exécutable (comparaison numérique `x.y.z`, pas textuelle) ; préversions via `releases` pour le canal « préversions »
   - [x] Fréquence : au démarrage (après quelques minutes, pour ne pas ralentir la relève) puis une fois par jour ; bouton _Rechercher les mises à jour_ dans la boîte « À propos »
   - [x] **Notification** de la nouvelle version (bandeau / toast) avec les nouveautés extraites du [CHANGELOG.md](CHANGELOG.md), boutons _Installer maintenant_, _Plus tard_, _Ignorer cette version_
-  - [ ] **Téléchargement automatique** du MSI joint à la Release GitHub (`Evolution-<version>-x64.msi`) en arrière-plan, avec progression dans la barre d'état (§4), dans `%LOCALAPPDATA%\EvolutionWin\Updates`
-  - [ ] **Vérification d'intégrité avant installation** : empreinte SHA-256 publiée à côté du MSI (`.sha256`) et signature Authenticode du MSI (`WinVerifyTrust`, éditeur attendu) ; refus d'installer si la vérification échoue
+  - [x] **Téléchargement automatique** du MSI joint à la Release GitHub (`Evolution-<version>-x64.msi`) en arrière-plan, avec progression dans la barre d'état (§4), dans `%LOCALAPPDATA%\EvolutionWin\Updates`
+  - [x] **Vérification d'intégrité avant installation** : empreinte SHA-256 publiée à côté du MSI (`.sha256`) et signature Authenticode du MSI (`WinVerifyTrust`, éditeur attendu) ; refus d'installer si la vérification échoue
   - [ ] **Installation** : fermeture propre de l'application (boîte d'envoi vidée, synchronisation terminée), lancement de `msiexec /i … /passive` (élévation UAC, installation par machine), redémarrage automatique d'EvolutionWin à la fin
   - [ ] Nettoyage des MSI téléchargés après installation réussie
   - [ ] **Paramètres** (§19) : mise à jour automatique / notification seulement / désactivée ; canal (versions stables, préversions)

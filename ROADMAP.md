@@ -35,8 +35,8 @@ flowchart LR
 - [x] **Actualisation manuelle et automatique** : bouton d\'actualisation et intégration des modifications effectuées sur d\'autres clients (Outlook Web, Google Agenda).
 
 ### 3. Application, installation & mises à jour (§1)
-- [ ] **Téléchargement automatique des mises à jour** : rapatriement en tâche de fond du MSI depuis GitHub Releases avec barre de progression.
-- [ ] **Contrôle d\'intégrité** : vérification de l\'empreinte SHA-256 et validation de la signature Authenticode avant installation.
+- [x] **Téléchargement automatique des mises à jour** : rapatriement en tâche de fond du MSI depuis GitHub Releases avec barre de progression.
+- [x] **Contrôle d\'intégrité** : vérification de l\'empreinte SHA-256 et validation de la signature Authenticode avant installation.
 
 ---
 

@@ -3,6 +3,17 @@
 #include "MainWindow.Helpers.h"
 #include "WindowIcon.h"
 #include "Settings.h"
+#include "UpdateIntegrity.h"
+
+#include <windows.h>
+#include <softpub.h>
+#include <wintrust.h>
+#include <bcrypt.h>
+#include <fstream>
+#include <filesystem>
+#include <memory>
+#pragma comment(lib, "wintrust.lib")
+#pragma comment(lib, "bcrypt.lib")
 
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
@@ -118,6 +129,9 @@ namespace
         hstring failure;	/* non vide si la vérification a échoué */
         hstring tag;	/* dernière version publiée (« v0.9.4 ») */
         hstring page;	/* page de cette version */
+        hstring msi_url;	/* installeur MSI joint à la version (vide : aucun) */
+        hstring msi_name;
+        hstring sha_url;	/* empreinte SHA-256 de l'installeur (fichier .sha256) */
         bool newer{ false };	/* plus récente que la version installée */
     };
 
@@ -149,6 +163,24 @@ namespace
             {
                 check.tag = release.GetNamedString(L"tag_name", L"");
                 check.page = release.GetNamedString(L"html_url", L"");
+                for (auto const& value : release.GetNamedArray(L"assets", JsonArray{}))
+                {
+                    auto asset = value.GetObject();
+                    std::wstring name{ asset.GetNamedString(L"name", L"") };
+                    hstring url = asset.GetNamedString(L"browser_download_url", L"");
+                    auto ends_with = [&name](std::wstring_view suffix)
+                    {
+                        return name.size() >= suffix.size() &&
+                            ::EvolutionWin::UpdateIntegrity::EqualsNoCase(std::wstring_view{ name }.substr(name.size() - suffix.size()), suffix);
+                    };
+                    if (ends_with(L".msi"))
+                    {
+                        check.msi_url = url;
+                        check.msi_name = hstring{ name };
+                    }
+                    else if (ends_with(L".msi.sha256"))
+                        check.sha_url = url;
+                }
                 if (check.tag.empty())
                     check.failure = L"version inconnue";
                 else
@@ -168,7 +200,8 @@ namespace
      * Paramètres :
      *   status : ligne sous le numéro de version
      *   banner : bandeau mis en évidence, ouvert si une nouvelle version existe */
-    void ShowUpdateResult(UpdateCheck const& check, TextBlock const& status, InfoBar const& banner)
+    void ShowUpdateResult(UpdateCheck const& check, TextBlock const& status, InfoBar const& banner,
+                          std::function<void()> const& install = nullptr)
     {
         if (!check.failure.empty())
         {
@@ -188,10 +221,20 @@ namespace
         banner.Message(L"Vous utilisez la version " EVO_VERSION_W L".");
         try
         {
-            HyperlinkButton download;
-            download.Content(box_value(L"Télécharger"));
-            download.NavigateUri(Uri{ check.page });
-            banner.ActionButton(download);
+            if (install && !check.msi_url.empty())
+            {
+                Button download;
+                download.Content(box_value(L"Télécharger et installer"));
+                download.Click([install](IInspectable const&, RoutedEventArgs const&) { install(); });
+                banner.ActionButton(download);
+            }
+            else
+            {
+                HyperlinkButton download;
+                download.Content(box_value(L"Télécharger"));
+                download.NavigateUri(Uri{ check.page });
+                banner.ActionButton(download);
+            }
         }
         catch (hresult_error const&) {}
         banner.IsOpen(true);
@@ -203,6 +246,185 @@ namespace
     Style LookupAboutStyle(wchar_t const* key)
     {
         return Application::Current().Resources().Lookup(box_value(key)).as<Style>();
+    }
+}
+
+namespace
+{
+    /* Résultat du téléchargement d'une mise à jour. */
+    struct UpdateDownload
+    {
+        std::wstring path;	/* installeur téléchargé */
+        std::wstring error;	/* non vide en cas d'échec */
+        bool cancelled{ false };
+    };
+
+    /* Empreinte SHA-256 incrémentale (CNG). */
+    class Sha256Stream
+    {
+    public:
+        Sha256Stream()
+        {
+            if (BCryptOpenAlgorithmProvider(&m_alg, BCRYPT_SHA256_ALGORITHM, nullptr, 0) == 0)
+                BCryptCreateHash(m_alg, &m_hash, nullptr, 0, nullptr, 0, 0);
+        }
+        ~Sha256Stream()
+        {
+            if (m_hash) BCryptDestroyHash(m_hash);
+            if (m_alg) BCryptCloseAlgorithmProvider(m_alg, 0);
+        }
+        Sha256Stream(Sha256Stream const&) = delete;
+        Sha256Stream& operator=(Sha256Stream const&) = delete;
+
+        /* Ajoute des octets à l'empreinte. */
+        void Append(const uint8_t* data, size_t size)
+        {
+            if (m_hash)
+                BCryptHashData(m_hash, const_cast<PUCHAR>(data), static_cast<ULONG>(size), 0);
+        }
+
+        /* Termine le calcul ; retourne l'empreinte hexadécimale ou une chaîne vide. */
+        std::wstring Finish()
+        {
+            unsigned char digest[32]{};
+            if (!m_hash || BCryptFinishHash(m_hash, digest, sizeof digest, 0) != 0)
+                return {};
+            return ::EvolutionWin::UpdateIntegrity::ToHex(digest, sizeof digest);
+        }
+
+    private:
+        BCRYPT_ALG_HANDLE m_alg{ nullptr };
+        BCRYPT_HASH_HANDLE m_hash{ nullptr };
+    };
+
+    /* États de la signature Authenticode d'un fichier. */
+    enum class SignatureState { Valid, Unsigned, Invalid };
+
+    /* Vérifie la signature Authenticode d'un fichier (WinVerifyTrust).
+     * Paramètres :
+     *   path : chemin du MSI */
+    SignatureState VerifyAuthenticode(std::wstring const& path)
+    {
+        WINTRUST_FILE_INFO file{};
+        file.cbStruct = sizeof file;
+        file.pcwszFilePath = path.c_str();
+
+        WINTRUST_DATA data{};
+        data.cbStruct = sizeof data;
+        data.dwUIChoice = WTD_UI_NONE;
+        data.fdwRevocationChecks = WTD_REVOKE_NONE;
+        data.dwUnionChoice = WTD_CHOICE_FILE;
+        data.pFile = &file;
+        data.dwStateAction = WTD_STATEACTION_VERIFY;
+
+        GUID action = WINTRUST_ACTION_GENERIC_VERIFY_V2;
+        LONG result = WinVerifyTrust(nullptr, &action, &data);
+        data.dwStateAction = WTD_STATEACTION_CLOSE;
+        WinVerifyTrust(nullptr, &action, &data);
+
+        if (result == 0)
+            return SignatureState::Valid;
+        if (static_cast<HRESULT>(result) == TRUST_E_NOSIGNATURE || static_cast<HRESULT>(result) == TRUST_E_PROVIDER_UNKNOWN ||
+            static_cast<HRESULT>(result) == TRUST_E_SUBJECT_FORM_UNKNOWN)
+            return SignatureState::Unsigned;
+        return SignatureState::Invalid;
+    }
+
+    /* Télécharge le MSI dans %LOCALAPPDATA%\EvolutionWin\updates en calculant
+     * son empreinte au fil du flux, la compare à celle du fichier .sha256
+     * publié, puis rend la main sur le thread de l'interface.
+     * Paramètres :
+     *   msi_url, sha_url : adresses des fichiers joints à la Release
+     *   msi_name         : nom du MSI
+     *   progress, status : barre et texte de progression
+     *   cancel           : indicateur d'annulation
+     *   done             : reçoit le résultat */
+    fire_and_forget RunUpdateDownload(hstring msi_url, hstring sha_url, hstring msi_name, ProgressBar progress,
+                                      TextBlock status, std::shared_ptr<bool> cancel,
+                                      std::function<void(UpdateDownload const&)> done)
+    {
+        apartment_context ui_thread;
+        UpdateDownload outcome;
+        try
+        {
+            Windows::Web::Http::HttpClient http;
+            http.DefaultRequestHeaders().UserAgent().ParseAdd(L"EvolutionWin/" EVO_VERSION_W);
+
+            /* empreinte publiée : obligatoire */
+            auto sha_response = co_await http.GetAsync(Uri{ sha_url });
+            hstring sha_text = co_await sha_response.Content().ReadAsStringAsync();
+            std::wstring expected = sha_response.IsSuccessStatusCode()
+                ? ::EvolutionWin::UpdateIntegrity::ParseSha256File(sha_text.c_str(), msi_name.c_str()) : std::wstring{};
+            if (expected.empty())
+                outcome.error = L"empreinte SHA-256 de la version introuvable";
+
+            if (outcome.error.empty())
+            {
+                wchar_t base[MAX_PATH]{};
+                DWORD length = GetEnvironmentVariableW(L"LOCALAPPDATA", base, MAX_PATH);
+                std::wstring dir = (length ? std::wstring{ base } : std::wstring{ L"." }) + L"\\EvolutionWin\\updates";
+                std::error_code ec;
+                std::filesystem::create_directories(dir, ec);
+                outcome.path = dir + L"\\" + std::wstring{ msi_name };
+
+                auto response = co_await http.GetAsync(Uri{ msi_url }, Windows::Web::Http::HttpCompletionOption::ResponseHeadersRead);
+                if (!response.IsSuccessStatusCode())
+                    outcome.error = L"réponse GitHub " + std::to_wstring(static_cast<int>(response.StatusCode()));
+                else
+                {
+                    uint64_t total = 0;
+                    if (auto length_ref = response.Content().Headers().ContentLength())
+                        total = length_ref.Value();
+                    auto stream = co_await response.Content().ReadAsInputStreamAsync();
+                    Windows::Storage::Streams::DataReader reader{ stream };
+                    reader.InputStreamOptions(Windows::Storage::Streams::InputStreamOptions::Partial);
+
+                    std::ofstream file(outcome.path, std::ios::binary | std::ios::trunc);
+                    Sha256Stream hash;
+                    uint64_t received = 0;
+                    std::vector<uint8_t> chunk;
+                    while (!*cancel)
+                    {
+                        uint32_t loaded = co_await reader.LoadAsync(65536);
+                        if (loaded == 0)
+                            break;
+                        chunk.resize(loaded);
+                        reader.ReadBytes(chunk);
+                        file.write(reinterpret_cast<const char*>(chunk.data()), static_cast<std::streamsize>(chunk.size()));
+                        hash.Append(chunk.data(), chunk.size());
+                        received += loaded;
+                        if (total > 0)
+                        {
+                            progress.IsIndeterminate(false);
+                            progress.Value(static_cast<double>(received) * 100.0 / static_cast<double>(total));
+                        }
+                        status.Text(L"Téléchargement : " + FormatFileSize(static_cast<int64_t>(received)) +
+                                    (total > 0 ? L" / " + FormatFileSize(static_cast<int64_t>(total)) : hstring{}));
+                    }
+                    file.close();
+
+                    if (*cancel)
+                    {
+                        outcome.cancelled = true;
+                        std::filesystem::remove(outcome.path, ec);
+                    }
+                    else if (!file || (total > 0 && received != total))
+                        outcome.error = L"téléchargement incomplet";
+                    else if (!::EvolutionWin::UpdateIntegrity::EqualsNoCase(hash.Finish(), expected))
+                    {
+                        outcome.error = L"l'empreinte SHA-256 ne correspond pas : fichier corrompu ou altéré, il a été supprimé";
+                        std::filesystem::remove(outcome.path, ec);
+                    }
+                }
+            }
+        }
+        catch (hresult_error const& e)
+        {
+            outcome.error = e.message().c_str();
+        }
+
+        co_await ui_thread;
+        done(outcome);
     }
 }
 
@@ -287,8 +509,15 @@ namespace winrt::EvolutionWin::implementation
             UpdateCheck known;
             known.tag = m_update_tag;
             known.page = m_update_page;
+            known.msi_url = m_update_msi_url;
+            known.msi_name = m_update_msi_name;
+            known.sha_url = m_update_sha_url;
             known.newer = true;
-            ShowUpdateResult(known, status, banner);
+            ShowUpdateResult(known, status, banner, [weak = get_weak()]
+            {
+                if (auto self = weak.get())
+                    self->DownloadAndInstallUpdateAsync();
+            });
             return;
         }
 
@@ -302,8 +531,15 @@ namespace winrt::EvolutionWin::implementation
             {
                 strong->m_update_tag = check.tag;
                 strong->m_update_page = check.page;
+                strong->m_update_msi_url = check.msi_url;
+                strong->m_update_msi_name = check.msi_name;
+                strong->m_update_sha_url = check.sha_url;
             }
-            ShowUpdateResult(check, status, banner);
+            ShowUpdateResult(check, status, banner, [weak = winrt::make_weak(strong)]
+            {
+                if (auto self = weak.get())
+                    self->DownloadAndInstallUpdateAsync();
+            });
         });
     }
 
@@ -353,6 +589,99 @@ namespace winrt::EvolutionWin::implementation
             btn_text.Text(L"Informations copiées !");
     }
 
+    /* Télécharge le MSI de la dernière version avec une barre de progression,
+     * contrôle son empreinte SHA-256 et sa signature Authenticode, puis lance
+     * l'installation (msiexec). Un installeur non signé n'est installé
+     * qu'après confirmation ; une signature invalide ou une empreinte
+     * différente interrompt la mise à jour. */
+    fire_and_forget MainWindow::DownloadAndInstallUpdateAsync()
+    {
+        auto strong = get_strong();
+        if (m_dialog_open || m_update_msi_url.empty() || !Content() || !Content().XamlRoot())
+            co_return;
+        if (m_update_sha_url.empty())
+        {
+            ShowStatus(L"Mise à jour : empreinte SHA-256 absente de la version, installation automatique refusée.", InfoBarSeverity::Warning);
+            co_return;
+        }
+        m_dialog_open = true;
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(L"Téléchargement de " + m_update_tag));
+        dialog.CloseButtonText(L"Annuler");
+
+        StackPanel panel;
+        panel.Spacing(8);
+        panel.MinWidth(380);
+        TextBlock status;
+        status.Text(L"Connexion à GitHub…");
+        ProgressBar progress;
+        progress.IsIndeterminate(true);
+        progress.Minimum(0);
+        progress.Maximum(100);
+        panel.Children().Append(status);
+        panel.Children().Append(progress);
+        dialog.Content(panel);
+
+        auto cancel = std::make_shared<bool>(false);
+        auto outcome = std::make_shared<UpdateDownload>();
+        hstring msi_url = m_update_msi_url, sha_url = m_update_sha_url, msi_name = m_update_msi_name;
+        dialog.CloseButtonClick([cancel](ContentDialog const&, ContentDialogButtonClickEventArgs const&) { *cancel = true; });
+        dialog.Opened([=](ContentDialog const& sender, ContentDialogOpenedEventArgs const&)
+        {
+            RunUpdateDownload(msi_url, sha_url, msi_name, progress, status, cancel,
+                [outcome, sender](UpdateDownload const& result)
+                {
+                    *outcome = result;
+                    sender.Hide();
+                });
+        });
+
+        co_await dialog.ShowAsync();
+        m_dialog_open = false;
+
+        if (outcome->cancelled || (*cancel && outcome->path.empty()))
+            co_return;
+        if (!outcome->error.empty())
+        {
+            ShowStatus(L"Mise à jour impossible : " + hstring{ outcome->error }, InfoBarSeverity::Error);
+            co_return;
+        }
+        if (outcome->path.empty())
+            co_return;
+
+        SignatureState signature = VerifyAuthenticode(outcome->path);
+        if (signature == SignatureState::Invalid)
+        {
+            std::error_code ec;
+            std::filesystem::remove(outcome->path, ec);
+            ShowStatus(L"Mise à jour refusée : la signature Authenticode de l'installeur n'est pas valide.", InfoBarSeverity::Error);
+            co_return;
+        }
+        if (signature == SignatureState::Unsigned)
+        {
+            ContentDialog confirm;
+            confirm.XamlRoot(Content().XamlRoot());
+            confirm.Title(box_value(L"Installeur non signé"));
+            confirm.Content(box_value(L"L'empreinte SHA-256 est correcte, mais l'installeur n'est pas signé (Authenticode). Installer quand même ?"));
+            confirm.PrimaryButtonText(L"Installer");
+            confirm.CloseButtonText(L"Annuler");
+            m_dialog_open = true;
+            auto answer = co_await confirm.ShowAsync();
+            m_dialog_open = false;
+            if (answer != ContentDialogResult::Primary)
+                co_return;
+        }
+
+        std::wstring arguments = L"/i \"" + outcome->path + L"\"";
+        auto launched = reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr, L"open", L"msiexec.exe", arguments.c_str(), nullptr, SW_SHOWNORMAL));
+        if (launched <= 32)
+            ShowStatus(L"Impossible de lancer l'installeur.", InfoBarSeverity::Error);
+        else
+            ShowStatus(L"Installation de " + m_update_tag + L" lancée.", InfoBarSeverity::Success);
+    }
+
     /* Au démarrage : vérifie en arrière-plan si une version plus récente est
      * publiée ; la fenêtre d'information n'apparaît qu'une fois par version. */
     void MainWindow::CheckForUpdateOnStartup()
@@ -363,6 +692,9 @@ namespace winrt::EvolutionWin::implementation
                 return;
             strong->m_update_tag = check.tag;
             strong->m_update_page = check.page;
+            strong->m_update_msi_url = check.msi_url;
+            strong->m_update_msi_name = check.msi_name;
+            strong->m_update_sha_url = check.sha_url;
             if (::EvolutionWin::Settings::Instance().GetString(UpdateNotifiedKey, L"") != check.tag)
                 strong->ShowUpdateDialogAsync();
         });
@@ -382,13 +714,25 @@ namespace winrt::EvolutionWin::implementation
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(L"Nouvelle version disponible"));
         dialog.Content(box_value(L"Evolution " + m_update_tag + L" est disponible. Vous utilisez la version " EVO_VERSION_W L"."));
-        dialog.PrimaryButtonText(L"Voir les détails");
+        bool can_install = !m_update_msi_url.empty();
+        if (can_install)
+        {
+            dialog.PrimaryButtonText(L"Télécharger et installer");
+            dialog.SecondaryButtonText(L"Voir les détails");
+        }
+        else
+            dialog.PrimaryButtonText(L"Voir les détails");
         dialog.CloseButtonText(L"Plus tard");
         dialog.DefaultButton(ContentDialogButton::Primary);
 
         auto result = co_await dialog.ShowAsync();
         m_dialog_open = false;
-        if (result == ContentDialogResult::Primary)
+        if (can_install && result == ContentDialogResult::Primary)
+        {
+            DownloadAndInstallUpdateAsync();
+            co_return;
+        }
+        if ((can_install && result == ContentDialogResult::Secondary) || (!can_install && result == ContentDialogResult::Primary))
         {
             Navigation().SelectedItem(Navigation().SettingsItem());
             SelectSettingsCategory(L"about");
