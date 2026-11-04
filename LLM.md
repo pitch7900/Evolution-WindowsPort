@@ -33,10 +33,12 @@ Ce document constitue le manuel de référence complet destiné à tout agent IA
 ```
 c:\Users\chris\VSCode\Evolution-WindowsPort\
 ├── VERSION                       # Numéro de version SemVer courante (ex: 0.9.7)
+├── ROADMAP.md                    # Feuille de route par jalons de versions (v0.9.8, v1.0.0...)
 ├── CHANGELOG.md                  # Historique des modifications (Keep a Changelog)
-├── TODO.md                       # Feuille de route détaillée et statut des tâches
-├── QUICKWINS.md                  # Tâches prioritaires à fort impact (toutes validées en 0.9.7)
+├── TODO.md                       # Référentiel exhaustif des spécifications et tâches
+├── QUICKWINS.md                  # Tâches prioritaires à fort impact (évolutif)
 ├── TESTS.md                      # Guide et spécification de la suite de tests
+├── locks/                        # Verrous locaux JSON anti-collision multi-agents (ignoré Git)
 │
 ├── winui/
 │   ├── core/                     # Moteur C (evo-core.dll)
@@ -185,14 +187,15 @@ Ce fichier `LLM.md` ne contient volontairement **aucun listing statique de tâch
 
 ### 7.1. Fichiers sources à lire obligatoirement :
 1. **[`VERSION`](VERSION)** : Indique la version SemVer courante du projet (ainsi que le nom de la branche de développement active, ex. `0.9.7`).
-2. **[`CHANGELOG.md`](CHANGELOG.md)** : Registre historique officiel listant l'ensemble des fonctionnalités déjà réalisées, testées et validées, regroupées par version.
-3. **[`QUICKWINS.md`](QUICKWINS.md)** : Liste des tâches prioritaires à fort impact utilisateur et faible coût d'implémentation. Ce fichier évolue régulièrement avec de nouveaux ajouts de Pierre ; l'agent doit toujours y traiter en priorité absolue les tâches ouvertes (`- [ ]`).
-4. **[`TODO.md`](TODO.md)** : Feuille de route globale et exhaustive du projet, détaillant les spécifications complètes, les contraintes métier et l'état d'avancement de chaque module. Pierre y ajoute régulièrement de nouvelles fonctionnalités à développer.
+2. **[`ROADMAP.md`](ROADMAP.md)** : **Feuille de route stratégique par jalons de version** (v0.9.8, v1.0.0, v1.1.0, etc.). Elle indique à l'agent IA **quelles tâches de `TODO.md` traiter en priorité** pour la version cible en cours.
+3. **[`CHANGELOG.md`](CHANGELOG.md)** : Registre historique officiel listant l'ensemble des fonctionnalités déjà réalisées, testées et validées, regroupées par version.
+4. **[`QUICKWINS.md`](QUICKWINS.md)** : Liste des tâches prioritaires à fort impact utilisateur et faible coût d'implémentation. Ce fichier évolue régulièrement avec de nouveaux ajouts de Pierre ; l'agent doit toujours y traiter en priorité absolue les tâches ouvertes (`- [ ]`).
+5. **[`TODO.md`](TODO.md)** : Référentiel global et exhaustif du projet, détaillant les spécifications complètes, les contraintes métier et l'état d'avancement de chaque module. Pierre y ajoute régulièrement de nouvelles fonctionnalités à développer.
 
 ### 7.2. Règles de traitement des tâches pour l'agent IA :
-- **Identification des besoins** : L'agent doit rechercher les tâches **non cochées** (`- [ ]`) en consultant en priorité `QUICKWINS.md`, puis les sections ouvertes de `TODO.md`.
+- **Identification des besoins** : L'agent consulte d'abord [`ROADMAP.md`](ROADMAP.md) pour identifier les objectifs du jalon de version actif, puis recherche les tâches **non cochées** (`- [ ]`) correspondantes dans [`QUICKWINS.md`](QUICKWINS.md) et [`TODO.md`](TODO.md).
 - **Mise à jour obligatoire lors de la complétion** :
-  - Dès qu'une tâche est développée et validée par la suite de tests (`tools\run-tests.bat`), elle doit **obligatoirement être cochée** (`- [x]`) dans le fichier source (`QUICKWINS.md` et/ou `TODO.md`).
+  - Dès qu'une tâche est développée et validée par la suite de tests (`tools\run-tests.bat`), elle doit **obligatoirement être cochée** (`- [x]`) dans les fichiers sources concernés ([`ROADMAP.md`](ROADMAP.md), [`QUICKWINS.md`](QUICKWINS.md) et/ou [`TODO.md`](TODO.md)).
   - L'entrée correspondante doit **obligatoirement être consignée dans [`CHANGELOG.md`](CHANGELOG.md)** sous la section `## [<version>] — en cours` avec une description claire de l'apport fonctionnel et technique.
   - La tâche fait l'objet d'un **commit atomique dédié** avant de passer à la tâche suivante.
 
@@ -207,22 +210,31 @@ Plusieurs agents IA indépendants peuvent travailler **en parallèle sur la mach
 
 ### 8.1. Registre local des verrous (`locks/`)
 Chaque agent actif signale sa tâche en créant directement sur disque un fichier JSON :
-`locks/<nom_agent>_<identifiant_tache>.json`
+`locks/<agent_id>_<identifiant_tache>.json`
 
-**Exemple de structure d'un verrou :**
+**Format JSON standardisé obligatoire pour tout verrou :**
 ```json
 {
-  "agent_id": "Agent-Calendar-1",
-  "task": "TODO l.648 - Recherche dans le calendrier",
+  "agent_id": "Agent-Alpha",
+  "task_ref": "ROADMAP.md §1 (v0.9.8) / TODO l.328",
+  "description": "Validation de la synchronisation calendrier/contacts Microsoft 365",
   "files": [
     "winui/app/MainWindow.Calendar.cpp",
-    "winui/app/MainWindow.Events.cpp",
-    "winui/app/MainWindow.Helpers.h"
+    "winui/app/MainWindow.Contacts.cpp",
+    "winui/app/MainWindow.Sources.cpp"
   ],
-  "scope_details": "Fonctions MatchCalendarEvent et champ de recherche CalendarSearchBox",
-  "started_at": "2026-11-03T15:20:00Z"
+  "functions_or_sections": "LoadSourcesAsync, SyncM365Calendars, UpdateContactCards",
+  "started_at": "2026-11-04T07:30:00Z"
 }
 ```
+
+**Description des champs JSON :**
+- `agent_id` *(chaîne)* : identifiant unique de l'agent qui travaille.
+- `task_ref` *(chaîne)* : référence explicite à la tâche dans `ROADMAP.md`, `TODO.md` ou `QUICKWINS.md`.
+- `description` *(chaîne)* : court résumé en français de l'objectif fonctionnel.
+- `files` *(tableau de chaînes)* : liste exhaustive des fichiers du dépôt que l'agent s'apprête à modifier.
+- `functions_or_sections` *(chaîne)* : noms des méthodes, classes ou portions de code affectées pour alerter les autres agents sur le périmètre précis.
+- `started_at` *(chaîne ISO 8601)* : horodatage UTC de début de la prise en charge.
 
 ### 8.2. Protocole obligatoire à chaque tâche (Cycle en 5 étapes) :
 
