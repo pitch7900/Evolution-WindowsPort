@@ -41,9 +41,33 @@ c:\Users\chris\VSCode\Evolution-WindowsPort\
 ├── locks/                        # Verrous locaux JSON anti-collision multi-agents (ignoré Git)
 │
 ├── winui/
-│   ├── core/                     # Moteur C (evo-core.dll)
-│   │   ├── evo-core.c            # Implémentation du moteur EDS / Camel
-│   │   ├── evo-core.h            # Déclarations publiques et exports ABI
+│   ├── core/                     # Moteur C (evo-core.dll), découpé par domaine fonctionnel
+│   │   ├── evo-core.h            # API publique (déclarations et exports ABI)
+│   │   ├── evo-core-private.h    # En-tête privé : includes, struct EvoCore, types et prototypes partagés
+│   │   ├── evo-core.c            # Cycle de vie : journal, modules EDS, fil GLib, new/free, hors connexion
+│   │   ├── evo-core-session.c    # CamelSession : authentification, certificats TLS
+│   │   ├── evo-core-events.c     # Constructeurs JSON et émission des événements
+│   │   ├── evo-core-requests.c   # File des requêtes asynchrones (core_submit), magasins, connexion
+│   │   ├── evo-core-accounts.c   # Liste, compte par défaut, suppression
+│   │   ├── evo-core-account-setup.c  # Ajout, test, lecture, modification IMAP/POP3/SMTP, mots de passe
+│   │   ├── evo-core-account-cloud.c  # Comptes Microsoft 365 / Exchange (EWS) et Google
+│   │   ├── evo-core-detect.c     # Détection automatique (ISPDB, DNS, Autodiscover)
+│   │   ├── evo-core-oauth2.c     # Connexion OAuth2 et demandes d'identifiants
+│   │   ├── evo-core-folders.c    # Arborescence, rôles, suivi des dossiers ouverts
+│   │   ├── evo-core-folder-ops.c # Création, renommage, déplacement, copie, suppression, quota
+│   │   ├── evo-core-messages.c   # Liste des messages d'un dossier
+│   │   ├── evo-core-search.c     # Recherche (dossier, sous-dossiers, compte, tous)
+│   │   ├── evo-core-message-read.c    # Lecture, pièces jointes, export .eml
+│   │   ├── evo-core-message-actions.c # Indicateurs, suivi, déplacement, copie, suppression
+│   │   ├── evo-core-refresh.c    # Relève, synchronisation périodique, reconnexion
+│   │   ├── evo-core-send.c       # Envoi MIME et Boîte d'envoi
+│   │   ├── evo-core-drafts.c     # Brouillons
+│   │   ├── evo-core-signatures.c # Signatures
+│   │   ├── evo-core-calendar.c   # Événements d'agenda
+│   │   ├── evo-core-tasks.c      # Tâches (VTODO)
+│   │   ├── evo-core-contacts.c   # Contacts et autocomplétion des destinataires
+│   │   ├── evo-core-sources.c    # Sources EDS et création d'agendas
+│   │   ├── evo-core-export.c     # Export vCard / iCalendar
 │   │   └── CMakeLists.txt        # Configuration CMake du moteur
 │   └── app/                      # Interface WinUI 3 (C++/WinRT)
 │       ├── App.xaml / App.xaml.cpp
@@ -159,7 +183,8 @@ Les règles suivantes ont été définies par Pierre et doivent être respectée
 ## 6. Architecture & Modèles de Conception
 
 ### 6.1. Le Pont `evo-core` (C) <-> `CoreBridge` (C++/WinRT)
-- Toutes les opérations d'E/S (réseau, disque, protocoles IMAP/SMTP) s'exécutent sur des threads d'arrière-plan dans `evo-core.c` via `core_submit()`.
+- Toutes les opérations d'E/S (réseau, disque, protocoles IMAP/SMTP) s'exécutent sur des threads d'arrière-plan via `core_submit()` (`evo-core-requests.c`).
+- Le moteur est découpé en un fichier par domaine (`evo-core-<domaine>.c`) : chaque fonction publique `evo_core_xxx` est définie à côté de son exécutant `core_xxx_run`. Les fonctions internes partagées entre fichiers (préfixe `core_`) sont déclarées dans `evo-core-private.h` ; toute nouvelle fonction partagée y est ajoutée, et tout nouveau fichier `.c` est ajouté à `winui/core/CMakeLists.txt`. `evo-core.h` reste la seule interface publique.
 - La communication repose sur du **JSON** :
   - Entrée : chaîne JSON sérialisée ou paramètres typés C.
   - Sortie : fonction de rappel `EvoCoreResultFunc` de type `void (const char *json_result, const char *error_message, void *user_data)`.

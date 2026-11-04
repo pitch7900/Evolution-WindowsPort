@@ -91,7 +91,7 @@ EvolutionWin intègre l'ensemble des capacités éprouvées du moteur GNOME Evol
 | [`WINDOWS-PORT.md`](./WINDOWS-PORT.md) | Documentation technique complète et suivi d'avancement du portage |
 | [`CHANGELOG.md`](./CHANGELOG.md), [`VERSION`](./VERSION) | Évolutions par version ; version en cours (utilisée par l'installeur) |
 | [`TODO.md`](./TODO.md) | Fonctionnalités restant à réaliser |
-| [`winui/`](./winui) | Client natif Windows 11 : `winui/core` (`evo-core.dll`) et `winui/app` (`EvolutionWin.exe`) |
+| [`winui/`](./winui) | Client natif Windows 11 : `winui/core` (`evo-core.dll`, un fichier source par domaine : session, comptes, dossiers, messages, agenda, tâches, contacts...) et `winui/app` (`EvolutionWin.exe`) |
 | [`tools/`](./tools) | Scripts de compilation MSVC (`build-*.bat`, `env.bat`, `check-prereqs.ps1`), couche CMake (`cmake/msvc-compat.cmake`), en-têtes POSIX de compatibilité (`compat/`), shim WebKit2 (`webkit-shim/`) et utilitaires (`tools/nuget.exe`) |
 | `build/` | Sorties de compilation (`EvolutionWin.exe`, `evo-core.dll`, `evolution.exe`, `libexec/*.exe`, `build/intermediate/`), ignoré par Git |
 | `dist/` | Installeurs MSI construits localement par `build-msi.bat`, ignoré par Git (versions publiées dans les [Releases](https://github.com/pitch7900/Evolution-WindowsPort/releases)) |

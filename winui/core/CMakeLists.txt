@@ -46,7 +46,31 @@ add_custom_command(
 
 add_library(evo-core SHARED
 	evo-core.h
+	evo-core-private.h
 	evo-core.c
+	evo-core-account-cloud.c
+	evo-core-account-setup.c
+	evo-core-accounts.c
+	evo-core-calendar.c
+	evo-core-contacts.c
+	evo-core-detect.c
+	evo-core-drafts.c
+	evo-core-events.c
+	evo-core-export.c
+	evo-core-folder-ops.c
+	evo-core-folders.c
+	evo-core-message-actions.c
+	evo-core-message-read.c
+	evo-core-messages.c
+	evo-core-oauth2.c
+	evo-core-refresh.c
+	evo-core-requests.c
+	evo-core-search.c
+	evo-core-send.c
+	evo-core-session.c
+	evo-core-signatures.c
+	evo-core-sources.c
+	evo-core-tasks.c
 	"${CMAKE_CURRENT_BINARY_DIR}/ispdb-resources.c"
 )
 

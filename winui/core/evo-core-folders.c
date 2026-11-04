@@ -1,0 +1,452 @@
+/*
+ * evo-core : Arborescence des dossiers : roles, comptage, suivi des dossiers ouverts
+ * et signal "folder-changed".
+ * Voir evo-core.h et evo-core-private.h.
+ */
+
+#include "evo-core-private.h"
+
+/* Rôle (dossier spécial) de chaque dossier d'un compte, pour ceux que le
+ * serveur ne signale pas (IMAP sans SPECIAL-USE, par exemple) : dossiers
+ * configurés dans le compte, sinon noms usuels. full_name -> type. */
+typedef struct {
+	GHashTable *roles;	/* full_name -> type (statique) */
+	GHashTable *used;	/* types déjà attribués dans le compte */
+} FolderRoles;
+
+static void
+folder_roles_add_uri (FolderRoles *fr,
+		      const gchar *account_uid,
+		      gchar *uri,
+		      const gchar *type)
+{
+	gchar *store_uid = NULL, *folder_name = NULL;
+
+	if (parse_folder_uri (uri, &store_uid, &folder_name) && g_strcmp0 (store_uid, account_uid) == 0 &&
+	    !g_hash_table_contains (fr->roles, folder_name)) {
+		g_hash_table_insert (fr->roles, folder_name, (gpointer) type);
+		folder_name = NULL;
+	}
+
+	g_free (store_uid);
+	g_free (folder_name);
+	g_free (uri);
+}
+
+/* Dossier réel « real-trash-path » / « real-junk-path » des réglages Camel
+ * (IMAP), s'il est activé. */
+static void
+folder_roles_add_real_path (FolderRoles *fr,
+			    CamelSettings *settings,
+			    const gchar *use_property,
+			    const gchar *path_property,
+			    const gchar *type)
+{
+	GObjectClass *klass = G_OBJECT_GET_CLASS (settings);
+	gboolean use = FALSE;
+	gchar *path = NULL;
+
+	if (!g_object_class_find_property (klass, use_property) ||
+	    !g_object_class_find_property (klass, path_property))
+		return;
+
+	g_object_get (settings, use_property, &use, path_property, &path, NULL);
+
+	if (use && path && *path && !g_hash_table_contains (fr->roles, path))
+		g_hash_table_insert (fr->roles, g_steal_pointer (&path), (gpointer) type);
+
+	g_free (path);
+}
+
+static void
+folder_roles_mark_used (FolderRoles *fr,
+			CamelFolderInfo *fi)
+{
+	for (; fi; fi = fi->next) {
+		const gchar *type = folder_type_name (fi->flags);
+
+		if (!*type)
+			type = g_hash_table_lookup (fr->roles, fi->full_name);
+		if (type && *type)
+			g_hash_table_add (fr->used, (gpointer) type);
+
+		folder_roles_mark_used (fr, fi->child);
+	}
+}
+
+static FolderRoles *
+folder_roles_new (EvoCore *core,
+		  CamelStore *store,
+		  CamelFolderInfo *fi)
+{
+	FolderRoles *fr = g_new0 (FolderRoles, 1);
+	const gchar *account_uid = camel_service_get_uid (CAMEL_SERVICE (store));
+	ESource *identity = core_ref_identity (core, account_uid);
+	ESource *account = e_source_registry_ref_source (core->registry, account_uid);
+	CamelSettings *settings = camel_service_ref_settings (CAMEL_SERVICE (store));
+
+	fr->roles = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+	fr->used = g_hash_table_new (g_str_hash, g_str_equal);
+
+	if (identity && e_source_has_extension (identity, E_SOURCE_EXTENSION_MAIL_SUBMISSION))
+		folder_roles_add_uri (fr, account_uid, e_source_mail_submission_dup_sent_folder (
+			e_source_get_extension (identity, E_SOURCE_EXTENSION_MAIL_SUBMISSION)), "sent");
+
+	if (identity && e_source_has_extension (identity, E_SOURCE_EXTENSION_MAIL_COMPOSITION))
+		folder_roles_add_uri (fr, account_uid, e_source_mail_composition_dup_drafts_folder (
+			e_source_get_extension (identity, E_SOURCE_EXTENSION_MAIL_COMPOSITION)), "drafts");
+
+	if (account && e_source_has_extension (account, E_SOURCE_EXTENSION_MAIL_ACCOUNT))
+		folder_roles_add_uri (fr, account_uid, e_source_mail_account_dup_archive_folder (
+			e_source_get_extension (account, E_SOURCE_EXTENSION_MAIL_ACCOUNT)), "archive");
+
+	if (settings) {
+		folder_roles_add_real_path (fr, settings, "use-real-trash-path", "real-trash-path", "trash");
+		folder_roles_add_real_path (fr, settings, "use-real-junk-path", "real-junk-path", "junk");
+	}
+
+	folder_roles_mark_used (fr, fi);
+
+	g_clear_object (&settings);
+	g_clear_object (&account);
+	g_clear_object (&identity);
+
+	return fr;
+}
+
+static void
+folder_roles_free (FolderRoles *fr)
+{
+	if (!fr)
+		return;
+
+	g_hash_table_destroy (fr->roles);
+	g_hash_table_destroy (fr->used);
+	g_free (fr);
+}
+
+/* Type d'un dossier : rôle signalé par le serveur, dossier configuré dans le
+ * compte, sinon nom usuel (anglais / français) pour un rôle encore libre
+ * dans le compte (le premier dossier trouvé l'obtient). */
+static const gchar *
+folder_roles_type (FolderRoles *fr,
+		   CamelFolderInfo *fi)
+{
+	static const struct {
+		const gchar *type;
+		const gchar *names;	/* séparés par « | », en minuscules */
+	} usual[] = {
+		{ "inbox", "inbox|boîte de réception" },
+		{ "drafts", "drafts|draft|brouillons" },
+		{ "sent", "sent|sent items|sent messages|sent mail|éléments envoyés|envoyés|messages envoyés" },
+		{ "trash", "trash|deleted items|deleted messages|corbeille|éléments supprimés" },
+		{ "junk", "junk|junk e-mail|junk email|spam|courrier indésirable|indésirables|pourriels" },
+		{ "archive", "archive|archives" },
+		{ "outbox", "outbox|boîte d'envoi" }
+	};
+	const gchar *type = folder_type_name (fi->flags);
+	gchar *name;
+	guint ii;
+
+	if (*type || !fr)
+		return type;
+
+	type = g_hash_table_lookup (fr->roles, fi->full_name);
+	if (type)
+		return type;
+
+	name = g_utf8_strdown (fi->display_name ? fi->display_name : "", -1);
+
+	for (ii = 0; ii < G_N_ELEMENTS (usual) && !type; ii++) {
+		gchar **names;
+		guint jj;
+
+		if (g_hash_table_contains (fr->used, usual[ii].type))
+			continue;
+
+		names = g_strsplit (usual[ii].names, "|", -1);
+		for (jj = 0; names[jj] && !type; jj++) {
+			if (g_strcmp0 (name, names[jj]) == 0)
+				type = usual[ii].type;
+		}
+		g_strfreev (names);
+	}
+
+	g_free (name);
+
+	if (!type)
+		return "";
+
+	g_hash_table_add (fr->used, (gpointer) type);
+	return type;
+}
+
+static void
+add_folder_infos (JsonBuilder *builder,
+		  CamelFolderInfo *fi,
+		  FolderRoles *roles)
+{
+	json_builder_begin_array (builder);
+
+	for (; fi; fi = fi->next) {
+		json_builder_begin_object (builder);
+		json_builder_set_member_name (builder, "full_name");
+		json_builder_add_string_value (builder, fi->full_name);
+		json_builder_set_member_name (builder, "name");
+		json_builder_add_string_value (builder, fi->display_name);
+		json_builder_set_member_name (builder, "unread");
+		json_builder_add_int_value (builder, MAX (fi->unread, 0));
+		json_builder_set_member_name (builder, "total");
+		json_builder_add_int_value (builder, MAX (fi->total, 0));
+		json_builder_set_member_name (builder, "type");
+		json_builder_add_string_value (builder, folder_roles_type (roles, fi));
+		json_builder_set_member_name (builder, "selectable");
+		json_builder_add_boolean_value (builder, (fi->flags & CAMEL_FOLDER_NOSELECT) == 0);
+		json_builder_set_member_name (builder, "children");
+		add_folder_infos (builder, fi->child, roles);
+		json_builder_end_object (builder);
+	}
+
+	json_builder_end_array (builder);
+}
+
+/* Liste l'arborescence des dossiers d'un compte : tente d'abord une lecture
+ * rapide depuis le cache local (CAMEL_STORE_FOLDER_INFO_FAST) pour un affichage
+ * instantané au démarrage, sans attendre la connexion réseau, puis se rabat sur
+ * le serveur si le compte n'a pas encore de cache local.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : args[0] = uid du compte
+ *   error : récepteur d'erreur en cas d'échec
+ * Retourne : chaîne JSON de l'arborescence des dossiers ou NULL sur erreur. */
+static gchar *
+core_list_folders_run (EvoCore *core,
+		       gchar **args,
+		       GError **error)
+{
+	CamelStore *store;
+	CamelFolderInfo *fi = NULL;
+	JsonBuilder *builder;
+	gchar *json = NULL;
+
+	store = core_ref_store (core, args[0], error);
+	if (!store)
+		return NULL;
+
+	/* Essai 1 : lecture immédiate depuis le cache local sans attendre le réseau */
+	fi = camel_store_get_folder_info_sync (store, NULL,
+		CAMEL_STORE_FOLDER_INFO_FAST | CAMEL_STORE_FOLDER_INFO_RECURSIVE,
+		core->cancellable, NULL);
+
+	/* Essai 2 : si aucun cache local n'existe encore (premier démarrage), se connecter au serveur */
+	if (!fi) {
+		if (core_ensure_connected (core, store, error)) {
+			fi = camel_store_get_folder_info_sync (store, NULL,
+				CAMEL_STORE_FOLDER_INFO_RECURSIVE, core->cancellable, error);
+		}
+	}
+
+	if (fi || !(error && *error)) {
+		FolderRoles *roles = folder_roles_new (core, store, fi);
+
+		builder = json_builder_new ();
+		add_folder_infos (builder, fi, roles);
+		folder_roles_free (roles);
+		json = json_from_builder (builder);
+		g_object_unref (builder);
+	}
+
+	if (fi)
+		camel_folder_info_free (fi);
+
+	g_object_unref (store);
+
+	return json;
+}
+
+/* --- messages --- */
+
+gint
+compare_infos_by_date (gconstpointer a,
+		       gconstpointer b)
+{
+	CamelMessageInfo *ia = *(CamelMessageInfo **) a, *ib = *(CamelMessageInfo **) b;
+	gint64 da = camel_message_info_get_date_received (ia);
+	gint64 db = camel_message_info_get_date_received (ib);
+
+	if (da <= 0)
+		da = camel_message_info_get_date_sent (ia);
+	if (db <= 0)
+		db = camel_message_info_get_date_sent (ib);
+
+	/* most recent first */
+	return da < db ? 1 : (da > db ? -1 : 0);
+}
+
+/* CamelFolder::changed, emitted in the core thread: "folder-changed" */
+void
+core_folder_changed_cb (CamelFolder *folder,
+			CamelFolderChangeInfo *changes,
+			gpointer user_data)
+{
+	EvoCore *core = user_data;
+	CamelStore *store = camel_folder_get_parent_store (folder);
+	CamelFolderSummary *summary = camel_folder_get_folder_summary (folder);
+	JsonBuilder *builder;
+
+	if (!store || g_cancellable_is_cancelled (core->cancellable))
+		return;
+
+	g_message ("folder “%s” changed: +%u -%u ~%u, %u unread, %d messages",
+		camel_folder_get_full_name (folder),
+		changes && changes->uid_added ? changes->uid_added->len : 0,
+		changes && changes->uid_removed ? changes->uid_removed->len : 0,
+		changes && changes->uid_changed ? changes->uid_changed->len : 0,
+		summary ? camel_folder_summary_get_unread_count (summary) : 0,
+		camel_folder_get_message_count (folder));
+
+	builder = core_event_builder ();
+	builder_add_string (builder, "account", camel_service_get_uid (CAMEL_SERVICE (store)));
+	builder_add_string (builder, "folder", camel_folder_get_full_name (folder));
+	json_builder_set_member_name (builder, "unread");
+	json_builder_add_int_value (builder, summary ? camel_folder_summary_get_unread_count (summary) : 0);
+	json_builder_set_member_name (builder, "total");
+	json_builder_add_int_value (builder, camel_folder_get_message_count (folder));
+	json_builder_set_member_name (builder, "added");
+	json_builder_add_int_value (builder, changes && changes->uid_added ? changes->uid_added->len : 0);
+	json_builder_set_member_name (builder, "removed");
+	json_builder_add_int_value (builder, changes && changes->uid_removed ? changes->uid_removed->len : 0);
+	json_builder_set_member_name (builder, "changed");
+	json_builder_add_int_value (builder, changes && changes->uid_changed ? changes->uid_changed->len : 0);
+
+	core_emit_builder (core, "folder-changed", builder);
+
+	/* Émet "new-mail" lorsque de nouveaux messages non lus arrivent dans la
+	 * boîte de réception après la synchronisation initiale */
+	if (g_object_get_data (G_OBJECT (folder), "evo-initial-sync-done") != NULL &&
+	    changes && changes->uid_added && changes->uid_added->len > 0 &&
+	    ((camel_folder_get_flags (folder) & CAMEL_FOLDER_TYPE_MASK) == CAMEL_FOLDER_TYPE_INBOX ||
+	     g_ascii_strcasecmp (camel_folder_get_full_name (folder), "INBOX") == 0)) {
+		guint ii, unread_added = 0;
+		CamelMessageInfo *newest = NULL;
+		gint64 newest_date = -1;
+
+		for (ii = 0; ii < changes->uid_added->len; ii++) {
+			CamelMessageInfo *info = camel_folder_get_message_info (folder, changes->uid_added->pdata[ii]);
+			if (!info)
+				continue;
+
+			guint32 flags = camel_message_info_get_flags (info);
+			if (!(flags & CAMEL_MESSAGE_SEEN) && !(flags & CAMEL_MESSAGE_DELETED)) {
+				gint64 d = camel_message_info_get_date_received (info);
+				if (d <= 0)
+					d = camel_message_info_get_date_sent (info);
+				unread_added++;
+				if (!newest || d >= newest_date) {
+					g_clear_object (&newest);
+					newest = g_object_ref (info);
+					newest_date = d;
+				}
+			}
+			g_object_unref (info);
+		}
+
+		if (unread_added > 0 && newest) {
+			JsonBuilder *mail_builder = core_event_builder ();
+
+			builder_add_string (mail_builder, "account", camel_service_get_uid (CAMEL_SERVICE (store)));
+			builder_add_string (mail_builder, "folder", camel_folder_get_full_name (folder));
+			json_builder_set_member_name (mail_builder, "count");
+			json_builder_add_int_value (mail_builder, unread_added);
+			builder_add_string (mail_builder, "from", camel_message_info_get_from (newest));
+			builder_add_string (mail_builder, "subject", camel_message_info_get_subject (newest));
+			core_emit_builder (core, "new-mail", mail_builder);
+		}
+
+		g_clear_object (&newest);
+	}
+}
+
+gchar *
+folder_key (const gchar *account_uid,
+	    const gchar *folder_name)
+{
+	return g_strconcat (account_uid, "\x1F", folder_name, NULL);
+}
+
+/* keeps the folder open (cache) and follows its changes */
+static CamelFolder *
+core_track_folder (EvoCore *core,
+		   const gchar *account_uid,
+		   CamelFolder *folder)
+{
+	gchar *key = folder_key (account_uid, camel_folder_get_full_name (folder));
+	CamelFolder *tracked;
+
+	g_mutex_lock (&core->folders_lock);
+
+	tracked = g_hash_table_lookup (core->folders, key);
+	if (!tracked) {
+		tracked = g_object_ref (folder);
+		g_hash_table_insert (core->folders, key, tracked);
+		g_signal_connect (tracked, "changed", G_CALLBACK (core_folder_changed_cb), core);
+		key = NULL;
+	}
+	g_object_ref (tracked);
+
+	g_mutex_unlock (&core->folders_lock);
+
+	g_free (key);
+
+	return tracked;
+}
+
+CamelFolder *
+core_ref_folder (EvoCore *core,
+		 const gchar *account_uid,
+		 const gchar *folder_name,
+		 GError **error)
+{
+	CamelStore *store;
+	CamelFolder *folder = NULL, *tracked = NULL;
+	gchar *key = folder_key (account_uid, folder_name);
+
+	g_mutex_lock (&core->folders_lock);
+	folder = g_hash_table_lookup (core->folders, key);
+	if (folder)
+		g_object_ref (folder);
+	g_mutex_unlock (&core->folders_lock);
+	g_free (key);
+
+	if (folder)
+		return folder;
+
+	store = core_ref_store (core, account_uid, error);
+	if (!store)
+		return NULL;
+
+	if (core_ensure_connected (core, store, error))
+		folder = camel_store_get_folder_sync (store, folder_name, 0, core->cancellable, error);
+
+	if (folder) {
+		tracked = core_track_folder (core, account_uid, folder);
+		g_object_unref (folder);
+	}
+
+	g_object_unref (store);
+
+	return tracked;
+}
+
+void
+evo_core_list_folders (EvoCore *core,
+		       const char *account_uid,
+		       EvoCoreResultFunc func,
+		       void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, NULL };
+
+	g_return_if_fail (account_uid != NULL);
+
+	core_submit (core, core_list_folders_run, g_strdupv (args), func, user_data);
+}
