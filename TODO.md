@@ -328,9 +328,9 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
 - [ ] 🟡 **Microsoft 365 / Exchange Online** : vérifier de bout en bout que la collection `microsoft365` (Graph) découvre et synchronise les calendriers et carnets d'adresses du compte ; les afficher sous le nom du compte dans les vues Calendrier et Contacts <a id="demo-cal-contacts-m365"></a>
   - [x] Portées OAuth2 nécessaires (`Calendars.ReadWrite`, `Contacts.ReadWrite`) demandées à la connexion ; consentement manquant → message clair et _Se reconnecter_
   - [ ] Exchange on-premise (collection `ews`) : même vérification dès qu'un serveur de test est disponible
-- [ ] 🟠 **Gmail / Google Workspace** : à l'ajout d'un compte Gmail, créer aussi une collection Google (backend `google` d'EDS : calendriers CalDAV, contacts CardDAV / Google People) avec le même jeton OAuth2 <a id="demo-cal-contacts-gmail"></a>
+- [x] 🟠 **Gmail / Google Workspace** : à l'ajout d'un compte Gmail, créer aussi une collection Google (backend `google` d'EDS : calendriers CalDAV, contacts CardDAV / Google People) avec le même jeton OAuth2 <a id="demo-cal-contacts-gmail"></a>
   - [x] Portées OAuth2 Calendar et Contacts ajoutées à la connexion Google (en plus de la messagerie)
-  - [ ] Comptes Gmail déjà configurés : bouton _Activer le calendrier et les contacts_ dans la page du compte (nouvelle connexion pour accorder les portées)
+  - [x] Comptes Gmail déjà configurés : bouton _Activer le calendrier et les contacts_ dans la page du compte (nouvelle connexion pour accorder les portées)
 - [ ] 🟡 **Gestion simple du calendrier du compte** : <a id="demo-gestion-calendrier"></a>
   - [x] Événements du calendrier principal (et des autres calendriers du compte) affichés avec la couleur du calendrier
   - [x] Créer un événement dans le calendrier choisi (calendrier principal du compte par défaut) : titre, lieu, date, heures ou journée entière, description

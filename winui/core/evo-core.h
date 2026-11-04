@@ -546,6 +546,21 @@ void		evo_core_add_google_account	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Active l'agenda et les contacts Google d'un compte Gmail configuré sans
+ * ces services : active ceux de sa collection « google » ou crée une
+ * collection dédiée (sans courrier) réutilisant l'identifiant du compte.
+ * La connexion OAuth2 se fait ensuite par evo_core_oauth2_begin () sur
+ * "collection_uid".
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   email     : adresse e-mail du compte Gmail
+ *   func      : rappel recevant {"collection_uid", "created", "already_enabled"}
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_enable_google_services	(EvoCore *core,
+						 const char *email,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Connexion OAuth2 interactive d'un compte (Microsoft 365...), en deux
  * étapes, aussi en réponse à l'événement "oauth2-required"
  * ({"source_uid", "name", "user"}) :

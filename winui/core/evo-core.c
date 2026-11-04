@@ -7936,6 +7936,109 @@ core_set_google_mail_settings (ESource *source,
 	e_source_authentication_set_method (authentication, "Google");
 }
 
+/* Active l'agenda et les contacts Google d'un compte Gmail déjà configuré
+ * sans ces services. Si une collection « google » existe pour l'adresse, ses
+ * services agenda et contacts sont activés ; sinon une collection dédiée
+ * (sans courrier) est créée avec le même identifiant et l'authentification
+ * OAuth2 « Google ». L'interface enchaîne avec evo_core_oauth2_begin () sur
+ * "collection_uid" pour accorder les portées CalDAV / CardDAV.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = adresse e-mail du compte Gmail
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : {"collection_uid", "created", "already_enabled"}, NULL sinon. */
+static gchar *
+core_enable_google_services_run (EvoCore *core,
+				 gchar **args,
+				 GError **error)
+{
+	const gchar *email = args[0];
+	ESource *collection_source = NULL;
+	ESourceCollection *collection;
+	ESourceAuthentication *authentication;
+	GList *sources, *link;
+	JsonBuilder *builder;
+	gboolean created = FALSE, already = FALSE;
+	gchar *json;
+
+	if (!email || !*email) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "L'adresse e-mail est obligatoire");
+		return NULL;
+	}
+
+	sources = e_source_registry_list_sources (core->registry, E_SOURCE_EXTENSION_COLLECTION);
+	for (link = sources; link && !collection_source; link = g_list_next (link)) {
+		ESource *candidate = link->data;
+		ESourceBackend *backend;
+		gchar *backend_name, *identity;
+
+		backend = E_SOURCE_BACKEND (e_source_get_extension (candidate, E_SOURCE_EXTENSION_COLLECTION));
+		backend_name = e_source_backend_dup_backend_name (backend);
+		identity = e_source_collection_dup_identity (E_SOURCE_COLLECTION (backend));
+		if (g_strcmp0 (backend_name, "google") == 0 && identity && g_ascii_strcasecmp (identity, email) == 0)
+			collection_source = g_object_ref (candidate);
+		g_free (backend_name);
+		g_free (identity);
+	}
+	g_list_free_full (sources, g_object_unref);
+
+	if (collection_source) {
+		collection = e_source_get_extension (collection_source, E_SOURCE_EXTENSION_COLLECTION);
+		already = e_source_collection_get_calendar_enabled (collection) &&
+			e_source_collection_get_contacts_enabled (collection);
+		if (!already) {
+			e_source_collection_set_calendar_enabled (collection, TRUE);
+			e_source_collection_set_contacts_enabled (collection, TRUE);
+			if (!e_source_write_sync (collection_source, core->cancellable, error)) {
+				g_object_unref (collection_source);
+				return NULL;
+			}
+		}
+	} else {
+		GList *new_sources;
+		gchar *display_name = g_strdup_printf ("%s (agenda et contacts)", email);
+
+		collection_source = e_source_new (NULL, NULL, NULL);
+		e_source_set_display_name (collection_source, display_name);
+		g_free (display_name);
+
+		collection = e_source_get_extension (collection_source, E_SOURCE_EXTENSION_COLLECTION);
+		e_source_backend_set_backend_name (E_SOURCE_BACKEND (collection), "google");
+		e_source_collection_set_identity (collection, email);
+		e_source_collection_set_mail_enabled (collection, FALSE);
+		e_source_collection_set_calendar_enabled (collection, TRUE);
+		e_source_collection_set_contacts_enabled (collection, TRUE);
+
+		authentication = e_source_get_extension (collection_source, E_SOURCE_EXTENSION_AUTHENTICATION);
+		e_source_authentication_set_method (authentication, "Google");
+		e_source_authentication_set_user (authentication, email);
+		e_source_authentication_set_host (authentication, "www.google.com");
+
+		new_sources = g_list_append (NULL, collection_source);
+		if (!e_source_registry_create_sources_sync (core->registry, new_sources, core->cancellable, error)) {
+			g_list_free (new_sources);
+			g_object_unref (collection_source);
+			return NULL;
+		}
+		g_list_free (new_sources);
+		created = TRUE;
+	}
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	builder_add_string (builder, "collection_uid", e_source_get_uid (collection_source));
+	json_builder_set_member_name (builder, "created");
+	json_builder_add_boolean_value (builder, created);
+	json_builder_set_member_name (builder, "already_enabled");
+	json_builder_add_boolean_value (builder, already);
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+	g_object_unref (collection_source);
+
+	return json;
+}
+
 /* Crée un compte Gmail / Google Workspace comme l'assistant d'Evolution :
  * une collection (backend "google", authentification OAuth2 "Google") qui
  * porte le courrier IMAP / SMTP de Gmail, l'identité, et dont le module du
@@ -12396,6 +12499,19 @@ evo_core_set_default_account (EvoCore *core,
 	g_return_if_fail (account_uid != NULL);
 
 	core_submit (core, core_set_default_account_run, g_strdupv (args), func, user_data);
+}
+
+void
+evo_core_enable_google_services (EvoCore *core,
+				 const char *email,
+				 EvoCoreResultFunc func,
+				 void *user_data)
+{
+	gchar *args[] = { (gchar *) email, NULL };
+
+	g_return_if_fail (email != NULL);
+
+	core_submit (core, core_enable_google_services_run, g_strdupv (args), func, user_data);
 }
 
 void

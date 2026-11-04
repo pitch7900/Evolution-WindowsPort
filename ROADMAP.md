@@ -25,8 +25,8 @@ flowchart LR
 
 ### 1. Comptes & Services distants (§3)
 - [ ] **Microsoft 365 / Exchange Online** : validation de bout en bout de la collection `microsoft365` (Microsoft Graph) pour synchroniser calendriers et contacts (`#demo-cal-contacts-m365`).
-- [ ] **Gmail / Google Workspace** : création automatique de la collection Google (CalDAV, CardDAV / Google People API) avec réutilisation du jeton OAuth2 existant (`#demo-cal-contacts-gmail`).
-- [ ] **Bouton d\'activation a posteriori** : option « Activer le calendrier et les contacts » pour les comptes Gmail déjà configurés sans ces portées.
+- [x] **Gmail / Google Workspace** : création automatique de la collection Google (CalDAV, CardDAV / Google People API) avec réutilisation du jeton OAuth2 existant (`#demo-cal-contacts-gmail`).
+- [x] **Bouton d\'activation a posteriori** : option « Activer le calendrier et les contacts » pour les comptes Gmail déjà configurés sans ces portées.
 - [x] **Gestion des contacts en ligne** : modification et synchronisation bidirectionnelle des fiches contacts distantes (`#demo-gestion-contacts`).
 
 ### 2. Calendrier (§13)

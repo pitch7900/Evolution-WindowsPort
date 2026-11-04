@@ -380,6 +380,16 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Active l'agenda et les contacts Google d'un compte Gmail existant.
+         * Paramètres :
+         *   email   : adresse du compte Gmail
+         *   handler : rappel recevant {"collection_uid", "created", "already_enabled"} */
+        void EnableGoogleServices(winrt::hstring const& email, CoreHandler handler)
+        {
+            evo_core_enable_google_services(m_core, winrt::to_string(email).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Crée un compte Microsoft 365 / Exchange Online (Microsoft Graph).
          * Paramètres :
          *   account_json : JSON {"email", "display_name", "full_name", "client_id"?, "tenant"?},
