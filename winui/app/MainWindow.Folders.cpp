@@ -132,7 +132,7 @@ namespace winrt::EvolutionWin::implementation
      * autres dossiers après, par ordre alphabétique. */
     static int SpecialFolderRank(hstring const& type)
     {
-        static wchar_t const* const order[] = { L"inbox", L"drafts", L"sent", L"trash", L"archive", L"junk", L"outbox" };
+        static wchar_t const* const order[] = { L"inbox", L"sent", L"drafts", L"trash", L"archive", L"junk", L"outbox" };
         for (int ii = 0; ii < static_cast<int>(std::size(order)); ii++)
             if (type == order[ii])
                 return ii;
