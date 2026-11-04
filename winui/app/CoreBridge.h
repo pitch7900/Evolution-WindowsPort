@@ -586,6 +586,16 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Modifie un contact existant dans un carnet d'adresses.
+         * Paramètres :
+         *   contact_json : description JSON modifiée du contact
+         *   handler      : rappel sur le thread de l'interface */
+        void ModifyContact(winrt::hstring const& contact_json, CoreHandler handler)
+        {
+            evo_core_modify_contact(m_core, winrt::to_string(contact_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Liste les sources activées (agendas, tâches, mémos, carnets d'adresses).
          * Paramètres :
          *   kinds   : types séparés par des virgules ("calendar,tasks", "contacts"), vide pour tous

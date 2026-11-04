@@ -798,6 +798,20 @@ void		evo_core_delete_contact		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Modifie un contact existant dans son carnet d'adresses.
+ * Format attendu pour contact_json :
+ * {"book_uid": "...", "uid": "...", "full_name": "...", "email": "...",
+ *  "phone": "...", "org": "...", "notes": "..."}
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   contact_json : description modifiée du contact au format JSON UTF-8
+ *   func         : rappel recevant {}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_modify_contact		(EvoCore *core,
+						 const char *contact_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Liste les sources activées d'un ou plusieurs types, triées par nom.
  * Paramètres :
  *   core      : instance du moteur evo-core

@@ -10417,6 +10417,83 @@ core_delete_contact_run (EvoCore *core,
 	return ok ? g_strdup ("{}") : NULL;
 }
 
+/* Modifie un contact existant dans son carnet d'adresses.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = JSON du contact {"book_uid", "uid", "full_name", "email", "phone", "org", "notes"}
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : "{}" en cas de succès, NULL sinon. */
+static gchar *
+core_modify_contact_run (EvoCore *core,
+			 gchar **args,
+			 GError **error)
+{
+	JsonNode *root;
+	JsonObject *object;
+	const gchar *book_uid, *uid, *full_name, *email, *phone, *org, *notes;
+	ESource *source = NULL;
+	EClient *client = NULL;
+	EContact *contact = NULL;
+	gboolean ok = FALSE;
+
+	root = json_from_string (args[0], error);
+	if (!root)
+		return NULL;
+
+	object = JSON_NODE_HOLDS_OBJECT (root) ? json_node_get_object (root) : NULL;
+	if (!object) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Objet JSON invalide");
+		json_node_unref (root);
+		return NULL;
+	}
+
+	book_uid = json_object_get_string_member_with_default (object, "book_uid", "");
+	uid = json_object_get_string_member_with_default (object, "uid", "");
+	full_name = json_object_get_string_member_with_default (object, "full_name", "");
+	email = json_object_get_string_member_with_default (object, "email", "");
+	phone = json_object_get_string_member_with_default (object, "phone", "");
+	org = json_object_get_string_member_with_default (object, "org", "");
+	notes = json_object_get_string_member_with_default (object, "notes", "");
+
+	if (!uid || !*uid) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Identifiant de contact obligatoire");
+		goto exit;
+	}
+
+	if (book_uid && *book_uid)
+		source = e_source_registry_ref_source (core->registry, book_uid);
+	if (!source)
+		source = e_source_registry_ref_default_address_book (core->registry);
+
+	if (!source) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "Carnet d'adresses introuvable");
+		goto exit;
+	}
+
+	client = e_book_client_connect_sync (source, 5, core->cancellable, error);
+	if (!client)
+		goto exit;
+
+	if (!e_book_client_get_contact_sync (E_BOOK_CLIENT (client), uid, &contact, core->cancellable, error))
+		goto exit;
+
+	e_contact_set (contact, E_CONTACT_FULL_NAME, (full_name && *full_name) ? full_name : email);
+	e_contact_set (contact, E_CONTACT_EMAIL_1, (email && *email) ? email : NULL);
+	e_contact_set (contact, E_CONTACT_PHONE_MOBILE, (phone && *phone) ? phone : NULL);
+	e_contact_set (contact, E_CONTACT_ORG, (org && *org) ? org : NULL);
+	e_contact_set (contact, E_CONTACT_NOTE, (notes && *notes) ? notes : NULL);
+
+	ok = e_book_client_modify_contact_sync (E_BOOK_CLIENT (client), contact, E_BOOK_OPERATION_FLAG_NONE, core->cancellable, error);
+
+exit:
+	g_clear_object (&contact);
+	g_clear_object (&client);
+	g_clear_object (&source);
+	json_node_unref (root);
+
+	return ok ? g_strdup ("{}") : NULL;
+}
+
 /* --- exportation vCard / iCalendar --- */
 
 /* Types de sources (agendas, tâches, mémos, carnets d'adresses) et
@@ -12434,6 +12511,25 @@ evo_core_delete_contact (EvoCore *core,
 	g_return_if_fail (contact_uid != NULL);
 
 	core_submit (core, core_delete_contact_run, g_strdupv (args), func, user_data);
+}
+
+/* Soumet une requête de modification d'un contact existant.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   contact_json : JSON modifié {"book_uid", "uid", "full_name", ...}
+ *   func         : rappel recevant {}
+ *   user_data    : données utilisateur transmises au rappel */
+void
+evo_core_modify_contact (EvoCore *core,
+			 const char *contact_json,
+			 EvoCoreResultFunc func,
+			 void *user_data)
+{
+	gchar *args[] = { (gchar *) contact_json, NULL };
+
+	g_return_if_fail (contact_json != NULL);
+
+	core_submit (core, core_modify_contact_run, g_strdupv (args), func, user_data);
 }
 
 /* Soumet une requête de liste des sources activées (agendas, listes de

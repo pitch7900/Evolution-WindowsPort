@@ -12,6 +12,15 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [0.9.8] — en cours
 
+### Ajouté
+
+- **Modification directe et synchronisation des contacts distants (ROADMAP v0.9.8, TODO section 3)** :
+  - Ajout de la fonction native `evo_core_modify_contact` dans `winui/core/evo-core.c` et déclaration dans `winui/core/evo-core.h`, permettant la mise à jour bidirectionnelle des fiches (`full_name`, `email`, `phone`, `org`, `notes`) sur le serveur de carnet d'adresses via `e_book_client_modify_contact_sync`.
+  - Intégration de la méthode `ModifyContact` dans `CoreBridge.h` réacheminant la réponse asynchrone sur le thread WinUI.
+  - Ajout des boutons « Modifier le contact » dans le volet de détail des contacts et sur le ruban Contacts › Accueil (`OnEditContactClick`).
+  - Boîte de dialogue modale `ShowEditContactDialogAsync` avec préremplissage des données actuelles du contact et rafraîchissement immédiat de la liste après sauvegarde.
+  - Couverture par test unitaire de contrat JSON dans `tests/unit/test_evo_core_contracts.c` et validation de l'ABI DLL (68 symboles exportés).
+
 ### Prévu (cf. ROADMAP.md)
 
 - **Comptes & Services distants (TODO section 3, ROADMAP v0.9.8)** : validation de bout en bout de la synchronisation des calendriers et contacts Microsoft 365 (Microsoft Graph) et Google Workspace (Google People API / CardDAV).

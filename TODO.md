@@ -340,7 +340,7 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
 - [ ] 🟡 **Gestion simple des contacts du compte** : <a id="demo-gestion-contacts"></a>
   - [x] Contacts du compte (et sous-dossiers / groupes de contacts) listés avec le nom du carnet d'origine — _volet « Carnets d'adresses » par compte, cases à cocher mémorisées, carnet actif_
   - [x] Créer un contact dans le carnet choisi (carnet du compte par défaut) : nom, prénom, adresses email, téléphones, société, fonction, notes
-  - [ ] **Modifier** un contact existant (manquant aujourd'hui) et le supprimer, avec envoi au serveur
+  - [x] **Modifier** un contact existant et le supprimer, avec envoi au serveur (fonction evo_core_modify_contact et bouton Modifier)
   - [ ] Contacts utilisables dans l'autocomplétion des destinataires (§15)
 - [x] 🟢 Erreurs de synchronisation du calendrier / des contacts remontées dans l'indicateur d'état des connexions (§4)
 

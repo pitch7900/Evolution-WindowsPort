@@ -209,6 +209,7 @@ namespace winrt::EvolutionWin::implementation
         void OnExportContactsClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnComposeToContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnDeleteContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnEditContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
         /* Gestionnaires des tâches */
         void OnNewTaskClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -518,6 +519,7 @@ namespace winrt::EvolutionWin::implementation
         fire_and_forget ShowNewFocusEventDialogAsync();
         void LoadContacts(hstring const& query);
         fire_and_forget ShowNewContactDialogAsync();
+        fire_and_forget ShowEditContactDialogAsync();
 
         /* Exportation vCard / iCalendar */
         fire_and_forget ExportCalendarAsync(Windows::Data::Json::JsonArray sources);
