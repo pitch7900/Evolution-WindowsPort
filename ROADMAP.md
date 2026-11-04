@@ -48,7 +48,7 @@ flowchart LR
 - [x] **Regroupement par discussion** : affichage hiérarchique sous forme de conversations / fils de discussion (`#demo-conversations`).
 - [x]**Gestion des dossiers** : réorganisation ordonnée des dossiers spéciaux en tête (Boîte de réception, Envoyés, Brouillons) avec icônes distinctives (`#demo-dossiers`).
 - [x] **Pièces jointes** : prévisualisation intégrée (images, texte, PDF, HTML), enregistrement groupé et glisser-déposer sortant. _(aperçu Office reporté : cf. TODO §6)_
-- [ ] **Suivi des messages** : options de marquage d\'importance, drapeaux avec date d\'échéance et rappels associés.
+- [x] **Suivi des messages** : options de marquage d\'importance, drapeaux avec date d\'échéance et rappels associés.
 - [x] **Accusés de lecture et de réception** : gestion de l\'émission et du traitement des notifications d\'état de distribution.
 
 ### 2. Invitations & Réunions (§13, §15)
