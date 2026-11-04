@@ -426,7 +426,7 @@
 
                         </AppBarButton>
 
-                        <AppBarButton Label="Suivi" Click="OnToggleFlagClick">
+                        <AppBarButton Label="Suivi" Click="OnFollowUpButtonClick">
 
                             <AppBarButton.Icon><FontIcon Glyph="&#xE7C1;" /></AppBarButton.Icon>
 
@@ -1427,7 +1427,7 @@
 
                             </AppBarButton>
 
-                            <AppBarButton x:Name="ToggleFlagButton" Label="Suivi" Click="OnToggleFlagClick">
+                            <AppBarButton x:Name="ToggleFlagButton" Label="Suivi" Click="OnFollowUpButtonClick">
 
                                 <AppBarButton.Icon>
 

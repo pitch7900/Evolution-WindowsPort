@@ -510,12 +510,12 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
 Trois notions distinctes, comme dans Outlook : le **suivi** (drapeau avec libellé et échéance : ce que _je_ dois faire), l'**importance** (fixée par l'expéditeur) et les **catégories** (classement en couleur, §17).
 
 - [ ] 🟡 **Suivi des messages** (évolution du drapeau simple existant) :
-  - [ ] **Libellé du suivi** : Urgent, À traiter, À répondre, Pour information, En attente, et libellés personnalisés
-  - [ ] **Échéance** : aujourd'hui, demain, cette semaine, semaine prochaine, sans date, date personnalisée
-  - [ ] Choix depuis le menu contextuel, le ruban et des raccourcis clavier
-  - [ ] Icône et couleur distinctes dans la liste des messages (ex. rouge pour Urgent, orange pour À traiter, échéance dépassée en rouge) et libellé + échéance dans l'en-tête du volet de lecture
-  - [ ] Stockage dans les indicateurs Camel (`follow-up`, `due-by`, `completed-on`), synchronisé avec le serveur (mots-clés IMAP, `flag` Exchange / Graph)
-  - [ ] _Marquer comme terminé_ en un clic (avec date de fin), _Effacer l'indicateur_
+  - [x] **Libellé du suivi** : Urgent, À traiter, À répondre, Pour information, En attente, et libellés personnalisés
+  - [x] **Échéance** : aujourd'hui, demain, cette semaine, semaine prochaine, sans date, date personnalisée
+  - [x] Choix depuis le menu contextuel, le ruban et des raccourcis clavier
+  - [x] Icône et couleur distinctes dans la liste des messages (ex. rouge pour Urgent, orange pour À traiter, échéance dépassée en rouge) et libellé + échéance dans l'en-tête du volet de lecture
+  - [x] Stockage dans les indicateurs Camel (`follow-up`, `due-by`, `completed-on`), synchronisé avec le serveur (mots-clés IMAP, `flag` Exchange / Graph)
+  - [x] _Marquer comme terminé_ en un clic (avec date de fin), _Effacer l'indicateur_
   - [ ] Filtres rapides « Urgents » et « À traiter » (§5) et dossiers de recherche correspondants (§9)
   - [ ] 🟠 Rappel sur un suivi — dépend de la fenêtre des rappels (§2)
 - [x] 🟡 **Importance** (haute / normale / basse) : affichée dans la liste (icône d'exclamation rouge ou flèche bleue) et choisie à la rédaction dans ComposeWindow ; filtre rapide « Importants » (§5)

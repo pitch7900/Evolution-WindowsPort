@@ -145,6 +145,21 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Définit ou efface le suivi d'un message.
+         * Paramètres :
+         *   label        : libellé ("" pour effacer)
+         *   due_by       : échéance en secondes Unix (texte) ou ""
+         *   completed_on : date de fin en secondes Unix (texte) ou ""
+         *   handler      : rappel recevant {"flagged", "follow_up", "due_by", "completed_on"} */
+        void SetFollowUp(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& uid,
+                         winrt::hstring const& label, winrt::hstring const& due_by, winrt::hstring const& completed_on,
+                         CoreHandler handler)
+        {
+            evo_core_set_follow_up(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                winrt::to_string(uid).c_str(), winrt::to_string(label).c_str(), winrt::to_string(due_by).c_str(),
+                winrt::to_string(completed_on).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Supprime un message (vers la corbeille du compte ou définitivement).
          * Paramètres :
          *   account : identifiant du compte

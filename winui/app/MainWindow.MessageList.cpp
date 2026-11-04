@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
 #include "MainWindow.Helpers.h"
+#include "FollowUp.h"
 #include "WindowIcon.h"
 #include "Settings.h"
 #include "ConversationThreads.h"
@@ -219,6 +220,12 @@ namespace winrt::EvolutionWin::implementation
             m_message_locations[std::wstring{ uid }] = { msg_account, msg_folder, msg_folder_name, msg_account_name };
 
             m_message_states[std::wstring{ uid }] = MessageState{ seen, flagged, attachments };
+            {
+                auto& fu_state = m_message_states[std::wstring{ uid }];
+                fu_state.follow_up = std::wstring{ message.GetNamedString(L"follow_up", L"") };
+                fu_state.due_by = ::EvolutionWin::FollowUp::ParseEpoch(message.GetNamedString(L"due_by", L""));
+                fu_state.completed_on = ::EvolutionWin::FollowUp::ParseEpoch(message.GetNamedString(L"completed_on", L""));
+            }
 
             if (thread_row.hidden)
                 continue;
@@ -285,6 +292,8 @@ namespace winrt::EvolutionWin::implementation
             flag_icon.Glyph(L"\xE7C1");
             flag_icon.FontSize(12);
             flag_icon.Foreground(SolidColorBrush{ Windows::UI::Color{ 255, 247, 99, 12 } });
+            flag_icon.Tag(box_value(L"follow-flag"));
+            StyleFollowUpIcon(flag_icon, m_message_states[std::wstring{ uid }]);
             flag_icon.Visibility(flagged ? Visibility::Visible : Visibility::Collapsed);
             meta.Children().Append(flag_icon);
 
@@ -655,6 +664,13 @@ namespace winrt::EvolutionWin::implementation
                     SetMessagesFlag(target_uids, L"flagged", !is_flagged);
                 });
                 menu_items.Append(flag_item);
+
+                MenuFlyoutSubItem follow_up_sub;
+                follow_up_sub.Text(hstring{ L"Suivi" + count_suffix });
+                follow_up_sub.Icon(FontIcon{});
+                follow_up_sub.Icon().as<FontIcon>().Glyph(L"çC1");
+                PopulateFollowUpMenuItems(follow_up_sub.Items(), target_uids);
+                menu_items.Append(follow_up_sub);
 
                 MenuFlyoutSubItem cat_sub;
                 cat_sub.Text(hstring{ L"Catégoriser" + count_suffix });

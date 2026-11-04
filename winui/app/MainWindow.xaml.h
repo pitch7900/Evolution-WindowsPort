@@ -118,6 +118,9 @@ namespace winrt::EvolutionWin::implementation
         void OnForwardClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnForwardAsAttachmentClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnToggleReadClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnFollowUpButtonClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void PopulateFollowUpMenuItems(Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items, std::vector<hstring> const& uids);
+        void ApplyFollowUp(std::vector<hstring> const& uids, std::wstring const& label, int due_choice, bool completed);
         void OnToggleFlagClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnDeleteClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnArchiveClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -368,7 +371,12 @@ namespace winrt::EvolutionWin::implementation
             bool seen{ true };
             bool flagged{ false };
             bool attachments{ false };
+            std::wstring follow_up;        ///< libellé du suivi (vide : aucun)
+            int64_t due_by{ 0 };           ///< échéance (secondes Unix, 0 : aucune)
+            int64_t completed_on{ 0 };     ///< date de fin (secondes Unix, 0 : non terminé)
         };
+
+        void StyleFollowUpIcon(Microsoft::UI::Xaml::Controls::FontIcon const& icon, MessageState const& state);
 
         std::vector<std::wstring> m_drag_cached_files;
 

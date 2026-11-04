@@ -244,6 +244,9 @@
     <ClCompile Include="MainWindow.Contacts.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="MainWindow.FollowUp.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
     <ClCompile Include="MainWindow.Tasks.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>

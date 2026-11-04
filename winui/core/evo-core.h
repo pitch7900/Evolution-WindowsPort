@@ -162,6 +162,23 @@ void		evo_core_set_message_flags	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Définit ou efface le suivi d'un message (libellé, échéance, date de fin ;
+ * étiquettes Camel "follow-up", "due-by", "completed-on").
+ * Paramètres :
+ *   label        : libellé du suivi, "" pour effacer
+ *   due_by       : échéance en secondes Unix (texte) ou "" ;
+ *   completed_on : date de fin en secondes Unix (texte) ou ""
+ *   func         : rappel recevant {"flagged", "follow_up", "due_by", "completed_on"} */
+void		evo_core_set_follow_up		(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *message_uid,
+						 const char *label,
+						 const char *due_by,
+						 const char *completed_on,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Action sur tout un dossier :
  *   "mark-all-read" : marquer tous les messages comme lus ;
  *   "empty"         : Corbeille / Indésirables : suppression définitive de

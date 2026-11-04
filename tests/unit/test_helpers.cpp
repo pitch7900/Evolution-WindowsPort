@@ -6073,6 +6073,33 @@ static std::wstring ToLowerCopyForTest(std::wstring text)
 }
 
 #include "../../winui/app/ConversationThreads.h"
+#include "../../winui/app/FollowUp.h"
+
+static void test_follow_up(void)
+{
+    TEST_CASE("Suivi: echeances, retard et lecture des dates");
+    {
+        using namespace EvolutionWin::FollowUp;
+        ASSERT_TRUE(DueOffsetDays(Due::Today, 3) == 0);
+        ASSERT_TRUE(DueOffsetDays(Due::Tomorrow, 3) == 1);
+        ASSERT_TRUE(DueOffsetDays(Due::ThisWeek, 3) == 2);   /* mercredi -> vendredi */
+        ASSERT_TRUE(DueOffsetDays(Due::ThisWeek, 5) == 0);   /* vendredi */
+        ASSERT_TRUE(DueOffsetDays(Due::ThisWeek, 0) == 5);   /* dimanche -> vendredi */
+        ASSERT_TRUE(DueOffsetDays(Due::NextWeek, 1) == 7);   /* lundi -> lundi suivant */
+        ASSERT_TRUE(DueOffsetDays(Due::NextWeek, 0) == 1);   /* dimanche -> lundi */
+        ASSERT_TRUE(DueOffsetDays(Due::NextWeek, 6) == 2);   /* samedi -> lundi */
+        ASSERT_TRUE(DueOffsetDays(Due::None, 2) == -1);
+        ASSERT_TRUE(IsOverdue(100, 0, 200));
+        ASSERT_FALSE(IsOverdue(100, 150, 200));  /* termine */
+        ASSERT_FALSE(IsOverdue(0, 0, 200));      /* sans echeance */
+        ASSERT_FALSE(IsOverdue(300, 0, 200));
+        ASSERT_TRUE(ParseEpoch(L"1700000000") == 1700000000);
+        ASSERT_TRUE(ParseEpoch(L"") == 0);
+        ASSERT_TRUE(ParseEpoch(L"12ab") == 0);
+        ASSERT_TRUE(DefaultLabels().size() == 5);
+    }
+    TEST_CASE_END();
+}
 
 static void test_conversation_threads(void)
 {
@@ -6297,6 +6324,7 @@ int main(void)
         test_font_size_preset_to_zoom();
     test_update_integrity();
     test_conversation_threads();
+    test_follow_up();
 return test_suite_summary();
 
 

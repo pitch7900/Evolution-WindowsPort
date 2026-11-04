@@ -2244,6 +2244,10 @@ json_from_message_infos (GPtrArray *infos,
 		json_builder_set_member_name (builder, "due_by");
 		json_builder_add_string_value (builder, camel_message_info_get_user_tag (info, "due-by") ?
 			camel_message_info_get_user_tag (info, "due-by") : "");
+		builder_add_string (builder, "follow_up", camel_message_info_get_user_tag (info, "follow-up") ?
+			camel_message_info_get_user_tag (info, "follow-up") : "");
+		builder_add_string (builder, "completed_on", camel_message_info_get_user_tag (info, "completed-on") ?
+			camel_message_info_get_user_tag (info, "completed-on") : "");
 		json_builder_set_member_name (builder, "preview");
 		json_builder_add_string_value (builder, camel_message_info_get_preview (info) ?
 			camel_message_info_get_preview (info) : "");
@@ -2772,6 +2776,10 @@ core_search_messages_run (EvoCore *core,
 		json_builder_set_member_name (builder, "due_by");
 		json_builder_add_string_value (builder, camel_message_info_get_user_tag (info, "due-by") ?
 			camel_message_info_get_user_tag (info, "due-by") : "");
+		builder_add_string (builder, "follow_up", camel_message_info_get_user_tag (info, "follow-up") ?
+			camel_message_info_get_user_tag (info, "follow-up") : "");
+		builder_add_string (builder, "completed_on", camel_message_info_get_user_tag (info, "completed-on") ?
+			camel_message_info_get_user_tag (info, "completed-on") : "");
 
 		/* Données de localisation du message dans les portées multi-dossiers et multi-comptes */
 		json_builder_set_member_name (builder, "account");
@@ -2804,6 +2812,58 @@ core_search_messages_run (EvoCore *core,
 }
 
 /* --- actions sur les messages (drapeaux, suppression, déplacement) --- */
+
+/* Définit (ou efface) le suivi d'un message : libellé, échéance, date de fin.
+ * Paramètres :
+ *   args  : [0] account_uid, [1] folder_full_name, [2] message_uid,
+ *           [3] libellé ("" pour effacer le suivi), [4] échéance (secondes
+ *           Unix en texte, "" si aucune), [5] date de fin (idem)
+ * Stockage : étiquettes utilisateur Camel "follow-up", "due-by" et
+ * "completed-on" (comme Evolution) ; le drapeau FLAGGED suit le libellé.
+ * Retourne : {"flagged", "follow_up", "due_by", "completed_on"} ou NULL. */
+static gchar *
+core_set_follow_up_run (EvoCore *core,
+			gchar **args,
+			GError **error)
+{
+	CamelFolder *folder;
+	CamelMessageInfo *mi;
+	JsonBuilder *builder;
+	gchar *json;
+	gboolean active = args[3] && *args[3];
+
+	folder = core_ref_folder (core, args[0], args[1], error);
+	if (!folder)
+		return NULL;
+
+	mi = camel_folder_get_message_info (folder, args[2]);
+	if (mi) {
+		camel_message_info_freeze_notifications (mi);
+		camel_message_info_set_user_tag (mi, "follow-up", active ? args[3] : NULL);
+		camel_message_info_set_user_tag (mi, "due-by", active && args[4] && *args[4] ? args[4] : NULL);
+		camel_message_info_set_user_tag (mi, "completed-on", active && args[5] && *args[5] ? args[5] : NULL);
+		camel_message_info_thaw_notifications (mi);
+	}
+	camel_folder_set_message_flags (folder, args[2], CAMEL_MESSAGE_FLAGGED, active ? CAMEL_MESSAGE_FLAGGED : 0);
+	camel_folder_synchronize_message_sync (folder, args[2], core->cancellable, NULL);
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	json_builder_set_member_name (builder, "flagged");
+	json_builder_add_boolean_value (builder, active);
+	builder_add_string (builder, "follow_up", active ? args[3] : "");
+	builder_add_string (builder, "due_by", active && args[4] ? args[4] : "");
+	builder_add_string (builder, "completed_on", active && args[5] ? args[5] : "");
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+
+	g_object_unref (builder);
+	g_clear_object (&mi);
+	g_object_unref (folder);
+
+	return json;
+}
+
 
 /* Modifie un indicateur ("seen" ou "flagged") sur un message et synchronise le
  * message avec le serveur.
@@ -12032,6 +12092,45 @@ evo_core_set_message_flags (EvoCore *core,
 	g_return_if_fail (flag_name != NULL);
 
 	core_submit (core, core_set_message_flags_run, g_strdupv (args), func, user_data);
+}
+
+/* Soumet la définition du suivi d'un message (libellé, échéance, date de fin).
+ * Paramètres :
+ *   core             : instance du moteur evo-core
+ *   account_uid      : identifiant du compte
+ *   folder_full_name : chemin complet du dossier
+ *   message_uid      : identifiant du message
+ *   label            : libellé du suivi, "" pour effacer le suivi
+ *   due_by           : échéance en secondes Unix (texte), "" ou NULL si aucune
+ *   completed_on     : date de fin en secondes Unix (texte), "" ou NULL
+ *   func             : rappel recevant {"flagged", "follow_up", "due_by", "completed_on"}
+ *   user_data        : données utilisateur transmises au rappel */
+void
+evo_core_set_follow_up (EvoCore *core,
+			const char *account_uid,
+			const char *folder_full_name,
+			const char *message_uid,
+			const char *label,
+			const char *due_by,
+			const char *completed_on,
+			EvoCoreResultFunc func,
+			void *user_data)
+{
+	gchar *args[] = {
+		(gchar *) account_uid,
+		(gchar *) folder_full_name,
+		(gchar *) message_uid,
+		(gchar *) (label ? label : ""),
+		(gchar *) (due_by ? due_by : ""),
+		(gchar *) (completed_on ? completed_on : ""),
+		NULL
+	};
+
+	g_return_if_fail (account_uid != NULL);
+	g_return_if_fail (folder_full_name != NULL);
+	g_return_if_fail (message_uid != NULL);
+
+	core_submit (core, core_set_follow_up_run, g_strdupv (args), func, user_data);
 }
 
 void
