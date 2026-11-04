@@ -8862,6 +8862,9 @@ core_get_event_run (EvoCore *core,
 	json_builder_add_boolean_value (builder, prop != NULL);
 	g_clear_object (&prop);
 
+	json_builder_set_member_name (builder, "reminder_minutes");
+	json_builder_add_int_value (builder, event_get_reminder (icomp));
+
 	json_builder_set_member_name (builder, "readonly");
 	json_builder_add_boolean_value (builder, e_client_is_readonly (client));
 
@@ -8907,6 +8910,69 @@ core_get_event_run (EvoCore *core,
 	g_object_unref (client);
 
 	return json;
+}
+
+/* Supprime les rappels (VALARM) d'un événement puis, si minutes >= 0, ajoute
+ * un rappel d'affichage déclenché « minutes » minutes avant le début.
+ * Paramètres :
+ *   icomp   : composant VEVENT à modifier
+ *   minutes : délai en minutes, négatif pour aucun rappel */
+static void
+event_set_reminder (ICalComponent *icomp,
+		    gint minutes)
+{
+	ICalComponent *alarm;
+	ICalTrigger *trigger;
+
+	while ((alarm = i_cal_component_get_first_component (icomp, I_CAL_VALARM_COMPONENT)) != NULL) {
+		i_cal_component_remove_component (icomp, alarm);
+		g_object_unref (alarm);
+	}
+
+	if (minutes < 0)
+		return;
+
+	alarm = i_cal_component_new_valarm ();
+	i_cal_component_take_property (alarm, i_cal_property_new_action (I_CAL_ACTION_DISPLAY));
+	trigger = i_cal_trigger_new_from_int (-minutes * 60);
+	i_cal_component_take_property (alarm, i_cal_property_new_trigger (trigger));
+	g_object_unref (trigger);
+	i_cal_component_take_property (alarm, i_cal_property_new_description ("Rappel"));
+	i_cal_component_take_component (icomp, alarm);
+}
+
+/* Délai du premier rappel (VALARM) d'un événement.
+ * Paramètres :
+ *   icomp : composant VEVENT
+ * Retourne : minutes avant le début, -1 s'il n'y a aucun rappel relatif. */
+static gint
+event_get_reminder (ICalComponent *icomp)
+{
+	ICalComponent *alarm = i_cal_component_get_first_component (icomp, I_CAL_VALARM_COMPONENT);
+	ICalProperty *prop;
+	gint minutes = -1;
+
+	if (!alarm)
+		return -1;
+
+	prop = i_cal_component_get_first_property (alarm, I_CAL_TRIGGER_PROPERTY);
+	if (prop) {
+		ICalTrigger *trigger = i_cal_property_get_trigger (prop);
+		ICalDuration *duration = trigger ? i_cal_trigger_get_duration (trigger) : NULL;
+
+		if (duration && !i_cal_duration_is_null_duration (duration)) {
+			gint secs = i_cal_duration_as_int (duration);
+
+			if (secs <= 0)
+				minutes = (-secs) / 60;
+		}
+		g_clear_object (&duration);
+		g_clear_object (&trigger);
+		g_object_unref (prop);
+	}
+	g_object_unref (alarm);
+
+	return minutes;
 }
 
 /* Modifie un événement existant (toute la série s'il est périodique).
@@ -8979,6 +9045,9 @@ core_modify_event_run (EvoCore *core,
 		i_cal_component_set_dtend (icomp, time_value);
 		g_object_unref (time_value);
 	}
+
+	if (json_object_has_member (object, "reminder_minutes"))
+		event_set_reminder (icomp, (gint) json_object_get_int_member (object, "reminder_minutes"));
 
 	if (e_cal_client_modify_object_sync (E_CAL_CLIENT (client), icomp, E_CAL_OBJ_MOD_ALL,
 		E_CAL_OPERATION_FLAG_NONE, core->cancellable, error))
@@ -9311,6 +9380,9 @@ core_create_event_run (EvoCore *core,
 	i_cal_component_set_dtend (icomp, dtend);
 	g_clear_object (&dtstart);
 	g_clear_object (&dtend);
+
+	if (json_object_has_member (object, "reminder_minutes"))
+		event_set_reminder (icomp, (gint) json_object_get_int_member (object, "reminder_minutes"));
 
 	if (!e_cal_client_create_object_sync (E_CAL_CLIENT (client), icomp, E_CAL_OPERATION_FLAG_NONE,
 		&created_uid, core->cancellable, error))
@@ -11498,6 +11570,45 @@ evo_core_list_messages (EvoCore *core,
 
 	g_snprintf (count, sizeof (count), "%u", max_count);
 	core_submit (core, core_list_messages_run, g_strdupv (args), func, user_data);
+}
+
+/* Actualise auprès des serveurs distants (Google Agenda, Outlook, CalDAV)
+ * tous les agendas activés.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : inutilisé
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : "{}". */
+static gchar *
+core_refresh_calendars_run (EvoCore *core,
+			    gchar **args,
+			    GError **error)
+{
+	GList *sources, *link;
+
+	sources = e_source_registry_list_enabled (core->registry, E_SOURCE_EXTENSION_CALENDAR);
+	for (link = sources; link && !g_cancellable_is_cancelled (core->cancellable); link = g_list_next (link)) {
+		EClient *client = core_connect_calendar (core, e_source_get_uid (link->data), NULL);
+
+		if (!client)
+			continue;
+		if (e_client_check_refresh_supported (client))
+			e_client_refresh_sync (client, core->cancellable, NULL);
+		g_object_unref (client);
+	}
+	g_list_free_full (sources, g_object_unref);
+
+	return g_strdup ("{}");
+}
+
+void
+evo_core_refresh_calendars (EvoCore *core,
+			    EvoCoreResultFunc func,
+			    void *user_data)
+{
+	g_return_if_fail (core != NULL);
+
+	core_submit (core, core_refresh_calendars_run, g_new0 (gchar *, 1), func, user_data);
 }
 
 void

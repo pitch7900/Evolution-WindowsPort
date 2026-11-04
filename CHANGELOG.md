@@ -14,6 +14,7 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- Calendrier : bouton _Actualiser_ qui synchronise les agendas distants (`evo_core_refresh_calendars`) et sélecteur de rappel (VALARM) dans la fenêtre d'événement.
 - **Modification directe et synchronisation des contacts distants (ROADMAP v0.9.8, TODO section 3)** :
   - Ajout de la fonction native `evo_core_modify_contact` dans `winui/core/evo-core.c` et déclaration dans `winui/core/evo-core.h`, permettant la mise à jour bidirectionnelle des fiches (`full_name`, `email`, `phone`, `org`, `notes`) sur le serveur de carnet d'adresses via `e_book_client_modify_contact_sync`.
   - Intégration de la méthode `ModifyContact` dans `CoreBridge.h` réacheminant la réponse asynchrone sur le thread WinUI.

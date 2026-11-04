@@ -623,6 +623,12 @@ void		evo_core_modify_event		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Actualise les agendas activés auprès des serveurs distants (Google Agenda,
+ * Outlook, CalDAV) ; rappel : {}. */
+void		evo_core_refresh_calendars	(EvoCore *core,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Comme evo_core_list_events (), limité aux agendas calendar_uids (uids
  * séparés par des virgules ; NULL ou "" : tous les agendas activés). */
 void		evo_core_list_calendar_events	(EvoCore *core,

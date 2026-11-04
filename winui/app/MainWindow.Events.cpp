@@ -541,7 +541,16 @@ namespace winrt::EvolutionWin::implementation
     /* Gestionnaire du bouton d'actualisation du calendrier. */
     void MainWindow::OnRefreshCalendarClick(IInspectable const&, RoutedEventArgs const&)
     {
+        /* affichage immédiat du cache local, puis actualisation des agendas distants */
         LoadEvents();
+        if (!m_core)
+            return;
+        ShowStatus(L"Actualisation des agendas distants…", InfoBarSeverity::Informational);
+        m_core->RefreshCalendars([this](hstring const&, hstring const&)
+        {
+            LoadEvents();
+            ShowStatus(L"Agendas actualisés.", InfoBarSeverity::Success);
+        });
     }
 
     /* Gestionnaire du bouton « Nouvel événement ». */
@@ -752,6 +761,25 @@ namespace winrt::EvolutionWin::implementation
         end_row.Children().Append(end_time);
         panel.Children().Append(end_row);
 
+        /* rappel (VALARM) : délai avant le début */
+        static constexpr int reminder_values[] = { -1, 0, 5, 15, 30, 60, 120, 1440 };
+        ComboBox reminder_combo;
+        reminder_combo.Header(box_value(L"Rappel"));
+        reminder_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
+        reminder_combo.IsEnabled(!readonly);
+        for (hstring label : { L"Aucun", L"À l'heure de l'événement", L"5 minutes avant", L"15 minutes avant",
+                               L"30 minutes avant", L"1 heure avant", L"2 heures avant", L"1 jour avant" })
+            reminder_combo.Items().Append(box_value(label));
+        {
+            int current = existing ? static_cast<int>(event.GetNamedNumber(L"reminder_minutes", -1)) : 15;
+            int selected = 0;
+            for (int i = 0; i < 8; ++i)
+                if (reminder_values[i] == current)
+                    selected = i;
+            reminder_combo.SelectedIndex(selected);
+        }
+        panel.Children().Append(reminder_combo);
+
         auto update_times = [start_time, end_time](bool day)
         {
             start_time.Visibility(day ? Visibility::Collapsed : Visibility::Visible);
@@ -857,6 +885,11 @@ namespace winrt::EvolutionWin::implementation
         payload.SetNamedValue(L"start", JsonValue::CreateNumberValue(static_cast<double>(start_unix)));
         payload.SetNamedValue(L"end", JsonValue::CreateNumberValue(static_cast<double>(end_unix)));
         payload.SetNamedValue(L"all_day", JsonValue::CreateBooleanValue(day));
+        {
+            int sel = reminder_combo.SelectedIndex();
+            payload.SetNamedValue(L"reminder_minutes",
+                JsonValue::CreateNumberValue(sel >= 0 && sel < 8 ? reminder_values[sel] : -1));
+        }
 
         if (existing)
         {

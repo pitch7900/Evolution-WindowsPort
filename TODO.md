@@ -335,7 +335,7 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
   - [x] Événements du calendrier principal (et des autres calendriers du compte) affichés avec la couleur du calendrier
   - [x] Créer un événement dans le calendrier choisi (calendrier principal du compte par défaut) : titre, lieu, date, heures ou journée entière, description
   - [x] **Modifier** un événement existant (manquant aujourd'hui) et le supprimer, avec envoi au serveur — _clic sur l'événement : fenêtre modifiable (lecture seule si l'agenda l'est), organisateur et participants_
-  - [ ] Modifications faites ailleurs (Outlook Web, Google Agenda, téléphone) visibles à la synchronisation suivante ; bouton _Actualiser_
+  - [x] Modifications faites ailleurs (Outlook Web, Google Agenda, téléphone) visibles à la synchronisation suivante ; bouton _Actualiser_
   - [x] Événements périodiques existants affichés correctement (occurrences développées), en lecture seule tant que l'éditeur complet (§13) n'existe pas
 - [ ] 🟡 **Gestion simple des contacts du compte** : <a id="demo-gestion-contacts"></a>
   - [x] Contacts du compte (et sous-dossiers / groupes de contacts) listés avec le nom du carnet d'origine — _volet « Carnets d'adresses » par compte, cases à cocher mémorisées, carnet actif_

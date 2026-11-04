@@ -472,6 +472,12 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Actualise les agendas auprès des serveurs distants. */
+        void RefreshCalendars(CoreHandler handler)
+        {
+            evo_core_refresh_calendars(m_core, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Événements des seuls agendas calendar_uids (séparés par des virgules). */
         void ListCalendarEvents(long long start_unix, long long end_unix, winrt::hstring const& calendar_uids, CoreHandler handler)
         {

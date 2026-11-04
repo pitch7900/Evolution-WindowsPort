@@ -31,8 +31,8 @@ flowchart LR
 
 ### 2. Calendrier (§13)
 - [ ] **Fenêtre d\'édition d\'événement** : fenêtre modifiable complète pour créer, modifier et supprimer des événements (dates, participants, lieu, description).
-- [ ] **Prise en charge des fuseaux horaires et alertes** : enregistrement des rappels d\'événements et prise en compte propre des fuseaux horaires.
-- [ ] **Actualisation manuelle et automatique** : bouton d\'actualisation et intégration des modifications effectuées sur d\'autres clients (Outlook Web, Google Agenda).
+- [ ] **Prise en charge des fuseaux horaires et alertes** (rappels VALARM faits, fuseaux restants) : enregistrement des rappels d\'événements et prise en compte propre des fuseaux horaires.
+- [x] **Actualisation manuelle et automatique** : bouton d\'actualisation et intégration des modifications effectuées sur d\'autres clients (Outlook Web, Google Agenda).
 
 ### 3. Application, installation & mises à jour (§1)
 - [ ] **Téléchargement automatique des mises à jour** : rapatriement en tâche de fond du MSI depuis GitHub Releases avec barre de progression.
