@@ -32,7 +32,7 @@ Ce document constitue le manuel de référence complet destiné à tout agent IA
 
 ```
 c:\Users\chris\VSCode\Evolution-WindowsPort\
-├── VERSION                       # Numéro de version SemVer courante (ex: 0.9.7)
+├── VERSION                       # Numéro de version SemVer courante (ex: 0.9.8)
 ├── ROADMAP.md                    # Feuille de route par jalons de versions (v0.9.8, v1.0.0...)
 ├── CHANGELOG.md                  # Historique des modifications (Keep a Changelog)
 ├── TODO.md                       # Référentiel exhaustif des spécifications et tâches
@@ -145,7 +145,7 @@ Les règles suivantes ont été définies par Pierre et doivent être respectée
    - Penser à déspécialiser les apostrophes dans les sorties console si nécessaire.
 
 2. **Stratégie de Git & Commits** :
-   - Travailler sur la branche active de la version en cours (actuellement `0.9.7`).
+   - Travailler sur la branche active de la version en cours (actuellement `0.9.8`).
    - Réaliser **un commit atomique après chaque tâche traitée**.
    - Format de commit conventionnel : `feat(<scope>): <description en français>` ou `fix(<scope>): <description>`.
    - Toujours pousser (`git push origin <branche>`) après avoir validé un ensemble de tâches.
@@ -186,7 +186,7 @@ Ce fichier `LLM.md` ne contient volontairement **aucun listing statique de tâch
 > Les fichiers [`TODO.md`](TODO.md) et [`QUICKWINS.md`](QUICKWINS.md) **ne sont jamais statiques ni figés**. Pierre peut les modifier ou y injecter régulièrement de nouvelles tâches, exigences ou priorités au fil de l'eau. L'agent IA doit toujours relire l'état réel et à jour de ces fichiers plutôt que de se baser sur un souvenir ou une supposition.
 
 ### 7.1. Fichiers sources à lire obligatoirement :
-1. **[`VERSION`](VERSION)** : Indique la version SemVer courante du projet (ainsi que le nom de la branche de développement active, ex. `0.9.7`).
+1. **[`VERSION`](VERSION)** : Indique la version SemVer courante du projet (ainsi que le nom de la branche de développement active, ex. `0.9.8`).
 2. **[`ROADMAP.md`](ROADMAP.md)** : **Feuille de route stratégique par jalons de version** (v0.9.8, v1.0.0, v1.1.0, etc.). Elle indique à l'agent IA **quelles tâches de `TODO.md` traiter en priorité** pour la version cible en cours.
 3. **[`CHANGELOG.md`](CHANGELOG.md)** : Registre historique officiel listant l'ensemble des fonctionnalités déjà réalisées, testées et validées, regroupées par version.
 4. **[`QUICKWINS.md`](QUICKWINS.md)** : Liste des tâches prioritaires à fort impact utilisateur et faible coût d'implémentation. Ce fichier évolue régulièrement avec de nouveaux ajouts de Pierre ; l'agent doit toujours y traiter en priorité absolue les tâches ouvertes (`- [ ]`).

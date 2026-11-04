@@ -7,6 +7,7 @@
 #include "SplashWindow.xaml.h"
 
 #include <map>
+#include <set>
 
 namespace winrt::EvolutionWin::implementation
 {
@@ -209,6 +210,7 @@ namespace winrt::EvolutionWin::implementation
         void OnExportContactsClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnComposeToContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnDeleteContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnEditContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
         /* Gestionnaires des tâches */
         void OnNewTaskClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -518,6 +520,7 @@ namespace winrt::EvolutionWin::implementation
         fire_and_forget ShowNewFocusEventDialogAsync();
         void LoadContacts(hstring const& query);
         fire_and_forget ShowNewContactDialogAsync();
+        fire_and_forget ShowEditContactDialogAsync();
 
         /* Exportation vCard / iCalendar */
         fire_and_forget ExportCalendarAsync(Windows::Data::Json::JsonArray sources);
@@ -580,6 +583,10 @@ namespace winrt::EvolutionWin::implementation
         bool m_startup_synced{ false };
         hstring m_update_tag;	/* version plus récente disponible (vide : aucune connue) */
         hstring m_update_page;
+        hstring m_update_msi_url;	/* installeur MSI de la version plus récente */
+        hstring m_update_msi_name;
+        hstring m_update_sha_url;	/* fichier .sha256 correspondant */
+        fire_and_forget DownloadAndInstallUpdateAsync();
         /* fenêtres indépendantes de lecture ouvertes par UID */
         std::map<std::wstring, winrt::EvolutionWin::MessageWindow> m_open_message_windows;
         /* fenêtres de rédaction ouvertes */
@@ -610,6 +617,9 @@ namespace winrt::EvolutionWin::implementation
         void LoadFolderSort();
         void SaveFolderSort();
         bool m_conversations_enabled{ false };
+        /* fils développés (clé : objet normalisé) et derniers messages affichés */
+        std::set<std::wstring> m_expanded_threads;
+        Windows::Data::Json::JsonArray m_last_shown_messages{ nullptr };
         void LoadFolderConversations();
         void SaveFolderConversations(bool enabled);
         void UpdateSortHeader();
@@ -644,6 +654,7 @@ namespace winrt::EvolutionWin::implementation
         Windows::Data::Json::JsonArray m_calendar_sources{ nullptr };
         void LoadCalendarSources();
         fire_and_forget ShowAddCalendarDialogAsync();
+        fire_and_forget ShowAddExchangeCalendarDialogAsync();
         /* carnets d'adresses affichés (contacts.visible) et actif (contacts.active) */
         Windows::Data::Json::JsonArray m_contact_books{ nullptr };
         void LoadContactBooks();

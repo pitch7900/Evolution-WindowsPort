@@ -10,6 +10,31 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
+## [0.9.8] — 2026-11-04
+`n> Note : la validation de bout en bout de la collection `microsoft365` (calendriers et contacts) exige un tenant réel et reste à faire ; la création de la collection et les paramètres sont déjà en place.`n
+### Ajouté
+
+- Calendrier : bouton _Actualiser_ qui synchronise les agendas distants (`evo_core_refresh_calendars`) et sélecteur de rappel (VALARM) dans la fenêtre d'événement.
+- **Modification directe et synchronisation des contacts distants (ROADMAP v0.9.8, TODO section 3)** :
+  - Ajout de la fonction native `evo_core_modify_contact` dans `winui/core/evo-core.c` et déclaration dans `winui/core/evo-core.h`, permettant la mise à jour bidirectionnelle des fiches (`full_name`, `email`, `phone`, `org`, `notes`) sur le serveur de carnet d'adresses via `e_book_client_modify_contact_sync`.
+  - Intégration de la méthode `ModifyContact` dans `CoreBridge.h` réacheminant la réponse asynchrone sur le thread WinUI.
+  - Ajout des boutons « Modifier le contact » dans le volet de détail des contacts et sur le ruban Contacts › Accueil (`OnEditContactClick`).
+  - Boîte de dialogue modale `ShowEditContactDialogAsync` avec préremplissage des données actuelles du contact et rafraîchissement immédiat de la liste après sauvegarde.
+  - Couverture par test unitaire de contrat JSON dans `tests/unit/test_evo_core_contracts.c` et validation de l'ABI DLL (68 symboles exportés).
+
+- **Groupes de calendriers Exchange Online / Microsoft 365 (TODO section 13)** : l'extension de source `Microsoft365 Folder` conserve le nom du groupe de calendriers Graph (`group-name`) ; `evo_core_list_sources` expose `backend` et `group_name` ; l'actualisation des agendas redécouvre d'abord les calendriers côté serveur ; le volet des calendriers regroupe les sources par compte et par groupe (« Équipe de ... ») et la boîte « Depuis Exchange Online… » permet de cocher les calendriers à afficher.
+- **Fenêtre d'édition d'événement complète et fuseaux horaires (ROADMAP v0.9.8, TODO section 13)** : la fenêtre d'événement permet d'éditer les participants (adresses séparées par « ; », réponses existantes conservées) et de choisir le fuseau horaire (noms IANA, heures murales envoyées au moteur, VTIMEZONE ajouté à l'agenda) ; les événements en TZID sont relus dans leur fuseau. Le moteur (`event_apply_times_and_attendees`) gère désormais la journée entière à la création.
+- **Téléchargement et contrôle d'intégrité des mises à jour (ROADMAP v0.9.8, TODO section 1)** : « Télécharger et installer » (fenêtre de nouvelle version et bandeau de la page À propos) récupère le MSI joint à la Release GitHub dans `%LOCALAPPDATA%\EvolutionWin\updates` avec barre de progression et annulation ; l'empreinte SHA-256 est calculée au fil du flux et comparée au fichier `.sha256` publié (obligatoire ; fichier supprimé en cas de différence), puis la signature Authenticode est validée par `WinVerifyTrust` (signature invalide : refus ; installeur non signé : confirmation explicite) avant de lancer `msiexec /i`. Fonctions pures dans `winui/app/UpdateIntegrity.h`, couvertes par 4 tests unitaires.
+- **Gmail / Google Workspace : agenda et contacts (ROADMAP v0.9.8, TODO section 3)** : l'ajout d'un compte Gmail crée la collection Google (CalDAV / CardDAV, même jeton OAuth2). Pour les comptes déjà configurés, nouvelle fonction native `evo_core_enable_google_services` (69 → 70 exports) et bouton « Activer le calendrier et les contacts » dans la liste des comptes : elle active les services de la collection Google existante ou crée une collection dédiée (sans courrier) puis lance la connexion Google pour accorder les nouvelles portées.
+
+- **Regroupement par discussion (ROADMAP v1.0.0, TODO section 5)** : `evo-core` expose pour chaque message l'empreinte Camel de son `Message-ID` (`msgid`) et celles de `In-Reply-To` / `References` (`refs`). Le module pur `winui/app/ConversationThreads.h` rassemble les messages d'une même discussion (identifiants cités, réponses à un message absent, repli sur l'objet normalisé « Re: / TR: / AW: … »). Avec le bouton « Conversations » du ruban, la liste n'affiche que le premier message de chaque fil, avec un bouton replier / développer et le nombre de messages et de non lus ; le message sélectionné reste visible. 1 test unitaire de plus.
+
+### Prévu (cf. ROADMAP.md)
+
+- **Comptes & Services distants (TODO section 3, ROADMAP v0.9.8)** : validation de bout en bout de la synchronisation des calendriers et contacts Microsoft 365 (Microsoft Graph) et Google Workspace (Google People API / CardDAV).
+- **Calendrier & Événements (TODO section 13, ROADMAP v0.9.8)** : fenêtre d'édition d'événement complète, gestion des fuseaux horaires, alertes et actualisation bidirectionnelle.
+- **Application & Déploiement (TODO section 1, ROADMAP v0.9.8)** : téléchargement en tâche de fond des mises à jour MSI depuis GitHub Releases avec vérification d'intégrité SHA-256.
+
 ## [0.9.7] — 2026-11-04
 
 ### Ajouté

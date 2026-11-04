@@ -380,6 +380,16 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Active l'agenda et les contacts Google d'un compte Gmail existant.
+         * Paramètres :
+         *   email   : adresse du compte Gmail
+         *   handler : rappel recevant {"collection_uid", "created", "already_enabled"} */
+        void EnableGoogleServices(winrt::hstring const& email, CoreHandler handler)
+        {
+            evo_core_enable_google_services(m_core, winrt::to_string(email).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Crée un compte Microsoft 365 / Exchange Online (Microsoft Graph).
          * Paramètres :
          *   account_json : JSON {"email", "display_name", "full_name", "client_id"?, "tenant"?},
@@ -470,6 +480,12 @@ namespace EvolutionWin
         {
             evo_core_modify_event(m_core, winrt::to_string(event_json).c_str(),
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Actualise les agendas auprès des serveurs distants. */
+        void RefreshCalendars(CoreHandler handler)
+        {
+            evo_core_refresh_calendars(m_core, &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
         /* Événements des seuls agendas calendar_uids (séparés par des virgules). */
@@ -583,6 +599,16 @@ namespace EvolutionWin
         void DeleteContact(winrt::hstring const& book_uid, winrt::hstring const& contact_uid, CoreHandler handler)
         {
             evo_core_delete_contact(m_core, winrt::to_string(book_uid).c_str(), winrt::to_string(contact_uid).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Modifie un contact existant dans un carnet d'adresses.
+         * Paramètres :
+         *   contact_json : description JSON modifiée du contact
+         *   handler      : rappel sur le thread de l'interface */
+        void ModifyContact(winrt::hstring const& contact_json, CoreHandler handler)
+        {
+            evo_core_modify_contact(m_core, winrt::to_string(contact_json).c_str(),
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 

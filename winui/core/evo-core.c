@@ -2202,6 +2202,24 @@ json_from_message_infos (GPtrArray *infos,
 		json_builder_add_boolean_value (builder, (flags & CAMEL_MESSAGE_FLAGGED) != 0);
 		json_builder_set_member_name (builder, "attachments");
 		json_builder_add_boolean_value (builder, (flags & CAMEL_MESSAGE_ATTACHMENTS) != 0);
+		/* regroupement par discussion : empreinte du Message-ID et de
+		 * ceux de In-Reply-To / References (identifiants 64 bits Camel) */
+		{
+			const GArray *references = camel_message_info_get_references (info);
+			guint jj;
+			gchar *text = g_strdup_printf ("%" G_GUINT64_FORMAT, (guint64) camel_message_info_get_message_id (info));
+
+			builder_add_string (builder, "msgid", text);
+			g_free (text);
+			json_builder_set_member_name (builder, "refs");
+			json_builder_begin_array (builder);
+			for (jj = 0; references && jj < references->len; jj++) {
+				text = g_strdup_printf ("%" G_GUINT64_FORMAT, g_array_index (references, guint64, jj));
+				json_builder_add_string_value (builder, text);
+				g_free (text);
+			}
+			json_builder_end_array (builder);
+		}
 		/* for sorting the list: recipients, size, labels (categories),
 		 * follow-up due date */
 		json_builder_set_member_name (builder, "to");
@@ -7936,6 +7954,109 @@ core_set_google_mail_settings (ESource *source,
 	e_source_authentication_set_method (authentication, "Google");
 }
 
+/* Active l'agenda et les contacts Google d'un compte Gmail déjà configuré
+ * sans ces services. Si une collection « google » existe pour l'adresse, ses
+ * services agenda et contacts sont activés ; sinon une collection dédiée
+ * (sans courrier) est créée avec le même identifiant et l'authentification
+ * OAuth2 « Google ». L'interface enchaîne avec evo_core_oauth2_begin () sur
+ * "collection_uid" pour accorder les portées CalDAV / CardDAV.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = adresse e-mail du compte Gmail
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : {"collection_uid", "created", "already_enabled"}, NULL sinon. */
+static gchar *
+core_enable_google_services_run (EvoCore *core,
+				 gchar **args,
+				 GError **error)
+{
+	const gchar *email = args[0];
+	ESource *collection_source = NULL;
+	ESourceCollection *collection;
+	ESourceAuthentication *authentication;
+	GList *sources, *link;
+	JsonBuilder *builder;
+	gboolean created = FALSE, already = FALSE;
+	gchar *json;
+
+	if (!email || !*email) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "L'adresse e-mail est obligatoire");
+		return NULL;
+	}
+
+	sources = e_source_registry_list_sources (core->registry, E_SOURCE_EXTENSION_COLLECTION);
+	for (link = sources; link && !collection_source; link = g_list_next (link)) {
+		ESource *candidate = link->data;
+		ESourceBackend *backend;
+		gchar *backend_name, *identity;
+
+		backend = E_SOURCE_BACKEND (e_source_get_extension (candidate, E_SOURCE_EXTENSION_COLLECTION));
+		backend_name = e_source_backend_dup_backend_name (backend);
+		identity = e_source_collection_dup_identity (E_SOURCE_COLLECTION (backend));
+		if (g_strcmp0 (backend_name, "google") == 0 && identity && g_ascii_strcasecmp (identity, email) == 0)
+			collection_source = g_object_ref (candidate);
+		g_free (backend_name);
+		g_free (identity);
+	}
+	g_list_free_full (sources, g_object_unref);
+
+	if (collection_source) {
+		collection = e_source_get_extension (collection_source, E_SOURCE_EXTENSION_COLLECTION);
+		already = e_source_collection_get_calendar_enabled (collection) &&
+			e_source_collection_get_contacts_enabled (collection);
+		if (!already) {
+			e_source_collection_set_calendar_enabled (collection, TRUE);
+			e_source_collection_set_contacts_enabled (collection, TRUE);
+			if (!e_source_write_sync (collection_source, core->cancellable, error)) {
+				g_object_unref (collection_source);
+				return NULL;
+			}
+		}
+	} else {
+		GList *new_sources;
+		gchar *display_name = g_strdup_printf ("%s (agenda et contacts)", email);
+
+		collection_source = e_source_new (NULL, NULL, NULL);
+		e_source_set_display_name (collection_source, display_name);
+		g_free (display_name);
+
+		collection = e_source_get_extension (collection_source, E_SOURCE_EXTENSION_COLLECTION);
+		e_source_backend_set_backend_name (E_SOURCE_BACKEND (collection), "google");
+		e_source_collection_set_identity (collection, email);
+		e_source_collection_set_mail_enabled (collection, FALSE);
+		e_source_collection_set_calendar_enabled (collection, TRUE);
+		e_source_collection_set_contacts_enabled (collection, TRUE);
+
+		authentication = e_source_get_extension (collection_source, E_SOURCE_EXTENSION_AUTHENTICATION);
+		e_source_authentication_set_method (authentication, "Google");
+		e_source_authentication_set_user (authentication, email);
+		e_source_authentication_set_host (authentication, "www.google.com");
+
+		new_sources = g_list_append (NULL, collection_source);
+		if (!e_source_registry_create_sources_sync (core->registry, new_sources, core->cancellable, error)) {
+			g_list_free (new_sources);
+			g_object_unref (collection_source);
+			return NULL;
+		}
+		g_list_free (new_sources);
+		created = TRUE;
+	}
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	builder_add_string (builder, "collection_uid", e_source_get_uid (collection_source));
+	json_builder_set_member_name (builder, "created");
+	json_builder_add_boolean_value (builder, created);
+	json_builder_set_member_name (builder, "already_enabled");
+	json_builder_add_boolean_value (builder, already);
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+	g_object_unref (collection_source);
+
+	return json;
+}
+
 /* Crée un compte Gmail / Google Workspace comme l'assistant d'Evolution :
  * une collection (backend "google", authentification OAuth2 "Google") qui
  * porte le courrier IMAP / SMTP de Gmail, l'identité, et dont le module du
@@ -8857,10 +8978,33 @@ core_get_event_run (EvoCore *core,
 	json_builder_set_member_name (builder, "all_day");
 	json_builder_add_boolean_value (builder, all_day);
 
+	/* fuseau horaire (TZID) du début et heures murales dans ce fuseau */
+	{
+		ICalProperty *dtstart_prop = i_cal_component_get_first_property (icomp, I_CAL_DTSTART_PROPERTY);
+		ICalParameter *tzparam = dtstart_prop ? i_cal_property_get_first_parameter (dtstart_prop, I_CAL_TZID_PARAMETER) : NULL;
+		const gchar *tzid = tzparam ? i_cal_parameter_get_tzid (tzparam) : NULL;
+
+		builder_add_string (builder, "timezone", tzid ? tzid : "");
+		if (tzid && *tzid && !all_day) {
+			ICalTime *ws = i_cal_component_get_dtstart (icomp);
+			ICalTime *we = i_cal_component_get_dtend (icomp);
+
+			builder_add_string (builder, "start_wall", ws ? i_cal_time_as_ical_string (ws) : "");
+			builder_add_string (builder, "end_wall", we ? i_cal_time_as_ical_string (we) : "");
+			g_clear_object (&ws);
+			g_clear_object (&we);
+		}
+		g_clear_object (&tzparam);
+		g_clear_object (&dtstart_prop);
+	}
+
 	prop = i_cal_component_get_first_property (icomp, I_CAL_RRULE_PROPERTY);
 	json_builder_set_member_name (builder, "recurring");
 	json_builder_add_boolean_value (builder, prop != NULL);
 	g_clear_object (&prop);
+
+	json_builder_set_member_name (builder, "reminder_minutes");
+	json_builder_add_int_value (builder, event_get_reminder (icomp));
 
 	json_builder_set_member_name (builder, "readonly");
 	json_builder_add_boolean_value (builder, e_client_is_readonly (client));
@@ -8909,6 +9053,175 @@ core_get_event_run (EvoCore *core,
 	return json;
 }
 
+/* Supprime les rappels (VALARM) d'un événement puis, si minutes >= 0, ajoute
+ * un rappel d'affichage déclenché « minutes » minutes avant le début.
+ * Paramètres :
+ *   icomp   : composant VEVENT à modifier
+ *   minutes : délai en minutes, négatif pour aucun rappel */
+static void
+event_set_reminder (ICalComponent *icomp,
+		    gint minutes)
+{
+	ICalComponent *alarm;
+	ICalTrigger *trigger;
+
+	while ((alarm = i_cal_component_get_first_component (icomp, I_CAL_VALARM_COMPONENT)) != NULL) {
+		i_cal_component_remove_component (icomp, alarm);
+		g_object_unref (alarm);
+	}
+
+	if (minutes < 0)
+		return;
+
+	alarm = i_cal_component_new_valarm ();
+	i_cal_component_take_property (alarm, i_cal_property_new_action (I_CAL_ACTION_DISPLAY));
+	trigger = i_cal_trigger_new_from_int (-minutes * 60);
+	i_cal_component_take_property (alarm, i_cal_property_new_trigger (trigger));
+	g_object_unref (trigger);
+	i_cal_component_take_property (alarm, i_cal_property_new_description ("Rappel"));
+	i_cal_component_take_component (icomp, alarm);
+}
+
+/* Applique début, fin, fuseau horaire et participants d'un événement JSON
+ * sur un composant VEVENT (création comme modification).
+ * Champs lus : "start" / "end" (secondes Unix), "all_day", "timezone" (nom
+ * IANA, ex. « Europe/Zurich »), "start_wall" / "end_wall" (heure locale du
+ * fuseau, « AAAAMMJJTHHMMSS ») et "attendees" (tableau d'adresses).
+ * Paramètres :
+ *   client : agenda (reçoit le VTIMEZONE du fuseau choisi)
+ *   icomp  : composant VEVENT à modifier
+ *   object : événement JSON */
+static void
+event_apply_times_and_attendees (ECalClient *client,
+				 ICalComponent *icomp,
+				 JsonObject *object)
+{
+	gint64 start_unix = json_object_get_int_member_with_default (object, "start", 0);
+	gint64 end_unix = json_object_get_int_member_with_default (object, "end", start_unix + 3600);
+	gboolean all_day = json_object_get_boolean_member_with_default (object, "all_day", FALSE);
+	const gchar *tzid = json_object_get_string_member_with_default (object, "timezone", "");
+	const gchar *start_wall = json_object_get_string_member_with_default (object, "start_wall", "");
+	const gchar *end_wall = json_object_get_string_member_with_default (object, "end_wall", "");
+	ICalTimezone *zone = NULL;
+	ICalTime *time_value;
+
+	if (!all_day && *tzid)
+		zone = i_cal_timezone_get_builtin_timezone (tzid);
+
+	if (zone && *start_wall && *end_wall) {
+		/* heure murale dans le fuseau choisi (comme Outlook) */
+		time_value = i_cal_time_new_from_string (start_wall);
+		i_cal_time_set_timezone (time_value, zone);
+		i_cal_component_set_dtstart (icomp, time_value);
+		g_object_unref (time_value);
+
+		time_value = i_cal_time_new_from_string (end_wall);
+		i_cal_time_set_timezone (time_value, zone);
+		i_cal_component_set_dtend (icomp, time_value);
+		g_object_unref (time_value);
+
+		e_cal_client_add_timezone_sync (client, zone, NULL, NULL);
+	} else if (start_unix > 0) {
+		/* journée entière : dates sans heure ; sinon heures en UTC */
+		ICalTimezone *utc = all_day ? NULL : i_cal_timezone_get_utc_timezone ();
+
+		time_value = i_cal_time_new_from_timet_with_zone ((time_t) start_unix, all_day, utc);
+		i_cal_component_set_dtstart (icomp, time_value);
+		g_object_unref (time_value);
+
+		time_value = i_cal_time_new_from_timet_with_zone ((time_t) MAX (end_unix, start_unix), all_day, utc);
+		i_cal_component_set_dtend (icomp, time_value);
+		g_object_unref (time_value);
+	}
+
+	if (json_object_has_member (object, "attendees")) {
+		JsonArray *list = json_object_get_array_member (object, "attendees");
+		ICalProperty *prop;
+		guint i;
+
+		/* conserve les participants existants dont l'adresse reste listée
+		 * (leur réponse est ainsi préservée) ; ajoute les nouveaux */
+		prop = i_cal_component_get_first_property (icomp, I_CAL_ATTENDEE_PROPERTY);
+		while (prop) {
+			ICalProperty *next = i_cal_component_get_next_property (icomp, I_CAL_ATTENDEE_PROPERTY);
+			const gchar *value = i_cal_property_get_attendee (prop);
+			gboolean keep = FALSE;
+
+			if (value && list) {
+				const gchar *addr = g_ascii_strncasecmp (value, "mailto:", 7) == 0 ? value + 7 : value;
+
+				for (i = 0; i < json_array_get_length (list); i++)
+					if (g_ascii_strcasecmp (addr, json_array_get_string_element (list, i)) == 0)
+						keep = TRUE;
+			}
+			if (!keep)
+				i_cal_component_remove_property (icomp, prop);
+			g_object_unref (prop);
+			prop = next;
+		}
+
+		for (i = 0; list && i < json_array_get_length (list); i++) {
+			const gchar *addr = json_array_get_string_element (list, i);
+			gboolean present = FALSE;
+			gchar *uri;
+
+			if (!addr || !*addr)
+				continue;
+			for (prop = i_cal_component_get_first_property (icomp, I_CAL_ATTENDEE_PROPERTY); prop;
+			     g_object_unref (prop), prop = i_cal_component_get_next_property (icomp, I_CAL_ATTENDEE_PROPERTY)) {
+				const gchar *value = i_cal_property_get_attendee (prop);
+
+				if (value && g_ascii_strcasecmp (g_ascii_strncasecmp (value, "mailto:", 7) == 0 ? value + 7 : value, addr) == 0)
+					present = TRUE;
+			}
+			if (present)
+				continue;
+
+			uri = g_strconcat ("mailto:", addr, NULL);
+			prop = i_cal_property_new_attendee (uri);
+			i_cal_property_take_parameter (prop, i_cal_parameter_new_partstat (I_CAL_PARTSTAT_NEEDSACTION));
+			i_cal_property_take_parameter (prop, i_cal_parameter_new_role (I_CAL_ROLE_REQPARTICIPANT));
+			i_cal_property_take_parameter (prop, i_cal_parameter_new_rsvp (I_CAL_RSVP_TRUE));
+			i_cal_component_take_property (icomp, prop);
+			g_free (uri);
+		}
+	}
+}
+
+/* Délai du premier rappel (VALARM) d'un événement.
+ * Paramètres :
+ *   icomp : composant VEVENT
+ * Retourne : minutes avant le début, -1 s'il n'y a aucun rappel relatif. */
+static gint
+event_get_reminder (ICalComponent *icomp)
+{
+	ICalComponent *alarm = i_cal_component_get_first_component (icomp, I_CAL_VALARM_COMPONENT);
+	ICalProperty *prop;
+	gint minutes = -1;
+
+	if (!alarm)
+		return -1;
+
+	prop = i_cal_component_get_first_property (alarm, I_CAL_TRIGGER_PROPERTY);
+	if (prop) {
+		ICalTrigger *trigger = i_cal_property_get_trigger (prop);
+		ICalDuration *duration = trigger ? i_cal_trigger_get_duration (trigger) : NULL;
+
+		if (duration && !i_cal_duration_is_null_duration (duration)) {
+			gint secs = i_cal_duration_as_int (duration);
+
+			if (secs <= 0)
+				minutes = (-secs) / 60;
+		}
+		g_clear_object (&duration);
+		g_clear_object (&trigger);
+		g_object_unref (prop);
+	}
+	g_object_unref (alarm);
+
+	return minutes;
+}
+
 /* Modifie un événement existant (toute la série s'il est périodique).
  * Paramètres :
  *   core  : instance du moteur evo-core
@@ -8926,10 +9239,7 @@ core_modify_event_run (EvoCore *core,
 	EClient *client = NULL;
 	ICalComponent *icomp = NULL;
 	ICalProperty *prop;
-	ICalTime *time_value;
 	const gchar *summary, *location, *description;
-	gint64 start_unix, end_unix;
-	gboolean all_day;
 	gchar *json = NULL;
 
 	root = json_from_string (args[0], error);
@@ -8953,9 +9263,6 @@ core_modify_event_run (EvoCore *core,
 	summary = json_object_get_string_member_with_default (object, "summary", "");
 	location = json_object_get_string_member_with_default (object, "location", "");
 	description = json_object_get_string_member_with_default (object, "description", "");
-	start_unix = json_object_get_int_member_with_default (object, "start", 0);
-	end_unix = json_object_get_int_member_with_default (object, "end", start_unix + 3600);
-	all_day = json_object_get_boolean_member_with_default (object, "all_day", FALSE);
 
 	i_cal_component_set_summary (icomp, *summary ? summary : "(Sans titre)");
 	i_cal_component_set_location (icomp, location);
@@ -8967,18 +9274,10 @@ core_modify_event_run (EvoCore *core,
 	if (*description)
 		i_cal_component_take_property (icomp, i_cal_property_new_description (description));
 
-	if (start_unix > 0) {
-		/* journée entière : dates sans heure ; sinon heures en UTC */
-		time_value = i_cal_time_new_from_timet_with_zone ((time_t) start_unix, all_day,
-			all_day ? NULL : i_cal_timezone_get_utc_timezone ());
-		i_cal_component_set_dtstart (icomp, time_value);
-		g_object_unref (time_value);
+	event_apply_times_and_attendees (E_CAL_CLIENT (client), icomp, object);
 
-		time_value = i_cal_time_new_from_timet_with_zone ((time_t) MAX (end_unix, start_unix), all_day,
-			all_day ? NULL : i_cal_timezone_get_utc_timezone ());
-		i_cal_component_set_dtend (icomp, time_value);
-		g_object_unref (time_value);
-	}
+	if (json_object_has_member (object, "reminder_minutes"))
+		event_set_reminder (icomp, (gint) json_object_get_int_member (object, "reminder_minutes"));
 
 	if (e_cal_client_modify_object_sync (E_CAL_CLIENT (client), icomp, E_CAL_OBJ_MOD_ALL,
 		E_CAL_OPERATION_FLAG_NONE, core->cancellable, error))
@@ -9249,8 +9548,6 @@ core_create_event_run (EvoCore *core,
 	ESource *source = NULL;
 	EClient *client = NULL;
 	ICalComponent *icomp = NULL;
-	ICalTime *dtstart, *dtend;
-	ICalTimezone *utc_zone;
 	gchar *new_uid = NULL, *created_uid = NULL, *json = NULL;
 	JsonBuilder *builder;
 
@@ -9290,7 +9587,8 @@ core_create_event_run (EvoCore *core,
 	if (!client)
 		goto exit;
 
-	utc_zone = i_cal_timezone_get_utc_timezone ();
+	json_object_set_int_member (object, "start", start_unix);
+	json_object_set_int_member (object, "end", end_unix);
 	icomp = i_cal_component_new_vevent ();
 
 	new_uid = e_util_generate_uid ();
@@ -9305,12 +9603,10 @@ core_create_event_run (EvoCore *core,
 		i_cal_component_take_property (icomp, prop);
 	}
 
-	dtstart = i_cal_time_new_from_timet_with_zone ((time_t) start_unix, FALSE, utc_zone);
-	dtend = i_cal_time_new_from_timet_with_zone ((time_t) end_unix, FALSE, utc_zone);
-	i_cal_component_set_dtstart (icomp, dtstart);
-	i_cal_component_set_dtend (icomp, dtend);
-	g_clear_object (&dtstart);
-	g_clear_object (&dtend);
+	event_apply_times_and_attendees (E_CAL_CLIENT (client), icomp, object);
+
+	if (json_object_has_member (object, "reminder_minutes"))
+		event_set_reminder (icomp, (gint) json_object_get_int_member (object, "reminder_minutes"));
 
 	if (!e_cal_client_create_object_sync (E_CAL_CLIENT (client), icomp, E_CAL_OPERATION_FLAG_NONE,
 		&created_uid, core->cancellable, error))
@@ -10417,6 +10713,83 @@ core_delete_contact_run (EvoCore *core,
 	return ok ? g_strdup ("{}") : NULL;
 }
 
+/* Modifie un contact existant dans son carnet d'adresses.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = JSON du contact {"book_uid", "uid", "full_name", "email", "phone", "org", "notes"}
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : "{}" en cas de succès, NULL sinon. */
+static gchar *
+core_modify_contact_run (EvoCore *core,
+			 gchar **args,
+			 GError **error)
+{
+	JsonNode *root;
+	JsonObject *object;
+	const gchar *book_uid, *uid, *full_name, *email, *phone, *org, *notes;
+	ESource *source = NULL;
+	EClient *client = NULL;
+	EContact *contact = NULL;
+	gboolean ok = FALSE;
+
+	root = json_from_string (args[0], error);
+	if (!root)
+		return NULL;
+
+	object = JSON_NODE_HOLDS_OBJECT (root) ? json_node_get_object (root) : NULL;
+	if (!object) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Objet JSON invalide");
+		json_node_unref (root);
+		return NULL;
+	}
+
+	book_uid = json_object_get_string_member_with_default (object, "book_uid", "");
+	uid = json_object_get_string_member_with_default (object, "uid", "");
+	full_name = json_object_get_string_member_with_default (object, "full_name", "");
+	email = json_object_get_string_member_with_default (object, "email", "");
+	phone = json_object_get_string_member_with_default (object, "phone", "");
+	org = json_object_get_string_member_with_default (object, "org", "");
+	notes = json_object_get_string_member_with_default (object, "notes", "");
+
+	if (!uid || !*uid) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Identifiant de contact obligatoire");
+		goto exit;
+	}
+
+	if (book_uid && *book_uid)
+		source = e_source_registry_ref_source (core->registry, book_uid);
+	if (!source)
+		source = e_source_registry_ref_default_address_book (core->registry);
+
+	if (!source) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "Carnet d'adresses introuvable");
+		goto exit;
+	}
+
+	client = e_book_client_connect_sync (source, 5, core->cancellable, error);
+	if (!client)
+		goto exit;
+
+	if (!e_book_client_get_contact_sync (E_BOOK_CLIENT (client), uid, &contact, core->cancellable, error))
+		goto exit;
+
+	e_contact_set (contact, E_CONTACT_FULL_NAME, (full_name && *full_name) ? full_name : email);
+	e_contact_set (contact, E_CONTACT_EMAIL_1, (email && *email) ? email : NULL);
+	e_contact_set (contact, E_CONTACT_PHONE_MOBILE, (phone && *phone) ? phone : NULL);
+	e_contact_set (contact, E_CONTACT_ORG, (org && *org) ? org : NULL);
+	e_contact_set (contact, E_CONTACT_NOTE, (notes && *notes) ? notes : NULL);
+
+	ok = e_book_client_modify_contact_sync (E_BOOK_CLIENT (client), contact, E_BOOK_OPERATION_FLAG_NONE, core->cancellable, error);
+
+exit:
+	g_clear_object (&contact);
+	g_clear_object (&client);
+	g_clear_object (&source);
+	json_node_unref (root);
+
+	return ok ? g_strdup ("{}") : NULL;
+}
+
 /* --- exportation vCard / iCalendar --- */
 
 /* Types de sources (agendas, tâches, mémos, carnets d'adresses) et
@@ -10842,6 +11215,25 @@ core_list_sources_run (EvoCore *core,
 			builder_add_string (builder, "account_email", source_acc_email ? source_acc_email : "");
 			builder_add_string (builder, "color", color);
 			g_free (source_acc_email);
+			{
+				/* protocole de la collection (microsoft365, ews, google...) et nom du
+				 * groupe de calendriers Exchange Online (« Équipe de ... ») */
+				gchar *collection_backend = NULL, *group_name = NULL;
+
+				if (parent && e_source_has_extension (parent, E_SOURCE_EXTENSION_COLLECTION))
+					collection_backend = e_source_backend_dup_backend_name (E_SOURCE_BACKEND (
+						e_source_get_extension (parent, E_SOURCE_EXTENSION_COLLECTION)));
+				if (e_source_has_extension (source, "Microsoft365 Folder")) {
+					GObject *folder_ext = G_OBJECT (e_source_get_extension (source, "Microsoft365 Folder"));
+
+					if (g_object_class_find_property (G_OBJECT_GET_CLASS (folder_ext), "group-name"))
+						g_object_get (folder_ext, "group-name", &group_name, NULL);
+				}
+				builder_add_string (builder, "backend", collection_backend ? collection_backend : "");
+				builder_add_string (builder, "group_name", group_name ? group_name : "");
+				g_free (collection_backend);
+				g_free (group_name);
+			}
 			json_builder_set_member_name (builder, "default");
 			json_builder_add_boolean_value (builder, default_source && e_source_equal (source, default_source));
 			json_builder_end_object (builder);
@@ -11421,6 +11813,56 @@ evo_core_list_messages (EvoCore *core,
 
 	g_snprintf (count, sizeof (count), "%u", max_count);
 	core_submit (core, core_list_messages_run, g_strdupv (args), func, user_data);
+}
+
+/* Actualise auprès des serveurs distants (Google Agenda, Outlook, CalDAV)
+ * tous les agendas activés.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : inutilisé
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : "{}". */
+static gchar *
+core_refresh_calendars_run (EvoCore *core,
+			    gchar **args,
+			    GError **error)
+{
+	GList *sources, *link;
+
+	/* demande d'abord aux collections (Exchange Online, Google...) de
+	 * redécouvrir leurs agendas, groupes d'agendas compris */
+	sources = e_source_registry_list_enabled (core->registry, E_SOURCE_EXTENSION_COLLECTION);
+	for (link = sources; link; link = g_list_next (link)) {
+		ESource *collection = link->data;
+
+		if (e_source_collection_get_calendar_enabled (e_source_get_extension (collection, E_SOURCE_EXTENSION_COLLECTION)))
+			e_source_registry_refresh_backend_sync (core->registry, e_source_get_uid (collection), core->cancellable, NULL);
+	}
+	g_list_free_full (sources, g_object_unref);
+
+	sources = e_source_registry_list_enabled (core->registry, E_SOURCE_EXTENSION_CALENDAR);
+	for (link = sources; link && !g_cancellable_is_cancelled (core->cancellable); link = g_list_next (link)) {
+		EClient *client = core_connect_calendar (core, e_source_get_uid (link->data), NULL);
+
+		if (!client)
+			continue;
+		if (e_client_check_refresh_supported (client))
+			e_client_refresh_sync (client, core->cancellable, NULL);
+		g_object_unref (client);
+	}
+	g_list_free_full (sources, g_object_unref);
+
+	return g_strdup ("{}");
+}
+
+void
+evo_core_refresh_calendars (EvoCore *core,
+			    EvoCoreResultFunc func,
+			    void *user_data)
+{
+	g_return_if_fail (core != NULL);
+
+	core_submit (core, core_refresh_calendars_run, g_new0 (gchar *, 1), func, user_data);
 }
 
 void
@@ -12078,6 +12520,19 @@ evo_core_set_default_account (EvoCore *core,
 }
 
 void
+evo_core_enable_google_services (EvoCore *core,
+				 const char *email,
+				 EvoCoreResultFunc func,
+				 void *user_data)
+{
+	gchar *args[] = { (gchar *) email, NULL };
+
+	g_return_if_fail (email != NULL);
+
+	core_submit (core, core_enable_google_services_run, g_strdupv (args), func, user_data);
+}
+
+void
 evo_core_add_google_account (EvoCore *core,
 			     const char *account_json,
 			     EvoCoreResultFunc func,
@@ -12434,6 +12889,25 @@ evo_core_delete_contact (EvoCore *core,
 	g_return_if_fail (contact_uid != NULL);
 
 	core_submit (core, core_delete_contact_run, g_strdupv (args), func, user_data);
+}
+
+/* Soumet une requête de modification d'un contact existant.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   contact_json : JSON modifié {"book_uid", "uid", "full_name", ...}
+ *   func         : rappel recevant {}
+ *   user_data    : données utilisateur transmises au rappel */
+void
+evo_core_modify_contact (EvoCore *core,
+			 const char *contact_json,
+			 EvoCoreResultFunc func,
+			 void *user_data)
+{
+	gchar *args[] = { (gchar *) contact_json, NULL };
+
+	g_return_if_fail (contact_json != NULL);
+
+	core_submit (core, core_modify_contact_run, g_strdupv (args), func, user_data);
 }
 
 /* Soumet une requête de liste des sources activées (agendas, listes de

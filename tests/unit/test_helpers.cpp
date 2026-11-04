@@ -6005,6 +6005,106 @@ static void test_message_importance_parsing()
     TEST_CASE_END();
 }
 
+#include "../../winui/app/UpdateIntegrity.h"
+
+static std::wstring ToLowerCopyForTest(std::wstring text)
+{
+    for (auto& c : text)
+        c = static_cast<wchar_t>(std::towlower(c));
+    return text;
+}
+
+#include "../../winui/app/ConversationThreads.h"
+
+static void test_conversation_threads(void)
+{
+    TEST_CASE("Conversations: regroupement par Message-ID, References et objet");
+    {
+        using namespace EvolutionWin::Conversations;
+        bool prefixed = false;
+        ASSERT_TRUE(NormalizeThreadSubject(L"RE: TR: Bilan ÉTÉ", &prefixed) == L"bilan été");
+        ASSERT_TRUE(prefixed);
+        NormalizeThreadSubject(L"Reunion", &prefixed);
+        ASSERT_FALSE(prefixed);
+
+        /* A <- B (In-Reply-To A) <- C (References A, B) ; D indépendant */
+        std::vector<ThreadMessage> msgs = {
+            { L"1", {}, L"Projet" },
+            { L"2", { L"1" }, L"autre objet" },
+            { L"3", { L"1", L"2" }, L"zzz" },
+            { L"4", {}, L"Facture" },
+        };
+        auto roots = BuildThreads(msgs);
+        ASSERT_TRUE(roots[0] == 0 && roots[1] == 0 && roots[2] == 0);
+        ASSERT_TRUE(roots[3] == 3);
+
+        /* deux réponses à un message absent de la liste : même fil */
+        std::vector<ThreadMessage> orphans = {
+            { L"10", { L"99" }, L"x" },
+            { L"11", { L"99" }, L"y" },
+            { L"12", {}, L"z" },
+        };
+        auto o = BuildThreads(orphans);
+        ASSERT_TRUE(o[0] == o[1]);
+        ASSERT_TRUE(o[2] != o[0]);
+
+        /* repli sur l'objet : seule une réponse rejoint le message d'origine */
+        std::vector<ThreadMessage> bysubject = {
+            { L"0", {}, L"Rendez-vous" },
+            { L"0", {}, L"RE: Rendez-vous" },
+            { L"0", {}, L"Rendez-vous" },
+        };
+        auto b = BuildThreads(bysubject);
+        ASSERT_TRUE(b[1] == b[0]);
+        ASSERT_TRUE(b[2] == b[0]);
+        std::vector<ThreadMessage> same = { { L"", {}, L"Newsletter" }, { L"", {}, L"Newsletter" } };
+        auto n = BuildThreads(same);
+        ASSERT_TRUE(n[0] != n[1]);
+    }
+    TEST_CASE_END();
+}
+
+static void test_update_integrity(void)
+{
+    using namespace EvolutionWin::UpdateIntegrity;
+    const std::wstring h1 = L"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789abcdef";
+    const std::wstring h2 = L"fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
+
+    TEST_CASE("UpdateIntegrity: IsHexSha256 valide la longueur et les chiffres");
+    {
+        ASSERT_TRUE(IsHexSha256(h1));
+        ASSERT_TRUE(!IsHexSha256(L"abc"));
+        ASSERT_TRUE(!IsHexSha256(h1.substr(0, 63) + L"g"));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("UpdateIntegrity: ParseSha256File au format sha256sum");
+    {
+        std::wstring file = h1 + L" *Evolution-0.9.8-x64.msi\n";
+        ASSERT_TRUE(ParseSha256File(file, L"Evolution-0.9.8-x64.msi") == ToLowerCopyForTest(h1));
+        ASSERT_TRUE(ParseSha256File(file, L"evolution-0.9.8-X64.MSI") == ToLowerCopyForTest(h1));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("UpdateIntegrity: plusieurs lignes, nom absent ou fichier corrompu");
+    {
+        std::wstring two = h2 + L"  autre.msi\r\n" + h1 + L" *Evolution.msi\r\n";
+        ASSERT_TRUE(ParseSha256File(two, L"Evolution.msi") == ToLowerCopyForTest(h1));
+        ASSERT_TRUE(ParseSha256File(two, L"inconnu.msi").empty());
+        ASSERT_TRUE(ParseSha256File(h2 + L"\n", L"quelconque.msi") == h2);
+        ASSERT_TRUE(ParseSha256File(L"<html>404</html>", L"x.msi").empty());
+        ASSERT_TRUE(ParseSha256File(L"", L"x.msi").empty());
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("UpdateIntegrity: ToHex");
+    {
+        const unsigned char bytes[] = { 0x00, 0xAB, 0xFF };
+        ASSERT_TRUE(ToHex(bytes, 3) == L"00abff");
+    }
+    TEST_CASE_END();
+}
+
 int main(void)
 
 
@@ -6137,6 +6237,8 @@ int main(void)
     test_calendar_search_matching();
     test_localized_file_size_and_dates();
         test_font_size_preset_to_zoom();
+    test_update_integrity();
+    test_conversation_threads();
 return test_suite_summary();
 
 

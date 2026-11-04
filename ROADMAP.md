@@ -24,19 +24,19 @@ flowchart LR
 > **Objectif :** Raccorder de bout en bout les calendriers et carnets d\'adresses distants pour les comptes Microsoft 365 et Google, et compléter l\'édition directe.
 
 ### 1. Comptes & Services distants (§3)
-- [ ] **Microsoft 365 / Exchange Online** : validation de bout en bout de la collection `microsoft365` (Microsoft Graph) pour synchroniser calendriers et contacts (`#demo-cal-contacts-m365`).
-- [ ] **Gmail / Google Workspace** : création automatique de la collection Google (CalDAV, CardDAV / Google People API) avec réutilisation du jeton OAuth2 existant (`#demo-cal-contacts-gmail`).
-- [ ] **Bouton d\'activation a posteriori** : option « Activer le calendrier et les contacts » pour les comptes Gmail déjà configurés sans ces portées.
-- [ ] **Gestion des contacts en ligne** : modification et synchronisation bidirectionnelle des fiches contacts distantes (`#demo-gestion-contacts`).
+- [ ] **Microsoft 365 / Exchange Online** : validation de bout en bout de la collection `microsoft365` (Microsoft Graph) pour synchroniser calendriers et contacts (`#demo-cal-contacts-m365`). _(reste à valider sur un tenant réel : code et paramètres en place)_
+- [x] **Gmail / Google Workspace** : création automatique de la collection Google (CalDAV, CardDAV / Google People API) avec réutilisation du jeton OAuth2 existant (`#demo-cal-contacts-gmail`).
+- [x] **Bouton d\'activation a posteriori** : option « Activer le calendrier et les contacts » pour les comptes Gmail déjà configurés sans ces portées.
+- [x] **Gestion des contacts en ligne** : modification et synchronisation bidirectionnelle des fiches contacts distantes (`#demo-gestion-contacts`).
 
 ### 2. Calendrier (§13)
-- [ ] **Fenêtre d\'édition d\'événement** : fenêtre modifiable complète pour créer, modifier et supprimer des événements (dates, participants, lieu, description).
-- [ ] **Prise en charge des fuseaux horaires et alertes** : enregistrement des rappels d\'événements et prise en compte propre des fuseaux horaires.
-- [ ] **Actualisation manuelle et automatique** : bouton d\'actualisation et intégration des modifications effectuées sur d\'autres clients (Outlook Web, Google Agenda).
+- [x] **Fenêtre d\'édition d\'événement** : fenêtre modifiable complète pour créer, modifier et supprimer des événements (dates, participants, lieu, description).
+- [x] **Prise en charge des fuseaux horaires et alertes** : enregistrement des rappels d\'événements et prise en compte propre des fuseaux horaires.
+- [x] **Actualisation manuelle et automatique** : bouton d\'actualisation et intégration des modifications effectuées sur d\'autres clients (Outlook Web, Google Agenda).
 
 ### 3. Application, installation & mises à jour (§1)
-- [ ] **Téléchargement automatique des mises à jour** : rapatriement en tâche de fond du MSI depuis GitHub Releases avec barre de progression.
-- [ ] **Contrôle d\'intégrité** : vérification de l\'empreinte SHA-256 et validation de la signature Authenticode avant installation.
+- [x] **Téléchargement automatique des mises à jour** : rapatriement en tâche de fond du MSI depuis GitHub Releases avec barre de progression.
+- [x] **Contrôle d\'intégrité** : vérification de l\'empreinte SHA-256 et validation de la signature Authenticode avant installation.
 
 ---
 
@@ -45,7 +45,7 @@ flowchart LR
 > **Objectif :** Finaliser tous les points indispensables de la liste de priorités Démo et offrir une expérience utilisateur fluide au quotidien.
 
 ### 1. Mail & Lecture (§5, §6, §7)
-- [ ] **Regroupement par discussion** : affichage hiérarchique sous forme de conversations / fils de discussion (`#demo-conversations`).
+- [x] **Regroupement par discussion** : affichage hiérarchique sous forme de conversations / fils de discussion (`#demo-conversations`).
 - [ ] **Gestion des dossiers** : réorganisation ordonnée des dossiers spéciaux en tête (Boîte de réception, Envoyés, Brouillons) avec icônes distinctives (`#demo-dossiers`).
 - [ ] **Pièces jointes** : prévisualisation intégrée, enregistrement groupé et glisser-déposer sortant.
 - [ ] **Suivi des messages** : options de marquage d\'importance, drapeaux avec date d\'échéance et rappels associés.

@@ -344,6 +344,16 @@ static void test_account_enabled_contract(void)
         ASSERT_CONTAINS(sample_draft_result, "\"folder\":\"Drafts\"");
     }
     TEST_CASE_END();
+
+    TEST_CASE("Contrats JSON: Modification de contact distant (evo_core_modify_contact)");
+    {
+        const char *sample_modify_contact = "{\"book_uid\":\"book-1\",\"uid\":\"c-101\",\"full_name\":\"Alice Martin\",\"email\":\"alice@exemple.fr\",\"phone\":\"+33123456789\",\"org\":\"Evolution\",\"notes\":\"Test notes\"}";
+        ASSERT_CONTAINS(sample_modify_contact, "\"book_uid\":");
+        ASSERT_CONTAINS(sample_modify_contact, "\"uid\":");
+        ASSERT_CONTAINS(sample_modify_contact, "\"full_name\":\"Alice Martin\"");
+        ASSERT_CONTAINS(sample_modify_contact, "\"email\":\"alice@exemple.fr\"");
+    }
+    TEST_CASE_END();
 }
 
 static void test_calendar_url_validation(void)

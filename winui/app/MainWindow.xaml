@@ -882,6 +882,12 @@
 
                         </AppBarButton>
 
+                        <AppBarButton Label="Modifier le contact" Click="OnEditContactClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE70F;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
                         <AppBarButton Label="Écrire un message" Click="OnComposeToContactClick">
 
                             <AppBarButton.Icon><FontIcon Glyph="&#xE715;" /></AppBarButton.Icon>
@@ -2038,6 +2044,18 @@
                                     <FontIcon Glyph="&#xE74D;" FontSize="14" />
 
                                     <TextBlock Text="Supprimer le contact" />
+
+                                </StackPanel>
+
+                            </Button>
+
+                            <Button Click="OnEditContactClick">
+
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+
+                                    <FontIcon Glyph="&#xE70F;" FontSize="14" />
+
+                                    <TextBlock Text="Modifier le contact" />
 
                                 </StackPanel>
 

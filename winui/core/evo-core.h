@@ -546,6 +546,21 @@ void		evo_core_add_google_account	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Active l'agenda et les contacts Google d'un compte Gmail configuré sans
+ * ces services : active ceux de sa collection « google » ou crée une
+ * collection dédiée (sans courrier) réutilisant l'identifiant du compte.
+ * La connexion OAuth2 se fait ensuite par evo_core_oauth2_begin () sur
+ * "collection_uid".
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   email     : adresse e-mail du compte Gmail
+ *   func      : rappel recevant {"collection_uid", "created", "already_enabled"}
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_enable_google_services	(EvoCore *core,
+						 const char *email,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Connexion OAuth2 interactive d'un compte (Microsoft 365...), en deux
  * étapes, aussi en réponse à l'événement "oauth2-required"
  * ({"source_uid", "name", "user"}) :
@@ -620,6 +635,12 @@ void		evo_core_get_event		(EvoCore *core,
  *               "description", "start", "end", "all_day"} ; rappel : {} */
 void		evo_core_modify_event		(EvoCore *core,
 						 const char *event_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Actualise les agendas activés auprès des serveurs distants (Google Agenda,
+ * Outlook, CalDAV) ; rappel : {}. */
+void		evo_core_refresh_calendars	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
@@ -795,6 +816,20 @@ void		evo_core_create_contact		(EvoCore *core,
 void		evo_core_delete_contact		(EvoCore *core,
 						 const char *book_uid,
 						 const char *contact_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Modifie un contact existant dans son carnet d'adresses.
+ * Format attendu pour contact_json :
+ * {"book_uid": "...", "uid": "...", "full_name": "...", "email": "...",
+ *  "phone": "...", "org": "...", "notes": "..."}
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   contact_json : description modifiée du contact au format JSON UTF-8
+ *   func         : rappel recevant {}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_modify_contact		(EvoCore *core,
+						 const char *contact_json,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 

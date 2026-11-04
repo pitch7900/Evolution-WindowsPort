@@ -138,8 +138,8 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] **Vérification de version** : dernière Release lue par l'API `https://api.github.com/repos/pitch7900/Evolution-WindowsPort/releases/latest` (champ `tag_name` pour la version, `assets` pour l'URL du MSI et de son `.sha256`), comparée à la version compilée dans l'exécutable (comparaison numérique `x.y.z`, pas textuelle) ; préversions via `releases` pour le canal « préversions »
   - [x] Fréquence : au démarrage (après quelques minutes, pour ne pas ralentir la relève) puis une fois par jour ; bouton _Rechercher les mises à jour_ dans la boîte « À propos »
   - [x] **Notification** de la nouvelle version (bandeau / toast) avec les nouveautés extraites du [CHANGELOG.md](CHANGELOG.md), boutons _Installer maintenant_, _Plus tard_, _Ignorer cette version_
-  - [ ] **Téléchargement automatique** du MSI joint à la Release GitHub (`Evolution-<version>-x64.msi`) en arrière-plan, avec progression dans la barre d'état (§4), dans `%LOCALAPPDATA%\EvolutionWin\Updates`
-  - [ ] **Vérification d'intégrité avant installation** : empreinte SHA-256 publiée à côté du MSI (`.sha256`) et signature Authenticode du MSI (`WinVerifyTrust`, éditeur attendu) ; refus d'installer si la vérification échoue
+  - [x] **Téléchargement automatique** du MSI joint à la Release GitHub (`Evolution-<version>-x64.msi`) en arrière-plan, avec progression dans la barre d'état (§4), dans `%LOCALAPPDATA%\EvolutionWin\Updates`
+  - [x] **Vérification d'intégrité avant installation** : empreinte SHA-256 publiée à côté du MSI (`.sha256`) et signature Authenticode du MSI (`WinVerifyTrust`, éditeur attendu) ; refus d'installer si la vérification échoue
   - [ ] **Installation** : fermeture propre de l'application (boîte d'envoi vidée, synchronisation terminée), lancement de `msiexec /i … /passive` (élévation UAC, installation par machine), redémarrage automatique d'EvolutionWin à la fin
   - [ ] Nettoyage des MSI téléchargés après installation réussie
   - [ ] **Paramètres** (§19) : mise à jour automatique / notification seulement / désactivée ; canal (versions stables, préversions)
@@ -328,19 +328,19 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
 - [ ] 🟡 **Microsoft 365 / Exchange Online** : vérifier de bout en bout que la collection `microsoft365` (Graph) découvre et synchronise les calendriers et carnets d'adresses du compte ; les afficher sous le nom du compte dans les vues Calendrier et Contacts <a id="demo-cal-contacts-m365"></a>
   - [x] Portées OAuth2 nécessaires (`Calendars.ReadWrite`, `Contacts.ReadWrite`) demandées à la connexion ; consentement manquant → message clair et _Se reconnecter_
   - [ ] Exchange on-premise (collection `ews`) : même vérification dès qu'un serveur de test est disponible
-- [ ] 🟠 **Gmail / Google Workspace** : à l'ajout d'un compte Gmail, créer aussi une collection Google (backend `google` d'EDS : calendriers CalDAV, contacts CardDAV / Google People) avec le même jeton OAuth2 <a id="demo-cal-contacts-gmail"></a>
+- [x] 🟠 **Gmail / Google Workspace** : à l'ajout d'un compte Gmail, créer aussi une collection Google (backend `google` d'EDS : calendriers CalDAV, contacts CardDAV / Google People) avec le même jeton OAuth2 <a id="demo-cal-contacts-gmail"></a>
   - [x] Portées OAuth2 Calendar et Contacts ajoutées à la connexion Google (en plus de la messagerie)
-  - [ ] Comptes Gmail déjà configurés : bouton _Activer le calendrier et les contacts_ dans la page du compte (nouvelle connexion pour accorder les portées)
+  - [x] Comptes Gmail déjà configurés : bouton _Activer le calendrier et les contacts_ dans la page du compte (nouvelle connexion pour accorder les portées)
 - [ ] 🟡 **Gestion simple du calendrier du compte** : <a id="demo-gestion-calendrier"></a>
   - [x] Événements du calendrier principal (et des autres calendriers du compte) affichés avec la couleur du calendrier
   - [x] Créer un événement dans le calendrier choisi (calendrier principal du compte par défaut) : titre, lieu, date, heures ou journée entière, description
   - [x] **Modifier** un événement existant (manquant aujourd'hui) et le supprimer, avec envoi au serveur — _clic sur l'événement : fenêtre modifiable (lecture seule si l'agenda l'est), organisateur et participants_
-  - [ ] Modifications faites ailleurs (Outlook Web, Google Agenda, téléphone) visibles à la synchronisation suivante ; bouton _Actualiser_
+  - [x] Modifications faites ailleurs (Outlook Web, Google Agenda, téléphone) visibles à la synchronisation suivante ; bouton _Actualiser_
   - [x] Événements périodiques existants affichés correctement (occurrences développées), en lecture seule tant que l'éditeur complet (§13) n'existe pas
 - [ ] 🟡 **Gestion simple des contacts du compte** : <a id="demo-gestion-contacts"></a>
   - [x] Contacts du compte (et sous-dossiers / groupes de contacts) listés avec le nom du carnet d'origine — _volet « Carnets d'adresses » par compte, cases à cocher mémorisées, carnet actif_
   - [x] Créer un contact dans le carnet choisi (carnet du compte par défaut) : nom, prénom, adresses email, téléphones, société, fonction, notes
-  - [ ] **Modifier** un contact existant (manquant aujourd'hui) et le supprimer, avec envoi au serveur
+  - [x] **Modifier** un contact existant et le supprimer, avec envoi au serveur (fonction evo_core_modify_contact et bouton Modifier)
   - [ ] Contacts utilisables dans l'autocomplétion des destinataires (§15)
 - [x] 🟢 Erreurs de synchronisation du calendrier / des contacts remontées dans l'indicateur d'état des connexions (§4)
 
@@ -430,8 +430,8 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
 ### Conversations
 
 - [ ] 🟠 **Grouper par discussion** (_Affichage › Afficher sous forme de conversations_) : <a id="demo-conversations"></a>
-  - [ ] Regroupement par `Message-ID` / `In-Reply-To` / `References` (`CamelFolderThread`), repli sur l'objet normalisé « RE: / TR: »
-  - [ ] Fil réductible / développable, nombre de messages et de non lus
+  - [x] Regroupement par `Message-ID` / `In-Reply-To` / `References` (`CamelFolderThread`), repli sur l'objet normalisé « RE: / TR: » — _empreintes Camel exposées par `evo-core` (`msgid`, `refs`), regroupement dans `ConversationThreads.h`_
+  - [x] Fil réductible / développable, nombre de messages et de non lus
   - [ ] 🟠 Inclure les messages d'autres dossiers (réponses envoyées)
   - [x] 🟢 Choix mémorisé par dossier : préférence booléenne `conversations.<compte>/<dossier>` et bouton à bascule dans le ruban Affichage
 - [ ] 🟡 **Paramètres de conversation** : expéditeurs au-dessus de l'objet, toujours développer la conversation sélectionnée, retrait classique
@@ -730,10 +730,10 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
 
 Constat : sur un compte Exchange Online / Microsoft 365 (ex. EVAM), EvolutionWin n'affiche aujourd'hui qu'une liste plate et très partielle de calendriers découverts (quelques collègues seulement sous le compte), alors qu'Outlook reflète l'intégralité des calendriers organisés en groupes structurés (_Mes calendriers_, _Équipe : Manager_, _Équipe : Mes collaborateurs direct reports_, _Autres calendriers_, _Salles_).
 
-- [ ] 🟠 **Découverte exhaustive et reflet fidèle de tous les calendriers Exchange Online / M365 (Graph / EWS)** :
-  - [ ] 🟠 **Exploration complète de l'API Graph / EWS** : interroger tous les groupes de calendriers (`GET /me/calendarGroups` et `GET /me/calendarGroups/{id}/calendars` sous Microsoft Graph, ou `FindFolder` / `CalendarFolder` avec `calendarGroup` sous EWS) pour récupérer l'ensemble des calendriers personnels, souscrits, partagés, d'équipe et de ressources (salles de réunion), sans omission.
-  - [ ] 🟡 **Arborescence hiérarchique par groupes dans le volet latéral** : reproduire fidèlement l'organisation d'Outlook avec groupes repliables/dépliables (_Mes calendriers_, _Équipe : Nom du manager_, _Équipe : Mes collaborateurs_, _Autres calendriers_, _Salles_), au lieu d'une simple liste plate.
-  - [ ] 🟢 **Sélection et couleurs individuelles** : case à cocher par calendrier, couleur d'accent propre conservée, mémorisation des calendriers cochés entre les sessions.
+- [x] 🟠 **Découverte exhaustive et reflet fidèle de tous les calendriers Exchange Online / M365 (Graph / EWS)** :
+  - [x] 🟠 **Exploration complète de l'API Graph / EWS** : interroger tous les groupes de calendriers (`GET /me/calendarGroups` et `GET /me/calendarGroups/{id}/calendars` sous Microsoft Graph, ou `FindFolder` / `CalendarFolder` avec `calendarGroup` sous EWS) pour récupérer l'ensemble des calendriers personnels, souscrits, partagés, d'équipe et de ressources (salles de réunion), sans omission.
+  - [x] 🟡 **Arborescence hiérarchique par groupes dans le volet latéral** : reproduire fidèlement l'organisation d'Outlook avec groupes repliables/dépliables (_Mes calendriers_, _Équipe : Nom du manager_, _Équipe : Mes collaborateurs_, _Autres calendriers_, _Salles_), au lieu d'une simple liste plate.
+  - [x] 🟢 **Sélection et couleurs individuelles** : case à cocher par calendrier, couleur d'accent propre conservée, mémorisation des calendriers cochés entre les sessions.
   - [ ] 🟡 **Gestion des groupes de calendriers** : création, renommage et suppression de groupes de calendriers répercutés sur le serveur Exchange Online.
 
 - Calendriers de groupes Microsoft 365 : cf. « Groupes Microsoft 365 », §7

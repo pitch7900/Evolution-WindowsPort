@@ -55,10 +55,18 @@ namespace winrt::EvolutionWin::implementation
         children.Clear();
         hstring active_name;
 
+        /* un groupe par compte, et par groupe de calendriers Exchange Online */
+        auto group_title = [](JsonObject const& source)
+        {
+            hstring account = source.GetNamedString(L"account", L"");
+            hstring group = source.GetNamedString(L"group_name", L"");
+            return group.empty() ? account : account + L" \u203A " + group;
+        };
+
         std::vector<hstring> accounts;
         for (auto const& value : sources)
         {
-            hstring account = value.GetObject().GetNamedString(L"account", L"");
+            hstring account = group_title(value.GetObject());
             if (std::find(accounts.begin(), accounts.end(), account) == accounts.end())
                 accounts.push_back(account);
         }
@@ -75,7 +83,7 @@ namespace winrt::EvolutionWin::implementation
             for (auto const& value : sources)
             {
                 auto source = value.GetObject();
-                if (source.GetNamedString(L"account", L"") != account)
+                if (group_title(source) != account)
                     continue;
 
                 hstring uid = source.GetNamedString(L"uid", L"");
@@ -363,6 +371,7 @@ namespace winrt::EvolutionWin::implementation
         dialog.Content(panel);
 
         dialog.PrimaryButtonText(L"Ajouter");
+        dialog.SecondaryButtonText(L"Depuis Exchange Online…");
         dialog.CloseButtonText(L"Annuler");
         dialog.DefaultButton(ContentDialogButton::Primary);
         dialog.IsPrimaryButtonEnabled(false);
@@ -374,6 +383,11 @@ namespace winrt::EvolutionWin::implementation
         m_dialog_open = true;
         auto result = co_await dialog.ShowAsync();
         m_dialog_open = false;
+        if (result == ContentDialogResult::Secondary)
+        {
+            ShowAddExchangeCalendarDialogAsync();
+            co_return;
+        }
         if (result != ContentDialogResult::Primary)
             co_return;
 
@@ -402,5 +416,166 @@ namespace winrt::EvolutionWin::implementation
             ShowStatus(L"Calendrier ajouté.", InfoBarSeverity::Success);
             LoadCalendarSources();
         });
+    }
+
+    /* Titre d'un groupe de sources : compte, suivi du groupe de calendriers
+     * Exchange Online (« Équipe de ... ») lorsqu'il existe.
+     * Paramètres :
+     *   source : objet JSON renvoyé par evo_core_list_sources () */
+    static hstring SourceGroupTitle(JsonObject const& source)
+    {
+        hstring account = source.GetNamedString(L"account", L"");
+        hstring group = source.GetNamedString(L"group_name", L"");
+        return group.empty() ? account : account + L" \u203A " + group;
+    }
+
+    /* Boîte « Calendriers Exchange Online » : liste les calendriers des comptes
+     * Exchange Online / Microsoft 365 (les leurs, ceux déjà présents sur le
+     * serveur, partagés ou appartenant à un groupe de calendriers), classés par
+     * groupe ; les cases cochées sont affichées dans la vue Calendrier. Le
+     * bouton de synchronisation demande au serveur de redécouvrir les
+     * calendriers puis actualise la liste. */
+    fire_and_forget MainWindow::ShowAddExchangeCalendarDialogAsync()
+    {
+        auto strong = get_strong();
+        if (m_dialog_open || !m_core || !Content() || !Content().XamlRoot())
+            co_return;
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(L"Calendriers Exchange Online"));
+        dialog.PrimaryButtonText(L"Afficher la sélection");
+        dialog.CloseButtonText(L"Annuler");
+        dialog.DefaultButton(ContentDialogButton::Primary);
+
+        StackPanel panel;
+        panel.Spacing(8);
+        panel.MinWidth(420);
+
+        TextBlock intro;
+        intro.TextWrapping(TextWrapping::Wrap);
+        intro.Text(L"Cochez les calendriers Exchange Online à afficher, y compris ceux des groupes de calendriers "
+                   L"(équipes) et les calendriers partagés avec vous.");
+        panel.Children().Append(intro);
+
+        StackPanel sync_row;
+        sync_row.Orientation(Orientation::Horizontal);
+        sync_row.Spacing(8);
+        Button sync_btn;
+        sync_btn.Content(box_value(L"Synchroniser avec Exchange Online"));
+        sync_row.Children().Append(sync_btn);
+        ProgressRing ring;
+        ring.Width(18);
+        ring.Height(18);
+        ring.IsActive(false);
+        ring.Visibility(Visibility::Collapsed);
+        sync_row.Children().Append(ring);
+        panel.Children().Append(sync_row);
+
+        StackPanel list_panel;
+        list_panel.Spacing(2);
+        ScrollViewer scroll;
+        scroll.MaxHeight(360);
+        scroll.Content(list_panel);
+        panel.Children().Append(scroll);
+        dialog.Content(panel);
+
+        /* cases à cocher : uid du calendrier -> case */
+        auto choices = std::make_shared<std::vector<std::pair<hstring, CheckBox>>>();
+        auto fill = [this, list_panel, choices]()
+        {
+            list_panel.Children().Clear();
+            choices->clear();
+            auto visible = VisibleCalendarUids();
+            std::vector<hstring> titles;
+            auto is_exchange = [](JsonObject const& source)
+            {
+                hstring backend = source.GetNamedString(L"backend", L"");
+                return backend == L"microsoft365" || backend == L"ews";
+            };
+
+            for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
+            {
+                auto source = value.GetObject();
+                if (!is_exchange(source))
+                    continue;
+                hstring title = SourceGroupTitle(source);
+                if (std::find(titles.begin(), titles.end(), title) == titles.end())
+                    titles.push_back(title);
+            }
+
+            if (titles.empty())
+            {
+                TextBlock none;
+                none.TextWrapping(TextWrapping::Wrap);
+                none.Text(L"Aucun calendrier Exchange Online trouvé. Utilisez le bouton de synchronisation ci-dessus.");
+                list_panel.Children().Append(none);
+                return;
+            }
+
+            for (auto const& title : titles)
+            {
+                TextBlock header;
+                header.Text(title);
+                header.Style(Application::Current().Resources().Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>());
+                header.Margin(ThicknessHelper::FromLengths(0, 8, 0, 2));
+                list_panel.Children().Append(header);
+
+                for (auto const& value : m_calendar_sources)
+                {
+                    auto source = value.GetObject();
+                    if (!is_exchange(source) || SourceGroupTitle(source) != title)
+                        continue;
+                    hstring uid = source.GetNamedString(L"uid", L"");
+                    CheckBox box;
+                    box.Content(box_value(source.GetNamedString(L"name", L"")));
+                    box.IsChecked(std::find(visible.begin(), visible.end(), uid) != visible.end());
+                    list_panel.Children().Append(box);
+                    choices->emplace_back(uid, box);
+                }
+            }
+        };
+        fill();
+
+        sync_btn.Click([this, sync_btn, ring, fill](IInspectable const&, RoutedEventArgs const&)
+        {
+            sync_btn.IsEnabled(false);
+            ring.Visibility(Visibility::Visible);
+            ring.IsActive(true);
+            m_core->RefreshCalendars([this, sync_btn, ring, fill](hstring const&, hstring const&)
+            {
+                /* la découverte des calendriers se poursuit côté serveur : courte attente */
+                auto timer = std::make_shared<DispatcherTimer>();
+                timer->Interval(std::chrono::seconds(5));
+                timer->Tick([this, timer, sync_btn, ring, fill](IInspectable const&, IInspectable const&)
+                {
+                    timer->Stop();
+                    m_core->ListSources(L"calendar", [this, sync_btn, ring, fill](hstring const& json, hstring const& error)
+                    {
+                        JsonArray sources;
+                        if (error.empty() && JsonArray::TryParse(json, sources))
+                            m_calendar_sources = sources;
+                        fill();
+                        ring.IsActive(false);
+                        ring.Visibility(Visibility::Collapsed);
+                        sync_btn.IsEnabled(true);
+                    });
+                });
+                timer->Start();
+            });
+        });
+
+        m_dialog_open = true;
+        auto result = co_await dialog.ShowAsync();
+        m_dialog_open = false;
+
+        if (result == ContentDialogResult::Primary)
+        {
+            for (auto const& [uid, box] : *choices)
+                SetUidVisible(m_calendar_sources, L"calendar.visible", uid, box.IsChecked() && box.IsChecked().GetBoolean());
+            ShowStatus(L"Calendriers Exchange Online mis à jour.", InfoBarSeverity::Success);
+        }
+        RebuildCalendarSourcesPanel();
+        LoadEvents();
     }
 }

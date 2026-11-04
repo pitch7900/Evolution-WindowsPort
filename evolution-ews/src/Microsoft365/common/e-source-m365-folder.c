@@ -10,6 +10,7 @@
 struct _ESourceM365FolderPrivate {
 	gchar *id;
 	gchar *group_id;
+	gchar *group_name;
 	gchar *display_name;
 	gchar *color;
 	gboolean is_default;
@@ -23,7 +24,8 @@ enum {
 	PROP_GROUP_ID,
 	PROP_DISPLAY_NAME,
 	PROP_COLOR,
-	PROP_MAX_PEOPLE
+	PROP_MAX_PEOPLE,
+	PROP_GROUP_NAME
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (ESourceM365Folder, e_source_m365_folder, E_TYPE_SOURCE_EXTENSION)
@@ -49,6 +51,12 @@ source_m365_folder_set_property (GObject *object,
 
 		case PROP_GROUP_ID:
 			e_source_m365_folder_set_group_id (
+				E_SOURCE_M365_FOLDER (object),
+				g_value_get_string (value));
+			return;
+
+		case PROP_GROUP_NAME:
+			e_source_m365_folder_set_group_name (
 				E_SOURCE_M365_FOLDER (object),
 				g_value_get_string (value));
 			return;
@@ -103,6 +111,13 @@ source_m365_folder_get_property (GObject *object,
 				E_SOURCE_M365_FOLDER (object)));
 			return;
 
+		case PROP_GROUP_NAME:
+			g_value_take_string (
+				value,
+				e_source_m365_folder_dup_group_name (
+				E_SOURCE_M365_FOLDER (object)));
+			return;
+
 		case PROP_DISPLAY_NAME:
 			g_value_take_string (
 				value,
@@ -135,6 +150,7 @@ source_m365_folder_finalize (GObject *object)
 
 	g_free (m365_folder->priv->id);
 	g_free (m365_folder->priv->group_id);
+	g_free (m365_folder->priv->group_name);
 	g_free (m365_folder->priv->display_name);
 	g_free (m365_folder->priv->color);
 
@@ -189,6 +205,19 @@ e_source_m365_folder_class_init (ESourceM365FolderClass *class)
 			"group-id",
 			"Group ID",
 			"Optional group ID, into which the folder ID belongs",
+			NULL,
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT |
+			G_PARAM_STATIC_STRINGS |
+			E_SOURCE_PARAM_SETTING));
+
+	g_object_class_install_property (
+		object_class,
+		PROP_GROUP_NAME,
+		g_param_spec_string (
+			"group-name",
+			"Group Name",
+			"Optional name of the group, into which the folder belongs",
 			NULL,
 			G_PARAM_READWRITE |
 			G_PARAM_CONSTRUCT |
@@ -369,6 +398,49 @@ e_source_m365_folder_set_group_id (ESourceM365Folder *extension,
 	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
 
 	g_object_notify (G_OBJECT (extension), "group-id");
+}
+
+const gchar *
+e_source_m365_folder_get_group_name (ESourceM365Folder *extension)
+{
+	g_return_val_if_fail (E_IS_SOURCE_M365_FOLDER (extension), NULL);
+
+	return extension->priv->group_name;
+}
+
+gchar *
+e_source_m365_folder_dup_group_name (ESourceM365Folder *extension)
+{
+	gchar *duplicate;
+
+	g_return_val_if_fail (E_IS_SOURCE_M365_FOLDER (extension), NULL);
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+	duplicate = g_strdup (e_source_m365_folder_get_group_name (extension));
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	return duplicate;
+}
+
+void
+e_source_m365_folder_set_group_name (ESourceM365Folder *extension,
+				     const gchar *group_name)
+{
+	g_return_if_fail (E_IS_SOURCE_M365_FOLDER (extension));
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+
+	if (g_strcmp0 (extension->priv->group_name, group_name) == 0) {
+		e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+		return;
+	}
+
+	g_free (extension->priv->group_name);
+	extension->priv->group_name = e_util_strdup_strip (group_name);
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	g_object_notify (G_OBJECT (extension), "group-name");
 }
 
 const gchar *
