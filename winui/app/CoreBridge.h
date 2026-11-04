@@ -145,6 +145,18 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Traite la demande d'accusé de lecture d'un message : envoie un MDN
+         * (RFC 8098) ou marque seulement le message comme traité ($MDNSent).
+         * Paramètres :
+         *   send    : true pour envoyer l'accusé, false pour « Ne pas envoyer »
+         *   handler : rappel recevant {"sent", "processed", "to"} */
+        void SendReadReceipt(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& uid,
+                             bool send, CoreHandler handler)
+        {
+            evo_core_send_read_receipt(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                winrt::to_string(uid).c_str(), send ? 1 : 0, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Définit ou efface le suivi d'un message.
          * Paramètres :
          *   label        : libellé ("" pour effacer)

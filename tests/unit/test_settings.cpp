@@ -359,6 +359,13 @@ static void test_settings_mail_read_and_security_options(void)
         mgr.SetBoolean("mail.request-read-receipt", true);
         ASSERT_EQ_INT(1, mgr.GetBoolean("mail.request-read-receipt", false));
 
+        /* Reglage des accuses de lecture (mail.read-receipt-policy) : "ask" par defaut */
+        std::string rr_default = mgr.GetString("mail.read-receipt-policy", "ask");
+        ASSERT_EQ_STR("ask", rr_default.c_str());
+        mgr.SetString("mail.read-receipt-policy", "always");
+        std::string rr_saved = mgr.GetString("mail.read-receipt-policy", "ask");
+        ASSERT_EQ_STR("always", rr_saved.c_str());
+
         /* Copie cachee automatique (mail.auto-bcc) */
         std::string bcc_default = mgr.GetString("mail.auto-bcc", "");
         ASSERT_EQ_STR("", bcc_default.c_str());

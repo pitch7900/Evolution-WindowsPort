@@ -6074,6 +6074,68 @@ static std::wstring ToLowerCopyForTest(std::wstring text)
 
 #include "../../winui/app/ConversationThreads.h"
 #include "../../winui/app/FollowUp.h"
+#include "../../winui/app/Receipts.h"
+
+static void test_read_receipts(void)
+{
+    TEST_CASE("Accuses de lecture: politique, adresses et decision");
+    {
+        using namespace EvolutionWin::Receipts;
+        ASSERT_TRUE(ParsePolicy(L"never") == Policy::Never);
+        ASSERT_TRUE(ParsePolicy(L"always") == Policy::Always);
+        ASSERT_TRUE(ParsePolicy(L"ask") == Policy::Ask);
+        ASSERT_TRUE(ParsePolicy(L"n'importe quoi") == Policy::Ask);   /* defaut : demander */
+        ASSERT_TRUE(PolicyToString(Policy::Always) == L"always");
+        ASSERT_TRUE(AddressOf(L"Jean Dupont <Jean@Exemple.FR>") == L"jean@exemple.fr");
+        ASSERT_TRUE(AddressOf(L"jean@exemple.fr") == L"jean@exemple.fr");
+        ASSERT_TRUE(AddressOf(L"pas une adresse").empty());
+        ASSERT_TRUE(AddressOf(L"Nom <cassee@x.fr").empty());
+        ASSERT_TRUE(DomainOf(L"jean@exemple.fr") == L"exemple.fr");
+
+        const wchar_t* from = L"Jean <jean@exemple.fr>";
+        const wchar_t* same = L"jean@exemple.fr";
+        const wchar_t* other = L"espion@autre.com";
+        ASSERT_FALSE(IsReceiptAddressSuspicious(same, from));
+        ASSERT_TRUE(IsReceiptAddressSuspicious(other, from));
+
+        /* jamais d'envoi automatique sans reglage explicite */
+        ASSERT_TRUE(Decide(Policy::Ask, same, from, false) == Action::Ask);
+        ASSERT_TRUE(Decide(Policy::Always, same, from, false) == Action::SendAuto);
+        ASSERT_TRUE(Decide(Policy::Always, other, from, false) == Action::Ask);   /* adresse etrangere */
+        ASSERT_TRUE(Decide(Policy::Never, same, from, false) == Action::None);
+        ASSERT_TRUE(Decide(Policy::Ask, same, from, true) == Action::None);       /* deja traite */
+        ASSERT_TRUE(Decide(Policy::Ask, L"", from, false) == Action::None);       /* pas de demande */
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Accuses de lecture: analyse et description d'un MDN recu");
+    {
+        using namespace EvolutionWin::Receipts;
+        Mdn m = ParseDispositionNotification(
+            L"Reporting-UA: EvolutionWin\r\n"
+            L"final-recipient: RFC822; marie@exemple.fr\r\n"
+            L"Original-Message-ID: <abc@exemple.fr>\r\n"
+            L"Disposition: manual-action/MDN-sent-manually; displayed\r\n");
+        ASSERT_TRUE(m.valid);
+        ASSERT_TRUE(m.final_recipient == L"marie@exemple.fr");
+        ASSERT_TRUE(m.original_message_id == L"<abc@exemple.fr>");
+        ASSERT_TRUE(m.disposition_type == L"displayed");
+        ASSERT_TRUE(DescribeMdn(m, L"4 nov. 2026", false) == L"Accusé de lecture : lu par marie@exemple.fr le 4 nov. 2026");
+        ASSERT_TRUE(DescribeMdn(m, L"Nov 4, 2026", true) == L"Read receipt: read by marie@exemple.fr on Nov 4, 2026");
+
+        /* lignes repliees, modificateurs, type different */
+        Mdn d = ParseDispositionNotification(
+            L"Final-Recipient: rfc822;\r\n paul@exemple.fr\n"
+            L"Disposition: automatic-action/MDN-sent-automatically; deleted/error\n");
+        ASSERT_TRUE(d.final_recipient == L"paul@exemple.fr");
+        ASSERT_TRUE(d.disposition_type == L"deleted");
+        ASSERT_TRUE(DescribeMdn(d, L"", true) == L"Read receipt: deleted by paul@exemple.fr");
+
+        Mdn bad = ParseDispositionNotification(L"n'importe quoi\r\n");
+        ASSERT_FALSE(bad.valid);
+    }
+    TEST_CASE_END();
+}
 
 static void test_follow_up(void)
 {
@@ -6325,6 +6387,7 @@ int main(void)
     test_update_integrity();
     test_conversation_threads();
     test_follow_up();
+    test_read_receipts();
 return test_suite_summary();
 
 

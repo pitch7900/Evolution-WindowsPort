@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../../winui/core/evo-core-mdn.h"
 
 #define CREDENTIAL_CHUNK_MAX_SIZE 2048
 
@@ -371,6 +372,46 @@ static void test_calendar_url_validation(void)
 }
 
 /**
+ * @brief Teste la construction des champs d'un accuse de lecture (MDN, RFC 8098).
+ */
+static void test_mdn_fields(void)
+{
+    char buf[1024];
+    int n;
+
+    TEST_CASE("MDN: champs message/disposition-notification (RFC 8098)");
+    {
+        n = evo_mdn_format_fields(buf, sizeof buf, "EvolutionWin", "marie@exemple.fr", "<abc@exemple.fr>", "displayed");
+        ASSERT_TRUE(n > 0);
+        ASSERT_TRUE(strstr(buf, "Reporting-UA: EvolutionWin\r\n") != NULL);
+        ASSERT_TRUE(strstr(buf, "Final-Recipient: rfc822; marie@exemple.fr\r\n") != NULL);
+        ASSERT_TRUE(strstr(buf, "Original-Message-ID: <abc@exemple.fr>\r\n") != NULL);
+        ASSERT_TRUE(strstr(buf, "Disposition: manual-action/MDN-sent-manually; displayed\r\n") != NULL);
+        ASSERT_EQ_INT(n, (int)strlen(buf));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("MDN: Message-ID absent, valeurs par defaut et anti-injection d'en-tetes");
+    {
+        n = evo_mdn_format_fields(buf, sizeof buf, "", "a@b.fr", "", "");
+        ASSERT_TRUE(n > 0);
+        ASSERT_TRUE(strstr(buf, "Original-Message-ID") == NULL);
+        ASSERT_TRUE(strstr(buf, "Reporting-UA: EvolutionWin") != NULL);
+        ASSERT_TRUE(strstr(buf, "; displayed\r\n") != NULL);
+
+        /* un retour a la ligne dans une valeur ne peut pas creer de faux champ */
+        n = evo_mdn_format_fields(buf, sizeof buf, "UA", "a@b.fr\r\nBcc: x@y.fr", "<id>", "displayed");
+        ASSERT_TRUE(n > 0);
+        ASSERT_TRUE(strstr(buf, "\r\nBcc:") == NULL);
+        ASSERT_TRUE(strstr(buf, "Final-Recipient: rfc822; a@b.fr  Bcc: x@y.fr\r\n") != NULL);
+
+        /* tampon trop petit : echec propre */
+        ASSERT_EQ_INT(-1, evo_mdn_format_fields(buf, 20, "UA", "a@b.fr", "<id>", "displayed"));
+    }
+    TEST_CASE_END();
+}
+
+/**
  * @brief Point d'entree de la suite de tests des contrats evo-core.
  * @return 0 si succes, 1 en cas d'echec.
  */
@@ -384,6 +425,7 @@ int main(void)
     test_json_event_contracts();
     test_calendar_url_validation();
     test_account_enabled_contract();
+    test_mdn_fields();
 
     return test_suite_summary();
 }

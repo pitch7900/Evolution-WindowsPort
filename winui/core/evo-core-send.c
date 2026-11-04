@@ -4,6 +4,7 @@
  */
 
 #include "evo-core-private.h"
+#include "evo-core-mdn.h"
 
 /* identity (sender) and submission settings of an account */
 ESource *
@@ -1096,4 +1097,225 @@ evo_core_save_draft (EvoCore *core,
 	g_return_if_fail (draft_json != NULL);
 
 	core_submit (core, core_save_draft_run, g_strdupv (args), func, user_data);
+}
+
+/* Construit et envoie l'accusé de lecture (MDN, RFC 8098) d'un message, ou le
+ * marque simplement comme traité.
+ * Paramètres :
+ *   args  : [0] account_uid, [1] folder_full_name, [2] message_uid,
+ *           [3] "1" pour envoyer l'accusé, "0" pour seulement marquer le
+ *           message comme traité (« Ne pas envoyer »)
+ * Le destinataire est lu dans Disposition-Notification-To (à défaut
+ * Return-Receipt-To) ; l'accusé part par le serveur SMTP du compte du message.
+ * Une fois traité, l'étiquette Camel "$MDNSent" est posée (comme Evolution) pour
+ * ne plus reproposer l'accusé.
+ * Retourne : {"sent": bool, "processed": true, "to": "adresse"} ou NULL. */
+static gchar *
+core_send_read_receipt_run (EvoCore *core,
+			    gchar **args,
+			    GError **error)
+{
+	CamelFolder *folder;
+	CamelMimeMessage *message = NULL;
+	CamelMessageInfo *mi;
+	CamelInternetAddress *to = NULL, *from = NULL;
+	CamelMimeMessage *mdn = NULL;
+	CamelService *transport = NULL;
+	ESource *identity = NULL;
+	ESourceMailIdentity *identity_extension;
+	ESourceMailSubmission *submission;
+	JsonBuilder *builder;
+	GString *text;
+	const gchar *header, *to_addr = NULL, *original_id, *subject;
+	gchar *json = NULL;
+	gchar fields[2048];
+	gboolean send = g_strcmp0 (args[3], "1") == 0, sent = FALSE;
+
+	folder = core_ref_folder (core, args[0], args[1], error);
+	if (!folder)
+		return NULL;
+
+	message = camel_folder_get_message_sync (folder, args[2], core->cancellable, error);
+	if (!message) {
+		g_object_unref (folder);
+		return NULL;
+	}
+
+	if (send) {
+		header = camel_medium_get_header (CAMEL_MEDIUM (message), "Disposition-Notification-To");
+		if (!header || !*header)
+			header = camel_medium_get_header (CAMEL_MEDIUM (message), "Return-Receipt-To");
+		if (!header || !*header) {
+			g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "This message does not request a read receipt");
+			goto exit;
+		}
+
+		to = camel_internet_address_new ();
+		if (camel_address_unformat (CAMEL_ADDRESS (to), header) < 1 ||
+		    !camel_internet_address_get (to, 0, NULL, &to_addr) || !to_addr || !*to_addr) {
+			g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Invalid read receipt address");
+			goto exit;
+		}
+
+		if (evo_core_get_offline (core) || (core->session && !camel_session_get_online (core->session))) {
+			g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_CONNECTED, "Offline: the read receipt cannot be sent now");
+			goto exit;
+		}
+
+		identity = core_ref_identity (core, args[0]);
+		if (!identity || !e_source_has_extension (identity, E_SOURCE_EXTENSION_MAIL_IDENTITY) ||
+		    !e_source_has_extension (identity, E_SOURCE_EXTENSION_MAIL_SUBMISSION)) {
+			g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "This account has no sender identity");
+			goto exit;
+		}
+
+		identity_extension = e_source_get_extension (identity, E_SOURCE_EXTENSION_MAIL_IDENTITY);
+		submission = e_source_get_extension (identity, E_SOURCE_EXTENSION_MAIL_SUBMISSION);
+		transport = camel_session_ref_service (core->session, e_source_mail_submission_get_transport_uid (submission));
+		if (!CAMEL_IS_TRANSPORT (transport)) {
+			g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "This account has no outgoing (SMTP) server");
+			goto exit;
+		}
+
+		from = camel_internet_address_new ();
+		camel_internet_address_add (from,
+			e_source_mail_identity_get_name (identity_extension),
+			e_source_mail_identity_get_address (identity_extension));
+
+		original_id = camel_medium_get_header (CAMEL_MEDIUM (message), "Message-ID");
+		subject = camel_mime_message_get_subject (message);
+
+		if (evo_mdn_format_fields (fields, sizeof fields, "EvolutionWin",
+			e_source_mail_identity_get_address (identity_extension),
+			original_id ? original_id : "", "displayed") < 0) {
+			g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Read receipt fields too long");
+			goto exit;
+		}
+
+		/* partie lisible, puis partie machine (multipart/report, RFC 8098 §3) */
+		text = g_string_new (NULL);
+		g_string_append_printf (text,
+			"Ceci est un accusé de lecture pour le message envoyé à %s avec l'objet « %s ».\r\n\r\n"
+			"Il indique seulement que le message a été affiché sur l'ordinateur du destinataire ; "
+			"il ne garantit pas qu'il a été lu ni compris.\r\n\r\n"
+			"This is a return receipt for the message with the subject \"%s\". "
+			"It only acknowledges that the message was displayed on the recipient's computer; "
+			"it does not guarantee that it was read or understood.\r\n",
+			e_source_mail_identity_get_address (identity_extension),
+			subject ? subject : "", subject ? subject : "");
+
+		mdn = camel_mime_message_new ();
+		{
+			CamelMultipart *report = camel_multipart_new ();
+			CamelMimePart *human = camel_mime_part_new ();
+			CamelMimePart *machine = camel_mime_part_new ();
+			gchar *mdn_subject = g_strconcat ("Accusé de lecture : ", subject ? subject : "", NULL);
+
+			camel_data_wrapper_set_mime_type (CAMEL_DATA_WRAPPER (report),
+				"multipart/report; report-type=disposition-notification");
+			camel_multipart_set_boundary (report, NULL);
+
+			camel_mime_part_set_content (human, text->str, text->len, "text/plain; charset=utf-8");
+			camel_mime_part_set_encoding (human, CAMEL_TRANSFER_ENCODING_QUOTEDPRINTABLE);
+			camel_multipart_add_part (report, human);
+
+			camel_mime_part_set_content (machine, fields, strlen (fields), "message/disposition-notification");
+			camel_mime_part_set_encoding (machine, CAMEL_TRANSFER_ENCODING_7BIT);
+			camel_multipart_add_part (report, machine);
+
+			camel_mime_message_set_subject (mdn, mdn_subject);
+			camel_medium_set_content (CAMEL_MEDIUM (mdn), CAMEL_DATA_WRAPPER (report));
+
+			g_free (mdn_subject);
+			g_object_unref (human);
+			g_object_unref (machine);
+			g_object_unref (report);
+		}
+		g_string_free (text, TRUE);
+
+		camel_mime_message_set_from (mdn, from);
+		camel_mime_message_set_recipients (mdn, CAMEL_RECIPIENT_TYPE_TO, to);
+		camel_mime_message_set_date (mdn, CAMEL_MESSAGE_DATE_CURRENT, 0);
+		camel_mime_message_set_message_id (mdn, NULL);
+		if (original_id && *original_id) {
+			gchar clean[512];
+
+			evo_mdn_sanitize_value (clean, sizeof clean, original_id);
+			camel_medium_set_header (CAMEL_MEDIUM (mdn), "In-Reply-To", clean);
+			camel_medium_set_header (CAMEL_MEDIUM (mdn), "References", clean);
+		}
+		camel_medium_set_header (CAMEL_MEDIUM (mdn), "Auto-Submitted", "auto-replied");
+		camel_medium_set_header (CAMEL_MEDIUM (mdn), "X-Mailer", "Evolution for Windows");
+
+		if (!camel_service_connect_sync (transport, core->cancellable, error) ||
+		    !camel_transport_send_to_sync (CAMEL_TRANSPORT (transport), mdn, CAMEL_ADDRESS (from),
+			CAMEL_ADDRESS (to), NULL, core->cancellable, error)) {
+			camel_service_disconnect_sync (transport, FALSE, NULL, NULL);
+			goto exit;
+		}
+		camel_service_disconnect_sync (transport, TRUE, NULL, NULL);
+		sent = TRUE;
+	}
+
+	/* mémorise le traitement : étiquette Camel $MDNSent */
+	mi = camel_folder_get_message_info (folder, args[2]);
+	if (mi) {
+		camel_message_info_set_user_flag (mi, "$MDNSent", TRUE);
+		g_object_unref (mi);
+	}
+	camel_folder_synchronize_message_sync (folder, args[2], core->cancellable, NULL);
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	builder_add_boolean (builder, "sent", sent);
+	builder_add_boolean (builder, "processed", TRUE);
+	builder_add_string (builder, "to", to_addr ? to_addr : "");
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+
+ exit:
+	g_clear_object (&mdn);
+	g_clear_object (&from);
+	g_clear_object (&to);
+	g_clear_object (&transport);
+	g_clear_object (&identity);
+	g_clear_object (&message);
+	g_object_unref (folder);
+
+	return json;
+}
+
+/* Soumet le traitement de l'accusé de lecture d'un message.
+ * Paramètres :
+ *   core             : instance du moteur evo-core
+ *   account_uid      : identifiant du compte qui a reçu le message
+ *   folder_full_name : chemin complet du dossier
+ *   message_uid      : identifiant du message
+ *   send             : non nul pour envoyer l'accusé, 0 pour seulement marquer
+ *                      le message comme traité
+ *   func             : rappel recevant {"sent", "processed", "to"}
+ *   user_data        : données utilisateur transmises au rappel */
+void
+evo_core_send_read_receipt (EvoCore *core,
+			    const char *account_uid,
+			    const char *folder_full_name,
+			    const char *message_uid,
+			    int send,
+			    EvoCoreResultFunc func,
+			    void *user_data)
+{
+	gchar *args[] = {
+		(gchar *) account_uid,
+		(gchar *) folder_full_name,
+		(gchar *) message_uid,
+		(gchar *) (send ? "1" : "0"),
+		NULL
+	};
+
+	g_return_if_fail (account_uid != NULL);
+	g_return_if_fail (folder_full_name != NULL);
+	g_return_if_fail (message_uid != NULL);
+
+	core_submit (core, core_send_read_receipt_run, g_strdupv (args), func, user_data);
 }

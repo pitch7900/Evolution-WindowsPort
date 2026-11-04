@@ -919,7 +919,7 @@ namespace winrt::EvolutionWin::implementation
         hstring target_account = loc.account.empty() ? m_account : loc.account;
         hstring target_folder = loc.folder.empty() ? m_folder : loc.folder;
 
-        m_core->FetchMessage(target_account, target_folder, uid, [this, request, uid](hstring const& json, hstring const& error)
+        m_core->FetchMessage(target_account, target_folder, uid, [this, request, uid, target_account, target_folder](hstring const& json, hstring const& error)
         {
             if (request != m_message_request)
                 return;
@@ -933,6 +933,8 @@ namespace winrt::EvolutionWin::implementation
             auto message = JsonObject::Parse(json);
             m_current_message = message;
             m_current_message_uid = uid;
+            m_current_message_account = target_account;
+            m_current_message_folder = target_folder;
             hstring to = message.GetNamedString(L"to", L"");
             hstring cc = message.GetNamedString(L"cc", L"");
 
@@ -941,6 +943,7 @@ namespace winrt::EvolutionWin::implementation
             MessageTo().Text(L"À : " + to + (cc.empty() ? hstring{} : L"   Cc : " + cc));
             MessageDate().Text(FormatDate(message.GetNamedNumber(L"date", 0)));
             UpdateSecurityBanner(message.GetNamedObject(L"security", JsonObject{}));
+            UpdateReceiptBars(message);
             PopulateAttachments(message.GetNamedArray(L"attachments", JsonArray{}));
             MessageHeader().Visibility(Visibility::Visible);
             ReaderPlaceholder().Visibility(Visibility::Collapsed);

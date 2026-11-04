@@ -138,6 +138,26 @@ void		evo_core_send_message		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Traite la demande d'accusé de lecture d'un message (en-tête
+ * Disposition-Notification-To ou Return-Receipt-To) : construit un vrai MDN
+ * (RFC 8098, multipart/report; report-type=disposition-notification), l'envoie
+ * par le serveur SMTP du compte du message, puis pose l'étiquette Camel
+ * "$MDNSent" pour ne plus reproposer l'accusé.
+ * Paramètres :
+ *   account_uid      : identifiant du compte qui a reçu le message
+ *   folder_full_name : chemin complet du dossier
+ *   message_uid      : identifiant du message
+ *   send             : non nul pour envoyer l'accusé ; 0 pour seulement marquer
+ *                      le message comme traité (« Ne pas envoyer »)
+ *   func             : rappel recevant {"sent": bool, "processed": true, "to": "adresse"} */
+void		evo_core_send_read_receipt	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *message_uid,
+						 int send,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Envoie tous les messages en attente dans la Boîte d'envoi locale
  * ("local" / "Outbox") via leurs comptes respectifs. */
 void		evo_core_send_unsent_messages	(EvoCore *core);

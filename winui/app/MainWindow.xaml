@@ -1601,6 +1601,17 @@
 
                         <InfoBar x:Name="SecurityBar" IsOpen="False" IsClosable="True" Margin="0,4,0,0" />
 
+                        <!-- accusé de lecture demandé par l'expéditeur / accusé reçu (MainWindow.Receipts.cpp) -->
+                        <InfoBar x:Name="ReceiptBar" IsOpen="False" IsClosable="True" Margin="0,4,0,0" Severity="Informational">
+                            <InfoBar.Content>
+                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                                    <Button x:Name="ReceiptSendButton" Click="OnReceiptSendClick" />
+                                    <Button x:Name="ReceiptIgnoreButton" Click="OnReceiptIgnoreClick" />
+                                </StackPanel>
+                            </InfoBar.Content>
+                        </InfoBar>
+                        <InfoBar x:Name="MdnBar" IsOpen="False" IsClosable="True" Margin="0,4,0,0" Severity="Success" />
+
                         <!-- contenu distant bloqué pour le message affiché -->
 
                         <InfoBar x:Name="RemoteContentBar" IsOpen="False" IsClosable="True" Margin="0,4,0,0"
@@ -4849,6 +4860,22 @@
 
                                     </StackPanel>
 
+                                </Border>
+
+                                <!-- Accusés de lecture : réglage par défaut (textes posés par RefreshPrivacyView) -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16" MinHeight="64">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock x:Name="ReadReceiptPolicyTitle" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                        <TextBlock x:Name="ReadReceiptPolicyHint" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <RadioButtons x:Name="ReadReceiptPolicyChoice" SelectionChanged="OnReadReceiptPolicyChanged">
+                                            <x:String>ask</x:String>
+                                            <x:String>never</x:String>
+                                            <x:String>always</x:String>
+                                        </RadioButtons>
+                                    </StackPanel>
                                 </Border>
 
 

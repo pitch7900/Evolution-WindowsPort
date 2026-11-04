@@ -258,6 +258,9 @@ namespace winrt::EvolutionWin::implementation
 
         /* Gestionnaires des paramètres / comptes */
         void OnAddAccountClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnReceiptSendClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnReceiptIgnoreClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnReadReceiptPolicyChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
         void OnRemoteContentModeChanged(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
@@ -450,6 +453,10 @@ namespace winrt::EvolutionWin::implementation
         void UpdateRemoteContentBanner();
         void TrustCurrentSender(hstring const& key, std::wstring const& entry, hstring const& label);
         void RefreshPrivacyView();
+        void UpdateReceiptBars(Windows::Data::Json::JsonObject const& message);
+        void HideReceiptBars();
+        void RefreshReadReceiptSettings();
+        void ProcessReadReceipt(bool send, bool automatic);
 
         /* Étape 1 : Notifications Windows et pièces jointes */
         void ShowNewMailNotification(Windows::Data::Json::JsonObject const& object);
@@ -575,6 +582,8 @@ namespace winrt::EvolutionWin::implementation
         /* message shown in the reader, for replies */
         Windows::Data::Json::JsonObject m_current_message{ nullptr };
         hstring m_current_message_uid;
+        hstring m_current_message_account;   ///< compte du message affiché (accusé de lecture)
+        hstring m_current_message_folder;    ///< dossier du message affiché
         /* contact sélectionné dans la vue Contacts */
         Windows::Data::Json::JsonObject m_selected_contact{ nullptr };
         /* folder tree nodes by NodeKey() */

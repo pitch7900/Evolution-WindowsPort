@@ -574,6 +574,38 @@ verify_or_decrypt_message (EvoCore *core,
 	g_string_free (desc_str, TRUE);
 }
 
+/* Cherche, dans un message, la partie message/disposition-notification d'un
+ * accusé de lecture reçu (multipart/report; report-type=disposition-notification)
+ * et renvoie son texte brut (champs RFC 8098), ou NULL si le message n'en est pas un.
+ * Paramètres :
+ *   part        : message ou partie à explorer
+ *   cancellable : annulation éventuelle
+ * Retourne : texte alloué (à libérer avec g_free), ou NULL. */
+static gchar *
+find_mdn_report (CamelMimePart *part,
+		 GCancellable *cancellable)
+{
+	CamelDataWrapper *content = camel_medium_get_content (CAMEL_MEDIUM (part));
+	CamelContentType *content_type = camel_mime_part_get_content_type (part);
+	guint ii, n;
+
+	if (content_type && camel_content_type_is (content_type, "message", "disposition-notification"))
+		return part_get_text (part, cancellable);
+
+	if (!content || !CAMEL_IS_MULTIPART (content))
+		return NULL;
+
+	n = camel_multipart_get_number (CAMEL_MULTIPART (content));
+	for (ii = 0; ii < n; ii++) {
+		gchar *found = find_mdn_report (camel_multipart_get_part (CAMEL_MULTIPART (content), ii), cancellable);
+
+		if (found)
+			return found;
+	}
+
+	return NULL;
+}
+
 static gchar *
 core_get_message_run (EvoCore *core,
 		      gchar **args,
@@ -637,6 +669,55 @@ core_get_message_run (EvoCore *core,
 
 	builder_add_string (builder, "message_id", camel_medium_get_header (CAMEL_MEDIUM (message), "Message-ID"));
 	builder_add_string (builder, "references", camel_medium_get_header (CAMEL_MEDIUM (message), "References"));
+
+	/* Accusé de lecture : demande reçue (Disposition-Notification-To ou
+	 * Return-Receipt-To) tant qu'elle n'est pas traitée ($MDNSent), et accusé
+	 * reçu (MDN) à afficher. Rien n'est proposé pour un brouillon ni pour un
+	 * message de soi-même (copie dans Envoyés). */
+	{
+		CamelMessageInfo *info = camel_folder_get_message_info (folder, args[2]);
+		const gchar *receipt = camel_medium_get_header (CAMEL_MEDIUM (message), "Disposition-Notification-To");
+		CamelContentType *ct = camel_mime_part_get_content_type (CAMEL_MIME_PART (message));
+		gboolean skip = FALSE;
+		gchar *report = NULL;
+
+		if (!receipt || !*receipt)
+			receipt = camel_medium_get_header (CAMEL_MEDIUM (message), "Return-Receipt-To");
+
+		if (info) {
+			skip = (camel_message_info_get_flags (info) & CAMEL_MESSAGE_DRAFT) != 0;
+			json_builder_set_member_name (builder, "mdn_sent");
+			json_builder_add_boolean_value (builder, camel_message_info_get_user_flag (info, "$MDNSent"));
+		}
+		if (!skip) {
+			ESource *identity = core_ref_identity (core, args[0]);
+
+			if (identity && e_source_has_extension (identity, E_SOURCE_EXTENSION_MAIL_IDENTITY)) {
+				const gchar *own = e_source_mail_identity_get_address (
+					e_source_get_extension (identity, E_SOURCE_EXTENSION_MAIL_IDENTITY));
+
+				if (own && *own && receipt && strstr (receipt, own))
+					skip = TRUE;
+			}
+			g_clear_object (&identity);
+		}
+		builder_add_string (builder, "receipt_to", skip ? "" : receipt);
+		g_clear_object (&info);
+
+		if (ct && camel_content_type_is (ct, "multipart", "report")) {
+			const gchar *type = camel_content_type_param (ct, "report-type");
+
+			if (type && g_ascii_strcasecmp (type, "disposition-notification") == 0)
+				report = find_mdn_report (CAMEL_MIME_PART (message), core->cancellable);
+		}
+		if (report) {
+			json_builder_set_member_name (builder, "mdn");
+			json_builder_begin_object (builder);
+			builder_add_string (builder, "report", report);
+			json_builder_end_object (builder);
+			g_free (report);
+		}
+	}
 
 	verify_or_decrypt_message (core, message, builder);
 
