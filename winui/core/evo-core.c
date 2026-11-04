@@ -8857,6 +8857,26 @@ core_get_event_run (EvoCore *core,
 	json_builder_set_member_name (builder, "all_day");
 	json_builder_add_boolean_value (builder, all_day);
 
+	/* fuseau horaire (TZID) du début et heures murales dans ce fuseau */
+	{
+		ICalProperty *dtstart_prop = i_cal_component_get_first_property (icomp, I_CAL_DTSTART_PROPERTY);
+		ICalParameter *tzparam = dtstart_prop ? i_cal_property_get_first_parameter (dtstart_prop, I_CAL_TZID_PARAMETER) : NULL;
+		const gchar *tzid = tzparam ? i_cal_parameter_get_tzid (tzparam) : NULL;
+
+		builder_add_string (builder, "timezone", tzid ? tzid : "");
+		if (tzid && *tzid && !all_day) {
+			ICalTime *ws = i_cal_component_get_dtstart (icomp);
+			ICalTime *we = i_cal_component_get_dtend (icomp);
+
+			builder_add_string (builder, "start_wall", ws ? i_cal_time_as_ical_string (ws) : "");
+			builder_add_string (builder, "end_wall", we ? i_cal_time_as_ical_string (we) : "");
+			g_clear_object (&ws);
+			g_clear_object (&we);
+		}
+		g_clear_object (&tzparam);
+		g_clear_object (&dtstart_prop);
+	}
+
 	prop = i_cal_component_get_first_property (icomp, I_CAL_RRULE_PROPERTY);
 	json_builder_set_member_name (builder, "recurring");
 	json_builder_add_boolean_value (builder, prop != NULL);
@@ -8941,6 +8961,112 @@ event_set_reminder (ICalComponent *icomp,
 	i_cal_component_take_component (icomp, alarm);
 }
 
+/* Applique début, fin, fuseau horaire et participants d'un événement JSON
+ * sur un composant VEVENT (création comme modification).
+ * Champs lus : "start" / "end" (secondes Unix), "all_day", "timezone" (nom
+ * IANA, ex. « Europe/Zurich »), "start_wall" / "end_wall" (heure locale du
+ * fuseau, « AAAAMMJJTHHMMSS ») et "attendees" (tableau d'adresses).
+ * Paramètres :
+ *   client : agenda (reçoit le VTIMEZONE du fuseau choisi)
+ *   icomp  : composant VEVENT à modifier
+ *   object : événement JSON */
+static void
+event_apply_times_and_attendees (ECalClient *client,
+				 ICalComponent *icomp,
+				 JsonObject *object)
+{
+	gint64 start_unix = json_object_get_int_member_with_default (object, "start", 0);
+	gint64 end_unix = json_object_get_int_member_with_default (object, "end", start_unix + 3600);
+	gboolean all_day = json_object_get_boolean_member_with_default (object, "all_day", FALSE);
+	const gchar *tzid = json_object_get_string_member_with_default (object, "timezone", "");
+	const gchar *start_wall = json_object_get_string_member_with_default (object, "start_wall", "");
+	const gchar *end_wall = json_object_get_string_member_with_default (object, "end_wall", "");
+	ICalTimezone *zone = NULL;
+	ICalTime *time_value;
+
+	if (!all_day && *tzid)
+		zone = i_cal_timezone_get_builtin_timezone (tzid);
+
+	if (zone && *start_wall && *end_wall) {
+		/* heure murale dans le fuseau choisi (comme Outlook) */
+		time_value = i_cal_time_new_from_string (start_wall);
+		i_cal_time_set_timezone (time_value, zone);
+		i_cal_component_set_dtstart (icomp, time_value);
+		g_object_unref (time_value);
+
+		time_value = i_cal_time_new_from_string (end_wall);
+		i_cal_time_set_timezone (time_value, zone);
+		i_cal_component_set_dtend (icomp, time_value);
+		g_object_unref (time_value);
+
+		e_cal_client_add_timezone_sync (client, zone, NULL, NULL);
+	} else if (start_unix > 0) {
+		/* journée entière : dates sans heure ; sinon heures en UTC */
+		ICalTimezone *utc = all_day ? NULL : i_cal_timezone_get_utc_timezone ();
+
+		time_value = i_cal_time_new_from_timet_with_zone ((time_t) start_unix, all_day, utc);
+		i_cal_component_set_dtstart (icomp, time_value);
+		g_object_unref (time_value);
+
+		time_value = i_cal_time_new_from_timet_with_zone ((time_t) MAX (end_unix, start_unix), all_day, utc);
+		i_cal_component_set_dtend (icomp, time_value);
+		g_object_unref (time_value);
+	}
+
+	if (json_object_has_member (object, "attendees")) {
+		JsonArray *list = json_object_get_array_member (object, "attendees");
+		ICalProperty *prop;
+		guint i;
+
+		/* conserve les participants existants dont l'adresse reste listée
+		 * (leur réponse est ainsi préservée) ; ajoute les nouveaux */
+		prop = i_cal_component_get_first_property (icomp, I_CAL_ATTENDEE_PROPERTY);
+		while (prop) {
+			ICalProperty *next = i_cal_component_get_next_property (icomp, I_CAL_ATTENDEE_PROPERTY);
+			const gchar *value = i_cal_property_get_attendee (prop);
+			gboolean keep = FALSE;
+
+			if (value && list) {
+				const gchar *addr = g_ascii_strncasecmp (value, "mailto:", 7) == 0 ? value + 7 : value;
+
+				for (i = 0; i < json_array_get_length (list); i++)
+					if (g_ascii_strcasecmp (addr, json_array_get_string_element (list, i)) == 0)
+						keep = TRUE;
+			}
+			if (!keep)
+				i_cal_component_remove_property (icomp, prop);
+			g_object_unref (prop);
+			prop = next;
+		}
+
+		for (i = 0; list && i < json_array_get_length (list); i++) {
+			const gchar *addr = json_array_get_string_element (list, i);
+			gboolean present = FALSE;
+			gchar *uri;
+
+			if (!addr || !*addr)
+				continue;
+			for (prop = i_cal_component_get_first_property (icomp, I_CAL_ATTENDEE_PROPERTY); prop;
+			     g_object_unref (prop), prop = i_cal_component_get_next_property (icomp, I_CAL_ATTENDEE_PROPERTY)) {
+				const gchar *value = i_cal_property_get_attendee (prop);
+
+				if (value && g_ascii_strcasecmp (g_ascii_strncasecmp (value, "mailto:", 7) == 0 ? value + 7 : value, addr) == 0)
+					present = TRUE;
+			}
+			if (present)
+				continue;
+
+			uri = g_strconcat ("mailto:", addr, NULL);
+			prop = i_cal_property_new_attendee (uri);
+			i_cal_property_take_parameter (prop, i_cal_parameter_new_partstat (I_CAL_PARTSTAT_NEEDSACTION));
+			i_cal_property_take_parameter (prop, i_cal_parameter_new_role (I_CAL_ROLE_REQPARTICIPANT));
+			i_cal_property_take_parameter (prop, i_cal_parameter_new_rsvp (I_CAL_RSVP_TRUE));
+			i_cal_component_take_property (icomp, prop);
+			g_free (uri);
+		}
+	}
+}
+
 /* Délai du premier rappel (VALARM) d'un événement.
  * Paramètres :
  *   icomp : composant VEVENT
@@ -8992,10 +9118,7 @@ core_modify_event_run (EvoCore *core,
 	EClient *client = NULL;
 	ICalComponent *icomp = NULL;
 	ICalProperty *prop;
-	ICalTime *time_value;
 	const gchar *summary, *location, *description;
-	gint64 start_unix, end_unix;
-	gboolean all_day;
 	gchar *json = NULL;
 
 	root = json_from_string (args[0], error);
@@ -9019,9 +9142,6 @@ core_modify_event_run (EvoCore *core,
 	summary = json_object_get_string_member_with_default (object, "summary", "");
 	location = json_object_get_string_member_with_default (object, "location", "");
 	description = json_object_get_string_member_with_default (object, "description", "");
-	start_unix = json_object_get_int_member_with_default (object, "start", 0);
-	end_unix = json_object_get_int_member_with_default (object, "end", start_unix + 3600);
-	all_day = json_object_get_boolean_member_with_default (object, "all_day", FALSE);
 
 	i_cal_component_set_summary (icomp, *summary ? summary : "(Sans titre)");
 	i_cal_component_set_location (icomp, location);
@@ -9033,18 +9153,7 @@ core_modify_event_run (EvoCore *core,
 	if (*description)
 		i_cal_component_take_property (icomp, i_cal_property_new_description (description));
 
-	if (start_unix > 0) {
-		/* journée entière : dates sans heure ; sinon heures en UTC */
-		time_value = i_cal_time_new_from_timet_with_zone ((time_t) start_unix, all_day,
-			all_day ? NULL : i_cal_timezone_get_utc_timezone ());
-		i_cal_component_set_dtstart (icomp, time_value);
-		g_object_unref (time_value);
-
-		time_value = i_cal_time_new_from_timet_with_zone ((time_t) MAX (end_unix, start_unix), all_day,
-			all_day ? NULL : i_cal_timezone_get_utc_timezone ());
-		i_cal_component_set_dtend (icomp, time_value);
-		g_object_unref (time_value);
-	}
+	event_apply_times_and_attendees (E_CAL_CLIENT (client), icomp, object);
 
 	if (json_object_has_member (object, "reminder_minutes"))
 		event_set_reminder (icomp, (gint) json_object_get_int_member (object, "reminder_minutes"));
@@ -9318,8 +9427,6 @@ core_create_event_run (EvoCore *core,
 	ESource *source = NULL;
 	EClient *client = NULL;
 	ICalComponent *icomp = NULL;
-	ICalTime *dtstart, *dtend;
-	ICalTimezone *utc_zone;
 	gchar *new_uid = NULL, *created_uid = NULL, *json = NULL;
 	JsonBuilder *builder;
 
@@ -9359,7 +9466,8 @@ core_create_event_run (EvoCore *core,
 	if (!client)
 		goto exit;
 
-	utc_zone = i_cal_timezone_get_utc_timezone ();
+	json_object_set_int_member (object, "start", start_unix);
+	json_object_set_int_member (object, "end", end_unix);
 	icomp = i_cal_component_new_vevent ();
 
 	new_uid = e_util_generate_uid ();
@@ -9374,12 +9482,7 @@ core_create_event_run (EvoCore *core,
 		i_cal_component_take_property (icomp, prop);
 	}
 
-	dtstart = i_cal_time_new_from_timet_with_zone ((time_t) start_unix, FALSE, utc_zone);
-	dtend = i_cal_time_new_from_timet_with_zone ((time_t) end_unix, FALSE, utc_zone);
-	i_cal_component_set_dtstart (icomp, dtstart);
-	i_cal_component_set_dtend (icomp, dtend);
-	g_clear_object (&dtstart);
-	g_clear_object (&dtend);
+	event_apply_times_and_attendees (E_CAL_CLIENT (client), icomp, object);
 
 	if (json_object_has_member (object, "reminder_minutes"))
 		event_set_reminder (icomp, (gint) json_object_get_int_member (object, "reminder_minutes"));
