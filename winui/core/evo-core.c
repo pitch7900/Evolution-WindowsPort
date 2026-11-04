@@ -2202,6 +2202,24 @@ json_from_message_infos (GPtrArray *infos,
 		json_builder_add_boolean_value (builder, (flags & CAMEL_MESSAGE_FLAGGED) != 0);
 		json_builder_set_member_name (builder, "attachments");
 		json_builder_add_boolean_value (builder, (flags & CAMEL_MESSAGE_ATTACHMENTS) != 0);
+		/* regroupement par discussion : empreinte du Message-ID et de
+		 * ceux de In-Reply-To / References (identifiants 64 bits Camel) */
+		{
+			const GArray *references = camel_message_info_get_references (info);
+			guint jj;
+			gchar *text = g_strdup_printf ("%" G_GUINT64_FORMAT, (guint64) camel_message_info_get_message_id (info));
+
+			builder_add_string (builder, "msgid", text);
+			g_free (text);
+			json_builder_set_member_name (builder, "refs");
+			json_builder_begin_array (builder);
+			for (jj = 0; references && jj < references->len; jj++) {
+				text = g_strdup_printf ("%" G_GUINT64_FORMAT, g_array_index (references, guint64, jj));
+				json_builder_add_string_value (builder, text);
+				g_free (text);
+			}
+			json_builder_end_array (builder);
+		}
 		/* for sorting the list: recipients, size, labels (categories),
 		 * follow-up due date */
 		json_builder_set_member_name (builder, "to");

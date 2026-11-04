@@ -430,8 +430,8 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
 ### Conversations
 
 - [ ] 🟠 **Grouper par discussion** (_Affichage › Afficher sous forme de conversations_) : <a id="demo-conversations"></a>
-  - [ ] Regroupement par `Message-ID` / `In-Reply-To` / `References` (`CamelFolderThread`), repli sur l'objet normalisé « RE: / TR: »
-  - [ ] Fil réductible / développable, nombre de messages et de non lus
+  - [x] Regroupement par `Message-ID` / `In-Reply-To` / `References` (`CamelFolderThread`), repli sur l'objet normalisé « RE: / TR: » — _empreintes Camel exposées par `evo-core` (`msgid`, `refs`), regroupement dans `ConversationThreads.h`_
+  - [x] Fil réductible / développable, nombre de messages et de non lus
   - [ ] 🟠 Inclure les messages d'autres dossiers (réponses envoyées)
   - [x] 🟢 Choix mémorisé par dossier : préférence booléenne `conversations.<compte>/<dossier>` et bouton à bascule dans le ruban Affichage
 - [ ] 🟡 **Paramètres de conversation** : expéditeurs au-dessus de l'objet, toujours développer la conversation sélectionnée, retrait classique

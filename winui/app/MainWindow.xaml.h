@@ -7,6 +7,7 @@
 #include "SplashWindow.xaml.h"
 
 #include <map>
+#include <set>
 
 namespace winrt::EvolutionWin::implementation
 {
@@ -616,6 +617,9 @@ namespace winrt::EvolutionWin::implementation
         void LoadFolderSort();
         void SaveFolderSort();
         bool m_conversations_enabled{ false };
+        /* fils développés (clé : objet normalisé) et derniers messages affichés */
+        std::set<std::wstring> m_expanded_threads;
+        Windows::Data::Json::JsonArray m_last_shown_messages{ nullptr };
         void LoadFolderConversations();
         void SaveFolderConversations(bool enabled);
         void UpdateSortHeader();
