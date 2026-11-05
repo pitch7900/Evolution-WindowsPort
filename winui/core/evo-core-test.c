@@ -134,6 +134,29 @@ main (int argc,
 	char *account = NULL, *message_uid = NULL;
 	int watch_minutes = 0;
 
+	/* --autoreply compte : réponses automatiques lues sur le serveur (octets du message interne) */
+	if (argc > 2 && strcmp (argv[1], "--autoreply") == 0) {
+		char *pos;
+
+		done_event = CreateEvent (NULL, FALSE, FALSE, NULL);
+		core = evo_core_new (on_event, NULL);
+		evo_core_get_auto_reply (core, argv[2], on_result, NULL);
+		WaitForSingleObject (done_event, INFINITE);
+		if (last_error)
+			printf ("[autoreply] ERREUR : %s\n", last_error);
+		else if ((pos = strstr (last_json, "internal_message")) != NULL) {
+			int ii;
+
+			pos += 20;
+			printf ("[autoreply] octets : ");
+			for (ii = 0; ii < 1400 && pos[ii]; ii++)
+				printf ("%02x ", (unsigned char) pos[ii]);
+			printf ("\n");
+		}
+		evo_core_free (core);
+		return 0;
+	}
+
 	/* --photo adresse : photo de profil de l'annuaire (taille de la réponse) */
 	if (argc > 2 && strcmp (argv[1], "--photo") == 0) {
 		done_event = CreateEvent (NULL, FALSE, FALSE, NULL);

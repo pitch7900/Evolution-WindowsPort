@@ -250,14 +250,29 @@ autoreply_plain_from_html (const gchar *html)
 
 	/* espaces insécables en espaces ; l'indentation du HTML ne doit pas se retrouver
 	 * dans le texte (lignes rognées, espaces multiples réduits à un seul) */
-	normalized = g_strdup (text);
-	g_free (text);
+	normalized = text;
 	{
-		gchar **split = g_strsplit (normalized, "\xC2\xA0", -1);
+		/* caractères invisibles de largeur nulle (BOM U+FEFF, U+200B..U+200D, U+2060, trait
+		 * d'union conditionnel U+00AD) : supprimés, sinon la zone de saisie les dessine en
+		 * barres larges ; l'espace insécable devient une espace */
+		static const gchar * const invisible[] = {
+			"\xEF\xBB\xBF", "\xE2\x80\x8B", "\xE2\x80\x8C", "\xE2\x80\x8D", "\xE2\x81\xA0", "\xC2\xAD" };
+		guint kk;
 
-		g_free (normalized);
-		normalized = g_strjoinv (" ", split);
-		g_strfreev (split);
+		for (kk = 0; kk < G_N_ELEMENTS (invisible); kk++) {
+			gchar **split = g_strsplit (normalized, invisible[kk], -1);
+
+			g_free (normalized);
+			normalized = g_strjoinv ("", split);
+			g_strfreev (split);
+		}
+		{
+			gchar **split = g_strsplit (normalized, "\xC2\xA0", -1);
+
+			g_free (normalized);
+			normalized = g_strjoinv (" ", split);
+			g_strfreev (split);
+		}
 	}
 
 	lines = g_strsplit (normalized, "\n", -1);
