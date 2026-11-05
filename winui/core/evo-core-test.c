@@ -49,7 +49,7 @@ wait_result (const char *what)
 		return 0;
 	}
 
-	printf ("[%s] %.1500s%s\n\n", what, last_json, strlen (last_json) > 1500 ? " ..." : "");
+	printf ("[%s] %.30000s%s\n\n", what, last_json, strlen (last_json) > 30000 ? " ..." : "");
 	fflush (stdout);
 
 	return 1;
@@ -133,6 +133,41 @@ main (int argc,
 	EvoCore *core;
 	char *account = NULL, *message_uid = NULL;
 	int watch_minutes = 0;
+
+	/* --people [adresse] : équipe de l'utilisateur, puis agenda d'une personne (14 jours) */
+	if (argc > 1 && strcmp (argv[1], "--people") == 0) {
+		char *email = argc > 2 ? _strdup (argv[2]) : NULL;
+		time_t now = time (NULL);
+
+		done_event = CreateEvent (NULL, FALSE, FALSE, NULL);
+		core = evo_core_new (on_event, NULL);
+		evo_core_list_team (core, "", on_result, NULL);
+		if (wait_result ("equipe") && !email)
+			email = json_first_string (last_json, "email", NULL);
+		if (email) {
+			evo_core_list_person_events (core, "", email, email, "#3498db",
+				(long long) now, (long long) now + 14 * 24 * 3600, on_result, NULL);
+			wait_result ("calendrier de la personne");
+		}
+		evo_core_free (core);
+		return 0;
+	}
+
+	/* --calendars : liste les agendas, force la redécouverte auprès des serveurs
+	 * (Exchange Online, Google...) puis les liste de nouveau */
+	if (argc > 1 && strcmp (argv[1], "--calendars") == 0) {
+		done_event = CreateEvent (NULL, FALSE, FALSE, NULL);
+		core = evo_core_new (on_event, NULL);
+		evo_core_list_sources (core, "calendar", on_result, NULL);
+		wait_result ("calendars (avant)");
+		evo_core_refresh_calendars (core, on_result, NULL);
+		wait_result ("refresh");
+		Sleep (30000);
+		evo_core_list_sources (core, "calendar", on_result, NULL);
+		wait_result ("calendars (apres)");
+		evo_core_free (core);
+		return 0;
+	}
 
 	if (argc > 1 && strcmp (argv[1], "--watch") == 0)
 		watch_minutes = argc > 2 ? atoi (argv[2]) : 5;

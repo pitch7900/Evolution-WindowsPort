@@ -3,6 +3,7 @@
 #include "MainWindow.Helpers.h"
 #include "WindowIcon.h"
 #include "Settings.h"
+#include "PeopleCalendars.h"
 
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
@@ -226,7 +227,7 @@ namespace winrt::EvolutionWin::implementation
                 return;
             }
 
-            m_calendar_sources = sources;
+            m_calendar_sources = ::EvolutionWin::People::MergeIntoSources(sources);
 
             /* premier usage : calendrier par défaut et calendriers principaux
                des comptes, pas les calendriers partagés d'autres personnes */
@@ -481,6 +482,7 @@ namespace winrt::EvolutionWin::implementation
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(L"Calendriers Exchange Online"));
         dialog.PrimaryButtonText(L"Afficher la sélection");
+        dialog.SecondaryButtonText(L"Personnes et équipes…");
         dialog.CloseButtonText(L"Annuler");
         dialog.DefaultButton(ContentDialogButton::Primary);
 
@@ -590,7 +592,7 @@ namespace winrt::EvolutionWin::implementation
                     {
                         JsonArray sources;
                         if (error.empty() && JsonArray::TryParse(json, sources))
-                            m_calendar_sources = sources;
+                            m_calendar_sources = ::EvolutionWin::People::MergeIntoSources(sources);
                         fill();
                         ring.IsActive(false);
                         ring.Visibility(Visibility::Collapsed);
@@ -604,6 +606,12 @@ namespace winrt::EvolutionWin::implementation
         m_dialog_open = true;
         auto result = co_await dialog.ShowAsync();
         m_dialog_open = false;
+
+        if (result == ContentDialogResult::Secondary)
+        {
+            ShowPeopleCalendarsDialogAsync();
+            co_return;
+        }
 
         if (result == ContentDialogResult::Primary)
         {

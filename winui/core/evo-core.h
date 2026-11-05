@@ -925,6 +925,42 @@ void		evo_core_get_gal_photo		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Événements du calendrier d'une personne (Microsoft 365, Graph
+ * /users/{adresse}/calendarView, lecture seule) : la personne doit avoir partagé
+ * son calendrier. Même format que evo_core_list_events (), avec
+ * calendar_uid = "person:adresse" et "readonly": true.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte Microsoft 365 utilisé ("" : premier compte)
+ *   email, name : adresse et nom affiché de la personne
+ *   color       : couleur "#rrggbb" ("" : aucune)
+ *   start_unix, end_unix : période en secondes Unix
+ *   func        : rappel recevant le tableau JSON des événements
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_list_person_events	(EvoCore *core,
+						 const char *account_uid,
+						 const char *email,
+						 const char *name,
+						 const char *color,
+						 long long start_unix,
+						 long long end_unix,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Équipe de l'utilisateur (Microsoft 365) : responsable, collaborateurs directs
+ * et collègues du même responsable. Les relations refusées par le serveur sont
+ * omises.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte Microsoft 365 utilisé ("" : premier compte)
+ *   func        : rappel recevant [{"name", "email", "relation":
+ *                 "manager"|"report"|"peer"}, ...]
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_list_team		(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Comme evo_core_list_contacts (), limité aux carnets book_uids (uids
  * séparés par des virgules ; NULL ou "" : tous les carnets activés). */
 void		evo_core_list_book_contacts	(EvoCore *core,

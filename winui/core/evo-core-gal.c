@@ -836,3 +836,374 @@ evo_core_get_gal_photo (EvoCore *core,
 
 	core_submit (core, core_gal_photo_run, g_strdupv (args), func, user_data);
 }
+
+/* --- calendriers de personnes (Microsoft Graph, lecture seule) --- */
+
+/* Source de collection Microsoft 365 : celle de l'identifiant demandé, sinon la
+ * première activée. NULL si aucune. */
+static ESource *
+gal_ref_m365_collection (EvoCore *core,
+			 const gchar *account_uid)
+{
+	GList *sources, *slink;
+	ESource *found = NULL;
+
+	sources = e_source_registry_list_enabled (core->registry, E_SOURCE_EXTENSION_COLLECTION);
+	for (slink = sources; slink && !found; slink = g_list_next (slink)) {
+		ESource *source = slink->data;
+		GalProvider provider;
+
+		if (!gal_collection_provider (source, &provider) || provider != GAL_PROVIDER_MICROSOFT365)
+			continue;
+		if (account_uid && *account_uid && g_strcmp0 (account_uid, e_source_get_uid (source)) != 0)
+			continue;
+		found = g_object_ref (source);
+	}
+	g_list_free_full (sources, g_object_unref);
+
+	return found;
+}
+
+/* Date Graph {"dateTime": "2026-11-05T09:00:00.0000000", "timeZone": "UTC"} en
+ * secondes Unix (0 si absente ou invalide). */
+static gint64
+gal_graph_time (JsonObject *object,
+		const gchar *member)
+{
+	JsonObject *when = json_object_has_member (object, member) &&
+		JSON_NODE_HOLDS_OBJECT (json_object_get_member (object, member))
+		? json_object_get_object_member (object, member) : NULL;
+	const gchar *text = when ? gal_string_member (when, "dateTime") : "";
+	gchar buffer[40];
+	GTimeZone *utc;
+	GDateTime *date;
+	gint64 result = 0;
+
+	if (!text || strlen (text) < 19)
+		return 0;
+
+	/* "AAAA-MM-JJTHH:MM:SS" + fraction éventuelle limitée à 6 chiffres */
+	g_strlcpy (buffer, text, sizeof (buffer));
+	if (strlen (buffer) > 26)
+		buffer[26] = '\0';
+
+	utc = g_time_zone_new_utc ();
+	date = g_date_time_new_from_iso8601 (buffer, utc);
+	if (date) {
+		result = g_date_time_to_unix (date);
+		g_date_time_unref (date);
+	}
+	g_time_zone_unref (utc);
+
+	return result;
+}
+
+/* Événements du calendrier d'une personne sur une période.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = compte (collection), [1] = adresse de la personne, [2] = nom
+ *           affiché, [3] = couleur "#rrggbb" ou "", [4] = début (secondes Unix),
+ *           [5] = fin (secondes Unix)
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : tableau JSON au format de evo_core_list_events (calendar_uid =
+ *   "person:adresse", lecture seule). */
+static gchar *
+core_list_person_events_run (EvoCore *core,
+			     gchar **args,
+			     GError **error)
+{
+	ESource *source = gal_ref_m365_collection (core, args[0]);
+	gint64 start = g_ascii_strtoll (args[4], NULL, 10), end = g_ascii_strtoll (args[5], NULL, 10);
+	gchar *token = NULL, *uri, *escaped, *start_text, *end_text, *calendar_uid, *json = NULL;
+	GDateTime *start_date, *end_date;
+	GBytes *bytes;
+	guint status = 0;
+	JsonNode *root = NULL;
+	JsonObject *object;
+	JsonBuilder *builder;
+
+	if (!source) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			"Les calendriers de personnes ne sont disponibles que pour les comptes Microsoft 365.");
+		return NULL;
+	}
+	if (!gal_get_token (core, source, &token, error)) {
+		g_object_unref (source);
+		return NULL;
+	}
+	g_object_unref (source);
+
+	if (end <= start)
+		end = start + 7 * 24 * 3600;
+	start_date = g_date_time_new_from_unix_utc (start);
+	end_date = g_date_time_new_from_unix_utc (end);
+	start_text = g_date_time_format (start_date, "%Y-%m-%dT%H:%M:%SZ");
+	end_text = g_date_time_format (end_date, "%Y-%m-%dT%H:%M:%SZ");
+	escaped = g_uri_escape_string (args[1], NULL, TRUE);
+	uri = g_strdup_printf ("https://graph.microsoft.com/v1.0/users/%s/calendarView?startDateTime=%s&endDateTime=%s"
+		"&$top=250&$select=id,subject,start,end,isAllDay,location,type,isCancelled,sensitivity,showAs",
+		escaped, start_text, end_text);
+	g_free (start_text);
+	g_free (end_text);
+	g_free (escaped);
+	g_date_time_unref (start_date);
+	g_date_time_unref (end_date);
+
+	bytes = gal_http_get (core, GAL_PROVIDER_MICROSOFT365, uri, token, &status, error);
+	g_free (uri);
+	e_util_safe_free_string (token);
+	if (!bytes)
+		return NULL;
+
+	if (status == 403 || status == 404) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED,
+			"Le calendrier de %s n'est pas partagé avec vous (accès refusé par le serveur).",
+			args[2] && *args[2] ? args[2] : args[1]);
+		g_bytes_unref (bytes);
+		return NULL;
+	}
+	if (status < 200 || status >= 300) {
+		gal_set_http_error (GAL_PROVIDER_MICROSOFT365, args[1], status, bytes, error);
+		g_bytes_unref (bytes);
+		return NULL;
+	}
+
+	object = gal_parse_response (bytes, &root, error);
+	g_bytes_unref (bytes);
+	if (!object)
+		return NULL;
+
+	calendar_uid = g_strconcat ("person:", args[1], NULL);
+	builder = json_builder_new ();
+	json_builder_begin_array (builder);
+
+	if (json_object_has_member (object, "value") && JSON_NODE_HOLDS_ARRAY (json_object_get_member (object, "value"))) {
+		JsonArray *array = json_object_get_array_member (object, "value");
+		guint ii;
+
+		for (ii = 0; ii < json_array_get_length (array); ii++) {
+			JsonObject *event;
+			JsonObject *location;
+			gchar *event_uid;
+			const gchar *type;
+
+			if (!JSON_NODE_HOLDS_OBJECT (json_array_get_element (array, ii)))
+				continue;
+			event = json_array_get_object_element (array, ii);
+			if (json_object_get_boolean_member_with_default (event, "isCancelled", FALSE))
+				continue;
+
+			location = json_object_has_member (event, "location") &&
+				JSON_NODE_HOLDS_OBJECT (json_object_get_member (event, "location"))
+				? json_object_get_object_member (event, "location") : NULL;
+			type = gal_string_member (event, "type");
+			event_uid = g_strconcat (calendar_uid, ":", gal_string_member (event, "id"), NULL);
+
+			json_builder_begin_object (builder);
+			builder_add_string (builder, "uid", event_uid);
+			builder_add_string (builder, "summary", *gal_string_member (event, "subject")
+				? gal_string_member (event, "subject") : "(Sans titre)");
+			builder_add_string (builder, "location", location ? gal_string_member (location, "displayName") : "");
+			builder_add_string (builder, "description", "");
+			json_builder_set_member_name (builder, "start");
+			json_builder_add_int_value (builder, gal_graph_time (event, "start"));
+			json_builder_set_member_name (builder, "end");
+			json_builder_add_int_value (builder, gal_graph_time (event, "end"));
+			builder_add_string (builder, "calendar_uid", calendar_uid);
+			builder_add_string (builder, "calendar_name", args[2] ? args[2] : "");
+			builder_add_string (builder, "calendar_color", args[3] ? args[3] : "");
+			json_builder_set_member_name (builder, "all_day");
+			json_builder_add_boolean_value (builder, json_object_get_boolean_member_with_default (event, "isAllDay", FALSE));
+			json_builder_set_member_name (builder, "recurring");
+			json_builder_add_boolean_value (builder, g_strcmp0 (type, "occurrence") == 0 || g_strcmp0 (type, "exception") == 0);
+			builder_add_categories (builder, NULL);
+			json_builder_set_member_name (builder, "readonly");
+			json_builder_add_boolean_value (builder, TRUE);
+			json_builder_end_object (builder);
+			g_free (event_uid);
+		}
+	}
+
+	json_builder_end_array (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+	g_free (calendar_uid);
+	json_node_unref (root);
+
+	return json;
+}
+
+/* Soumet la lecture des événements du calendrier d'une personne (Microsoft 365,
+ * lecture seule ; la personne doit avoir partagé son calendrier, ou l'organisation
+ * autoriser la consultation des disponibilités).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte Microsoft 365 utilisé ("" : premier compte)
+ *   email       : adresse de la personne
+ *   name        : nom affiché (repris dans calendar_name)
+ *   color       : couleur "#rrggbb" attribuée au calendrier ("" : aucune)
+ *   start_unix, end_unix : période en secondes Unix
+ *   func        : rappel recevant le tableau JSON des événements
+ *   user_data   : données utilisateur transmises au rappel */
+void
+evo_core_list_person_events (EvoCore *core,
+			     const char *account_uid,
+			     const char *email,
+			     const char *name,
+			     const char *color,
+			     long long start_unix,
+			     long long end_unix,
+			     EvoCoreResultFunc func,
+			     void *user_data)
+{
+	gchar start_buf[32], end_buf[32];
+	gchar *args[] = { (gchar *) (account_uid ? account_uid : ""), (gchar *) (email ? email : ""),
+		(gchar *) (name ? name : ""), (gchar *) (color ? color : ""), start_buf, end_buf, NULL };
+
+	g_return_if_fail (core != NULL);
+
+	g_snprintf (start_buf, sizeof (start_buf), "%" G_GINT64_FORMAT, (gint64) start_unix);
+	g_snprintf (end_buf, sizeof (end_buf), "%" G_GINT64_FORMAT, (gint64) end_unix);
+
+	core_submit (core, core_list_person_events_run, g_strdupv (args), func, user_data);
+}
+
+/* Ajoute à un tableau JSON les personnes d'une réponse Graph (liste "value"). */
+static void
+gal_add_people_json (JsonBuilder *builder,
+		     JsonObject *response,
+		     const gchar *relation)
+{
+	JsonNode *value = json_object_has_member (response, "value") ? json_object_get_member (response, "value") : NULL;
+	guint ii;
+
+	if (!value || !JSON_NODE_HOLDS_ARRAY (value))
+		return;
+
+	for (ii = 0; ii < json_array_get_length (json_node_get_array (value)); ii++) {
+		JsonNode *node = json_array_get_element (json_node_get_array (value), ii);
+		GalPerson *person;
+
+		if (!node || !JSON_NODE_HOLDS_OBJECT (node))
+			continue;
+		person = gal_person_from_graph (json_node_get_object (node));
+		if (!person)
+			continue;
+		json_builder_begin_object (builder);
+		builder_add_string (builder, "name", person->name ? person->name : person->email);
+		builder_add_string (builder, "email", person->email);
+		builder_add_string (builder, "relation", relation);
+		json_builder_end_object (builder);
+		gal_person_free (person);
+	}
+}
+
+/* Équipe de l'utilisateur : son responsable, ses collaborateurs directs et les
+ * collaborateurs directs de son responsable (équipes Outlook).
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = compte (collection)
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : [{"name", "email", "relation": "manager"|"report"|"peer"}, ...]. */
+static gchar *
+core_list_team_run (EvoCore *core,
+		    gchar **args,
+		    GError **error)
+{
+	ESource *source = gal_ref_m365_collection (core, args[0]);
+	gchar *token = NULL, *manager_email = NULL, *json;
+	JsonBuilder *builder;
+	guint step;
+
+	if (!source) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			"Les équipes ne sont disponibles que pour les comptes Microsoft 365.");
+		return NULL;
+	}
+	if (!gal_get_token (core, source, &token, error)) {
+		g_object_unref (source);
+		return NULL;
+	}
+	g_object_unref (source);
+
+	builder = json_builder_new ();
+	json_builder_begin_array (builder);
+
+	for (step = 0; step < 3; step++) {
+		static const gchar * const select = "?$select=displayName,givenName,surname,mail,userPrincipalName";
+		gchar *uri;
+		GBytes *bytes;
+		guint status = 0;
+		JsonNode *root = NULL;
+		JsonObject *object;
+
+		if (step == 0)
+			uri = g_strconcat ("https://graph.microsoft.com/v1.0/me/manager", select, NULL);
+		else if (step == 1)
+			uri = g_strconcat ("https://graph.microsoft.com/v1.0/me/directReports", select, NULL);
+		else if (manager_email) {
+			gchar *escaped = g_uri_escape_string (manager_email, NULL, TRUE);
+
+			uri = g_strconcat ("https://graph.microsoft.com/v1.0/users/", escaped, "/directReports", select, NULL);
+			g_free (escaped);
+		} else
+			break;
+
+		bytes = gal_http_get (core, GAL_PROVIDER_MICROSOFT365, uri, token, &status, NULL);
+		g_free (uri);
+		if (!bytes)
+			continue;
+		if (status >= 200 && status < 300) {
+			object = gal_parse_response (bytes, &root, NULL);
+			if (object) {
+				if (step == 0) {
+					GalPerson *person = gal_person_from_graph (object);
+
+					if (person) {
+						manager_email = g_strdup (person->email);
+						json_builder_begin_object (builder);
+						builder_add_string (builder, "name", person->name ? person->name : person->email);
+						builder_add_string (builder, "email", person->email);
+						builder_add_string (builder, "relation", "manager");
+						json_builder_end_object (builder);
+						gal_person_free (person);
+					}
+				} else {
+					gal_add_people_json (builder, object, step == 1 ? "report" : "peer");
+				}
+			}
+			if (root)
+				json_node_unref (root);
+		}
+		g_bytes_unref (bytes);
+	}
+
+	json_builder_end_array (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+	g_free (manager_email);
+	e_util_safe_free_string (token);
+
+	return json;
+}
+
+/* Soumet la lecture de l'équipe de l'utilisateur (responsable, collaborateurs
+ * directs, collègues du même responsable). Les relations non autorisées par la
+ * portée OAuth2 (User.ReadBasic.All) sont simplement omises.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte Microsoft 365 utilisé ("" : premier compte)
+ *   func        : rappel recevant [{"name", "email", "relation"}, ...]
+ *   user_data   : données utilisateur transmises au rappel */
+void
+evo_core_list_team (EvoCore *core,
+		    const char *account_uid,
+		    EvoCoreResultFunc func,
+		    void *user_data)
+{
+	gchar *args[] = { (gchar *) (account_uid ? account_uid : ""), NULL };
+
+	g_return_if_fail (core != NULL);
+
+	core_submit (core, core_list_team_run, g_strdupv (args), func, user_data);
+}

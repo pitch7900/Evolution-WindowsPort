@@ -4,6 +4,7 @@
 #include "WindowIcon.h"
 #include "Settings.h"
 #include "CategoryStore.h"
+#include "PeopleCalendars.h"
 
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
@@ -299,10 +300,16 @@ namespace winrt::EvolutionWin::implementation
         }
 
         std::wstring visible;
+        std::vector<hstring> person_uids;   /* calendriers de personnes (Graph, lecture seule) */
         for (auto const& uid : VisibleCalendarUids())
-            visible += (visible.empty() ? L"" : L",") + std::wstring{ uid };
+        {
+            if (::EvolutionWin::People::IsPersonUid(std::wstring_view{ uid }))
+                person_uids.push_back(uid);
+            else
+                visible += (visible.empty() ? L"" : L",") + std::wstring{ uid };
+        }
 
-        if (visible.empty())
+        if (visible.empty() && person_uids.empty())
         {
             EventList().Items().Clear();
             TextBlock none;
@@ -312,12 +319,70 @@ namespace winrt::EvolutionWin::implementation
             return;
         }
 
-        m_core->ListCalendarEvents(start_unix, end_unix, hstring{ visible }, [this](hstring const& json, hstring const& error)
+        /* événements des calendriers de personnes, fusionnés avec ceux des calendriers EDS */
+        auto people_events = std::make_shared<JsonArray>();
+        auto pending = std::make_shared<int>(visible.empty() ? 0 : 1);
+        auto people_warned = std::make_shared<bool>(false);
+        auto finish = [this, people_events, pending](hstring const& json)
+        {
+            JsonArray occurrences;
+            JsonArray::TryParse(json, occurrences);
+            for (auto const& value : *people_events)
+                occurrences.Append(value);
+            m_all_calendar_events = occurrences;
+            FilterAndRenderCalendarEvents();
+        };
+
+        auto edsJson = std::make_shared<hstring>(L"[]");
+        auto person_done = [pending, finish, edsJson]()
+        {
+            if (--*pending == 0)
+                finish(*edsJson);
+        };
+
+        *pending += static_cast<int>(person_uids.size());
+        for (auto const& uid : person_uids)
+        {
+            hstring email = ::EvolutionWin::People::EmailFromUid(uid);
+            hstring name = email, color, account_uid;
+            for (auto const& value : ::EvolutionWin::People::Load())
+            {
+                auto person = value.GetObject();
+                if (person.GetNamedString(L"email", L"") == email)
+                {
+                    name = person.GetNamedString(L"name", email);
+                    color = person.GetNamedString(L"color", L"");
+                    account_uid = person.GetNamedString(L"account_uid", L"");
+                }
+            }
+            m_core->ListPersonEvents(account_uid, email, name, color, start_unix, end_unix,
+                [this, people_events, people_warned, person_done](hstring const& json, hstring const& error)
+            {
+                JsonArray events;
+                if (error.empty() && JsonArray::TryParse(json, events))
+                {
+                    for (auto const& value : events)
+                        people_events->Append(value);
+                }
+                else if (!error.empty() && !*people_warned)
+                {
+                    *people_warned = true;   /* un seul message par chargement */
+                    ShowStatus(error, InfoBarSeverity::Warning);
+                }
+                person_done();
+            });
+        }
+
+        if (visible.empty())
+            return;   /* seuls des calendriers de personnes sont affichés : person_done () conclut */
+
+        m_core->ListCalendarEvents(start_unix, end_unix, hstring{ visible }, [this, edsJson, person_done](hstring const& json, hstring const& error)
         {
             if (!error.empty())
             {
                 ShowStatus(L"Calendrier : " + error, InfoBarSeverity::Error);
                 UpdateConnectionStatus(m_account.empty() ? L"global" : m_account, L"error", L"Anomalie de synchronisation du calendrier : " + error);
+                person_done();
                 return;
             }
 
@@ -331,16 +396,8 @@ namespace winrt::EvolutionWin::implementation
                 }
             }
 
-            JsonArray occurrences;
-            if (JsonArray::TryParse(json, occurrences))
-            {
-                m_all_calendar_events = occurrences;
-            }
-            else
-            {
-                m_all_calendar_events = JsonArray{};
-            }
-            FilterAndRenderCalendarEvents();
+            *edsJson = json;
+            person_done();
         });
     }
 

@@ -669,6 +669,22 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Équipe de l'utilisateur (responsable, collaborateurs, collègues) : [{"name", "email", "relation"}]. */
+        void ListTeam(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_list_team(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Événements du calendrier d'une personne de l'annuaire Microsoft 365 (lecture seule). */
+        void ListPersonEvents(winrt::hstring const& account, winrt::hstring const& email, winrt::hstring const& name,
+                              winrt::hstring const& color, long long start_unix, long long end_unix, CoreHandler handler)
+        {
+            evo_core_list_person_events(m_core, winrt::to_string(account).c_str(), winrt::to_string(email).c_str(),
+                winrt::to_string(name).c_str(), winrt::to_string(color).c_str(), start_unix, end_unix,
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Photo de profil d'une personne de l'annuaire Microsoft 365 : {"photo": "data:image/jpeg;base64,..."}. */
         void GetGalPhoto(winrt::hstring const& account, winrt::hstring const& email, CoreHandler handler)
         {
