@@ -40,6 +40,9 @@ namespace winrt::EvolutionWin::implementation
      *   query : texte de filtrage optionnel sur le nom ou l'adresse e-mail */
     void MainWindow::LoadContacts(hstring const& query)
     {
+        /* revenir des fiches de l'annuaire de l'organisation aux carnets */
+        SetGalMode(false);
+
         if (!m_contact_books)
         {
             LoadContactBooks();
@@ -118,14 +121,22 @@ namespace winrt::EvolutionWin::implementation
     /* Gestionnaire de modification du champ de recherche de contacts. */
     void MainWindow::OnContactSearchChanged(AutoSuggestBox const& sender, AutoSuggestBoxTextChangedEventArgs const& args)
     {
-        if (args.Reason() == AutoSuggestionBoxTextChangeReason::UserInput)
+        if (args.Reason() != AutoSuggestionBoxTextChangeReason::UserInput)
+            return;
+
+        if (m_gal_mode)
+            ScheduleGalSearch(sender.Text());
+        else
             LoadContacts(sender.Text());
     }
 
     /* Gestionnaire de validation de la recherche de contacts. */
     void MainWindow::OnContactSearchSubmitted(AutoSuggestBox const&, AutoSuggestBoxQuerySubmittedEventArgs const& args)
     {
-        LoadContacts(args.QueryText());
+        if (m_gal_mode)
+            SearchGalDirectory(args.QueryText());
+        else
+            LoadContacts(args.QueryText());
     }
 
     /* Gestionnaire de sélection d'un contact dans la liste : affiche sa fiche détaillée. */
@@ -245,6 +256,13 @@ namespace winrt::EvolutionWin::implementation
     {
         if (!m_selected_contact)
             return;
+
+        if (m_gal_mode)
+        {
+            ShowStatus(Tr(L"Les fiches de l'annuaire de l'organisation sont en lecture seule.",
+                          L"Organization directory entries are read-only."), InfoBarSeverity::Informational);
+            return;
+        }
 
         ShowEditContactDialogAsync();
     }
@@ -488,7 +506,7 @@ namespace winrt::EvolutionWin::implementation
 
         hstring book_uid = m_selected_contact.GetNamedString(L"book_uid", L"");
         hstring uid = m_selected_contact.GetNamedString(L"uid", L"");
-        if (book_uid.empty() || uid.empty())
+        if (m_gal_mode || book_uid.empty() || uid.empty())
             return;
 
         m_core->DeleteContact(book_uid, uid, [this](hstring const&, hstring const& error)

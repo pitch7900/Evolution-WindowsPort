@@ -632,6 +632,15 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Recherche dans l'annuaire de l'organisation (GAL : Microsoft 365, Google
+         * Workspace) : [{"name", "email", "title", "department", "company", "office",
+         * "phone", "mobile", "account", "provider"}, ...]. */
+        void SearchGal(winrt::hstring const& text, int max_count, CoreHandler handler)
+        {
+            evo_core_search_gal(m_core, winrt::to_string(text).c_str(), max_count,
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Contacts des seuls carnets book_uids (séparés par des virgules). */
         void ListBookContacts(winrt::hstring const& query, winrt::hstring const& book_uids, CoreHandler handler)
         {

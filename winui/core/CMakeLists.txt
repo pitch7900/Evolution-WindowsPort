@@ -64,6 +64,8 @@ add_library(evo-core SHARED
 	evo-core-export.c
 	evo-core-folder-ops.c
 	evo-core-folders.c
+	evo-core-gal.c
+	evo-core-gal-util.h
 	evo-core-message-actions.c
 	evo-core-message-read.c
 	evo-core-messages.c

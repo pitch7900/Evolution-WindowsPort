@@ -742,6 +742,9 @@ Constat : sur un compte Exchange Online / Microsoft 365 (ex. EVAM), EvolutionWin
 ## 15. Contacts — 🟡
 
 - [ ] 🟡 **Carnet d'adresses global** (GAL) Exchange / M365 : recherche et sélection des destinataires (backend evolution-ews) <a id="demo-gal"></a>
+  - [x] Moteur : `evo_core_search_gal` (Microsoft Graph `GET /users?$search=` pour Microsoft 365 / Exchange Online, API People `searchDirectoryPeople` pour Google Workspace) avec le jeton OAuth2 du compte ; _reste à valider sur un tenant réel_ (Microsoft 365 et Google Workspace)
+  - [x] Consultation : bouton « Annuaire de l'organisation » dans la vue Contacts (recherche dès 2 caractères, fiche en lecture seule : fonction, service, société, téléphones, bureau, bouton _Écrire un message_)
+  - [ ] Exchange sur site (EWS `ResolveNames`) : non pris en charge (les carnets GAL EDS d'EWS restent visibles dans les carnets habituels)
 - Contacts unifiés et doublons : cf. §11 ; recherche rapide de contacts : cf. §10 ; export par glisser-déposer vers l'extérieur : cf. §18
 - [ ] 🟡 **Fenêtre de sélection de destinataires** (carnet d'adresses, comme le bouton _À…_ d'Outlook) :
   - [ ] Ouverte par un bouton en face de chaque ligne _À_, _Cc_, _Cci_ de la fenêtre de rédaction, et en face de la ligne des participants (_Obligatoires_, _Facultatifs_, _Ressources_) d'une invitation (§13)
@@ -752,6 +755,7 @@ Constat : sur un compte Exchange Online / Microsoft 365 (ex. EVAM), EvolutionWin
   - [ ] Fiche du contact accessible depuis la liste (clic droit › _Propriétés_), création d'un nouveau contact depuis la fenêtre
 - [ ] 🟡 **Autocomplétion des adresses** dans les champs _À_, _Cc_, _Cci_ de la rédaction et dans les participants d'une invitation : <a id="demo-autocompletion"></a>
   - [x] Suggestions au fil de la frappe (à partir de 2 caractères) depuis tous les carnets d'adresses (requête préfixe `EBookClient` sur nom, prénom, adresse), puis l'annuaire GAL pour les comptes Exchange / M365
+  - [x] Annuaire de l'organisation (GAL Microsoft 365 / Google Workspace via `evo_core_search_gal`) ajouté aux suggestions à partir de 3 caractères, après une pause de frappe de 400 ms, sans doublon d'adresse ; _reste à valider sur un tenant réel_
   - [x] Adresses récemment utilisées en tête (destinataires des derniers messages envoyés), même si absentes des contacts
   - [x] Liste déroulante : nom, adresse, carnet d'origine ; navigation aux flèches, validation par Entrée / Tab / point-virgule
   - [ ] Destinataire validé affiché en « jeton » (nom, adresse en info-bulle), supprimable, double-clic pour le modifier ; adresse inconnue ou mal formée soulignée

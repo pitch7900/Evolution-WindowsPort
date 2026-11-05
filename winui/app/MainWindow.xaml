@@ -1990,7 +1990,13 @@
 
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
 
-                        <StackPanel x:Name="ContactBooksPanel" Spacing="2" />
+                        <StackPanel Spacing="12">
+                            <StackPanel x:Name="ContactBooksPanel" Spacing="2" />
+                            <!-- annuaire de l'organisation (GAL), lecture seule : MainWindow.Gal.cpp -->
+                            <Button x:Name="GalDirectoryButton" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                    Content="Annuaire de l'organisation" Click="OnGalDirectoryClick"
+                                    ToolTipService.ToolTip="Rechercher dans l'annuaire d'entreprise (Microsoft 365, Google Workspace)" />
+                        </StackPanel>
 
                     </ScrollViewer>
 
@@ -2080,7 +2086,7 @@
 
                             </Button>
 
-                            <Button Click="OnDeleteContactClick">
+                            <Button x:Name="ContactDeleteButton" Click="OnDeleteContactClick">
 
                                 <StackPanel Orientation="Horizontal" Spacing="6">
 
@@ -2092,7 +2098,7 @@
 
                             </Button>
 
-                            <Button Click="OnEditContactClick">
+                            <Button x:Name="ContactEditButton" Click="OnEditContactClick">
 
                                 <StackPanel Orientation="Horizontal" Spacing="6">
 

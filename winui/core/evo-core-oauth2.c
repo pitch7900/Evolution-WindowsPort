@@ -88,6 +88,12 @@ core_oauth2_begin_run (EvoCore *core,
 		if (scope && !strstr (scope, "gmail.settings.basic"))
 			g_hash_table_insert (query_form, g_strdup ("scope"),
 				g_strconcat (scope, " https://www.googleapis.com/auth/gmail.settings.basic", NULL));
+
+		/* Annuaire de l'organisation (API People searchDirectoryPeople) */
+		scope = g_hash_table_lookup (query_form, "scope");
+		if (scope && !strstr (scope, "directory.readonly"))
+			g_hash_table_insert (query_form, g_strdup ("scope"),
+				g_strconcat (scope, " https://www.googleapis.com/auth/directory.readonly", NULL));
 	}
 
 	if (custom_redirect)
