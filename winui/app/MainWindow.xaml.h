@@ -192,6 +192,11 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::CalendarViewSelectedDatesChangedEventArgs const& args);
         void OnRefreshCalendarClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnNewEventClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnCalendarSplitterPointerPressed(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
+        void OnCalendarSplitterPointerMoved(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
+        void OnCalendarSplitterPointerReleased(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
+        void OnCalendarSplitterPointerCaptureLost(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
+        void OnCalendarSplitterDoubleTapped(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::DoubleTappedRoutedEventArgs const& args);
         /**
          * @brief Gestionnaire pour la création rapide d'un temps de travail individuel (Focus).
          * @param sender Bouton émetteur de l'action.
@@ -234,6 +239,11 @@ namespace winrt::EvolutionWin::implementation
         hstring PeopleCalendarAccountUid();
         Windows::Data::Json::JsonArray m_calendar_groups{ nullptr };	/* groupes de calendriers Outlook (noms) */
         void RemergeCalendarSources();
+        void RestoreCalendarSidebarWidth();
+        bool m_calendar_dragging{ false };
+        bool m_calendar_sidebar_restored{ false };
+        double m_calendar_drag_origin{ 0 };
+        double m_calendar_drag_start{ 0 };
         void SendEventInvitations(hstring const& sender_uid, hstring const& calendar_uid, hstring const& event_uid);
         winrt::fire_and_forget ShowPeopleCalendarsDialogAsync();
         void ShowDirectoryPhoto(Windows::Data::Json::JsonObject const& contact);

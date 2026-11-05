@@ -395,6 +395,7 @@ namespace winrt::EvolutionWin::implementation
 
     void MainWindow::LoadCalendarSources()
     {
+        RestoreCalendarSidebarWidth();
         m_core->ListSources(L"calendar", [this](hstring const& json, hstring const& error)
         {
             JsonArray sources;

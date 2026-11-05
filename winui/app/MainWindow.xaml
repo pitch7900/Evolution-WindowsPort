@@ -1805,6 +1805,9 @@
 
                 </Grid.ColumnDefinitions>
 
+                <!-- séparateur déplaçable entre la colonne des calendriers et la grille (double-clic : largeur automatique) -->
+                <local:PaneSplitter x:Name="CalendarSplitter" Grid.Column="1" Width="24" HorizontalAlignment="Left" Margin="-24,0,0,0" Background="Transparent" PointerPressed="OnCalendarSplitterPointerPressed" PointerMoved="OnCalendarSplitterPointerMoved" PointerReleased="OnCalendarSplitterPointerReleased" PointerCaptureLost="OnCalendarSplitterPointerCaptureLost" DoubleTapped="OnCalendarSplitterDoubleTapped"><Rectangle Width="1" HorizontalAlignment="Center" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" /></local:PaneSplitter>
+
 
 
                 <!-- colonne de gauche : le mini-calendrier et la liste des calendriers -->

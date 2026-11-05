@@ -795,6 +795,72 @@ namespace winrt::EvolutionWin::implementation
         }
     }
 
+    /* Largeur minimale de la colonne des calendriers et place laissée à la grille. */
+    static constexpr double CalendarSidebarMinWidth = 200;
+    static constexpr double CalendarGridMinWidth = 420;
+
+    /**
+     * @brief Rétablit la largeur de la colonne des calendriers mémorisée (réglage layout.calendar-sidebar).
+     *        Sans réglage, la colonne garde sa largeur automatique.
+     */
+    void MainWindow::RestoreCalendarSidebarWidth()
+    {
+        if (m_calendar_sidebar_restored)
+            return;
+        m_calendar_sidebar_restored = true;
+
+        double width = ::EvolutionWin::Settings::Instance().GetNumber(L"layout.calendar-sidebar", 0);
+        if (width >= CalendarSidebarMinWidth)
+            CalendarSidebarColumn().Width(GridLengthHelper::FromPixels(width));
+    }
+
+    /** @brief Début du déplacement du séparateur : capture du pointeur et largeur de départ. */
+    void MainWindow::OnCalendarSplitterPointerPressed(IInspectable const& sender, Input::PointerRoutedEventArgs const& args)
+    {
+        auto splitter = sender.as<UIElement>();
+        if (!args.GetCurrentPoint(splitter).Properties().IsLeftButtonPressed() || !splitter.CapturePointer(args.Pointer()))
+            return;
+
+        m_calendar_dragging = true;
+        m_calendar_drag_origin = args.GetCurrentPoint(CalendarViewPane()).Position().X;
+        m_calendar_drag_start = CalendarSidebarColumn().ActualWidth();
+    }
+
+    /** @brief Pendant le glissement : nouvelle largeur de la colonne, bornée pour laisser la place à la grille. */
+    void MainWindow::OnCalendarSplitterPointerMoved(IInspectable const&, Input::PointerRoutedEventArgs const& args)
+    {
+        if (!m_calendar_dragging)
+            return;
+
+        double max_width = (std::max)(CalendarSidebarMinWidth, CalendarViewPane().ActualWidth() - CalendarGridMinWidth - 72);
+        double x = args.GetCurrentPoint(CalendarViewPane()).Position().X;
+        double width = std::clamp(m_calendar_drag_start + x - m_calendar_drag_origin, CalendarSidebarMinWidth, max_width);
+        CalendarSidebarColumn().Width(GridLengthHelper::FromPixels(std::round(width)));
+    }
+
+    /** @brief Fin du glissement : mémorise la largeur. */
+    void MainWindow::OnCalendarSplitterPointerReleased(IInspectable const& sender, Input::PointerRoutedEventArgs const& args)
+    {
+        if (!m_calendar_dragging)
+            return;
+        m_calendar_dragging = false;
+        sender.as<UIElement>().ReleasePointerCapture(args.Pointer());
+        ::EvolutionWin::Settings::Instance().SetNumber(L"layout.calendar-sidebar", CalendarSidebarColumn().ActualWidth());
+    }
+
+    /** @brief Capture perdue : le glissement s'arrête. */
+    void MainWindow::OnCalendarSplitterPointerCaptureLost(IInspectable const&, Input::PointerRoutedEventArgs const&)
+    {
+        m_calendar_dragging = false;
+    }
+
+    /** @brief Double-clic : retour à la largeur automatique de la colonne. */
+    void MainWindow::OnCalendarSplitterDoubleTapped(IInspectable const&, Input::DoubleTappedRoutedEventArgs const&)
+    {
+        CalendarSidebarColumn().Width(GridLengthHelper::Auto());
+        ::EvolutionWin::Settings::Instance().SetNumber(L"layout.calendar-sidebar", 0);
+    }
+
     /**
      * @brief Modifie le pas horaire de la grille du calendrier (15, 30 ou 60 minutes).
      * @param sender Élément de menu émetteur (MenuFlyoutItem).
