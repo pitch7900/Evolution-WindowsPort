@@ -113,7 +113,7 @@ json_from_message_infos (GPtrArray *infos,
  *   args  : args[0] = uid du compte, args[1] = nom complet du dossier
  *   error : récepteur d'erreur éventuel
  * Retourne : chaîne JSON vide. */
-static gchar *
+gchar *
 core_folder_background_refresh_run (EvoCore *core,
 				    gchar **args,
 				    GError **error)

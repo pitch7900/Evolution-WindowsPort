@@ -236,12 +236,21 @@ core_ref_folder (EvoCore *core,
 		 const gchar *account_uid,
 		 const gchar *folder_name,
 		 GError **error);
+gchar *
+core_find_role_folder (EvoCore *core,
+		       CamelStore *store,
+		       CamelFolderInfo *fi,
+		       const gchar *role);
 
 /* evo-core-messages.c */
 gchar *
 core_list_messages_run (EvoCore *core,
 			gchar **args,
 			GError **error);
+gchar *
+core_folder_background_refresh_run (EvoCore *core,
+				    gchar **args,
+				    GError **error);
 gboolean
 message_info_matches_query (CamelMessageInfo *info,
 			    const gchar *query,

@@ -209,8 +209,9 @@ namespace winrt::EvolutionWin::implementation
 
         auto sel_uids = SelectedMessageUids();
         hstring uid = sel_uids.empty() ? SelectedMessageUid() : sel_uids.front();
-        hstring account = m_account;
-        hstring folder = m_folder;
+        auto uid_location = GetMessageLocation(uid);
+        hstring account = uid_location.account;
+        hstring folder = uid_location.folder;
 
         if (uid.empty() || account.empty() || folder.empty())
             co_return;
@@ -228,13 +229,7 @@ namespace winrt::EvolutionWin::implementation
                 co_return;
 
             hstring dest_dir = folder_dest.Path();
-            JsonObject request;
-            request.SetNamedValue(L"account", JsonValue::CreateStringValue(account));
-            request.SetNamedValue(L"folder", JsonValue::CreateStringValue(folder));
-            JsonArray uids;
-            for (auto const& u : sel_uids)
-                uids.Append(JsonValue::CreateStringValue(u));
-            request.SetNamedValue(L"uids", uids);
+            JsonObject request = BuildMessagesRequest(sel_uids);
 
             ShowStatus(L"Exportation de " + hstring{ std::to_wstring(sel_uids.size()) } + L" messages en cours…", InfoBarSeverity::Informational);
             m_core->ExportMessagesEml(request.Stringify(), [this, dest_dir](hstring const& json, hstring const& error)
@@ -276,12 +271,7 @@ namespace winrt::EvolutionWin::implementation
             co_return;
         hstring dest = file.Path();
 
-        JsonObject request;
-        request.SetNamedValue(L"account", JsonValue::CreateStringValue(account));
-        request.SetNamedValue(L"folder", JsonValue::CreateStringValue(folder));
-        JsonArray uids;
-        uids.Append(JsonValue::CreateStringValue(uid));
-        request.SetNamedValue(L"uids", uids);
+        JsonObject request = BuildMessagesRequest({ uid });
 
         m_core->ExportMessagesEml(request.Stringify(), [this, dest](hstring const& json, hstring const& error)
         {
@@ -396,8 +386,9 @@ namespace winrt::EvolutionWin::implementation
     {
         auto strong = get_strong();
         hstring uid = SelectedMessageUid();
-        hstring account = m_account;
-        hstring folder = m_folder;
+        auto uid_location = GetMessageLocation(uid);
+        hstring account = uid_location.account;
+        hstring folder = uid_location.folder;
 
         if (uid.empty() || account.empty() || folder.empty() || !attachments)
             co_return;
@@ -461,8 +452,9 @@ namespace winrt::EvolutionWin::implementation
     {
         auto strong = get_strong();
         hstring uid = SelectedMessageUid();
-        hstring account = m_account;
-        hstring folder = m_folder;
+        auto uid_location = GetMessageLocation(uid);
+        hstring account = uid_location.account;
+        hstring folder = uid_location.folder;
 
         if (uid.empty() || account.empty() || folder.empty())
             co_return;
@@ -548,8 +540,9 @@ namespace winrt::EvolutionWin::implementation
     {
         auto strong = get_strong();
         hstring uid = SelectedMessageUid();
-        hstring account = m_account;
-        hstring folder = m_folder;
+        auto uid_location = GetMessageLocation(uid);
+        hstring account = uid_location.account;
+        hstring folder = uid_location.folder;
 
         if (uid.empty() || account.empty() || folder.empty())
             co_return;
@@ -773,12 +766,7 @@ namespace winrt::EvolutionWin::implementation
         if (!m_core || account.empty() || folder.empty() || uid.empty())
             co_return;
 
-        JsonObject request;
-        request.SetNamedValue(L"account", JsonValue::CreateStringValue(account));
-        request.SetNamedValue(L"folder", JsonValue::CreateStringValue(folder));
-        JsonArray uids;
-        uids.Append(JsonValue::CreateStringValue(uid));
-        request.SetNamedValue(L"uids", uids);
+        JsonObject request = BuildMessagesRequest({ uid });
 
         m_core->ExportMessagesEml(request.Stringify(), [this](hstring const& json, hstring const& error)
         {

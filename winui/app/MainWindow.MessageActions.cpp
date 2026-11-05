@@ -171,7 +171,7 @@ namespace winrt::EvolutionWin::implementation
 
 
 
-            if (account != m_account || folder != m_folder)
+            if (!IsUnifiedView() && (account != m_account || folder != m_folder))
 
                 return;
 
@@ -525,7 +525,7 @@ namespace winrt::EvolutionWin::implementation
 
         {
 
-            m_core->CopyMessage(m_account, m_folder, uid, dest_account, dest_folder,
+            m_core->CopyMessage(GetMessageLocation(uid).account, GetMessageLocation(uid).folder, uid, dest_account, dest_folder,
 
                 [this, dest_folder, remaining, count = uids.size()](hstring const&, hstring const& error)
 
@@ -586,10 +586,26 @@ namespace winrt::EvolutionWin::implementation
      * Archive du compte, créé au premier usage s'il n'existe pas. */
 
     void MainWindow::ArchiveMessagesByUids(std::vector<hstring> const& uids)
+    {
+        for (auto const& [location, group] : GroupUidsByLocation(uids))
+            ArchiveMessagesInFolder(hstring{ location.first }, hstring{ location.second }, group);
+    }
+
+    /* Marque des messages comme indésirables (ou non indésirables), un lot par
+     * compte et dossier d'origine. */
+    void MainWindow::MarkAsJunkByUids(std::vector<hstring> const& uids)
+    {
+        for (auto const& [location, group] : GroupUidsByLocation(uids))
+            MarkAsJunkInFolder(hstring{ location.first }, hstring{ location.second }, group);
+    }
+
+    /* Archive les messages d'un dossier d'un compte (créé au premier usage
+     * si le dossier Archive n'existe pas). */
+    void MainWindow::ArchiveMessagesInFolder(hstring const& account, hstring const& folder, std::vector<hstring> const& uids)
 
     {
 
-        if (uids.empty() || m_account.empty())
+        if (uids.empty() || account.empty())
 
             return;
 
@@ -597,13 +613,13 @@ namespace winrt::EvolutionWin::implementation
 
         hstring archive;
 
-        if (auto it = m_account_folders.find(std::wstring{ m_account }); it != m_account_folders.end() && it->second)
+        if (auto it = m_account_folders.find(std::wstring{ account }); it != m_account_folders.end() && it->second)
 
             archive = FindArchiveFolder(it->second);
 
 
 
-        if (archive == m_folder && !archive.empty())
+        if (archive == folder && !archive.empty())
 
         {
 
@@ -619,7 +635,7 @@ namespace winrt::EvolutionWin::implementation
 
         {
 
-            MoveMessagesByUids(uids, m_account, archive);
+            MoveMessagesByUids(uids, account, archive);
 
             return;
 
@@ -627,7 +643,7 @@ namespace winrt::EvolutionWin::implementation
 
 
 
-        hstring account = m_account;
+        
 
         m_core->CreateFolder(account, L"", L"Archive", [this, uids, account](hstring const&, hstring const& error)
 
@@ -643,7 +659,7 @@ namespace winrt::EvolutionWin::implementation
 
             }
 
-            if (account == m_account)
+            /* le compte est explicite : pas de dépendance au dossier affiché */
 
                 MoveMessagesByUids(uids, account, L"Archive");
 
@@ -677,14 +693,14 @@ namespace winrt::EvolutionWin::implementation
      *        Déplace les messages vers le dossier Indésirables du compte (ou vers la Boîte de réception pour l'opération inverse).
      * @param uids Identifiants des messages concernés (dossier courant).
      */
-    void MainWindow::MarkAsJunkByUids(std::vector<hstring> const& uids)
+    void MainWindow::MarkAsJunkInFolder(hstring const& account, hstring const& folder, std::vector<hstring> const& uids)
     {
-        if (uids.empty() || m_account.empty())
+        if (uids.empty() || account.empty())
             return;
 
         hstring junk;
         hstring inbox;
-        if (auto it = m_account_folders.find(std::wstring{ m_account }); it != m_account_folders.end() && it->second)
+        if (auto it = m_account_folders.find(std::wstring{ account }); it != m_account_folders.end() && it->second)
         {
             junk = FindFolderByType(it->second, L"junk");
             inbox = FindFolderByType(it->second, L"inbox");
@@ -696,7 +712,7 @@ namespace winrt::EvolutionWin::implementation
             return;
         }
 
-        if (m_folder == junk)
+        if (folder == junk)
         {
             /* Non indésirable : retour vers la Boîte de réception */
             if (inbox.empty())
@@ -704,11 +720,11 @@ namespace winrt::EvolutionWin::implementation
                 ShowStatus(L"Boîte de réception introuvable pour ce compte.", InfoBarSeverity::Warning);
                 return;
             }
-            MoveMessagesByUids(uids, m_account, inbox);
+            MoveMessagesByUids(uids, account, inbox);
             return;
         }
 
-        MoveMessagesByUids(uids, m_account, junk);
+        MoveMessagesByUids(uids, account, junk);
     }
 
     /**

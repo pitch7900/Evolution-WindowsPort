@@ -404,6 +404,14 @@ namespace winrt::EvolutionWin::implementation
         void ForwardMessagesAsAttachments(std::vector<hstring> const& uids);
         ::EvolutionWin::ComposeData BuildReplyComposeData(ReplyKind kind, Windows::Data::Json::JsonObject const& message);
         void LoadMessages(bool keep_selection);
+        /* Vues unifiées multi-comptes : le dossier affiché est « virtuel »
+           (m_account = UnifiedViews::kAccountId, m_folder = rôle) */
+        bool IsUnifiedView() const;
+        void AddUnifiedViewsNodes();
+        void LoadUnifiedMessages(bool keep_selection);
+        void UpdateUnifiedCounts();
+        bool UnifiedFolderMatches(hstring const& account, hstring const& folder) const;
+        hstring m_unified_accounts;
         void UpdateFolderCounts(hstring const& account, Windows::Data::Json::JsonArray const& folders);
         static std::wstring NodeKey(hstring const& account, hstring const& folder);
         void Initialize();
@@ -435,6 +443,9 @@ namespace winrt::EvolutionWin::implementation
         void CopyMessagesByUids(std::vector<hstring> const& uids, hstring const& dest_account, hstring const& dest_folder);
         void ArchiveMessagesByUids(std::vector<hstring> const& uids);
         void MarkAsJunkByUids(std::vector<hstring> const& uids);
+        void ArchiveMessagesInFolder(hstring const& account, hstring const& folder, std::vector<hstring> const& uids);
+        void MarkAsJunkInFolder(hstring const& account, hstring const& folder, std::vector<hstring> const& uids);
+        std::map<std::pair<std::wstring, std::wstring>, std::vector<hstring>> GroupUidsByLocation(std::vector<hstring> const& uids);
         void PopulateCategorizeMenuItems(
             Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items,
             std::vector<hstring> const& uids);
@@ -498,6 +509,7 @@ namespace winrt::EvolutionWin::implementation
         };
         std::unordered_map<std::wstring, MessageLocation> m_message_locations;
         MessageLocation GetMessageLocation(hstring const& uid);
+        Windows::Data::Json::JsonObject BuildMessagesRequest(std::vector<hstring> const& uids);
         hstring CurrentSearchScope();
         void UpdateSearchPlaceholder();
 

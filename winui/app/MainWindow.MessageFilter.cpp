@@ -298,6 +298,9 @@ namespace winrt::EvolutionWin::implementation
         }
 
         hstring scope = CurrentSearchScope();
+        /* une vue unifiée n'a ni sous-dossiers ni compte propre : la recherche élargie porte sur tous les comptes */
+        if (IsUnifiedView() && scope != L"folder")
+            scope = L"all";
 
         if (query.empty())
         {

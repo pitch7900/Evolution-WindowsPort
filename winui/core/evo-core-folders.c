@@ -210,6 +210,64 @@ add_folder_infos (JsonBuilder *builder,
 	json_builder_end_array (builder);
 }
 
+/* Parcourt l'arborescence en préordre (même ordre que add_folder_infos, donc
+ * mêmes attributions de rôles) et renvoie le premier dossier sélectionnable
+ * du rôle demandé.
+ * Paramètres :
+ *   fi    : dossiers à parcourir (frères et enfants)
+ *   roles : rôles du compte
+ *   role  : rôle recherché ("inbox", "sent", ...)
+ * Retourne : nom complet du dossier (à libérer avec g_free) ou NULL. */
+static gchar *
+find_role_folder_recursive (CamelFolderInfo *fi,
+			    FolderRoles *roles,
+			    const gchar *role)
+{
+	for (; fi; fi = fi->next) {
+		/* le type est toujours évalué : il réserve le rôle dans le compte */
+		const gchar *type = folder_roles_type (roles, fi);
+		gchar *found;
+
+		if (fi->full_name && !(fi->flags & CAMEL_FOLDER_NOSELECT) &&
+		    g_strcmp0 (type, role) == 0)
+			return g_strdup (fi->full_name);
+
+		found = find_role_folder_recursive (fi->child, roles, role);
+		if (found)
+			return found;
+	}
+
+	return NULL;
+}
+
+/* Trouve le dossier d'un rôle donné dans un compte (boîte de réception,
+ * envoyés, brouillons, corbeille...), avec les mêmes règles que l'arborescence
+ * affichée dans l'interface (rôle serveur, dossier configuré, nom usuel).
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   store : magasin du compte
+ *   fi    : arborescence des dossiers du compte (récursive)
+ *   role  : rôle recherché ("inbox", "sent", "drafts", "trash", "junk", "archive")
+ * Retourne : nom complet du dossier (à libérer avec g_free) ou NULL. */
+gchar *
+core_find_role_folder (EvoCore *core,
+		       CamelStore *store,
+		       CamelFolderInfo *fi,
+		       const gchar *role)
+{
+	FolderRoles *roles;
+	gchar *name;
+
+	if (!fi || !role || !*role)
+		return NULL;
+
+	roles = folder_roles_new (core, store, fi);
+	name = find_role_folder_recursive (fi, roles, role);
+	folder_roles_free (roles);
+
+	return name;
+}
+
 /* Liste l'arborescence des dossiers d'un compte : tente d'abord une lecture
  * rapide depuis le cache local (CAMEL_STORE_FOLDER_INFO_FAST) pour un affichage
  * instantané au démarrage, sans attendre la connexion réseau, puis se rabat sur

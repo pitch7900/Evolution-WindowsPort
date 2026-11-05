@@ -442,6 +442,27 @@ void		evo_core_search_messages_scoped	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Charge une vue unifiée multi-comptes : les messages du dossier d'un rôle
+ * donné (boîte de réception, envoyés, brouillons, corbeille...) de tous les
+ * comptes, fusionnés et triés du plus récent au plus ancien. Un compte
+ * injoignable est ignoré.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   role         : rôle du dossier ("inbox", "sent", "drafts", "trash", "junk", "archive")
+ *   account_uids : comptes inclus, identifiants séparés par des virgules (NULL ou "" : tous)
+ *   max_count    : nombre maximal de messages renvoyés (0 pour tous)
+ *   func         : rappel recevant le tableau JSON des messages ; chacun porte "account",
+ *                  "account_name", "folder", "folder_name" et un "uid" composite
+ *                  "<uid>\x1f<compte>\x1f<dossier>" : seule la partie avant le premier
+ *                  \x1f est l'identifiant à transmettre aux autres fonctions du moteur
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_list_unified		(EvoCore *core,
+						 const char *role,
+						 const char *account_uids,
+						 unsigned int max_count,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Enregistre une pièce jointe d'un message dans un fichier sur le disque.
  * Paramètres :
  *   core             : instance du moteur evo-core
