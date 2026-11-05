@@ -1,0 +1,45 @@
+            <NavigationView.MenuItems>
+
+                <NavigationViewItem x:Name="MailItem" Content="Courrier" Tag="mail" IsSelected="True"
+
+                                    ToolTipService.ToolTip="Courrier (Ctrl+1)">
+
+                    <NavigationViewItem.Icon>
+
+                        <FontIcon Glyph="&#xE715;" />
+
+                    </NavigationViewItem.Icon>
+
+                </NavigationViewItem>
+
+                <NavigationViewItem Content="Calendrier" Tag="calendar" ToolTipService.ToolTip="Calendrier (Ctrl+2)">
+
+                    <NavigationViewItem.Icon>
+
+                        <FontIcon Glyph="&#xE787;" />
+
+                    </NavigationViewItem.Icon>
+
+                </NavigationViewItem>
+
+                <NavigationViewItem Content="Contacts" Tag="contacts" ToolTipService.ToolTip="Contacts (Ctrl+3)">
+
+                    <NavigationViewItem.Icon>
+
+                        <FontIcon Glyph="&#xE77B;" />
+
+                    </NavigationViewItem.Icon>
+
+                </NavigationViewItem>
+
+                <NavigationViewItem Content="Tâches" Tag="tasks" ToolTipService.ToolTip="Tâches (Ctrl+4)">
+
+                    <NavigationViewItem.Icon>
+
+                        <FontIcon Glyph="&#xE9D5;" />
+
+                    </NavigationViewItem.Icon>
+
+                </NavigationViewItem>
+
+            </NavigationView.MenuItems>

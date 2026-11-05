@@ -1,0 +1,137 @@
+                <local:PaneSplitter x:Name="TodoBarSplitter" Grid.Column="1" Width="6" Background="Transparent"
+
+                                    Visibility="Collapsed"
+
+                                    PointerPressed="OnTodoBarSplitterPointerPressed"
+
+                                    PointerMoved="OnTodoBarSplitterPointerMoved"
+
+                                    PointerReleased="OnTodoBarSplitterPointerReleased"
+
+                                    PointerCaptureLost="OnTodoBarSplitterPointerCaptureLost">
+
+                    <Rectangle Width="1" HorizontalAlignment="Center" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                </local:PaneSplitter>
+
+
+
+                <!-- Volet latéral des tâches (To-Do Bar façon Outlook) -->
+
+                <Border x:Name="TodoBarPane" Grid.Column="2" Visibility="Collapsed"
+
+                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                        BorderThickness="1,0,0,0">
+
+                    <Grid Padding="12,12,12,12" RowSpacing="10">
+
+                        <Grid.RowDefinitions>
+
+                            <RowDefinition Height="Auto" />
+
+                            <RowDefinition Height="Auto" />
+
+                            <RowDefinition Height="*" />
+
+                            <RowDefinition Height="Auto" />
+
+                        </Grid.RowDefinitions>
+
+
+
+                        <!-- En-tête : Titre + Actions rapides -->
+
+                        <Grid Grid.Row="0">
+
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+
+                                <FontIcon Glyph="&#xE9D5;" FontSize="15" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+
+                                <TextBlock Text="Tâches à faire" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+
+                                <Button ToolTipService.ToolTip="Actualiser les tâches" Click="OnTodoBarRefreshClick"
+
+                                        Padding="6,4" Background="Transparent" BorderThickness="0">
+
+                                    <FontIcon Glyph="&#xE72C;" FontSize="12" />
+
+                                </Button>
+
+                                <Button ToolTipService.ToolTip="Fermer le volet des tâches (Alt+F2)" Click="OnTodoBarCloseClick"
+
+                                        Padding="6,4" Background="Transparent" BorderThickness="0">
+
+                                    <FontIcon Glyph="&#xE711;" FontSize="12" />
+
+                                </Button>
+
+                            </StackPanel>
+
+                        </Grid>
+
+
+
+                        <!-- Champ d'ajout rapide de tâche -->
+
+                        <Grid Grid.Row="1" ColumnSpacing="6">
+
+                            <Grid.ColumnDefinitions>
+
+                                <ColumnDefinition Width="*" />
+
+                                <ColumnDefinition Width="Auto" />
+
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox x:Name="TodoBarQuickInput" PlaceholderText="Nouvelle tâche rapide... (Entrée)"
+
+                                     KeyDown="OnTodoBarQuickInputKeyDown" />
+
+                            <Button Grid.Column="1" ToolTipService.ToolTip="Ajouter cette tâche" Click="OnTodoBarQuickAddClick">
+
+                                <FontIcon Glyph="&#xE710;" FontSize="12" />
+
+                            </Button>
+
+                        </Grid>
+
+
+
+                        <!-- Liste des tâches en cours -->
+
+                        <ListView x:Name="TodoBarListView" Grid.Row="2" SelectionMode="None"
+
+                                  IsItemClickEnabled="True" ItemClick="OnTodoBarItemClick"
+
+                                  Padding="0,2,0,2" />
+
+
+
+                        <!-- Pied du volet : Compteur et lien Voir toutes les tâches -->
+
+                        <Grid Grid.Row="3" Margin="0,4,0,0">
+
+                            <TextBlock x:Name="TodoBarCountText" Text="Aucune tâche en attente"
+
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+
+                                       VerticalAlignment="Center" />
+
+                            <HyperlinkButton Content="Voir tout (Ctrl+4)" Click="OnTodoBarViewAllClick"
+
+                                             HorizontalAlignment="Right" Padding="4,2" />
+
+                        </Grid>
+
+                    </Grid>
+
+                </Border>

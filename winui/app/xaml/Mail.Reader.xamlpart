@@ -1,0 +1,449 @@
+                <Rectangle x:Name="ReaderDivider" Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="3" Height="1"
+
+                           Margin="0,4,0,4" Visibility="Collapsed" Fill="{ThemeResource CardStrokeColorDefaultBrush}" />
+
+                <Grid x:Name="ReaderPane" Grid.Column="4" Grid.RowSpan="3">
+
+                    <Grid.RowDefinitions>
+
+                        <RowDefinition Height="Auto" />
+
+                        <RowDefinition Height="*" />
+
+                    </Grid.RowDefinitions>
+
+                    <StackPanel x:Name="MessageHeader" Grid.Row="0" Padding="24,8,24,12" Spacing="4" Visibility="Collapsed">
+
+                        <CommandBar DefaultLabelPosition="Right" HorizontalAlignment="Left" Margin="-12,0,0,4">
+
+                            <AppBarButton Label="Répondre" Click="OnReplyClick">
+
+                                <AppBarButton.Icon>
+
+                                    <FontIcon Glyph="&#xE97A;" />
+
+                                </AppBarButton.Icon>
+
+                                <AppBarButton.KeyboardAccelerators>
+
+                                    <KeyboardAccelerator Modifiers="Control" Key="R" />
+
+                                </AppBarButton.KeyboardAccelerators>
+
+                            </AppBarButton>
+
+                            <AppBarButton Label="Répondre à tous" Click="OnReplyAllClick">
+
+                                <AppBarButton.Icon>
+
+                                    <FontIcon Glyph="&#xEE35;" />
+
+                                </AppBarButton.Icon>
+
+                                <AppBarButton.KeyboardAccelerators>
+
+                                    <KeyboardAccelerator Modifiers="Control,Shift" Key="R" />
+
+                                </AppBarButton.KeyboardAccelerators>
+
+                            </AppBarButton>
+
+                            <AppBarButton Label="Transférer" Click="OnForwardClick">
+
+                                <AppBarButton.Icon>
+
+                                    <FontIcon Glyph="&#xE72D;" />
+
+                                </AppBarButton.Icon>
+
+                                <AppBarButton.KeyboardAccelerators>
+
+                                    <KeyboardAccelerator Modifiers="Control" Key="F" />
+
+                                </AppBarButton.KeyboardAccelerators>
+
+                            </AppBarButton>
+
+                            <AppBarButton Label="Transférer en PJ" Click="OnForwardAsAttachmentClick" ToolTipService.ToolTip="Transférer en tant que pièce jointe (Ctrl+Maj+F)">
+
+                                <AppBarButton.Icon>
+
+                                    <FontIcon Glyph="&#xE723;" />
+
+                                </AppBarButton.Icon>
+
+                            </AppBarButton>
+
+                            <AppBarSeparator />
+
+                            <AppBarButton x:Name="ToggleReadButton" Label="Non lu" Click="OnToggleReadClick">
+
+                                <AppBarButton.Icon>
+
+                                    <FontIcon x:Name="ToggleReadIcon" Glyph="&#xE715;" />
+
+                                </AppBarButton.Icon>
+
+                                <AppBarButton.KeyboardAccelerators>
+
+                                    <KeyboardAccelerator Modifiers="Control" Key="U" />
+
+                                </AppBarButton.KeyboardAccelerators>
+
+                            </AppBarButton>
+
+                            <AppBarButton x:Name="ToggleFlagButton" Label="Suivi" Click="OnFollowUpButtonClick">
+
+                                <AppBarButton.Icon>
+
+                                    <FontIcon x:Name="ToggleFlagIcon" Glyph="&#xE7C1;" />
+
+                                </AppBarButton.Icon>
+
+                            </AppBarButton>
+
+                            <AppBarButton Label="Créer une tâche" Click="OnCreateTaskFromMessageClick" ToolTipService.ToolTip="Créer une tâche à partir de ce message">
+
+                                <AppBarButton.Icon>
+
+                                    <FontIcon Glyph="&#xE9D5;" />
+
+                                </AppBarButton.Icon>
+
+                            </AppBarButton>
+
+                            <AppBarButton Label="Déplacer">
+
+                                <AppBarButton.Icon>
+
+                                    <FontIcon Glyph="&#xE8DE;" />
+
+                                </AppBarButton.Icon>
+
+                                <AppBarButton.Flyout>
+
+                                    <MenuFlyout x:Name="MoveMenu" Opening="OnMoveMenuOpening" />
+
+                                </AppBarButton.Flyout>
+
+                            </AppBarButton>
+
+                            <AppBarButton Label="Supprimer" Click="OnDeleteClick">
+
+                                <AppBarButton.Icon>
+
+                                    <FontIcon Glyph="&#xE74D;" />
+
+                                </AppBarButton.Icon>
+
+                                <AppBarButton.KeyboardAccelerators>
+
+                                    <KeyboardAccelerator Key="Delete" />
+
+                                </AppBarButton.KeyboardAccelerators>
+
+                            </AppBarButton>
+
+                            <AppBarButton Label="Archiver" Click="OnArchiveClick">
+
+                                <AppBarButton.Icon>
+
+                                    <FontIcon Glyph="&#xE7B8;" />
+
+                                </AppBarButton.Icon>
+
+                                <AppBarButton.KeyboardAccelerators>
+
+                                    <KeyboardAccelerator Key="Back" />
+
+                                </AppBarButton.KeyboardAccelerators>
+
+                            </AppBarButton>
+
+                            <AppBarSeparator />
+
+                            <AppBarButton Label="Imprimer" Click="OnPrintClick">
+
+                                <AppBarButton.Icon>
+
+                                    <FontIcon Glyph="&#xE749;" />
+
+                                </AppBarButton.Icon>
+
+                                <AppBarButton.KeyboardAccelerators>
+
+                                    <KeyboardAccelerator Modifiers="Control" Key="P" />
+
+                                </AppBarButton.KeyboardAccelerators>
+
+                            </AppBarButton>
+
+                            <AppBarButton Label="Enregistrer sous" Click="OnSaveMessageClick" ToolTipService.ToolTip="Enregistrer le message au format .eml (Ctrl+S)">
+
+                                <AppBarButton.Icon>
+
+                                    <FontIcon Glyph="&#xE74E;" />
+
+                                </AppBarButton.Icon>
+
+                                
+
+                                <AppBarButton.KeyboardAccelerators>
+
+                                    <KeyboardAccelerator Modifiers="Control" Key="S" />
+
+                                </AppBarButton.KeyboardAccelerators>
+
+                            </AppBarButton>
+
+                            <AppBarButton Label="Afficher dans le navigateur" Click="OnOpenInBrowserClick" ToolTipService.ToolTip="Ouvrir ce message dans le navigateur web par défaut">
+
+                                <AppBarButton.Icon>
+
+                                    <FontIcon Glyph="&#xE774;" />
+
+                                </AppBarButton.Icon>
+
+                            </AppBarButton>
+
+                            <AppBarButton Label="Source MIME" Click="OnViewRawMimeClick" ToolTipService.ToolTip="Afficher le flux brut intégral du message RFC 822 (Ctrl+Maj+U)">
+
+                                <AppBarButton.Icon>
+
+                                    <FontIcon Glyph="&#xE943;" />
+
+                                </AppBarButton.Icon>
+
+                                <AppBarButton.KeyboardAccelerators>
+
+                                    <KeyboardAccelerator Modifiers="Control,Shift" Key="U" />
+
+                                </AppBarButton.KeyboardAccelerators>
+
+                            </AppBarButton>
+                            <AppBarSeparator />
+                            <AppBarButton Label="Texte brut / HTML" Click="OnTogglePlainTextClick" ToolTipService.ToolTip="Basculer entre texte brut et HTML">
+                                <AppBarButton.Icon><FontIcon Glyph="&#xE8C4;" /></AppBarButton.Icon>
+                            </AppBarButton>
+                            <AppBarButton Label="Zoom avant" Click="OnZoomInClick" ToolTipService.ToolTip="Agrandir l'affichage (Ctrl++)">
+                                <AppBarButton.Icon><FontIcon Glyph="&#xE710;" /></AppBarButton.Icon>
+                                <AppBarButton.KeyboardAccelerators>
+                                    <KeyboardAccelerator Modifiers="Control" Key="Add" />
+                                </AppBarButton.KeyboardAccelerators>
+                            </AppBarButton>
+                            <AppBarButton Label="Zoom arrière" Click="OnZoomOutClick" ToolTipService.ToolTip="Réduire l'affichage (Ctrl+-)">
+                                <AppBarButton.Icon><FontIcon Glyph="&#xE738;" /></AppBarButton.Icon>
+                                <AppBarButton.KeyboardAccelerators>
+                                    <KeyboardAccelerator Modifiers="Control" Key="Subtract" />
+                                </AppBarButton.KeyboardAccelerators>
+                            </AppBarButton>
+                            <AppBarButton Label="100 %" Click="OnZoomResetClick" ToolTipService.ToolTip="Réinitialiser le zoom à 100 % (Ctrl+0)">
+                                <AppBarButton.Icon><FontIcon Glyph="&#xE777;" /></AppBarButton.Icon>
+                                <AppBarButton.KeyboardAccelerators>
+                                    <KeyboardAccelerator Modifiers="Control" Key="Number0" />
+                                </AppBarButton.KeyboardAccelerators>
+                            </AppBarButton>
+
+                            <AppBarButton x:Name="ReadAloudButton" Label="Lire à voix haute" Click="OnReadAloudClick" ToolTipService.ToolTip="Lire à voix haute le message (Synthèse vocale Windows)">
+
+                                <AppBarButton.Icon>
+
+                                    <FontIcon x:Name="ReadAloudIcon" Glyph="&#xEC92;" />
+
+                                </AppBarButton.Icon>
+
+                            </AppBarButton>
+
+                        </CommandBar>
+
+                        <TextBlock x:Name="MessageSubject" Style="{StaticResource SubtitleTextBlockStyle}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+
+                        <TextBlock x:Name="MessageFrom" Style="{StaticResource BodyStrongTextBlockStyle}" IsTextSelectionEnabled="True" />
+
+                        <TextBlock x:Name="MessageTo" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+
+                        <TextBlock x:Name="MessageDate" Style="{StaticResource CaptionTextBlockStyle}" />
+
+                        <InfoBar x:Name="SecurityBar" IsOpen="False" IsClosable="True" Margin="0,4,0,0" />
+
+                        <!-- accusé de lecture demandé par l'expéditeur / accusé reçu (MainWindow.Receipts.cpp) -->
+                        <InfoBar x:Name="ReceiptBar" IsOpen="False" IsClosable="True" Margin="0,4,0,0" Severity="Informational">
+                            <InfoBar.Content>
+                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                                    <Button x:Name="ReceiptSendButton" Click="OnReceiptSendClick" />
+                                    <Button x:Name="ReceiptIgnoreButton" Click="OnReceiptIgnoreClick" />
+                                </StackPanel>
+                            </InfoBar.Content>
+                        </InfoBar>
+                        <InfoBar x:Name="MdnBar" IsOpen="False" IsClosable="True" Margin="0,4,0,0" Severity="Success" />
+
+                        <!-- invitation iCalendar : Accepter / Provisoire / Refuser (MainWindow.Invitations.cpp) -->
+                        <InfoBar x:Name="InviteBar" IsOpen="False" IsClosable="False" Margin="0,4,0,0" Severity="Informational">
+                            <InfoBar.Content>
+                                <StackPanel Spacing="8" Margin="0,0,0,12">
+                                    <TextBlock x:Name="InviteDetails" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                    <TextBlock x:Name="InviteState" TextWrapping="Wrap" FontWeight="SemiBold" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button x:Name="InviteAcceptButton" Click="OnInviteAcceptClick" />
+                                        <Button x:Name="InviteTentativeButton" Click="OnInviteTentativeClick" />
+                                        <Button x:Name="InviteDeclineButton" Click="OnInviteDeclineClick" />
+                                        <Button x:Name="InviteRemoveButton" Click="OnInviteRemoveClick" />
+                                    </StackPanel>
+                                    <CheckBox x:Name="InviteSendReplyCheck" IsChecked="True" />
+                                </StackPanel>
+                            </InfoBar.Content>
+                        </InfoBar>
+
+                        <!-- contenu distant bloqué pour le message affiché -->
+
+                        <InfoBar x:Name="RemoteContentBar" IsOpen="False" IsClosable="True" Margin="0,4,0,0"
+
+                                 Severity="Informational" Title="Contenu externe bloqué">
+
+                            <InfoBar.Content>
+
+                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+
+                                    <Button Content="Afficher les images pour ce message" Click="OnShowRemoteContentClick" />
+
+                                    <Button x:Name="TrustSenderButton" Click="OnTrustSenderClick" />
+
+                                    <Button x:Name="TrustDomainButton" Click="OnTrustDomainClick" />
+
+                                </StackPanel>
+
+                            </InfoBar.Content>
+
+                        </InfoBar>
+
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,4,0,0">
+
+                            <StackPanel x:Name="AttachmentBar" Orientation="Horizontal" Spacing="8" Visibility="Collapsed" />
+
+                        </ScrollViewer>
+
+                    </StackPanel>
+
+                    <Border x:Name="ReaderContainer" Grid.Row="1" Margin="12,0,12,12" Background="White" RequestedTheme="Light" CornerRadius="6" Visibility="Collapsed">
+
+                        <controls:WebView2 x:Name="Reader" RequestedTheme="Light" DefaultBackgroundColor="White" />
+
+                    </Border>
+
+                    <!-- Panneau d'aperçu sécurisé de pièce jointe -->
+
+                    <Border x:Name="AttachmentPreviewContainer" Grid.Row="1" Margin="12,0,12,12" Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Visibility="Collapsed">
+
+                        <Grid>
+
+                            <Grid.RowDefinitions>
+
+                                <RowDefinition Height="Auto" />
+
+                                <RowDefinition Height="*" />
+
+                            </Grid.RowDefinitions>
+
+                            <!-- En-tête et actions d'aperçu -->
+
+                            <Border Grid.Row="0" Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" Padding="12,8,12,8">
+
+                                <Grid>
+
+                                    <Grid.ColumnDefinitions>
+
+                                        <ColumnDefinition Width="Auto" />
+
+                                        <ColumnDefinition Width="*" />
+
+                                        <ColumnDefinition Width="Auto" />
+
+                                    </Grid.ColumnDefinitions>
+
+                                                                        <Button Grid.Column="0" Click="OnCloseAttachmentPreviewClick">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon Glyph="&#xE72B;" FontSize="12" />
+                                            <TextBlock Text="Retour au message" />
+                                        </StackPanel>
+                                    </Button>
+                                    <TextBlock x:Name="PreviewFilenameText" Grid.Column="1" VerticalAlignment="Center" Margin="16,0,0,0" Style="{StaticResource BodyStrongTextBlockStyle}" TextTrimming="CharacterEllipsis" />
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                        <Button x:Name="PreviewSaveButton" Click="OnPreviewSaveClick">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <FontIcon Glyph="&#xE74E;" FontSize="12" />
+                                                <TextBlock Text="Enregistrer sous..." />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button x:Name="PreviewOpenButton" Click="OnPreviewOpenClick">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <FontIcon Glyph="&#xE8A7;" FontSize="12" />
+                                                <TextBlock Text="Ouvrir" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+
+                                </Grid>
+
+                            </Border>
+
+                            <!-- Contenu prévisualisé -->
+
+                            <Grid Grid.Row="1">
+
+                                <!-- Image -->
+
+                                <ScrollViewer x:Name="PreviewImageScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+
+                                    <Image x:Name="PreviewImage" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16" />
+
+                                </ScrollViewer>
+
+                                <!-- Texte brut -->
+
+                                <ScrollViewer x:Name="PreviewTextScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+
+                                    <TextBox x:Name="PreviewText" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="Consolas, monospace" FontSize="13" BorderThickness="0" Background="Transparent" Padding="16" />
+
+                                </ScrollViewer>
+
+                                <!-- PDF : pages rendues en images (Windows.Data.Pdf) -->
+
+                                <ScrollViewer x:Name="PreviewPdfScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+
+                                    <StackPanel x:Name="PreviewPdfPages" Spacing="12" Margin="16" HorizontalAlignment="Center" />
+
+                                </ScrollViewer>
+
+                                <!-- HTML : WebView2 isole, sans script ni contenu distant -->
+
+                                <controls:WebView2 x:Name="PreviewWeb" Visibility="Collapsed" RequestedTheme="Light" DefaultBackgroundColor="White" />
+
+                                <!-- Fichier non supporté / fiche sécurisée -->
+
+                                <StackPanel x:Name="PreviewUnsupported" Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
+
+                                    <FontIcon Glyph="&#xE7BA;" FontSize="48" Foreground="{ThemeResource SystemFillColorCautionBrush}" HorizontalAlignment="Center" />
+
+                                    <TextBlock Text="Aucun aperçu direct n'est disponible pour ce type de fichier." Style="{StaticResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" />
+
+                                    <TextBlock Text="Pour votre sécurité, les fichiers exécutables ou non reconnus ne sont pas exécutés." Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
+
+                                </StackPanel>
+
+                                <ProgressRing x:Name="PreviewLoadingRing" IsActive="False" Width="40" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+                            </Grid>
+
+                        </Grid>
+
+                    </Border>
+
+                    <TextBlock x:Name="ReaderPlaceholder" Grid.Row="1"
+
+                               Text="Sélectionnez un message pour le lire"
+
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                </Grid>

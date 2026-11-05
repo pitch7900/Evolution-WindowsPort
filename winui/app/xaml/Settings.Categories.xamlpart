@@ -1,0 +1,5 @@
+                            <StackPanel x:Name="SettingsCategoryCategories" Visibility="Collapsed" Spacing="16">
+                                <TextBlock Text="Catégories et codes couleur" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                <TextBlock TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Les mêmes catégories et les mêmes couleurs servent pour les courriels, les contacts, les tâches et les événements du calendrier. Les premières portent les raccourcis Ctrl+F2 à Ctrl+F12 (courriels)." />
+                                <StackPanel x:Name="CategoriesEditorHost" Spacing="8" />
+                            </StackPanel>

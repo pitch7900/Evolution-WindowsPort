@@ -1,0 +1,157 @@
+                                <TextBlock Text="Fuseaux horaires" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+
+
+
+                                <!-- Fuseau horaire principal -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE774;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Fuseau horaire principal" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Fuseau horaire de référence utilisé pour afficher et programmer vos événements."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ComboBox Grid.Column="2" x:Name="CalendarTimezoneCombo" Tag="calendar.timezone"
+
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="220">
+
+                                            <ComboBoxItem Content="(Système) Heure locale" Tag="system" />
+
+                                            <ComboBoxItem Content="(UTC+01:00) Paris, Bruxelles" Tag="Europe/Paris" />
+
+                                            <ComboBoxItem Content="(UTC+00:00) Londres, Dublin" Tag="Europe/London" />
+
+                                            <ComboBoxItem Content="(UTC-05:00) New York, Montréal" Tag="America/New_York" />
+
+                                            <ComboBoxItem Content="(UTC-08:00) Los Angeles, SF" Tag="America/Los_Angeles" />
+
+                                            <ComboBoxItem Content="(UTC+09:00) Tokyo, Séoul" Tag="Asia/Tokyo" />
+
+                                            <ComboBoxItem Content="(UTC+00:00) UTC universel" Tag="UTC" />
+
+                                        </ComboBox>
+
+                                    </Grid>
+
+                                </Border>
+
+
+
+                                <!-- Second fuseau horaire -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE916;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Afficher un second fuseau horaire dans la grille" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Affiche une double échelle horaire sur la marge gauche de la grille de calendrier."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ToggleSwitch Grid.Column="2" x:Name="CalendarSecondTimezoneSwitch" Tag="calendar.second-timezone-enabled"
+
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+
+                                    </Grid>
+
+                                </Border>
+
+
+
+                                <!-- Choix du second fuseau horaire -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8B7;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Second fuseau horaire" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Zone géographique secondaire affichée en parallèle dans la grille du calendrier."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ComboBox Grid.Column="2" x:Name="CalendarSecondTimezoneCombo" Tag="calendar.second-timezone"
+
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="220">
+
+                                            <ComboBoxItem Content="(UTC+00:00) UTC universel" Tag="UTC" />
+
+                                            <ComboBoxItem Content="(UTC-05:00) New York, Montréal" Tag="America/New_York" />
+
+                                            <ComboBoxItem Content="(UTC-08:00) Los Angeles, SF" Tag="America/Los_Angeles" />
+
+                                            <ComboBoxItem Content="(UTC+01:00) Paris, Bruxelles" Tag="Europe/Paris" />
+
+                                            <ComboBoxItem Content="(UTC+00:00) Londres, Dublin" Tag="Europe/London" />
+
+                                            <ComboBoxItem Content="(UTC+09:00) Tokyo, Séoul" Tag="Asia/Tokyo" />
+
+                                        </ComboBox>
+
+                                    </Grid>
+
+                                </Border>

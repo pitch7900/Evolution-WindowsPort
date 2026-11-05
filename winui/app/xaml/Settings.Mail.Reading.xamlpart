@@ -1,0 +1,172 @@
+                                <TextBlock Text="Lecture et affichage" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+
+
+
+                                <!-- Marquer comme lu -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8C3;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Marquer le message comme lu" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Délai avant que le message affiché dans le volet de lecture soit considéré comme lu."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ComboBox Grid.Column="2" x:Name="MailMarkAsReadCombo" Tag="mail.mark-as-read"
+
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+
+                                            <ComboBoxItem Content="Immédiatement" Tag="immediate" />
+
+                                            <ComboBoxItem Content="Après un délai" Tag="delayed" />
+
+                                            <ComboBoxItem Content="Au changement de sélection" Tag="on-selection-change" />
+
+                                            <ComboBoxItem Content="Manuellement seulement" Tag="never" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Délai de marquage automatique comme lu -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE823;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Délai pour marquer comme lu" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Temps d'attente avant marquage automatique (lorsque l'option « Après un délai » est activée)."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="MailMarkAsReadDelayCombo" Tag="mail.mark-read-delay-seconds"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="180">
+                                            <ComboBoxItem Content="1 seconde" Tag="1" />
+                                            <ComboBoxItem Content="2 secondes" Tag="2" />
+                                            <ComboBoxItem Content="3 secondes" Tag="3" />
+                                            <ComboBoxItem Content="5 secondes (défaut)" Tag="5" />
+                                            <ComboBoxItem Content="10 secondes" Tag="10" />
+                                            <ComboBoxItem Content="15 secondes" Tag="15" />
+                                            <ComboBoxItem Content="30 secondes" Tag="30" />
+                                            <ComboBoxItem Content="60 secondes (1 min)" Tag="60" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+
+
+                                <!-- Ordre des dossiers dans le volet latéral -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8B7;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Ordre des dossiers dans le volet latéral" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Choisissez d'afficher les dossiers spéciaux en premier (Boîte de réception, etc.) ou de trier tous les dossiers par ordre alphabétique de A à Z."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="MailFolderSortCombo" Tag="mail.folder-sort"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="180">
+                                            <ComboBoxItem Content="Dossiers spéciaux en tête (recommandé)" Tag="special-first" />
+                                            <ComboBoxItem Content="Ordre alphabétique (A-Z)" Tag="alphabetical" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Lignes d'aperçu du message sous l'objet -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8BD;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Aperçu du message sous l'objet" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Nombre de lignes d'extrait du message affichées sous l'objet dans la liste des messages (masqué en mode confidentialité)."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="MailSnippetLinesCombo" Tag="mail.snippet-lines"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="180">
+                                            <ComboBoxItem Content="Désactivé (aucune ligne)" Tag="0" />
+                                            <ComboBoxItem Content="1 ligne d'extrait (défaut)" Tag="1" />
+                                            <ComboBoxItem Content="2 lignes d'extrait" Tag="2" />
+                                            <ComboBoxItem Content="3 lignes d'extrait" Tag="3" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Vider la corbeille à la fermeture -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE74D;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Vider la corbeille en quittant l'application" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Purger définitivement les éléments supprimés à la fermeture d'EvolutionWin."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <CheckBox Grid.Column="2" x:Name="MailEmptyTrashOnExitCheck" Tag="mail.empty-trash-on-exit"
+
+                                                  Click="OnSettingCheckChanged" VerticalAlignment="Center" />
+
+                                    </Grid>
+
+                                </Border>

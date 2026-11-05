@@ -1,0 +1,166 @@
+            <Grid x:Name="CalendarViewPane" Grid.Row="2" Visibility="Collapsed" Padding="24,16,24,16" ColumnSpacing="24">
+
+                <Grid.ColumnDefinitions>
+
+                    <ColumnDefinition x:Name="CalendarSidebarColumn" Width="Auto" />
+
+                    <ColumnDefinition Width="*" />
+
+                </Grid.ColumnDefinitions>
+
+                <!-- séparateur déplaçable entre la colonne des calendriers et la grille (double-clic : largeur automatique) -->
+                <local:PaneSplitter x:Name="CalendarSplitter" Grid.Column="1" Width="24" HorizontalAlignment="Left" Margin="-24,0,0,0" Background="Transparent" PointerPressed="OnCalendarSplitterPointerPressed" PointerMoved="OnCalendarSplitterPointerMoved" PointerReleased="OnCalendarSplitterPointerReleased" PointerCaptureLost="OnCalendarSplitterPointerCaptureLost" DoubleTapped="OnCalendarSplitterDoubleTapped"><Rectangle Width="1" HorizontalAlignment="Center" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" /></local:PaneSplitter>
+
+
+
+                <!-- colonne de gauche : le mini-calendrier et la liste des calendriers -->
+
+                <Grid x:Name="CalendarSidebarPanel" Grid.Column="0" RowSpacing="12">
+
+                    <Grid.RowDefinitions>
+
+                        <RowDefinition Height="Auto" />
+
+                        <RowDefinition Height="Auto" />
+
+                        <RowDefinition Height="*" />
+
+                    </Grid.RowDefinitions>
+
+                    <CalendarView Grid.Row="0" x:Name="MonthCalendar" SelectionMode="Single" SelectedDatesChanged="OnCalendarDateSelected" />
+
+                    <!-- calendriers par compte : case = affiché, clic sur le nom =
+
+                         calendrier actif des nouveaux événements (MainWindow::LoadCalendarSources) -->
+
+                    <Grid x:Name="CalendarSourcesTitle" Grid.Row="1">
+                        <TextBlock Text="Calendriers" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="4,4,0,0" VerticalAlignment="Center" />
+                        <ProgressRing x:Name="CalendarSyncRing" Width="16" Height="16" IsActive="False" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,44,0" ToolTipService.ToolTip="Synchronisation des groupes de calendriers…" />
+                        <Button HorizontalAlignment="Right" Padding="6,2" Click="OnAddCalendarClick" ToolTipService.ToolTip="Ajouter un calendrier (local ou depuis une adresse Internet ICS / webcal)">
+                            <FontIcon Glyph="&#xE710;" FontSize="12" />
+                        </Button>
+                    </Grid>
+
+                    <ScrollViewer x:Name="CalendarSourcesScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto">
+
+                        <StackPanel x:Name="CalendarSourcesPanel" Spacing="2" />
+
+                    </ScrollViewer>
+
+                </Grid>
+
+
+
+                <Grid Grid.Column="1" RowSpacing="12">
+
+                    <Grid.RowDefinitions>
+
+                        <RowDefinition Height="Auto" />
+
+                        <RowDefinition Height="*" />
+
+                    </Grid.RowDefinitions>
+
+                    <Grid x:Name="CalendarHeaderGrid" Grid.Row="0" SizeChanged="OnCalendarHeaderSizeChanged">
+
+                        <!-- barre de navigation : Aujourd'hui, précédent / suivant, plage
+
+                             affichée, période (MainWindow::LoadEvents) -->
+
+                        <StackPanel x:Name="CalendarHeaderLeft" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+
+                            <Button Content="Aujourd'hui" Click="OnRibbonTodayClick" />
+
+                            <Button Click="OnGoToDateClick" ToolTipService.ToolTip="Atteindre une date (Ctrl+G)">
+
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+
+                                    <FontIcon Glyph="&#xE787;" FontSize="12" />
+
+                                    <TextBlock Text="Aller au…" />
+
+                                </StackPanel>
+
+                            </Button>
+
+                            <Button Click="OnCalendarPreviousClick" ToolTipService.ToolTip="Période précédente">
+
+                                <FontIcon Glyph="&#xE76B;" FontSize="12" />
+
+                            </Button>
+
+                            <Button Click="OnCalendarNextClick" ToolTipService.ToolTip="Période suivante">
+
+                                <FontIcon Glyph="&#xE76C;" FontSize="12" />
+
+                            </Button>
+
+                            <StackPanel Margin="8,0,0,0" VerticalAlignment="Center">
+
+                                <TextBlock x:Name="CalendarHeader" Text="Événements"
+
+                                           Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                                <TextBlock x:Name="ActiveCalendarText" Style="{StaticResource CaptionTextBlockStyle}"
+
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                            </StackPanel>
+
+                        </StackPanel>
+
+                        <StackPanel x:Name="CalendarHeaderRight" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+
+                            <SelectorBar x:Name="CalendarPeriodBar" SelectionChanged="OnCalendarPeriodChanged">
+
+                                <SelectorBarItem Text="Jour" Tag="day" />
+
+                                <SelectorBarItem Text="Semaine de travail" Tag="workweek" />
+
+                                <SelectorBarItem Text="Semaine" Tag="week" />
+
+                                <SelectorBarItem Text="Mois" Tag="month" />
+
+                                <SelectorBarItem Text="Liste" Tag="list" />
+
+                            </SelectorBar>
+
+                            <AutoSuggestBox x:Name="CalendarSearchBox" Width="220" PlaceholderText="Filtrer les événements" QueryIcon="Find"
+                                            TextChanged="OnCalendarSearchTextChanged" QuerySubmitted="OnCalendarSearchQuerySubmitted" />
+
+                            <Button x:Name="EventCategoryFilterButton" Click="OnEventCategoryFilterClick" Padding="8,4" ToolTipService.ToolTip="Filtrer par catégorie">
+    <FontIcon Glyph="&#xE8EC;" FontSize="13" />
+</Button>
+                            <Button Click="OnExportCalendarClick" ToolTipService.ToolTip="Exporter un agenda ou une liste de tâches (.ics)">
+
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+
+                                    <FontIcon Glyph="&#xEDE1;" FontSize="14" />
+
+                                    <TextBlock Text="Exporter" />
+
+                                </StackPanel>
+
+                            </Button>
+
+                            <Button Click="OnRefreshCalendarClick" ToolTipService.ToolTip="Actualiser le calendrier">
+
+                                <FontIcon Glyph="&#xE72C;" FontSize="14" />
+
+                            </Button>
+
+                        </StackPanel>
+
+                    </Grid>
+
+                    <ListView x:Name="EventList" Grid.Row="1" SelectionMode="None" Visibility="Collapsed"
+
+                              IsItemClickEnabled="True" ItemClick="OnEventItemClick" />
+
+                    <!-- grille Jour / Semaine / Mois (MainWindow.Calendar.cpp) -->
+
+                    <Grid x:Name="CalendarGridHost" Grid.Row="1" />
+
+                </Grid>
+
+            </Grid>

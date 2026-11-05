@@ -1,0 +1,93 @@
+                    <CommandBar x:Name="RibbonContactsFile" Visibility="Collapsed" DefaultLabelPosition="Right"
+
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+
+                        <AppBarButton Label="Exporter" Click="OnExportContactsClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xEDE1;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarButton Label="Paramètres" Click="OnRibbonSettingsClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE713;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="À propos" Click="OnRibbonAboutClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Quitter" Click="OnRibbonQuitClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE7E8;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                    </CommandBar>
+
+                    <CommandBar x:Name="RibbonContactsHome" Visibility="Collapsed" DefaultLabelPosition="Right"
+
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+
+                        <AppBarButton Label="Nouveau contact" Click="OnNewContactClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE710;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Modifier le contact" Click="OnEditContactClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE70F;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Écrire un message" Click="OnComposeToContactClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE715;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Supprimer le contact" Click="OnDeleteContactClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE74D;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarButton Label="Exporter" Click="OnExportContactsClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xEDE1;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                    </CommandBar>
+
+                    <CommandBar x:Name="RibbonContactsView" Visibility="Collapsed" DefaultLabelPosition="Right"
+
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+
+                        <AppBarButton Label="Rétablir la disposition" Click="OnRibbonResetLayoutClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE777;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarToggleButton x:Name="RibbonContactsTodoBarToggle" Label="Volet des tâches"
+
+                                            Click="OnRibbonTodoBarToggled"
+
+                                            ToolTipService.ToolTip="Afficher ou masquer la barre latérale des tâches à faire (Alt+F2)">
+
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE9D5;" /></AppBarToggleButton.Icon>
+
+                        </AppBarToggleButton>
+
+                    </CommandBar>

@@ -1,0 +1,564 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Window
+
+    x:Class="EvolutionWin.MainWindow"
+
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+
+    xmlns:local="using:EvolutionWin"
+
+    Title="Evolution">
+
+
+
+    <Window.SystemBackdrop>
+
+        <MicaBackdrop />
+
+    </Window.SystemBackdrop>
+
+
+
+    <Grid>
+
+        <!-- raccourcis actifs dans toute la fenêtre, quelle que soit la vue -->
+
+        <Grid.KeyboardAccelerators>
+
+            <KeyboardAccelerator Modifiers="Control,Shift" Key="K" Invoked="OnNewTaskAccelerator" />
+
+            <KeyboardAccelerator Modifiers="Control" Key="E" Invoked="OnSearchAccelerator" />
+
+            <KeyboardAccelerator Key="F1" Invoked="OnKeyboardShortcutsAccelerator" />
+
+        </Grid.KeyboardAccelerators>
+
+        <Grid.RowDefinitions>
+
+            <RowDefinition Height="48" />
+
+            <RowDefinition Height="*" />
+
+            <RowDefinition Height="Auto" />
+
+            <RowDefinition Height="Auto" />
+
+        </Grid.RowDefinitions>
+
+
+
+        <!-- title bar drawn by the app (ExtendsContentIntoTitleBar) -->
+
+<!--#include xaml/TitleBar.xamlpart-->
+
+
+
+        <!-- barre d'icônes fixe entre les modules (comme Outlook) : pas de
+
+             bouton de dépliage, noms en info-bulle, non-lus en badge -->
+
+        <NavigationView
+
+            x:Name="Navigation"
+
+            Grid.Row="1"
+
+            PaneDisplayMode="LeftCompact"
+
+            IsPaneToggleButtonVisible="False"
+
+            IsBackButtonVisible="Collapsed"
+
+            IsSettingsVisible="True"
+
+            SelectionChanged="OnNavigationSelectionChanged"
+
+            ItemInvoked="OnNavigationItemInvoked">
+
+
+
+<!--#include xaml/NavigationMenuItems.xamlpart-->
+
+
+
+
+
+
+
+            <Grid>
+
+            <Grid.RowDefinitions>
+
+                <RowDefinition Height="Auto" />
+
+                <RowDefinition Height="Auto" />
+
+                <RowDefinition Height="*" />
+
+            </Grid.RowDefinitions>
+
+
+
+            <!-- ruban (vues Courrier, Calendrier, Contacts et Tâches) : onglets (SelectorBar) et
+
+                 barre de commandes de l'onglet choisi ; voir MainWindow::UpdateRibbon -->
+
+            <StackPanel x:Name="Ribbon" Grid.Row="0" Margin="12,4,12,0">
+
+                <SelectorBar x:Name="RibbonTabs" SelectionChanged="OnRibbonTabChanged">
+
+                    <SelectorBarItem Text="Fichier" Tag="file" />
+
+                    <SelectorBarItem Text="Accueil" Tag="home" IsSelected="True" />
+
+                    <SelectorBarItem x:Name="RibbonSendReceiveTab" Text="Envoi/réception" Tag="sendreceive" />
+
+                    <SelectorBarItem x:Name="RibbonFolderTab" Text="Dossier" Tag="folder" />
+
+                    <SelectorBarItem Text="Affichage" Tag="view" />
+
+                </SelectorBar>
+
+                <Border CornerRadius="6" BorderThickness="1" Padding="4,0"
+
+                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+
+                <Grid>
+
+<!--#include xaml/Ribbon.Mail.xamlpart-->
+
+<!--#include xaml/Ribbon.Calendar.xamlpart-->
+
+
+
+                    <!-- ruban Contacts -->
+
+<!--#include xaml/Ribbon.Contacts.xamlpart-->
+
+
+
+                    <!-- ruban Tâches -->
+
+<!--#include xaml/Ribbon.Tasks.xamlpart-->
+
+                    <CommandBar x:Name="RibbonTasksView" Visibility="Collapsed" DefaultLabelPosition="Right"
+
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+
+                        <AppBarButton Label="Rétablir la disposition" Click="OnRibbonResetLayoutClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE777;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                    </CommandBar>
+
+                </Grid>
+
+                </Border>
+
+            </StackPanel>
+
+
+
+
+
+            <!-- bandeau d'information des vues Courrier et Calendrier (compte à
+
+                 reconnecter, réponses automatiques…) : MainWindow::ShowBanner -->
+
+            <InfoBar x:Name="InfoBanner" Grid.Row="1" IsOpen="False" IsClosable="True"
+
+                     Margin="12,8,12,0" Closed="OnInfoBannerClosed" />
+
+
+
+            <!-- Zone principale d'affichage : Vues superposées + Volet latéral To-Do bar à droite -->
+
+            <Grid x:Name="ViewsArea" Grid.Row="2">
+
+                <Grid.ColumnDefinitions>
+
+                    <ColumnDefinition Width="*" />
+
+                    <ColumnDefinition Width="Auto" />
+
+                    <ColumnDefinition x:Name="TodoBarColumn" Width="0" />
+
+                </Grid.ColumnDefinitions>
+
+
+
+                <!-- Zone des vues principales (Courrier, Calendrier, Contacts, Tâches, Paramètres) -->
+
+                <Grid Grid.Column="0">
+
+                    <Grid x:Name="MailView">
+
+                <!-- largeurs des dossiers et de la liste : réglées par les
+
+                     séparateurs et mémorisées (MainWindow::RestorePaneWidths) -->
+
+                <Grid.ColumnDefinitions>
+
+                    <ColumnDefinition x:Name="FoldersColumn" Width="260" />
+
+                    <ColumnDefinition Width="Auto" />
+
+                    <ColumnDefinition x:Name="ListColumn" Width="420" />
+
+                    <ColumnDefinition Width="Auto" />
+
+                    <ColumnDefinition Width="*" />
+
+                </Grid.ColumnDefinitions>
+
+                <!-- volet de lecture en bas (MainWindow::ApplyReadingPanePosition) :
+
+                     liste en ligne 0, séparateur en ligne 1, lecture en ligne 2 -->
+
+                <Grid.RowDefinitions>
+
+                    <RowDefinition Height="*" />
+
+                    <RowDefinition Height="Auto" />
+
+                    <RowDefinition x:Name="ReaderRow" Height="0" />
+
+                </Grid.RowDefinitions>
+
+
+
+                <!-- accounts and folders -->
+
+<!--#include xaml/Mail.Folders.xamlpart-->
+
+
+
+                <!-- séparateurs déplaçables (double-clic : largeur par défaut) -->
+
+<!--#include xaml/Mail.Splitters.xamlpart-->
+
+
+
+                <!-- messages of the selected folder -->
+
+<!--#include xaml/Mail.MessageList.xamlpart-->
+
+
+
+                <!-- reading pane -->
+
+<!--#include xaml/Mail.Reader.xamlpart-->
+
+            </Grid>
+
+
+
+            <!-- Vue Calendrier -->
+
+<!--#include xaml/CalendarView.xamlpart-->
+
+
+
+            <!-- Vue Contacts -->
+
+<!--#include xaml/ContactsView.xamlpart-->
+
+
+
+            <!-- Vue Tâches -->
+
+<!--#include xaml/TasksView.xamlpart-->
+
+
+
+            <!-- Vue Paramètres (Modèle Paramètres de Windows 11) -->
+
+            <Grid x:Name="SettingsViewPane" Grid.Row="2" Visibility="Collapsed">
+
+                <Grid.ColumnDefinitions>
+
+                    <ColumnDefinition Width="280" />
+
+                    <ColumnDefinition Width="1" />
+
+                    <ColumnDefinition Width="*" />
+
+                </Grid.ColumnDefinitions>
+
+
+
+                <!-- Volet gauche : Navigation par catégories et recherche rapide -->
+
+<!--#include xaml/Settings.Navigation.xamlpart-->
+
+
+
+                <!-- Séparateur vertical -->
+
+                <Border Grid.Column="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Width="1" />
+
+
+
+                <!-- Volet droit : Contenu de la catégorie active -->
+
+                <Grid Grid.Column="2" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+                    <Grid.RowDefinitions>
+
+                        <RowDefinition Height="Auto" />
+
+                        <RowDefinition Height="*" />
+
+                    </Grid.RowDefinitions>
+
+
+
+                    <!-- En-tête avec fil d'Ariane -->
+
+                    <StackPanel Grid.Row="0" Padding="36,24,36,12" Spacing="4">
+
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
+
+                            <HyperlinkButton Content="Paramètres" Click="OnSettingsBreadcrumbRootClick"
+
+                                             Padding="0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                            <FontIcon Glyph="&#xE76C;" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
+
+                            <TextBlock x:Name="SettingsBreadcrumbCategory" Text="Comptes"
+
+                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" />
+
+                        </StackPanel>
+
+                        <TextBlock x:Name="SettingsCategoryTitle" Text="Comptes" Style="{StaticResource TitleTextBlockStyle}" />
+
+                        <TextBlock x:Name="SettingsCategoryDescription"
+
+                                   Text="Gérez vos comptes de messagerie Microsoft 365, Exchange, Gmail et IMAP / SMTP."
+
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+
+                    </StackPanel>
+
+
+
+                    <!-- Conteneur avec défilement des différentes catégories -->
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="36,0,36,36">
+
+                        <StackPanel Spacing="24">
+
+
+
+                            <!-- ======================================================== -->
+
+                            <!-- CATÉGORIE 1 : COMPTES                                   -->
+
+                            <!-- ======================================================== -->
+
+<!--#include xaml/Settings.Accounts.xamlpart-->
+
+
+
+                            <!-- ======================================================== -->
+
+                            <!-- CATÉGORIE 2 : COURRIER                                  -->
+
+                            <!-- ======================================================== -->
+
+                            <StackPanel x:Name="SettingsCategoryMail" Visibility="Collapsed" Spacing="16">
+
+<!--#include xaml/Settings.Mail.Reception.xamlpart-->
+
+
+
+<!--#include xaml/Settings.Mail.Reading.xamlpart-->
+
+
+
+<!--#include xaml/Settings.Mail.Composition.xamlpart-->
+
+
+
+                                <!-- Signatures de courrier : gestion, éditeur et attribution -->
+<!--#include xaml/Settings.Mail.Signatures.xamlpart-->
+
+                            </StackPanel>
+
+                            <!-- ======================================================== -->
+
+                            <!-- CATÉGORIE 3 : CALENDRIER                                -->
+
+                            <!-- ======================================================== -->
+
+                            <StackPanel x:Name="SettingsCategoryCalendar" Visibility="Collapsed" Spacing="16">
+
+<!--#include xaml/Settings.Calendar.WorkWeek.xamlpart-->
+
+
+
+<!--#include xaml/Settings.Calendar.TimeZones.xamlpart-->
+
+
+
+<!--#include xaml/Settings.Calendar.Appointments.xamlpart-->
+
+                            </StackPanel>
+
+
+
+                            <!-- ======================================================== -->
+
+                            <!-- CATÉGORIE 4 : CONTACTS                                  -->
+
+                            <!-- ======================================================== -->
+
+<!--#include xaml/Settings.Contacts.xamlpart-->
+
+
+
+                            <!-- ======================================================== -->
+
+                            <!-- CATÉGORIES COMMUNES (codes couleur)                     -->
+                            <!-- ======================================================== -->
+<!--#include xaml/Settings.Categories.xamlpart-->
+
+                            <!-- ======================================================== -->
+                            <!-- CATÉGORIE 5 : TÂCHES                                    -->
+
+                            <!-- ======================================================== -->
+
+<!--#include xaml/Settings.Tasks.xamlpart-->
+
+
+
+                            <!-- ======================================================== -->
+
+                            <!-- CATÉGORIE 6 : NOTIFICATIONS                             -->
+
+                            <!-- ======================================================== -->
+
+                            <StackPanel x:Name="SettingsCategoryNotifications" Visibility="Collapsed" Spacing="16">
+
+<!--#include xaml/Settings.Notifications.Banners.xamlpart-->
+
+
+
+<!--#include xaml/Settings.Notifications.Reminders.xamlpart-->
+
+<!--#include xaml/Settings.Notifications.Privacy.xamlpart-->
+
+<!--#include xaml/Settings.Notifications.PerAccount.xamlpart-->
+
+                            </StackPanel>
+
+
+
+                            <!-- ======================================================== -->
+
+                            <!-- CATÉGORIE 7 : APPARENCE                                 -->
+
+                            <!-- ======================================================== -->
+
+<!--#include xaml/Settings.Appearance.xamlpart-->
+
+
+
+                            <!-- ======================================================== -->
+
+                            <!-- CATÉGORIE 8 : CONFIDENTIALITÉ & SÉCURITÉ                -->
+
+                            <!-- ======================================================== -->
+
+<!--#include xaml/Settings.Privacy.xamlpart-->
+
+
+
+                            <!-- ======================================================== -->
+
+                            <!-- CATÉGORIE 9 : MISE À JOUR                               -->
+
+                            <!-- ======================================================== -->
+
+<!--#include xaml/Settings.Update.xamlpart-->
+
+
+
+                            <!-- ======================================================== -->
+
+                            <!-- CATÉGORIE 10 : AVANCÉ                                   -->
+
+                            <!-- ======================================================== -->
+
+                            <StackPanel x:Name="SettingsCategoryAdvanced" Visibility="Collapsed" Spacing="16">
+
+<!--#include xaml/Settings.Advanced.Storage.xamlpart-->
+
+
+
+<!--#include xaml/Settings.Advanced.Diagnostics.xamlpart-->
+
+                            </StackPanel>
+
+
+
+                            <!-- ======================================================== -->
+
+                            <!-- CATÉGORIE 11 : À PROPOS                                 -->
+
+                            <!-- ======================================================== -->
+
+<!--#include xaml/Settings.About.xamlpart-->
+
+
+
+                        </StackPanel>
+
+                    </ScrollViewer>
+
+                </Grid>
+
+            </Grid>
+
+                </Grid>
+
+
+
+                <!-- Séparateur redimensionnable pour la barre latérale des tâches -->
+
+<!--#include xaml/TodoBar.xamlpart-->
+
+            </Grid>
+
+            </Grid>
+
+        </NavigationView>
+
+
+
+        <!-- status / notifications temporaires -->
+
+        <InfoBar x:Name="StatusBar" Grid.Row="2" IsOpen="False" IsClosable="True" Margin="8,0,8,4" Visibility="Collapsed" />
+
+
+
+        <!-- barre d'état permanente (style Outlook) : compteurs, progression, état des connexions -->
+
+<!--#include xaml/StatusBar.xamlpart-->
+
+    </Grid>
+
+</Window>
+

@@ -1,0 +1,102 @@
+            <Grid x:Name="TasksViewPane" Grid.Row="2" Visibility="Collapsed" Padding="24,16,24,16" RowSpacing="12">
+
+                <Grid.RowDefinitions>
+
+                    <RowDefinition Height="Auto" />
+
+                    <RowDefinition Height="Auto" />
+
+                    <RowDefinition Height="*" />
+
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" ColumnSpacing="16">
+
+                    <Grid.ColumnDefinitions>
+
+                        <ColumnDefinition Width="Auto" />
+
+                        <ColumnDefinition Width="Auto" />
+
+                        <ColumnDefinition Width="*" />
+
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Tâches" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+
+                    <ComboBox x:Name="TaskListChoice" Grid.Column="1" HorizontalAlignment="Left" MinWidth="220" VerticalAlignment="Center"
+
+                              SelectionChanged="OnTaskListChanged" ToolTipService.ToolTip="Liste de tâches" />
+
+                    <AutoSuggestBox x:Name="TaskSearchBox" Grid.Column="2" HorizontalAlignment="Right" Width="280"
+
+                                    VerticalAlignment="Center" PlaceholderText="Rechercher une tâche (Ctrl+E)..." QueryIcon="Find"
+
+                                    TextChanged="OnTaskSearchTextChanged" QuerySubmitted="OnTaskSearchQuerySubmitted" />
+
+                </Grid>
+
+                <!-- filtres et tri, appliqués localement (ShowTasks) et mémorisés -->
+
+                <Grid Grid.Row="1" ColumnSpacing="16">
+
+                    <Grid.ColumnDefinitions>
+
+                        <ColumnDefinition Width="*" />
+
+                        <ColumnDefinition Width="Auto" />
+
+                    </Grid.ColumnDefinitions>
+
+                    <SelectorBar x:Name="TaskFilterBar" SelectionChanged="OnTaskFilterChanged">
+
+                        <SelectorBarItem Text="Toutes" Tag="all" IsSelected="True" />
+
+                        <SelectorBarItem Text="Aujourd'hui" Tag="today" />
+
+                        <SelectorBarItem Text="En retard" Tag="overdue" />
+
+                        <SelectorBarItem Text="Cette semaine" Tag="week" />
+
+                        <SelectorBarItem Text="Sans date" Tag="nodate" />
+
+                    </SelectorBar>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+
+                        <Button x:Name="TaskCategoryFilterButton" Click="OnTaskCategoryFilterClick" Padding="8,4" ToolTipService.ToolTip="Filtrer par catégorie">
+    <FontIcon Glyph="&#xE8EC;" FontSize="13" />
+</Button>
+                        <ComboBox x:Name="TaskSortChoice" SelectionChanged="OnTaskSortChanged" ToolTipService.ToolTip="Ordre des tâches">
+
+                            <x:String>Trier par échéance</x:String>
+
+                            <x:String>Trier par priorité</x:String>
+
+                        </ComboBox>
+
+                        <CheckBox x:Name="ShowCompletedTasksBox" Content="Afficher les tâches terminées"
+
+                                  IsChecked="True" Click="OnShowCompletedTasksClick" />
+
+                    </StackPanel>
+
+                </Grid>
+
+                <ListView x:Name="TaskList" Grid.Row="2" SelectionMode="None" IsItemClickEnabled="True" ItemClick="OnTaskItemClick">
+
+                    <ListView.ItemContainerStyle>
+
+                        <Style TargetType="ListViewItem">
+
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+
+                        </Style>
+
+                    </ListView.ItemContainerStyle>
+
+                </ListView>
+
+                <ProgressRing x:Name="TaskProgress" Grid.Row="2" IsActive="False" Width="32" Height="32" />
+
+            </Grid>

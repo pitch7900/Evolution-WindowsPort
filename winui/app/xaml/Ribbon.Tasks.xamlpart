@@ -1,0 +1,50 @@
+                    <CommandBar x:Name="RibbonTasksFile" Visibility="Collapsed" DefaultLabelPosition="Right"
+
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+
+                        <AppBarButton Label="Paramètres" Click="OnRibbonSettingsClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE713;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="À propos" Click="OnRibbonAboutClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+                        <AppBarButton Label="Raccourcis clavier" Click="OnRibbonKeyboardShortcutsClick" ToolTipService.ToolTip="Afficher les raccourcis clavier (F1)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE765;" /></AppBarButton.Icon>
+                        </AppBarButton>
+
+                        <AppBarButton Label="Quitter" Click="OnRibbonQuitClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE7E8;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                    </CommandBar>
+
+                    <CommandBar x:Name="RibbonTasksHome" Visibility="Collapsed" DefaultLabelPosition="Right"
+
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+
+                        <AppBarButton Label="Nouvelle tâche" Click="OnNewTaskClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE710;" /></AppBarButton.Icon>
+
+                            <AppBarButton.KeyboardAccelerators>
+
+                                <KeyboardAccelerator Modifiers="Control,Shift" Key="K" />
+
+                            </AppBarButton.KeyboardAccelerators>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Actualiser" Click="OnRefreshTasksClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE72C;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                    </CommandBar>

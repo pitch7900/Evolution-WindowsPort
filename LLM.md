@@ -71,7 +71,15 @@ c:\Users\chris\VSCode\Evolution-WindowsPort\
 │   │   └── CMakeLists.txt        # Configuration CMake du moteur
 │   └── app/                      # Interface WinUI 3 (C++/WinRT)
 │       ├── App.xaml / App.xaml.cpp
-│       ├── MainWindow.xaml / .h  # Fenêtre principale et vue d'ensemble
+│       ├── MainWindow.xaml      # GÉNÉRÉ (ignoré par git) par tools\assemble-xaml.ps1 : ne jamais le modifier
+│       ├── MainWindow.xaml.h    # Fenêtre principale et vue d'ensemble
+│       ├── xaml/                # Sources du XAML de la fenêtre principale :
+│       │   ├── MainWindow.xaml.in            # Gabarit (coque : fenêtre, navigation, zones) avec lignes <!--#include xaml/X.xamlpart-->
+│       │   ├── TitleBar / NavigationMenuItems / StatusBar / TodoBar .xamlpart
+│       │   ├── Ribbon.Mail / .Calendar / .Contacts / .Tasks .xamlpart    # Rubans par module
+│       │   ├── Mail.Folders / .Splitters / .MessageList / .Reader .xamlpart
+│       │   ├── CalendarView / ContactsView / TasksView .xamlpart
+│       │   └── Settings.Navigation + Settings.<Catégorie>[.<Section>] .xamlpart   # Un fichier par catégorie ou section des Paramètres
 │       ├── MainWindow.*.cpp      # Découpage modulaire du code-behind :
 │       │   ├── MainWindow.Accounts.cpp       # Comptes, synchronisation, quota
 │       │   ├── MainWindow.Attachments.cpp    # Pièces jointes, aperçu, export EML
@@ -196,6 +204,12 @@ Les règles suivantes ont été définies par Pierre et doivent être respectée
 - Accès singleton via `EvolutionWin::Settings::Instance()`.
 - Méthodes typées : `GetBoolean()`, `SetBoolean()`, `GetString()`, `SetString()`, `GetInt()`, `SetInt()`, `GetArray()`, etc.
 - Toujours fournir une valeur de repli par défaut lors de la lecture.
+
+### 6.2 bis. XAML de la fenêtre principale (fragments)
+- `winui/app/MainWindow.xaml` dépassait 5 800 lignes : il est **généré** à chaque build (cible MSBuild `AssembleMainWindowXaml`, `InitialTargets` de `EvolutionWin.vcxproj`) par `tools\assemble-xaml.ps1`, à partir du gabarit `winui/app/xaml/MainWindow.xaml.in` et des fragments `winui/app/xaml/*.xamlpart`. Le fichier généré est ignoré par git.
+- **Toujours modifier le gabarit ou un fragment, jamais `MainWindow.xaml`** (il serait écrasé). Une ligne `<!--#include xaml/Nom.xamlpart-->` du gabarit est remplacée telle quelle par le contenu du fragment ; un fragment est un sous-arbre XML bien formé (un ou plusieurs éléments voisins), sans en-tête XML ni déclaration d'espaces de noms (`local:`, `x:`, `controls:` viennent de la fenêtre).
+- Pour ajouter une section : créer `xaml/<Nom>.xamlpart`, y mettre l'élément, ajouter la ligne d'inclusion au bon endroit du gabarit. Pas de modification du code C++ : tous les éléments nommés (`x:Name`) restent des membres de `MainWindow` (c'est la raison de ce découpage plutôt que des `UserControl`).
+- Les erreurs du compilateur XAML citent `MainWindow.xaml` (généré) : ouvrir ce fichier à la ligne indiquée pour repérer l'élément fautif, puis le corriger dans le fragment correspondant.
 
 ### 6.3. Localisation et Unicode sous Windows MSVC
 - **Attention au pliage de casse Unicode (accents)** : `std::towlower` en C++ sous Windows n'applique pas la casse française par défaut. Toujours utiliser `::CharLowerBuffW(str.data(), len)` (provenant de `user32.lib`) pour les recherches insensibles à la casse et aux accents.
