@@ -56,7 +56,7 @@ c:\Users\chris\VSCode\Evolution-WindowsPort\
 │   │   ├── evo-core-folders.c    # Arborescence, rôles, suivi des dossiers ouverts
 │   │   ├── evo-core-folder-ops.c # Création, renommage, déplacement, copie, suppression, quota
 │   │   ├── evo-core-messages.c   # Liste des messages d'un dossier
-│   │   ├── evo-core-search.c     # Recherche (dossier, sous-dossiers, compte, tous)
+│   │   ├── evo-core-search.c     # Recherche (dossier, sous-dossiers, compte, tous) et vues unifiées multi-comptes
 │   │   ├── evo-core-message-read.c    # Lecture, pièces jointes, export .eml
 │   │   ├── evo-core-message-actions.c # Indicateurs, suivi, déplacement, copie, suppression
 │   │   ├── evo-core-refresh.c    # Relève, synchronisation périodique, reconnexion
@@ -94,6 +94,7 @@ c:\Users\chris\VSCode\Evolution-WindowsPort\
 │       ├── MainWindow.Helpers.h  # Algorithmes autonomes, parsing MIME, localisation
 │       ├── CoreBridge.h          # Passerelle C++/WinRT encapsulant evo-core.dll
 │       ├── Settings.h            # Persistance JSON des réglages et préférences
+│       ├── UnifiedViews.h        # Vues unifiées multi-comptes : fonctions pures (uid composite, comptes inclus)
 │       ├── ComposeWindow.xaml / .cpp / .h # Fenêtre de rédaction de courriel
 │       ├── MessageWindow.xaml / .cpp / .h # Fenêtre autonome de visualisation de message
 │       └── EvolutionWin.vcxproj  # Projet MSBuild pour l'application WinUI

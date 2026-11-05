@@ -636,7 +636,7 @@ La recherche dans le dossier courant existe déjà (filtrage instantané + reche
 
 ## 11. Vues unifiées multi-comptes — 🟠
 
-- [ ] 🟠 **Mails** : Boîte de réception unifiée (et Envoyés, Brouillons, Corbeille), compte d'origine indiqué (colonne ou pastille de couleur) — dossiers virtuels Camel
+- [x] 🟠 **Mails** : Boîte de réception unifiée (et Envoyés, Brouillons, Corbeille), compte d'origine indiqué (colonne ou pastille de couleur) — dossiers virtuels Camel — _fait par agrégation côté moteur (`evo_core_list_unified`) plutôt que `CamelVeeFolder` ; compte d'origine en libellé sur chaque ligne (pas de pastille de couleur)_
 - [ ] 🟡 **Calendriers** : événements de tous les calendriers de tous les comptes, une couleur par calendrier, chacun masquable — _fait dans la vue Calendrier : volet « Calendriers » par compte, cases à cocher mémorisées, couleur par calendrier_
 - [ ] 🟡 **Contacts** : carnet d'adresses unifié, détection et regroupement des doublons (même email)
 - [ ] 🟠 **Recherche dans les vues unifiées** (simple et avancée) pour mails, événements et contacts, compte d'origine visible dans les résultats

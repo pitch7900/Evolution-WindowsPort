@@ -76,8 +76,8 @@ flowchart LR
 - [ ] **Filtres par catégorie** : filtrage rapide dans les listes selon les catégories attribuées.
 
 ### 3. Vues unifiées multi-comptes (§11)
-- [ ] **Boîte de réception unifiée** : vue agrégée virtuelle (`CamelVeeFolder`) regroupant les messages reçus de l\'ensemble des comptes.
-- [ ] **Dossiers virtuels globaux** : regroupement des éléments envoyés, de la corbeille et des brouillons sur tous les comptes.
+- [x] **Boîte de réception unifiée** : vue agrégée virtuelle (`CamelVeeFolder`) regroupant les messages reçus de l\'ensemble des comptes.
+- [x] **Dossiers virtuels globaux** : regroupement des éléments envoyés, de la corbeille et des brouillons sur tous les comptes.
 
 ---
 
