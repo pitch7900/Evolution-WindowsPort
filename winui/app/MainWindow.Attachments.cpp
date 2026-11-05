@@ -16,6 +16,8 @@
 #include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include <algorithm>
+#include <memory>
+#include <optional>
 #include <fstream>
 #include <chrono>
 #include <cmath>
@@ -112,6 +114,40 @@ namespace winrt::EvolutionWin::implementation
              * temporaire de glisser-déposer au début du glissement (report asynchrone),
              * puis offerte à l'Explorateur / au Bureau sous forme de fichier. */
             button.CanDrag(true);
+
+            /* Un Button capture le pointeur : le glissement natif (CanDrag) ne démarre alors
+             * pas. On le déclenche explicitement quand la souris, bouton gauche enfoncé, s'éloigne
+             * de plus de quelques pixels du point d'appui. */
+            auto press_point = std::make_shared<std::optional<Windows::Foundation::Point>>();
+            button.AddHandler(UIElement::PointerPressedEvent(),
+                box_value(Input::PointerEventHandler([press_point](IInspectable const&, Input::PointerRoutedEventArgs const& a)
+            {
+                *press_point = a.GetCurrentPoint(nullptr).Position();
+            })), true);
+            button.AddHandler(UIElement::PointerReleasedEvent(),
+                box_value(Input::PointerEventHandler([press_point](IInspectable const&, Input::PointerRoutedEventArgs const&)
+            {
+                press_point->reset();
+            })), true);
+            button.AddHandler(UIElement::PointerMovedEvent(),
+                box_value(Input::PointerEventHandler([press_point](IInspectable const& sender, Input::PointerRoutedEventArgs const& a)
+            {
+                if (!press_point->has_value())
+                    return;
+                auto point = a.GetCurrentPoint(nullptr);
+                if (!point.Properties().IsLeftButtonPressed())
+                {
+                    press_point->reset();
+                    return;
+                }
+                double dx = point.Position().X - (*press_point)->X;
+                double dy = point.Position().Y - (*press_point)->Y;
+                if (dx * dx + dy * dy < 36.0)
+                    return;
+                press_point->reset();
+                sender.as<UIElement>().StartDragAsync(point);
+            })), true);
+
             button.DragStarting([this, index, filename](UIElement const&, DragStartingEventArgs const& args)
             {
                 hstring uid = SelectedMessageUid();

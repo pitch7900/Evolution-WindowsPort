@@ -1130,11 +1130,13 @@ core_send_read_receipt_run (EvoCore *core,
 	gchar *json = NULL;
 	gchar fields[2048];
 	gboolean send = g_strcmp0 (args[3], "1") == 0, sent = FALSE;
+	const gchar *stage = "folder";
 
 	folder = core_ref_folder (core, args[0], args[1], error);
 	if (!folder)
 		return NULL;
 
+	stage = "message";
 	message = camel_folder_get_message_sync (folder, args[2], core->cancellable, error);
 	if (!message) {
 		g_object_unref (folder);
@@ -1162,6 +1164,7 @@ core_send_read_receipt_run (EvoCore *core,
 			goto exit;
 		}
 
+		stage = "identity";
 		identity = core_ref_identity (core, args[0]);
 		if (!identity || !e_source_has_extension (identity, E_SOURCE_EXTENSION_MAIL_IDENTITY) ||
 		    !e_source_has_extension (identity, E_SOURCE_EXTENSION_MAIL_SUBMISSION)) {
@@ -1204,6 +1207,7 @@ core_send_read_receipt_run (EvoCore *core,
 			e_source_mail_identity_get_address (identity_extension),
 			subject ? subject : "", subject ? subject : "");
 
+		stage = "build";
 		mdn = camel_mime_message_new ();
 		{
 			CamelMultipart *report = camel_multipart_new ();
@@ -1247,6 +1251,7 @@ core_send_read_receipt_run (EvoCore *core,
 		camel_medium_set_header (CAMEL_MEDIUM (mdn), "Auto-Submitted", "auto-replied");
 		camel_medium_set_header (CAMEL_MEDIUM (mdn), "X-Mailer", "Evolution for Windows");
 
+		stage = "smtp";
 		if (!camel_service_connect_sync (transport, core->cancellable, error) ||
 		    !camel_transport_send_to_sync (CAMEL_TRANSPORT (transport), mdn, CAMEL_ADDRESS (from),
 			CAMEL_ADDRESS (to), NULL, core->cancellable, error)) {
@@ -1275,6 +1280,8 @@ core_send_read_receipt_run (EvoCore *core,
 	g_object_unref (builder);
 
  exit:
+	if (!json && error && !*error)
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Read receipt failed at step \"%s\" (no error reported)", stage);
 	g_clear_object (&mdn);
 	g_clear_object (&from);
 	g_clear_object (&to);

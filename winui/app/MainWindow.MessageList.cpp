@@ -740,7 +740,7 @@ namespace winrt::EvolutionWin::implementation
                 MenuFlyoutSubItem follow_up_sub;
                 follow_up_sub.Text(hstring{ L"Suivi" + count_suffix });
                 follow_up_sub.Icon(FontIcon{});
-                follow_up_sub.Icon().as<FontIcon>().Glyph(L"çC1");
+                follow_up_sub.Icon().as<FontIcon>().Glyph(L"\xE787");
                 PopulateFollowUpMenuItems(follow_up_sub.Items(), target_uids);
                 menu_items.Append(follow_up_sub);
 
