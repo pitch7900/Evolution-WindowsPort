@@ -511,6 +511,23 @@ itip_update_calendar (EvoCore *core,
 		if (e_cal_client_modify_object_sync (client, event, E_CAL_OBJ_MOD_ALL, E_CAL_OPERATION_FLAG_NONE,
 			core->cancellable, &error))
 			result = action == EVO_ITIP_KEEP ? "kept" : "updated";
+		/* agenda distant qui refuse la modification (objet absent côté serveur) :
+		 * repli sur l'agenda local « Sur cet ordinateur » */
+		if (error && g_error_matches (error, E_CAL_CLIENT_ERROR, E_CAL_CLIENT_ERROR_OBJECT_NOT_FOUND)) {
+			ESource *local = e_source_registry_ref_builtin_calendar (core->registry);
+
+			g_clear_error (&error);
+			g_clear_object (&client);
+			if (local) {
+				client = E_CAL_CLIENT (e_cal_client_connect_sync (local, E_CAL_CLIENT_SOURCE_TYPE_EVENTS, 5, core->cancellable, &error));
+				if (client) {
+					itip_add_timezones (core, client, vcalendar);
+					if (e_cal_client_create_object_sync (client, event, E_CAL_OPERATION_FLAG_NONE, NULL, core->cancellable, &error))
+						result = "added";
+				}
+				g_object_unref (local);
+			}
+		}
 	}
 
  exit:
@@ -544,7 +561,7 @@ itip_send_via_account (EvoCore *core,
 {
 	ESource *identity = core_ref_identity (core, account_uid);
 	CamelService *transport = NULL;
-	gboolean ok = FALSE;
+	gboolean ok = FALSE, saved = FALSE;
 
 	if (evo_core_get_offline (core) || (core->session && !camel_session_get_online (core->session))) {
 		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_CONNECTED, "Hors connexion : la réponse ne peut pas être envoyée maintenant");
@@ -564,7 +581,7 @@ itip_send_via_account (EvoCore *core,
 
 	if (camel_service_connect_sync (transport, core->cancellable, error) &&
 	    camel_transport_send_to_sync (CAMEL_TRANSPORT (transport), message, CAMEL_ADDRESS (from),
-		CAMEL_ADDRESS (to), NULL, core->cancellable, error)) {
+		CAMEL_ADDRESS (to), &saved, core->cancellable, error)) {
 		camel_service_disconnect_sync (transport, TRUE, NULL, NULL);
 		ok = TRUE;
 	} else {

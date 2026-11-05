@@ -1131,6 +1131,7 @@ core_send_read_receipt_run (EvoCore *core,
 	gchar fields[2048];
 	gboolean send = g_strcmp0 (args[3], "1") == 0, sent = FALSE;
 	const gchar *stage = "folder";
+	gboolean saved = FALSE;
 
 	folder = core_ref_folder (core, args[0], args[1], error);
 	if (!folder)
@@ -1254,7 +1255,7 @@ core_send_read_receipt_run (EvoCore *core,
 		stage = "smtp";
 		if (!camel_service_connect_sync (transport, core->cancellable, error) ||
 		    !camel_transport_send_to_sync (CAMEL_TRANSPORT (transport), mdn, CAMEL_ADDRESS (from),
-			CAMEL_ADDRESS (to), NULL, core->cancellable, error)) {
+			CAMEL_ADDRESS (to), &saved, core->cancellable, error)) {
 			camel_service_disconnect_sync (transport, FALSE, NULL, NULL);
 			goto exit;
 		}

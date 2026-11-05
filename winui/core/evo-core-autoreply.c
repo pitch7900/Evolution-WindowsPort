@@ -273,7 +273,8 @@ autoreply_graph_get (EvoCore *core,
 	const gchar *status;
 	gchar *uri;
 
-	uri = g_strconcat (AUTOREPLY_GRAPH_URI, "/automaticRepliesSetting", NULL);
+	/* GET sur mailboxSettings entier : l'objet automaticRepliesSetting y est imbriqué */
+	uri = g_strdup (AUTOREPLY_GRAPH_URI);
 	bytes = autoreply_http (core, AUTOREPLY_PROVIDER_MICROSOFT365, "GET", uri, token, NULL, error);
 	g_free (uri);
 	if (!bytes)
@@ -285,6 +286,9 @@ autoreply_graph_get (EvoCore *core,
 		return FALSE;
 
 	object = json_node_get_object (root);
+	if (json_object_has_member (object, "automaticRepliesSetting") &&
+	    JSON_NODE_HOLDS_OBJECT (json_object_get_member (object, "automaticRepliesSetting")))
+		object = json_object_get_object_member (object, "automaticRepliesSetting");
 	status = json_object_get_string_member_with_default (object, "status", "disabled");
 	settings->enabled = g_strcmp0 (status, "disabled") != 0;
 	settings->external_audience = autoreply_audience_from_graph (
