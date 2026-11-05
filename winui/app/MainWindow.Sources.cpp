@@ -4,6 +4,7 @@
 #include "WindowIcon.h"
 #include "Settings.h"
 #include "PeopleCalendars.h"
+#include <map>
 
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
@@ -67,13 +68,21 @@ namespace winrt::EvolutionWin::implementation
             return group.empty() ? account : account + L" \u203A " + group;
         };
 
+        /* titres : d'abord les comptes, puis leurs groupes (affichés en retrait sous leur compte) */
         std::vector<hstring> accounts;
         for (auto const& value : sources)
         {
-            hstring account = group_title(value.GetObject());
+            hstring account = value.GetObject().GetNamedString(L"account", L"");
             if (std::find(accounts.begin(), accounts.end(), account) == accounts.end())
                 accounts.push_back(account);
         }
+        for (auto const& value : sources)
+        {
+            hstring title = group_title(value.GetObject());
+            if (std::find(accounts.begin(), accounts.end(), title) == accounts.end())
+                accounts.push_back(title);
+        }
+        std::map<hstring, StackPanel> parent_items;   /* compte -> liste de ses éléments (reçoit ses groupes) */
 
         /* groupes repliés (mémorisés par titre de groupe) */
         auto& collapse_settings = ::EvolutionWin::Settings::Instance();
@@ -85,6 +94,22 @@ namespace winrt::EvolutionWin::implementation
         for (auto const& account : accounts)
         {
             bool collapsed = std::find(collapsed_titles->begin(), collapsed_titles->end(), account) != collapsed_titles->end();
+
+            /* groupe d'un compte (« compte › groupe ») : placé sous son compte, nom du groupe seul */
+            hstring sub_name, parent_account;
+            for (auto const& value : sources)
+            {
+                auto member = value.GetObject();
+                if (!member.GetNamedString(L"group_name", L"").empty() && group_title(member) == account)
+                {
+                    sub_name = member.GetNamedString(L"group_name", L"");
+                    parent_account = member.GetNamedString(L"account", L"");
+                    break;
+                }
+            }
+            bool is_sub = !sub_name.empty();
+            auto target_children = (is_sub && parent_items.count(parent_account) > 0
+                ? parent_items.at(parent_account) : panel).Children();
 
             /* en-tête cliquable : chevron + titre du groupe, plie / déplie la liste */
             Grid header_row;
@@ -110,7 +135,10 @@ namespace winrt::EvolutionWin::implementation
             for (auto const& value : sources)
             {
                 auto member = value.GetObject();
-                if (group_title(member) == account && !member.GetNamedBoolean(L"placeholder", false))
+                if (member.GetNamedBoolean(L"placeholder", false))
+                    continue;
+                /* un compte coche aussi ses groupes ; un groupe, ses seuls calendriers */
+                if (is_sub ? group_title(member) == account : member.GetNamedString(L"account", L"") == account)
                     group_uids.push_back(member.GetNamedString(L"uid", L""));
             }
             if (on_toggle_group && !group_uids.empty())
@@ -142,19 +170,21 @@ namespace winrt::EvolutionWin::implementation
             }
 
             TextBlock header;
-            header.Text(account.empty() ? hstring{ L"Autres" } : account);
+            header.Text(is_sub ? sub_name : (account.empty() ? hstring{ L"Autres" } : account));
             header.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
             header.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
             header.VerticalAlignment(VerticalAlignment::Center);
             Grid::SetColumn(header, 2);
             header_row.Children().Append(header);
             ToolTipService::SetToolTip(header_row, box_value(L"Plier / déplier"));
-            children.Append(header_row);
+            target_children.Append(header_row);
 
             StackPanel group_items;
             group_items.Margin(ThicknessHelper::FromLengths(18, 0, 0, 0));   /* éléments en retrait sous le groupe */
             group_items.Visibility(collapsed ? Visibility::Collapsed : Visibility::Visible);
-            children.Append(group_items);
+            target_children.Append(group_items);
+            if (!is_sub)
+                parent_items.insert_or_assign(account, group_items);
 
             header_row.Tapped([group_items, chevron, account, collapsed_titles, collapse_key](IInspectable const&, Input::TappedRoutedEventArgs const&)
             {
