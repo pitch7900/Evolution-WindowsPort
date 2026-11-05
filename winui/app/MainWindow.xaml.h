@@ -239,6 +239,9 @@ namespace winrt::EvolutionWin::implementation
         hstring PeopleCalendarAccountUid();
         Windows::Data::Json::JsonArray m_calendar_groups{ nullptr };	/* groupes de calendriers Outlook (noms) */
         void RemergeCalendarSources();
+        void OnCalendarHeaderSizeChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::SizeChangedEventArgs const& args);
+        void UpdateCalendarHeaderLayout();
+        bool m_calendar_header_stacked{ false };
         void HideStatus();
         void OnStatusMessageCloseClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         Microsoft::UI::Xaml::DispatcherTimer m_status_timer{ nullptr };

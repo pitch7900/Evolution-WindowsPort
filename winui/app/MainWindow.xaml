@@ -1858,13 +1858,13 @@
 
                     </Grid.RowDefinitions>
 
-                    <Grid Grid.Row="0">
+                    <Grid x:Name="CalendarHeaderGrid" Grid.Row="0" SizeChanged="OnCalendarHeaderSizeChanged">
 
                         <!-- barre de navigation : Aujourd'hui, précédent / suivant, plage
 
                              affichée, période (MainWindow::LoadEvents) -->
 
-                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <StackPanel x:Name="CalendarHeaderLeft" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
 
                             <Button Content="Aujourd'hui" Click="OnRibbonTodayClick" />
 
@@ -1906,7 +1906,7 @@
 
                         </StackPanel>
 
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                        <StackPanel x:Name="CalendarHeaderRight" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
 
                             <SelectorBar x:Name="CalendarPeriodBar" SelectionChanged="OnCalendarPeriodChanged">
 

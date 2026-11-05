@@ -8,6 +8,7 @@
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -792,6 +793,57 @@ namespace winrt::EvolutionWin::implementation
 
             cell.Child(content);
             host.Children().Append(cell);
+        }
+    }
+
+    /** @brief Largeur de la barre d'en-tête du calendrier modifiée : réorganise les commandes si elles ne tiennent plus. */
+    void MainWindow::OnCalendarHeaderSizeChanged(IInspectable const&, SizeChangedEventArgs const&)
+    {
+        UpdateCalendarHeaderLayout();
+    }
+
+    /**
+     * @brief Place les commandes du calendrier (navigation à gauche, période / filtre / export à droite) sur une
+     *        seule ligne quand la largeur le permet, sinon sur deux lignes pour qu'elles ne se chevauchent pas.
+     */
+    void MainWindow::UpdateCalendarHeaderLayout()
+    {
+        auto grid = CalendarHeaderGrid();
+        auto left = CalendarHeaderLeft();
+        auto right = CalendarHeaderRight();
+        if (grid.ActualWidth() <= 0)
+            return;
+
+        /* largeur voulue sans contrainte : Measure () borné par la grille la réduirait */
+        Windows::Foundation::Size unbounded{ (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)() };
+        left.Measure(unbounded);
+        right.Measure(unbounded);
+        double needed = left.DesiredSize().Width + right.DesiredSize().Width + 24;
+        bool stacked = needed > grid.ActualWidth();
+        if (stacked == m_calendar_header_stacked && grid.RowDefinitions().Size() == (stacked ? 2u : 0u))
+            return;
+        m_calendar_header_stacked = stacked;
+
+        grid.RowDefinitions().Clear();
+        if (stacked)
+        {
+            for (int row = 0; row < 2; ++row)
+            {
+                RowDefinition definition;
+                definition.Height(GridLengthHelper::Auto());
+                grid.RowDefinitions().Append(definition);
+            }
+            grid.RowSpacing(8);
+            Grid::SetRow(left, 0);
+            Grid::SetRow(right, 1);
+            right.HorizontalAlignment(HorizontalAlignment::Left);
+        }
+        else
+        {
+            grid.RowSpacing(0);
+            Grid::SetRow(left, 0);
+            Grid::SetRow(right, 0);
+            right.HorizontalAlignment(HorizontalAlignment::Right);
         }
     }
 
