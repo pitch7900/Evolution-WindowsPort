@@ -1,5 +1,6 @@
 /*
- * evo-core : Recherche de messages (dossier, sous-dossiers, compte, tous les comptes).
+ * evo-core : Recherche de messages (dossier, sous-dossiers, compte, tous les comptes)
+ * et vues unifiées multi-comptes (boîte de réception, envoyés, brouillons, corbeille).
  * Voir evo-core.h et evo-core-private.h.
  */
 
@@ -123,6 +124,124 @@ core_account_display_name (EvoCore *core,
 	return name;
 }
 
+/* Sérialise des messages trouvés dans plusieurs dossiers en tableau JSON, avec
+ * leur localisation (compte, dossier).
+ * Paramètres :
+ *   matches       : messages triés (ScopedSearchMatch *)
+ *   max_count     : nombre maximal de messages sérialisés (0 pour tous)
+ *   composite_uid : TRUE pour que "uid" soit unique entre comptes et dossiers
+ *                   ("<uid>\x1f<compte>\x1f<dossier>") ; les actions du client
+ *                   en retirent la localisation avant d'appeler le moteur
+ * Retourne : chaîne JSON nouvellement allouée. */
+static gchar *
+scoped_matches_to_json (GPtrArray *matches,
+			guint max_count,
+			gboolean composite_uid)
+{
+	JsonBuilder *builder;
+	gchar *json;
+	guint ii;
+
+	builder = json_builder_new ();
+	json_builder_begin_array (builder);
+
+	for (ii = 0; ii < matches->len && (max_count == 0 || ii < max_count); ii++) {
+		ScopedSearchMatch *m = matches->pdata[ii];
+		CamelMessageInfo *info = m->info;
+		guint32 flags = camel_message_info_get_flags (info);
+		gint64 date = camel_message_info_get_date_received (info);
+
+		if (date <= 0)
+			date = camel_message_info_get_date_sent (info);
+
+		json_builder_begin_object (builder);
+		json_builder_set_member_name (builder, "uid");
+		if (composite_uid) {
+			gchar *composite = g_strdup_printf ("%s\x1f%s\x1f%s", camel_message_info_get_uid (info),
+				m->account_uid ? m->account_uid : "", m->folder_full_name ? m->folder_full_name : "");
+
+			json_builder_add_string_value (builder, composite);
+			g_free (composite);
+		} else {
+			json_builder_add_string_value (builder, camel_message_info_get_uid (info));
+		}
+		json_builder_set_member_name (builder, "subject");
+		json_builder_add_string_value (builder, camel_message_info_get_subject (info) ? camel_message_info_get_subject (info) : "");
+		json_builder_set_member_name (builder, "from");
+		json_builder_add_string_value (builder, camel_message_info_get_from (info) ? camel_message_info_get_from (info) : "");
+		json_builder_set_member_name (builder, "date");
+		json_builder_add_int_value (builder, date);
+		json_builder_set_member_name (builder, "seen");
+		json_builder_add_boolean_value (builder, (flags & CAMEL_MESSAGE_SEEN) != 0);
+		json_builder_set_member_name (builder, "flagged");
+		json_builder_add_boolean_value (builder, (flags & CAMEL_MESSAGE_FLAGGED) != 0);
+		json_builder_set_member_name (builder, "attachments");
+		json_builder_add_boolean_value (builder, (flags & CAMEL_MESSAGE_ATTACHMENTS) != 0);
+		/* regroupement par discussion (empreintes 64 bits Camel) */
+		{
+			const GArray *references = camel_message_info_get_references (info);
+			guint jj;
+			gchar *text = g_strdup_printf ("%" G_GUINT64_FORMAT, (guint64) camel_message_info_get_message_id (info));
+
+			builder_add_string (builder, "msgid", text);
+			g_free (text);
+			json_builder_set_member_name (builder, "refs");
+			json_builder_begin_array (builder);
+			for (jj = 0; references && jj < references->len; jj++) {
+				text = g_strdup_printf ("%" G_GUINT64_FORMAT, g_array_index (references, guint64, jj));
+				json_builder_add_string_value (builder, text);
+				g_free (text);
+			}
+			json_builder_end_array (builder);
+		}
+		json_builder_set_member_name (builder, "to");
+		json_builder_add_string_value (builder, camel_message_info_get_to (info) ? camel_message_info_get_to (info) : "");
+		json_builder_set_member_name (builder, "size");
+		json_builder_add_int_value (builder, camel_message_info_get_size (info));
+		json_builder_set_member_name (builder, "labels");
+		json_builder_begin_array (builder);
+		{
+			const CamelNamedFlags *user_flags = camel_message_info_get_user_flags (info);
+			guint jj, n_flags = user_flags ? camel_named_flags_get_length (user_flags) : 0;
+
+			for (jj = 0; jj < n_flags; jj++) {
+				const gchar *name = camel_named_flags_get (user_flags, jj);
+				if (name && *name && *name != '$' && *name != '\\')
+					json_builder_add_string_value (builder, name);
+			}
+		}
+		json_builder_end_array (builder);
+		json_builder_set_member_name (builder, "due_by");
+		json_builder_add_string_value (builder, camel_message_info_get_user_tag (info, "due-by") ?
+			camel_message_info_get_user_tag (info, "due-by") : "");
+		builder_add_string (builder, "follow_up", camel_message_info_get_user_tag (info, "follow-up") ?
+			camel_message_info_get_user_tag (info, "follow-up") : "");
+		builder_add_string (builder, "completed_on", camel_message_info_get_user_tag (info, "completed-on") ?
+			camel_message_info_get_user_tag (info, "completed-on") : "");
+
+		/* Données de localisation du message dans les portées multi-dossiers et multi-comptes */
+		json_builder_set_member_name (builder, "account");
+		json_builder_add_string_value (builder, m->account_uid ? m->account_uid : "");
+		json_builder_set_member_name (builder, "account_name");
+		json_builder_add_string_value (builder, m->account_name ? m->account_name : "");
+		json_builder_set_member_name (builder, "folder");
+		json_builder_add_string_value (builder, m->folder_full_name ? m->folder_full_name : "");
+		json_builder_set_member_name (builder, "folder_name");
+		json_builder_add_string_value (builder, m->folder_display_name ? m->folder_display_name : "");
+		json_builder_set_member_name (builder, "preview");
+		json_builder_add_string_value (builder, camel_message_info_get_preview (info) ?
+			camel_message_info_get_preview (info) : "");
+
+		json_builder_end_object (builder);
+	}
+
+	json_builder_end_array (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+
+	return json;
+}
+
 /* Exécute une recherche de messages selon une portée définie :
  *   - "folder"     : dossier courant uniquement
  *   - "subfolders" : dossier courant et tous ses sous-dossiers récursivement
@@ -147,7 +266,6 @@ core_search_messages_run (EvoCore *core,
 	gchar **raw_words = NULL, **words = NULL;
 	GString *sexp = NULL;
 	guint ii, n_words = 0;
-	JsonBuilder *builder;
 	gchar *json;
 
 	if (!query || !*query) {
@@ -312,77 +430,7 @@ core_search_messages_run (EvoCore *core,
 
 	g_ptr_array_sort (matches, compare_scoped_matches_by_date);
 
-	builder = json_builder_new ();
-	json_builder_begin_array (builder);
-
-	for (ii = 0; ii < matches->len && (max_count == 0 || ii < max_count); ii++) {
-		ScopedSearchMatch *m = matches->pdata[ii];
-		CamelMessageInfo *info = m->info;
-		guint32 flags = camel_message_info_get_flags (info);
-		gint64 date = camel_message_info_get_date_received (info);
-
-		if (date <= 0)
-			date = camel_message_info_get_date_sent (info);
-
-		json_builder_begin_object (builder);
-		json_builder_set_member_name (builder, "uid");
-		json_builder_add_string_value (builder, camel_message_info_get_uid (info));
-		json_builder_set_member_name (builder, "subject");
-		json_builder_add_string_value (builder, camel_message_info_get_subject (info) ? camel_message_info_get_subject (info) : "");
-		json_builder_set_member_name (builder, "from");
-		json_builder_add_string_value (builder, camel_message_info_get_from (info) ? camel_message_info_get_from (info) : "");
-		json_builder_set_member_name (builder, "date");
-		json_builder_add_int_value (builder, date);
-		json_builder_set_member_name (builder, "seen");
-		json_builder_add_boolean_value (builder, (flags & CAMEL_MESSAGE_SEEN) != 0);
-		json_builder_set_member_name (builder, "flagged");
-		json_builder_add_boolean_value (builder, (flags & CAMEL_MESSAGE_FLAGGED) != 0);
-		json_builder_set_member_name (builder, "attachments");
-		json_builder_add_boolean_value (builder, (flags & CAMEL_MESSAGE_ATTACHMENTS) != 0);
-		json_builder_set_member_name (builder, "to");
-		json_builder_add_string_value (builder, camel_message_info_get_to (info) ? camel_message_info_get_to (info) : "");
-		json_builder_set_member_name (builder, "size");
-		json_builder_add_int_value (builder, camel_message_info_get_size (info));
-		json_builder_set_member_name (builder, "labels");
-		json_builder_begin_array (builder);
-		{
-			const CamelNamedFlags *user_flags = camel_message_info_get_user_flags (info);
-			guint jj, n_flags = user_flags ? camel_named_flags_get_length (user_flags) : 0;
-
-			for (jj = 0; jj < n_flags; jj++) {
-				const gchar *name = camel_named_flags_get (user_flags, jj);
-				if (name && *name && *name != '$' && *name != '\\')
-					json_builder_add_string_value (builder, name);
-			}
-		}
-		json_builder_end_array (builder);
-		json_builder_set_member_name (builder, "due_by");
-		json_builder_add_string_value (builder, camel_message_info_get_user_tag (info, "due-by") ?
-			camel_message_info_get_user_tag (info, "due-by") : "");
-		builder_add_string (builder, "follow_up", camel_message_info_get_user_tag (info, "follow-up") ?
-			camel_message_info_get_user_tag (info, "follow-up") : "");
-		builder_add_string (builder, "completed_on", camel_message_info_get_user_tag (info, "completed-on") ?
-			camel_message_info_get_user_tag (info, "completed-on") : "");
-
-		/* Données de localisation du message dans les portées multi-dossiers et multi-comptes */
-		json_builder_set_member_name (builder, "account");
-		json_builder_add_string_value (builder, m->account_uid ? m->account_uid : "");
-		json_builder_set_member_name (builder, "account_name");
-		json_builder_add_string_value (builder, m->account_name ? m->account_name : "");
-		json_builder_set_member_name (builder, "folder");
-		json_builder_add_string_value (builder, m->folder_full_name ? m->folder_full_name : "");
-		json_builder_set_member_name (builder, "folder_name");
-		json_builder_add_string_value (builder, m->folder_display_name ? m->folder_display_name : "");
-		json_builder_set_member_name (builder, "preview");
-		json_builder_add_string_value (builder, camel_message_info_get_preview (info) ?
-			camel_message_info_get_preview (info) : "");
-
-		json_builder_end_object (builder);
-	}
-
-	json_builder_end_array (builder);
-	json = json_from_builder (builder);
-	g_object_unref (builder);
+	json = scoped_matches_to_json (matches, max_count, g_strcmp0 (scope, "folder") != 0);
 
 	g_ptr_array_unref (matches);
 	g_ptr_array_unref (targets);
@@ -540,4 +588,190 @@ evo_core_search_messages (EvoCore *core,
 			  void *user_data)
 {
 	evo_core_search_messages_scoped (core, account_uid, folder_full_name, "folder", query, max_count, func, user_data);
+}
+
+/* --- vues unifiées multi-comptes --- */
+
+/* Indique si un compte fait partie de la sélection d'une vue unifiée.
+ * Paramètres :
+ *   included : identifiants de comptes retenus (NULL ou vide : tous)
+ *   uid      : identifiant du compte testé
+ * Retourne : TRUE si le compte est retenu. */
+static gboolean
+unified_account_included (gchar **included,
+			  const gchar *uid)
+{
+	if (!included || !*included)
+		return TRUE;
+
+	return g_strv_contains ((const gchar * const *) included, uid);
+}
+
+/* Construit la vue unifiée d'un rôle de dossier : les messages du dossier de ce
+ * rôle (boîte de réception, envoyés, brouillons, corbeille...) de tous les
+ * comptes, fusionnés et triés du plus récent au plus ancien. Chaque message
+ * porte son compte et son dossier d'origine, et un "uid" composite unique.
+ * Choix d'architecture : agrégation côté moteur plutôt que CamelVeeFolder (qui
+ * exige un CamelVeeStore, des requêtes S-expression et une synchronisation de
+ * résumés non fournis ici) ; les messages restent ceux de leur dossier réel,
+ * donc lecture, indicateurs, déplacement et suppression sont inchangés.
+ * Un compte injoignable est ignoré (pas d'échec global).
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] rôle, [1] comptes retenus séparés par des virgules ("" : tous),
+ *           [2] nombre maximal de messages (0 : tous)
+ *   error : emplacement d'erreur GError
+ * Retourne : tableau JSON des messages, ou NULL sur erreur. */
+static gchar *
+core_list_unified_run (EvoCore *core,
+		       gchar **args,
+		       GError **error)
+{
+	const gchar *role = args[0];
+	guint max_count = (guint) g_ascii_strtoull (args[2], NULL, 10);
+	gchar **included = (args[1] && *args[1]) ? g_strsplit (args[1], ",", -1) : NULL;
+	GPtrArray *matches;
+	GList *services, *link;
+	gchar *json;
+
+	if (!role || !*role) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Rôle de dossier manquant");
+		g_strfreev (included);
+		return NULL;
+	}
+
+	matches = g_ptr_array_new_with_free_func ((GDestroyNotify) scoped_search_match_free);
+	services = camel_session_list_services (core->session);
+
+	for (link = services; link; link = g_list_next (link)) {
+		CamelService *srv;
+		CamelStore *store;
+		CamelProvider *provider;
+		CamelFolderInfo *fi;
+		CamelFolder *folder;
+		GPtrArray *uids;
+		const gchar *s_uid, *s_name;
+		gchar *folder_name;
+		guint ii;
+
+		if (!CAMEL_IS_STORE (link->data))
+			continue;
+
+		srv = CAMEL_SERVICE (link->data);
+		store = CAMEL_STORE (link->data);
+		provider = camel_service_get_provider (srv);
+		s_uid = camel_service_get_uid (srv);
+
+		/* les dossiers de recherche (vfolder) ne sont pas des comptes */
+		if ((provider && g_strcmp0 (provider->protocol, "vfolder") == 0) ||
+		    !unified_account_included (included, s_uid))
+			continue;
+
+		s_name = camel_service_get_display_name (srv);
+		if (!s_name)
+			s_name = s_uid;
+
+		/* arborescence depuis le cache local, sinon depuis le serveur */
+		fi = camel_store_get_folder_info_sync (store, NULL,
+			CAMEL_STORE_FOLDER_INFO_FAST | CAMEL_STORE_FOLDER_INFO_RECURSIVE, core->cancellable, NULL);
+		if (!fi && core_ensure_connected (core, store, NULL))
+			fi = camel_store_get_folder_info_sync (store, NULL,
+				CAMEL_STORE_FOLDER_INFO_RECURSIVE, core->cancellable, NULL);
+		if (!fi)
+			continue;
+
+		folder_name = core_find_role_folder (core, store, fi, role);
+		camel_folder_info_free (fi);
+		if (!folder_name)
+			continue;
+
+		folder = core_ref_folder (core, s_uid, folder_name, NULL);
+		if (!folder) {
+			g_free (folder_name);
+			continue;
+		}
+
+		uids = camel_folder_dup_uids (folder);
+		if (!uids || uids->len == 0) {
+			/* premier chargement sans cache : interrogation serveur */
+			if (uids)
+				g_ptr_array_unref (uids);
+			camel_folder_refresh_info_sync (folder, core->cancellable, NULL);
+			uids = camel_folder_dup_uids (folder);
+		} else {
+			/* cache présent : relève serveur en arrière-plan */
+			gchar **bg_args = g_new0 (gchar *, 3);
+
+			bg_args[0] = g_strdup (s_uid);
+			bg_args[1] = g_strdup (folder_name);
+			core_submit (core, core_folder_background_refresh_run, bg_args, core_ignore_result, NULL);
+		}
+
+		g_object_set_data (G_OBJECT (folder), "evo-initial-sync-done", GINT_TO_POINTER (1));
+
+		for (ii = 0; uids && ii < uids->len; ii++) {
+			CamelMessageInfo *info = camel_folder_get_message_info (folder, uids->pdata[ii]);
+
+			if (info && !(camel_message_info_get_flags (info) & CAMEL_MESSAGE_DELETED)) {
+				ScopedSearchMatch *m = g_slice_new0 (ScopedSearchMatch);
+
+				m->info = info;
+				m->account_uid = g_strdup (s_uid);
+				m->account_name = g_strdup (s_name);
+				m->folder_full_name = g_strdup (folder_name);
+				m->folder_display_name = g_strdup (camel_folder_get_display_name (folder));
+				g_ptr_array_add (matches, m);
+			} else {
+				g_clear_object (&info);
+			}
+		}
+
+		if (uids)
+			g_ptr_array_unref (uids);
+		g_object_unref (folder);
+		g_free (folder_name);
+	}
+
+	g_list_free (services);
+	g_strfreev (included);
+
+	g_ptr_array_sort (matches, compare_scoped_matches_by_date);
+	json = scoped_matches_to_json (matches, max_count, TRUE);
+	g_ptr_array_unref (matches);
+
+	return json;
+}
+
+/* Soumet le chargement d'une vue unifiée (messages d'un rôle de dossier de
+ * tous les comptes), triés du plus récent au plus ancien.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   role         : rôle du dossier ("inbox", "sent", "drafts", "trash", "junk", "archive")
+ *   account_uids : comptes inclus, identifiants séparés par des virgules (NULL ou "" : tous)
+ *   max_count    : nombre maximal de messages renvoyés (0 pour tous)
+ *   func         : rappel recevant le tableau JSON des messages ; chaque message porte
+ *                  "account", "account_name", "folder", "folder_name" et un "uid"
+ *                  composite "<uid>\x1f<compte>\x1f<dossier>" à réduire à la partie
+ *                  avant le premier \x1f pour les autres appels du moteur
+ *   user_data    : données utilisateur transmises au rappel */
+void
+evo_core_list_unified (EvoCore *core,
+		       const char *role,
+		       const char *account_uids,
+		       unsigned int max_count,
+		       EvoCoreResultFunc func,
+		       void *user_data)
+{
+	gchar count[16];
+	gchar *args[] = {
+		(gchar *) (role ? role : ""),
+		(gchar *) (account_uids ? account_uids : ""),
+		count,
+		NULL
+	};
+
+	g_return_if_fail (role != NULL);
+
+	g_snprintf (count, sizeof (count), "%u", max_count);
+	core_submit (core, core_list_unified_run, g_strdupv (args), func, user_data);
 }
