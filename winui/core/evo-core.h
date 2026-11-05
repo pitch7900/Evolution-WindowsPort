@@ -981,6 +981,22 @@ void		evo_core_list_team		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Groupes de calendriers Outlook d'un compte Microsoft 365 (Graph
+ * /me/calendarGroups) avec les calendriers qu'ils contiennent. Les groupes
+ * d'équipes ou de salles créés dans Outlook (« Team Infra N2 », « Salles »...) y
+ * figurent par leur nom, mais Graph n'expose pas leurs membres (personnes,
+ * salles) : ils apparaissent vides.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte Microsoft 365 ("" : premier compte)
+ *   func        : rappel recevant [{"name", "class_id", "calendars": [{"name",
+ *                 "address"}]}, ...]
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_list_calendar_groups	(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Comme evo_core_list_contacts (), limité aux carnets book_uids (uids
  * séparés par des virgules ; NULL ou "" : tous les carnets activés). */
 void		evo_core_list_book_contacts	(EvoCore *core,

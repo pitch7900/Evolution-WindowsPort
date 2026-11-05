@@ -82,17 +82,95 @@ namespace EvolutionWin::People
     }
 
     /**
-     * @brief Ajoute aux calendriers EDS les sources virtuelles des personnes mémorisées.
-     * @param real Sources renvoyées par evo_core_list_sources (calendriers EDS).
-     * @return Nouveau tableau : sources EDS puis une source par personne (backend « person »).
+     * @brief Nom affiché d'un groupe de calendriers Outlook (traduit pour les groupes standard).
+     * @param group Objet {"name", "class_id", "calendars"} renvoyé par evo_core_list_calendar_groups.
+     * @return Nom à afficher ; vide pour le groupe « Mes calendriers » (les calendriers du compte, sans sous-groupe).
      */
-    inline winrt::Windows::Data::Json::JsonArray MergeIntoSources(winrt::Windows::Data::Json::JsonArray const& real)
+    inline winrt::hstring GroupDisplayName(winrt::Windows::Data::Json::JsonObject const& group)
+    {
+        std::wstring class_id{ group.GetNamedString(L"class_id", L"") };
+        if (class_id.rfind(L"0006f0b7", 0) == 0)
+            return winrt::hstring{};
+        if (class_id.rfind(L"0006f0b8", 0) == 0)
+            return L"Autres calendriers";
+        if (class_id.rfind(L"0006f0b9", 0) == 0)
+            return L"Calendriers des contacts";
+        return group.GetNamedString(L"name", L"");
+    }
+
+    /**
+     * @brief Ajoute aux calendriers EDS les groupes Outlook et les sources virtuelles des personnes.
+     *
+     * Les calendriers Exchange Online sont classés dans le groupe Outlook qui les contient ; chaque
+     * groupe Outlook est affiché, même vide (Graph n'expose pas les membres des groupes d'équipes ou de salles).
+     * @param real Sources renvoyées par evo_core_list_sources (calendriers EDS).
+     * @param groups Groupes renvoyés par evo_core_list_calendar_groups (nullptr : aucun).
+     * @return Nouveau tableau : sources EDS, repères de groupes vides (« placeholder »), une source par personne.
+     */
+    inline winrt::Windows::Data::Json::JsonArray MergeIntoSources(winrt::Windows::Data::Json::JsonArray const& real,
+        winrt::Windows::Data::Json::JsonArray const& groups = nullptr)
     {
         using namespace winrt::Windows::Data::Json;
 
         JsonArray merged;
+        winrt::hstring m365_account, m365_account_uid;
+
         for (auto const& value : real)
-            merged.Append(value);
+        {
+            auto source = value.GetObject();
+            bool m365 = source.GetNamedString(L"backend", L"") == L"microsoft365";
+            if (m365 && m365_account_uid.empty())
+            {
+                m365_account = source.GetNamedString(L"account", L"");
+                m365_account_uid = source.GetNamedString(L"account_uid", L"");
+            }
+
+            winrt::hstring group_name;
+            if (m365 && groups)
+            {
+                winrt::hstring name = source.GetNamedString(L"name", L"");
+                for (auto const& group_value : groups)
+                {
+                    auto group = group_value.GetObject();
+                    for (auto const& calendar : group.GetNamedArray(L"calendars", JsonArray{}))
+                    {
+                        if (calendar.GetObject().GetNamedString(L"name", L"") == name)
+                            group_name = GroupDisplayName(group);
+                    }
+                }
+            }
+
+            if (group_name.empty() || !source.GetNamedString(L"group_name", L"").empty())
+            {
+                merged.Append(value);
+                continue;
+            }
+            JsonObject copy = JsonObject::Parse(source.Stringify());
+            copy.SetNamedValue(L"group_name", JsonValue::CreateStringValue(group_name));
+            merged.Append(copy);
+        }
+
+        /* groupes Outlook (même vides) : repères affichés comme sous-groupes du compte */
+        if (groups && !m365_account_uid.empty())
+        {
+            for (auto const& group_value : groups)
+            {
+                winrt::hstring display = GroupDisplayName(group_value.GetObject());
+                if (display.empty())
+                    continue;
+                JsonObject marker;
+                marker.SetNamedValue(L"uid", JsonValue::CreateStringValue(L"group:" + m365_account_uid + L":" + display));
+                marker.SetNamedValue(L"name", JsonValue::CreateStringValue(L""));
+                marker.SetNamedValue(L"kind", JsonValue::CreateStringValue(L"calendar"));
+                marker.SetNamedValue(L"account", JsonValue::CreateStringValue(m365_account));
+                marker.SetNamedValue(L"account_uid", JsonValue::CreateStringValue(m365_account_uid));
+                marker.SetNamedValue(L"backend", JsonValue::CreateStringValue(L"group"));
+                marker.SetNamedValue(L"group_name", JsonValue::CreateStringValue(display));
+                marker.SetNamedValue(L"placeholder", JsonValue::CreateBooleanValue(true));
+                marker.SetNamedValue(L"default", JsonValue::CreateBooleanValue(false));
+                merged.Append(marker);
+            }
+        }
 
         /* nom du compte (groupe de la liste des calendriers) d'après son identifiant */
         auto account_name = [&real](winrt::hstring const& account_uid)

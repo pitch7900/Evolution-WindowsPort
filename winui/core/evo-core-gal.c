@@ -1209,3 +1209,144 @@ evo_core_list_team (EvoCore *core,
 
 	core_submit (core, core_list_team_run, g_strdupv (args), func, user_data);
 }
+
+/* Groupes de calendriers Outlook du compte (Graph /me/calendarGroups) et calendriers
+ * qu'ils contiennent. Les groupes d'équipes ou de salles créés dans Outlook y figurent
+ * par leur nom ; leurs membres (personnes, salles) ne sont pas exposés par Graph.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = compte (collection)
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : [{"name", "class_id", "calendars": [{"name", "address"}]}, ...]. */
+static gchar *
+core_list_calendar_groups_run (EvoCore *core,
+			       gchar **args,
+			       GError **error)
+{
+	ESource *source = gal_ref_m365_collection (core, args[0]);
+	gchar *token = NULL, *json = NULL;
+	GBytes *bytes;
+	guint status = 0;
+	JsonNode *root = NULL;
+	JsonObject *object;
+	JsonBuilder *builder;
+	JsonArray *groups;
+	guint ii;
+
+	if (!source) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			"Les groupes de calendriers ne sont disponibles que pour les comptes Microsoft 365.");
+		return NULL;
+	}
+	if (!gal_get_token (core, source, &token, error)) {
+		g_object_unref (source);
+		return NULL;
+	}
+	g_object_unref (source);
+
+	bytes = gal_http_get (core, GAL_PROVIDER_MICROSOFT365,
+		"https://graph.microsoft.com/v1.0/me/calendarGroups?$select=id,name,classId", token, &status, error);
+	if (!bytes) {
+		e_util_safe_free_string (token);
+		return NULL;
+	}
+	if (status < 200 || status >= 300) {
+		gal_set_http_error (GAL_PROVIDER_MICROSOFT365, args[0], status, bytes, error);
+		g_bytes_unref (bytes);
+		e_util_safe_free_string (token);
+		return NULL;
+	}
+	object = gal_parse_response (bytes, &root, error);
+	g_bytes_unref (bytes);
+	if (!object) {
+		e_util_safe_free_string (token);
+		return NULL;
+	}
+
+	builder = json_builder_new ();
+	json_builder_begin_array (builder);
+
+	groups = json_object_has_member (object, "value") && JSON_NODE_HOLDS_ARRAY (json_object_get_member (object, "value"))
+		? json_object_get_array_member (object, "value") : NULL;
+	for (ii = 0; groups && ii < json_array_get_length (groups); ii++) {
+		JsonObject *group;
+		gchar *escaped, *uri;
+		GBytes *calendars_bytes;
+		guint calendars_status = 0;
+		JsonNode *calendars_root = NULL;
+		JsonObject *calendars_object = NULL;
+
+		if (!JSON_NODE_HOLDS_OBJECT (json_array_get_element (groups, ii)))
+			continue;
+		group = json_array_get_object_element (groups, ii);
+
+		json_builder_begin_object (builder);
+		builder_add_string (builder, "name", gal_string_member (group, "name"));
+		builder_add_string (builder, "class_id", gal_string_member (group, "classId"));
+		json_builder_set_member_name (builder, "calendars");
+		json_builder_begin_array (builder);
+
+		escaped = g_uri_escape_string (gal_string_member (group, "id"), NULL, TRUE);
+		uri = g_strconcat ("https://graph.microsoft.com/v1.0/me/calendarGroups/", escaped,
+			"/calendars?$select=name,owner", NULL);
+		calendars_bytes = gal_http_get (core, GAL_PROVIDER_MICROSOFT365, uri, token, &calendars_status, NULL);
+		if (calendars_bytes && calendars_status >= 200 && calendars_status < 300)
+			calendars_object = gal_parse_response (calendars_bytes, &calendars_root, NULL);
+		if (calendars_object && json_object_has_member (calendars_object, "value") &&
+		    JSON_NODE_HOLDS_ARRAY (json_object_get_member (calendars_object, "value"))) {
+			JsonArray *list = json_object_get_array_member (calendars_object, "value");
+			guint jj;
+
+			for (jj = 0; jj < json_array_get_length (list); jj++) {
+				JsonObject *calendar, *owner;
+
+				if (!JSON_NODE_HOLDS_OBJECT (json_array_get_element (list, jj)))
+					continue;
+				calendar = json_array_get_object_element (list, jj);
+				owner = json_object_has_member (calendar, "owner") &&
+					JSON_NODE_HOLDS_OBJECT (json_object_get_member (calendar, "owner"))
+					? json_object_get_object_member (calendar, "owner") : NULL;
+				json_builder_begin_object (builder);
+				builder_add_string (builder, "name", gal_string_member (calendar, "name"));
+				builder_add_string (builder, "address", owner ? gal_string_member (owner, "address") : "");
+				json_builder_end_object (builder);
+			}
+		}
+		if (calendars_root)
+			json_node_unref (calendars_root);
+		g_clear_pointer (&calendars_bytes, g_bytes_unref);
+		g_free (uri);
+		g_free (escaped);
+
+		json_builder_end_array (builder);
+		json_builder_end_object (builder);
+	}
+
+	json_builder_end_array (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+	json_node_unref (root);
+	e_util_safe_free_string (token);
+
+	return json;
+}
+
+/* Soumet la lecture des groupes de calendriers Outlook du compte (voir
+ * evo_core_list_calendar_groups dans evo-core.h).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte Microsoft 365 ("" : premier compte)
+ *   func        : rappel recevant [{"name", "class_id", "calendars": [{"name", "address"}]}]
+ *   user_data   : données utilisateur transmises au rappel */
+void
+evo_core_list_calendar_groups (EvoCore *core,
+			       const char *account_uid,
+			       EvoCoreResultFunc func,
+			       void *user_data)
+{
+	gchar *args[] = { (gchar *) (account_uid ? account_uid : ""), NULL };
+
+	g_return_if_fail (core != NULL);
+
+	core_submit (core, core_list_calendar_groups_run, g_strdupv (args), func, user_data);
+}

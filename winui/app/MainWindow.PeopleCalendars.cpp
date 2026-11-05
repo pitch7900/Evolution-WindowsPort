@@ -4,6 +4,7 @@
 #include "PeopleCalendars.h"
 
 #include <algorithm>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -25,8 +26,13 @@ namespace winrt::EvolutionWin::implementation
 {
     namespace
     {
-        /** @brief Personne choisie dans la boîte : nom affiché. L'adresse est la clé de la table. */
-        using Selection = std::map<std::wstring, std::wstring>;
+        /** @brief Personne choisie dans la boîte : nom affiché et groupe de calendriers. L'adresse est la clé de la table. */
+        struct Chosen
+        {
+            std::wstring name;
+            std::wstring group;
+        };
+        using Selection = std::map<std::wstring, Chosen>;
 
         /**
          * @brief Ajoute une case à cocher « personne » dans une liste, cochée si déjà choisie.
@@ -35,9 +41,10 @@ namespace winrt::EvolutionWin::implementation
          * @param email Adresse de la personne.
          * @param name Nom affiché.
          * @param detail Précision affichée après le nom (relation, fonction), éventuellement vide.
+         * @param group_of Fournit le groupe de calendriers au moment où la case est cochée.
          */
         void AppendPersonCheckBox(StackPanel const& list, std::shared_ptr<Selection> const& selection,
-            hstring const& email, hstring const& name, hstring const& detail)
+            hstring const& email, hstring const& name, hstring const& detail, std::function<std::wstring()> group_of)
         {
             CheckBox box;
             std::wstring label{ name.empty() ? email : name };
@@ -49,11 +56,11 @@ namespace winrt::EvolutionWin::implementation
 
             std::wstring key{ email };
             std::wstring display{ name.empty() ? email : name };
-            box.Click([selection, key, display](IInspectable const& sender, RoutedEventArgs const&)
+            box.Click([selection, key, display, group_of](IInspectable const& sender, RoutedEventArgs const&)
             {
                 auto check = sender.as<CheckBox>();
                 if (check.IsChecked() && check.IsChecked().GetBoolean())
-                    (*selection)[key] = display;
+                    (*selection)[key] = Chosen{ display, group_of() };
                 else
                     selection->erase(key);
             });
@@ -115,7 +122,8 @@ namespace winrt::EvolutionWin::implementation
             std::wstring email{ person.GetNamedString(L"email", L"") };
             if (email.empty())
                 continue;
-            (*selection)[email] = std::wstring{ person.GetNamedString(L"name", hstring{ email }) };
+            (*selection)[email] = Chosen{ std::wstring{ person.GetNamedString(L"name", hstring{ email }) },
+                                         std::wstring{ person.GetNamedString(L"group", L"") } };
             colors[email] = std::wstring{ person.GetNamedString(L"color", L"") };
         }
 
@@ -154,8 +162,12 @@ namespace winrt::EvolutionWin::implementation
         if (!selection->empty())
         {
             panel.Children().Append(SectionTitle(Tr(L"Calendriers déjà ajoutés", L"Calendars already added")));
-            for (auto const& [email, name] : *selection)
-                AppendPersonCheckBox(added_list, selection, hstring{ email }, hstring{ name }, hstring{});
+            for (auto const& [email, chosen] : *selection)
+            {
+                std::wstring group = chosen.group;
+                AppendPersonCheckBox(added_list, selection, hstring{ email }, hstring{ chosen.name },
+                    hstring{ group }, [group]() { return group; });
+            }
             panel.Children().Append(added_list);
         }
 
@@ -182,19 +194,46 @@ namespace winrt::EvolutionWin::implementation
 
                 hstring manager_label = Tr(L"responsable", L"manager");
                 hstring peer_label = Tr(L"même responsable", L"same manager");
+
+                /* groupes comme dans Outlook : « Équipe : <responsable> » (responsable et collègues)
+                   et « Mon équipe » (collaborateurs directs) */
+                std::wstring manager_name;
+                for (auto const& value : members)
+                    if (value.GetObject().GetNamedString(L"relation", L"") == L"manager")
+                        manager_name = std::wstring{ value.GetObject().GetNamedString(L"name", L"") };
+                std::wstring manager_group = std::wstring{ Tr(L"Équipe : ", L"Team: ") } + manager_name;
+                std::wstring reports_group{ Tr(L"Mon équipe", L"My team") };
+
                 for (auto const& value : members)
                 {
                     auto member = value.GetObject();
                     hstring relation = member.GetNamedString(L"relation", L"");
+                    std::wstring group = relation == L"report" ? reports_group
+                        : (manager_name.empty() ? reports_group : manager_group);
                     AppendPersonCheckBox(team_list, selection, member.GetNamedString(L"email", L""),
                         member.GetNamedString(L"name", L""),
-                        relation == L"manager" ? manager_label : (relation == L"peer" ? peer_label : hstring{}));
+                        relation == L"manager" ? manager_label : (relation == L"peer" ? peer_label : hstring{}),
+                        [group]() { return group; });
                 }
             });
         }
 
         /* recherche dans l'annuaire */
         panel.Children().Append(SectionTitle(Tr(L"Ajouter depuis l'annuaire", L"Add from the directory")));
+        /* groupe de calendriers : groupes Outlook du compte, ou nom libre */
+        ComboBox group_box;
+        group_box.IsEditable(true);
+        group_box.HorizontalAlignment(HorizontalAlignment::Stretch);
+        group_box.Header(box_value(Tr(L"Groupe des personnes ajoutées par la recherche (choisir ou saisir un nom)",
+                                      L"Group for people added by the search (pick or type a name)")));
+        for (auto const& value : m_calendar_groups ? m_calendar_groups : JsonArray{})
+        {
+            hstring display = ::EvolutionWin::People::GroupDisplayName(value.GetObject());
+            if (!display.empty())
+                group_box.Items().Append(box_value(display));
+        }
+        group_box.Text(Tr(L"Autres calendriers", L"Other calendars"));
+        panel.Children().Append(group_box);
         TextBox search_box;
         search_box.PlaceholderText(Tr(L"Nom ou adresse (3 caractères au moins)", L"Name or address (at least 3 characters)"));
         panel.Children().Append(search_box);
@@ -208,7 +247,7 @@ namespace winrt::EvolutionWin::implementation
         auto search_serial = std::make_shared<uint64_t>(0);
         if (!account_uid.empty())
         {
-            search_box.TextChanged([this, account_uid, results_list, selection, search_serial](IInspectable const& sender, TextChangedEventArgs const&)
+            search_box.TextChanged([this, account_uid, results_list, selection, search_serial, group_box](IInspectable const& sender, TextChangedEventArgs const&)
             {
                 hstring text = sender.as<TextBox>().Text();
                 uint64_t serial = ++*search_serial;
@@ -220,7 +259,7 @@ namespace winrt::EvolutionWin::implementation
                 waiting.Text(Tr(L"Recherche…", L"Searching…"));
                 results_list.Children().Append(waiting);
 
-                m_core->SearchGalAccount(account_uid, text, 15, [results_list, selection, search_serial, serial](hstring const& json, hstring const& error)
+                m_core->SearchGalAccount(account_uid, text, 15, [results_list, selection, search_serial, serial, group_box](hstring const& json, hstring const& error)
                 {
                     if (serial != *search_serial)
                         return;   /* résultat périmé : la saisie a changé */
@@ -239,7 +278,12 @@ namespace winrt::EvolutionWin::implementation
                     {
                         auto person = value.GetObject();
                         AppendPersonCheckBox(results_list, selection, person.GetNamedString(L"email", L""),
-                            person.GetNamedString(L"name", L""), person.GetNamedString(L"title", L""));
+                            person.GetNamedString(L"name", L""), person.GetNamedString(L"title", L""),
+                            [group_box]()
+                            {
+                                std::wstring text{ group_box.Text() };
+                                return text.empty() ? std::wstring{ Tr(L"Autres calendriers", L"Other calendars") } : text;
+                            });
                     }
                 });
             });
@@ -272,12 +316,13 @@ namespace winrt::EvolutionWin::implementation
 
         JsonArray people;
         uint32_t index = 0;
-        for (auto const& [email, name] : *selection)
+        for (auto const& [email, chosen] : *selection)
         {
             JsonObject person;
             auto known = colors.find(email);
             person.SetNamedValue(L"email", JsonValue::CreateStringValue(email));
-            person.SetNamedValue(L"name", JsonValue::CreateStringValue(name));
+            person.SetNamedValue(L"name", JsonValue::CreateStringValue(chosen.name));
+            person.SetNamedValue(L"group", JsonValue::CreateStringValue(chosen.group));
             person.SetNamedValue(L"color", JsonValue::CreateStringValue(
                 known != colors.end() && !known->second.empty() ? hstring{ known->second } : ::EvolutionWin::People::ColorFor(index)));
             person.SetNamedValue(L"account_uid", JsonValue::CreateStringValue(account_uid));
@@ -291,11 +336,7 @@ namespace winrt::EvolutionWin::implementation
         settings.Set(L"calendar.visible", visible);
 
         /* sources virtuelles : retire les anciennes, ajoute les nouvelles */
-        JsonArray real;
-        for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
-            if (value.GetObject().GetNamedString(L"backend", L"") != L"person")
-                real.Append(value);
-        m_calendar_sources = ::EvolutionWin::People::MergeIntoSources(real);
+        RemergeCalendarSources();
 
         ShowStatus(Tr(L"Calendriers de personnes mis à jour.", L"People calendars updated."), InfoBarSeverity::Success);
         RebuildCalendarSourcesPanel();

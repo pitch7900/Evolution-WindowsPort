@@ -110,10 +110,10 @@ namespace winrt::EvolutionWin::implementation
             for (auto const& value : sources)
             {
                 auto member = value.GetObject();
-                if (group_title(member) == account)
+                if (group_title(member) == account && !member.GetNamedBoolean(L"placeholder", false))
                     group_uids.push_back(member.GetNamedString(L"uid", L""));
             }
-            if (on_toggle_group)
+            if (on_toggle_group && !group_uids.empty())
             {
                 size_t shown_count = 0;
                 for (auto const& uid : group_uids)
@@ -152,6 +152,7 @@ namespace winrt::EvolutionWin::implementation
             children.Append(header_row);
 
             StackPanel group_items;
+            group_items.Margin(ThicknessHelper::FromLengths(18, 0, 0, 0));   /* éléments en retrait sous le groupe */
             group_items.Visibility(collapsed ? Visibility::Collapsed : Visibility::Visible);
             children.Append(group_items);
 
@@ -173,10 +174,21 @@ namespace winrt::EvolutionWin::implementation
                 ::EvolutionWin::Settings::Instance().Set(collapse_key, stored);
             });
 
+            if (group_uids.empty())
+            {
+                TextBlock empty_hint;
+                empty_hint.Text(L"Aucun calendrier : Outlook n'expose pas les membres de ce groupe. Ajoutez des personnes avec « Personnes et équipes… ».");
+                empty_hint.TextWrapping(TextWrapping::Wrap);
+                empty_hint.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+                empty_hint.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorTertiaryBrush")).as<Brush>());
+                empty_hint.Margin(ThicknessHelper::FromLengths(4, 0, 4, 4));
+                group_items.Children().Append(empty_hint);
+            }
+
             for (auto const& value : sources)
             {
                 auto source = value.GetObject();
-                if (group_title(source) != account)
+                if (group_title(source) != account || source.GetNamedBoolean(L"placeholder", false))
                     continue;
 
                 hstring uid = source.GetNamedString(L"uid", L"");
@@ -362,7 +374,7 @@ namespace winrt::EvolutionWin::implementation
                 return;
             }
 
-            m_calendar_sources = ::EvolutionWin::People::MergeIntoSources(sources);
+            m_calendar_sources = ::EvolutionWin::People::MergeIntoSources(sources, m_calendar_groups);
 
             /* premier usage : calendrier par défaut et calendriers principaux
                des comptes, pas les calendriers partagés d'autres personnes */
@@ -385,7 +397,35 @@ namespace winrt::EvolutionWin::implementation
 
             RebuildCalendarSourcesPanel();
             LoadEvents();
+
+            /* groupes de calendriers Outlook (Équipe, Salles, Team...) : noms seulement */
+            if (hstring account_uid = PeopleCalendarAccountUid(); !account_uid.empty())
+            {
+                m_core->ListCalendarGroups(account_uid, [this](hstring const& groups_json, hstring const& groups_error)
+                {
+                    JsonArray groups;
+                    if (!groups_error.empty() || !JsonArray::TryParse(groups_json, groups))
+                        return;
+                    m_calendar_groups = groups;
+                    RemergeCalendarSources();
+                    RebuildCalendarSourcesPanel();
+                });
+            }
         });
+    }
+
+    /* Reconstruit m_calendar_sources : calendriers EDS (sans repères ni personnes) fusionnés de nouveau
+     * avec les groupes Outlook et les calendriers de personnes. */
+    void MainWindow::RemergeCalendarSources()
+    {
+        JsonArray real;
+        for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
+        {
+            hstring backend = value.GetObject().GetNamedString(L"backend", L"");
+            if (backend != L"person" && backend != L"group")
+                real.Append(value);
+        }
+        m_calendar_sources = ::EvolutionWin::People::MergeIntoSources(real, m_calendar_groups);
     }
 
     std::vector<hstring> MainWindow::VisibleCalendarUids()
@@ -746,7 +786,7 @@ namespace winrt::EvolutionWin::implementation
                         if (error.empty() && JsonArray::TryParse(json, sources))
                         {
                             AutoShowExchangeCalendars(sources);
-                            m_calendar_sources = ::EvolutionWin::People::MergeIntoSources(sources);
+                            m_calendar_sources = ::EvolutionWin::People::MergeIntoSources(sources, m_calendar_groups);
                         }
                         fill();
                         ring.IsActive(false);

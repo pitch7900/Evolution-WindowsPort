@@ -679,6 +679,13 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Groupes de calendriers Outlook du compte : [{"name", "class_id", "calendars": [{"name", "address"}]}]. */
+        void ListCalendarGroups(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_list_calendar_groups(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Équipe de l'utilisateur (responsable, collaborateurs, collègues) : [{"name", "email", "relation"}]. */
         void ListTeam(winrt::hstring const& account, CoreHandler handler)
         {
