@@ -184,7 +184,7 @@ namespace winrt::EvolutionWin::implementation
             for (auto const& val : paths)
                 data.attachments.push_back(val.GetString());
 
-            StatusBar().IsOpen(false);
+            HideStatus();
             OpenCompose(data);
         });
     }
@@ -242,7 +242,7 @@ namespace winrt::EvolutionWin::implementation
                         data.attachments.push_back(val.GetString());
                 }
 
-                StatusBar().IsOpen(false);
+                HideStatus();
                 OpenCompose(data);
             });
         };

@@ -5589,7 +5589,7 @@
 
         <!-- status / notifications temporaires -->
 
-        <InfoBar x:Name="StatusBar" Grid.Row="2" IsOpen="False" IsClosable="True" Margin="8,0,8,4" />
+        <InfoBar x:Name="StatusBar" Grid.Row="2" IsOpen="False" IsClosable="True" Margin="8,0,8,4" Visibility="Collapsed" />
 
 
 
@@ -5627,6 +5627,8 @@
 
 
 
+                <!-- au centre : message temporaire compact (remplace l'ancienne grande barre de notification) -->
+                <Grid x:Name="StatusMessagePanel" Grid.Column="1" ColumnSpacing="8" Margin="16,0,16,0" VerticalAlignment="Center" Visibility="Collapsed"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><FontIcon x:Name="StatusMessageIcon" Grid.Column="0" Glyph="&#xE946;" FontSize="12" VerticalAlignment="Center" /><TextBlock x:Name="StatusMessageText" Grid.Column="1" Style="{StaticResource CaptionTextBlockStyle}" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center" /><Button x:Name="StatusMessageCloseButton" Grid.Column="2" Style="{StaticResource SubtleButtonStyle}" Padding="4,2,4,2" Click="OnStatusMessageCloseClick" ToolTipService.ToolTip="Fermer"><FontIcon Glyph="&#xE711;" FontSize="10" /></Button></Grid>
                 <!-- Au centre / droite : barre de progression discrète lors de la synchronisation -->
 
                 <StackPanel x:Name="StatusBarProgressPanel" Grid.Column="2" Orientation="Horizontal"

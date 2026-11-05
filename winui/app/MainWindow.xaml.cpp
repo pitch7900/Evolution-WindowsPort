@@ -273,7 +273,7 @@ namespace winrt::EvolutionWin::implementation
             }
             if (m_initialized)
             {
-                StatusBar().IsOpen(false);
+                HideStatus();
                 LoadAccounts();
 
                 /* à l'ouverture, en tâche de fond : calendriers et groupes de calendriers d'Outlook
@@ -422,9 +422,70 @@ namespace winrt::EvolutionWin::implementation
         if (!m_initialized)
             return;
 
-        StatusBar().Message(message);
-        StatusBar().Severity(severity);
-        StatusBar().IsOpen(!message.empty());
+        if (message.empty())
+        {
+            HideStatus();
+            return;
+        }
+
+        /* message compact dans la barre d'état du bas : icône de gravité + texte sur une ligne
+           (texte complet en infobulle), disparition automatique */
+        auto resources = Application::Current().Resources();
+        hstring glyph = L"\uE946", brush = L"SystemFillColorAttentionBrush";
+        int seconds = 7;
+        switch (severity)
+        {
+        case InfoBarSeverity::Success:
+            glyph = L"\uE73E";
+            brush = L"SystemFillColorSuccessBrush";
+            break;
+        case InfoBarSeverity::Warning:
+            glyph = L"\uE7BA";
+            brush = L"SystemFillColorCautionBrush";
+            seconds = 12;
+            break;
+        case InfoBarSeverity::Error:
+            glyph = L"\uEA39";
+            brush = L"SystemFillColorCriticalBrush";
+            seconds = 20;
+            break;
+        default:
+            break;
+        }
+
+        StatusMessageIcon().Glyph(glyph);
+        StatusMessageIcon().Foreground(resources.Lookup(box_value(brush)).as<Microsoft::UI::Xaml::Media::Brush>());
+        StatusMessageText().Text(message);
+        ToolTipService::SetToolTip(StatusMessageText(), box_value(message));
+        StatusMessagePanel().Visibility(Visibility::Visible);
+
+        if (!m_status_timer)
+        {
+            m_status_timer = DispatcherTimer();
+            m_status_timer.Tick([weak = get_weak()](IInspectable const&, IInspectable const&)
+            {
+                if (auto self = weak.get())
+                    self->HideStatus();
+            });
+        }
+        m_status_timer.Stop();
+        m_status_timer.Interval(std::chrono::seconds(seconds));
+        m_status_timer.Start();
+    }
+
+    /* Masque le message compact de la barre d'état. */
+    void MainWindow::HideStatus()
+    {
+        if (m_status_timer)
+            m_status_timer.Stop();
+        StatusMessagePanel().Visibility(Visibility::Collapsed);
+        StatusMessageText().Text(L"");
+    }
+
+    /* Bouton de fermeture du message compact. */
+    void MainWindow::OnStatusMessageCloseClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        HideStatus();
     }
 
     /* Badge de la barre latérale sur « Courrier » : total des non-lus des
