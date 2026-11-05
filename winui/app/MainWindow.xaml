@@ -1832,6 +1832,7 @@
 
                     <Grid x:Name="CalendarSourcesTitle" Grid.Row="1">
                         <TextBlock Text="Calendriers" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="4,4,0,0" VerticalAlignment="Center" />
+                        <ProgressRing x:Name="CalendarSyncRing" Width="16" Height="16" IsActive="False" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,44,0" ToolTipService.ToolTip="Synchronisation des groupes de calendriers…" />
                         <Button HorizontalAlignment="Right" Padding="6,2" Click="OnAddCalendarClick" ToolTipService.ToolTip="Ajouter un calendrier (local ou depuis une adresse Internet ICS / webcal)">
                             <FontIcon Glyph="&#xE710;" FontSize="12" />
                         </Button>

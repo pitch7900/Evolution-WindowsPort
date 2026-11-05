@@ -239,6 +239,9 @@ namespace winrt::EvolutionWin::implementation
         hstring PeopleCalendarAccountUid();
         Windows::Data::Json::JsonArray m_calendar_groups{ nullptr };	/* groupes de calendriers Outlook (noms) */
         void RemergeCalendarSources();
+        int m_calendar_sync_pending{ 0 };	/* synchronisations de groupes en cours (anneau de progression) */
+        void CalendarSyncBegin();
+        void CalendarSyncEnd();
         winrt::fire_and_forget ImportOutlookGroupsAsync();
         winrt::fire_and_forget ShowEwsConsentDialogAsync();
         void ApplyOutlookGroups(Windows::Data::Json::JsonArray const& groups, hstring const& account_uid, bool announce);
@@ -751,7 +754,8 @@ namespace winrt::EvolutionWin::implementation
         hstring m_calendar_search_query;
         /* calendriers affichés (calendar.visible) et actif (calendar.active) */
         Windows::Data::Json::JsonArray m_calendar_sources{ nullptr };
-        void LoadCalendarSources();
+        void LoadCalendarSources(bool render = true);
+        bool m_calendar_background_started{ false };
         fire_and_forget ShowAddCalendarDialogAsync();
         fire_and_forget ShowAddExchangeCalendarDialogAsync();
         /* carnets d'adresses affichés (contacts.visible) et actif (contacts.active) */

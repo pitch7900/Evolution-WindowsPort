@@ -275,6 +275,14 @@ namespace winrt::EvolutionWin::implementation
             {
                 StatusBar().IsOpen(false);
                 LoadAccounts();
+
+                /* à l'ouverture, en tâche de fond : calendriers et groupes de calendriers d'Outlook
+                   (noms par Graph, membres par EWS), sans attendre l'affichage de la vue Calendrier */
+                if (!m_calendar_background_started)
+                {
+                    m_calendar_background_started = true;
+                    LoadCalendarSources(false);
+                }
             }
         }
         else if (event == L"folder-changed")

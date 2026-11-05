@@ -207,7 +207,7 @@ namespace winrt::EvolutionWin::implementation
             if (group_uids.empty())
             {
                 TextBlock empty_hint;
-                empty_hint.Text(L"Aucun calendrier : Outlook n'expose pas les membres de ce groupe. Ajoutez des personnes avec « Personnes et équipes… ».");
+                empty_hint.Text(L"Aucun calendrier dans ce groupe. Ajoutez des personnes avec « Personnes et équipes… ».");
                 empty_hint.TextWrapping(TextWrapping::Wrap);
                 empty_hint.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
                 empty_hint.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorTertiaryBrush")).as<Brush>());
@@ -393,10 +393,10 @@ namespace winrt::EvolutionWin::implementation
             settings.Set(L"calendar.visible", visible);
     }
 
-    void MainWindow::LoadCalendarSources()
+    void MainWindow::LoadCalendarSources(bool render)
     {
         RestoreCalendarSidebarWidth();
-        m_core->ListSources(L"calendar", [this](hstring const& json, hstring const& error)
+        m_core->ListSources(L"calendar", [this, render](hstring const& json, hstring const& error)
         {
             JsonArray sources;
             if (!error.empty() || !JsonArray::TryParse(json, sources))
@@ -427,33 +427,64 @@ namespace winrt::EvolutionWin::implementation
             AutoShowExchangeCalendars(sources);
 
             RebuildCalendarSourcesPanel();
-            LoadEvents();
+            if (render)
+                LoadEvents();
 
-            /* groupes de calendriers Outlook (Équipe, Salles, Team...) : noms seulement */
+            /* groupes de calendriers d'Outlook, en tâche de fond à chaque ouverture : noms (Graph) puis
+               membres (EWS) ; un anneau de progression signale la synchronisation */
             if (hstring account_uid = PeopleCalendarAccountUid(); !account_uid.empty())
             {
+                CalendarSyncBegin();
                 m_core->ListCalendarGroups(account_uid, [this](hstring const& groups_json, hstring const& groups_error)
                 {
                     JsonArray groups;
-                    if (!groups_error.empty() || !JsonArray::TryParse(groups_json, groups))
-                        return;
-                    m_calendar_groups = groups;
-                    RemergeCalendarSources();
-                    RebuildCalendarSourcesPanel();
+                    if (groups_error.empty() && JsonArray::TryParse(groups_json, groups))
+                    {
+                        m_calendar_groups = groups;
+                        RemergeCalendarSources();
+                        RebuildCalendarSourcesPanel();
+                    }
+                    CalendarSyncEnd();
                 });
 
-                /* groupes d'Outlook déjà importés : mise à jour silencieuse (EWS), sans message en cas d'échec */
-                if (::EvolutionWin::Settings::Instance().GetBoolean(L"calendar.nav-import", false))
+                CalendarSyncBegin();
+                m_core->ListNavCalendars(account_uid, [this, account_uid](hstring const& nav_json, hstring const& nav_error)
                 {
-                    m_core->ListNavCalendars(account_uid, [this, account_uid](hstring const& nav_json, hstring const& nav_error)
+                    JsonArray nav_groups;
+                    if (nav_error.empty() && JsonArray::TryParse(nav_json, nav_groups))
                     {
-                        JsonArray nav_groups;
-                        if (nav_error.empty() && JsonArray::TryParse(nav_json, nav_groups))
-                            ApplyOutlookGroups(nav_groups, account_uid, false);
-                    });
-                }
+                        ApplyOutlookGroups(nav_groups, account_uid, false);
+                    }
+                    else if (!nav_error.empty() && std::wstring_view{ nav_error }.find(L"AADSTS65001") != std::wstring_view::npos &&
+                             !::EvolutionWin::Settings::Instance().GetBoolean(L"calendar.nav-import", false))
+                    {
+                        /* première fois : autorisation Microsoft à donner ; pas de fenêtre à l'ouverture */
+                        ShowStatus(Tr(L"Groupes Outlook : autorisation Microsoft requise (Calendriers Exchange Online › Personnes et équipes… › Importer mes groupes Outlook).",
+                                      L"Outlook groups: Microsoft authorization required (Exchange Online calendars › People and teams… › Import my Outlook groups)."),
+                            InfoBarSeverity::Informational);
+                    }
+                    CalendarSyncEnd();
+                });
             }
         });
+    }
+
+    /* Début d'une synchronisation de groupes de calendriers : anneau de progression visible. */
+    void MainWindow::CalendarSyncBegin()
+    {
+        ++m_calendar_sync_pending;
+        CalendarSyncRing().Visibility(Visibility::Visible);
+        CalendarSyncRing().IsActive(true);
+    }
+
+    /* Fin d'une synchronisation : l'anneau disparaît quand toutes sont terminées. */
+    void MainWindow::CalendarSyncEnd()
+    {
+        if (--m_calendar_sync_pending > 0)
+            return;
+        m_calendar_sync_pending = 0;
+        CalendarSyncRing().IsActive(false);
+        CalendarSyncRing().Visibility(Visibility::Collapsed);
     }
 
     /* Reconstruit m_calendar_sources : calendriers EDS (sans repères ni personnes) fusionnés de nouveau
