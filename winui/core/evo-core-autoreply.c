@@ -197,7 +197,7 @@ autoreply_http (EvoCore *core,
 		else if (status == 403)
 			g_set_error (error, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED,
 				provider == AUTOREPLY_PROVIDER_GMAIL
-				? "Autorisation insuffisante : la portée OAuth2 « gmail.settings.basic » est requise ; reconnectez le compte Google pour l'accorder (%s)."
+				? "Gmail : autorisation manquante. Supprimez puis ajoutez de nouveau le compte Google pour accorder la gestion des réponses automatiques (%s)."
 				: "Autorisation insuffisante : la permission « MailboxSettings.ReadWrite » est requise (consentement de l'administrateur possible) ; reconnectez le compte (%s).",
 				detail ? detail : "accès refusé");
 		else
@@ -298,6 +298,10 @@ autoreply_graph_get (EvoCore *core,
 	settings->external_message = autoreply_plain_from_html (
 		json_object_get_string_member_with_default (object, "externalReplyMessage", ""));
 	settings->subject = g_strdup ("");
+
+	g_message ("auto-reply Graph : status=%s, message interne=%u octets, externe=%u octets (texte), champs=%u",
+		status, (guint) strlen (settings->internal_message), (guint) strlen (settings->external_message),
+		json_object_get_size (object));
 
 	/* Graph renvoie toujours des dates ; elles ne comptent qu'en mode "scheduled" */
 	if (g_strcmp0 (status, "scheduled") == 0) {

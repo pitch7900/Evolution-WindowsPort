@@ -312,6 +312,7 @@ Dans Microsoft 365 / Exchange Online, les utilisateurs disposent souvent d'une b
 - [ ] **Options** :
   - [x] 🟢 Activer / désactiver ; plage de dates ou durée indéterminée _(à valider sur un compte réel)_
   - [ ] 🟢 Messages distincts interne / externe (éditeur HTML) _(messages distincts en texte brut faits ; éditeur HTML restant ; Gmail n'a qu'un message)_
+  - [ ] 🟢 Messages en HTML éditables (réutiliser l'éditeur WebView2 des signatures) et zones de saisie interne / externe de même taille _(tailles harmonisées ; retour de test : textes Exchange non affichés dans la fenêtre, voir journal « auto-reply Graph »)_
   - [x] 🟢 Externe : tous les expéditeurs ou seulement les contacts _(plus « personne » ; à valider sur un compte réel)_
   - [ ] 🟡 Exchange / M365 : bloquer le calendrier, refuser les nouvelles invitations, annuler les réunions de la période
 - [x] 🟢 **Indicateur visible** : bandeau « Réponses automatiques activées pour ce compte » + _Désactiver_ ; rappel à l'ouverture si la période est expirée
@@ -707,6 +708,7 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
 - [x] 🟢 **Ajouter du temps de travail individuel** (bloc « focus » sans participants, bouton ruban dédié et durée 2h préremplie)
 - [x] 🟡 **Répondre aux invitations reçues** depuis le volet de lecture du Mail (Accepter / Provisoire / Refuser) <a id="demo-invitations"></a>
   - [ ] _Proposer un nouvel horaire_ (iTIP `COUNTER`) : non traité pour l'instant
+  - [ ] Création d'invitation : choix du compte / de l'adresse expéditrice dans la fenêtre d'édition d'événement et envoi réel des invitations aux participants (retour de test : l'invitation créée n'est jamais reçue)
 - [ ] 🔴 **Affichage Planification** (Scheduling Assistant) : une ligne par personne / ressource, heures en abscisse, créneaux libres / occupés / provisoires / absent (EWS `GetUserAvailability`, Graph `getSchedule`, CalDAV free-busy), suggestion de créneau commun
 - [ ] 🟡 **Glisser-déposer d'un email vers le calendrier** pour créer un rendez-vous
 - [ ] 🟠 **Emplacement de travail** par jour / créneau (bureau, télétravail, hors ligne), synchronisé avec Exchange Online si disponible, visible en vue Planification
@@ -744,6 +746,8 @@ Constat : sur un compte Exchange Online / Microsoft 365 (ex. EVAM), EvolutionWin
 - [ ] 🟡 **Carnet d'adresses global** (GAL) Exchange / M365 : recherche et sélection des destinataires (backend evolution-ews) <a id="demo-gal"></a>
   - [x] Moteur : `evo_core_search_gal` (Microsoft Graph `GET /users?$search=` pour Microsoft 365 / Exchange Online, API People `searchDirectoryPeople` pour Google Workspace) avec le jeton OAuth2 du compte ; _reste à valider sur un tenant réel_ (Microsoft 365 et Google Workspace)
   - [x] Consultation : bouton « Annuaire de l'organisation » dans la vue Contacts (recherche dès 2 caractères, fiche en lecture seule : fonction, service, société, téléphones, bureau, bouton _Écrire un message_)
+  - [ ] Bouton « Annuaire de l'organisation » placé sous chaque compte concerné (et non en bas de la liste des carnets)
+  - [ ] Fiche annuaire : adresse postale (rue, ville, code postal, pays), numéros manquants et photo du profil (Graph `/users/{id}/photo/$value`)
   - [ ] Exchange sur site (EWS `ResolveNames`) : non pris en charge (les carnets GAL EDS d'EWS restent visibles dans les carnets habituels)
 - Contacts unifiés et doublons : cf. §11 ; recherche rapide de contacts : cf. §10 ; export par glisser-déposer vers l'extérieur : cf. §18
 - [ ] 🟡 **Fenêtre de sélection de destinataires** (carnet d'adresses, comme le bouton _À…_ d'Outlook) :

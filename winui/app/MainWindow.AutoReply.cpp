@@ -326,8 +326,7 @@ namespace winrt::EvolutionWin::implementation
             box.Header(box_value(header));
             box.AcceptsReturn(true);
             box.TextWrapping(TextWrapping::Wrap);
-            box.MinHeight(90);
-            box.MaxHeight(180);
+            box.Height(150);
             return box;
         };
         TextBox internal_box = make_message_box(AR::Tr(AR::Str::InternalMessage, english));
