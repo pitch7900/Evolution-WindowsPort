@@ -835,3 +835,209 @@ evo_core_respond_invitation (EvoCore *core,
 
 	core_submit (core, core_respond_invitation_run, g_strdupv (args), func, user_data);
 }
+
+/* Envoie les invitations (iTIP METHOD:REQUEST) d'un événement de l'agenda à ses
+ * participants, depuis l'adresse d'un compte de messagerie. L'organisateur est
+ * posé s'il manque (adresse du compte), chaque participant reçoit RSVP=TRUE.
+ * Paramètres :
+ *   args : [0] compte expéditeur, [1] identifiant de l'agenda, [2] uid de l'événement
+ * Retourne : {"sent": nombre de destinataires, "to": "a@b.c, d@e.f"} ou NULL. */
+static gchar *
+core_send_event_invitations_run (EvoCore *core,
+				 gchar **args,
+				 GError **error)
+{
+	ESource *source = NULL;
+	ECalClient *client = NULL;
+	ICalComponent *icomp = NULL, *vcalendar = NULL, *copy = NULL;
+	ICalProperty *prop;
+	CamelMimeMessage *message = NULL;
+	CamelMultipart *alternative = NULL;
+	CamelMimePart *human = NULL, *calendar_part = NULL;
+	CamelInternetAddress *from = NULL, *to = NULL;
+	GString *recipients = g_string_new (NULL);
+	gchar *address = NULL, *name = NULL, *json = NULL, *ics = NULL, *organizer_uri = NULL, *subject = NULL, *body = NULL;
+	gchar *when = NULL;
+	guint count = 0;
+	gboolean organizer_missing;
+
+	address = itip_identity_address (core, args[0], &name);
+	if (!address || !*address) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+			"Ce compte n'a pas d'adresse d'expéditeur : choisissez un autre compte pour envoyer les invitations.");
+		goto exit;
+	}
+
+	source = e_source_registry_ref_source (core->registry, args[1]);
+	if (!source) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "Agenda introuvable");
+		goto exit;
+	}
+	client = E_CAL_CLIENT (e_cal_client_connect_sync (source, E_CAL_CLIENT_SOURCE_TYPE_EVENTS, 10, core->cancellable, error));
+	if (!client)
+		goto exit;
+	if (!e_cal_client_get_object_sync (client, args[2], NULL, &icomp, core->cancellable, error))
+		goto exit;
+
+	/* organisateur : adresse du compte choisi, s'il n'y en a pas déjà un */
+	organizer_uri = g_strconcat ("mailto:", address, NULL);
+	organizer_missing = !(prop = i_cal_component_get_first_property (icomp, I_CAL_ORGANIZER_PROPERTY));
+	if (prop)
+		g_object_unref (prop);
+	if (organizer_missing) {
+		ICalParameter *cn;
+
+		prop = i_cal_property_new_organizer (organizer_uri);
+		if (name && *name) {
+			cn = i_cal_parameter_new_cn (name);
+			i_cal_property_take_parameter (prop, cn);
+		}
+		i_cal_component_take_property (icomp, prop);
+	}
+
+	/* destinataires : tous les participants sauf l'organisateur ; réponse demandée */
+	to = camel_internet_address_new ();
+	for (prop = i_cal_component_get_first_property (icomp, I_CAL_ATTENDEE_PROPERTY); prop;
+	     g_object_unref (prop), prop = i_cal_component_get_next_property (icomp, I_CAL_ATTENDEE_PROPERTY)) {
+		const gchar *value = i_cal_property_get_attendee (prop);
+		const gchar *mail = value && g_ascii_strncasecmp (value, "mailto:", 7) == 0 ? value + 7 : value;
+		ICalParameter *rsvp;
+
+		if (!mail || !*mail || g_ascii_strcasecmp (mail, address) == 0)
+			continue;
+		rsvp = i_cal_property_get_first_parameter (prop, I_CAL_RSVP_PARAMETER);
+		if (!rsvp) {
+			rsvp = i_cal_parameter_new_rsvp (I_CAL_RSVP_TRUE);
+			i_cal_property_take_parameter (prop, rsvp);
+		} else {
+			g_object_unref (rsvp);
+		}
+		camel_internet_address_add (to, NULL, mail);
+		if (count++)
+			g_string_append (recipients, ", ");
+		g_string_append (recipients, mail);
+	}
+
+	if (count == 0) {
+		json = g_strdup ("{\"sent\":0,\"to\":\"\"}");
+		goto exit;
+	}
+
+	/* mémorise l'organisateur sur l'événement (les réponses reviennent à cette adresse) */
+	e_cal_client_modify_object_sync (client, icomp, E_CAL_OBJ_MOD_ALL, E_CAL_OPERATION_FLAG_NONE,
+			core->cancellable, NULL);
+
+	/* VCALENDAR METHOD:REQUEST contenant l'événement */
+	vcalendar = i_cal_component_new_vcalendar ();
+	i_cal_component_take_property (vcalendar, i_cal_property_new_prodid ("-//EvolutionWin//Evolution for Windows//FR"));
+	i_cal_component_take_property (vcalendar, i_cal_property_new_version ("2.0"));
+	i_cal_component_take_property (vcalendar, i_cal_property_new_method (I_CAL_METHOD_REQUEST));
+	copy = i_cal_component_clone (icomp);
+	i_cal_component_add_component (vcalendar, copy);
+	ics = i_cal_component_as_ical_string (vcalendar);
+
+	{
+		ICalTime *dtstart = i_cal_component_get_dtstart (icomp);
+		const gchar *summary = i_cal_component_get_summary (icomp);
+
+		if (dtstart && !i_cal_time_is_null_time (dtstart)) {
+			time_t start = i_cal_time_as_timet_with_zone (dtstart, i_cal_time_get_timezone (dtstart));
+			GDateTime *date = g_date_time_new_from_unix_local ((gint64) start);
+
+			when = g_date_time_format (date, i_cal_time_is_date (dtstart) ? "%d/%m/%Y" : "%d/%m/%Y %H:%M");
+			g_date_time_unref (date);
+		}
+		subject = g_strdup_printf ("Invitation : %s", summary && *summary ? summary : "(Sans titre)");
+		body = g_strdup_printf ("%s vous invite à : %s%s%s\r\n\r\n"
+			"Ouvrez ce message dans un client de messagerie compatible pour accepter, refuser ou répondre « provisoire ».\r\n",
+			name && *name ? name : address, summary && *summary ? summary : "(Sans titre)",
+			when ? "\r\nQuand : " : "", when ? when : "");
+		g_clear_object (&dtstart);
+	}
+
+	from = camel_internet_address_new ();
+	camel_internet_address_add (from, name, address);
+
+	message = camel_mime_message_new ();
+	alternative = camel_multipart_new ();
+	human = camel_mime_part_new ();
+	calendar_part = camel_mime_part_new ();
+
+	camel_data_wrapper_set_mime_type (CAMEL_DATA_WRAPPER (alternative), "multipart/alternative");
+	camel_multipart_set_boundary (alternative, NULL);
+	camel_mime_part_set_content (human, body, strlen (body), "text/plain; charset=utf-8");
+	camel_mime_part_set_encoding (human, CAMEL_TRANSFER_ENCODING_QUOTEDPRINTABLE);
+	camel_multipart_add_part (alternative, human);
+	camel_mime_part_set_content (calendar_part, ics, strlen (ics), "text/calendar; charset=utf-8; method=REQUEST");
+	camel_mime_part_set_encoding (calendar_part, CAMEL_TRANSFER_ENCODING_QUOTEDPRINTABLE);
+	camel_multipart_add_part (alternative, calendar_part);
+
+	camel_mime_message_set_subject (message, subject);
+	camel_medium_set_content (CAMEL_MEDIUM (message), CAMEL_DATA_WRAPPER (alternative));
+	camel_mime_message_set_from (message, from);
+	camel_mime_message_set_recipients (message, CAMEL_RECIPIENT_TYPE_TO, to);
+	camel_mime_message_set_date (message, CAMEL_MESSAGE_DATE_CURRENT, 0);
+	camel_mime_message_set_message_id (message, NULL);
+	camel_medium_set_header (CAMEL_MEDIUM (message), "X-Mailer", "Evolution for Windows");
+
+	if (itip_send_via_account (core, args[0], message, from, to, error)) {
+		JsonBuilder *builder = json_builder_new ();
+
+		json_builder_begin_object (builder);
+		json_builder_set_member_name (builder, "sent");
+		json_builder_add_int_value (builder, count);
+		builder_add_string (builder, "to", recipients->str);
+		json_builder_end_object (builder);
+		json = json_from_builder (builder);
+		g_object_unref (builder);
+	}
+
+ exit:
+	g_string_free (recipients, TRUE);
+	g_free (address);
+	g_free (name);
+	g_free (organizer_uri);
+	g_free (subject);
+	g_free (body);
+	g_free (when);
+	g_free (ics);
+	g_clear_object (&message);
+	g_clear_object (&alternative);
+	g_clear_object (&human);
+	g_clear_object (&calendar_part);
+	g_clear_object (&from);
+	g_clear_object (&to);
+	g_clear_object (&vcalendar);
+	g_clear_object (&icomp);
+	g_clear_object (&client);
+	g_clear_object (&source);
+
+	return json;
+}
+
+/* Soumet l'envoi des invitations d'un événement à ses participants (voir
+ * evo_core_send_event_invitations dans evo-core.h).
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   account_uid  : compte de messagerie dont l'adresse envoie les invitations
+ *   calendar_uid : agenda contenant l'événement
+ *   event_uid    : identifiant de l'événement
+ *   func         : rappel recevant {"sent": nombre, "to": "adresses"}
+ *   user_data    : données utilisateur transmises au rappel */
+void
+evo_core_send_event_invitations (EvoCore *core,
+				 const char *account_uid,
+				 const char *calendar_uid,
+				 const char *event_uid,
+				 EvoCoreResultFunc func,
+				 void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, (gchar *) calendar_uid, (gchar *) event_uid, NULL };
+
+	g_return_if_fail (core != NULL);
+	g_return_if_fail (account_uid != NULL);
+	g_return_if_fail (calendar_uid != NULL);
+	g_return_if_fail (event_uid != NULL);
+
+	core_submit (core, core_send_event_invitations_run, g_strdupv (args), func, user_data);
+}

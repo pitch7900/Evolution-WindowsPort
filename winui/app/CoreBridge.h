@@ -669,6 +669,16 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Envoie par messagerie les invitations (iTIP REQUEST) d'un événement à ses participants,
+         * depuis l'adresse du compte sender_uid : {"sent": nombre, "to": "adresses"}. */
+        void SendEventInvitations(winrt::hstring const& sender_uid, winrt::hstring const& calendar_uid,
+                                  winrt::hstring const& event_uid, CoreHandler handler)
+        {
+            evo_core_send_event_invitations(m_core, winrt::to_string(sender_uid).c_str(),
+                winrt::to_string(calendar_uid).c_str(), winrt::to_string(event_uid).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Équipe de l'utilisateur (responsable, collaborateurs, collègues) : [{"name", "email", "relation"}]. */
         void ListTeam(winrt::hstring const& account, CoreHandler handler)
         {

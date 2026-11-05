@@ -188,6 +188,26 @@ void		evo_core_respond_invitation	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Envoie par messagerie les invitations (iTIP METHOD:REQUEST, texte lisible +
+ * pièce text/calendar) d'un événement de l'agenda à ses participants, depuis
+ * l'adresse du compte choisi. À utiliser pour les agendas dont le serveur n'envoie
+ * pas lui-même les invitations (agenda local, abonnements) ; Exchange Online et
+ * Google Agenda les envoient eux-mêmes. L'organisateur de l'événement est posé
+ * (adresse du compte) s'il manque, et une réponse (RSVP) est demandée.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   account_uid  : compte de messagerie dont l'adresse envoie les invitations
+ *   calendar_uid : agenda contenant l'événement
+ *   event_uid    : identifiant de l'événement
+ *   func         : rappel recevant {"sent": nombre de destinataires, "to": "adresses"}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_send_event_invitations	(EvoCore *core,
+						 const char *account_uid,
+						 const char *calendar_uid,
+						 const char *event_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Envoie tous les messages en attente dans la Boîte d'envoi locale
  * ("local" / "Outbox") via leurs comptes respectifs. */
 void		evo_core_send_unsent_messages	(EvoCore *core);

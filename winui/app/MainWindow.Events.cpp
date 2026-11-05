@@ -922,6 +922,38 @@ namespace winrt::EvolutionWin::implementation
         }
         panel.Children().Append(attendees_box);
 
+        /* invitations : compte de messagerie expéditeur (adresse de l'organisateur) */
+        ComboBox sender_combo;
+        sender_combo.Header(box_value(Tr(L"Envoyer les invitations depuis", L"Send invitations from")));
+        sender_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
+        std::vector<hstring> sender_uids;
+        {
+            int selected = -1;
+            for (auto const& value : m_accounts ? m_accounts : JsonArray{})
+            {
+                auto account = value.GetObject();
+                hstring address = account.GetNamedString(L"address", L"");
+                if (account.GetNamedBoolean(L"local", false) || address.empty())
+                    continue;
+                hstring uid = account.GetNamedString(L"uid", L"");
+                hstring name = account.GetNamedString(L"name", address);
+                sender_combo.Items().Append(box_value(name == address ? address : name + L" <" + address + L">"));
+                if (selected < 0 && (uid == m_account || (m_account.empty() && account.GetNamedBoolean(L"default", false))))
+                    selected = static_cast<int>(sender_uids.size());
+                sender_uids.push_back(uid);
+            }
+            if (!sender_uids.empty())
+                sender_combo.SelectedIndex(selected >= 0 ? selected : 0);
+        }
+        CheckBox invite_check;
+        invite_check.Content(box_value(Tr(L"Envoyer les invitations aux participants", L"Send invitations to attendees")));
+        invite_check.IsChecked(true);
+        if (!readonly && !sender_uids.empty())
+        {
+            panel.Children().Append(sender_combo);
+            panel.Children().Append(invite_check);
+        }
+
         /* organisateur et participants (lecture seule) */
         if (existing)
         {
@@ -1063,11 +1095,20 @@ namespace winrt::EvolutionWin::implementation
             payload.SetNamedValue(L"attendees", list);
         }
 
+        /* compte expéditeur des invitations : vide si aucune invitation à envoyer */
+        hstring sender_uid;
+        if (invite_check.IsChecked() && invite_check.IsChecked().GetBoolean() && !readonly &&
+            payload.GetNamedArray(L"attendees", JsonArray{}).Size() > 0 &&
+            sender_combo.SelectedIndex() >= 0 && static_cast<size_t>(sender_combo.SelectedIndex()) < sender_uids.size())
+            sender_uid = sender_uids[sender_combo.SelectedIndex()];
+
         if (existing)
         {
             payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(event.GetNamedString(L"calendar_uid", L"")));
             payload.SetNamedValue(L"uid", JsonValue::CreateStringValue(event.GetNamedString(L"uid", L"")));
-            m_core->ModifyEvent(payload.Stringify(), [this](hstring const&, hstring const& error)
+            hstring edit_calendar = event.GetNamedString(L"calendar_uid", L"");
+            hstring edit_uid = event.GetNamedString(L"uid", L"");
+            m_core->ModifyEvent(payload.Stringify(), [this, sender_uid, edit_calendar, edit_uid](hstring const&, hstring const& error)
             {
                 if (!error.empty())
                 {
@@ -1076,6 +1117,7 @@ namespace winrt::EvolutionWin::implementation
                 }
                 ShowStatus(L"Événement modifié.", InfoBarSeverity::Success);
                 LoadEvents();
+                SendEventInvitations(sender_uid, edit_calendar, edit_uid);
             });
             co_return;
         }
@@ -1083,7 +1125,8 @@ namespace winrt::EvolutionWin::implementation
         if (hstring active = ActiveCalendarUid(); !active.empty())
             payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(active));
 
-        m_core->CreateEvent(payload.Stringify(), [this](hstring const&, hstring const& error)
+        hstring create_calendar = payload.GetNamedString(L"calendar_uid", L"");
+        m_core->CreateEvent(payload.Stringify(), [this, sender_uid, create_calendar](hstring const& json, hstring const& error)
         {
             if (!error.empty())
             {
@@ -1092,6 +1135,46 @@ namespace winrt::EvolutionWin::implementation
             }
             ShowStatus(L"Événement enregistré.", InfoBarSeverity::Success);
             LoadEvents();
+            JsonObject created;
+            if (JsonObject::TryParse(json, created))
+                SendEventInvitations(sender_uid, create_calendar, created.GetNamedString(L"uid", L""));
+        });
+    }
+
+    /**
+     * @brief Envoie les invitations d'un événement à ses participants lorsque le calendrier ne le
+     *        fait pas lui-même (agenda local, abonnement) ; Exchange Online, Exchange et Google
+     *        Agenda envoient leurs invitations côté serveur.
+     * @param sender_uid Compte de messagerie expéditeur ("" : aucune invitation).
+     * @param calendar_uid Agenda de l'événement.
+     * @param event_uid Identifiant de l'événement enregistré.
+     */
+    void MainWindow::SendEventInvitations(hstring const& sender_uid, hstring const& calendar_uid, hstring const& event_uid)
+    {
+        if (sender_uid.empty() || calendar_uid.empty() || event_uid.empty())
+            return;
+
+        for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
+        {
+            auto source = value.GetObject();
+            if (source.GetNamedString(L"uid", L"") != calendar_uid)
+                continue;
+            hstring backend = source.GetNamedString(L"backend", L"");
+            if (backend == L"microsoft365" || backend == L"ews" || backend == L"google")
+                return;   /* le serveur envoie les invitations */
+        }
+
+        m_core->SendEventInvitations(sender_uid, calendar_uid, event_uid, [this](hstring const& json, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                ShowStatus(Tr(L"Invitations non envoyées : ", L"Invitations not sent: ") + error, InfoBarSeverity::Error);
+                return;
+            }
+            JsonObject result;
+            if (JsonObject::TryParse(json, result) && result.GetNamedNumber(L"sent", 0) > 0)
+                ShowStatus(Tr(L"Invitations envoyées à : ", L"Invitations sent to: ") + result.GetNamedString(L"to", L""),
+                    InfoBarSeverity::Success);
         });
     }
 

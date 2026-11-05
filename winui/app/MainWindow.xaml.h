@@ -232,6 +232,7 @@ namespace winrt::EvolutionWin::implementation
         hstring m_gal_account;   ///< compte interrogé par l'annuaire ("" : tous les comptes)
         void OnGalDirectoryForAccount(hstring const& account_uid);
         hstring PeopleCalendarAccountUid();
+        void SendEventInvitations(hstring const& sender_uid, hstring const& calendar_uid, hstring const& event_uid);
         winrt::fire_and_forget ShowPeopleCalendarsDialogAsync();
         void ShowDirectoryPhoto(Windows::Data::Json::JsonObject const& contact);
         Microsoft::UI::Xaml::DispatcherTimer m_gal_timer{ nullptr };
