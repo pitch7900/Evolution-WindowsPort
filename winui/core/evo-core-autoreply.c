@@ -238,7 +238,65 @@ autoreply_parse_response (GBytes *bytes,
 static gchar *
 autoreply_plain_from_html (const gchar *html)
 {
-	return html && *html ? html_to_text (html) : g_strdup ("");
+	gchar *text, *normalized, **lines, *joined;
+	GString *out;
+	guint ii;
+	gboolean previous_blank = TRUE;
+
+	if (!html || !*html)
+		return g_strdup ("");
+
+	text = html_to_text (html);
+
+	/* espaces insécables en espaces ; l'indentation du HTML ne doit pas se retrouver
+	 * dans le texte (lignes rognées, espaces multiples réduits à un seul) */
+	normalized = g_strdup (text);
+	g_free (text);
+	{
+		gchar **split = g_strsplit (normalized, "\xC2\xA0", -1);
+
+		g_free (normalized);
+		normalized = g_strjoinv (" ", split);
+		g_strfreev (split);
+	}
+
+	lines = g_strsplit (normalized, "\n", -1);
+	out = g_string_new (NULL);
+	for (ii = 0; lines[ii]; ii++) {
+		gchar *line = g_strdelimit (g_strdup (lines[ii]), "\t\r", ' ');
+		gchar *read, *write;
+		gboolean in_space = FALSE;
+
+		g_strstrip (line);
+		for (read = write = line; *read; read++) {
+			if (*read == ' ') {
+				if (in_space)
+					continue;
+				in_space = TRUE;
+			} else {
+				in_space = FALSE;
+			}
+			*write++ = *read;
+		}
+		*write = '\0';
+
+		if (!*line) {
+			/* au plus une ligne vide d'affilée, aucune en tête */
+			if (!previous_blank)
+				g_string_append_c (out, '\n');
+			previous_blank = TRUE;
+		} else {
+			g_string_append (out, line);
+			g_string_append_c (out, '\n');
+			previous_blank = FALSE;
+		}
+		g_free (line);
+	}
+	joined = g_string_free (out, FALSE);
+	g_strfreev (lines);
+	g_free (normalized);
+
+	return g_strstrip (joined);
 }
 
 /* HTML d'un texte brut (échappé, retours à la ligne en <br>). */

@@ -315,7 +315,6 @@ namespace winrt::EvolutionWin::implementation
         audience_combo.Items().Append(box_value(AR::Tr(AR::Str::AudienceKnown, english)));
         audience_combo.Items().Append(box_value(AR::Tr(AR::Str::AudienceAll, english)));
         audience_combo.SelectedIndex(2);
-        form_panel.Children().Append(audience_combo);
 
         TextBox subject_box;
         subject_box.Header(box_value(AR::Tr(AR::Str::Subject, english)));
@@ -343,20 +342,39 @@ namespace winrt::EvolutionWin::implementation
         TextBox internal_box = make_message_box(AR::Tr(AR::Str::InternalMessage, english));
         TextBox external_box = make_message_box(AR::Tr(AR::Str::ExternalMessage, english));
 
-        Grid messages_grid;
-        messages_grid.Height(380);
-        messages_grid.RowSpacing(12);
-        for (int row = 0; row < 2; ++row)
+        /* deux onglets comme Outlook : au sein de l'organisation / en dehors de l'organisation */
+        internal_box.Height(260);
+        external_box.Height(210);
+
+        SelectorBar message_tabs;
+        SelectorBarItem tab_internal;
+        tab_internal.Text(::EvolutionWin::Helpers::Tr(L"Au sein de mon organisation", L"Inside my organization"));
+        SelectorBarItem tab_external;
+        tab_external.Text(::EvolutionWin::Helpers::Tr(L"En dehors de mon organisation", L"Outside my organization"));
+        message_tabs.Items().Append(tab_internal);
+        message_tabs.Items().Append(tab_external);
+        message_tabs.SelectedItem(tab_internal);
+        form_panel.Children().Append(message_tabs);
+
+        StackPanel internal_panel;
+        internal_panel.Spacing(8);
+        internal_panel.Children().Append(internal_box);
+
+        StackPanel external_panel;
+        external_panel.Spacing(8);
+        external_panel.Visibility(Visibility::Collapsed);
+        external_panel.Children().Append(audience_combo);
+        external_panel.Children().Append(external_box);
+
+        form_panel.Children().Append(internal_panel);
+        form_panel.Children().Append(external_panel);
+
+        message_tabs.SelectionChanged([internal_panel, external_panel, tab_external](SelectorBar const& sender, SelectorBarSelectionChangedEventArgs const&)
         {
-            RowDefinition definition;
-            definition.Height(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
-            messages_grid.RowDefinitions().Append(definition);
-        }
-        Grid::SetRow(internal_box, 0);
-        Grid::SetRow(external_box, 1);
-        messages_grid.Children().Append(internal_box);
-        messages_grid.Children().Append(external_box);
-        form_panel.Children().Append(messages_grid);
+            bool outside = sender.SelectedItem() == tab_external;
+            internal_panel.Visibility(outside ? Visibility::Collapsed : Visibility::Visible);
+            external_panel.Visibility(outside ? Visibility::Visible : Visibility::Collapsed);
+        });
 
         TextBlock note;
         note.Style(caption_style);
@@ -365,7 +383,11 @@ namespace winrt::EvolutionWin::implementation
         form_panel.Children().Append(note);
 
         panel.Children().Append(form);
-        dialog.Content(panel);
+        ScrollViewer scroll;
+        scroll.VerticalScrollBarVisibility(ScrollBarVisibility::Auto);
+        scroll.MaxHeight(620);
+        scroll.Content(panel);
+        dialog.Content(scroll);
 
         /* réglages lus : fournisseur retenu pour la validation et l'affichage */
         auto provider = std::make_shared<std::string>();
@@ -406,8 +428,10 @@ namespace winrt::EvolutionWin::implementation
             if (s.single_message)
             {
                 /* un seul message : zone unique « Message de réponse » + objet */
-                internal_box.Visibility(Visibility::Collapsed);
-                messages_grid.RowDefinitions().GetAt(0).Height(GridLengthHelper::FromPixels(0));
+                /* Gmail : un seul message : pas d'onglets, seule la zone « message de réponse » */
+                message_tabs.Visibility(Visibility::Collapsed);
+                internal_panel.Visibility(Visibility::Collapsed);
+                external_panel.Visibility(Visibility::Visible);
                 external_box.Header(box_value(AR::Tr(AR::Str::SingleMessage, english)));
                 subject_box.Visibility(Visibility::Visible);
                 note.Text(AR::Tr(AR::Str::GmailNote, english));
