@@ -229,6 +229,9 @@ namespace winrt::EvolutionWin::implementation
         void SearchGalDirectory(hstring const& query);
         bool m_gal_mode{ false };
         uint64_t m_gal_request{ 0 };
+        hstring m_gal_account;   ///< compte interrogé par l'annuaire ("" : tous les comptes)
+        void OnGalDirectoryForAccount(hstring const& account_uid);
+        void ShowDirectoryPhoto(Windows::Data::Json::JsonObject const& contact);
         Microsoft::UI::Xaml::DispatcherTimer m_gal_timer{ nullptr };
 
         /* Gestionnaires des tâches */

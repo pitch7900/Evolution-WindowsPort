@@ -25,7 +25,7 @@
 
 /* Champs Graph demandés : l'ensemble complet (portée User.Read.All) puis le
  * jeu de base seul (portée User.ReadBasic.All, sans consentement administrateur). */
-#define GAL_GRAPH_SELECT_FULL	"displayName,givenName,surname,mail,userPrincipalName,jobTitle,department,companyName,officeLocation,mobilePhone,businessPhones"
+#define GAL_GRAPH_SELECT_FULL	"displayName,givenName,surname,mail,userPrincipalName,jobTitle,department,companyName,officeLocation,mobilePhone,businessPhones,faxNumber,streetAddress,city,state,postalCode,country"
 #define GAL_GRAPH_SELECT_BASIC	"displayName,givenName,surname,mail,userPrincipalName"
 
 /**
@@ -218,7 +218,7 @@ gal_google_search_url (const char *term,
 		return 0;
 
 	written = snprintf (out, cap,
-		"%s?query=%s&pageSize=%d&readMask=names,emailAddresses,organizations,phoneNumbers,locations"
+		"%s?query=%s&pageSize=%d&readMask=names,emailAddresses,organizations,phoneNumbers,locations,addresses,photos"
 		"&sources=DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE&sources=DIRECTORY_SOURCE_TYPE_DOMAIN_CONTACT",
 		GAL_GOOGLE_PEOPLE_URI, encoded, gal_clamp_limit (limit));
 	return written > 0 && (size_t) written < cap;

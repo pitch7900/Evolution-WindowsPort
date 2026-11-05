@@ -2051,6 +2051,8 @@
 
                     <StackPanel x:Name="ContactDetailPane" Spacing="12" Visibility="Collapsed">
 
+                        <PersonPicture x:Name="ContactPhoto" Width="96" Height="96" HorizontalAlignment="Left" Visibility="Collapsed" />
+
                         <TextBlock x:Name="ContactNameText" Style="{StaticResource TitleTextBlockStyle}" IsTextSelectionEnabled="True" />
 
                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -2076,6 +2078,8 @@
                             <TextBlock x:Name="ContactOrgText" IsTextSelectionEnabled="True" />
 
                         </StackPanel>
+
+                        <StackPanel x:Name="ContactAddressRow" Orientation="Horizontal" Spacing="8" Visibility="Collapsed"><FontIcon Glyph="&#xE707;" FontSize="14" /><TextBlock x:Name="ContactAddressText" IsTextSelectionEnabled="True" TextWrapping="Wrap" /></StackPanel>
 
                         <TextBlock x:Name="ContactNotesText" TextWrapping="Wrap" IsTextSelectionEnabled="True"
 

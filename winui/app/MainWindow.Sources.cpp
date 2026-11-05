@@ -49,7 +49,8 @@ namespace winrt::EvolutionWin::implementation
      * Retourne : nom de la source active. */
     static hstring BuildSourcesPanel(StackPanel const& panel, JsonArray const& sources,
         std::vector<hstring> const& visible, hstring const& active,
-        std::function<void(hstring const&, bool)> on_toggle, std::function<void(hstring const&)> on_activate)
+        std::function<void(hstring const&, bool)> on_toggle, std::function<void(hstring const&)> on_activate,
+        std::function<void(StackPanel const&, JsonObject const&)> group_footer = nullptr)
     {
         auto children = panel.Children();
         children.Clear();
@@ -149,6 +150,20 @@ namespace winrt::EvolutionWin::implementation
                 row.Children().Append(label);
 
                 children.Append(row);
+            }
+
+            /* pied de groupe (ex. « Annuaire de l'organisation » du compte) */
+            if (group_footer)
+            {
+                for (auto const& value : sources)
+                {
+                    auto source = value.GetObject();
+                    if (group_title(source) == account && source.GetNamedString(L"group_name", L"").empty())
+                    {
+                        group_footer(panel, source);
+                        break;
+                    }
+                }
             }
         }
 
@@ -320,6 +335,7 @@ namespace winrt::EvolutionWin::implementation
 
     void MainWindow::RebuildContactBooksPanel()
     {
+        int directory_accounts = 0;
         hstring active_name = BuildSourcesPanel(ContactBooksPanel(), m_contact_books,
             VisibleBookUids(), ActiveBookUid(),
             [this](hstring const& uid, bool shown)
@@ -331,7 +347,27 @@ namespace winrt::EvolutionWin::implementation
             {
                 ::EvolutionWin::Settings::Instance().SetString(L"contacts.active", uid);
                 RebuildContactBooksPanel();
+            },
+            [this, &directory_accounts](StackPanel const& panel, JsonObject const& source)
+            {
+                hstring backend = source.GetNamedString(L"backend", L"");
+                hstring account_uid = source.GetNamedString(L"account_uid", L"");
+                if ((backend != L"microsoft365" && backend != L"google") || account_uid.empty())
+                    return;
+                ++directory_accounts;
+
+                HyperlinkButton directory;
+                directory.Content(box_value(::EvolutionWin::Helpers::Tr(L"Annuaire de l'organisation", L"Organization directory")));
+                directory.Padding(ThicknessHelper::FromLengths(4, 2, 4, 2));
+                directory.Click([this, account_uid](IInspectable const&, RoutedEventArgs const&)
+                {
+                    OnGalDirectoryForAccount(account_uid);
+                });
+                panel.Children().Append(directory);
             });
+
+        /* le bouton global ne sert que s'il n'y a aucun compte avec annuaire (message explicatif) */
+        GalDirectoryButton().Visibility(directory_accounts > 0 ? Visibility::Collapsed : Visibility::Visible);
 
         ActiveBookText().Text(active_name.empty() ? hstring{}
             : L"Nouveaux contacts dans : " + active_name);

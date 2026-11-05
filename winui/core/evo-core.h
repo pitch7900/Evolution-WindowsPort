@@ -896,6 +896,35 @@ void		evo_core_search_gal		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Comme evo_core_search_gal (), limité à un seul compte. Chaque entrée porte
+ * en plus "phone2" (autre numéro, fax), "address" (adresse postale sur une
+ * ligne), "photo_url" (URL de la photo, Google) et "account_uid".
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant (ou nom affiché) du compte Microsoft 365 / Google
+ *   text, max_count, func, user_data : voir evo_core_search_gal () */
+void		evo_core_search_gal_account	(EvoCore *core,
+						 const char *account_uid,
+						 const char *text,
+						 int max_count,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Photo de profil d'une personne de l'annuaire Microsoft 365 (Graph,
+ * /users/{adresse}/photo/$value).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte à interroger ("" : tous les comptes Microsoft 365)
+ *   email       : adresse de la personne
+ *   func        : rappel recevant {"photo": "data:image/jpeg;base64,..."},
+ *                 "photo" vide si la personne n'a pas de photo
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_get_gal_photo		(EvoCore *core,
+						 const char *account_uid,
+						 const char *email,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Comme evo_core_list_contacts (), limité aux carnets book_uids (uids
  * séparés par des virgules ; NULL ou "" : tous les carnets activés). */
 void		evo_core_list_book_contacts	(EvoCore *core,

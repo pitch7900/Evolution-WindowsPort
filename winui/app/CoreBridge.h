@@ -662,6 +662,20 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Annuaire d'un seul compte (identifiant ou nom affiché). */
+        void SearchGalAccount(winrt::hstring const& account, winrt::hstring const& text, int max_count, CoreHandler handler)
+        {
+            evo_core_search_gal_account(m_core, winrt::to_string(account).c_str(), winrt::to_string(text).c_str(), max_count,
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Photo de profil d'une personne de l'annuaire Microsoft 365 : {"photo": "data:image/jpeg;base64,..."}. */
+        void GetGalPhoto(winrt::hstring const& account, winrt::hstring const& email, CoreHandler handler)
+        {
+            evo_core_get_gal_photo(m_core, winrt::to_string(account).c_str(), winrt::to_string(email).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Contacts des seuls carnets book_uids (séparés par des virgules). */
         void ListBookContacts(winrt::hstring const& query, winrt::hstring const& book_uids, CoreHandler handler)
         {

@@ -3,6 +3,9 @@
 #include "MainWindow.Helpers.h"
 #include "Gal.h"
 
+#include <winrt/Windows.Security.Cryptography.h>
+#include <winrt/Windows.Storage.Streams.h>
+#include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
 #include <chrono>
 #include <string>
 #include <vector>
@@ -52,7 +55,12 @@ namespace winrt::EvolutionWin::implementation
             person.office = json.GetNamedString(L"office", L"");
             person.phone = json.GetNamedString(L"phone", L"");
             person.mobile = json.GetNamedString(L"mobile", L"");
+            person.phone2 = json.GetNamedString(L"phone2", L"");
+            person.address = json.GetNamedString(L"address", L"");
+            person.photo_url = json.GetNamedString(L"photo_url", L"");
             person.account = json.GetNamedString(L"account", L"");
+            person.account_uid = json.GetNamedString(L"account_uid", L"");
+            person.provider = json.GetNamedString(L"provider", L"");
             return person;
         }
     }
@@ -98,7 +106,17 @@ namespace winrt::EvolutionWin::implementation
      */
     void MainWindow::OnGalDirectoryClick(IInspectable const&, RoutedEventArgs const&)
     {
+        OnGalDirectoryForAccount(hstring{});
+    }
+
+    /**
+     * @brief Ouvre l'annuaire de l'organisation d'un compte (lien « Annuaire » sous le compte).
+     * @param account_uid Identifiant du compte à interroger ("" : tous les comptes).
+     */
+    void MainWindow::OnGalDirectoryForAccount(hstring const& account_uid)
+    {
         SetGalMode(true);
+        m_gal_account = account_uid;
         m_selected_contact = nullptr;
         ContactList().Items().Clear();
         ContactDetailPane().Visibility(Visibility::Collapsed);
@@ -160,7 +178,7 @@ namespace winrt::EvolutionWin::implementation
 
         AppendGalMessage(ContactList(), Tr(L"Recherche dans l'annuaire…", L"Searching the directory…"));
 
-        m_core->SearchGal(query, 30, [this, request](hstring const& json, hstring const& error)
+        m_core->SearchGalAccount(m_gal_account, query, 30, [this, request](hstring const& json, hstring const& error)
         {
             if (request != m_gal_request || !m_gal_mode)
                 return;   /* résultat périmé : une autre recherche ou un autre carnet est affiché */
@@ -198,6 +216,10 @@ namespace winrt::EvolutionWin::implementation
                 contact.SetNamedValue(L"note", JsonValue::CreateStringValue(
                     Gal::NoteLine(person, std::wstring_view{ office_label }, std::wstring_view{ directory_label })));
                 contact.SetNamedValue(L"gal", JsonValue::CreateBooleanValue(true));
+                contact.SetNamedValue(L"address", JsonValue::CreateStringValue(person.address));
+                contact.SetNamedValue(L"photo_url", JsonValue::CreateStringValue(person.photo_url));
+                contact.SetNamedValue(L"account_uid", JsonValue::CreateStringValue(person.account_uid));
+                contact.SetNamedValue(L"provider", JsonValue::CreateStringValue(person.provider));
 
                 StackPanel row;
                 row.Padding(ThicknessHelper::FromLengths(8, 6, 8, 6));
@@ -216,6 +238,75 @@ namespace winrt::EvolutionWin::implementation
 
                 items.Append(row);
             }
+        });
+    }
+
+    /**
+     * @brief Affiche la photo de profil d'une fiche d'annuaire (volet de détail des contacts).
+     *        Google : URL publique de la photo ; Microsoft 365 : lecture Graph /photo/$value ;
+     *        sinon (ou sans photo) initiales du nom. La photo est masquée pour un contact de carnet.
+     * @param contact Objet JSON de la fiche sélectionnée (clés gal, photo_url, provider, account_uid, email).
+     */
+    void MainWindow::ShowDirectoryPhoto(JsonObject const& contact)
+    {
+        if (!contact.GetNamedBoolean(L"gal", false))
+        {
+            ContactPhoto().Visibility(Visibility::Collapsed);
+            return;
+        }
+
+        hstring name = contact.GetNamedString(L"full_name", L"");
+        hstring email = contact.GetNamedString(L"email", L"");
+        hstring photo_url = contact.GetNamedString(L"photo_url", L"");
+
+        ContactPhoto().ProfilePicture(nullptr);
+        ContactPhoto().DisplayName(name);
+        ContactPhoto().Visibility(Visibility::Visible);
+
+        if (!photo_url.empty())
+        {
+            try
+            {
+                Microsoft::UI::Xaml::Media::Imaging::BitmapImage bitmap;
+                bitmap.UriSource(Windows::Foundation::Uri{ photo_url });
+                ContactPhoto().ProfilePicture(bitmap);
+            }
+            catch (...)
+            {
+            }
+            return;
+        }
+
+        if (contact.GetNamedString(L"provider", L"") != L"microsoft365" || email.empty())
+            return;
+
+        m_core->GetGalPhoto(contact.GetNamedString(L"account_uid", L""), email,
+            [this, email](hstring const& json, hstring const& error)
+        {
+            JsonObject result;
+            if (!error.empty() || !JsonObject::TryParse(json, result) || !m_selected_contact ||
+                m_selected_contact.GetNamedString(L"email", L"") != email)
+                return;   /* échec, ou une autre fiche est affichée entre-temps */
+
+            hstring data = result.GetNamedString(L"photo", L"");
+            constexpr std::wstring_view prefix = L"base64,";
+            std::wstring_view text{ data };
+            auto at = text.find(prefix);
+            if (at == std::wstring_view::npos)
+                return;
+
+            auto buffer = Windows::Security::Cryptography::CryptographicBuffer::DecodeFromBase64String(
+                hstring{ text.substr(at + prefix.size()) });
+            Windows::Storage::Streams::InMemoryRandomAccessStream stream;
+            Windows::Storage::Streams::DataWriter writer{ stream };
+            writer.WriteBuffer(buffer);
+            writer.StoreAsync().get();
+            writer.DetachStream();
+            stream.Seek(0);
+
+            Microsoft::UI::Xaml::Media::Imaging::BitmapImage bitmap;
+            bitmap.SetSource(stream);
+            ContactPhoto().ProfilePicture(bitmap);
         });
     }
 }

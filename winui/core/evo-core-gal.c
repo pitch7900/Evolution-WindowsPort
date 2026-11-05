@@ -266,6 +266,9 @@ typedef struct {
 	gchar *office;
 	gchar *phone;
 	gchar *mobile;
+	gchar *phone2;	/* autre numéro (2e téléphone professionnel, fax) */
+	gchar *address;	/* adresse postale sur une ligne */
+	gchar *photo_url;	/* URL publique de la photo (Google) */
 } GalPerson;
 
 static void
@@ -283,7 +286,40 @@ gal_person_free (gpointer data)
 	g_free (person->office);
 	g_free (person->phone);
 	g_free (person->mobile);
+	g_free (person->phone2);
+	g_free (person->address);
+	g_free (person->photo_url);
 	g_free (person);
+}
+
+/* Assemble une adresse postale sur une ligne : « rue, code ville, région, pays »
+ * (les éléments vides sont omis). Retourne une chaîne vide s'il n'y a rien. */
+static gchar *
+gal_join_address (const gchar *street,
+		  const gchar *postal_code,
+		  const gchar *city,
+		  const gchar *state,
+		  const gchar *country)
+{
+	GPtrArray *parts = g_ptr_array_new_with_free_func (g_free);
+	gchar *locality = g_strstrip (g_strdup_printf ("%s %s", postal_code ? postal_code : "", city ? city : ""));
+	gchar *result;
+
+	if (street && *street)
+		g_ptr_array_add (parts, g_strdup (street));
+	if (*locality)
+		g_ptr_array_add (parts, g_strdup (locality));
+	if (state && *state)
+		g_ptr_array_add (parts, g_strdup (state));
+	if (country && *country)
+		g_ptr_array_add (parts, g_strdup (country));
+	g_ptr_array_add (parts, NULL);
+
+	result = g_strjoinv (", ", (gchar **) parts->pdata);
+	g_ptr_array_unref (parts);
+	g_free (locality);
+
+	return result;
 }
 
 /* Adresse principale d'un utilisateur Graph : "mail", à défaut le nom
@@ -323,14 +359,34 @@ gal_person_from_graph (JsonObject *user)
 	person->office = g_strdup (gal_string_member (user, "officeLocation"));
 	person->mobile = g_strdup (gal_string_member (user, "mobilePhone"));
 	person->phone = g_strdup ("");
+	person->phone2 = g_strdup (gal_string_member (user, "faxNumber"));
+	person->photo_url = g_strdup ("");
+	person->address = gal_join_address (gal_string_member (user, "streetAddress"),
+		gal_string_member (user, "postalCode"), gal_string_member (user, "city"),
+		gal_string_member (user, "state"), gal_string_member (user, "country"));
 
 	phones = json_object_has_member (user, "businessPhones") ? json_object_get_member (user, "businessPhones") : NULL;
-	if (phones && JSON_NODE_HOLDS_ARRAY (phones) && json_array_get_length (json_node_get_array (phones)) > 0) {
-		JsonNode *first = json_array_get_element (json_node_get_array (phones), 0);
+	if (phones && JSON_NODE_HOLDS_ARRAY (phones)) {
+		JsonArray *array = json_node_get_array (phones);
+		guint ii;
 
-		if (first && JSON_NODE_HOLDS_VALUE (first) && json_node_get_value_type (first) == G_TYPE_STRING) {
-			g_free (person->phone);
-			person->phone = g_strdup (json_node_get_string (first));
+		for (ii = 0; ii < json_array_get_length (array); ii++) {
+			JsonNode *node = json_array_get_element (array, ii);
+			const gchar *number;
+
+			if (!node || !JSON_NODE_HOLDS_VALUE (node) || json_node_get_value_type (node) != G_TYPE_STRING)
+				continue;
+			number = json_node_get_string (node);
+			if (!number || !*number)
+				continue;
+			/* 1er numéro professionnel : téléphone ; suivants : « autre » (avant le fax) */
+			if (!*person->phone) {
+				g_free (person->phone);
+				person->phone = g_strdup (number);
+			} else if (!*person->phone2) {
+				g_free (person->phone2);
+				person->phone2 = g_strdup (number);
+			}
 		}
 	}
 
@@ -366,6 +422,9 @@ gal_person_from_google (JsonObject *entry)
 	person->office = g_strdup (*office ? office : gal_string_member (location, "buildingId"));
 	person->phone = g_strdup ("");
 	person->mobile = g_strdup ("");
+	person->phone2 = g_strdup ("");
+	person->address = g_strdup (gal_string_member (gal_first_object (entry, "addresses"), "formattedValue"));
+	person->photo_url = g_strdup (gal_string_member (gal_first_object (entry, "photos"), "url"));
 
 	if (phones && JSON_NODE_HOLDS_ARRAY (phones)) {
 		JsonArray *array = json_node_get_array (phones);
@@ -516,6 +575,7 @@ static void
 gal_add_person_json (JsonBuilder *builder,
 		     const GalPerson *person,
 		     const gchar *account,
+		     const gchar *account_uid,
 		     GalProvider provider)
 {
 	json_builder_begin_object (builder);
@@ -529,7 +589,11 @@ gal_add_person_json (JsonBuilder *builder,
 	builder_add_string (builder, "office", person->office ? person->office : "");
 	builder_add_string (builder, "phone", person->phone ? person->phone : "");
 	builder_add_string (builder, "mobile", person->mobile ? person->mobile : "");
+	builder_add_string (builder, "phone2", person->phone2 ? person->phone2 : "");
+	builder_add_string (builder, "address", person->address ? person->address : "");
+	builder_add_string (builder, "photo_url", person->photo_url ? person->photo_url : "");
 	builder_add_string (builder, "account", account);
+	builder_add_string (builder, "account_uid", account_uid);
 	builder_add_string (builder, "provider", provider == GAL_PROVIDER_GOOGLE ? "google" : "microsoft365");
 	json_builder_end_object (builder);
 }
@@ -578,6 +642,10 @@ core_search_gal_run (EvoCore *core,
 
 		if (!gal_collection_provider (source, &provider))
 			continue;
+		/* filtre optionnel : un seul compte (identifiant ou nom affiché) */
+		if (args[2] && *args[2] && g_strcmp0 (args[2], e_source_get_uid (source)) != 0 &&
+		    g_strcmp0 (args[2], account) != 0)
+			continue;
 		accounts++;
 
 		if (!gal_get_token (core, source, &token, &local_error)) {
@@ -608,7 +676,7 @@ core_search_gal_run (EvoCore *core,
 			if (g_hash_table_contains (seen, person->email))
 				continue;
 			g_hash_table_add (seen, g_strdup (person->email));
-			gal_add_person_json (builder, person, account, provider);
+			gal_add_person_json (builder, person, account, e_source_get_uid (source), provider);
 			found++;
 		}
 
@@ -646,11 +714,125 @@ evo_core_search_gal (EvoCore *core,
 		     void *user_data)
 {
 	gchar count_buf[16];
-	gchar *args[] = { (gchar *) (text ? text : ""), count_buf, NULL };
+	gchar *args[] = { (gchar *) (text ? text : ""), count_buf, (gchar *) "", NULL };
 
 	g_return_if_fail (core != NULL);
 
 	g_snprintf (count_buf, sizeof (count_buf), "%d", max_count > 0 ? max_count : 15);
 
 	core_submit (core, core_search_gal_run, g_strdupv (args), func, user_data);
+}
+
+
+/* Recherche dans l'annuaire d'un seul compte.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant (ou nom affiché) du compte Microsoft 365 / Google
+ *   text        : saisie de l'utilisateur
+ *   max_count   : nombre maximal de résultats
+ *   func        : rappel recevant le tableau JSON (voir evo_core_search_gal)
+ *   user_data   : données utilisateur transmises au rappel */
+void
+evo_core_search_gal_account (EvoCore *core,
+			     const char *account_uid,
+			     const char *text,
+			     int max_count,
+			     EvoCoreResultFunc func,
+			     void *user_data)
+{
+	gchar count_buf[16];
+	gchar *args[] = { (gchar *) (text ? text : ""), count_buf, (gchar *) (account_uid ? account_uid : ""), NULL };
+
+	g_return_if_fail (core != NULL);
+
+	g_snprintf (count_buf, sizeof (count_buf), "%d", max_count > 0 ? max_count : 15);
+
+	core_submit (core, core_search_gal_run, g_strdupv (args), func, user_data);
+}
+
+/* Photo de profil d'une personne de l'annuaire Microsoft 365 (Graph
+ * GET /users/{adresse}/photo/$value).
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = compte (identifiant ou nom, vide = tous), [1] = adresse
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : {"photo": "data:image/jpeg;base64,..."} ; "photo" vide si la
+ *   personne n'a pas de photo ou si la portée est insuffisante. */
+static gchar *
+core_gal_photo_run (EvoCore *core,
+		    gchar **args,
+		    GError **error)
+{
+	GList *sources, *slink;
+	JsonBuilder *builder;
+	gchar *json, *photo = NULL, *escaped;
+
+	escaped = g_uri_escape_string (args[1] ? args[1] : "", NULL, TRUE);
+	sources = e_source_registry_list_enabled (core->registry, E_SOURCE_EXTENSION_COLLECTION);
+
+	for (slink = sources; slink && !photo; slink = g_list_next (slink)) {
+		ESource *source = slink->data;
+		GalProvider provider;
+		gchar *token = NULL, *uri;
+		GBytes *bytes;
+		guint status = 0;
+
+		if (!gal_collection_provider (source, &provider) || provider != GAL_PROVIDER_MICROSOFT365)
+			continue;
+		if (args[0] && *args[0] && g_strcmp0 (args[0], e_source_get_uid (source)) != 0 &&
+		    g_strcmp0 (args[0], e_source_get_display_name (source)) != 0)
+			continue;
+		if (!gal_get_token (core, source, &token, NULL))
+			continue;
+
+		uri = g_strconcat ("https://graph.microsoft.com/v1.0/users/", escaped, "/photo/$value", NULL);
+		bytes = gal_http_get (core, provider, uri, token, &status, NULL);
+		if (bytes && status >= 200 && status < 300) {
+			gsize size = 0;
+			gconstpointer data = g_bytes_get_data (bytes, &size);
+
+			if (data && size > 0) {
+				gchar *base64 = g_base64_encode (data, size);
+
+				photo = g_strconcat ("data:image/jpeg;base64,", base64, NULL);
+				g_free (base64);
+			}
+		}
+		g_clear_pointer (&bytes, g_bytes_unref);
+		g_free (uri);
+		e_util_safe_free_string (token);
+	}
+	g_list_free_full (sources, g_object_unref);
+	g_free (escaped);
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	builder_add_string (builder, "photo", photo ? photo : "");
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+	g_free (photo);
+
+	return json;
+}
+
+/* Soumet la lecture de la photo de profil d'une personne de l'annuaire.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte à interroger (vide pour tous les comptes Microsoft 365)
+ *   email       : adresse de la personne
+ *   func        : rappel recevant {"photo": "data:image/jpeg;base64,..."} (vide si aucune)
+ *   user_data   : données utilisateur transmises au rappel */
+void
+evo_core_get_gal_photo (EvoCore *core,
+			const char *account_uid,
+			const char *email,
+			EvoCoreResultFunc func,
+			void *user_data)
+{
+	gchar *args[] = { (gchar *) (account_uid ? account_uid : ""), (gchar *) (email ? email : ""), NULL };
+
+	g_return_if_fail (core != NULL);
+
+	core_submit (core, core_gal_photo_run, g_strdupv (args), func, user_data);
 }

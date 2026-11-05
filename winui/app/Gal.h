@@ -28,7 +28,12 @@ namespace EvolutionWin::Gal
         std::wstring office;
         std::wstring phone;
         std::wstring mobile;
+        std::wstring phone2;       ///< autre numéro (2e téléphone professionnel, fax)
+        std::wstring address;      ///< adresse postale sur une ligne
+        std::wstring photo_url;    ///< URL publique de la photo (Google)
         std::wstring account;
+        std::wstring account_uid;  ///< identifiant du compte d'origine
+        std::wstring provider;     ///< "microsoft365" ou "google"
     };
 
     /**
@@ -109,7 +114,7 @@ namespace EvolutionWin::Gal
         std::wstring mobile = Trim(person.mobile);
         if (!mobile.empty())
             mobile = std::wstring{ mobile_label } + L" " + mobile;
-        return JoinNonEmpty({ person.phone, mobile }, L" ; ");
+        return JoinNonEmpty({ person.phone, mobile, person.phone2 }, L" ; ");
     }
 
     /**

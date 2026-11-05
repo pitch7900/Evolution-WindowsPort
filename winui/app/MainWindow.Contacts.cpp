@@ -198,6 +198,11 @@ namespace winrt::EvolutionWin::implementation
         ContactOrgText().Text(contact.GetNamedString(L"org", L"—"));
         ContactNotesText().Text(contact.GetNamedString(L"note", L""));
 
+        hstring address = contact.GetNamedString(L"address", L"");
+        ContactAddressText().Text(address);
+        ContactAddressRow().Visibility(address.empty() ? Visibility::Collapsed : Visibility::Visible);
+        ShowDirectoryPhoto(contact);
+
         ContactPlaceholder().Visibility(Visibility::Collapsed);
         ContactDetailPane().Visibility(Visibility::Visible);
     }
