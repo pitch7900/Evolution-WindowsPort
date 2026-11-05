@@ -1235,6 +1235,9 @@
 
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4">
 
+                                <Button x:Name="MailCategoryFilterButton" Click="OnMailCategoryFilterClick" Padding="8,4" ToolTipService.ToolTip="Filtrer par catégorie">
+    <FontIcon Glyph="&#xE8EC;" FontSize="13" />
+</Button>
                                 <ToggleButton x:Name="FlaggedFilterButton" Click="OnQuickFilterToggled"
 
                                               Padding="8,4" ToolTipService.ToolTip="Avec indicateur">
@@ -1869,6 +1872,9 @@
                             <AutoSuggestBox x:Name="CalendarSearchBox" Width="220" PlaceholderText="Filtrer les événements" QueryIcon="Find"
                                             TextChanged="OnCalendarSearchTextChanged" QuerySubmitted="OnCalendarSearchQuerySubmitted" />
 
+                            <Button x:Name="EventCategoryFilterButton" Click="OnEventCategoryFilterClick" Padding="8,4" ToolTipService.ToolTip="Filtrer par catégorie">
+    <FontIcon Glyph="&#xE8EC;" FontSize="13" />
+</Button>
                             <Button Click="OnExportCalendarClick" ToolTipService.ToolTip="Exporter un agenda ou une liste de tâches (.ics)">
 
                                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -1973,7 +1979,11 @@
 
                     </StackPanel>
 
-                    <AutoSuggestBox x:Name="ContactSearchBox" Grid.Row="1" PlaceholderText="Rechercher un contact" QueryIcon="Find"
+                    <Button x:Name="ContactCategoryFilterButton" Grid.Row="1" Click="OnContactCategoryFilterClick" Padding="8,4"
+                            HorizontalAlignment="Right" VerticalAlignment="Center" ToolTipService.ToolTip="Filtrer par catégorie">
+                        <FontIcon Glyph="&#xE8EC;" FontSize="13" />
+                    </Button>
+                    <AutoSuggestBox x:Name="ContactSearchBox" Grid.Row="1" PlaceholderText="Rechercher un contact" QueryIcon="Find" Margin="0,0,44,0"
 
                                     TextChanged="OnContactSearchChanged" QuerySubmitted="OnContactSearchSubmitted" />
 
@@ -2129,6 +2139,9 @@
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
 
+                        <Button x:Name="TaskCategoryFilterButton" Click="OnTaskCategoryFilterClick" Padding="8,4" ToolTipService.ToolTip="Filtrer par catégorie">
+    <FontIcon Glyph="&#xE8EC;" FontSize="13" />
+</Button>
                         <ComboBox x:Name="TaskSortChoice" SelectionChanged="OnTaskSortChanged" ToolTipService.ToolTip="Ordre des tâches">
 
                             <x:String>Trier par échéance</x:String>

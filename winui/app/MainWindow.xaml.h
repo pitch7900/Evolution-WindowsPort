@@ -97,6 +97,10 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::SelectorBar const& sender,
             Microsoft::UI::Xaml::Controls::SelectorBarSelectionChangedEventArgs const& args);
         void OnQuickFilterToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnMailCategoryFilterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTaskCategoryFilterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnContactCategoryFilterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnEventCategoryFilterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnSaveMessageClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnOpenInBrowserClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnViewRawMimeClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -430,6 +434,11 @@ namespace winrt::EvolutionWin::implementation
         void SetEventCategories(Windows::Data::Json::JsonObject const& event, std::vector<std::wstring> const& names);
         void SetContactCategories(Windows::Data::Json::JsonObject const& contact, std::vector<std::wstring> const& names);
         void ShowContacts();
+        void ShowCategoryFilterMenu(
+            Microsoft::UI::Xaml::FrameworkElement const& anchor,
+            ::EvolutionWin::Categories::CategoryFilter& filter,
+            std::function<void()> changed);
+        void UpdateCategoryFilterButtons();
         void RememberRecentFolder(hstring const& account, hstring const& folder);
         void RemoveMessageFromList(hstring const& uid);
         void ClearReader();
@@ -680,6 +689,10 @@ namespace winrt::EvolutionWin::implementation
         hstring m_task_search_query;
         Windows::Data::Json::JsonArray m_all_contacts{ nullptr };
         hstring m_contact_query;
+        ::EvolutionWin::Categories::CategoryFilter m_mail_category_filter;
+        ::EvolutionWin::Categories::CategoryFilter m_task_category_filter;
+        ::EvolutionWin::Categories::CategoryFilter m_contact_category_filter;
+        ::EvolutionWin::Categories::CategoryFilter m_event_category_filter;
         /* préférences de la vue relues ; contrôles mis à jour par le code */
         bool m_task_view_restored{ false };
         bool m_updating_task_view{ false };

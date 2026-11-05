@@ -109,6 +109,8 @@ namespace winrt::EvolutionWin::implementation
             hstring full_name = contact.GetNamedString(L"full_name", L"(Sans nom)");
             hstring email = contact.GetNamedString(L"email", L"");
             auto categories = ::EvolutionWin::CategoryStore::CategoriesOf(contact);
+            if (!::EvolutionWin::Categories::MatchesCategoryFilter(categories, m_contact_category_filter))
+                continue;
 
             StackPanel row;
             row.Padding(ThicknessHelper::FromLengths(8, 6, 8, 6));
@@ -136,6 +138,15 @@ namespace winrt::EvolutionWin::implementation
             });
 
             items.Append(row);
+        }
+
+        if (items.Size() == 0 && m_all_contacts.Size() > 0)
+        {
+            TextBlock none;
+            none.Text(L"Aucun contact ne correspond au filtre par catégorie.");
+            none.TextWrapping(TextWrapping::Wrap);
+            none.Padding(ThicknessHelper::FromLengths(8, 8, 8, 8));
+            items.Append(none);
         }
     }
 

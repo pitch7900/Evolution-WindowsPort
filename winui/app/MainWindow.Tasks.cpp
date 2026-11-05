@@ -340,6 +340,8 @@ namespace winrt::EvolutionWin::implementation
                 continue;
             if (!show_completed && task.GetNamedString(L"status", L"") == L"completed")
                 continue;
+            if (!::EvolutionWin::Categories::MatchesCategoryFilter(::EvolutionWin::CategoryStore::CategoriesOf(task), m_task_category_filter))
+                continue;
             if (MatchesTaskFilter(task, filter) && MatchesTaskSearch(task, m_task_search_query))
                 tasks.push_back(task);
         }

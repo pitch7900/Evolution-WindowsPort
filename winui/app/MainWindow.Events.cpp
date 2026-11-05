@@ -361,7 +361,8 @@ namespace winrt::EvolutionWin::implementation
             hstring summary = ev.GetNamedString(L"summary", L"");
             hstring location = ev.GetNamedString(L"location", L"");
             hstring description = ev.GetNamedString(L"description", L"");
-            if (MatchCalendarEvent(summary, location, description, query))
+            if (::EvolutionWin::Categories::MatchesCategoryFilter(::EvolutionWin::CategoryStore::CategoriesOf(ev), m_event_category_filter) &&
+                MatchCalendarEvent(summary, location, description, query))
             {
                 filtered_events.Append(value);
             }

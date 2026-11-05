@@ -449,4 +449,124 @@ namespace winrt::EvolutionWin::implementation
             LoadContacts(m_contact_query);
         });
     }
+    /**
+     * @brief Ouvre le menu de filtrage par catégorie d'une liste.
+     *
+     * Une entrée cochable par catégorie du registre (logique « ou » entre les
+     * catégories cochées), une entrée « Sans catégorie » et « Effacer le filtre ».
+     *
+     * @param anchor Bouton sous lequel s'affiche le menu.
+     * @param filter Critère de filtrage de la liste (modifié par le menu).
+     * @param changed Rappel appelé après chaque modification pour réafficher la liste.
+     */
+    void MainWindow::ShowCategoryFilterMenu(
+        FrameworkElement const& anchor,
+        Cat::CategoryFilter& filter,
+        std::function<void()> changed)
+    {
+        MenuFlyout flyout;
+        Cat::CategoryFilter* target = &filter;
+
+        for (auto const& cat : ::EvolutionWin::CategoryStore::Registry().Items())
+        {
+            std::wstring name = cat.name;
+            ToggleMenuFlyoutItem item;
+            item.Text(hstring{ name });
+            item.Icon(MakeColorIcon(Windows::UI::Color{ 255, cat.r, cat.g, cat.b }));
+            item.IsChecked(std::any_of(filter.selected.begin(), filter.selected.end(),
+                [&](std::wstring const& n) { return Cat::NamesEqual(n, name); }));
+            item.Click([this, target, name, changed](IInspectable const&, RoutedEventArgs const&)
+            {
+                Cat::ToggleFilterCategory(*target, name);
+                UpdateCategoryFilterButtons();
+                changed();
+            });
+            flyout.Items().Append(item);
+        }
+
+        flyout.Items().Append(MenuFlyoutSeparator{});
+
+        ToggleMenuFlyoutItem none_item;
+        none_item.Text(L"Sans catégorie");
+        none_item.IsChecked(filter.include_uncategorized);
+        none_item.Click([this, target, changed](IInspectable const&, RoutedEventArgs const&)
+        {
+            target->include_uncategorized = !target->include_uncategorized;
+            UpdateCategoryFilterButtons();
+            changed();
+        });
+        flyout.Items().Append(none_item);
+
+        MenuFlyoutItem clear_item;
+        clear_item.Text(L"Effacer le filtre");
+        clear_item.IsEnabled(!filter.IsEmpty());
+        clear_item.Click([this, target, changed](IInspectable const&, RoutedEventArgs const&)
+        {
+            *target = Cat::CategoryFilter{};
+            UpdateCategoryFilterButtons();
+            changed();
+        });
+        flyout.Items().Append(clear_item);
+
+        flyout.ShowAt(anchor);
+    }
+
+    /**
+     * @brief Met à jour l'aspect des quatre boutons de filtre par catégorie
+     *        (icône en couleur d'accent et infobulle détaillée quand un filtre est actif).
+     */
+    void MainWindow::UpdateCategoryFilterButtons()
+    {
+        auto update = [](Button const& button, Cat::CategoryFilter const& filter)
+        {
+            if (!button)
+                return;
+
+            FontIcon icon;
+            icon.Glyph(L"\xE8EC");
+            icon.FontSize(13);
+            if (!filter.IsEmpty())
+                icon.Foreground(Application::Current().Resources().Lookup(box_value(L"AccentTextFillColorPrimaryBrush")).as<Brush>());
+
+            std::wstring tip = L"Filtrer par catégorie";
+            if (!filter.IsEmpty())
+            {
+                std::vector<std::wstring> shown = filter.selected;
+                if (filter.include_uncategorized)
+                    shown.push_back(L"Sans catégorie");
+                tip += L" : " + Cat::JoinCategories(shown);
+            }
+            button.Content(icon);
+            Controls::ToolTipService::SetToolTip(button, box_value(hstring{ tip }));
+        };
+
+        update(MailCategoryFilterButton(), m_mail_category_filter);
+        update(TaskCategoryFilterButton(), m_task_category_filter);
+        update(ContactCategoryFilterButton(), m_contact_category_filter);
+        update(EventCategoryFilterButton(), m_event_category_filter);
+    }
+
+    /** @brief Bouton de filtre par catégorie de la liste des courriels. */
+    void MainWindow::OnMailCategoryFilterClick(IInspectable const& sender, RoutedEventArgs const&)
+    {
+        ShowCategoryFilterMenu(sender.as<FrameworkElement>(), m_mail_category_filter, [this]() { ReapplyMessageFilters(); });
+    }
+
+    /** @brief Bouton de filtre par catégorie de la liste des tâches. */
+    void MainWindow::OnTaskCategoryFilterClick(IInspectable const& sender, RoutedEventArgs const&)
+    {
+        ShowCategoryFilterMenu(sender.as<FrameworkElement>(), m_task_category_filter, [this]() { ShowTasks(); });
+    }
+
+    /** @brief Bouton de filtre par catégorie de la liste des contacts. */
+    void MainWindow::OnContactCategoryFilterClick(IInspectable const& sender, RoutedEventArgs const&)
+    {
+        ShowCategoryFilterMenu(sender.as<FrameworkElement>(), m_contact_category_filter, [this]() { ShowContacts(); });
+    }
+
+    /** @brief Bouton de filtre par catégorie du calendrier (liste et grilles). */
+    void MainWindow::OnEventCategoryFilterClick(IInspectable const& sender, RoutedEventArgs const&)
+    {
+        ShowCategoryFilterMenu(sender.as<FrameworkElement>(), m_event_category_filter, [this]() { FilterAndRenderCalendarEvents(); });
+    }
 }
