@@ -6433,6 +6433,75 @@ static void test_update_integrity(void)
 
 #include "../../winui/app/Gal.h"
 
+#include "../../winui/app/UnifiedViews.h"
+
+static void test_unified_views(void)
+{
+    using namespace EvolutionWin::UnifiedViews;
+
+    TEST_CASE("Vues unifiees: identifiant composite et identifiant reel");
+    {
+        std::wstring composite = MakeUid(L"42", L"imap-a", L"INBOX/Sous");
+        ASSERT_TRUE(composite != L"42");
+        ASSERT_TRUE(RealUid(composite) == L"42");
+        /* deux comptes avec le meme uid IMAP restent distincts */
+        ASSERT_TRUE(MakeUid(L"42", L"imap-a", L"INBOX") != MakeUid(L"42", L"imap-b", L"INBOX"));
+        /* un identifiant ordinaire (hors vue unifiee) est inchange */
+        ASSERT_TRUE(RealUid(L"1234") == L"1234");
+        ASSERT_TRUE(RealUid(L"") == L"");
+        ASSERT_TRUE(RealUid(std::string("7\x1f" "compte\x1f" "INBOX")) == "7");
+        ASSERT_TRUE(RealUid(std::string("abc")) == "abc");
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Vues unifiees: roles et titres");
+    {
+        ASSERT_EQ_INT(4, (long long)Roles().size());
+        ASSERT_TRUE(IsUnifiedRole(L"inbox"));
+        ASSERT_TRUE(IsUnifiedRole(L"trash"));
+        ASSERT_FALSE(IsUnifiedRole(L"junk"));
+        ASSERT_FALSE(IsUnifiedRole(L""));
+        ASSERT_TRUE(Title(L"inbox", false) == L"Boîte de réception unifiée");
+        ASSERT_TRUE(Title(L"inbox", true) == L"Unified Inbox");
+        ASSERT_TRUE(Title(L"archive", false).empty());
+        for (auto const& role : Roles())
+        {
+            ASSERT_FALSE(Title(role, false).empty());
+            ASSERT_FALSE(Title(role, true).empty());
+        }
+        ASSERT_TRUE(IsUnifiedAccount(kAccountId));
+        ASSERT_FALSE(IsUnifiedAccount(L"imap-a"));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Vues unifiees: comptes inclus");
+    {
+        std::vector<Account> accounts = {
+            { L"a", true, false }, { L"local", true, true }, { L"b", false, false }, { L"c", true, false }
+        };
+        auto included = IncludedAccounts(accounts);
+        ASSERT_EQ_INT(2, (long long)included.size());
+        ASSERT_TRUE(included[0] == L"a" && included[1] == L"c");
+        ASSERT_TRUE(ShouldOffer(included));
+        ASSERT_TRUE(ToCsv(included) == L"a,c");
+
+        auto reduced = IncludedAccounts(accounts, { L"c" });
+        ASSERT_EQ_INT(1, (long long)reduced.size());
+        ASSERT_FALSE(ShouldOffer(reduced));
+        ASSERT_FALSE(ShouldOffer({}));
+        ASSERT_TRUE(ToCsv({}).empty());
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Vues unifiees: non lus affiches");
+    {
+        ASSERT_EQ_INT(5, DisplayedUnread(L"inbox", 5));
+        ASSERT_EQ_INT(0, DisplayedUnread(L"inbox", -2));
+        ASSERT_EQ_INT(0, DisplayedUnread(L"drafts", 5));
+    }
+    TEST_CASE_END();
+}
+
 static void test_gal(void)
 {
     using namespace EvolutionWin::Gal;
@@ -6638,6 +6707,7 @@ int main(void)
     test_auto_reply();
     test_invitations_banner();
     test_gal();
+    test_unified_views();
 return test_suite_summary();
 
 

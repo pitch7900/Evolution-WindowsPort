@@ -157,7 +157,7 @@ namespace winrt::EvolutionWin::implementation
      */
     void MainWindow::OnRibbonAutoReplyClick(IInspectable const&, RoutedEventArgs const&)
     {
-        if (m_account.empty() || m_account == L"local")
+        if (m_account.empty() || m_account == L"local" || IsUnifiedView())
         {
             ShowStatus(AR::Tr(AR::Str::NoAccount, AutoReplyEnglish()), InfoBarSeverity::Warning);
             return;

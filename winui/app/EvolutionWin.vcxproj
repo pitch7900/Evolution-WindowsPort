@@ -164,6 +164,7 @@
     </ClInclude>
     <ClInclude Include="AutoReply.h" />
     <ClInclude Include="Gal.h" />
+    <ClInclude Include="UnifiedViews.h" />
     <ClInclude Include="MainWindow.Helpers.h" />
     <ClInclude Include="MainWindow.xaml.h">
       <DependentUpon>MainWindow.xaml</DependentUpon>

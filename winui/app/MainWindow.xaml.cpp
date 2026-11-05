@@ -290,7 +290,7 @@ namespace winrt::EvolutionWin::implementation
             UpdateMailBadge();
 
             /* new or removed messages in the folder on screen */
-            if (account == m_account && folder == m_folder &&
+            if (((account == m_account && folder == m_folder) || UnifiedFolderMatches(account, folder)) &&
                 (object.GetNamedNumber(L"added", 0) > 0 || object.GetNamedNumber(L"removed", 0) > 0))
                 LoadMessages(true);
         }
@@ -431,9 +431,12 @@ namespace winrt::EvolutionWin::implementation
 
         for (auto const& [key, node] : m_nodes)
         {
-            if (auto item = node.Content().try_as<EvolutionWin::FolderItem>(); item && !item.IsAccount() && item.Glyph() == inbox_glyph)
+            /* la Boîte de réception unifiée n'est pas comptée : elle reprend les autres */
+            if (auto item = node.Content().try_as<EvolutionWin::FolderItem>(); item && !item.IsAccount() && item.Glyph() == inbox_glyph
+                && !::EvolutionWin::UnifiedViews::IsUnifiedAccount(std::wstring_view{ item.Account() }))
                 unread += item.Unread();
         }
+        UpdateUnifiedCounts();
 
         if (unread <= 0)
         {
