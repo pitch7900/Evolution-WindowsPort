@@ -54,6 +54,7 @@ flowchart LR
 ### 2. Invitations & Réunions (§13, §15)
 - [x] **Traitement des invitations iCalendar** : bandeau d\'action dans le volet de lecture (Accepter, Refuser, Provisoire) avec mise à jour du calendrier de l\'utilisateur (`#demo-invitations`).
 - [ ] **Carnet d\'adresses global (GAL)** : recherche et consultation de l\'annuaire d\'entreprise pour Exchange Online et Microsoft 365 (`#demo-gal`). _Implémenté (moteur Microsoft Graph et Google, autocomplétion des destinataires, consultation depuis la vue Contacts, tests) ; reste à valider sur un tenant réel (Microsoft 365) avant de cocher._
+- [ ] **Réunion en ligne Microsoft Teams** (compte Exchange Online / Microsoft 365) : bouton « Réunion Teams » du ruban Calendrier, création via Microsoft Graph (`isOnlineMeeting: true`, `teamsForBusiness`) et lien de visio inséré dans l'invitation. _(codé : case « Réunion en ligne Microsoft Teams » dans la fenêtre d'événement et bouton du ruban ; reste à valider sur un tenant réel)_
 
 ### 3. Gestion des absences (§3)
 - [ ] **Réponses automatiques (Out of Office)** : interface de configuration des messages d\'absence pour Microsoft 365 et Gmail (`#demo-reponses-auto`). _Implémenté (moteur, boîte de dialogue, tests) ; reste à valider sur un compte réel (tenant M365, compte Gmail) avant de cocher._

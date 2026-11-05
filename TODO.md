@@ -692,7 +692,7 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
     - [ ] Autocomplétion dynamique des destinataires depuis les contacts locaux et l'annuaire d'entreprise (GAL Exchange Online / Microsoft 365).
     - [ ] Envoi automatique des invitations / annulations (iTIP / iMIP) et suivi des réponses (accepté, provisoire, refusé).
   - [ ] 🟠 **Réunion en ligne Microsoft Teams (compte Exchange Online / O365)** :
-    - [ ] Bouton dédié *« Réunion Teams »* dans la barre d'outils / ruban pour générer automatiquement une réunion en ligne Microsoft Teams via Microsoft Graph (`isOnlineMeeting: true`, `onlineMeetingProvider: teamsForBusiness`).
+    - [ ] Bouton dédié *« Réunion Teams »* dans la barre d'outils / ruban pour générer automatiquement une réunion en ligne Microsoft Teams via Microsoft Graph (`isOnlineMeeting: true`, `onlineMeetingProvider: teamsForBusiness`). _(codé, reste à valider sur un tenant réel : bouton « Réunion Teams » du ruban Calendrier et case dans la fenêtre d'événement, via la propriété `X-M365-ONLINE-MEETING` du backend Microsoft 365)_
     - [ ] Insertion automatique du lien de visio, de l'ID de réunion, du code secret et des coordonnées de connexion dans le corps de l'invitation.
   - [ ] 🟠 **Emplacements et réservation des ressources de l'entreprise (salles et équipements)** :
     - [ ] Champ *Emplacement* relié aux listes de salles Exchange Online (_room lists_ et boîtes de ressources).

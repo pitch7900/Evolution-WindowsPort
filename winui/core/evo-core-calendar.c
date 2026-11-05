@@ -850,6 +850,16 @@ core_create_event_run (EvoCore *core,
 	if (json_object_has_member (object, "reminder_minutes"))
 		event_set_reminder (icomp, (gint) json_object_get_int_member (object, "reminder_minutes"));
 
+	/* réunion en ligne Microsoft Teams : le backend Microsoft 365 la crée côté serveur
+	 * (isOnlineMeeting, teamsForBusiness) quand cette propriété est présente */
+	if (json_object_get_boolean_member_with_default (object, "online_meeting", FALSE)) {
+		ICalProperty *teams = i_cal_property_new (I_CAL_X_PROPERTY);
+
+		i_cal_property_set_x_name (teams, "X-M365-ONLINE-MEETING");
+		i_cal_property_set_x (teams, "TRUE");
+		i_cal_component_take_property (icomp, teams);
+	}
+
 	if (!e_cal_client_create_object_sync (E_CAL_CLIENT (client), icomp, E_CAL_OPERATION_FLAG_NONE,
 		&created_uid, core->cancellable, error))
 		goto exit;

@@ -230,13 +230,15 @@ namespace winrt::EvolutionWin::implementation
         dialog.CloseButtonText(AR::Tr(AR::Str::Cancel, english));
         dialog.DefaultButton(ContentDialogButton::Primary);
         dialog.IsPrimaryButtonEnabled(false);
+        /* fenêtre plus large que par défaut (une boîte de dialogue n'est pas redimensionnable) */
+        dialog.Resources().Insert(box_value(L"ContentDialogMaxWidth"), box_value(1000.0));
 
         auto secondary_brush = Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Media::Brush>();
         auto caption_style = Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>();
 
         StackPanel panel;
         panel.Spacing(12);
-        panel.MinWidth(480);
+        panel.MinWidth(720);
 
         /* état : lecture, enregistrement ou erreur */
         StackPanel status_row;
@@ -320,19 +322,41 @@ namespace winrt::EvolutionWin::implementation
         subject_box.Visibility(Visibility::Collapsed);
         form_panel.Children().Append(subject_box);
 
+        /* zones de message : deux lignes de même hauteur dans une grille, couleurs et alignement
+         * explicites (sinon texte illisible : noir sur fond noir, aligné à droite) */
         auto make_message_box = [](hstring const& header)
         {
+            auto resources = Application::Current().Resources();
             TextBox box;
             box.Header(box_value(header));
             box.AcceptsReturn(true);
             box.TextWrapping(TextWrapping::Wrap);
-            box.Height(150);
+            box.TextAlignment(TextAlignment::Left);
+            box.FlowDirection(FlowDirection::LeftToRight);
+            box.HorizontalAlignment(HorizontalAlignment::Stretch);
+            box.VerticalAlignment(VerticalAlignment::Stretch);
+            box.MinHeight(110);
+            box.Foreground(resources.Lookup(box_value(L"TextFillColorPrimaryBrush")).as<Media::Brush>());
+            box.Background(resources.Lookup(box_value(L"ControlFillColorDefaultBrush")).as<Media::Brush>());
             return box;
         };
         TextBox internal_box = make_message_box(AR::Tr(AR::Str::InternalMessage, english));
         TextBox external_box = make_message_box(AR::Tr(AR::Str::ExternalMessage, english));
-        form_panel.Children().Append(internal_box);
-        form_panel.Children().Append(external_box);
+
+        Grid messages_grid;
+        messages_grid.Height(380);
+        messages_grid.RowSpacing(12);
+        for (int row = 0; row < 2; ++row)
+        {
+            RowDefinition definition;
+            definition.Height(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+            messages_grid.RowDefinitions().Append(definition);
+        }
+        Grid::SetRow(internal_box, 0);
+        Grid::SetRow(external_box, 1);
+        messages_grid.Children().Append(internal_box);
+        messages_grid.Children().Append(external_box);
+        form_panel.Children().Append(messages_grid);
 
         TextBlock note;
         note.Style(caption_style);
@@ -383,6 +407,7 @@ namespace winrt::EvolutionWin::implementation
             {
                 /* un seul message : zone unique « Message de réponse » + objet */
                 internal_box.Visibility(Visibility::Collapsed);
+                messages_grid.RowDefinitions().GetAt(0).Height(GridLengthHelper::FromPixels(0));
                 external_box.Header(box_value(AR::Tr(AR::Str::SingleMessage, english)));
                 subject_box.Visibility(Visibility::Visible);
                 note.Text(AR::Tr(AR::Str::GmailNote, english));

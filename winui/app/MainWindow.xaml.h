@@ -192,6 +192,7 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::CalendarViewSelectedDatesChangedEventArgs const& args);
         void OnRefreshCalendarClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnNewEventClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnNewTeamsMeetingClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         /**
          * @brief Gestionnaire pour la création rapide d'un temps de travail individuel (Focus).
          * @param sender Bouton émetteur de l'action.
@@ -720,7 +721,8 @@ namespace winrt::EvolutionWin::implementation
         hstring m_calendar_period{ L"week" };	/* "day", "week" ou "month" (calendar.period) */
         bool m_updating_period{ false };
         void SetCalendarPeriod(hstring const& period);
-        fire_and_forget ShowEventDialogAsync(Windows::Data::Json::JsonObject event, hstring const& summary_preset = L"", bool is_focus = false);
+        fire_and_forget ShowEventDialogAsync(Windows::Data::Json::JsonObject event, hstring const& summary_preset = L"", bool is_focus = false, bool teams = false);
+        hstring TeamsCalendarUid();
         /* grille du calendrier (MainWindow.Calendar.cpp) */
         void OpenCalendarEvent(hstring const& calendar_uid, hstring const& uid);
         void RenderCalendarGrid(Windows::Data::Json::JsonArray const& events, int64_t start_unix, int days);

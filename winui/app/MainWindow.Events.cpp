@@ -627,6 +627,44 @@ namespace winrt::EvolutionWin::implementation
         ShowNewEventDialogAsync();
     }
 
+    /**
+     * @brief Calendrier Microsoft 365 qui recevra une réunion Teams : le calendrier actif s'il est
+     *        Microsoft 365, sinon le calendrier par défaut (ou le premier) d'un compte Microsoft 365.
+     * @return Identifiant du calendrier ("" si aucun compte Microsoft 365 n'a de calendrier).
+     */
+    hstring MainWindow::TeamsCalendarUid()
+    {
+        hstring active = ActiveCalendarUid();
+        hstring fallback;
+        for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
+        {
+            auto source = value.GetObject();
+            if (source.GetNamedString(L"backend", L"") != L"microsoft365")
+                continue;
+            hstring uid = source.GetNamedString(L"uid", L"");
+            if (uid == active)
+                return uid;
+            if (fallback.empty() || source.GetNamedBoolean(L"default", false) || source.GetNamedString(L"name", L"") == L"Calendrier")
+                fallback = uid;
+        }
+        return fallback;
+    }
+
+    /**
+     * @brief Gestionnaire du bouton « Réunion Teams » : ouvre la fenêtre de nouvel événement avec
+     *        la réunion en ligne Microsoft Teams cochée (calendrier Exchange Online).
+     */
+    void MainWindow::OnNewTeamsMeetingClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (TeamsCalendarUid().empty())
+        {
+            ShowStatus(L"Aucun calendrier Exchange Online / Microsoft 365 : ajoutez un compte Microsoft 365 pour créer une réunion Teams.",
+                InfoBarSeverity::Warning);
+            return;
+        }
+        ShowEventDialogAsync(nullptr, L"", false, true);
+    }
+
     /* Nouvel événement : fenêtre d'événement vide (calendrier actif). */
     fire_and_forget MainWindow::ShowNewEventDialogAsync()
     {
@@ -682,7 +720,7 @@ namespace winrt::EvolutionWin::implementation
      * organisateur et participants, suppression).
      * Paramètres :
      *   event : détail renvoyé par evo_core_get_event (), ou nullptr */
-    fire_and_forget MainWindow::ShowEventDialogAsync(JsonObject event, hstring const& summary_preset, bool is_focus)
+    fire_and_forget MainWindow::ShowEventDialogAsync(JsonObject event, hstring const& summary_preset, bool is_focus, bool teams)
     {
         auto strong = get_strong();
         if (m_dialog_open || !Content() || !Content().XamlRoot())
@@ -922,6 +960,14 @@ namespace winrt::EvolutionWin::implementation
         }
         panel.Children().Append(attendees_box);
 
+        /* réunion en ligne Microsoft Teams (nouvel événement d'un calendrier Exchange Online) */
+        CheckBox teams_check;
+        teams_check.Content(box_value(Tr(L"Réunion en ligne Microsoft Teams (lien de visio ajouté à l'invitation)",
+                                         L"Microsoft Teams online meeting (join link added to the invitation)")));
+        teams_check.IsChecked(teams);
+        if (!existing && !readonly && !TeamsCalendarUid().empty())
+            panel.Children().Append(teams_check);
+
         /* invitations : compte de messagerie expéditeur (adresse de l'organisateur) */
         ComboBox sender_combo;
         sender_combo.Header(box_value(Tr(L"Envoyer les invitations depuis", L"Send invitations from")));
@@ -1124,6 +1170,14 @@ namespace winrt::EvolutionWin::implementation
 
         if (hstring active = ActiveCalendarUid(); !active.empty())
             payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(active));
+
+        /* réunion Teams : l'événement est créé dans un calendrier Microsoft 365 */
+        if (teams_check.IsChecked() && teams_check.IsChecked().GetBoolean())
+        {
+            if (hstring teams_calendar = TeamsCalendarUid(); !teams_calendar.empty())
+                payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(teams_calendar));
+            payload.SetNamedValue(L"online_meeting", JsonValue::CreateBooleanValue(true));
+        }
 
         hstring create_calendar = payload.GetNamedString(L"calendar_uid", L"");
         m_core->CreateEvent(payload.Stringify(), [this, sender_uid, create_calendar](hstring const& json, hstring const& error)

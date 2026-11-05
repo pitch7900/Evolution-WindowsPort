@@ -134,6 +134,17 @@ main (int argc,
 	char *account = NULL, *message_uid = NULL;
 	int watch_minutes = 0;
 
+	/* --photo adresse : photo de profil de l'annuaire (taille de la réponse) */
+	if (argc > 2 && strcmp (argv[1], "--photo") == 0) {
+		done_event = CreateEvent (NULL, FALSE, FALSE, NULL);
+		core = evo_core_new (on_event, NULL);
+		evo_core_get_gal_photo (core, "", argv[2], on_result, NULL);
+		WaitForSingleObject (done_event, INFINITE);
+		printf ("[photo] %s, %u octets\n", last_error ? last_error : "ok", last_json ? (unsigned) strlen (last_json) : 0);
+		evo_core_free (core);
+		return 0;
+	}
+
 	/* --people [adresse] : équipe de l'utilisateur, puis agenda d'une personne (14 jours) */
 	if (argc > 1 && strcmp (argv[1], "--people") == 0) {
 		char *email = argc > 2 ? _strdup (argv[2]) : NULL;

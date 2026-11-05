@@ -787,6 +787,8 @@ core_gal_photo_run (EvoCore *core,
 
 		uri = g_strconcat ("https://graph.microsoft.com/v1.0/users/", escaped, "/photo/$value", NULL);
 		bytes = gal_http_get (core, provider, uri, token, &status, NULL);
+		g_message ("photo annuaire Graph : HTTP %u pour %s (%.200s)", status, args[1],
+			bytes && status >= 300 && g_bytes_get_data (bytes, NULL) ? (const gchar *) g_bytes_get_data (bytes, NULL) : "");
 		if (bytes && status >= 200 && status < 300) {
 			gsize size = 0;
 			gconstpointer data = g_bytes_get_data (bytes, &size);
