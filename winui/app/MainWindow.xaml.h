@@ -5,6 +5,7 @@
 #include "ComposeWindow.xaml.h"
 #include "MessageWindow.xaml.h"
 #include "SplashWindow.xaml.h"
+#include "Categories.h"
 
 #include <map>
 
@@ -412,6 +413,23 @@ namespace winrt::EvolutionWin::implementation
             std::vector<hstring> const& uids);
         void ToggleCategoryForMessages(std::vector<hstring> const& uids, std::wstring const& category_name, bool apply);
         void ClearCategoriesForMessages(std::vector<hstring> const& uids);
+
+        /* Catégories unifiées (MainWindow.Categories.cpp) */
+        void RefreshCategoriesView();
+        void OnCategoriesRegistryChanged();
+        void PopulateItemCategoryMenu(
+            Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items,
+            std::vector<std::wstring> const& current,
+            std::function<void(std::vector<std::wstring> const&)> apply);
+        void AttachCategoryContextMenu(
+            Microsoft::UI::Xaml::UIElement const& element,
+            std::vector<std::wstring> const& current,
+            std::function<void(std::vector<std::wstring> const&)> apply);
+        Microsoft::UI::Xaml::UIElement BuildCategoryChips(std::vector<std::wstring> const& names);
+        void SetTaskCategories(Windows::Data::Json::JsonObject const& task, std::vector<std::wstring> const& names);
+        void SetEventCategories(Windows::Data::Json::JsonObject const& event, std::vector<std::wstring> const& names);
+        void SetContactCategories(Windows::Data::Json::JsonObject const& contact, std::vector<std::wstring> const& names);
+        void ShowContacts();
         void RememberRecentFolder(hstring const& account, hstring const& folder);
         void RemoveMessageFromList(hstring const& uid);
         void ClearReader();
@@ -660,6 +678,8 @@ namespace winrt::EvolutionWin::implementation
         Windows::Data::Json::JsonArray m_all_tasks{ nullptr };
         hstring m_task_list_uid;
         hstring m_task_search_query;
+        Windows::Data::Json::JsonArray m_all_contacts{ nullptr };
+        hstring m_contact_query;
         /* préférences de la vue relues ; contrôles mis à jour par le code */
         bool m_task_view_restored{ false };
         bool m_updating_task_view{ false };

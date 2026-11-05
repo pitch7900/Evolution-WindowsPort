@@ -5,6 +5,7 @@
 
 #include "ComposeWindow.xaml.h"
 #include "Settings.h"
+#include "CategoryStore.h"
 #include <cwctype>
 #include <string>
 #include <shellapi.h>
@@ -1030,82 +1031,33 @@ namespace EvolutionWin::Helpers
     }
 
     /**
-     * @brief Description d'une catégorie de classement et de sa couleur associée.
+     * @brief Description d'une catégorie (définie dans Categories.h, partagée par tous les types d'éléments).
      */
-    struct CategoryDefinition
-    {
-        std::wstring name;       ///< Libellé de la catégorie (ex. "Catégorie rouge", "Travail", "Important")
-        uint8_t r{ 0 };          ///< Composante rouge de la couleur (0-255)
-        uint8_t g{ 0 };          ///< Composante verte de la couleur (0-255)
-        uint8_t b{ 0 };          ///< Composante bleue de la couleur (0-255)
-        std::wstring shortcut;   ///< Raccourci clavier rapide (ex. "Ctrl+F2")
-    };
+    using CategoryDefinition = ::EvolutionWin::Categories::CategoryDefinition;
 
     /**
      * @brief Renvoie la liste standard des catégories prédéfinies avec leurs couleurs Fluent.
+     *
+     * Valeurs d'usine uniquement : la liste réelle de l'utilisateur est le registre
+     * partagé (CategoryStore::Registry()).
      * @return Vecteur contenant la liste ordonnée des catégories.
      */
     inline std::vector<CategoryDefinition> GetDefaultCategories()
     {
-        return {
-            { L"Catégorie rouge",    232, 17,  35,  L"Ctrl+F2" },
-            { L"Catégorie orange",   255, 140, 0,   L"Ctrl+F3" },
-            { L"Catégorie jaune",    255, 185, 0,   L"Ctrl+F4" },
-            { L"Catégorie verte",    16,  124, 65,  L"Ctrl+F5" },
-            { L"Catégorie bleue",    0,   120, 212, L"Ctrl+F6" },
-            { L"Catégorie violette", 136, 23,  152, L"Ctrl+F7" },
-            { L"Important",          209, 52,  56,  L"" },
-            { L"Travail",            0,   99,  177, L"" },
-            { L"Personnel",          0,   130, 114, L"" },
-            { L"À suivre",           227, 0,   140, L"" }
-        };
+        return ::EvolutionWin::Categories::DefaultCategories();
     }
 
     /**
-     * @brief Obtient la couleur RVB associée à une catégorie donnée.
+     * @brief Obtient la couleur RVB associée à une catégorie, d'après le registre partagé.
      * @param category_name Nom de la catégorie recherchée.
      * @param out_r Référence de sortie pour la composante rouge.
      * @param out_g Référence de sortie pour la composante verte.
      * @param out_b Référence de sortie pour la composante bleue.
-     * @return true si la catégorie correspond à une catégorie standard, false si une couleur de repli a été calculée.
+     * @return true si la catégorie est dans le registre, false si une couleur de repli a été calculée.
      */
     inline bool GetCategoryColor(std::wstring_view category_name, uint8_t& out_r, uint8_t& out_g, uint8_t& out_b)
     {
-        auto cats = GetDefaultCategories();
-        for (auto const& c : cats)
-        {
-            if (c.name.size() == category_name.size())
-            {
-                bool eq = true;
-                for (size_t i = 0; i < c.name.size(); ++i)
-                {
-                    if (std::towlower(c.name[i]) != std::towlower(category_name[i]))
-                    {
-                        eq = false;
-                        break;
-                    }
-                }
-                if (eq)
-                {
-                    out_r = c.r; out_g = c.g; out_b = c.b;
-                    return true;
-                }
-            }
-        }
-
-        uint32_t hash = 5381;
-        for (wchar_t ch : category_name)
-            hash = ((hash << 5) + hash) + ch;
-
-        static const uint8_t fallback_palette[][3] = {
-            { 0, 120, 212 }, { 16, 124, 65 }, { 255, 140, 0 }, { 232, 17, 35 },
-            { 136, 23, 152 }, { 0, 153, 188 }, { 135, 100, 184 }, { 180, 0, 158 }
-        };
-        size_t idx = hash % (sizeof(fallback_palette) / sizeof(fallback_palette[0]));
-        out_r = fallback_palette[idx][0];
-        out_g = fallback_palette[idx][1];
-        out_b = fallback_palette[idx][2];
-        return false;
+        return ::EvolutionWin::CategoryStore::Registry().ColorOf(category_name, out_r, out_g, out_b);
     }
 
     /**

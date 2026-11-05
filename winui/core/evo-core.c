@@ -8747,6 +8747,112 @@ core_set_account_signature_run (EvoCore *core,
 	return success ? g_strdup ("{}") : NULL;
 }
 
+/* --- catégories communes (CATEGORIES iCalendar / vCard) --- */
+
+/* Catégories d'un composant iCalendar (propriétés CATEGORIES, chacune
+ * pouvant contenir plusieurs valeurs séparées par des virgules).
+ * Paramètres :
+ *   icomp : composant VEVENT / VTODO
+ * Retourne : tableau de chaînes terminé par NULL (g_strfreev), jamais NULL. */
+static gchar **
+ical_dup_categories (ICalComponent *icomp)
+{
+	GPtrArray *names = g_ptr_array_new ();
+	ICalProperty *prop;
+
+	for (prop = i_cal_component_get_first_property (icomp, I_CAL_CATEGORIES_PROPERTY);
+	     prop;
+	     g_object_unref (prop), prop = i_cal_component_get_next_property (icomp, I_CAL_CATEGORIES_PROPERTY)) {
+		const gchar *value = i_cal_property_get_categories (prop);
+		gchar **parts;
+		guint ii;
+
+		if (!value)
+			continue;
+
+		parts = g_strsplit (value, ",", -1);
+		for (ii = 0; parts[ii]; ii++) {
+			g_strstrip (parts[ii]);
+			if (*parts[ii])
+				g_ptr_array_add (names, g_strdup (parts[ii]));
+		}
+		g_strfreev (parts);
+	}
+
+	g_ptr_array_add (names, NULL);
+
+	return (gchar **) g_ptr_array_free (names, FALSE);
+}
+
+/* Ajoute au JSON le membre "categories" (tableau de chaînes).
+ * Paramètres :
+ *   builder : constructeur JSON, dans un objet
+ *   names   : noms de catégories (terminé par NULL), NULL pour un tableau vide */
+static void
+builder_add_categories (JsonBuilder *builder,
+			const gchar * const *names)
+{
+	guint ii;
+
+	json_builder_set_member_name (builder, "categories");
+	json_builder_begin_array (builder);
+	for (ii = 0; names && names[ii]; ii++)
+		json_builder_add_string_value (builder, names[ii]);
+	json_builder_end_array (builder);
+}
+
+/* Ajoute au JSON les catégories d'un composant iCalendar.
+ * Paramètres :
+ *   builder : constructeur JSON, dans un objet
+ *   icomp   : composant VEVENT / VTODO */
+static void
+ical_add_categories (JsonBuilder *builder,
+		     ICalComponent *icomp)
+{
+	gchar **names = ical_dup_categories (icomp);
+
+	builder_add_categories (builder, (const gchar * const *) names);
+	g_strfreev (names);
+}
+
+/* Remplace les catégories d'un composant iCalendar si l'objet JSON contient
+ * le membre "categories" (tableau de chaînes) ; sinon ne touche à rien.
+ * Une propriété CATEGORIES est écrite par catégorie ; les noms vides ou
+ * contenant une virgule sont ignorés.
+ * Paramètres :
+ *   icomp  : composant VEVENT / VTODO à modifier
+ *   object : objet JSON décrivant la modification */
+static void
+ical_apply_categories_json (ICalComponent *icomp,
+			    JsonObject *object)
+{
+	JsonNode *node;
+
+	if (!json_object_has_member (object, "categories"))
+		return;
+
+	node = json_object_get_member (object, "categories");
+	e_cal_util_component_remove_property_by_kind (icomp, I_CAL_CATEGORIES_PROPERTY, TRUE);
+
+	if (node && JSON_NODE_HOLDS_ARRAY (node)) {
+		JsonArray *array = json_node_get_array (node);
+		guint ii;
+
+		for (ii = 0; ii < json_array_get_length (array); ii++) {
+			const gchar *category = json_array_get_string_element (array, ii);
+			gchar *clean;
+
+			if (!category)
+				continue;
+
+			clean = g_strstrip (g_strdup (category));
+			if (*clean && !strchr (clean, ','))
+				i_cal_component_take_property (icomp, i_cal_property_new_categories (clean));
+			g_free (clean);
+		}
+	}
+}
+
 /* --- agenda (ECalClient / libecal-2.0) --- */
 
 typedef struct {
@@ -8761,6 +8867,7 @@ typedef struct {
 	gchar *calendar_color;	/* "#rrggbb" (ESourceSelectable) ou NULL */
 	gboolean all_day;
 	gboolean recurring;
+	gchar **categories;	/* noms de catégories (NULL-terminé) */
 } CalEventItem;
 
 /* Ouvre l'agenda calendar_uid (connexion EDS). */
@@ -8865,6 +8972,8 @@ core_get_event_run (EvoCore *core,
 	json_builder_set_member_name (builder, "readonly");
 	json_builder_add_boolean_value (builder, e_client_is_readonly (client));
 
+	ical_add_categories (builder, icomp);
+
 	prop = i_cal_component_get_first_property (icomp, I_CAL_ORGANIZER_PROPERTY);
 	json_builder_set_member_name (builder, "organizer");
 	json_builder_begin_object (builder);
@@ -8957,15 +9066,24 @@ core_modify_event_run (EvoCore *core,
 	end_unix = json_object_get_int_member_with_default (object, "end", start_unix + 3600);
 	all_day = json_object_get_boolean_member_with_default (object, "all_day", FALSE);
 
-	i_cal_component_set_summary (icomp, *summary ? summary : "(Sans titre)");
-	i_cal_component_set_location (icomp, location);
+	/* modification partielle : seuls les champs présents dans le JSON sont
+	 * touchés (ex. {"calendar_uid", "uid", "categories"} ne change que les
+	 * catégories) */
+	if (json_object_has_member (object, "summary"))
+		i_cal_component_set_summary (icomp, *summary ? summary : "(Sans titre)");
+	if (json_object_has_member (object, "location"))
+		i_cal_component_set_location (icomp, location);
 
-	while ((prop = i_cal_component_get_first_property (icomp, I_CAL_DESCRIPTION_PROPERTY)) != NULL) {
-		i_cal_component_remove_property (icomp, prop);
-		g_object_unref (prop);
+	if (json_object_has_member (object, "description")) {
+		while ((prop = i_cal_component_get_first_property (icomp, I_CAL_DESCRIPTION_PROPERTY)) != NULL) {
+			i_cal_component_remove_property (icomp, prop);
+			g_object_unref (prop);
+		}
+		if (*description)
+			i_cal_component_take_property (icomp, i_cal_property_new_description (description));
 	}
-	if (*description)
-		i_cal_component_take_property (icomp, i_cal_property_new_description (description));
+
+	ical_apply_categories_json (icomp, object);
 
 	if (start_unix > 0) {
 		/* journée entière : dates sans heure ; sinon heures en UTC */
@@ -9010,6 +9128,7 @@ cal_event_item_free (gpointer data)
 	g_free (item->calendar_uid);
 	g_free (item->calendar_name);
 	g_free (item->calendar_color);
+	g_strfreev (item->categories);
 	g_free (item);
 }
 
@@ -9069,6 +9188,8 @@ cal_event_item_new (ICalComponent *icomp,
 	item->recurring = prop != NULL || e_cal_util_component_has_recurrences (icomp) ||
 		e_cal_util_component_is_instance (icomp);
 	g_clear_object (&prop);
+
+	item->categories = ical_dup_categories (icomp);
 
 	item->all_day = start && i_cal_time_is_date (start);
 	item->start = cal_time_to_unix (start);
@@ -9219,6 +9340,7 @@ core_list_events_run (EvoCore *core,
 		json_builder_add_boolean_value (builder, item->all_day);
 		json_builder_set_member_name (builder, "recurring");
 		json_builder_add_boolean_value (builder, item->recurring);
+		builder_add_categories (builder, (const gchar * const *) item->categories);
 		json_builder_end_object (builder);
 	}
 
@@ -9304,6 +9426,8 @@ core_create_event_run (EvoCore *core,
 		ICalProperty *prop = i_cal_property_new_description (description);
 		i_cal_component_take_property (icomp, prop);
 	}
+
+	ical_apply_categories_json (icomp, object);
 
 	dtstart = i_cal_time_new_from_timet_with_zone ((time_t) start_unix, FALSE, utc_zone);
 	dtend = i_cal_time_new_from_timet_with_zone ((time_t) end_unix, FALSE, utc_zone);
@@ -9521,42 +9645,6 @@ task_status_name (ICalComponent *icomp)
 	return name;
 }
 
-/* Ajoute au JSON les catégories d'une tâche (propriétés CATEGORIES, chacune
- * pouvant contenir plusieurs valeurs séparées par des virgules).
- * Paramètres :
- *   builder : constructeur JSON, dans un objet
- *   icomp   : composant VTODO */
-static void
-task_add_categories (JsonBuilder *builder,
-		     ICalComponent *icomp)
-{
-	ICalProperty *prop;
-
-	json_builder_set_member_name (builder, "categories");
-	json_builder_begin_array (builder);
-
-	for (prop = i_cal_component_get_first_property (icomp, I_CAL_CATEGORIES_PROPERTY);
-	     prop;
-	     g_object_unref (prop), prop = i_cal_component_get_next_property (icomp, I_CAL_CATEGORIES_PROPERTY)) {
-		const gchar *value = i_cal_property_get_categories (prop);
-		gchar **parts;
-		guint ii;
-
-		if (!value)
-			continue;
-
-		parts = g_strsplit (value, ",", -1);
-		for (ii = 0; parts[ii]; ii++) {
-			g_strstrip (parts[ii]);
-			if (*parts[ii])
-				json_builder_add_string_value (builder, parts[ii]);
-		}
-		g_strfreev (parts);
-	}
-
-	json_builder_end_array (builder);
-}
-
 typedef struct {
 	gint64 due;
 	gint priority;
@@ -9679,7 +9767,7 @@ task_item_new (EvoCore *core,
 	builder_add_string (builder, "status", task_status_name (icomp));
 	json_builder_set_member_name (builder, "percent");
 	json_builder_add_int_value (builder, percent);
-	task_add_categories (builder, icomp);
+	ical_add_categories (builder, icomp);
 	builder_add_string (builder, "list_uid", e_source_get_uid (source));
 	builder_add_string (builder, "list_name", e_source_get_display_name (source));
 	builder_add_string (builder, "account_name", account_name ? account_name : "");
@@ -9858,29 +9946,7 @@ task_apply_json (ICalComponent *icomp,
 			i_cal_component_take_property (icomp, i_cal_property_new_priority (priority));
 	}
 
-	if (json_object_has_member (object, "categories")) {
-		JsonNode *node = json_object_get_member (object, "categories");
-
-		e_cal_util_component_remove_property_by_kind (icomp, I_CAL_CATEGORIES_PROPERTY, TRUE);
-		if (node && JSON_NODE_HOLDS_ARRAY (node)) {
-			JsonArray *array = json_node_get_array (node);
-			guint ii;
-
-			/* une propriété CATEGORIES par catégorie */
-			for (ii = 0; ii < json_array_get_length (array); ii++) {
-				const gchar *category = json_array_get_string_element (array, ii);
-				gchar *clean;
-
-				if (!category)
-					continue;
-
-				clean = g_strstrip (g_strdup (category));
-				if (*clean && !strchr (clean, ','))
-					i_cal_component_take_property (icomp, i_cal_property_new_categories (clean));
-				g_free (clean);
-			}
-		}
-	}
+	ical_apply_categories_json (icomp, object);
 
 	if (json_object_has_member (object, "percent"))
 		percent = CLAMP (json_object_get_int_member_with_default (object, "percent", 0), 0, 100);
@@ -10119,7 +10185,69 @@ typedef struct {
 	gchar *notes;
 	gchar *book_uid;
 	gchar *book_name;
+	gchar **categories;	/* noms de catégories (NULL-terminé) */
 } ContactItem;
+
+/* Catégories d'un contact (champ vCard CATEGORIES : valeurs séparées par des
+ * virgules).
+ * Paramètres :
+ *   contact : contact evolution-data-server
+ * Retourne : tableau de chaînes terminé par NULL (g_strfreev), jamais NULL. */
+static gchar **
+contact_dup_categories (EContact *contact)
+{
+	const gchar *value = e_contact_get_const (contact, E_CONTACT_CATEGORIES);
+	GPtrArray *names = g_ptr_array_new ();
+
+	if (value && *value) {
+		gchar **parts = g_strsplit (value, ",", -1);
+		guint ii;
+
+		for (ii = 0; parts[ii]; ii++) {
+			g_strstrip (parts[ii]);
+			if (*parts[ii])
+				g_ptr_array_add (names, g_strdup (parts[ii]));
+		}
+		g_strfreev (parts);
+	}
+
+	g_ptr_array_add (names, NULL);
+
+	return (gchar **) g_ptr_array_free (names, FALSE);
+}
+
+/* Remplace les catégories d'un contact par le contenu d'un tableau JSON de
+ * chaînes (noms vides ou contenant une virgule ignorés ; tableau vide : plus
+ * aucune catégorie).
+ * Paramètres :
+ *   contact : contact à modifier
+ *   array   : tableau JSON de noms de catégories */
+static void
+contact_apply_categories (EContact *contact,
+			  JsonArray *array)
+{
+	GString *joined = g_string_new ("");
+	guint ii;
+
+	for (ii = 0; array && ii < json_array_get_length (array); ii++) {
+		const gchar *category = json_array_get_string_element (array, ii);
+		gchar *clean;
+
+		if (!category)
+			continue;
+
+		clean = g_strstrip (g_strdup (category));
+		if (*clean && !strchr (clean, ',')) {
+			if (joined->len > 0)
+				g_string_append_c (joined, ',');
+			g_string_append (joined, clean);
+		}
+		g_free (clean);
+	}
+
+	e_contact_set (contact, E_CONTACT_CATEGORIES, joined->len > 0 ? joined->str : NULL);
+	g_string_free (joined, TRUE);
+}
 
 /* Libère un élément de contact temporaire.
  * Paramètres :
@@ -10140,6 +10268,7 @@ contact_item_free (gpointer data)
 	g_free (item->notes);
 	g_free (item->book_uid);
 	g_free (item->book_name);
+	g_strfreev (item->categories);
 	g_free (item);
 }
 
@@ -10244,6 +10373,7 @@ core_list_contacts_run (EvoCore *core,
 				item->notes = g_strdup (notes ? notes : "");
 				item->book_uid = g_strdup (e_source_get_uid (source));
 				item->book_name = g_strdup (e_source_get_display_name (source));
+				item->categories = contact_dup_categories (contact);
 
 				g_ptr_array_add (items, item);
 			}
@@ -10274,6 +10404,7 @@ core_list_contacts_run (EvoCore *core,
 		builder_add_string (builder, "notes", item->notes);
 		builder_add_string (builder, "book_uid", item->book_uid);
 		builder_add_string (builder, "book_name", item->book_name);
+		builder_add_categories (builder, (const gchar * const *) item->categories);
 		json_builder_end_object (builder);
 	}
 
@@ -10355,6 +10486,8 @@ core_create_contact_run (EvoCore *core,
 		e_contact_set (contact, E_CONTACT_ORG, org);
 	if (notes && *notes)
 		e_contact_set (contact, E_CONTACT_NOTE, notes);
+	if (json_object_has_member (object, "categories") && JSON_NODE_HOLDS_ARRAY (json_object_get_member (object, "categories")))
+		contact_apply_categories (contact, json_object_get_array_member (object, "categories"));
 
 	if (!e_book_client_add_contact_sync (E_BOOK_CLIENT (client), contact, E_BOOK_OPERATION_FLAG_NONE,
 		&created_uid, core->cancellable, error))
@@ -10415,6 +10548,65 @@ core_delete_contact_run (EvoCore *core,
 	g_object_unref (client);
 
 	return ok ? g_strdup ("{}") : NULL;
+}
+
+/* Remplace les catégories d'un contact existant.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = book_uid, [1] = contact_uid, [2] = tableau JSON de noms
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : "{}" en cas de succès, NULL sinon. */
+static gchar *
+core_set_contact_categories_run (EvoCore *core,
+				 gchar **args,
+				 GError **error)
+{
+	JsonNode *root;
+	ESource *source = NULL;
+	EClient *client;
+	EContact *contact = NULL;
+	gchar *json = NULL;
+
+	root = json_from_string (args[2], error);
+	if (!root)
+		return NULL;
+
+	if (!JSON_NODE_HOLDS_ARRAY (root)) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Liste de catégories invalide");
+		json_node_unref (root);
+		return NULL;
+	}
+
+	if (args[0] && *args[0])
+		source = e_source_registry_ref_source (core->registry, args[0]);
+	if (!source)
+		source = e_source_registry_ref_default_address_book (core->registry);
+
+	if (!source) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "Carnet d'adresses introuvable");
+		json_node_unref (root);
+		return NULL;
+	}
+
+	client = e_book_client_connect_sync (source, 5, core->cancellable, error);
+	g_object_unref (source);
+	if (!client) {
+		json_node_unref (root);
+		return NULL;
+	}
+
+	if (e_book_client_get_contact_sync (E_BOOK_CLIENT (client), args[1], &contact, core->cancellable, error)) {
+		contact_apply_categories (contact, json_node_get_array (root));
+		if (e_book_client_modify_contact_sync (E_BOOK_CLIENT (client), contact, E_BOOK_OPERATION_FLAG_NONE,
+			core->cancellable, error))
+			json = g_strdup ("{}");
+	}
+
+	g_clear_object (&contact);
+	g_object_unref (client);
+	json_node_unref (root);
+
+	return json;
 }
 
 /* --- exportation vCard / iCalendar --- */
@@ -12434,6 +12626,30 @@ evo_core_delete_contact (EvoCore *core,
 	g_return_if_fail (contact_uid != NULL);
 
 	core_submit (core, core_delete_contact_run, g_strdupv (args), func, user_data);
+}
+
+/* Soumet une requête de remplacement des catégories d'un contact.
+ * Paramètres :
+ *   core            : instance du moteur evo-core
+ *   book_uid        : identifiant du carnet d'adresses
+ *   contact_uid     : identifiant du contact
+ *   categories_json : tableau JSON de noms de catégories (["Travail", ...])
+ *   func            : rappel recevant {}
+ *   user_data       : données utilisateur transmises au rappel */
+void
+evo_core_set_contact_categories (EvoCore *core,
+				 const char *book_uid,
+				 const char *contact_uid,
+				 const char *categories_json,
+				 EvoCoreResultFunc func,
+				 void *user_data)
+{
+	gchar *args[] = { (gchar *) (book_uid ? book_uid : ""), (gchar *) contact_uid, (gchar *) categories_json, NULL };
+
+	g_return_if_fail (contact_uid != NULL);
+	g_return_if_fail (categories_json != NULL);
+
+	core_submit (core, core_set_contact_categories_run, g_strdupv (args), func, user_data);
 }
 
 /* Soumet une requête de liste des sources activées (agendas, listes de

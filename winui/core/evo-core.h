@@ -605,7 +605,8 @@ void		evo_core_remove_account		(EvoCore *core,
  *   event_uid    : uid de l'événement
  *   func         : rappel recevant {"uid", "calendar_uid", "calendar_name",
  *                  "summary", "location", "description", "start", "end",
- *                  "all_day", "recurring", "readonly", "organizer": {"name",
+ *                  "all_day", "recurring", "readonly", "categories": ["..."],
+ *                  "organizer": {"name",
  *                  "email"}, "attendees": [{"name", "email", "status":
  *                  "accepted"|"declined"|"tentative"|"delegated"|"needs-action"}]}
  *   user_data    : données utilisateur transmises au rappel */
@@ -617,7 +618,10 @@ void		evo_core_get_event		(EvoCore *core,
 
 /* Modifie un événement (toute la série s'il est périodique).
  * event_json : {"calendar_uid", "uid", "summary", "location",
- *               "description", "start", "end", "all_day"} ; rappel : {} */
+ *               "description", "start", "end", "all_day", "categories":
+ *               ["..."]} ; rappel : {}
+ * Modification partielle : seuls les champs présents sont modifiés ("start"
+ * absent : dates inchangées ; "categories" remplace les catégories). */
 void		evo_core_modify_event		(EvoCore *core,
 						 const char *event_json,
 						 EvoCoreResultFunc func,
@@ -740,7 +744,7 @@ void		evo_core_delete_task		(EvoCore *core,
  *   query     : filtre de recherche (chaîne vide ou NULL pour tous les contacts)
  *   func      : rappel recevant [{"uid": "...", "full_name": "...", "email": "...",
  *               "phone": "...", "org": "...", "notes": "...",
- *               "book_uid": "...", "book_name": "..."}, ...]
+ *               "book_uid": "...", "book_name": "...", "categories": ["..."]}, ...]
  *   user_data : données utilisateur transmises au rappel */
 /* Destinataires pour l'autocomplétion : nom, prénom, nom de famille,
  * surnom ou adresse commençant par text (2 caractères au moins), dans tous
@@ -774,7 +778,8 @@ void		evo_core_list_contacts		(EvoCore *core,
 /* Crée un nouveau contact dans le carnet d'adresses par défaut (ou celui
  * indiqué par "book_uid"). Format attendu pour contact_json :
  * {"book_uid": "..." (optionnel), "full_name": "...", "email": "...",
- *  "phone": "...", "org": "...", "notes": "..."}
+ *  "phone": "...", "org": "...", "notes": "...", "categories": ["..."]
+ *  (optionnel)}
  * Paramètres :
  *   core         : instance du moteur evo-core
  *   contact_json : description du contact au format JSON UTF-8
@@ -795,6 +800,24 @@ void		evo_core_create_contact		(EvoCore *core,
 void		evo_core_delete_contact		(EvoCore *core,
 						 const char *book_uid,
 						 const char *contact_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Remplace les catégories d'un contact (champ vCard CATEGORIES). Les noms
+ * vides ou contenant une virgule sont ignorés ; un tableau vide retire
+ * toutes les catégories. Les listes de contacts renvoient les catégories
+ * dans le membre "categories" (tableau de chaînes).
+ * Paramètres :
+ *   core            : instance du moteur evo-core
+ *   book_uid        : identifiant du carnet d'adresses ("" pour le carnet par défaut)
+ *   contact_uid     : identifiant du contact
+ *   categories_json : tableau JSON de noms, ex. ["Travail","Important"]
+ *   func            : rappel recevant {}
+ *   user_data       : données utilisateur transmises au rappel */
+void		evo_core_set_contact_categories	(EvoCore *core,
+						 const char *book_uid,
+						 const char *contact_uid,
+						 const char *categories_json,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 

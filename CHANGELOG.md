@@ -10,6 +10,12 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
+## [1.0.0] — en cours
+
+### Ajouté
+
+- **Catégories unifiées (ROADMAP v1.1.0 §2, TODO section 17, `#demo-categories`)** : un registre unique « nom → couleur » (`winui/app/Categories.h`, logique pure testée dans `tests/unit/test_categories.cpp`) est maintenant partagé par les courriels, les contacts, les tâches et les événements du calendrier. Il est enregistré dans `settings.json` (clé `categories.registry`) via `CategoryStore.h`. Nouvelle page **Paramètres › Catégories** : créer, renommer, choisir la couleur (sélecteur de couleur) et supprimer une catégorie, rétablir la palette standard. Côté moteur (`evo-core`), les événements et les contacts exposent et acceptent désormais leurs catégories (`CATEGORIES` iCalendar / vCard), `evo_core_modify_event` devient une modification partielle (seuls les champs présents sont modifiés) et la nouvelle fonction `evo_core_set_contact_categories` remplace les catégories d'un contact. Les courriels continuent d'utiliser les étiquettes Camel. L'affectation se fait depuis le menu contextuel « Catégoriser » des listes de messages, de tâches, de contacts et d'événements (liste et grilles Jour / Semaine / Mois), avec pastilles de couleur dans les listes de tâches, de contacts et d'événements ; les blocs d'événements du calendrier prennent la couleur de leur première catégorie. Limites connues : renommer ou supprimer une catégorie ne modifie pas les éléments déjà classés ; la synchronisation avec la liste principale de catégories Microsoft 365 n'est pas faite ; les pastilles de la fiche détaillée d'un contact ne sont pas encore affichées.
+
 ## [0.9.7] — 2026-11-04
 
 ### Ajouté

@@ -116,6 +116,8 @@
   <ItemGroup>
     <ResourceCompile Include="EvolutionWin.rc" />
     <ClInclude Include="WindowIcon.h" />
+    <ClInclude Include="Categories.h" />
+    <ClInclude Include="CategoryStore.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="Signatures.h" />
     <None Include="Assets\EvolutionWin.ico" />
@@ -245,6 +247,9 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="MainWindow.Tasks.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="MainWindow.Categories.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="MainWindow.Settings.cpp">
