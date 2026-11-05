@@ -1,0 +1,194 @@
+        <Border Grid.Row="3" Background="{ThemeResource LayerFillColorDefaultBrush}"
+
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0"
+
+                Padding="12,4,12,4" MinHeight="32">
+
+            <Grid VerticalAlignment="Center">
+
+                <Grid.ColumnDefinitions>
+
+                    <ColumnDefinition Width="Auto" />
+
+                    <ColumnDefinition Width="*" />
+
+                    <ColumnDefinition Width="Auto" />
+
+                    <ColumnDefinition Width="Auto" />
+
+                </Grid.ColumnDefinitions>
+
+
+
+                <!-- À gauche : statut du dossier / nombre d'éléments -->
+
+                <TextBlock x:Name="FolderStatusText" Grid.Column="0"
+
+                           Text="Tous les dossiers sont à jour" VerticalAlignment="Center"
+
+                           Style="{StaticResource CaptionTextBlockStyle}" />
+
+
+
+                <!-- au centre : message temporaire compact (remplace l'ancienne grande barre de notification) -->
+                <Grid x:Name="StatusMessagePanel" Grid.Column="1" ColumnSpacing="8" Margin="16,0,16,0" VerticalAlignment="Center" Visibility="Collapsed"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><FontIcon x:Name="StatusMessageIcon" Grid.Column="0" Glyph="&#xE946;" FontSize="12" VerticalAlignment="Center" /><TextBlock x:Name="StatusMessageText" Grid.Column="1" Style="{StaticResource CaptionTextBlockStyle}" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center" /><Button x:Name="StatusMessageCloseButton" Grid.Column="2" Style="{StaticResource SubtleButtonStyle}" Padding="4,2,4,2" Click="OnStatusMessageCloseClick" ToolTipService.ToolTip="Fermer"><FontIcon Glyph="&#xE711;" FontSize="10" /></Button></Grid>
+                <!-- Au centre / droite : barre de progression discrète lors de la synchronisation -->
+
+                <StackPanel x:Name="StatusBarProgressPanel" Grid.Column="2" Orientation="Horizontal"
+
+                            Spacing="8" VerticalAlignment="Center" Margin="0,0,16,0" Visibility="Collapsed">
+
+                    <ProgressBar x:Name="StatusBarProgressBar" Width="140" Height="4"
+
+                                 IsIndeterminate="True" VerticalAlignment="Center" />
+
+                    <TextBlock x:Name="StatusBarProgressText" Text="Synchronisation…"
+
+                               Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+
+                    <Button x:Name="StatusBarCancelButton" Style="{StaticResource SubtleButtonStyle}"
+                            Padding="4,2,4,2" Click="OnCancelSyncClick" ToolTipService.ToolTip="Annuler l'opération en cours">
+                        <FontIcon Glyph="&#xE711;" FontSize="10" />
+                    </Button>
+
+                </StackPanel>
+
+
+
+                <!-- À droite : notifications et indicateur d'état des connexions -->
+
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+
+                    <!-- Menu déroulant des notifications récentes -->
+
+                    <Button x:Name="NotificationsButton"
+
+                            Padding="6,3,6,3" VerticalAlignment="Center"
+
+                            ToolTipService.ToolTip="Notifications reçues">
+
+                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+
+                            <FontIcon Glyph="&#xEA8F;" FontSize="14" VerticalAlignment="Center" />
+
+                            <InfoBadge x:Name="NotificationsBadge" Value="0" Visibility="Collapsed"
+
+                                       Style="{StaticResource AttentionValueInfoBadgeStyle}" />
+
+                        </StackPanel>
+
+                        <Button.Flyout>
+
+                            <Flyout x:Name="NotificationsFlyout">
+
+                                <StackPanel Width="340" Spacing="8">
+
+                                    <Grid>
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Text="Notifications" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+
+                                        <Button x:Name="ClearAllNotificationsButton" Grid.Column="1"
+
+                                                Content="Tout effacer" Style="{StaticResource SubtleButtonStyle}"
+
+                                                Click="OnClearAllNotificationsClick" />
+
+                                    </Grid>
+
+                                    <MenuFlyoutSeparator />
+
+                                    <ScrollViewer MaxHeight="300" HorizontalScrollBarVisibility="Disabled">
+
+                                        <StackPanel Spacing="6">
+
+                                            <TextBlock x:Name="NoNotificationsText" Text="Aucune notification"
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}"
+
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+
+                                                       HorizontalAlignment="Center" Margin="0,16,0,16" />
+
+                                            <StackPanel x:Name="NotificationsPanel" Spacing="6" />
+
+                                        </StackPanel>
+
+                                    </ScrollViewer>
+
+                                </StackPanel>
+
+                            </Flyout>
+
+                        </Button.Flyout>
+
+                    </Button>
+
+                <Button x:Name="ConnectionStatusButton"
+
+                        Click="OnConnectionStatusButtonClick"
+
+                        Padding="8,3,8,3" VerticalAlignment="Center"
+
+                        ToolTipService.ToolTip="Afficher l'état des connexions réseau">
+
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+
+                        <Ellipse x:Name="ConnectionStatusDot" Width="8" Height="8"
+
+                                 Fill="#107C41" VerticalAlignment="Center" />
+
+                        <TextBlock x:Name="ConnectionStatusLabel" Text="Connecté"
+
+                                   Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+
+                    </StackPanel>
+
+                    <Button.Flyout>
+
+                        <Flyout x:Name="ConnectionStatusFlyout">
+
+                            <StackPanel Width="340" Spacing="12">
+
+                                <TextBlock Text="État des connexions" Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                                <StackPanel x:Name="ConnectionAccountsPanel" Spacing="8">
+
+                                    <!-- Rempli dynamiquement par RefreshConnectionAccountsList -->
+
+                                </StackPanel>
+
+                                <MenuFlyoutSeparator />
+
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+
+                                    <Button x:Name="RetryConnectionsButton" Content="Vérifier maintenant"
+
+                                            Click="OnRetryConnectionsClick" />
+
+                                    <Button x:Name="ToggleOfflineButton" Content="Travailler hors connexion"
+
+                                            Click="OnToggleOfflineClick" />
+
+                                </StackPanel>
+
+                            </StackPanel>
+
+                        </Flyout>
+
+                    </Button.Flyout>
+
+                </Button>
+
+                </StackPanel>
+
+            </Grid>
+
+        </Border>

@@ -46,17 +46,18 @@ flowchart LR
 
 ### 1. Mail & Lecture (§5, §6, §7)
 - [x] **Regroupement par discussion** : affichage hiérarchique sous forme de conversations / fils de discussion (`#demo-conversations`).
-- [ ] **Gestion des dossiers** : réorganisation ordonnée des dossiers spéciaux en tête (Boîte de réception, Envoyés, Brouillons) avec icônes distinctives (`#demo-dossiers`).
-- [ ] **Pièces jointes** : prévisualisation intégrée, enregistrement groupé et glisser-déposer sortant.
-- [ ] **Suivi des messages** : options de marquage d\'importance, drapeaux avec date d\'échéance et rappels associés.
-- [ ] **Accusés de lecture et de réception** : gestion de l\'émission et du traitement des notifications d\'état de distribution.
+- [x]**Gestion des dossiers** : réorganisation ordonnée des dossiers spéciaux en tête (Boîte de réception, Envoyés, Brouillons) avec icônes distinctives (`#demo-dossiers`).
+- [x] **Pièces jointes** : prévisualisation intégrée (images, texte, PDF, HTML), enregistrement groupé et glisser-déposer sortant. _(aperçu Office reporté : cf. TODO §6)_
+- [x] **Suivi des messages** : options de marquage d\'importance, drapeaux avec date d\'échéance et rappels associés.
+- [x] **Accusés de lecture et de réception** : gestion de l\'émission et du traitement des notifications d\'état de distribution.
 
 ### 2. Invitations & Réunions (§13, §15)
-- [ ] **Traitement des invitations iCalendar** : bandeau d\'action dans le volet de lecture (Accepter, Refuser, Provisoire) avec mise à jour du calendrier de l\'utilisateur (`#demo-invitations`).
-- [ ] **Carnet d\'adresses global (GAL)** : recherche et consultation de l\'annuaire d\'entreprise pour Exchange Online et Microsoft 365 (`#demo-gal`).
+- [x] **Traitement des invitations iCalendar** : bandeau d\'action dans le volet de lecture (Accepter, Refuser, Provisoire) avec mise à jour du calendrier de l\'utilisateur (`#demo-invitations`).
+- [ ] **Carnet d\'adresses global (GAL)** : recherche et consultation de l\'annuaire d\'entreprise pour Exchange Online et Microsoft 365 (`#demo-gal`). _Implémenté (moteur Microsoft Graph et Google, autocomplétion des destinataires, consultation depuis la vue Contacts, tests) ; reste à valider sur un tenant réel (Microsoft 365) avant de cocher._
+- [ ] **Réunion en ligne Microsoft Teams** (compte Exchange Online / Microsoft 365) : bouton « Réunion Teams » du ruban Calendrier, création via Microsoft Graph (`isOnlineMeeting: true`, `teamsForBusiness`) et lien de visio inséré dans l'invitation. _(codé : case « Réunion en ligne Microsoft Teams » dans la fenêtre d'événement et bouton du ruban ; reste à valider sur un tenant réel)_
 
 ### 3. Gestion des absences (§3)
-- [ ] **Réponses automatiques (Out of Office)** : interface de configuration des messages d\'absence pour Microsoft 365 et Gmail (`#demo-reponses-auto`).
+- [ ] **Réponses automatiques (Out of Office)** : interface de configuration des messages d\'absence pour Microsoft 365 et Gmail (`#demo-reponses-auto`). _Implémenté (moteur, boîte de dialogue, tests) ; reste à valider sur un compte réel (tenant M365, compte Gmail) avant de cocher._
 
 ---
 
@@ -72,12 +73,12 @@ flowchart LR
 - [ ] **Gestion des autorisations déléguées** : consultation et révocation des droits accordés depuis l\'interface d\'EvolutionWin.
 
 ### 2. Catégorisation transverse (§17)
-- [ ] **Système de catégories unifiées** : palette de codes couleur et libellés partagés entre e-mails, contacts, tâches et événements de calendrier (`#demo-categories`).
-- [ ] **Filtres par catégorie** : filtrage rapide dans les listes selon les catégories attribuées.
+- [x] **Système de catégories unifiées** : palette de codes couleur et libellés partagés entre e-mails, contacts, tâches et événements de calendrier (`#demo-categories`).
+- [x] **Filtres par catégorie** : filtrage rapide dans les listes selon les catégories attribuées.
 
 ### 3. Vues unifiées multi-comptes (§11)
-- [ ] **Boîte de réception unifiée** : vue agrégée virtuelle (`CamelVeeFolder`) regroupant les messages reçus de l\'ensemble des comptes.
-- [ ] **Dossiers virtuels globaux** : regroupement des éléments envoyés, de la corbeille et des brouillons sur tous les comptes.
+- [x] **Boîte de réception unifiée** : vue agrégée virtuelle (`CamelVeeFolder`) regroupant les messages reçus de l\'ensemble des comptes.
+- [x] **Dossiers virtuels globaux** : regroupement des éléments envoyés, de la corbeille et des brouillons sur tous les comptes.
 
 ---
 

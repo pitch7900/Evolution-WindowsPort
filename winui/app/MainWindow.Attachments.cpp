@@ -16,6 +16,8 @@
 #include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include <algorithm>
+#include <memory>
+#include <optional>
 #include <fstream>
 #include <chrono>
 #include <cmath>
@@ -108,6 +110,85 @@ namespace winrt::EvolutionWin::implementation
 
             button.ContextFlyout(flyout);
 
+            /* Glisser-déposer sortant : la pièce jointe est extraite dans le dossier
+             * temporaire de glisser-déposer au début du glissement (report asynchrone),
+             * puis offerte à l'Explorateur / au Bureau sous forme de fichier. */
+            button.CanDrag(true);
+
+            /* Un Button capture le pointeur : le glissement natif (CanDrag) ne démarre alors
+             * pas. On le déclenche explicitement quand la souris, bouton gauche enfoncé, s'éloigne
+             * de plus de quelques pixels du point d'appui. */
+            auto press_point = std::make_shared<std::optional<Windows::Foundation::Point>>();
+            button.AddHandler(UIElement::PointerPressedEvent(),
+                box_value(Input::PointerEventHandler([press_point](IInspectable const&, Input::PointerRoutedEventArgs const& a)
+            {
+                *press_point = a.GetCurrentPoint(nullptr).Position();
+            })), true);
+            button.AddHandler(UIElement::PointerReleasedEvent(),
+                box_value(Input::PointerEventHandler([press_point](IInspectable const&, Input::PointerRoutedEventArgs const&)
+            {
+                press_point->reset();
+            })), true);
+            button.AddHandler(UIElement::PointerMovedEvent(),
+                box_value(Input::PointerEventHandler([press_point](IInspectable const& sender, Input::PointerRoutedEventArgs const& a)
+            {
+                if (!press_point->has_value())
+                    return;
+                auto point = a.GetCurrentPoint(nullptr);
+                if (!point.Properties().IsLeftButtonPressed())
+                {
+                    press_point->reset();
+                    return;
+                }
+                double dx = point.Position().X - (*press_point)->X;
+                double dy = point.Position().Y - (*press_point)->Y;
+                if (dx * dx + dy * dy < 36.0)
+                    return;
+                press_point->reset();
+                sender.as<UIElement>().StartDragAsync(point);
+            })), true);
+
+            button.DragStarting([this, index, filename](UIElement const&, DragStartingEventArgs const& args)
+            {
+                hstring uid = SelectedMessageUid();
+                if (uid.empty() || m_account.empty() || m_folder.empty())
+                {
+                    args.Cancel(true);
+                    return;
+                }
+
+                std::wstring dir = ::EvolutionWin::Helpers::GetDragDropTempDir();
+                std::wstring path = dir + std::wstring{ SanitizeFileName(filename, L"piece-jointe") };
+                auto deferral = args.GetDeferral();
+                auto data = args.Data();
+                data.RequestedOperation(Windows::ApplicationModel::DataTransfer::DataPackageOperation::Copy);
+
+                m_core->SaveAttachment(m_account, m_folder, uid, index, hstring{ path },
+                    [this, deferral, data, path](hstring const&, hstring const& error)
+                {
+                    DispatcherQueue().TryEnqueue(::EvolutionWin::Helpers::KeepCoroutineAlive(
+                        [this, deferral, data, path, error]() -> Windows::Foundation::IAsyncAction
+                    {
+                        if (error.empty())
+                        {
+                            try
+                            {
+                                auto file = co_await Windows::Storage::StorageFile::GetFileFromPathAsync(path);
+                                data.SetStorageItems(single_threaded_vector<Windows::Storage::IStorageItem>({ file }));
+                            }
+                            catch (...)
+                            {
+                            }
+                        }
+                        else
+                        {
+                            ShowStatus(L"Impossible de glisser la pièce jointe : " + error, InfoBarSeverity::Error);
+                        }
+                        deferral.Complete();
+                    }));
+                });
+            });
+
             children.Append(button);
         }
 
@@ -164,8 +245,9 @@ namespace winrt::EvolutionWin::implementation
 
         auto sel_uids = SelectedMessageUids();
         hstring uid = sel_uids.empty() ? SelectedMessageUid() : sel_uids.front();
-        hstring account = m_account;
-        hstring folder = m_folder;
+        auto uid_location = GetMessageLocation(uid);
+        hstring account = uid_location.account;
+        hstring folder = uid_location.folder;
 
         if (uid.empty() || account.empty() || folder.empty())
             co_return;
@@ -183,13 +265,7 @@ namespace winrt::EvolutionWin::implementation
                 co_return;
 
             hstring dest_dir = folder_dest.Path();
-            JsonObject request;
-            request.SetNamedValue(L"account", JsonValue::CreateStringValue(account));
-            request.SetNamedValue(L"folder", JsonValue::CreateStringValue(folder));
-            JsonArray uids;
-            for (auto const& u : sel_uids)
-                uids.Append(JsonValue::CreateStringValue(u));
-            request.SetNamedValue(L"uids", uids);
+            JsonObject request = BuildMessagesRequest(sel_uids);
 
             ShowStatus(L"Exportation de " + hstring{ std::to_wstring(sel_uids.size()) } + L" messages en cours…", InfoBarSeverity::Informational);
             m_core->ExportMessagesEml(request.Stringify(), [this, dest_dir](hstring const& json, hstring const& error)
@@ -231,12 +307,7 @@ namespace winrt::EvolutionWin::implementation
             co_return;
         hstring dest = file.Path();
 
-        JsonObject request;
-        request.SetNamedValue(L"account", JsonValue::CreateStringValue(account));
-        request.SetNamedValue(L"folder", JsonValue::CreateStringValue(folder));
-        JsonArray uids;
-        uids.Append(JsonValue::CreateStringValue(uid));
-        request.SetNamedValue(L"uids", uids);
+        JsonObject request = BuildMessagesRequest({ uid });
 
         m_core->ExportMessagesEml(request.Stringify(), [this, dest](hstring const& json, hstring const& error)
         {
@@ -286,7 +357,7 @@ namespace winrt::EvolutionWin::implementation
 
         m_core->ListMessages(account, folder, 0, [this, account, folder, folder_name, dest_dir](hstring const& json, hstring const& error)
         {
-            DispatcherQueue().TryEnqueue([this, account, folder, folder_name, dest_dir, json, error]() -> fire_and_forget
+            DispatcherQueue().TryEnqueue(::EvolutionWin::Helpers::KeepCoroutineAlive([this, account, folder, folder_name, dest_dir, json, error]() -> Windows::Foundation::IAsyncAction
             {
                 JsonArray msgs;
                 if (!error.empty() || !JsonArray::TryParse(json, msgs) || msgs.Size() == 0)
@@ -341,7 +412,7 @@ namespace winrt::EvolutionWin::implementation
                     }
                     ShowStatus(L"Exportation réussie : " + hstring{ std::to_wstring(count) } + L" messages de « " + folder_name + L" » enregistrés sous format .eml.", InfoBarSeverity::Success);
                 });
-            });
+            }));
         });
     }
 
@@ -351,8 +422,9 @@ namespace winrt::EvolutionWin::implementation
     {
         auto strong = get_strong();
         hstring uid = SelectedMessageUid();
-        hstring account = m_account;
-        hstring folder = m_folder;
+        auto uid_location = GetMessageLocation(uid);
+        hstring account = uid_location.account;
+        hstring folder = uid_location.folder;
 
         if (uid.empty() || account.empty() || folder.empty() || !attachments)
             co_return;
@@ -416,8 +488,9 @@ namespace winrt::EvolutionWin::implementation
     {
         auto strong = get_strong();
         hstring uid = SelectedMessageUid();
-        hstring account = m_account;
-        hstring folder = m_folder;
+        auto uid_location = GetMessageLocation(uid);
+        hstring account = uid_location.account;
+        hstring folder = uid_location.folder;
 
         if (uid.empty() || account.empty() || folder.empty())
             co_return;
@@ -471,6 +544,11 @@ namespace winrt::EvolutionWin::implementation
         PreviewTextScroll().Visibility(Visibility::Collapsed);
         PreviewUnsupported().Visibility(Visibility::Collapsed);
         PreviewLoadingRing().IsActive(false);
+        PreviewPdfPages().Children().Clear();
+        PreviewPdfScroll().Visibility(Visibility::Collapsed);
+        PreviewWeb().Visibility(Visibility::Collapsed);
+        if (PreviewWeb().CoreWebView2())
+            PreviewWeb().CoreWebView2().NavigateToString(L"<html></html>");
 
         if (!m_preview_current_path.empty())
         {
@@ -498,8 +576,9 @@ namespace winrt::EvolutionWin::implementation
     {
         auto strong = get_strong();
         hstring uid = SelectedMessageUid();
-        hstring account = m_account;
-        hstring folder = m_folder;
+        auto uid_location = GetMessageLocation(uid);
+        hstring account = uid_location.account;
+        hstring folder = uid_location.folder;
 
         if (uid.empty() || account.empty() || folder.empty())
             co_return;
@@ -528,12 +607,14 @@ namespace winrt::EvolutionWin::implementation
         PreviewImageScroll().Visibility(Visibility::Collapsed);
         PreviewTextScroll().Visibility(Visibility::Collapsed);
         PreviewUnsupported().Visibility(Visibility::Collapsed);
+        PreviewPdfScroll().Visibility(Visibility::Collapsed);
+        PreviewWeb().Visibility(Visibility::Collapsed);
         PreviewLoadingRing().IsActive(true);
 
         m_core->SaveAttachment(account, folder, uid, index, m_preview_current_path,
             [this, strong, filename, temp_file](hstring const&, hstring const& error)
         {
-            DispatcherQueue().TryEnqueue([this, strong, filename, temp_file, error]() -> fire_and_forget
+            DispatcherQueue().TryEnqueue(::EvolutionWin::Helpers::KeepCoroutineAlive([this, strong, filename, temp_file, error]() -> Windows::Foundation::IAsyncAction
             {
                 PreviewLoadingRing().IsActive(false);
 
@@ -558,6 +639,66 @@ namespace winrt::EvolutionWin::implementation
                     }
                     catch (...)
                     {
+                        PreviewUnsupported().Visibility(Visibility::Visible);
+                    }
+                }
+                else if (kind == AttachmentPreviewKind::Pdf)
+                {
+                    try
+                    {
+                        auto file = co_await Windows::Storage::StorageFile::GetFileFromPathAsync(temp_file);
+                        auto doc = co_await Windows::Data::Pdf::PdfDocument::LoadFromFileAsync(file);
+                        PreviewPdfPages().Children().Clear();
+                        uint32_t count = (std::min)(doc.PageCount(), 60u);
+                        for (uint32_t p = 0; p < count; ++p)
+                        {
+                            auto page = doc.GetPage(p);
+                            Windows::Storage::Streams::InMemoryRandomAccessStream mem;
+                            Windows::Data::Pdf::PdfPageRenderOptions opts;
+                            opts.DestinationWidth(900);
+                            co_await page.RenderToStreamAsync(mem, opts);
+                            Microsoft::UI::Xaml::Media::Imaging::BitmapImage bitmap;
+                            co_await bitmap.SetSourceAsync(mem);
+                            Image img;
+                            img.Source(bitmap);
+                            img.Width(900);
+                            img.Stretch(Microsoft::UI::Xaml::Media::Stretch::Uniform);
+                            PreviewPdfPages().Children().Append(img);
+                            PreviewPdfScroll().Visibility(Visibility::Visible);
+                        }
+                    }
+                    catch (...)
+                    {
+                        PreviewPdfScroll().Visibility(Visibility::Collapsed);
+                        PreviewUnsupported().Visibility(Visibility::Visible);
+                    }
+                }
+                else if (kind == AttachmentPreviewKind::Html)
+                {
+                    try
+                    {
+                        co_await PreviewWeb().EnsureCoreWebView2Async();
+                        auto core = PreviewWeb().CoreWebView2();
+                        core.Settings().IsScriptEnabled(false);
+                        core.Settings().AreDevToolsEnabled(false);
+                        core.Settings().AreDefaultContextMenusEnabled(false);
+                        core.NavigationStarting([](auto const&, Microsoft::Web::WebView2::Core::CoreWebView2NavigationStartingEventArgs const& a)
+                        {
+                            /* seule la page injectee (data:) est autorisee : pas de lien ni de redirection */
+                            if (std::wstring_view{ a.Uri() }.rfind(L"data:", 0) != 0)
+                                a.Cancel(true);
+                        });
+                        core.NewWindowRequested([](auto const&, Microsoft::Web::WebView2::Core::CoreWebView2NewWindowRequestedEventArgs const& a) { a.Handled(true); });
+                        auto file = co_await Windows::Storage::StorageFile::GetFileFromPathAsync(temp_file);
+                        hstring html = co_await Windows::Storage::FileIO::ReadTextAsync(file);
+                        /* CSP : aucune ressource distante, images integrees seulement */
+                        std::wstring doc = L"<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src data:; style-src 'unsafe-inline'\">" + std::wstring{ html };
+                        PreviewWeb().Visibility(Visibility::Visible);
+                        core.NavigateToString(hstring{ doc });
+                    }
+                    catch (...)
+                    {
+                        PreviewWeb().Visibility(Visibility::Collapsed);
                         PreviewUnsupported().Visibility(Visibility::Visible);
                     }
                 }
@@ -602,7 +743,7 @@ namespace winrt::EvolutionWin::implementation
                 {
                     PreviewUnsupported().Visibility(Visibility::Visible);
                 }
-            });
+            }));
         });
     }
 
@@ -661,16 +802,11 @@ namespace winrt::EvolutionWin::implementation
         if (!m_core || account.empty() || folder.empty() || uid.empty())
             co_return;
 
-        JsonObject request;
-        request.SetNamedValue(L"account", JsonValue::CreateStringValue(account));
-        request.SetNamedValue(L"folder", JsonValue::CreateStringValue(folder));
-        JsonArray uids;
-        uids.Append(JsonValue::CreateStringValue(uid));
-        request.SetNamedValue(L"uids", uids);
+        JsonObject request = BuildMessagesRequest({ uid });
 
         m_core->ExportMessagesEml(request.Stringify(), [this](hstring const& json, hstring const& error)
         {
-            DispatcherQueue().TryEnqueue([this, json, error]() -> fire_and_forget
+            DispatcherQueue().TryEnqueue(::EvolutionWin::Helpers::KeepCoroutineAlive([this, json, error]() -> Windows::Foundation::IAsyncAction
             {
                 JsonArray paths;
                 if (!error.empty() || !JsonArray::TryParse(json, paths) || paths.Size() == 0)
@@ -787,7 +923,7 @@ namespace winrt::EvolutionWin::implementation
                 m_dialog_open = true;
                 co_await dialog.ShowAsync();
                 m_dialog_open = false;
-            });
+            }));
         });
 
         co_return;

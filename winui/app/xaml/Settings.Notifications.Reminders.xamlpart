@@ -1,0 +1,49 @@
+                                <TextBlock Text="Rappels de calendrier et de tâches" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+
+                                <!-- Activation globale des rappels -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE823;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Activer les rappels d'événements et de tâches" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Émettre des notifications système et alertes sonores à l'approche de vos rendez-vous et échéances."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="CalendarRemindersEnabledSwitch" Tag="calendar.reminders-enabled"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Durée d'affichage des bannières de rappel -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xEA8F;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Durée d'affichage des alertes de rappel" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Délai de persistance de la notification de rappel à l'écran avant masquage automatique."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="CalendarRemindersDurationCombo" Tag="calendar.reminders-duration"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="180">
+                                            <ComboBoxItem Content="5 secondes" Tag="5" />
+                                            <ComboBoxItem Content="10 secondes (défaut)" Tag="10" />
+                                            <ComboBoxItem Content="30 secondes" Tag="30" />
+                                            <ComboBoxItem Content="1 minute" Tag="60" />
+                                            <ComboBoxItem Content="Persistant" Tag="0" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>

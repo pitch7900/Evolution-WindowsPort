@@ -128,6 +128,9 @@ namespace winrt::EvolutionWin::implementation
         /* autocomplétion : requête en cours, texte inséré par suggestion */
         uint64_t m_recipient_request{ 0 };
         std::map<std::wstring, std::wstring> m_suggestion_values;
+        /* annuaire de l'organisation (GAL) : recherche différée après la frappe */
+        Microsoft::UI::Xaml::DispatcherTimer m_gal_timer{ nullptr };
+        std::function<void()> m_gal_pending;
         void RememberRecipients();
         void RemoveRecentRecipient(std::wstring const& address);
         EvolutionWin::RecipientSuggestion m_focused_suggestion{ nullptr };

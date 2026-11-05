@@ -8,9 +8,17 @@
 
 #include "evo-core.h"
 #include "ErrorLog.h"
+#include "UnifiedViews.h"
 
 namespace EvolutionWin
 {
+    /* Identifiant de message transmis au moteur (UTF-8) : dans une vue unifiée
+       l'identifiant affiché est composite, seul l'uid réel est connu du moteur */
+    inline std::string CoreUid(winrt::hstring const& uid)
+    {
+        return UnifiedViews::RealUid(winrt::to_string(uid));
+    }
+
     /* json is empty when error is set */
     using CoreHandler = std::function<void (winrt::hstring const& json, winrt::hstring const& error)>;
     using CoreEventHandler = std::function<void (winrt::hstring const& event, winrt::hstring const& json)>;
@@ -54,7 +62,7 @@ namespace EvolutionWin
         void FetchMessage(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& uid, CoreHandler handler)
         {
             evo_core_get_message(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
-                winrt::to_string(uid).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+                CoreUid(uid).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
         void Refresh()
@@ -141,8 +149,72 @@ namespace EvolutionWin
                              winrt::hstring const& flag, bool value, CoreHandler handler)
         {
             evo_core_set_message_flags(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
-                winrt::to_string(uid).c_str(), winrt::to_string(flag).c_str(), value ? 1 : 0,
+                CoreUid(uid).c_str(), winrt::to_string(flag).c_str(), value ? 1 : 0,
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Traite la demande d'accusé de lecture d'un message : envoie un MDN
+         * (RFC 8098) ou marque seulement le message comme traité ($MDNSent).
+         * Paramètres :
+         *   send    : true pour envoyer l'accusé, false pour « Ne pas envoyer »
+         *   handler : rappel recevant {"sent", "processed", "to"} */
+        void SendReadReceipt(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& uid,
+                             bool send, CoreHandler handler)
+        {
+            evo_core_send_read_receipt(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                CoreUid(uid).c_str(), send ? 1 : 0, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Répond à une invitation iCalendar d'un message : met à jour l'agenda,
+         * envoie (ou non) la réponse iTIP à l'organisateur, mémorise la réponse.
+         * Paramètres :
+         *   response   : "accepted", "tentative", "declined" ou "remove" (réunion annulée)
+         *   send_reply : true pour envoyer la réponse à l'organisateur
+         *   handler    : rappel recevant {"response", "partstat", "calendar", "calendar_error"?, "sent", "to"} */
+        void RespondInvitation(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& uid,
+                               winrt::hstring const& response, bool send_reply, CoreHandler handler)
+        {
+            evo_core_respond_invitation(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                CoreUid(uid).c_str(), winrt::to_string(response).c_str(), send_reply ? 1 : 0,
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Définit ou efface le suivi d'un message.
+         * Paramètres :
+         *   label        : libellé ("" pour effacer)
+         *   due_by       : échéance en secondes Unix (texte) ou ""
+         *   completed_on : date de fin en secondes Unix (texte) ou ""
+         *   handler      : rappel recevant {"flagged", "follow_up", "due_by", "completed_on"} */
+        void SetFollowUp(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& uid,
+                         winrt::hstring const& label, winrt::hstring const& due_by, winrt::hstring const& completed_on,
+                         CoreHandler handler)
+        {
+            evo_core_set_follow_up(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                CoreUid(uid).c_str(), winrt::to_string(label).c_str(), winrt::to_string(due_by).c_str(),
+                winrt::to_string(completed_on).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Lit les réponses automatiques (absence) d'un compte Microsoft 365 ou Gmail.
+         * Paramètres :
+         *   account : identifiant du compte
+         *   handler : rappel recevant {"provider", "single_message", "enabled",
+         *             "external_audience", "start", "end", "subject",
+         *             "internal_message", "external_message"} */
+        void GetAutoReply(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_get_auto_reply(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Enregistre les réponses automatiques (absence) d'un compte.
+         * Paramètres :
+         *   account       : identifiant du compte
+         *   settings_json : réglages (mêmes champs que GetAutoReply)
+         *   handler       : rappel recevant les réglages enregistrés */
+        void SetAutoReply(winrt::hstring const& account, winrt::hstring const& settings_json, CoreHandler handler)
+        {
+            evo_core_set_auto_reply(m_core, winrt::to_string(account).c_str(),
+                winrt::to_string(settings_json).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
         /* Supprime un message (vers la corbeille du compte ou définitivement).
@@ -167,7 +239,7 @@ namespace EvolutionWin
                            CoreHandler handler)
         {
             evo_core_delete_message(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
-                winrt::to_string(uid).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+                CoreUid(uid).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
         /* Déplace un message d'un dossier vers un autre dossier.
@@ -183,7 +255,7 @@ namespace EvolutionWin
                          winrt::hstring const& dst_account, winrt::hstring const& dst_folder, CoreHandler handler)
         {
             evo_core_copy_message(m_core, winrt::to_string(src_account).c_str(), winrt::to_string(src_folder).c_str(),
-                winrt::to_string(uid).c_str(), winrt::to_string(dst_account).c_str(), winrt::to_string(dst_folder).c_str(),
+                CoreUid(uid).c_str(), winrt::to_string(dst_account).c_str(), winrt::to_string(dst_folder).c_str(),
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
@@ -191,7 +263,7 @@ namespace EvolutionWin
                          winrt::hstring const& dst_account, winrt::hstring const& dst_folder, CoreHandler handler)
         {
             evo_core_move_message(m_core, winrt::to_string(src_account).c_str(), winrt::to_string(src_folder).c_str(),
-                winrt::to_string(uid).c_str(), winrt::to_string(dst_account).c_str(), winrt::to_string(dst_folder).c_str(),
+                CoreUid(uid).c_str(), winrt::to_string(dst_account).c_str(), winrt::to_string(dst_folder).c_str(),
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
@@ -279,6 +351,19 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Charge une vue unifiée : les messages d'un rôle de dossier de tous les comptes.
+         * Paramètres :
+         *   role      : rôle du dossier ("inbox", "sent", "drafts", "trash")
+         *   accounts  : comptes inclus, séparés par des virgules ("" : tous)
+         *   max_count : nombre maximal de messages (0 pour tous)
+         *   handler   : rappel recevant le tableau JSON des messages (uid composite,
+         *               compte et dossier d'origine) */
+        void ListUnified(winrt::hstring const& role, winrt::hstring const& accounts, unsigned max_count, CoreHandler handler)
+        {
+            evo_core_list_unified(m_core, winrt::to_string(role).c_str(), winrt::to_string(accounts).c_str(), max_count,
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Enregistre une pièce jointe d'un message dans un fichier local.
          * Paramètres :
          *   account          : identifiant du compte
@@ -291,7 +376,7 @@ namespace EvolutionWin
                             unsigned attachment_index, winrt::hstring const& dest_path, CoreHandler handler)
         {
             evo_core_save_attachment(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
-                winrt::to_string(uid).c_str(), attachment_index, winrt::to_string(dest_path).c_str(),
+                CoreUid(uid).c_str(), attachment_index, winrt::to_string(dest_path).c_str(),
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
@@ -471,7 +556,7 @@ namespace EvolutionWin
         /* Détail d'un événement (organisateur, participants, lecture seule…). */
         void GetEvent(winrt::hstring const& calendar_uid, winrt::hstring const& uid, CoreHandler handler)
         {
-            evo_core_get_event(m_core, winrt::to_string(calendar_uid).c_str(), winrt::to_string(uid).c_str(),
+            evo_core_get_event(m_core, winrt::to_string(calendar_uid).c_str(), CoreUid(uid).c_str(),
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
@@ -568,6 +653,76 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Recherche dans l'annuaire de l'organisation (GAL : Microsoft 365, Google
+         * Workspace) : [{"name", "email", "title", "department", "company", "office",
+         * "phone", "mobile", "account", "provider"}, ...]. */
+        void SearchGal(winrt::hstring const& text, int max_count, CoreHandler handler)
+        {
+            evo_core_search_gal(m_core, winrt::to_string(text).c_str(), max_count,
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Annuaire d'un seul compte (identifiant ou nom affiché). */
+        void SearchGalAccount(winrt::hstring const& account, winrt::hstring const& text, int max_count, CoreHandler handler)
+        {
+            evo_core_search_gal_account(m_core, winrt::to_string(account).c_str(), winrt::to_string(text).c_str(), max_count,
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Envoie par messagerie les invitations (iTIP REQUEST) d'un événement à ses participants,
+         * depuis l'adresse du compte sender_uid : {"sent": nombre, "to": "adresses"}. */
+        void SendEventInvitations(winrt::hstring const& sender_uid, winrt::hstring const& calendar_uid,
+                                  winrt::hstring const& event_uid, CoreHandler handler)
+        {
+            evo_core_send_event_invitations(m_core, winrt::to_string(sender_uid).c_str(),
+                winrt::to_string(calendar_uid).c_str(), winrt::to_string(event_uid).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Groupes de calendriers d'Outlook lus par EWS : [{"name": groupe, "calendars": [{"name", "email"}]}]. */
+        void ListNavCalendars(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_list_nav_calendars(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Page d'autorisation Microsoft pour l'accès EWS : {"url": "..."}. */
+        void GetEwsConsentUrl(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_get_ews_consent_url(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Groupes de calendriers Outlook du compte : [{"name", "class_id", "calendars": [{"name", "address"}]}]. */
+        void ListCalendarGroups(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_list_calendar_groups(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Équipe de l'utilisateur (responsable, collaborateurs, collègues) : [{"name", "email", "relation"}]. */
+        void ListTeam(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_list_team(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Événements du calendrier d'une personne de l'annuaire Microsoft 365 (lecture seule). */
+        void ListPersonEvents(winrt::hstring const& account, winrt::hstring const& email, winrt::hstring const& name,
+                              winrt::hstring const& color, long long start_unix, long long end_unix, CoreHandler handler)
+        {
+            evo_core_list_person_events(m_core, winrt::to_string(account).c_str(), winrt::to_string(email).c_str(),
+                winrt::to_string(name).c_str(), winrt::to_string(color).c_str(), start_unix, end_unix,
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Photo de profil d'une personne de l'annuaire Microsoft 365 : {"photo": "data:image/jpeg;base64,..."}. */
+        void GetGalPhoto(winrt::hstring const& account, winrt::hstring const& email, CoreHandler handler)
+        {
+            evo_core_get_gal_photo(m_core, winrt::to_string(account).c_str(), winrt::to_string(email).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Contacts des seuls carnets book_uids (séparés par des virgules). */
         void ListBookContacts(winrt::hstring const& query, winrt::hstring const& book_uids, CoreHandler handler)
         {
@@ -600,6 +755,19 @@ namespace EvolutionWin
         {
             evo_core_delete_contact(m_core, winrt::to_string(book_uid).c_str(), winrt::to_string(contact_uid).c_str(),
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Remplace les catégories d'un contact (champ vCard CATEGORIES).
+         * Paramètres :
+         *   book_uid        : identifiant du carnet d'adresses
+         *   contact_uid     : identifiant du contact
+         *   categories_json : tableau JSON de noms (["Travail", ...]), [] pour aucune
+         *   handler         : rappel sur le thread de l'interface */
+        void SetContactCategories(winrt::hstring const& book_uid, winrt::hstring const& contact_uid,
+            winrt::hstring const& categories_json, CoreHandler handler)
+        {
+            evo_core_set_contact_categories(m_core, winrt::to_string(book_uid).c_str(), winrt::to_string(contact_uid).c_str(),
+                winrt::to_string(categories_json).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
         /* Modifie un contact existant dans un carnet d'adresses.

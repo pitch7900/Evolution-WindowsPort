@@ -1,0 +1,397 @@
+                    <CommandBar x:Name="RibbonMailFile" Visibility="Collapsed" DefaultLabelPosition="Right"
+
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+
+                        <AppBarButton Label="Enregistrer sous" Click="OnSaveMessageClick" ToolTipService.ToolTip="Enregistrer le message au format .eml (Ctrl+S)">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE74E;" /></AppBarButton.Icon>
+
+                            <AppBarButton.KeyboardAccelerators>
+
+                                <KeyboardAccelerator Modifiers="Control" Key="S" />
+
+                            </AppBarButton.KeyboardAccelerators>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Imprimer" Click="OnPrintClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE749;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarButton Label="Espace disque" Click="OnRibbonAccountQuotaClick" ToolTipService.ToolTip="Afficher l'espace disque et le quota du compte">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xEDA2;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Réponses automatiques" Click="OnRibbonAutoReplyClick" ToolTipService.ToolTip="Configurer les réponses automatiques (absence du bureau) du compte">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE789;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Paramètres" Click="OnRibbonSettingsClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE713;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="À propos" Click="OnRibbonAboutClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+                        <AppBarButton Label="Raccourcis clavier" Click="OnRibbonKeyboardShortcutsClick" ToolTipService.ToolTip="Afficher les raccourcis clavier (F1)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE765;" /></AppBarButton.Icon>
+                        </AppBarButton>
+
+                        <AppBarButton Label="Quitter" Click="OnRibbonQuitClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE7E8;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                    </CommandBar>
+
+                    <CommandBar x:Name="RibbonMailHome" Visibility="Visible" DefaultLabelPosition="Right"
+
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+
+                        <AppBarButton Label="Nouveau message" Click="OnNewMessageClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE710;" /></AppBarButton.Icon>
+
+                            <AppBarButton.KeyboardAccelerators>
+
+                                <KeyboardAccelerator Modifiers="Control" Key="N" />
+
+                            </AppBarButton.KeyboardAccelerators>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Nouvel élément">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8F4;" /></AppBarButton.Icon>
+
+                            <AppBarButton.Flyout>
+
+                                <MenuFlyout>
+
+                                    <MenuFlyoutItem Text="Message" Click="OnNewMessageClick"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE715;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+
+                                    <MenuFlyoutItem Text="Rendez-vous" Click="OnNewEventClick"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE787;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+
+                                    <MenuFlyoutItem Text="Réunion (bientôt)" IsEnabled="False"
+
+                                                    ToolTipService.ToolTip="Réunion avec participants et invitations : à venir"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE716;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+
+                                    <MenuFlyoutItem Text="Tâche" Click="OnNewTaskClick" KeyboardAcceleratorTextOverride="Ctrl+Maj+K"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE9D5;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+
+                                    <MenuFlyoutItem Text="Contact" Click="OnNewContactClick"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE77B;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+
+                                </MenuFlyout>
+
+                            </AppBarButton.Flyout>
+
+                        </AppBarButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarButton Label="Supprimer" Click="OnDeleteClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE74D;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Indésirable" Click="OnJunkClick" ToolTipService.ToolTip="Marquer comme indésirable / non indésirable">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE7BA;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Archiver" Click="OnArchiveClick" ToolTipService.ToolTip="Archiver (Retour arrière)">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE7B8;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+                        <AppBarButton x:Name="RibbonMoveButton" Label="Déplacer" ToolTipService.ToolTip="Déplacer vers un dossier (Ctrl+Maj+V)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8DE;" /></AppBarButton.Icon>
+                            <AppBarButton.Flyout>
+                                <MenuFlyout Opening="OnMoveMenuOpening" />
+                            </AppBarButton.Flyout>
+                            <AppBarButton.KeyboardAccelerators>
+                                <KeyboardAccelerator Modifiers="Control,Shift" Key="V" Invoked="OnMoveFolderAccelerator" />
+                            </AppBarButton.KeyboardAccelerators>
+                        </AppBarButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarButton Label="Répondre" Click="OnReplyClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE97A;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Répondre à tous" Click="OnReplyAllClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xEE35;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Transférer" Click="OnForwardClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE72D;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Transférer en PJ" Click="OnForwardAsAttachmentClick" ToolTipService.ToolTip="Transférer en tant que pièce jointe (Ctrl+Maj+F)">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE723;" /></AppBarButton.Icon>
+
+                            <AppBarButton.KeyboardAccelerators>
+
+                                <KeyboardAccelerator Modifiers="Control,Shift" Key="F" />
+
+                            </AppBarButton.KeyboardAccelerators>
+
+                        </AppBarButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarButton Label="Lu / Non lu" Click="OnToggleReadClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8C3;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Suivi" Click="OnFollowUpButtonClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE7C1;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton x:Name="RibbonCategorizeButton" Label="Catégoriser" ToolTipService.ToolTip="Attribuer des catégories aux messages sélectionnés (Ctrl+F2)">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8EC;" /></AppBarButton.Icon>
+
+                            <AppBarButton.Flyout>
+
+                                <MenuFlyout x:Name="RibbonCategorizeMenu" Opening="OnCategorizeMenuOpening" />
+
+                            </AppBarButton.Flyout>
+
+                            <AppBarButton.KeyboardAccelerators>
+
+                                <KeyboardAccelerator Modifiers="Control" Key="F2" Invoked="OnCategorizeQuickAccelerator" />
+
+                            </AppBarButton.KeyboardAccelerators>
+
+                        </AppBarButton>
+
+                        <AppBarSeparator />
+
+                                                <AppBarButton x:Name="RibbonCreateTaskFromMessage" Label="Créer une tâche" Click="OnCreateTaskFromMessageClick" ToolTipService.ToolTip="Créer une tâche à partir du message sélectionné (Ctrl+Maj+T)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE9D5;" /></AppBarButton.Icon>
+                            <AppBarButton.KeyboardAccelerators>
+                                <KeyboardAccelerator Modifiers="Control,Shift" Key="T" />
+                            </AppBarButton.KeyboardAccelerators>
+                        </AppBarButton>
+                        <AppBarSeparator />
+                        <AppBarElementContainer VerticalAlignment="Center">
+                            <AutoSuggestBox x:Name="RibbonQuickContactSearch"
+                                            PlaceholderText="Rechercher un contact..."
+                                            QueryIcon="Find"
+                                            Width="220"
+                                            Margin="4,0,4,0"
+                                            TextChanged="OnRibbonContactSearchTextChanged"
+                                            QuerySubmitted="OnRibbonContactSearchQuerySubmitted"
+                                            SuggestionChosen="OnRibbonContactSearchSuggestionChosen"
+                                            ToolTipService.ToolTip="Recherche rapide dans le carnet d'adresses (Ctrl+E ou saisie directe)" />
+                        </AppBarElementContainer>
+                        <AppBarButton x:Name="RibbonAddressBookButton" Label="Carnet d'adresses" Click="OnAddressBookClick" ToolTipService.ToolTip="Ouvrir le carnet d'adresses">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE779;" /></AppBarButton.Icon>
+                        </AppBarButton>
+
+                    </CommandBar>
+
+                    <CommandBar x:Name="RibbonSendReceive" Visibility="Collapsed" DefaultLabelPosition="Right"
+
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+
+                        <AppBarButton Label="Envoyer/Recevoir" Click="OnRefreshClick" ToolTipService.ToolTip="Envoyer/Recevoir (F5)">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE72C;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Tous les dossiers" Click="OnRefreshAllClick" ToolTipService.ToolTip="Envoyer/Recevoir tous les dossiers (F9)">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE895;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Dossier courant" Click="OnRefreshFolderClick" ToolTipService.ToolTip="Mettre à jour le dossier courant (Maj+F9)">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8B7;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                    </CommandBar>
+
+                    <CommandBar x:Name="RibbonFolder" Visibility="Collapsed" DefaultLabelPosition="Right"
+
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+
+                        <AppBarButton Label="Nouveau dossier" Click="OnRibbonNewFolderClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8F4;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton x:Name="RibbonRenameFolder" Label="Renommer" Click="OnRibbonRenameFolderClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8AC;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton x:Name="RibbonFolderMore" Label="Déplacer / Copier">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8DE;" /></AppBarButton.Icon>
+
+                            <AppBarButton.Flyout>
+
+                                <MenuFlyout x:Name="RibbonFolderMenu" Opening="OnRibbonFolderMenuOpening" />
+
+                            </AppBarButton.Flyout>
+
+                        </AppBarButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarButton Label="Marquer tout comme lu" Click="OnRibbonMarkAllReadClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8C3;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton x:Name="RibbonEmptyFolder" Label="Vider le dossier" Click="OnRibbonEmptyFolderClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE74D;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton x:Name="RibbonDeleteFolder" Label="Supprimer le dossier" Click="OnRibbonDeleteFolderClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8F6;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                    </CommandBar>
+
+                    <CommandBar x:Name="RibbonMailView" Visibility="Collapsed" DefaultLabelPosition="Right"
+
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+
+                        <AppBarButton Label="Tous les messages" Click="OnRibbonReadFilterClick" Tag="all">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8BD;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Non lus" Click="OnRibbonReadFilterClick" Tag="unread">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE715;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Lus" Click="OnRibbonReadFilterClick" Tag="read">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8C3;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarButton Label="Trier par">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8CB;" /></AppBarButton.Icon>
+
+                            <AppBarButton.Flyout>
+
+                                <MenuFlyout Opening="OnSortMenuOpening" />
+
+                            </AppBarButton.Flyout>
+
+                        </AppBarButton>
+
+                        <AppBarToggleButton x:Name="RibbonMailConversationToggle" Label="Conversations"
+                                            Click="OnRibbonConversationToggled"
+                                            ToolTipService.ToolTip="Afficher les courriels sous forme de conversations pour ce dossier">
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE8BD;" /></AppBarToggleButton.Icon>
+                        </AppBarToggleButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarButton x:Name="RibbonFolderPaneButton" Label="Volet des dossiers"
+                                            ToolTipService.ToolTip="Affichage du volet des dossiers (Normal, Réduit ou Désactivé)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8A0;" /></AppBarButton.Icon>
+                            <AppBarButton.Flyout>
+                                <MenuFlyout Opening="OnFolderPaneMenuOpening" />
+                            </AppBarButton.Flyout>
+                        </AppBarButton>
+
+                        <AppBarButton Label="Volet de lecture">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8A1;" /></AppBarButton.Icon>
+
+                            <AppBarButton.Flyout>
+
+                                <MenuFlyout Opening="OnReadingPaneMenuOpening" />
+
+                            </AppBarButton.Flyout>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Rétablir la disposition" Click="OnRibbonResetLayoutClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE72C;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Fermer les éléments ouverts" Click="OnCloseAllSecondaryWindowsClick"
+                                      ToolTipService.ToolTip="Ferme toutes les fenêtres de messages et de rédaction ouvertes">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8BB;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarToggleButton x:Name="RibbonMailCompactDensityToggle" Label="Mode compact"
+
+                                            Click="OnRibbonCompactDensityToggled"
+
+                                            ToolTipService.ToolTip="Espacement plus étroit des listes pour afficher plus d'éléments">
+
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE8E9;" /></AppBarToggleButton.Icon>
+
+                        </AppBarToggleButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarToggleButton x:Name="RibbonMailTodoBarToggle" Label="Volet des tâches"
+
+                                            Click="OnRibbonTodoBarToggled"
+
+                                            ToolTipService.ToolTip="Afficher ou masquer la barre latérale des tâches à faire (Alt+F2)">
+
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE9D5;" /></AppBarToggleButton.Icon>
+
+                        </AppBarToggleButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarToggleButton x:Name="RibbonConfidentialToggle" Label="Notifications confidentielles"
+
+                                            Click="OnConfidentialToggled"
+
+                                            ToolTipService.ToolTip="Masquer l'expéditeur et l'objet dans les notifications (présentation, partage d'écran)">
+
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE72E;" /></AppBarToggleButton.Icon>
+
+                        </AppBarToggleButton>
+
+                    </CommandBar>

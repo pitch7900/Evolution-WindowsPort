@@ -3,6 +3,7 @@
 #include "MainWindow.Helpers.h"
 #include "WindowIcon.h"
 #include "Settings.h"
+#include "CategoryStore.h"
 
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
@@ -85,6 +86,9 @@ namespace winrt::EvolutionWin::implementation
             if ((read_filter == L"unread" && seen) || (read_filter == L"read" && !seen))
                 return false;
         }
+
+        if (!::EvolutionWin::Categories::MatchesCategoryFilter(::EvolutionWin::CategoryStore::CategoriesOf(message), m_mail_category_filter))
+            return false;
 
         if (FlaggedFilterButton().IsChecked().GetBoolean() && !message.GetNamedBoolean(L"flagged", false))
             return false;
@@ -298,6 +302,9 @@ namespace winrt::EvolutionWin::implementation
         }
 
         hstring scope = CurrentSearchScope();
+        /* une vue unifiée n'a ni sous-dossiers ni compte propre : la recherche élargie porte sur tous les comptes */
+        if (IsUnifiedView() && scope != L"folder")
+            scope = L"all";
 
         if (query.empty())
         {

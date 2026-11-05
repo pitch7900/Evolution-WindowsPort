@@ -8,7 +8,7 @@
   packages into ..\packages and passes GtkPrefix (MSVC builds of GLib, EDS
   and evo-core).
 -->
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" InitialTargets="AssembleMainWindowXaml" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <!-- surchargeables (build-winui-app.bat) : paquets NuGet partagés entre
          worktrees, evo-core compilé dans le build\ de cette copie -->
@@ -116,6 +116,8 @@
   <ItemGroup>
     <ResourceCompile Include="EvolutionWin.rc" />
     <ClInclude Include="WindowIcon.h" />
+    <ClInclude Include="Categories.h" />
+    <ClInclude Include="CategoryStore.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="Signatures.h" />
     <None Include="Assets\EvolutionWin.ico" />
@@ -162,6 +164,10 @@
     <ClInclude Include="App.xaml.h">
       <DependentUpon>App.xaml</DependentUpon>
     </ClInclude>
+    <ClInclude Include="AutoReply.h" />
+    <ClInclude Include="Gal.h" />
+    <ClInclude Include="PeopleCalendars.h" />
+    <ClInclude Include="UnifiedViews.h" />
     <ClInclude Include="MainWindow.Helpers.h" />
     <ClInclude Include="MainWindow.xaml.h">
       <DependentUpon>MainWindow.xaml</DependentUpon>
@@ -179,6 +185,8 @@
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml" />
     <Page Include="MainWindow.xaml" />
+    <None Include="xaml\MainWindow.xaml.in" />
+    <None Include="xaml\*.xamlpart" />
     <Page Include="ComposeWindow.xaml" />
     <Page Include="MessageWindow.xaml" />
     <Page Include="SplashWindow.xaml" />
@@ -244,7 +252,28 @@
     <ClCompile Include="MainWindow.Contacts.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="MainWindow.Receipts.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="MainWindow.AutoReply.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="MainWindow.Invitations.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="MainWindow.FollowUp.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="MainWindow.PeopleCalendars.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="MainWindow.Gal.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
     <ClCompile Include="MainWindow.Tasks.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="MainWindow.Categories.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="MainWindow.Settings.cpp">
@@ -301,5 +330,10 @@
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <Error Condition="!Exists('$(CppWinRTDir)build\native\Microsoft.Windows.CppWinRT.props')" Text="NuGet packages missing: run win32\msvc\build-winui-app.bat (nuget restore)." />
     <Error Condition="!Exists('$(AppSdkDir)build\native\Microsoft.WindowsAppSDK.props')" Text="NuGet packages missing: run win32\msvc\build-winui-app.bat (nuget restore)." />
+  </Target>
+  <!-- MainWindow.xaml est assemblé (et ignoré par git) à partir du gabarit xaml\MainWindow.xaml.in et des
+       fragments xaml\*.xamlpart : voir tools\assemble-xaml.ps1. InitialTargets : exécuté avant tout le reste. -->
+  <Target Name="AssembleMainWindowXaml">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\tools\assemble-xaml.ps1&quot; -AppDir &quot;$(MSBuildThisFileDirectory.TrimEnd('\'))&quot;" />
   </Target>
 </Project>

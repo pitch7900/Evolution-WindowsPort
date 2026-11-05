@@ -305,14 +305,15 @@ Dans Microsoft 365 / Exchange Online, les utilisateurs disposent souvent d'une b
 
 - [ ] **Gestion des réponses automatiques** (_Fichier › Réponses automatiques_ et menu contextuel du compte) : <a id="demo-reponses-auto"></a>
   - [ ] 🟡 Exchange on-premise (EWS `GetUserOofSettings` / `SetUserOofSettings`, déjà présents dans evolution-ews)
-  - [ ] 🟡 Microsoft 365 (Graph `mailboxSettings/automaticRepliesSetting`)
-  - [ ] 🟠 Gmail / Google Workspace (API Gmail _vacation settings_, nouvelle portée OAuth2)
+  - [x] 🟡 Microsoft 365 (Graph `mailboxSettings/automaticRepliesSetting`) — `evo_core_get_auto_reply` / `evo_core_set_auto_reply`, portée `MailboxSettings.ReadWrite` ; _reste à valider sur un compte réel_ (tenant M365)
+  - [x] 🟠 Gmail / Google Workspace (API Gmail _vacation settings_, nouvelle portée OAuth2) — portée `gmail.settings.basic` ajoutée à la connexion Google ; _reste à valider sur un compte réel_ (le client OAuth doit autoriser cette portée ; comptes déjà connectés à reconnecter)
   - [ ] 🟠 IMAP avec Sieve / ManageSieve (extension `vacation` ; client ManageSieve à écrire)
-  - [ ] 🟢 Option grisée pour les comptes qui ne la supportent pas
+  - [ ] 🟢 Option grisée pour les comptes qui ne la supportent pas _(partiel : le bouton reste actif, la boîte affiche une erreur explicite pour IMAP générique et EWS)_
 - [ ] **Options** :
-  - [ ] 🟢 Activer / désactiver ; plage de dates ou durée indéterminée
-  - [ ] 🟢 Messages distincts interne / externe (éditeur HTML)
-  - [ ] 🟢 Externe : tous les expéditeurs ou seulement les contacts
+  - [x] 🟢 Activer / désactiver ; plage de dates ou durée indéterminée _(à valider sur un compte réel)_
+  - [ ] 🟢 Messages distincts interne / externe (éditeur HTML) _(messages distincts en texte brut faits ; éditeur HTML restant ; Gmail n'a qu'un message)_
+  - [ ] 🟢 Messages en HTML éditables (réutiliser l'éditeur WebView2 des signatures) et zones de saisie interne / externe de même taille _(tailles harmonisées ; retour de test : textes Exchange non affichés dans la fenêtre, voir journal « auto-reply Graph »)_
+  - [x] 🟢 Externe : tous les expéditeurs ou seulement les contacts _(plus « personne » ; à valider sur un compte réel)_
   - [ ] 🟡 Exchange / M365 : bloquer le calendrier, refuser les nouvelles invitations, annuler les réunions de la période
 - [x] 🟢 **Indicateur visible** : bandeau « Réponses automatiques activées pour ce compte » + _Désactiver_ ; rappel à l'ouverture si la période est expirée
 
@@ -458,8 +459,8 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
   - [ ] **Rendu sécurisé, sans exécution de code actif** :
     - [x] 🟢 Images (PNG, JPEG, GIF, BMP, WebP, SVG converti en image fixe) : décodage natif (`BitmapImage` / WIC), SVG sans scripts
     - [x] 🟢 Texte, CSV, JSON, XML, code : affichage en texte brut (jamais interprété)
-    - [ ] 🟡 PDF : rendu page par page en images avec `Windows.Data.Pdf` (aucun JavaScript, formulaire, lien de lancement ni pièce jointe imbriquée exécutés), zoom et défilement
-    - [ ] 🟡 HTML / EML / MSG joint : WebView2 isolé avec scripts désactivés et contenu distant bloqué (même règles que le lecteur, §6)
+    - [x] 🟡 PDF : rendu page par page en images avec `Windows.Data.Pdf` (aucun JavaScript, formulaire, lien de lancement ni pièce jointe imbriquée exécutés), zoom et défilement
+    - [x] 🟡 HTML / EML / MSG joint : WebView2 isolé avec scripts désactivés et contenu distant bloqué (même règles que le lecteur, §6)
     - [ ] 🟠 Office (Word, Excel, PowerPoint, OpenDocument) : rendu en lecture seule **sans macros ni contenu actif** — conversion en PDF / image hors processus, ou gestionnaires d'aperçu Windows (`IPreviewHandler`) exécutés dans un processus isolé à faibles privilèges ; macros VBA, objets OLE / ActiveX, liens externes et DDE jamais exécutés
     - [x] 🟢 Types non pris en charge ou à risque (`.exe`, `.js`, `.vbs`, `.ps1`, `.lnk`, `.hta`, archives…) : pas d'aperçu, simple fiche (nom, type, taille) avec avertissement
   - [x] 🟡 Fichiers d'aperçu temporaires dans un dossier privé, supprimés à la fermeture ; taille maximale configurable pour l'aperçu
@@ -510,12 +511,12 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
 Trois notions distinctes, comme dans Outlook : le **suivi** (drapeau avec libellé et échéance : ce que _je_ dois faire), l'**importance** (fixée par l'expéditeur) et les **catégories** (classement en couleur, §17).
 
 - [ ] 🟡 **Suivi des messages** (évolution du drapeau simple existant) :
-  - [ ] **Libellé du suivi** : Urgent, À traiter, À répondre, Pour information, En attente, et libellés personnalisés
-  - [ ] **Échéance** : aujourd'hui, demain, cette semaine, semaine prochaine, sans date, date personnalisée
-  - [ ] Choix depuis le menu contextuel, le ruban et des raccourcis clavier
-  - [ ] Icône et couleur distinctes dans la liste des messages (ex. rouge pour Urgent, orange pour À traiter, échéance dépassée en rouge) et libellé + échéance dans l'en-tête du volet de lecture
-  - [ ] Stockage dans les indicateurs Camel (`follow-up`, `due-by`, `completed-on`), synchronisé avec le serveur (mots-clés IMAP, `flag` Exchange / Graph)
-  - [ ] _Marquer comme terminé_ en un clic (avec date de fin), _Effacer l'indicateur_
+  - [x] **Libellé du suivi** : Urgent, À traiter, À répondre, Pour information, En attente, et libellés personnalisés
+  - [x] **Échéance** : aujourd'hui, demain, cette semaine, semaine prochaine, sans date, date personnalisée
+  - [x] Choix depuis le menu contextuel, le ruban et des raccourcis clavier
+  - [x] Icône et couleur distinctes dans la liste des messages (ex. rouge pour Urgent, orange pour À traiter, échéance dépassée en rouge) et libellé + échéance dans l'en-tête du volet de lecture
+  - [x] Stockage dans les indicateurs Camel (`follow-up`, `due-by`, `completed-on`), synchronisé avec le serveur (mots-clés IMAP, `flag` Exchange / Graph)
+  - [x] _Marquer comme terminé_ en un clic (avec date de fin), _Effacer l'indicateur_
   - [ ] Filtres rapides « Urgents » et « À traiter » (§5) et dossiers de recherche correspondants (§9)
   - [ ] 🟠 Rappel sur un suivi — dépend de la fenêtre des rappels (§2)
 - [x] 🟡 **Importance** (haute / normale / basse) : affichée dans la liste (icône d'exclamation rouge ou flèche bleue) et choisie à la rédaction dans ComposeWindow ; filtre rapide « Importants » (§5)
@@ -636,7 +637,7 @@ La recherche dans le dossier courant existe déjà (filtrage instantané + reche
 
 ## 11. Vues unifiées multi-comptes — 🟠
 
-- [ ] 🟠 **Mails** : Boîte de réception unifiée (et Envoyés, Brouillons, Corbeille), compte d'origine indiqué (colonne ou pastille de couleur) — dossiers virtuels Camel
+- [x] 🟠 **Mails** : Boîte de réception unifiée (et Envoyés, Brouillons, Corbeille), compte d'origine indiqué (colonne ou pastille de couleur) — dossiers virtuels Camel — _fait par agrégation côté moteur (`evo_core_list_unified`) plutôt que `CamelVeeFolder` ; compte d'origine en libellé sur chaque ligne (pas de pastille de couleur)_
 - [ ] 🟡 **Calendriers** : événements de tous les calendriers de tous les comptes, une couleur par calendrier, chacun masquable — _fait dans la vue Calendrier : volet « Calendriers » par compte, cases à cocher mémorisées, couleur par calendrier_
 - [ ] 🟡 **Contacts** : carnet d'adresses unifié, détection et regroupement des doublons (même email)
 - [ ] 🟠 **Recherche dans les vues unifiées** (simple et avancée) pour mails, événements et contacts, compte d'origine visible dans les résultats
@@ -689,10 +690,11 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
   - [ ] **Invitation de participants et organisation de réunion** :
     - [ ] Bouton *« Inviter des personnes »* transformant le rendez-vous individuel en réunion avec champs *Obligatoires*, *Facultatifs*, *Ressources*.
     - [ ] Autocomplétion dynamique des destinataires depuis les contacts locaux et l'annuaire d'entreprise (GAL Exchange Online / Microsoft 365).
-    - [ ] Envoi automatique des invitations / annulations (iTIP / iMIP) et suivi des réponses (accepté, provisoire, refusé).
-  - [ ] 🟠 **Réunion en ligne Microsoft Teams (compte Exchange Online / O365)** :
-    - [ ] Bouton dédié *« Réunion Teams »* dans la barre d'outils / ruban pour générer automatiquement une réunion en ligne Microsoft Teams via Microsoft Graph (`isOnlineMeeting: true`, `onlineMeetingProvider: teamsForBusiness`).
-    - [ ] Insertion automatique du lien de visio, de l'ID de réunion, du code secret et des coordonnées de connexion dans le corps de l'invitation.
+    - [ ] Envoi automatique des invitations / annulations (iTIP / iMIP) et suivi des réponses (accepté, provisoire, refusé). _(partiel : envoi des invitations iTIP `REQUEST` depuis le compte choisi pour les agendas locaux et abonnements ; Exchange Online et Google Agenda les envoient côté serveur. Reste : annulations (`CANCEL`) et suivi des réponses dans l'événement)_
+  - [ ] 🟠 **Réunion en ligne Microsoft Teams (compte Exchange Online / O365)** : _(v1.0.0 : codé, reste à valider sur un tenant réel)_
+    - [x] Bouton dédié *« Réunion Teams »* dans la barre d'outils / ruban pour générer automatiquement une réunion en ligne Microsoft Teams via Microsoft Graph (`isOnlineMeeting: true`, `onlineMeetingProvider: teamsForBusiness`). _(fait : bouton « Réunion Teams » du ruban Calendrier et case « Réunion en ligne Microsoft Teams » dans la fenêtre d'un nouvel événement ; la propriété `X-M365-ONLINE-MEETING` est transformée en réunion Teams par le backend Microsoft 365. **À valider sur un tenant réel**)_
+    - [ ] Insertion automatique du lien de visio, de l'ID de réunion, du code secret et des coordonnées de connexion dans le corps de l'invitation. _(le lien et les coordonnées d'appel sont ajoutés par Exchange Online au corps de l'invitation ; à vérifier sur un tenant réel. Reste à faire : afficher le lien dans la fenêtre d'événement avec un bouton « Rejoindre », et lire l'ID de réunion / le code secret du serveur)_
+    - [ ] Afficher « Rejoindre la réunion Teams » dans la fenêtre d'un événement existant (lien `onlineMeeting.joinUrl` du serveur) et ajouter Teams à un événement déjà créé (aujourd'hui : uniquement à la création)
   - [ ] 🟠 **Emplacements et réservation des ressources de l'entreprise (salles et équipements)** :
     - [ ] Champ *Emplacement* relié aux listes de salles Exchange Online (_room lists_ et boîtes de ressources).
     - [ ] Consultation en direct de la disponibilité des salles et réservation automatique lors de l'enregistrement de la réunion (acceptation / refus automatique par la ressource).
@@ -705,7 +707,9 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
     - [ ] Menu déroulant **« Classer »** (icône 4 carrés de couleur) : attribution de catégories avec codes couleur (synchronisées avec la liste principale Exchange Online).
     - [ ] Boutons d'importance : **! Importance haute** et **↓ Importance faible** (propriété `PRIORITY`).
 - [x] 🟢 **Ajouter du temps de travail individuel** (bloc « focus » sans participants, bouton ruban dédié et durée 2h préremplie)
-- [ ] 🟡 **Répondre aux invitations reçues** depuis le volet de lecture du Mail (Accepter / Provisoire / Refuser / Proposer un nouvel horaire) <a id="demo-invitations"></a>
+- [x] 🟡 **Répondre aux invitations reçues** depuis le volet de lecture du Mail (Accepter / Provisoire / Refuser) <a id="demo-invitations"></a>
+  - [ ] _Proposer un nouvel horaire_ (iTIP `COUNTER`) : non traité pour l'instant
+  - [ ] Création d'invitation : choix du compte / de l'adresse expéditrice dans la fenêtre d'édition d'événement et envoi réel des invitations aux participants (retour de test : l'invitation créée n'est jamais reçue)
 - [ ] 🔴 **Affichage Planification** (Scheduling Assistant) : une ligne par personne / ressource, heures en abscisse, créneaux libres / occupés / provisoires / absent (EWS `GetUserAvailability`, Graph `getSchedule`, CalDAV free-busy), suggestion de créneau commun
 - [ ] 🟡 **Glisser-déposer d'un email vers le calendrier** pour créer un rendez-vous
 - [ ] 🟠 **Emplacement de travail** par jour / créneau (bureau, télétravail, hors ligne), synchronisé avec Exchange Online si disponible, visible en vue Planification
@@ -741,6 +745,11 @@ Constat : sur un compte Exchange Online / Microsoft 365 (ex. EVAM), EvolutionWin
 ## 15. Contacts — 🟡
 
 - [ ] 🟡 **Carnet d'adresses global** (GAL) Exchange / M365 : recherche et sélection des destinataires (backend evolution-ews) <a id="demo-gal"></a>
+  - [x] Moteur : `evo_core_search_gal` (Microsoft Graph `GET /users?$search=` pour Microsoft 365 / Exchange Online, API People `searchDirectoryPeople` pour Google Workspace) avec le jeton OAuth2 du compte ; _reste à valider sur un tenant réel_ (Microsoft 365 et Google Workspace)
+  - [x] Consultation : bouton « Annuaire de l'organisation » dans la vue Contacts (recherche dès 2 caractères, fiche en lecture seule : fonction, service, société, téléphones, bureau, bouton _Écrire un message_)
+  - [ ] Bouton « Annuaire de l'organisation » placé sous chaque compte concerné (et non en bas de la liste des carnets)
+  - [ ] Fiche annuaire : adresse postale (rue, ville, code postal, pays), numéros manquants et photo du profil (Graph `/users/{id}/photo/$value`)
+  - [ ] Exchange sur site (EWS `ResolveNames`) : non pris en charge (les carnets GAL EDS d'EWS restent visibles dans les carnets habituels)
 - Contacts unifiés et doublons : cf. §11 ; recherche rapide de contacts : cf. §10 ; export par glisser-déposer vers l'extérieur : cf. §18
 - [ ] 🟡 **Fenêtre de sélection de destinataires** (carnet d'adresses, comme le bouton _À…_ d'Outlook) :
   - [ ] Ouverte par un bouton en face de chaque ligne _À_, _Cc_, _Cci_ de la fenêtre de rédaction, et en face de la ligne des participants (_Obligatoires_, _Facultatifs_, _Ressources_) d'une invitation (§13)
@@ -751,6 +760,7 @@ Constat : sur un compte Exchange Online / Microsoft 365 (ex. EVAM), EvolutionWin
   - [ ] Fiche du contact accessible depuis la liste (clic droit › _Propriétés_), création d'un nouveau contact depuis la fenêtre
 - [ ] 🟡 **Autocomplétion des adresses** dans les champs _À_, _Cc_, _Cci_ de la rédaction et dans les participants d'une invitation : <a id="demo-autocompletion"></a>
   - [x] Suggestions au fil de la frappe (à partir de 2 caractères) depuis tous les carnets d'adresses (requête préfixe `EBookClient` sur nom, prénom, adresse), puis l'annuaire GAL pour les comptes Exchange / M365
+  - [x] Annuaire de l'organisation (GAL Microsoft 365 / Google Workspace via `evo_core_search_gal`) ajouté aux suggestions à partir de 3 caractères, après une pause de frappe de 400 ms, sans doublon d'adresse ; _reste à valider sur un tenant réel_
   - [x] Adresses récemment utilisées en tête (destinataires des derniers messages envoyés), même si absentes des contacts
   - [x] Liste déroulante : nom, adresse, carnet d'origine ; navigation aux flèches, validation par Entrée / Tab / point-virgule
   - [ ] Destinataire validé affiché en « jeton » (nom, adresse en info-bulle), supprimable, double-clic pour le modifier ; adresse inconnue ou mal formée soulignée
@@ -810,15 +820,15 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 ## 17. Catégories et codes couleur — 🟡
 
 - [ ] 🟡 **Catégories communes et classements personnalisés** : nom + code couleur (palette de couleurs configurables par l'utilisateur), gérées dans les Réglages (créer, renommer, choisir la couleur, supprimer) <a id="demo-categories"></a>
-  - [ ] Stockage : étiquettes Camel pour les mails, propriété `CATEGORIES` pour les contacts (vCard), les événements et les tâches (iCalendar)
+  - [x] Stockage : étiquettes Camel pour les mails, propriété `CATEGORIES` pour les contacts (vCard), les événements et les tâches (iCalendar)
   - [ ] 🟠 **Réutilisation et synchronisation avec Exchange Online / Microsoft 365** : synchronisation bidirectionnelle avec la liste principale des catégories (*Master Category List* via Graph `/me/outlook/masterCategories` ou EWS `GetUserSettings`) ; si des catégories préexistantes sont présentes sur le compte O365, elles sont automatiquement récupérées et réutilisées avec leurs intitulés et codes couleur d'origine.
-  - [ ] Possibilité pour chaque utilisateur de créer des classements personnalisés supplémentaires et d'adapter les catégories selon ses besoins.
+  - [x] Possibilité pour chaque utilisateur de créer des classements personnalisés supplémentaires et d'adapter les catégories selon ses besoins.
 - [x] 🟡 **Catégoriser** un élément (plusieurs catégories possibles) : menu contextuel, bouton _Catégoriser_ / _Classer_ du ruban (courriels et événements d'agenda), catégories récentes ; raccourci vers une catégorie (Ctrl+F2…F12)
 - [ ] **Affichage des codes couleur sur les courriels et les événements de l'agenda** :
   - [x] 🟡 **Mails** : pastilles et badges de couleur dans la liste des messages (`MainWindow.MessageList`) et dans l'en-tête du volet / de la fenêtre de lecture (`MessageWindow`)
-  - [ ] 🟡 **Événements de l'agenda** : affichage de la couleur de la catégorie dans la grille du calendrier (Jour / Semaine / Mois : bande latérale ou bloc d'événement coloré) et dans la vue Liste
+  - [x] 🟡 **Événements de l'agenda** : affichage de la couleur de la catégorie dans la grille du calendrier (Jour / Semaine / Mois : bande latérale ou bloc d'événement coloré) et dans la vue Liste
   - [ ] 🟡 **Contacts** : pastilles dans la liste et sur la fiche
-  - [ ] 🟡 **Tâches** : pastilles dans la liste des tâches
+  - [x] 🟡 **Tâches** : pastilles dans la liste des tâches
 - [ ] 🟠 **Mise en forme conditionnelle** : couleur automatique selon des règles (expéditeur, domaine, mots de l'objet, importance, organisateur…), pour la liste des messages (§5) comme pour le calendrier (§12)
 - [x] 🟢 **Filtrer / trier / regrouper par catégorie** dans toutes les vues ; recherche par catégorie (§10)
 

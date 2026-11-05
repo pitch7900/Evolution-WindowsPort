@@ -55,3 +55,6 @@ logs/
 
 # Verrous locaux d'agents IA
 locks/*.json
+
+# --- MainWindow.xaml : assemblé par tools\assemble-xaml.ps1 depuis winui/app/xaml/ (ne pas modifier, ni versionner) ---
+winui/app/MainWindow.xaml

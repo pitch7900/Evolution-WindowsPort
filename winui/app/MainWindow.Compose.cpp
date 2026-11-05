@@ -150,15 +150,9 @@ namespace winrt::EvolutionWin::implementation
             }
         }
 
-        JsonObject req;
-        req.SetNamedValue(L"account", JsonValue::CreateStringValue(m_account));
-        req.SetNamedValue(L"folder", JsonValue::CreateStringValue(m_folder));
-        JsonArray uid_array;
-        for (auto const& u : uids)
-            uid_array.Append(JsonValue::CreateStringValue(u));
-        req.SetNamedValue(L"uids", uid_array);
+        JsonObject req = BuildMessagesRequest(uids);
 
-        hstring account = m_account;
+        hstring account = req.GetNamedString(L"account", m_account);
         ShowStatus(L"Préparation des courriels en pièces jointes…", InfoBarSeverity::Informational);
 
         m_core->ExportMessagesEml(req.Stringify(),
@@ -190,7 +184,7 @@ namespace winrt::EvolutionWin::implementation
             for (auto const& val : paths)
                 data.attachments.push_back(val.GetString());
 
-            StatusBar().IsOpen(false);
+            HideStatus();
             OpenCompose(data);
         });
     }
@@ -228,13 +222,7 @@ namespace winrt::EvolutionWin::implementation
                 return;
             }
 
-            JsonObject req;
-            req.SetNamedValue(L"account", JsonValue::CreateStringValue(m_account));
-            req.SetNamedValue(L"folder", JsonValue::CreateStringValue(m_folder));
-            JsonArray uid_array;
-            for (auto const& u : extra_uids)
-                uid_array.Append(JsonValue::CreateStringValue(u));
-            req.SetNamedValue(L"uids", uid_array);
+            JsonObject req = BuildMessagesRequest(extra_uids);
 
             ShowStatus(L"Ajout des autres courriels sélectionnés en pièces jointes…", InfoBarSeverity::Informational);
 
@@ -254,7 +242,7 @@ namespace winrt::EvolutionWin::implementation
                         data.attachments.push_back(val.GetString());
                 }
 
-                StatusBar().IsOpen(false);
+                HideStatus();
                 OpenCompose(data);
             });
         };

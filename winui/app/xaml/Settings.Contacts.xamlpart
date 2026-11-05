@@ -1,0 +1,122 @@
+                            <StackPanel x:Name="SettingsCategoryContacts" Visibility="Collapsed" Spacing="16">
+
+                                <TextBlock Text="Affichage et classement des contacts" Style="{StaticResource SubtitleTextBlockStyle}" />
+
+
+
+                                <!-- Carnet d'adresses par défaut -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE716;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Carnet d'adresses par défaut" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Carnet dans lequel les nouveaux contacts seront enregistrés par défaut."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="ContactsDefaultBookCombo" Tag="contacts.active"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="200" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Format d'affichage des noms -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE716;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Format d'affichage des noms" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Ordre de présentation habituel des personnes dans la liste des contacts."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ComboBox Grid.Column="2" x:Name="ContactsNameFormatCombo" Tag="contacts.name-format"
+
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+
+                                            <ComboBoxItem Content="Prénom Nom" Tag="first-last" />
+
+                                            <ComboBoxItem Content="Nom Prénom" Tag="last-first" />
+
+                                        </ComboBox>
+
+                                    </Grid>
+
+                                </Border>
+
+
+
+                                <!-- Ordre de tri des contacts -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8D5;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Trier les contacts par" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Critère de tri alphabétique utilisé dans le carnet d'adresses."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ComboBox Grid.Column="2" x:Name="ContactsSortOrderCombo" Tag="contacts.sort-order"
+
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+
+                                            <ComboBoxItem Content="Nom de famille" Tag="last" />
+
+                                            <ComboBoxItem Content="Prénom" Tag="first" />
+
+                                        </ComboBox>
+
+                                    </Grid>
+
+                                </Border>
+
+                            </StackPanel>

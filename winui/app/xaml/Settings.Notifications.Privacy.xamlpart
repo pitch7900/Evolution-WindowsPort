@@ -1,0 +1,43 @@
+                                <TextBlock Text="Confidentialité des notifications" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+
+
+
+                                <!-- Mode confidentiel (contrôle existant conservé) -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE72E;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Mode confidentiel des notifications" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Masque l'expéditeur et l'objet dans les alertes (« Nouveau message » uniquement), idéal lors des partages d'écran."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ToggleSwitch Grid.Column="2" x:Name="ConfidentialNotificationsSwitch"
+
+                                                      Toggled="OnConfidentialToggled" VerticalAlignment="Center" />
+
+                                    </Grid>
+
+                                </Border>

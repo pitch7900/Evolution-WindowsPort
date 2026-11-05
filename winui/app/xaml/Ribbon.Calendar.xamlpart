@@ -1,0 +1,172 @@
+                    <CommandBar x:Name="RibbonCalendarFile" Visibility="Collapsed" DefaultLabelPosition="Right"
+
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+
+                        <AppBarButton Label="Exporter" Click="OnExportCalendarClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xEDE1;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarButton Label="Paramètres" Click="OnRibbonSettingsClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE713;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="À propos" Click="OnRibbonAboutClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+                        <AppBarButton Label="Raccourcis clavier" Click="OnRibbonKeyboardShortcutsClick" ToolTipService.ToolTip="Afficher les raccourcis clavier (F1)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE765;" /></AppBarButton.Icon>
+                        </AppBarButton>
+
+                        <AppBarButton Label="Quitter" Click="OnRibbonQuitClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE7E8;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                    </CommandBar>
+
+                    <CommandBar x:Name="RibbonCalendarHome" Visibility="Collapsed" DefaultLabelPosition="Right"
+
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+
+                        <AppBarButton Label="Nouvel événement" Click="OnNewEventClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE710;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton x:Name="RibbonCalendarFocusButton" Label="Temps individuel (Focus)"
+                                      ToolTipService.ToolTip="Planifier un temps de travail individuel (Focus) sans participants"
+                                      Click="OnNewFocusEventClick">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8D2;" /></AppBarButton.Icon>
+                        </AppBarButton>
+
+                        <AppBarButton Label="Actualiser" Click="OnRefreshCalendarClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE72C;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Exporter" Click="OnExportCalendarClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xEDE1;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                    </CommandBar>
+
+                    <CommandBar x:Name="RibbonCalendarView" Visibility="Collapsed" DefaultLabelPosition="Right"
+
+                                HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+
+                        <AppBarButton Label="Aujourd'hui" Click="OnRibbonTodayClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8D1;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Atteindre la date" Click="OnGoToDateClick" ToolTipService.ToolTip="Atteindre une date dans le calendrier (Ctrl+G)">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE787;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarButton Label="Jour" Tag="day" Click="OnCalendarPeriodClick" ToolTipService.ToolTip="Affichage Jour (Ctrl+Alt+1)">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8BF;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Semaine de travail" Tag="workweek" Click="OnCalendarPeriodClick" ToolTipService.ToolTip="Affichage Semaine de travail (Ctrl+Alt+2)">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8C0;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Semaine" Tag="week" Click="OnCalendarPeriodClick" ToolTipService.ToolTip="Affichage Semaine (Ctrl+Alt+3)">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8C0;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Mois" Tag="month" Click="OnCalendarPeriodClick" ToolTipService.ToolTip="Affichage Mois (Ctrl+Alt+4)">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE787;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                        <AppBarButton Label="Liste" Tag="list" Click="OnCalendarPeriodClick" ToolTipService.ToolTip="Affichage Liste (Ctrl+Alt+5)">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8FD;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
+                                                <AppBarButton x:Name="RibbonCalendarTimeScaleButton" Label="Échelle de temps" ToolTipService.ToolTip="Modifier le pas horaire de la grille (15, 30 ou 60 minutes)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE823;" /></AppBarButton.Icon>
+                            <AppBarButton.Flyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem Text="60 minutes" Tag="60" Click="OnCalendarTimeScaleClick" />
+                                    <MenuFlyoutItem Text="30 minutes (défaut)" Tag="30" Click="OnCalendarTimeScaleClick" />
+                                    <MenuFlyoutItem Text="15 minutes" Tag="15" Click="OnCalendarTimeScaleClick" />
+                                </MenuFlyout>
+                            </AppBarButton.Flyout>
+                        </AppBarButton>
+                        <AppBarButton x:Name="RibbonCalendarFolderPaneButton" Label="Volet des dossiers"
+                                            ToolTipService.ToolTip="Affichage du volet des dossiers et calendriers (Normal, Réduit ou Désactivé)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8A0;" /></AppBarButton.Icon>
+                            <AppBarButton.Flyout>
+                                <MenuFlyout Opening="OnFolderPaneMenuOpening" />
+                            </AppBarButton.Flyout>
+                        </AppBarButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarToggleButton x:Name="RibbonCalendarSideBySideToggle" Label="Côte à côte"
+                                            Click="OnCalendarLayoutModeToggled"
+                                            ToolTipService.ToolTip="Afficher les calendriers cochés côte à côte (ou superposés en vue unifiée)">
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE90C;" /></AppBarToggleButton.Icon>
+                        </AppBarToggleButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarToggleButton x:Name="RibbonCalendarCompactDensityToggle" Label="Mode compact"
+
+                                            Click="OnRibbonCompactDensityToggled"
+
+                                            ToolTipService.ToolTip="Espacement plus étroit des listes pour afficher plus d'éléments">
+
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE8E9;" /></AppBarToggleButton.Icon>
+
+                        </AppBarToggleButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarToggleButton x:Name="RibbonMiniCalendarToggle" Label="Mini-calendrier"
+                                            Click="OnRibbonMiniCalendarToggled"
+                                            ToolTipService.ToolTip="Afficher ou masquer le mini-calendrier dans le volet latéral gauche">
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE787;" /></AppBarToggleButton.Icon>
+                        </AppBarToggleButton>
+
+                        <AppBarSeparator />
+
+                        <AppBarToggleButton x:Name="RibbonCalendarTodoBarToggle" Label="Volet des tâches"
+
+                                            Click="OnRibbonTodoBarToggled"
+
+                                            ToolTipService.ToolTip="Afficher ou masquer la barre latérale des tâches à faire (Alt+F2)">
+
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE9D5;" /></AppBarToggleButton.Icon>
+
+                        </AppBarToggleButton>
+
+                    </CommandBar>

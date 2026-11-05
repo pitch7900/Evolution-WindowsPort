@@ -504,6 +504,8 @@ namespace winrt::EvolutionWin::implementation
         m_current_message = nullptr;
         m_current_message_uid = L"";
         SecurityBar().IsOpen(false);
+        HideReceiptBars();
+        HideInvitationBar();
         AttachmentBar().Children().Clear();
         AttachmentBar().Visibility(Visibility::Collapsed);
         MessageHeader().Visibility(Visibility::Collapsed);
@@ -585,6 +587,7 @@ namespace winrt::EvolutionWin::implementation
         m_updating_privacy_view = true;
         RemoteContentModeChoice().SelectedIndex(mode == L"never" ? 0 : mode == L"always" ? 2 : 1);
         m_updating_privacy_view = false;
+        RefreshReadReceiptSettings();
 
         auto items = TrustedSenderList().Items();
         items.Clear();

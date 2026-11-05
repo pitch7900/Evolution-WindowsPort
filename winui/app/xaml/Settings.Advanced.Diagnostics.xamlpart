@@ -1,0 +1,83 @@
+                                <TextBlock Text="Diagnostics et réinitialisation" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+
+
+
+                                <!-- Journalisation détaillée -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE90F;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Journalisation détaillée (Debug log)" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Enregistrer des traces détaillées dans evolution.log pour aider au diagnostic d'anomalies."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ToggleSwitch Grid.Column="2" x:Name="AdvancedVerboseLogSwitch" Tag="advanced.verbose-log"
+
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+
+                                    </Grid>
+
+                                </Border>
+
+
+
+                                <!-- Réinitialiser tous les paramètres -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE7A7;" FontSize="20" Foreground="{ThemeResource SystemFillColorCautionBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Rétablir tous les paramètres par défaut" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Restaure les réglages initiaux de l'application sans toucher à vos comptes ni à vos courriels."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <Button Grid.Column="2" Content="Réinitialiser" Click="OnResetAllSettingsClick" VerticalAlignment="Center" />
+
+                                    </Grid>
+
+                                </Border>

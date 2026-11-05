@@ -1,0 +1,109 @@
+                                <TextBlock Text="Rendez-vous et alertes" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+
+
+
+                                <!-- Durée par défaut -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE823;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Durée par défaut des nouveaux rendez-vous" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Durée attribuée automatiquement lors de la création d'un événement dans l'agenda."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ComboBox Grid.Column="2" x:Name="CalendarDefaultDurationCombo" Tag="calendar.default-duration"
+
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+
+                                            <ComboBoxItem Content="15 minutes" Tag="15" />
+
+                                            <ComboBoxItem Content="30 minutes" Tag="30" />
+
+                                            <ComboBoxItem Content="1 heure" Tag="60" />
+
+                                            <ComboBoxItem Content="2 heures" Tag="120" />
+
+                                        </ComboBox>
+
+                                    </Grid>
+
+                                </Border>
+
+
+
+                                <!-- Rappel par défaut -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xEA8F;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Rappel automatique par défaut" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Délai d'alerte configuré pour les nouveaux rendez-vous créés."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ComboBox Grid.Column="2" x:Name="CalendarDefaultReminderCombo" Tag="calendar.default-reminder"
+
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+
+                                            <ComboBoxItem Content="Aucun rappel" Tag="0" />
+
+                                            <ComboBoxItem Content="5 minutes avant" Tag="5" />
+
+                                            <ComboBoxItem Content="15 minutes avant" Tag="15" />
+
+                                            <ComboBoxItem Content="30 minutes avant" Tag="30" />
+
+                                            <ComboBoxItem Content="1 heure avant" Tag="60" />
+
+                                            <ComboBoxItem Content="1 jour avant" Tag="1440" />
+
+                                        </ComboBox>
+
+                                    </Grid>
+
+                                </Border>

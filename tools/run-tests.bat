@@ -53,6 +53,16 @@ cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
         exit /b 1
     )
 
+rem 4. Compilation des tests unitaires Categories unifiees (C++17)
+echo [4/4] Compilation de test_categories.cpp ...
+cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_categories.cpp" ^
+    /Fe:"%TEST_BIN_DIR%\test_categories.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_categories.obj" || (
+        echo [ERREUR] Echec de la compilation de test_categories.cpp
+        exit /b 1
+    )
+
 echo Compilation achevee avec succes.
 echo.
 
@@ -72,6 +82,14 @@ if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
 rem Execution de la suite 3 : Preferences Settings
 "%TEST_BIN_DIR%\test_settings.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite 4 : Categories unifiees
+"%TEST_BIN_DIR%\test_categories.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution du test d'assemblage du XAML de la fenetre principale
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%EVO_WORKSPACE%\tests\xaml\test_xaml_assembly.ps1"
 if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
 rem Execution du test d'export ABI DLL

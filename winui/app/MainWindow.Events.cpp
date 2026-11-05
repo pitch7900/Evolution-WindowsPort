@@ -3,6 +3,8 @@
 #include "MainWindow.Helpers.h"
 #include "WindowIcon.h"
 #include "Settings.h"
+#include "CategoryStore.h"
+#include "PeopleCalendars.h"
 
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
@@ -298,10 +300,16 @@ namespace winrt::EvolutionWin::implementation
         }
 
         std::wstring visible;
+        std::vector<hstring> person_uids;   /* calendriers de personnes (Graph, lecture seule) */
         for (auto const& uid : VisibleCalendarUids())
-            visible += (visible.empty() ? L"" : L",") + std::wstring{ uid };
+        {
+            if (::EvolutionWin::People::IsPersonUid(std::wstring_view{ uid }))
+                person_uids.push_back(uid);
+            else
+                visible += (visible.empty() ? L"" : L",") + std::wstring{ uid };
+        }
 
-        if (visible.empty())
+        if (visible.empty() && person_uids.empty())
         {
             EventList().Items().Clear();
             TextBlock none;
@@ -311,12 +319,70 @@ namespace winrt::EvolutionWin::implementation
             return;
         }
 
-        m_core->ListCalendarEvents(start_unix, end_unix, hstring{ visible }, [this](hstring const& json, hstring const& error)
+        /* événements des calendriers de personnes, fusionnés avec ceux des calendriers EDS */
+        auto people_events = std::make_shared<JsonArray>();
+        auto pending = std::make_shared<int>(visible.empty() ? 0 : 1);
+        auto people_warned = std::make_shared<bool>(false);
+        auto finish = [this, people_events, pending](hstring const& json)
+        {
+            JsonArray occurrences;
+            JsonArray::TryParse(json, occurrences);
+            for (auto const& value : *people_events)
+                occurrences.Append(value);
+            m_all_calendar_events = occurrences;
+            FilterAndRenderCalendarEvents();
+        };
+
+        auto edsJson = std::make_shared<hstring>(L"[]");
+        auto person_done = [pending, finish, edsJson]()
+        {
+            if (--*pending == 0)
+                finish(*edsJson);
+        };
+
+        *pending += static_cast<int>(person_uids.size());
+        for (auto const& uid : person_uids)
+        {
+            hstring email = ::EvolutionWin::People::EmailFromUid(uid);
+            hstring name = email, color, account_uid;
+            for (auto const& value : ::EvolutionWin::People::LoadAll())
+            {
+                auto person = value.GetObject();
+                if (person.GetNamedString(L"email", L"") == email)
+                {
+                    name = person.GetNamedString(L"name", email);
+                    color = person.GetNamedString(L"color", L"");
+                    account_uid = person.GetNamedString(L"account_uid", L"");
+                }
+            }
+            m_core->ListPersonEvents(account_uid, email, name, color, start_unix, end_unix,
+                [this, people_events, people_warned, person_done](hstring const& json, hstring const& error)
+            {
+                JsonArray events;
+                if (error.empty() && JsonArray::TryParse(json, events))
+                {
+                    for (auto const& value : events)
+                        people_events->Append(value);
+                }
+                else if (!error.empty() && !*people_warned)
+                {
+                    *people_warned = true;   /* un seul message par chargement */
+                    ShowStatus(error, InfoBarSeverity::Warning);
+                }
+                person_done();
+            });
+        }
+
+        if (visible.empty())
+            return;   /* seuls des calendriers de personnes sont affichés : person_done () conclut */
+
+        m_core->ListCalendarEvents(start_unix, end_unix, hstring{ visible }, [this, edsJson, person_done](hstring const& json, hstring const& error)
         {
             if (!error.empty())
             {
                 ShowStatus(L"Calendrier : " + error, InfoBarSeverity::Error);
                 UpdateConnectionStatus(m_account.empty() ? L"global" : m_account, L"error", L"Anomalie de synchronisation du calendrier : " + error);
+                person_done();
                 return;
             }
 
@@ -330,16 +396,8 @@ namespace winrt::EvolutionWin::implementation
                 }
             }
 
-            JsonArray occurrences;
-            if (JsonArray::TryParse(json, occurrences))
-            {
-                m_all_calendar_events = occurrences;
-            }
-            else
-            {
-                m_all_calendar_events = JsonArray{};
-            }
-            FilterAndRenderCalendarEvents();
+            *edsJson = json;
+            person_done();
         });
     }
 
@@ -360,7 +418,8 @@ namespace winrt::EvolutionWin::implementation
             hstring summary = ev.GetNamedString(L"summary", L"");
             hstring location = ev.GetNamedString(L"location", L"");
             hstring description = ev.GetNamedString(L"description", L"");
-            if (MatchCalendarEvent(summary, location, description, query))
+            if (::EvolutionWin::Categories::MatchesCategoryFilter(::EvolutionWin::CategoryStore::CategoriesOf(ev), m_event_category_filter) &&
+                MatchCalendarEvent(summary, location, description, query))
             {
                 filtered_events.Append(value);
             }
@@ -403,11 +462,12 @@ namespace winrt::EvolutionWin::implementation
             del_col.Width(GridLengthHelper::Auto());
             row.ColumnDefinitions().Append(del_col);
 
-            /* couleur du calendrier (EDS), sinon couleur d'accent */
+            /* couleur de la première catégorie, sinon couleur du calendrier (EDS), sinon couleur d'accent */
             Border color_bar;
             color_bar.Width(4);
             color_bar.CornerRadius(CornerRadiusHelper::FromUniformRadius(2));
-            std::wstring color{ ev.GetNamedString(L"calendar_color", L"") };
+            auto event_categories = ::EvolutionWin::CategoryStore::CategoriesOf(ev);
+            std::wstring color{ ::EvolutionWin::CategoryStore::EventColorHex(ev) };
             if (color.size() == 7 && color[0] == L'#')
             {
                 auto channel = [&](size_t at) { return static_cast<uint8_t>(std::wcstoul(color.substr(at, 2).c_str(), nullptr, 16)); };
@@ -445,8 +505,16 @@ namespace winrt::EvolutionWin::implementation
                 details.Children().Append(desc);
             }
 
+            if (!event_categories.empty())
+                details.Children().Append(BuildCategoryChips(event_categories));
+
             Grid::SetColumn(details, 1);
             row.Children().Append(details);
+
+            AttachCategoryContextMenu(row, event_categories, [this, ev](std::vector<std::wstring> const& names)
+            {
+                SetEventCategories(ev, names);
+            });
 
             Button del_btn;
             FontIcon del_icon;
@@ -559,6 +627,41 @@ namespace winrt::EvolutionWin::implementation
         ShowNewEventDialogAsync();
     }
 
+    /**
+     * @brief Calendrier Microsoft 365 qui recevra une réunion Teams : le calendrier actif s'il est
+     *        Microsoft 365, sinon le calendrier par défaut (ou le premier) d'un compte Microsoft 365.
+     * @return Identifiant du calendrier ("" si aucun compte Microsoft 365 n'a de calendrier).
+     */
+    hstring MainWindow::TeamsCalendarUid()
+    {
+        hstring active = ActiveCalendarUid();
+        hstring fallback;
+        for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
+        {
+            auto source = value.GetObject();
+            if (source.GetNamedString(L"backend", L"") != L"microsoft365")
+                continue;
+            hstring uid = source.GetNamedString(L"uid", L"");
+            if (uid == active)
+                return uid;
+            if (fallback.empty() || source.GetNamedBoolean(L"default", false) || source.GetNamedString(L"name", L"") == L"Calendrier")
+                fallback = uid;
+        }
+        return fallback;
+    }
+
+    /**
+     * @brief Ouvre la fenêtre de nouvel événement sur un créneau sélectionné dans la grille du calendrier.
+     * @param start_unix Début du créneau (secondes Unix).
+     * @param end_unix Fin du créneau (secondes Unix).
+     */
+    void MainWindow::BeginEventFromSelection(int64_t start_unix, int64_t end_unix)
+    {
+        m_new_event_start = start_unix;
+        m_new_event_end = end_unix;
+        ShowEventDialogAsync(nullptr);
+    }
+
     /* Nouvel événement : fenêtre d'événement vide (calendrier actif). */
     fire_and_forget MainWindow::ShowNewEventDialogAsync()
     {
@@ -614,7 +717,7 @@ namespace winrt::EvolutionWin::implementation
      * organisateur et participants, suppression).
      * Paramètres :
      *   event : détail renvoyé par evo_core_get_event (), ou nullptr */
-    fire_and_forget MainWindow::ShowEventDialogAsync(JsonObject event, hstring const& summary_preset, bool is_focus)
+    fire_and_forget MainWindow::ShowEventDialogAsync(JsonObject event, hstring const& summary_preset, bool is_focus, bool teams)
     {
         auto strong = get_strong();
         if (m_dialog_open || !Content() || !Content().XamlRoot())
@@ -696,9 +799,18 @@ namespace winrt::EvolutionWin::implementation
         panel.Children().Append(location_box);
 
         /* début / fin : date et heure */
+        /* créneau sélectionné dans la grille du calendrier : utilisé une seule fois */
+        bool from_selection = !existing && m_new_event_start > 0 && m_new_event_end > m_new_event_start;
         time_t start_t = existing ? static_cast<time_t>(event.GetNamedNumber(L"start", 0))
-            : static_cast<time_t>(m_selected_day_start > 0 ? m_selected_day_start + 9 * 3600 : 0);
-        time_t end_t = existing ? static_cast<time_t>(event.GetNamedNumber(L"end", 0)) : start_t + (is_focus ? 7200 : 3600);
+            : static_cast<time_t>(from_selection ? m_new_event_start
+                : (m_selected_day_start > 0 ? m_selected_day_start + 9 * 3600 : 0));
+        time_t end_t = existing ? static_cast<time_t>(event.GetNamedNumber(L"end", 0))
+            : (from_selection ? static_cast<time_t>(m_new_event_end) : start_t + (is_focus ? 7200 : 3600));
+        if (!existing)
+        {
+            m_new_event_start = 0;
+            m_new_event_end = 0;
+        }
         if (!existing && start_t == 0)
         {
             time_t now = std::time(nullptr);
@@ -854,6 +966,46 @@ namespace winrt::EvolutionWin::implementation
         }
         panel.Children().Append(attendees_box);
 
+        /* réunion en ligne Microsoft Teams (nouvel événement d'un calendrier Exchange Online) */
+        CheckBox teams_check;
+        teams_check.Content(box_value(Tr(L"Réunion en ligne Microsoft Teams (lien de visio ajouté à l'invitation)",
+                                         L"Microsoft Teams online meeting (join link added to the invitation)")));
+        teams_check.IsChecked(teams);
+        if (!existing && !readonly && !TeamsCalendarUid().empty())
+            panel.Children().Append(teams_check);
+
+        /* invitations : compte de messagerie expéditeur (adresse de l'organisateur) */
+        ComboBox sender_combo;
+        sender_combo.Header(box_value(Tr(L"Envoyer les invitations depuis", L"Send invitations from")));
+        sender_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
+        std::vector<hstring> sender_uids;
+        {
+            int selected = -1;
+            for (auto const& value : m_accounts ? m_accounts : JsonArray{})
+            {
+                auto account = value.GetObject();
+                hstring address = account.GetNamedString(L"address", L"");
+                if (account.GetNamedBoolean(L"local", false) || address.empty())
+                    continue;
+                hstring uid = account.GetNamedString(L"uid", L"");
+                hstring name = account.GetNamedString(L"name", address);
+                sender_combo.Items().Append(box_value(name == address ? address : name + L" <" + address + L">"));
+                if (selected < 0 && (uid == m_account || (m_account.empty() && account.GetNamedBoolean(L"default", false))))
+                    selected = static_cast<int>(sender_uids.size());
+                sender_uids.push_back(uid);
+            }
+            if (!sender_uids.empty())
+                sender_combo.SelectedIndex(selected >= 0 ? selected : 0);
+        }
+        CheckBox invite_check;
+        invite_check.Content(box_value(Tr(L"Envoyer les invitations aux participants", L"Send invitations to attendees")));
+        invite_check.IsChecked(true);
+        if (!readonly && !sender_uids.empty())
+        {
+            panel.Children().Append(sender_combo);
+            panel.Children().Append(invite_check);
+        }
+
         /* organisateur et participants (lecture seule) */
         if (existing)
         {
@@ -995,11 +1147,20 @@ namespace winrt::EvolutionWin::implementation
             payload.SetNamedValue(L"attendees", list);
         }
 
+        /* compte expéditeur des invitations : vide si aucune invitation à envoyer */
+        hstring sender_uid;
+        if (invite_check.IsChecked() && invite_check.IsChecked().GetBoolean() && !readonly &&
+            payload.GetNamedArray(L"attendees", JsonArray{}).Size() > 0 &&
+            sender_combo.SelectedIndex() >= 0 && static_cast<size_t>(sender_combo.SelectedIndex()) < sender_uids.size())
+            sender_uid = sender_uids[sender_combo.SelectedIndex()];
+
         if (existing)
         {
             payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(event.GetNamedString(L"calendar_uid", L"")));
             payload.SetNamedValue(L"uid", JsonValue::CreateStringValue(event.GetNamedString(L"uid", L"")));
-            m_core->ModifyEvent(payload.Stringify(), [this](hstring const&, hstring const& error)
+            hstring edit_calendar = event.GetNamedString(L"calendar_uid", L"");
+            hstring edit_uid = event.GetNamedString(L"uid", L"");
+            m_core->ModifyEvent(payload.Stringify(), [this, sender_uid, edit_calendar, edit_uid](hstring const&, hstring const& error)
             {
                 if (!error.empty())
                 {
@@ -1008,6 +1169,7 @@ namespace winrt::EvolutionWin::implementation
                 }
                 ShowStatus(L"Événement modifié.", InfoBarSeverity::Success);
                 LoadEvents();
+                SendEventInvitations(sender_uid, edit_calendar, edit_uid);
             });
             co_return;
         }
@@ -1015,7 +1177,16 @@ namespace winrt::EvolutionWin::implementation
         if (hstring active = ActiveCalendarUid(); !active.empty())
             payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(active));
 
-        m_core->CreateEvent(payload.Stringify(), [this](hstring const&, hstring const& error)
+        /* réunion Teams : l'événement est créé dans un calendrier Microsoft 365 */
+        if (teams_check.IsChecked() && teams_check.IsChecked().GetBoolean())
+        {
+            if (hstring teams_calendar = TeamsCalendarUid(); !teams_calendar.empty())
+                payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(teams_calendar));
+            payload.SetNamedValue(L"online_meeting", JsonValue::CreateBooleanValue(true));
+        }
+
+        hstring create_calendar = payload.GetNamedString(L"calendar_uid", L"");
+        m_core->CreateEvent(payload.Stringify(), [this, sender_uid, create_calendar](hstring const& json, hstring const& error)
         {
             if (!error.empty())
             {
@@ -1024,6 +1195,46 @@ namespace winrt::EvolutionWin::implementation
             }
             ShowStatus(L"Événement enregistré.", InfoBarSeverity::Success);
             LoadEvents();
+            JsonObject created;
+            if (JsonObject::TryParse(json, created))
+                SendEventInvitations(sender_uid, create_calendar, created.GetNamedString(L"uid", L""));
+        });
+    }
+
+    /**
+     * @brief Envoie les invitations d'un événement à ses participants lorsque le calendrier ne le
+     *        fait pas lui-même (agenda local, abonnement) ; Exchange Online, Exchange et Google
+     *        Agenda envoient leurs invitations côté serveur.
+     * @param sender_uid Compte de messagerie expéditeur ("" : aucune invitation).
+     * @param calendar_uid Agenda de l'événement.
+     * @param event_uid Identifiant de l'événement enregistré.
+     */
+    void MainWindow::SendEventInvitations(hstring const& sender_uid, hstring const& calendar_uid, hstring const& event_uid)
+    {
+        if (sender_uid.empty() || calendar_uid.empty() || event_uid.empty())
+            return;
+
+        for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
+        {
+            auto source = value.GetObject();
+            if (source.GetNamedString(L"uid", L"") != calendar_uid)
+                continue;
+            hstring backend = source.GetNamedString(L"backend", L"");
+            if (backend == L"microsoft365" || backend == L"ews" || backend == L"google")
+                return;   /* le serveur envoie les invitations */
+        }
+
+        m_core->SendEventInvitations(sender_uid, calendar_uid, event_uid, [this](hstring const& json, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                ShowStatus(Tr(L"Invitations non envoyées : ", L"Invitations not sent: ") + error, InfoBarSeverity::Error);
+                return;
+            }
+            JsonObject result;
+            if (JsonObject::TryParse(json, result) && result.GetNamedNumber(L"sent", 0) > 0)
+                ShowStatus(Tr(L"Invitations envoyées à : ", L"Invitations sent to: ") + result.GetNamedString(L"to", L""),
+                    InfoBarSeverity::Success);
         });
     }
 

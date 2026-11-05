@@ -138,6 +138,76 @@ void		evo_core_send_message		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Traite la demande d'accusé de lecture d'un message (en-tête
+ * Disposition-Notification-To ou Return-Receipt-To) : construit un vrai MDN
+ * (RFC 8098, multipart/report; report-type=disposition-notification), l'envoie
+ * par le serveur SMTP du compte du message, puis pose l'étiquette Camel
+ * "$MDNSent" pour ne plus reproposer l'accusé.
+ * Paramètres :
+ *   account_uid      : identifiant du compte qui a reçu le message
+ *   folder_full_name : chemin complet du dossier
+ *   message_uid      : identifiant du message
+ *   send             : non nul pour envoyer l'accusé ; 0 pour seulement marquer
+ *                      le message comme traité (« Ne pas envoyer »)
+ *   func             : rappel recevant {"sent": bool, "processed": true, "to": "adresse"} */
+void		evo_core_send_read_receipt	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *message_uid,
+						 int send,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Répond à une invitation iCalendar (iTIP / iMIP) contenue dans un message
+ * (voir le membre "invitation" renvoyé par evo_core_get_message) :
+ *  - met à jour l'agenda de l'utilisateur sans créer de doublon (UID et SEQUENCE) :
+ *    ajout ou remplacement pour Accepter / Provisoire, retrait pour Refuser ou
+ *    pour une annulation (METHOD:CANCEL) ; le PARTSTAT du participant qui
+ *    correspond à l'identité du compte est mis à jour ;
+ *  - envoie à l'organisateur, par le serveur SMTP du compte, une réponse
+ *    METHOD:REPLY (multipart/alternative : texte lisible et text/calendar) ;
+ *  - mémorise la réponse sur le message (étiquette Camel "evo-invite-response").
+ * Paramètres :
+ *   account_uid      : identifiant du compte qui a reçu le message
+ *   folder_full_name : chemin complet du dossier
+ *   message_uid      : identifiant du message
+ *   response         : "accepted", "declined" ou "tentative" ; "remove" pour retirer
+ *                      de l'agenda une réunion annulée (METHOD:CANCEL)
+ *   send_reply       : non nul pour envoyer la réponse à l'organisateur ; 0 pour
+ *                      « sans envoyer de réponse »
+ *   func             : rappel recevant {"response", "partstat", "calendar", "sent", "to"} ;
+ *                      "calendar" vaut "added", "updated", "kept", "removed", "unchanged"
+ *                      ou "skipped" (occurrence isolée d'une série) ; "calendar_error"
+ *                      est présent si l'agenda n'a pas pu être mis à jour */
+void		evo_core_respond_invitation	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *message_uid,
+						 const char *response,
+						 int send_reply,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Envoie par messagerie les invitations (iTIP METHOD:REQUEST, texte lisible +
+ * pièce text/calendar) d'un événement de l'agenda à ses participants, depuis
+ * l'adresse du compte choisi. À utiliser pour les agendas dont le serveur n'envoie
+ * pas lui-même les invitations (agenda local, abonnements) ; Exchange Online et
+ * Google Agenda les envoient eux-mêmes. L'organisateur de l'événement est posé
+ * (adresse du compte) s'il manque, et une réponse (RSVP) est demandée.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   account_uid  : compte de messagerie dont l'adresse envoie les invitations
+ *   calendar_uid : agenda contenant l'événement
+ *   event_uid    : identifiant de l'événement
+ *   func         : rappel recevant {"sent": nombre de destinataires, "to": "adresses"}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_send_event_invitations	(EvoCore *core,
+						 const char *account_uid,
+						 const char *calendar_uid,
+						 const char *event_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Envoie tous les messages en attente dans la Boîte d'envoi locale
  * ("local" / "Outbox") via leurs comptes respectifs. */
 void		evo_core_send_unsent_messages	(EvoCore *core);
@@ -159,6 +229,23 @@ void		evo_core_set_message_flags	(EvoCore *core,
 						 const char *message_uid,
 						 const char *flag_name,
 						 int value,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Définit ou efface le suivi d'un message (libellé, échéance, date de fin ;
+ * étiquettes Camel "follow-up", "due-by", "completed-on").
+ * Paramètres :
+ *   label        : libellé du suivi, "" pour effacer
+ *   due_by       : échéance en secondes Unix (texte) ou "" ;
+ *   completed_on : date de fin en secondes Unix (texte) ou ""
+ *   func         : rappel recevant {"flagged", "follow_up", "due_by", "completed_on"} */
+void		evo_core_set_follow_up		(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *message_uid,
+						 const char *label,
+						 const char *due_by,
+						 const char *completed_on,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
@@ -371,6 +458,27 @@ void		evo_core_search_messages_scoped	(EvoCore *core,
 						 const char *folder_full_name,
 						 const char *scope,
 						 const char *query,
+						 unsigned int max_count,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Charge une vue unifiée multi-comptes : les messages du dossier d'un rôle
+ * donné (boîte de réception, envoyés, brouillons, corbeille...) de tous les
+ * comptes, fusionnés et triés du plus récent au plus ancien. Un compte
+ * injoignable est ignoré.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   role         : rôle du dossier ("inbox", "sent", "drafts", "trash", "junk", "archive")
+ *   account_uids : comptes inclus, identifiants séparés par des virgules (NULL ou "" : tous)
+ *   max_count    : nombre maximal de messages renvoyés (0 pour tous)
+ *   func         : rappel recevant le tableau JSON des messages ; chacun porte "account",
+ *                  "account_name", "folder", "folder_name" et un "uid" composite
+ *                  "<uid>\x1f<compte>\x1f<dossier>" : seule la partie avant le premier
+ *                  \x1f est l'identifiant à transmettre aux autres fonctions du moteur
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_list_unified		(EvoCore *core,
+						 const char *role,
+						 const char *account_uids,
 						 unsigned int max_count,
 						 EvoCoreResultFunc func,
 						 void *user_data);
@@ -620,7 +728,8 @@ void		evo_core_remove_account		(EvoCore *core,
  *   event_uid    : uid de l'événement
  *   func         : rappel recevant {"uid", "calendar_uid", "calendar_name",
  *                  "summary", "location", "description", "start", "end",
- *                  "all_day", "recurring", "readonly", "organizer": {"name",
+ *                  "all_day", "recurring", "readonly", "categories": ["..."],
+ *                  "organizer": {"name",
  *                  "email"}, "attendees": [{"name", "email", "status":
  *                  "accepted"|"declined"|"tentative"|"delegated"|"needs-action"}]}
  *   user_data    : données utilisateur transmises au rappel */
@@ -632,7 +741,10 @@ void		evo_core_get_event		(EvoCore *core,
 
 /* Modifie un événement (toute la série s'il est périodique).
  * event_json : {"calendar_uid", "uid", "summary", "location",
- *               "description", "start", "end", "all_day"} ; rappel : {} */
+ *               "description", "start", "end", "all_day", "categories":
+ *               ["..."]} ; rappel : {}
+ * Modification partielle : seuls les champs présents sont modifiés ("start"
+ * absent : dates inchangées ; "categories" remplace les catégories). */
 void		evo_core_modify_event		(EvoCore *core,
 						 const char *event_json,
 						 EvoCoreResultFunc func,
@@ -761,7 +873,7 @@ void		evo_core_delete_task		(EvoCore *core,
  *   query     : filtre de recherche (chaîne vide ou NULL pour tous les contacts)
  *   func      : rappel recevant [{"uid": "...", "full_name": "...", "email": "...",
  *               "phone": "...", "org": "...", "notes": "...",
- *               "book_uid": "...", "book_name": "..."}, ...]
+ *               "book_uid": "...", "book_name": "...", "categories": ["..."]}, ...]
  *   user_data : données utilisateur transmises au rappel */
 /* Destinataires pour l'autocomplétion : nom, prénom, nom de famille,
  * surnom ou adresse commençant par text (2 caractères au moins), dans tous
@@ -776,6 +888,144 @@ void		evo_core_delete_task		(EvoCore *core,
 void		evo_core_search_recipients	(EvoCore *core,
 						 const char *text,
 						 int max_count,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Recherche dans l'annuaire de l'organisation (carnet d'adresses global, GAL)
+ * des comptes Microsoft 365 / Exchange Online (Microsoft Graph, GET /users avec
+ * $search, portée User.ReadBasic.All ; les détails professionnels exigent
+ * User.Read.All, sinon seuls nom et adresse sont renvoyés) et Google Workspace
+ * (API People, portée directory.readonly : les comptes Google déjà connectés
+ * doivent être reconnectés). Le jeton OAuth2 est celui du compte, renouvelé par
+ * EDS. Exchange sur site (EWS) et IMAP générique ne sont pas interrogés.
+ * Les résultats des comptes joignables sont renvoyés même si un autre échoue ;
+ * l'erreur n'est signalée que si tous échouent ou si aucun compte compatible
+ * n'existe. Une saisie de moins de 2 caractères renvoie [].
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   text      : saisie (début du nom, du prénom ou de l'adresse)
+ *   max_count : nombre maximal de résultats (1 à 50, 15 par défaut)
+ *   func      : rappel recevant [{"name", "email", "given_name", "family_name",
+ *               "title", "department", "company", "office", "phone", "mobile",
+ *               "account", "provider": "microsoft365"|"google"}, ...],
+ *               une entrée par adresse
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_search_gal		(EvoCore *core,
+						 const char *text,
+						 int max_count,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Comme evo_core_search_gal (), limité à un seul compte. Chaque entrée porte
+ * en plus "phone2" (autre numéro, fax), "address" (adresse postale sur une
+ * ligne), "photo_url" (URL de la photo, Google) et "account_uid".
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant (ou nom affiché) du compte Microsoft 365 / Google
+ *   text, max_count, func, user_data : voir evo_core_search_gal () */
+void		evo_core_search_gal_account	(EvoCore *core,
+						 const char *account_uid,
+						 const char *text,
+						 int max_count,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Photo de profil d'une personne de l'annuaire Microsoft 365 (Graph,
+ * /users/{adresse}/photo/$value).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte à interroger ("" : tous les comptes Microsoft 365)
+ *   email       : adresse de la personne
+ *   func        : rappel recevant {"photo": "data:image/jpeg;base64,..."},
+ *                 "photo" vide si la personne n'a pas de photo
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_get_gal_photo		(EvoCore *core,
+						 const char *account_uid,
+						 const char *email,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Événements du calendrier d'une personne (Microsoft 365, Graph
+ * /users/{adresse}/calendarView, lecture seule) : la personne doit avoir partagé
+ * son calendrier. Même format que evo_core_list_events (), avec
+ * calendar_uid = "person:adresse" et "readonly": true.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte Microsoft 365 utilisé ("" : premier compte)
+ *   email, name : adresse et nom affiché de la personne
+ *   color       : couleur "#rrggbb" ("" : aucune)
+ *   start_unix, end_unix : période en secondes Unix
+ *   func        : rappel recevant le tableau JSON des événements
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_list_person_events	(EvoCore *core,
+						 const char *account_uid,
+						 const char *email,
+						 const char *name,
+						 const char *color,
+						 long long start_unix,
+						 long long end_unix,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Équipe de l'utilisateur (Microsoft 365) : responsable, collaborateurs directs
+ * et collègues du même responsable. Les relations refusées par le serveur sont
+ * omises.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte Microsoft 365 utilisé ("" : premier compte)
+ *   func        : rappel recevant [{"name", "email", "relation":
+ *                 "manager"|"report"|"peer"}, ...]
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_list_team		(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Groupes de calendriers Outlook d'un compte Microsoft 365 (Graph
+ * /me/calendarGroups) avec les calendriers qu'ils contiennent. Les groupes
+ * d'équipes ou de salles créés dans Outlook (« Team Infra N2 », « Salles »...) y
+ * figurent par leur nom, mais Graph n'expose pas leurs membres (personnes,
+ * salles) : ils apparaissent vides.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte Microsoft 365 ("" : premier compte)
+ *   func        : rappel recevant [{"name", "class_id", "calendars": [{"name",
+ *                 "address"}]}, ...]
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_list_calendar_groups	(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Groupes de calendriers d'Outlook (« Team Infra N2 », « Salles », équipes...) avec
+ * leurs membres, lus par EWS dans la navigation de la boîte aux lettres
+ * (dossier Common Views, éléments IPM.Microsoft.WunderBar.Link) : Microsoft Graph
+ * ne les expose pas. Le jeton EWS est demandé avec le jeton de renouvellement du
+ * compte ; l'application doit y être autorisée (sinon une erreur explicite est
+ * renvoyée). L'adresse de chaque membre est cherchée par son nom dans l'annuaire.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte Microsoft 365 ("" : premier compte)
+ *   func        : rappel recevant [{"name": groupe, "calendars": [{"name",
+ *                 "email"}]}, ...] ("email" vide si introuvable)
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_list_nav_calendars	(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Adresse de la page d'autorisation Microsoft qui permet à l'application de lire,
+ * par EWS, la navigation des calendriers d'Outlook (groupes d'équipes et de salles :
+ * voir evo_core_list_nav_calendars). À ouvrir dans le navigateur ; une fois
+ * l'autorisation accordée, evo_core_list_nav_calendars () réussit. Un administrateur
+ * peut devoir donner son accord (selon la stratégie du tenant).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte Microsoft 365 ("" : premier compte)
+ *   func        : rappel recevant {"url": "..."}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_get_ews_consent_url	(EvoCore *core,
+						 const char *account_uid,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
@@ -795,7 +1045,8 @@ void		evo_core_list_contacts		(EvoCore *core,
 /* Crée un nouveau contact dans le carnet d'adresses par défaut (ou celui
  * indiqué par "book_uid"). Format attendu pour contact_json :
  * {"book_uid": "..." (optionnel), "full_name": "...", "email": "...",
- *  "phone": "...", "org": "...", "notes": "..."}
+ *  "phone": "...", "org": "...", "notes": "...", "categories": ["..."]
+ *  (optionnel)}
  * Paramètres :
  *   core         : instance du moteur evo-core
  *   contact_json : description du contact au format JSON UTF-8
@@ -830,6 +1081,24 @@ void		evo_core_delete_contact		(EvoCore *core,
  *   user_data    : données utilisateur transmises au rappel */
 void		evo_core_modify_contact		(EvoCore *core,
 						 const char *contact_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Remplace les catégories d'un contact (champ vCard CATEGORIES). Les noms
+ * vides ou contenant une virgule sont ignorés ; un tableau vide retire
+ * toutes les catégories. Les listes de contacts renvoient les catégories
+ * dans le membre "categories" (tableau de chaînes).
+ * Paramètres :
+ *   core            : instance du moteur evo-core
+ *   book_uid        : identifiant du carnet d'adresses ("" pour le carnet par défaut)
+ *   contact_uid     : identifiant du contact
+ *   categories_json : tableau JSON de noms, ex. ["Travail","Important"]
+ *   func            : rappel recevant {}
+ *   user_data       : données utilisateur transmises au rappel */
+void		evo_core_set_contact_categories	(EvoCore *core,
+						 const char *book_uid,
+						 const char *contact_uid,
+						 const char *categories_json,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
@@ -952,6 +1221,40 @@ void		evo_core_set_account_signature	(EvoCore *core,
 void		evo_core_respond_tls_trust	(EvoCore *core,
 						 const char *trust_id,
 						 int trust_decision);
+
+/* Lit les réponses automatiques (absence du bureau) d'un compte Microsoft 365
+ * (Microsoft Graph, mailboxSettings/automaticRepliesSetting) ou Gmail
+ * (users.settings.getVacation), avec le jeton OAuth2 de la collection du compte.
+ * Erreur en français pour les comptes IMAP génériques et Exchange sur site (EWS).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   func        : rappel recevant {"provider": "microsoft365"|"gmail", "single_message",
+ *                 "enabled", "external_audience": "none"|"known"|"all", "start", "end"
+ *                 (secondes Unix, 0 = sans limite), "subject" (Gmail), "internal_message",
+ *                 "external_message" (texte brut)}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_get_auto_reply		(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Enregistre les réponses automatiques d'un compte Microsoft 365 ou Gmail.
+ * Microsoft 365 exige les deux dates ou aucune ; Gmail n'a qu'un message (celui des
+ * expéditeurs externes, sinon l'interne) ; l'audience « none » équivaut chez Gmail
+ * à « seulement mon domaine ». Portées OAuth2 requises : MailboxSettings.ReadWrite
+ * (Microsoft 365) et gmail.settings.basic (Gmail).
+ * Paramètres :
+ *   core          : instance du moteur evo-core
+ *   account_uid   : identifiant du compte
+ *   settings_json : réglages, mêmes champs que le résultat de evo_core_get_auto_reply
+ *   func          : rappel recevant les réglages enregistrés (même format)
+ *   user_data     : données utilisateur transmises au rappel */
+void		evo_core_set_auto_reply		(EvoCore *core,
+						 const char *account_uid,
+						 const char *settings_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
 
 /* Versions des composants du moteur, pour la boîte « À propos » et les
  * rapports de bug (sans instance du moteur, appel synchrone) :

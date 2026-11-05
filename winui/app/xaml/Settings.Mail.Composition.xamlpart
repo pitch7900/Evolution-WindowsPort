@@ -1,0 +1,379 @@
+                                <TextBlock Text="Rédaction de messages" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+
+
+
+                                <!-- Format par défaut -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8D2;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Format par défaut des nouveaux messages" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Privilégier le texte enrichi HTML (mise en forme, liens) ou le format texte brut universel."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ComboBox Grid.Column="2" x:Name="MailDefaultFormatCombo" Tag="mail.default-format"
+
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+
+                                            <ComboBoxItem Content="HTML (texte enrichi)" Tag="html" />
+
+                                            <ComboBoxItem Content="Texte brut" Tag="text" />
+
+                                        </ComboBox>
+
+                                    </Grid>
+
+                                </Border>
+
+                                <!-- Police de rédaction par défaut -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8D2;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Police de rédaction par défaut" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Police de caractères utilisée pour la saisie des nouveaux courriels."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ComboBox Grid.Column="2" x:Name="MailComposeFontCombo" Tag="mail.compose-font-family"
+
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+
+                                            <ComboBoxItem Content="Segoe UI" Tag="Segoe UI" />
+
+                                            <ComboBoxItem Content="Calibri" Tag="Calibri" />
+
+                                            <ComboBoxItem Content="Aptos" Tag="Aptos" />
+
+                                            <ComboBoxItem Content="Arial" Tag="Arial" />
+
+                                            <ComboBoxItem Content="Consolas" Tag="Consolas" />
+
+                                            <ComboBoxItem Content="Times New Roman" Tag="Times New Roman" />
+
+                                        </ComboBox>
+
+                                    </Grid>
+
+                                </Border>
+
+                                <!-- Taille de police par défaut -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8D2;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Taille de police par défaut" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Taille d'affichage du corps du texte des courriels en rédaction."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ComboBox Grid.Column="2" x:Name="MailComposeFontSizeCombo" Tag="mail.compose-font-size"
+
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+
+                                            <ComboBoxItem Content="9 pt (très petite)" Tag="9pt" />
+
+                                            <ComboBoxItem Content="10 pt (petite)" Tag="10pt" />
+
+                                            <ComboBoxItem Content="11 pt (standard)" Tag="11pt" />
+
+                                            <ComboBoxItem Content="12 pt (moyenne)" Tag="12pt" />
+
+                                            <ComboBoxItem Content="14 pt (grande)" Tag="14pt" />
+
+                                            <ComboBoxItem Content="16 pt (très grande)" Tag="16pt" />
+
+                                        </ComboBox>
+
+                                    </Grid>
+
+                                </Border>
+
+                                <!-- Vérificateur d'orthographe -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE73E;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Vérificateur d'orthographe" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Surligner et corriger les fautes d'orthographe lors de la rédaction de messages."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ToggleSwitch Grid.Column="2" x:Name="MailComposeSpellcheckSwitch" Tag="mail.compose-spellcheck"
+
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+
+                                    </Grid>
+
+                                </Border>
+
+
+
+                                <!-- Confirmation objet vide -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE7BA;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Avertir en cas d'envoi sans objet" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Demander une confirmation si vous tentez d'expédier un message avec la ligne d'objet vide."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ToggleSwitch Grid.Column="2" x:Name="MailWarnEmptySubjectSwitch" Tag="mail.warn-empty-subject"
+
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+
+                                    </Grid>
+
+                                </Border>
+
+
+
+                                <!-- Copie cachée automatique (Cci / Bcc) -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE715;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Copie cachée automatique (Cci / Bcc)" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Adresse e-mail ajoutée automatiquement en copie invisible lors de la rédaction de nouveaux courriels."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <TextBox Grid.Column="2" x:Name="MailAutoBccBox" Tag="mail.auto-bcc" MinWidth="220"
+                                                 PlaceholderText="copie@exemple.com"
+                                                 LostFocus="OnSettingTextBoxLostFocus" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Demande d'accusé de lecture systématique -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE73E;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Demander systématiquement un accusé de lecture" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Ajoute l'en-tête de confirmation de lecture (Disposition-Notification-To) à tous les messages sortants."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="MailRequestReadReceiptSwitch" Tag="mail.request-read-receipt"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Préfixe de réponse personnalisé / multilingue -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE97A;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Préfixe de réponse" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Préfixe ajouté au sujet lors de la réponse (Re:, RE:, AW:, R:, SV:…)."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="MailReplyPrefixCombo" Tag="mail.reply-prefix" MinWidth="170"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center">
+                                            <ComboBoxItem Content="Re: (standard / FR / EN)" Tag="Re: " />
+                                            <ComboBoxItem Content="RE: (majuscules)" Tag="RE: " />
+                                            <ComboBoxItem Content="AW: (allemand)" Tag="AW: " />
+                                            <ComboBoxItem Content="R: (italien)" Tag="R: " />
+                                            <ComboBoxItem Content="SV: (scandinave)" Tag="SV: " />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Préfixe de transfert personnalisé / multilingue -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE72D;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Préfixe de transfert" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Préfixe ajouté au sujet lors du transfert (TR:, Fwd:, FW:, WG:, I:…)."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="MailForwardPrefixCombo" Tag="mail.forward-prefix" MinWidth="170"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center">
+                                            <ComboBoxItem Content="TR: (français)" Tag="TR: " />
+                                            <ComboBoxItem Content="Fwd: (anglais)" Tag="Fwd: " />
+                                            <ComboBoxItem Content="FW: (anglais court)" Tag="FW: " />
+                                            <ComboBoxItem Content="WG: (allemand)" Tag="WG: " />
+                                            <ComboBoxItem Content="I: (italien)" Tag="I: " />
+                                            <ComboBoxItem Content="ENC: (espagnol / port.)" Tag="ENC: " />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Confirmation suppression définitive -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE814;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Confirmer la suppression définitive" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Demander confirmation avant d'éliminer définitivement un élément sans passer par la corbeille."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ToggleSwitch Grid.Column="2" x:Name="MailConfirmPermanentDeleteSwitch" Tag="mail.confirm-permanent-delete"
+
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+
+                                    </Grid>
+
+                                </Border>

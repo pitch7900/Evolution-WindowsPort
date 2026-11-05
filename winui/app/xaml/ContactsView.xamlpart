@@ -1,0 +1,176 @@
+            <Grid x:Name="ContactsViewPane" Grid.Row="2" Visibility="Collapsed">
+
+                <Grid.ColumnDefinitions>
+
+                    <ColumnDefinition Width="260" />
+
+                    <ColumnDefinition Width="380" />
+
+                    <ColumnDefinition Width="*" />
+
+                </Grid.ColumnDefinitions>
+
+
+
+                <!-- carnets d'adresses par compte : case = affiché, clic sur le nom =
+
+                     carnet des nouveaux contacts (MainWindow::LoadContactBooks) -->
+
+                <Grid Grid.Column="0" Padding="16,12,8,12" RowSpacing="8"
+
+                      BorderThickness="0,0,1,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+
+                    <Grid.RowDefinitions>
+
+                        <RowDefinition Height="Auto" />
+
+                        <RowDefinition Height="*" />
+
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Carnets d'adresses" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+
+                        <StackPanel Spacing="12">
+                            <StackPanel x:Name="ContactBooksPanel" Spacing="2" />
+                            <!-- annuaire de l'organisation (GAL), lecture seule : MainWindow.Gal.cpp -->
+                            <Button x:Name="GalDirectoryButton" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                    Content="Annuaire de l'organisation" Click="OnGalDirectoryClick"
+                                    ToolTipService.ToolTip="Rechercher dans l'annuaire d'entreprise (Microsoft 365, Google Workspace)" />
+                        </StackPanel>
+
+                    </ScrollViewer>
+
+                </Grid>
+
+
+
+                <Grid Grid.Column="1" Padding="16,12,16,12" RowSpacing="8"
+
+                      BorderThickness="0,0,1,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+
+                    <Grid.RowDefinitions>
+
+                        <RowDefinition Height="Auto" />
+
+                        <RowDefinition Height="Auto" />
+
+                        <RowDefinition Height="*" />
+
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" VerticalAlignment="Center">
+
+                        <TextBlock Text="Contacts" Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                        <TextBlock x:Name="ActiveBookText" Style="{StaticResource CaptionTextBlockStyle}"
+
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                    </StackPanel>
+
+                    <Button x:Name="ContactCategoryFilterButton" Grid.Row="1" Click="OnContactCategoryFilterClick" Padding="8,4" HorizontalAlignment="Right" VerticalAlignment="Center" ToolTipService.ToolTip="Filtrer par catégorie">
+                        <FontIcon Glyph="&#xE8EC;" FontSize="13" />
+                    </Button>
+                    <AutoSuggestBox x:Name="ContactSearchBox" Grid.Row="1" PlaceholderText="Rechercher un contact" QueryIcon="Find" Margin="0,0,44,0"
+
+                                    TextChanged="OnContactSearchChanged" QuerySubmitted="OnContactSearchSubmitted" />
+
+                    <ListView x:Name="ContactList" Grid.Row="2" SelectionMode="Single" SelectionChanged="OnContactSelectionChanged" />
+
+                </Grid>
+
+
+
+                <Grid Grid.Column="2" Padding="32,24,32,24">
+
+                    <StackPanel x:Name="ContactDetailPane" Spacing="12" Visibility="Collapsed">
+
+                        <PersonPicture x:Name="ContactPhoto" Width="96" Height="96" HorizontalAlignment="Left" Visibility="Collapsed" />
+
+                        <TextBlock x:Name="ContactNameText" Style="{StaticResource TitleTextBlockStyle}" IsTextSelectionEnabled="True" />
+
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+
+                            <FontIcon Glyph="&#xE715;" FontSize="14" />
+
+                            <TextBlock x:Name="ContactEmailText" IsTextSelectionEnabled="True" />
+
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+
+                            <FontIcon Glyph="&#xE717;" FontSize="14" />
+
+                            <TextBlock x:Name="ContactPhoneText" IsTextSelectionEnabled="True" />
+
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+
+                            <FontIcon Glyph="&#xE731;" FontSize="14" />
+
+                            <TextBlock x:Name="ContactOrgText" IsTextSelectionEnabled="True" />
+
+                        </StackPanel>
+
+                        <StackPanel x:Name="ContactAddressRow" Orientation="Horizontal" Spacing="8" Visibility="Collapsed"><FontIcon Glyph="&#xE707;" FontSize="14" /><TextBlock x:Name="ContactAddressText" IsTextSelectionEnabled="True" TextWrapping="Wrap" /></StackPanel>
+
+                        <TextBlock x:Name="ContactNotesText" TextWrapping="Wrap" IsTextSelectionEnabled="True"
+
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,4,0,8" />
+
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+
+                            <Button Style="{StaticResource AccentButtonStyle}" Click="OnComposeToContactClick">
+
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+
+                                    <FontIcon Glyph="&#xE715;" FontSize="14" />
+
+                                    <TextBlock Text="Écrire un message" />
+
+                                </StackPanel>
+
+                            </Button>
+
+                            <Button x:Name="ContactDeleteButton" Click="OnDeleteContactClick">
+
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+
+                                    <FontIcon Glyph="&#xE74D;" FontSize="14" />
+
+                                    <TextBlock Text="Supprimer le contact" />
+
+                                </StackPanel>
+
+                            </Button>
+
+                            <Button x:Name="ContactEditButton" Click="OnEditContactClick">
+
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+
+                                    <FontIcon Glyph="&#xE70F;" FontSize="14" />
+
+                                    <TextBlock Text="Modifier le contact" />
+
+                                </StackPanel>
+
+                            </Button>
+
+                        </StackPanel>
+
+                    </StackPanel>
+
+                    <TextBlock x:Name="ContactPlaceholder"
+
+                               Text="Sélectionnez un contact pour afficher sa fiche"
+
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                </Grid>
+
+            </Grid>

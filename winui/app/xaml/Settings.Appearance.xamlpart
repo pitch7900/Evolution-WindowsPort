@@ -1,0 +1,337 @@
+                            <StackPanel x:Name="SettingsCategoryAppearance" Visibility="Collapsed" Spacing="16">
+
+                                <TextBlock Text="Thème et personnalisation visuelle" Style="{StaticResource SubtitleTextBlockStyle}" />
+
+
+
+                                <!-- Langue de l'interface utilisateur -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE774;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Langue d'affichage de l'application" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Choisissez la langue de l'interface. La modification prendra effet au prochain démarrage."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        
+                                <!-- Raccourcis clavier et profils -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE765;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Raccourcis clavier et profils" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Consulter la liste exhaustive des raccourcis et basculer entre le profil Outlook ou Evolution."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Content="Afficher la liste (F1)" Click="OnRibbonKeyboardShortcutsClick" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+</StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="AppearanceLanguageCombo" Tag="general.language" MinWidth="200"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center">
+                                            <ComboBoxItem Content="Langue de Windows (par défaut)" Tag="system" />
+                                            <ComboBoxItem Content="Français (France)" Tag="fr-FR" />
+                                            <ComboBoxItem Content="English (United States)" Tag="en-US" />
+                                            <ComboBoxItem Content="Deutsch (Deutschland)" Tag="de-DE" />
+                                            <ComboBoxItem Content="Español (España)" Tag="es-ES" />
+                                            <ComboBoxItem Content="Italiano (Italia)" Tag="it-IT" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Thème de l'application -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE790;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Thème de l'application" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Choisissez entre le thème clair, le thème sombre ou suivez la préférence Windows."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <RadioButtons Grid.Column="2" x:Name="AppearanceThemeChoice" MaxColumns="3"
+
+                                                      SelectionChanged="OnThemeChoiceChanged" VerticalAlignment="Center">
+
+                                            <x:String>Système</x:String>
+
+                                            <x:String>Clair</x:String>
+
+                                            <x:String>Sombre</x:String>
+
+                                        </RadioButtons>
+
+                                    </Grid>
+
+                                </Border>
+
+
+
+                                <!-- Volet des dossiers -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8A0;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Volet des dossiers" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Choisissez entre le mode normal, réduit (icônes seules / mini-calendrier) ou masqué."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2" x:Name="AppearanceFolderPaneCombo" Tag="layout.folder-pane"
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+                                            <ComboBoxItem Content="Normal" Tag="normal" />
+                                            <ComboBoxItem Content="Réduit" Tag="minimized" />
+                                            <ComboBoxItem Content="Désactivé" Tag="off" />
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Mode compact des listes -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8E9;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Mode compact des listes" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Réduit l'espacement et la hauteur des lignes (Courrier et Calendrier) pour afficher plus d'éléments à l'écran."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ToggleSwitch Grid.Column="2" x:Name="AppearanceCompactDensitySwitch" Tag="layout.compact-density"
+
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+
+                                    </Grid>
+
+                                </Border>
+
+
+
+                                <!-- Vue par défaut au démarrage -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE756;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Vue affichée à l'ouverture" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Module ouvert automatiquement lors du lancement d'EvolutionWin."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ComboBox Grid.Column="2" x:Name="AppearanceStartupViewCombo" Tag="appearance.startup-view"
+
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+
+                                            <ComboBoxItem Content="Courrier" Tag="mail" />
+
+                                            <ComboBoxItem Content="Calendrier" Tag="calendar" />
+
+                                            <ComboBoxItem Content="Contacts" Tag="contacts" />
+
+                                            <ComboBoxItem Content="Tâches" Tag="tasks" />
+
+                                        </ComboBox>
+
+                                    </Grid>
+
+                                </Border>
+
+
+
+                                <!-- Taille de police de lecture -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE8D2;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Taille de texte pour la lecture" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Ajuster la taille de police par défaut pour le volet de lecture des messages."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ComboBox Grid.Column="2" x:Name="AppearanceFontSizeCombo" Tag="appearance.font-size"
+
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+
+                                            <ComboBoxItem Content="Petite" Tag="small" />
+
+                                            <ComboBoxItem Content="Normale" Tag="normal" />
+
+                                            <ComboBoxItem Content="Grande" Tag="large" />
+
+                                            <ComboBoxItem Content="Très grande" Tag="extralarge" />
+
+                                        </ComboBox>
+
+                                    </Grid>
+
+                                </Border>
+
+
+
+                                <!-- Réduire dans la barre d'état (systray) -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE718;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Réduire dans la zone de notification Windows" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Masquer dans la boîte à miniatures près de l'horloge au lieu de quitter complètement."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ToggleSwitch Grid.Column="2" x:Name="AppearanceMinimizeToTraySwitch" Tag="appearance.minimize-to-tray"
+
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+
+                                    </Grid>
+
+                                </Border>
+
+                                <!-- Démarrage automatique avec Windows -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="16,12">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE7E8;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Démarrer automatiquement avec Windows" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Lance EvolutionWin dès l'ouverture de votre session utilisateur Windows."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="AppearanceAutoStartupSwitch" Tag="general.auto-startup"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                            </StackPanel>

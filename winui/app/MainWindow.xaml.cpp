@@ -273,8 +273,16 @@ namespace winrt::EvolutionWin::implementation
             }
             if (m_initialized)
             {
-                StatusBar().IsOpen(false);
+                HideStatus();
                 LoadAccounts();
+
+                /* à l'ouverture, en tâche de fond : calendriers et groupes de calendriers d'Outlook
+                   (noms par Graph, membres par EWS), sans attendre l'affichage de la vue Calendrier */
+                if (!m_calendar_background_started)
+                {
+                    m_calendar_background_started = true;
+                    LoadCalendarSources(false);
+                }
             }
         }
         else if (event == L"folder-changed")
@@ -290,7 +298,7 @@ namespace winrt::EvolutionWin::implementation
             UpdateMailBadge();
 
             /* new or removed messages in the folder on screen */
-            if (account == m_account && folder == m_folder &&
+            if (((account == m_account && folder == m_folder) || UnifiedFolderMatches(account, folder)) &&
                 (object.GetNamedNumber(L"added", 0) > 0 || object.GetNamedNumber(L"removed", 0) > 0))
                 LoadMessages(true);
         }
@@ -414,9 +422,70 @@ namespace winrt::EvolutionWin::implementation
         if (!m_initialized)
             return;
 
-        StatusBar().Message(message);
-        StatusBar().Severity(severity);
-        StatusBar().IsOpen(!message.empty());
+        if (message.empty())
+        {
+            HideStatus();
+            return;
+        }
+
+        /* message compact dans la barre d'état du bas : icône de gravité + texte sur une ligne
+           (texte complet en infobulle), disparition automatique */
+        auto resources = Application::Current().Resources();
+        hstring glyph = L"\uE946", brush = L"SystemFillColorAttentionBrush";
+        int seconds = 7;
+        switch (severity)
+        {
+        case InfoBarSeverity::Success:
+            glyph = L"\uE73E";
+            brush = L"SystemFillColorSuccessBrush";
+            break;
+        case InfoBarSeverity::Warning:
+            glyph = L"\uE7BA";
+            brush = L"SystemFillColorCautionBrush";
+            seconds = 12;
+            break;
+        case InfoBarSeverity::Error:
+            glyph = L"\uEA39";
+            brush = L"SystemFillColorCriticalBrush";
+            seconds = 20;
+            break;
+        default:
+            break;
+        }
+
+        StatusMessageIcon().Glyph(glyph);
+        StatusMessageIcon().Foreground(resources.Lookup(box_value(brush)).as<Microsoft::UI::Xaml::Media::Brush>());
+        StatusMessageText().Text(message);
+        ToolTipService::SetToolTip(StatusMessageText(), box_value(message));
+        StatusMessagePanel().Visibility(Visibility::Visible);
+
+        if (!m_status_timer)
+        {
+            m_status_timer = DispatcherTimer();
+            m_status_timer.Tick([weak = get_weak()](IInspectable const&, IInspectable const&)
+            {
+                if (auto self = weak.get())
+                    self->HideStatus();
+            });
+        }
+        m_status_timer.Stop();
+        m_status_timer.Interval(std::chrono::seconds(seconds));
+        m_status_timer.Start();
+    }
+
+    /* Masque le message compact de la barre d'état. */
+    void MainWindow::HideStatus()
+    {
+        if (m_status_timer)
+            m_status_timer.Stop();
+        StatusMessagePanel().Visibility(Visibility::Collapsed);
+        StatusMessageText().Text(L"");
+    }
+
+    /* Bouton de fermeture du message compact. */
+    void MainWindow::OnStatusMessageCloseClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        HideStatus();
     }
 
     /* Badge de la barre latérale sur « Courrier » : total des non-lus des
@@ -431,9 +500,12 @@ namespace winrt::EvolutionWin::implementation
 
         for (auto const& [key, node] : m_nodes)
         {
-            if (auto item = node.Content().try_as<EvolutionWin::FolderItem>(); item && !item.IsAccount() && item.Glyph() == inbox_glyph)
+            /* la Boîte de réception unifiée n'est pas comptée : elle reprend les autres */
+            if (auto item = node.Content().try_as<EvolutionWin::FolderItem>(); item && !item.IsAccount() && item.Glyph() == inbox_glyph
+                && !::EvolutionWin::UnifiedViews::IsUnifiedAccount(std::wstring_view{ item.Account() }))
                 unread += item.Unread();
         }
+        UpdateUnifiedCounts();
 
         if (unread <= 0)
         {

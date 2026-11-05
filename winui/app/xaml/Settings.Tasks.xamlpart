@@ -1,0 +1,99 @@
+                            <StackPanel x:Name="SettingsCategoryTasks" Visibility="Collapsed" Spacing="16">
+
+                                <TextBlock Text="Suivi et affichage des tâches" Style="{StaticResource SubtitleTextBlockStyle}" />
+
+
+
+                                <!-- Tâches terminées par défaut -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE73E;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Afficher les tâches terminées" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Conserver les tâches déjà achevées visibles dans la liste avec une mise en forme barrée."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ToggleSwitch Grid.Column="2" x:Name="TasksShowCompletedSwitch" Tag="tasks.show-completed"
+
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+
+                                    </Grid>
+
+                                </Border>
+
+
+
+                                <!-- Échéance par défaut -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE787;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Échéance par défaut des nouvelles tâches" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Date limite préremplie lors de l'ajout d'une tâche."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ComboBox Grid.Column="2" x:Name="TasksDefaultDueCombo" Tag="tasks.default-due"
+
+                                                  SelectionChanged="OnSettingComboChanged" VerticalAlignment="Center" MinWidth="160">
+
+                                            <ComboBoxItem Content="Aucune échéance" Tag="none" />
+
+                                            <ComboBoxItem Content="Aujourd'hui" Tag="today" />
+
+                                            <ComboBoxItem Content="Demain" Tag="tomorrow" />
+
+                                            <ComboBoxItem Content="Dans 1 semaine" Tag="week" />
+
+                                        </ComboBox>
+
+                                    </Grid>
+
+                                </Border>
+
+                            </StackPanel>

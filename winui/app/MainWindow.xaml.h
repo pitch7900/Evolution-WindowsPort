@@ -5,6 +5,7 @@
 #include "ComposeWindow.xaml.h"
 #include "MessageWindow.xaml.h"
 #include "SplashWindow.xaml.h"
+#include "Categories.h"
 
 #include <map>
 #include <set>
@@ -97,6 +98,10 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::SelectorBar const& sender,
             Microsoft::UI::Xaml::Controls::SelectorBarSelectionChangedEventArgs const& args);
         void OnQuickFilterToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnMailCategoryFilterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTaskCategoryFilterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnContactCategoryFilterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnEventCategoryFilterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnSaveMessageClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnOpenInBrowserClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnViewRawMimeClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -118,6 +123,9 @@ namespace winrt::EvolutionWin::implementation
         void OnForwardClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnForwardAsAttachmentClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnToggleReadClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnFollowUpButtonClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void PopulateFollowUpMenuItems(Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items, std::vector<hstring> const& uids);
+        void ApplyFollowUp(std::vector<hstring> const& uids, std::wstring const& label, int due_choice, bool completed);
         void OnToggleFlagClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnDeleteClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnArchiveClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -163,6 +171,8 @@ namespace winrt::EvolutionWin::implementation
         void RestoreSessionFolder();
         void UpdateOutOfOfficeBanner();
         Windows::Foundation::IAsyncAction ShowOutOfOfficeDialogAsync(winrt::hstring account);
+        void OnRibbonAutoReplyClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void DisableAutoReply(winrt::hstring const& account);
 
         /* Écran de démarrage (Splash screen) */
         void SetSplashWindow(winrt::EvolutionWin::SplashWindow const& splash);
@@ -182,6 +192,11 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::CalendarViewSelectedDatesChangedEventArgs const& args);
         void OnRefreshCalendarClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnNewEventClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnCalendarSplitterPointerPressed(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
+        void OnCalendarSplitterPointerMoved(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
+        void OnCalendarSplitterPointerReleased(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
+        void OnCalendarSplitterPointerCaptureLost(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args);
+        void OnCalendarSplitterDoubleTapped(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Input::DoubleTappedRoutedEventArgs const& args);
         /**
          * @brief Gestionnaire pour la création rapide d'un temps de travail individuel (Focus).
          * @param sender Bouton émetteur de l'action.
@@ -211,6 +226,40 @@ namespace winrt::EvolutionWin::implementation
         void OnComposeToContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnDeleteContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnEditContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
+        /* Annuaire de l'organisation (GAL), MainWindow.Gal.cpp */
+        void OnGalDirectoryClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void SetGalMode(bool on);
+        void ScheduleGalSearch(hstring const& query);
+        void SearchGalDirectory(hstring const& query);
+        bool m_gal_mode{ false };
+        uint64_t m_gal_request{ 0 };
+        hstring m_gal_account;   ///< compte interrogé par l'annuaire ("" : tous les comptes)
+        void OnGalDirectoryForAccount(hstring const& account_uid);
+        hstring PeopleCalendarAccountUid();
+        Windows::Data::Json::JsonArray m_calendar_groups{ nullptr };	/* groupes de calendriers Outlook (noms) */
+        void RemergeCalendarSources();
+        void OnCalendarHeaderSizeChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::SizeChangedEventArgs const& args);
+        void UpdateCalendarHeaderLayout();
+        bool m_calendar_header_stacked{ false };
+        void HideStatus();
+        void OnStatusMessageCloseClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        Microsoft::UI::Xaml::DispatcherTimer m_status_timer{ nullptr };
+        int m_calendar_sync_pending{ 0 };	/* synchronisations de groupes en cours (anneau de progression) */
+        void CalendarSyncBegin();
+        void CalendarSyncEnd();
+        winrt::fire_and_forget ImportOutlookGroupsAsync();
+        winrt::fire_and_forget ShowEwsConsentDialogAsync();
+        void ApplyOutlookGroups(Windows::Data::Json::JsonArray const& groups, hstring const& account_uid, bool announce);
+        void RestoreCalendarSidebarWidth();
+        bool m_calendar_dragging{ false };
+        bool m_calendar_sidebar_restored{ false };
+        double m_calendar_drag_origin{ 0 };
+        double m_calendar_drag_start{ 0 };
+        void SendEventInvitations(hstring const& sender_uid, hstring const& calendar_uid, hstring const& event_uid);
+        winrt::fire_and_forget ShowPeopleCalendarsDialogAsync();
+        void ShowDirectoryPhoto(Windows::Data::Json::JsonObject const& contact);
+        Microsoft::UI::Xaml::DispatcherTimer m_gal_timer{ nullptr };
 
         /* Gestionnaires des tâches */
         void OnNewTaskClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -255,6 +304,13 @@ namespace winrt::EvolutionWin::implementation
 
         /* Gestionnaires des paramètres / comptes */
         void OnAddAccountClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnReceiptSendClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnInviteAcceptClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnInviteTentativeClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnInviteDeclineClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnInviteRemoveClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnReceiptIgnoreClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnReadReceiptPolicyChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
         void OnRemoteContentModeChanged(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
@@ -368,7 +424,12 @@ namespace winrt::EvolutionWin::implementation
             bool seen{ true };
             bool flagged{ false };
             bool attachments{ false };
+            std::wstring follow_up;        ///< libellé du suivi (vide : aucun)
+            int64_t due_by{ 0 };           ///< échéance (secondes Unix, 0 : aucune)
+            int64_t completed_on{ 0 };     ///< date de fin (secondes Unix, 0 : non terminé)
         };
+
+        void StyleFollowUpIcon(Microsoft::UI::Xaml::Controls::FontIcon const& icon, MessageState const& state);
 
         std::vector<std::wstring> m_drag_cached_files;
 
@@ -378,6 +439,14 @@ namespace winrt::EvolutionWin::implementation
         void ForwardMessagesAsAttachments(std::vector<hstring> const& uids);
         ::EvolutionWin::ComposeData BuildReplyComposeData(ReplyKind kind, Windows::Data::Json::JsonObject const& message);
         void LoadMessages(bool keep_selection);
+        /* Vues unifiées multi-comptes : le dossier affiché est « virtuel »
+           (m_account = UnifiedViews::kAccountId, m_folder = rôle) */
+        bool IsUnifiedView() const;
+        void AddUnifiedViewsNodes();
+        void LoadUnifiedMessages(bool keep_selection);
+        void UpdateUnifiedCounts();
+        bool UnifiedFolderMatches(hstring const& account, hstring const& folder) const;
+        hstring m_unified_accounts;
         void UpdateFolderCounts(hstring const& account, Windows::Data::Json::JsonArray const& folders);
         static std::wstring NodeKey(hstring const& account, hstring const& folder);
         void Initialize();
@@ -409,11 +478,36 @@ namespace winrt::EvolutionWin::implementation
         void CopyMessagesByUids(std::vector<hstring> const& uids, hstring const& dest_account, hstring const& dest_folder);
         void ArchiveMessagesByUids(std::vector<hstring> const& uids);
         void MarkAsJunkByUids(std::vector<hstring> const& uids);
+        void ArchiveMessagesInFolder(hstring const& account, hstring const& folder, std::vector<hstring> const& uids);
+        void MarkAsJunkInFolder(hstring const& account, hstring const& folder, std::vector<hstring> const& uids);
+        std::map<std::pair<std::wstring, std::wstring>, std::vector<hstring>> GroupUidsByLocation(std::vector<hstring> const& uids);
         void PopulateCategorizeMenuItems(
             Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items,
             std::vector<hstring> const& uids);
         void ToggleCategoryForMessages(std::vector<hstring> const& uids, std::wstring const& category_name, bool apply);
         void ClearCategoriesForMessages(std::vector<hstring> const& uids);
+
+        /* Catégories unifiées (MainWindow.Categories.cpp) */
+        void RefreshCategoriesView();
+        void OnCategoriesRegistryChanged();
+        void PopulateItemCategoryMenu(
+            Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items,
+            std::vector<std::wstring> const& current,
+            std::function<void(std::vector<std::wstring> const&)> apply);
+        void AttachCategoryContextMenu(
+            Microsoft::UI::Xaml::UIElement const& element,
+            std::vector<std::wstring> const& current,
+            std::function<void(std::vector<std::wstring> const&)> apply);
+        Microsoft::UI::Xaml::UIElement BuildCategoryChips(std::vector<std::wstring> const& names);
+        void SetTaskCategories(Windows::Data::Json::JsonObject const& task, std::vector<std::wstring> const& names);
+        void SetEventCategories(Windows::Data::Json::JsonObject const& event, std::vector<std::wstring> const& names);
+        void SetContactCategories(Windows::Data::Json::JsonObject const& contact, std::vector<std::wstring> const& names);
+        void ShowContacts();
+        void ShowCategoryFilterMenu(
+            Microsoft::UI::Xaml::FrameworkElement const& anchor,
+            ::EvolutionWin::Categories::CategoryFilter& filter,
+            std::function<void()> changed);
+        void UpdateCategoryFilterButtons();
         void RememberRecentFolder(hstring const& account, hstring const& folder);
         void RemoveMessageFromList(hstring const& uid);
         void ClearReader();
@@ -442,6 +536,13 @@ namespace winrt::EvolutionWin::implementation
         void UpdateRemoteContentBanner();
         void TrustCurrentSender(hstring const& key, std::wstring const& entry, hstring const& label);
         void RefreshPrivacyView();
+        void UpdateInvitationBar(Windows::Data::Json::JsonObject const& message);
+        void HideInvitationBar();
+        void RespondToInvitation(hstring const& response);
+        void UpdateReceiptBars(Windows::Data::Json::JsonObject const& message);
+        void HideReceiptBars();
+        void RefreshReadReceiptSettings();
+        void ProcessReadReceipt(bool send, bool automatic);
 
         /* Étape 1 : Notifications Windows et pièces jointes */
         void ShowNewMailNotification(Windows::Data::Json::JsonObject const& object);
@@ -465,6 +566,7 @@ namespace winrt::EvolutionWin::implementation
         };
         std::unordered_map<std::wstring, MessageLocation> m_message_locations;
         MessageLocation GetMessageLocation(hstring const& uid);
+        Windows::Data::Json::JsonObject BuildMessagesRequest(std::vector<hstring> const& uids);
         hstring CurrentSearchScope();
         void UpdateSearchPlaceholder();
 
@@ -567,6 +669,8 @@ namespace winrt::EvolutionWin::implementation
         /* message shown in the reader, for replies */
         Windows::Data::Json::JsonObject m_current_message{ nullptr };
         hstring m_current_message_uid;
+        hstring m_current_message_account;   ///< compte du message affiché (accusé de lecture)
+        hstring m_current_message_folder;    ///< dossier du message affiché
         /* contact sélectionné dans la vue Contacts */
         Windows::Data::Json::JsonObject m_selected_contact{ nullptr };
         /* folder tree nodes by NodeKey() */
@@ -637,10 +741,14 @@ namespace winrt::EvolutionWin::implementation
         void ApplyFolderPaneState(hstring const& state);
         void ApplyFolderPaneVisibility(bool visible);
         int64_t m_selected_day_start{ 0 };	/* jour de référence (0 : aujourd'hui) */
+        int64_t m_new_event_start{ 0 };	/* créneau sélectionné dans la grille (nouvel événement), 0 : aucun */
+        int64_t m_new_event_end{ 0 };
+        void BeginEventFromSelection(int64_t start_unix, int64_t end_unix);
         hstring m_calendar_period{ L"week" };	/* "day", "week" ou "month" (calendar.period) */
         bool m_updating_period{ false };
         void SetCalendarPeriod(hstring const& period);
-        fire_and_forget ShowEventDialogAsync(Windows::Data::Json::JsonObject event, hstring const& summary_preset = L"", bool is_focus = false);
+        fire_and_forget ShowEventDialogAsync(Windows::Data::Json::JsonObject event, hstring const& summary_preset = L"", bool is_focus = false, bool teams = false);
+        hstring TeamsCalendarUid();
         /* grille du calendrier (MainWindow.Calendar.cpp) */
         void OpenCalendarEvent(hstring const& calendar_uid, hstring const& uid);
         void RenderCalendarGrid(Windows::Data::Json::JsonArray const& events, int64_t start_unix, int days);
@@ -652,7 +760,8 @@ namespace winrt::EvolutionWin::implementation
         hstring m_calendar_search_query;
         /* calendriers affichés (calendar.visible) et actif (calendar.active) */
         Windows::Data::Json::JsonArray m_calendar_sources{ nullptr };
-        void LoadCalendarSources();
+        void LoadCalendarSources(bool render = true);
+        bool m_calendar_background_started{ false };
         fire_and_forget ShowAddCalendarDialogAsync();
         fire_and_forget ShowAddExchangeCalendarDialogAsync();
         /* carnets d'adresses affichés (contacts.visible) et actif (contacts.active) */
@@ -671,6 +780,12 @@ namespace winrt::EvolutionWin::implementation
         Windows::Data::Json::JsonArray m_all_tasks{ nullptr };
         hstring m_task_list_uid;
         hstring m_task_search_query;
+        Windows::Data::Json::JsonArray m_all_contacts{ nullptr };
+        hstring m_contact_query;
+        ::EvolutionWin::Categories::CategoryFilter m_mail_category_filter;
+        ::EvolutionWin::Categories::CategoryFilter m_task_category_filter;
+        ::EvolutionWin::Categories::CategoryFilter m_contact_category_filter;
+        ::EvolutionWin::Categories::CategoryFilter m_event_category_filter;
         /* préférences de la vue relues ; contrôles mis à jour par le code */
         bool m_task_view_restored{ false };
         bool m_updating_task_view{ false };

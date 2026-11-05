@@ -110,6 +110,8 @@ namespace winrt::EvolutionWin::implementation
 
             { L"Tri des contacts", L"Trier le carnet d'adresses par nom de famille ou prénom", L"contacts" },
 
+            { L"Catégories et codes couleur", L"Créer, renommer, colorer et supprimer les catégories communes aux courriels, contacts, tâches et événements", L"categories" },
+
             { L"Tâches terminées", L"Afficher ou masquer les tâches achevées par défaut", L"tasks" },
 
             { L"Échéance des tâches", L"Date d'échéance par défaut des nouvelles tâches", L"tasks" },
@@ -1187,6 +1189,8 @@ namespace winrt::EvolutionWin::implementation
 
         hide_section(SettingsCategoryTasks());
 
+        hide_section(SettingsCategoryCategories());
+
         hide_section(SettingsCategoryNotifications());
 
         hide_section(SettingsCategoryAppearance());
@@ -1273,6 +1277,13 @@ namespace winrt::EvolutionWin::implementation
 
         }
 
+        else if (category_tag == L"categories")
+        {
+            title = L"Catégories";
+            desc = L"Palette de catégories et codes couleur partagés par les courriels, contacts, tâches et événements.";
+            if (auto s = SettingsCategoryCategories()) s.Visibility(Visibility::Visible);
+            RefreshCategoriesView();
+        }
         else if (category_tag == L"notifications")
 
         {

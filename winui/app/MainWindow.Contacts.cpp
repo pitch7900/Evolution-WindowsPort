@@ -3,6 +3,7 @@
 #include "MainWindow.Helpers.h"
 #include "WindowIcon.h"
 #include "Settings.h"
+#include "CategoryStore.h"
 
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
@@ -40,6 +41,10 @@ namespace winrt::EvolutionWin::implementation
      *   query : texte de filtrage optionnel sur le nom ou l'adresse e-mail */
     void MainWindow::LoadContacts(hstring const& query)
     {
+        m_contact_query = query;
+        /* revenir des fiches de l'annuaire de l'organisation aux carnets */
+        SetGalMode(false);
+
         if (!m_contact_books)
         {
             LoadContactBooks();
@@ -80,52 +85,93 @@ namespace winrt::EvolutionWin::implementation
                 }
             }
 
-            auto items = ContactList().Items();
-            items.Clear();
-            m_selected_contact = nullptr;
-            ContactDetailPane().Visibility(Visibility::Collapsed);
-            ContactPlaceholder().Visibility(Visibility::Visible);
-
-            auto contacts = JsonArray::Parse(json);
-            for (auto const& value : contacts)
-            {
-                auto contact = value.GetObject();
-                hstring full_name = contact.GetNamedString(L"full_name", L"(Sans nom)");
-                hstring email = contact.GetNamedString(L"email", L"");
-
-                StackPanel row;
-                row.Padding(ThicknessHelper::FromLengths(8, 6, 8, 6));
-                row.Tag(box_value(contact.Stringify()));
-
-                TextBlock name_text;
-                name_text.Text(full_name);
-                name_text.Style(Application::Current().Resources().Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>());
-                row.Children().Append(name_text);
-
-                if (!email.empty())
-                {
-                    TextBlock email_text;
-                    email_text.Text(email);
-                    email_text.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
-                    row.Children().Append(email_text);
-                }
-
-                items.Append(row);
-            }
+            JsonArray contacts;
+            if (!JsonArray::TryParse(json, contacts))
+                contacts = JsonArray{};
+            m_all_contacts = contacts;
+            ShowContacts();
         });
+    }
+
+    /* Affiche les contacts chargés (m_all_contacts) : nom, adresse, pastilles
+     * des catégories et menu contextuel « Catégoriser ». */
+    void MainWindow::ShowContacts()
+    {
+        auto items = ContactList().Items();
+        items.Clear();
+        m_selected_contact = nullptr;
+        ContactDetailPane().Visibility(Visibility::Collapsed);
+        ContactPlaceholder().Visibility(Visibility::Visible);
+
+        if (!m_all_contacts)
+            return;
+
+        for (auto const& value : m_all_contacts)
+        {
+            auto contact = value.GetObject();
+            hstring full_name = contact.GetNamedString(L"full_name", L"(Sans nom)");
+            hstring email = contact.GetNamedString(L"email", L"");
+            auto categories = ::EvolutionWin::CategoryStore::CategoriesOf(contact);
+            if (!::EvolutionWin::Categories::MatchesCategoryFilter(categories, m_contact_category_filter))
+                continue;
+
+            StackPanel row;
+            row.Padding(ThicknessHelper::FromLengths(8, 6, 8, 6));
+            row.Tag(box_value(contact.Stringify()));
+
+            TextBlock name_text;
+            name_text.Text(full_name);
+            name_text.Style(Application::Current().Resources().Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>());
+            row.Children().Append(name_text);
+
+            if (!email.empty())
+            {
+                TextBlock email_text;
+                email_text.Text(email);
+                email_text.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+                row.Children().Append(email_text);
+            }
+
+            if (!categories.empty())
+                row.Children().Append(BuildCategoryChips(categories));
+
+            AttachCategoryContextMenu(row, categories, [this, contact](std::vector<std::wstring> const& names)
+            {
+                SetContactCategories(contact, names);
+            });
+
+            items.Append(row);
+        }
+
+        if (items.Size() == 0 && m_all_contacts.Size() > 0)
+        {
+            TextBlock none;
+            none.Text(L"Aucun contact ne correspond au filtre par catégorie.");
+            none.TextWrapping(TextWrapping::Wrap);
+            none.Padding(ThicknessHelper::FromLengths(8, 8, 8, 8));
+            items.Append(none);
+        }
     }
 
     /* Gestionnaire de modification du champ de recherche de contacts. */
     void MainWindow::OnContactSearchChanged(AutoSuggestBox const& sender, AutoSuggestBoxTextChangedEventArgs const& args)
     {
-        if (args.Reason() == AutoSuggestionBoxTextChangeReason::UserInput)
+        if (args.Reason() != AutoSuggestionBoxTextChangeReason::UserInput)
+            return;
+
+        if (m_gal_mode)
+            ScheduleGalSearch(sender.Text());
+        else
             LoadContacts(sender.Text());
     }
 
     /* Gestionnaire de validation de la recherche de contacts. */
     void MainWindow::OnContactSearchSubmitted(AutoSuggestBox const&, AutoSuggestBoxQuerySubmittedEventArgs const& args)
     {
-        LoadContacts(args.QueryText());
+        if (m_gal_mode)
+            SearchGalDirectory(args.QueryText());
+        else
+            LoadContacts(args.QueryText());
     }
 
     /* Gestionnaire de sélection d'un contact dans la liste : affiche sa fiche détaillée. */
@@ -151,6 +197,11 @@ namespace winrt::EvolutionWin::implementation
         ContactPhoneText().Text(contact.GetNamedString(L"phone", L"—"));
         ContactOrgText().Text(contact.GetNamedString(L"org", L"—"));
         ContactNotesText().Text(contact.GetNamedString(L"note", L""));
+
+        hstring address = contact.GetNamedString(L"address", L"");
+        ContactAddressText().Text(address);
+        ContactAddressRow().Visibility(address.empty() ? Visibility::Collapsed : Visibility::Visible);
+        ShowDirectoryPhoto(contact);
 
         ContactPlaceholder().Visibility(Visibility::Collapsed);
         ContactDetailPane().Visibility(Visibility::Visible);
@@ -245,6 +296,13 @@ namespace winrt::EvolutionWin::implementation
     {
         if (!m_selected_contact)
             return;
+
+        if (m_gal_mode)
+        {
+            ShowStatus(Tr(L"Les fiches de l'annuaire de l'organisation sont en lecture seule.",
+                          L"Organization directory entries are read-only."), InfoBarSeverity::Informational);
+            return;
+        }
 
         ShowEditContactDialogAsync();
     }
@@ -488,7 +546,7 @@ namespace winrt::EvolutionWin::implementation
 
         hstring book_uid = m_selected_contact.GetNamedString(L"book_uid", L"");
         hstring uid = m_selected_contact.GetNamedString(L"uid", L"");
-        if (book_uid.empty() || uid.empty())
+        if (m_gal_mode || book_uid.empty() || uid.empty())
             return;
 
         m_core->DeleteContact(book_uid, uid, [this](hstring const&, hstring const& error)

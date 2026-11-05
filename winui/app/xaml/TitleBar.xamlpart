@@ -1,0 +1,93 @@
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Padding="12,0,0,0">
+
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+
+                <FontIcon Glyph="&#xE715;" FontSize="14" />
+
+                <TextBlock Text="Evolution" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+
+                <!-- barre d'accès rapide, personnalisable (MainWindow::RebuildQuickAccess) ;
+
+                     zone cliquable déclarée à Windows (UpdateTitleBarPassthrough) -->
+
+                <StackPanel x:Name="QuickAccessBar" Orientation="Horizontal" Spacing="2" Margin="12,0,0,0"
+
+                            VerticalAlignment="Center" SizeChanged="OnQuickAccessSizeChanged" />
+
+            </StackPanel>
+
+            <!-- recherche de la fenêtre (Ctrl+E) avec portée sélectionnable :
+
+                 dossier courant, sous-dossiers, compte courant ou tous les comptes -->
+
+            <StackPanel x:Name="SearchContainer" Orientation="Horizontal" Spacing="4"
+
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+
+                        SizeChanged="OnQuickAccessSizeChanged">
+
+                <ComboBox x:Name="SearchScopeBox" Width="170" VerticalAlignment="Center"
+
+                          SelectionChanged="OnSearchScopeChanged" ToolTipService.ToolTip="Portée de la recherche">
+
+                    <ComboBoxItem Tag="folder" IsSelected="True">
+
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+
+                            <FontIcon Glyph="&#xE8B7;" FontSize="13" />
+
+                            <TextBlock Text="Dossier courant" />
+
+                        </StackPanel>
+
+                    </ComboBoxItem>
+
+                    <ComboBoxItem Tag="subfolders">
+
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+
+                            <FontIcon Glyph="&#xED43;" FontSize="13" />
+
+                            <TextBlock Text="Sous-dossiers" />
+
+                        </StackPanel>
+
+                    </ComboBoxItem>
+
+                    <ComboBoxItem Tag="account">
+
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+
+                            <FontIcon Glyph="&#xE715;" FontSize="13" />
+
+                            <TextBlock Text="Compte courant" />
+
+                        </StackPanel>
+
+                    </ComboBoxItem>
+
+                    <ComboBoxItem Tag="all">
+
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+
+                            <FontIcon Glyph="&#xE774;" FontSize="13" />
+
+                            <TextBlock Text="Tous les comptes" />
+
+                        </StackPanel>
+
+                    </ComboBoxItem>
+
+                </ComboBox>
+
+                <AutoSuggestBox x:Name="SearchBox" Width="360" VerticalAlignment="Center"
+
+                                PlaceholderText="Rechercher dans le dossier (Ctrl+E)" QueryIcon="Find"
+
+                                TextChanged="OnSearchTextChanged" QuerySubmitted="OnSearchQuerySubmitted"
+
+                                KeyDown="OnSearchKeyDown" />
+
+            </StackPanel>
+
+        </Grid>

@@ -2,8 +2,14 @@
 #include "MainWindow.xaml.h"
 #include "MainWindow.Helpers.h"
 #include "Settings.h"
+#include "CategoryStore.h"
 
+#include <winrt/Microsoft.UI.Input.h>
+#include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <algorithm>
+#include <cmath>
+#include <limits>
+#include <memory>
 #include <vector>
 
 /*
@@ -206,6 +212,8 @@ namespace winrt::EvolutionWin::implementation
                 args.Handled(true);
                 OpenCalendarEvent(calendar_uid, uid);
             });
+            AttachCategoryContextMenu(element, ::EvolutionWin::CategoryStore::CategoriesOf(ev),
+                [this, ev](std::vector<std::wstring> const& names) { SetEventCategories(ev, names); });
         };
 
         /* en-têtes des jours (« lun. 26 », aujourd'hui en couleur d'accent) */
@@ -299,8 +307,8 @@ namespace winrt::EvolutionWin::implementation
                 if (IsAllDay(ev))
                 {
                     Border chip;
-                    chip.Background(CalendarBrush(ev.GetNamedString(L"calendar_color", L""), 0x60));
-                    chip.BorderBrush(CalendarBrush(ev.GetNamedString(L"calendar_color", L""), 0xFF));
+                    chip.Background(CalendarBrush(::EvolutionWin::CategoryStore::EventColorHex(ev), 0x60));
+                    chip.BorderBrush(CalendarBrush(::EvolutionWin::CategoryStore::EventColorHex(ev), 0xFF));
                     chip.BorderThickness(ThicknessHelper::FromLengths(3, 0, 0, 0));
                     chip.CornerRadius(CornerRadiusHelper::FromUniformRadius(2));
                     chip.Padding(ThicknessHelper::FromLengths(4, 1, 4, 1));
@@ -433,6 +441,95 @@ namespace winrt::EvolutionWin::implementation
             Grid::SetColumn(separator, day + 1);
             body.Children().Append(separator);
 
+            /* sélection d'un créneau à la souris (glisser) ou clic simple (1 h) : crée un événement.
+               Couche ajoutée avant les événements, qui restent cliquables au-dessus. */
+            {
+                Grid slot_layer;
+                slot_layer.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+                Grid::SetColumn(slot_layer, day + 1);
+
+                Border selection;
+                selection.VerticalAlignment(VerticalAlignment::Top);
+                selection.Visibility(Visibility::Collapsed);
+                selection.IsHitTestVisible(false);
+                selection.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));
+                selection.Background(ThemeBrush(L"AccentFillColorSecondaryBrush"));
+                selection.Opacity(0.45);
+                selection.Margin(ThicknessHelper::FromLengths(2, 0, 4, 0));
+                slot_layer.Children().Append(selection);
+
+                struct Drag { bool active{ false }; double y0{ 0 }; };
+                auto drag = std::make_shared<Drag>();
+                int64_t day_start = day_starts[day];
+                double hour_height = HourHeight;
+
+                auto snap = [hour_height](double y, bool up) -> int64_t
+                {
+                    double minutes = (std::max)(0.0, y) / hour_height * 60.0;
+                    int64_t quarters = static_cast<int64_t>(up ? std::ceil(minutes / 15.0) : std::floor(minutes / 15.0));
+                    return (std::min<int64_t>)(quarters, 96) * 900;
+                };
+
+                slot_layer.PointerPressed([drag, slot_layer, selection, snap, hour_height](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+                {
+                    auto point = args.GetCurrentPoint(slot_layer);
+                    if (!point.Properties().IsLeftButtonPressed())
+                        return;
+                    drag->active = true;
+                    drag->y0 = point.Position().Y;
+                    slot_layer.CapturePointer(args.Pointer());
+                    int64_t from_s = snap(drag->y0, false);
+                    selection.Margin(ThicknessHelper::FromLengths(2, from_s * hour_height / 3600, 4, 0));
+                    selection.Height(hour_height / 4);
+                    selection.Visibility(Visibility::Visible);
+                });
+                slot_layer.PointerMoved([drag, slot_layer, selection, snap, hour_height](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+                {
+                    if (!drag->active)
+                        return;
+                    double y1 = args.GetCurrentPoint(slot_layer).Position().Y;
+                    int64_t a = snap((std::min)(drag->y0, y1), false);
+                    int64_t b = snap((std::max)(drag->y0, y1), true);
+                    if (b <= a)
+                        b = a + 900;
+                    selection.Margin(ThicknessHelper::FromLengths(2, a * hour_height / 3600, 4, 0));
+                    selection.Height((b - a) * hour_height / 3600);
+                });
+                slot_layer.PointerReleased([this, drag, slot_layer, selection, snap, day_start](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+                {
+                    if (!drag->active)
+                        return;
+                    drag->active = false;
+                    slot_layer.ReleasePointerCapture(args.Pointer());
+                    selection.Visibility(Visibility::Collapsed);
+
+                    double y1 = args.GetCurrentPoint(slot_layer).Position().Y;
+                    int64_t a, b;
+                    if (std::abs(y1 - drag->y0) < 6.0)
+                    {
+                        /* simple clic : créneau d'une heure à partir de la demi-heure la plus proche */
+                        int64_t half = (snap(drag->y0, false) / 1800) * 1800;
+                        a = half;
+                        b = a + 3600;
+                    }
+                    else
+                    {
+                        a = snap((std::min)(drag->y0, y1), false);
+                        b = snap((std::max)(drag->y0, y1), true);
+                        if (b <= a)
+                            b = a + 900;
+                    }
+                    BeginEventFromSelection(day_start + a, day_start + b);
+                });
+                slot_layer.PointerCanceled([drag, selection](IInspectable const&, Input::PointerRoutedEventArgs const&)
+                {
+                    drag->active = false;
+                    selection.Visibility(Visibility::Collapsed);
+                });
+                ToolTipService::SetToolTip(slot_layer, box_value(L"Cliquer ou glisser pour créer un événement"));
+                body.Children().Append(slot_layer);
+            }
+
             /* chevauchements : groupes d'événements qui se recouvrent, une
                colonne (« couloir ») par événement simultané dans le groupe */
             auto& list = segments[day];
@@ -475,7 +572,7 @@ namespace winrt::EvolutionWin::implementation
                 {
                     auto const& seg = list[index];
                     auto ev = seg.event;
-                    hstring color = ev.GetNamedString(L"calendar_color", L"");
+                    hstring color = ::EvolutionWin::CategoryStore::EventColorHex(ev);
                     int64_t event_start = static_cast<int64_t>(ev.GetNamedNumber(L"start", 0));
                     int64_t event_end = static_cast<int64_t>(ev.GetNamedNumber(L"end", 0));
 
@@ -591,6 +688,13 @@ namespace winrt::EvolutionWin::implementation
                 cell.Background(ThemeBrush(L"SubtleFillColorSecondaryBrush"));
             Grid::SetRow(cell, index / 7 + 1);
             Grid::SetColumn(cell, index % 7);
+            if (cell.Background() == nullptr)
+                cell.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+            cell.Tapped([this, from](IInspectable const&, Input::TappedRoutedEventArgs const&)
+            {
+                /* clic dans une case vide : nouvel événement ce jour-là, à 9 h */
+                BeginEventFromSelection(from + 9 * 3600, from + 10 * 3600);
+            });
 
             StackPanel content;
             content.Spacing(2);
@@ -629,7 +733,7 @@ namespace winrt::EvolutionWin::implementation
                 }
                 shown++;
 
-                hstring color = ev.GetNamedString(L"calendar_color", L"");
+                hstring color = ::EvolutionWin::CategoryStore::EventColorHex(ev);
                 bool all_day = IsAllDay(ev);
                 Border chip;
                 chip.CornerRadius(CornerRadiusHelper::FromUniformRadius(2));
@@ -667,6 +771,8 @@ namespace winrt::EvolutionWin::implementation
                     args.Handled(true);
                     OpenCalendarEvent(calendar_uid, uid);
                 });
+                AttachCategoryContextMenu(chip, ::EvolutionWin::CategoryStore::CategoriesOf(ev),
+                    [this, ev](std::vector<std::wstring> const& names) { SetEventCategories(ev, names); });
                 content.Children().Append(chip);
             }
 
@@ -688,6 +794,123 @@ namespace winrt::EvolutionWin::implementation
             cell.Child(content);
             host.Children().Append(cell);
         }
+    }
+
+    /** @brief Largeur de la barre d'en-tête du calendrier modifiée : réorganise les commandes si elles ne tiennent plus. */
+    void MainWindow::OnCalendarHeaderSizeChanged(IInspectable const&, SizeChangedEventArgs const&)
+    {
+        UpdateCalendarHeaderLayout();
+    }
+
+    /**
+     * @brief Place les commandes du calendrier (navigation à gauche, période / filtre / export à droite) sur une
+     *        seule ligne quand la largeur le permet, sinon sur deux lignes pour qu'elles ne se chevauchent pas.
+     */
+    void MainWindow::UpdateCalendarHeaderLayout()
+    {
+        auto grid = CalendarHeaderGrid();
+        auto left = CalendarHeaderLeft();
+        auto right = CalendarHeaderRight();
+        if (grid.ActualWidth() <= 0)
+            return;
+
+        /* largeur voulue sans contrainte : Measure () borné par la grille la réduirait */
+        Windows::Foundation::Size unbounded{ (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)() };
+        left.Measure(unbounded);
+        right.Measure(unbounded);
+        double needed = left.DesiredSize().Width + right.DesiredSize().Width + 24;
+        bool stacked = needed > grid.ActualWidth();
+        if (stacked == m_calendar_header_stacked && grid.RowDefinitions().Size() == (stacked ? 2u : 0u))
+            return;
+        m_calendar_header_stacked = stacked;
+
+        grid.RowDefinitions().Clear();
+        if (stacked)
+        {
+            for (int row = 0; row < 2; ++row)
+            {
+                RowDefinition definition;
+                definition.Height(GridLengthHelper::Auto());
+                grid.RowDefinitions().Append(definition);
+            }
+            grid.RowSpacing(8);
+            Grid::SetRow(left, 0);
+            Grid::SetRow(right, 1);
+            right.HorizontalAlignment(HorizontalAlignment::Left);
+        }
+        else
+        {
+            grid.RowSpacing(0);
+            Grid::SetRow(left, 0);
+            Grid::SetRow(right, 0);
+            right.HorizontalAlignment(HorizontalAlignment::Right);
+        }
+    }
+
+    /* Largeur minimale de la colonne des calendriers et place laissée à la grille. */
+    static constexpr double CalendarSidebarMinWidth = 200;
+    static constexpr double CalendarGridMinWidth = 420;
+
+    /**
+     * @brief Rétablit la largeur de la colonne des calendriers mémorisée (réglage layout.calendar-sidebar).
+     *        Sans réglage, la colonne garde sa largeur automatique.
+     */
+    void MainWindow::RestoreCalendarSidebarWidth()
+    {
+        if (m_calendar_sidebar_restored)
+            return;
+        m_calendar_sidebar_restored = true;
+
+        double width = ::EvolutionWin::Settings::Instance().GetNumber(L"layout.calendar-sidebar", 0);
+        if (width >= CalendarSidebarMinWidth)
+            CalendarSidebarColumn().Width(GridLengthHelper::FromPixels(width));
+    }
+
+    /** @brief Début du déplacement du séparateur : capture du pointeur et largeur de départ. */
+    void MainWindow::OnCalendarSplitterPointerPressed(IInspectable const& sender, Input::PointerRoutedEventArgs const& args)
+    {
+        auto splitter = sender.as<UIElement>();
+        if (!args.GetCurrentPoint(splitter).Properties().IsLeftButtonPressed() || !splitter.CapturePointer(args.Pointer()))
+            return;
+
+        m_calendar_dragging = true;
+        m_calendar_drag_origin = args.GetCurrentPoint(CalendarViewPane()).Position().X;
+        m_calendar_drag_start = CalendarSidebarColumn().ActualWidth();
+    }
+
+    /** @brief Pendant le glissement : nouvelle largeur de la colonne, bornée pour laisser la place à la grille. */
+    void MainWindow::OnCalendarSplitterPointerMoved(IInspectable const&, Input::PointerRoutedEventArgs const& args)
+    {
+        if (!m_calendar_dragging)
+            return;
+
+        double max_width = (std::max)(CalendarSidebarMinWidth, CalendarViewPane().ActualWidth() - CalendarGridMinWidth - 72);
+        double x = args.GetCurrentPoint(CalendarViewPane()).Position().X;
+        double width = std::clamp(m_calendar_drag_start + x - m_calendar_drag_origin, CalendarSidebarMinWidth, max_width);
+        CalendarSidebarColumn().Width(GridLengthHelper::FromPixels(std::round(width)));
+    }
+
+    /** @brief Fin du glissement : mémorise la largeur. */
+    void MainWindow::OnCalendarSplitterPointerReleased(IInspectable const& sender, Input::PointerRoutedEventArgs const& args)
+    {
+        if (!m_calendar_dragging)
+            return;
+        m_calendar_dragging = false;
+        sender.as<UIElement>().ReleasePointerCapture(args.Pointer());
+        ::EvolutionWin::Settings::Instance().SetNumber(L"layout.calendar-sidebar", CalendarSidebarColumn().ActualWidth());
+    }
+
+    /** @brief Capture perdue : le glissement s'arrête. */
+    void MainWindow::OnCalendarSplitterPointerCaptureLost(IInspectable const&, Input::PointerRoutedEventArgs const&)
+    {
+        m_calendar_dragging = false;
+    }
+
+    /** @brief Double-clic : retour à la largeur automatique de la colonne. */
+    void MainWindow::OnCalendarSplitterDoubleTapped(IInspectable const&, Input::DoubleTappedRoutedEventArgs const&)
+    {
+        CalendarSidebarColumn().Width(GridLengthHelper::Auto());
+        ::EvolutionWin::Settings::Instance().SetNumber(L"layout.calendar-sidebar", 0);
     }
 
     /**

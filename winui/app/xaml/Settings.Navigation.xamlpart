@@ -1,0 +1,197 @@
+                <Grid Grid.Column="0" Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="16,20,16,16">
+
+                    <Grid.RowDefinitions>
+
+                        <RowDefinition Height="Auto" />
+
+                        <RowDefinition Height="Auto" />
+
+                        <RowDefinition Height="*" />
+
+                    </Grid.RowDefinitions>
+
+
+
+                    <TextBlock Grid.Row="0" Text="Paramètres" Style="{StaticResource TitleTextBlockStyle}" Margin="8,0,0,16" />
+
+
+
+                    <!-- Recherche rapide -->
+
+                    <AutoSuggestBox Grid.Row="1" x:Name="SettingsSearchBox"
+
+                                    PlaceholderText="Rechercher un paramètre"
+
+                                    QueryIcon="Find"
+
+                                    TextChanged="OnSettingsSearchTextChanged"
+
+                                    SuggestionChosen="OnSettingsSearchSuggestionChosen"
+
+                                    Margin="4,0,4,12" />
+
+
+
+                    <!-- Liste des catégories -->
+
+                    <ListView Grid.Row="2" x:Name="SettingsNavList"
+
+                              SelectionMode="Single"
+
+                              SelectionChanged="OnSettingsNavSelectionChanged">
+
+                        <ListView.ItemContainerStyle>
+
+                            <Style TargetType="ListViewItem">
+
+                                <Setter Property="CornerRadius" Value="6" />
+
+                                <Setter Property="Margin" Value="0,2,0,2" />
+
+                                <Setter Property="Padding" Value="12,10,12,10" />
+
+                            </Style>
+
+                        </ListView.ItemContainerStyle>
+
+                        <ListViewItem Tag="accounts">
+
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+
+                                <FontIcon Glyph="&#xE77B;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+
+                                <TextBlock Text="Comptes" VerticalAlignment="Center" />
+
+                            </StackPanel>
+
+                        </ListViewItem>
+
+                        <ListViewItem Tag="mail">
+
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+
+                                <FontIcon Glyph="&#xE715;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+
+                                <TextBlock Text="Courrier" VerticalAlignment="Center" />
+
+                            </StackPanel>
+
+                        </ListViewItem>
+
+                        <ListViewItem Tag="calendar">
+
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+
+                                <FontIcon Glyph="&#xE787;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+
+                                <TextBlock Text="Calendrier" VerticalAlignment="Center" />
+
+                            </StackPanel>
+
+                        </ListViewItem>
+
+                        <ListViewItem Tag="contacts">
+
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+
+                                <FontIcon Glyph="&#xE716;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+
+                                <TextBlock Text="Contacts" VerticalAlignment="Center" />
+
+                            </StackPanel>
+
+                        </ListViewItem>
+
+                        <ListViewItem Tag="tasks">
+
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+
+                                <FontIcon Glyph="&#xE9D5;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+
+                                <TextBlock Text="Tâches" VerticalAlignment="Center" />
+
+                            </StackPanel>
+
+                        </ListViewItem>
+
+                        <ListViewItem Tag="categories">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE8EC;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                <TextBlock Text="Catégories" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </ListViewItem>
+                        <ListViewItem Tag="notifications">
+
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+
+                                <FontIcon Glyph="&#xEA8F;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+
+                                <TextBlock Text="Notifications" VerticalAlignment="Center" />
+
+                            </StackPanel>
+
+                        </ListViewItem>
+
+                        <ListViewItem Tag="appearance">
+
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+
+                                <FontIcon Glyph="&#xE790;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+
+                                <TextBlock Text="Apparence" VerticalAlignment="Center" />
+
+                            </StackPanel>
+
+                        </ListViewItem>
+
+                        <ListViewItem Tag="privacy">
+
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+
+                                <FontIcon Glyph="&#xE72E;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+
+                                <TextBlock Text="Confidentialité et sécurité" VerticalAlignment="Center" />
+
+                            </StackPanel>
+
+                        </ListViewItem>
+
+                        <ListViewItem Tag="update">
+
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+
+                                <FontIcon Glyph="&#xE777;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+
+                                <TextBlock Text="Mise à jour" VerticalAlignment="Center" />
+
+                            </StackPanel>
+
+                        </ListViewItem>
+
+                        <ListViewItem Tag="advanced">
+
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+
+                                <FontIcon Glyph="&#xE90F;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+
+                                <TextBlock Text="Avancé" VerticalAlignment="Center" />
+
+                            </StackPanel>
+
+                        </ListViewItem>
+
+                        <ListViewItem Tag="about">
+
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+
+                                <FontIcon Glyph="&#xE946;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+
+                                <TextBlock Text="À propos" VerticalAlignment="Center" />
+
+                            </StackPanel>
+
+                        </ListViewItem>
+
+                    </ListView>
+
+                </Grid>

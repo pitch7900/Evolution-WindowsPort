@@ -5,6 +5,7 @@
 
 #include "ComposeWindow.xaml.h"
 #include "Settings.h"
+#include "CategoryStore.h"
 #include <cwctype>
 #include <string>
 #include <shellapi.h>
@@ -26,6 +27,25 @@ namespace EvolutionWin::Helpers
     using namespace Microsoft::UI::Xaml::Controls;
     using namespace Windows::Data::Json;
     using namespace Windows::Foundation;
+
+    /**
+     * @brief Exécute une lambda-coroutine en gardant ses captures vivantes.
+     *
+     * Une lambda dont le corps contient co_await perd ses captures (this, copies…) dès
+     * qu'elle retourne à la première suspension : le code qui reprend ensuite lit de la
+     * mémoire libérée (plantage). Cette fonction copie la lambda dans le cadre de la
+     * coroutine, qui vit jusqu'à la fin de l'exécution.
+     * @param fn Lambda sans paramètre retournant IAsyncAction.
+     * @return Gestionnaire (DispatcherQueueHandler) à passer à TryEnqueue.
+     */
+    template <typename F>
+    auto KeepCoroutineAlive(F fn)
+    {
+        return [fn]()
+        {
+            [](F copy) -> fire_and_forget { co_await copy(); }(fn);
+        };
+    }
 
     /* Segoe Fluent Icons glyphs (et Segoe UI Symbol pour le sablier de la boîte d'envoi) */
     inline hstring FolderGlyph(hstring const& type)
@@ -102,6 +122,37 @@ namespace EvolutionWin::Helpers
         if (bytes >= 1024)
             return to_hstring(bytes / 1024) + L" Ko";
         return to_hstring(bytes) + L" o";
+    }
+
+    /**
+     * @brief Indique si la langue d'affichage de l'application est l'anglais.
+     * @return true pour une langue « en* », false sinon (français par défaut).
+     */
+    inline bool UiIsEnglish()
+    {
+        try
+        {
+            auto languages = Windows::Globalization::ApplicationLanguages::Languages();
+            if (languages.Size() > 0)
+            {
+                hstring tag_text = languages.GetAt(0);
+                std::wstring_view tag{ tag_text };
+                return tag.size() >= 2 && (tag[0] == L'e' || tag[0] == L'E') && (tag[1] == L'n' || tag[1] == L'N');
+            }
+        }
+        catch (...) {}
+        return false;
+    }
+
+    /**
+     * @brief Choisit le texte de la langue d'affichage (il n'y a pas de fichier de ressources).
+     * @param fr Texte français.
+     * @param en Texte anglais.
+     * @return Le texte dans la langue courante.
+     */
+    inline hstring Tr(wchar_t const* fr, wchar_t const* en)
+    {
+        return hstring{ UiIsEnglish() ? en : fr };
     }
 
     /**
@@ -774,6 +825,8 @@ namespace EvolutionWin::Helpers
     {
         Image,       ///< Fichier image décodable directement par BitmapImage
         Text,        ///< Fichier texte brut, code source, CSV, JSON, logs
+        Pdf,         ///< Document PDF rendu page par page (Windows.Data.Pdf)
+        Html,        ///< Page HTML affichée dans un WebView2 isolé (sans script ni contenu distant)
         Unsupported  ///< Type non pris en charge ou exécutable à risque
     };
 
@@ -797,8 +850,16 @@ namespace EvolutionWin::Helpers
             return AttachmentPreviewKind::Image;
         }
 
+        // PDF : rendu en images, aucun code actif exécuté
+        if (ext == L".pdf")
+            return AttachmentPreviewKind::Pdf;
+
+        // HTML : WebView2 isolé (scripts désactivés, contenu distant bloqué)
+        if (ext == L".html" || ext == L".htm")
+            return AttachmentPreviewKind::Html;
+
         // Fichiers texte brut affichés sans interprétation de code
-        if (ext == L".txt" || ext == L".csv" || ext == L".tsv" || ext == L".log" ||
+        if (ext == L".eml" || ext == L".txt" || ext == L".csv" || ext == L".tsv" || ext == L".log" ||
             ext == L".json" || ext == L".xml" || ext == L".ini" || ext == L".cfg" ||
             ext == L".conf" || ext == L".md" || ext == L".patch" || ext == L".diff" ||
             ext == L".yaml" || ext == L".yml" || ext == L".sql" || ext == L".c" ||
@@ -1030,82 +1091,33 @@ namespace EvolutionWin::Helpers
     }
 
     /**
-     * @brief Description d'une catégorie de classement et de sa couleur associée.
+     * @brief Description d'une catégorie (définie dans Categories.h, partagée par tous les types d'éléments).
      */
-    struct CategoryDefinition
-    {
-        std::wstring name;       ///< Libellé de la catégorie (ex. "Catégorie rouge", "Travail", "Important")
-        uint8_t r{ 0 };          ///< Composante rouge de la couleur (0-255)
-        uint8_t g{ 0 };          ///< Composante verte de la couleur (0-255)
-        uint8_t b{ 0 };          ///< Composante bleue de la couleur (0-255)
-        std::wstring shortcut;   ///< Raccourci clavier rapide (ex. "Ctrl+F2")
-    };
+    using CategoryDefinition = ::EvolutionWin::Categories::CategoryDefinition;
 
     /**
      * @brief Renvoie la liste standard des catégories prédéfinies avec leurs couleurs Fluent.
+     *
+     * Valeurs d'usine uniquement : la liste réelle de l'utilisateur est le registre
+     * partagé (CategoryStore::Registry()).
      * @return Vecteur contenant la liste ordonnée des catégories.
      */
     inline std::vector<CategoryDefinition> GetDefaultCategories()
     {
-        return {
-            { L"Catégorie rouge",    232, 17,  35,  L"Ctrl+F2" },
-            { L"Catégorie orange",   255, 140, 0,   L"Ctrl+F3" },
-            { L"Catégorie jaune",    255, 185, 0,   L"Ctrl+F4" },
-            { L"Catégorie verte",    16,  124, 65,  L"Ctrl+F5" },
-            { L"Catégorie bleue",    0,   120, 212, L"Ctrl+F6" },
-            { L"Catégorie violette", 136, 23,  152, L"Ctrl+F7" },
-            { L"Important",          209, 52,  56,  L"" },
-            { L"Travail",            0,   99,  177, L"" },
-            { L"Personnel",          0,   130, 114, L"" },
-            { L"À suivre",           227, 0,   140, L"" }
-        };
+        return ::EvolutionWin::Categories::DefaultCategories();
     }
 
     /**
-     * @brief Obtient la couleur RVB associée à une catégorie donnée.
+     * @brief Obtient la couleur RVB associée à une catégorie, d'après le registre partagé.
      * @param category_name Nom de la catégorie recherchée.
      * @param out_r Référence de sortie pour la composante rouge.
      * @param out_g Référence de sortie pour la composante verte.
      * @param out_b Référence de sortie pour la composante bleue.
-     * @return true si la catégorie correspond à une catégorie standard, false si une couleur de repli a été calculée.
+     * @return true si la catégorie est dans le registre, false si une couleur de repli a été calculée.
      */
     inline bool GetCategoryColor(std::wstring_view category_name, uint8_t& out_r, uint8_t& out_g, uint8_t& out_b)
     {
-        auto cats = GetDefaultCategories();
-        for (auto const& c : cats)
-        {
-            if (c.name.size() == category_name.size())
-            {
-                bool eq = true;
-                for (size_t i = 0; i < c.name.size(); ++i)
-                {
-                    if (std::towlower(c.name[i]) != std::towlower(category_name[i]))
-                    {
-                        eq = false;
-                        break;
-                    }
-                }
-                if (eq)
-                {
-                    out_r = c.r; out_g = c.g; out_b = c.b;
-                    return true;
-                }
-            }
-        }
-
-        uint32_t hash = 5381;
-        for (wchar_t ch : category_name)
-            hash = ((hash << 5) + hash) + ch;
-
-        static const uint8_t fallback_palette[][3] = {
-            { 0, 120, 212 }, { 16, 124, 65 }, { 255, 140, 0 }, { 232, 17, 35 },
-            { 136, 23, 152 }, { 0, 153, 188 }, { 135, 100, 184 }, { 180, 0, 158 }
-        };
-        size_t idx = hash % (sizeof(fallback_palette) / sizeof(fallback_palette[0]));
-        out_r = fallback_palette[idx][0];
-        out_g = fallback_palette[idx][1];
-        out_b = fallback_palette[idx][2];
-        return false;
+        return ::EvolutionWin::CategoryStore::Registry().ColorOf(category_name, out_r, out_g, out_b);
     }
 
     /**

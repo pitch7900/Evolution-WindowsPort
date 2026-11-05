@@ -1,0 +1,111 @@
+                            <StackPanel x:Name="SettingsCategoryPrivacy" Visibility="Collapsed" Spacing="16">
+
+                                <TextBlock Text="Contenu externe et suivi des messages" Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                                <TextBlock Text="Les images et styles distants d'un message (dont les pixels espions) révèlent à l'expéditeur que vous l'avez ouvert, à quel moment et depuis quelle adresse IP."
+
+                                           Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+
+
+                                <!-- Mode de chargement du contenu distant (contrôle existant conservé) -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16" MinHeight="64">
+
+                                    <StackPanel Spacing="8">
+
+                                        <TextBlock Text="Charger le contenu externe des messages" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                        <RadioButtons x:Name="RemoteContentModeChoice" SelectionChanged="OnRemoteContentModeChanged">
+
+                                            <x:String>Jamais</x:String>
+
+                                            <x:String>Expéditeurs et domaines de confiance seulement</x:String>
+
+                                            <x:String>Toujours</x:String>
+
+                                        </RadioButtons>
+
+                                    </StackPanel>
+
+                                </Border>
+
+                                <!-- Accusés de lecture : réglage par défaut (textes posés par RefreshPrivacyView) -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16" MinHeight="64">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock x:Name="ReadReceiptPolicyTitle" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                        <TextBlock x:Name="ReadReceiptPolicyHint" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <RadioButtons x:Name="ReadReceiptPolicyChoice" SelectionChanged="OnReadReceiptPolicyChanged">
+                                            <x:String>ask</x:String>
+                                            <x:String>never</x:String>
+                                            <x:String>always</x:String>
+                                        </RadioButtons>
+                                    </StackPanel>
+                                </Border>
+
+
+
+                                <!-- Masquer les extraits de texte dans la liste -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+
+                                    <Grid ColumnSpacing="16">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                            <ColumnDefinition Width="*" />
+
+                                            <ColumnDefinition Width="Auto" />
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0" Glyph="&#xE890;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+
+                                            <TextBlock Text="Masquer l'extrait des messages dans la liste" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                            <TextBlock Text="Ne pas afficher les lignes d'aperçu du texte des messages pour une discrétion totale."
+
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                        </StackPanel>
+
+                                        <ToggleSwitch Grid.Column="2" x:Name="PrivacyHideSnippetsSwitch" Tag="privacy.hide-snippets"
+
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+
+                                    </Grid>
+
+                                </Border>
+
+
+
+                                <TextBlock Text="Expéditeurs et domaines de confiance" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+
+                                <TextBlock x:Name="TrustedSendersEmpty"
+
+                                           Text="Aucun expéditeur ni domaine de confiance. Utilisez le bandeau « Contenu externe bloqué » au-dessus d'un message pour en ajouter."
+
+                                           Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                <ListView x:Name="TrustedSenderList" SelectionMode="None" />
+
+                            </StackPanel>

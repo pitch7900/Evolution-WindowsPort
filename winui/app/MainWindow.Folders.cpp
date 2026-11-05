@@ -3,6 +3,7 @@
 #include "MainWindow.Helpers.h"
 #include "WindowIcon.h"
 #include "Settings.h"
+#include "UnifiedViews.h"
 
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
@@ -86,6 +87,9 @@ namespace winrt::EvolutionWin::implementation
                     nullptr, nullptr, 0) == CSTR_LESS_THAN;
             });
 
+            /* vues unifiées (Boîte de réception, Envoyés, Brouillons, Corbeille de tous les comptes) en tête */
+            AddUnifiedViewsNodes();
+
             for (auto const& account : sorted_accounts)
             {
                 hstring uid = account.GetNamedString(L"uid");
@@ -132,7 +136,7 @@ namespace winrt::EvolutionWin::implementation
      * autres dossiers après, par ordre alphabétique. */
     static int SpecialFolderRank(hstring const& type)
     {
-        static wchar_t const* const order[] = { L"inbox", L"drafts", L"sent", L"trash", L"archive", L"junk", L"outbox" };
+        static wchar_t const* const order[] = { L"inbox", L"sent", L"drafts", L"trash", L"archive", L"junk", L"outbox" };
         for (int ii = 0; ii < static_cast<int>(std::size(order)); ii++)
             if (type == order[ii])
                 return ii;
@@ -244,6 +248,10 @@ namespace winrt::EvolutionWin::implementation
         if (!item)
             return;
         args.Handled(true);
+
+        /* vues unifiées : pas de gestion de dossier (ce ne sont pas de vrais dossiers) */
+        if (::EvolutionWin::UnifiedViews::IsUnifiedAccount(std::wstring_view{ item.Account() }))
+            return;
 
         bool trash = item.Glyph() == FolderGlyph(L"trash");
         bool junk = item.Glyph() == FolderGlyph(L"junk");
@@ -957,6 +965,97 @@ namespace winrt::EvolutionWin::implementation
         });
     }
 
+    /* Indique si le dossier affiché est une vue unifiée multi-comptes
+     * (Boîte de réception unifiée, Envoyés, Brouillons ou Corbeille de tous les comptes). */
+    bool MainWindow::IsUnifiedView() const
+    {
+        return ::EvolutionWin::UnifiedViews::IsUnifiedAccount(std::wstring_view{ m_account });
+    }
+
+    /* Ajoute en tête de l'arborescence le groupe « Tous les comptes » et ses
+     * vues unifiées. Le groupe n'est proposé que s'il y a au moins deux comptes
+     * distants activés ; le dossier local et les comptes désactivés en sont exclus. */
+    void MainWindow::AddUnifiedViewsNodes()
+    {
+        namespace Unified = ::EvolutionWin::UnifiedViews;
+
+        std::vector<Unified::Account> accounts;
+        for (auto const& value : m_accounts)
+        {
+            auto account = value.GetObject();
+            accounts.push_back({ std::wstring{ account.GetNamedString(L"uid", L"") },
+                account.GetNamedBoolean(L"enabled", true), account.GetNamedBoolean(L"local", false) });
+        }
+
+        auto included = Unified::IncludedAccounts(accounts);
+        m_unified_accounts = hstring{ Unified::ToCsv(included) };
+        if (!Unified::ShouldOffer(included))
+            return;
+
+        TreeViewNode root;
+        root.Content(EvolutionWin::FolderItem(Tr(L"Tous les comptes", L"All accounts"), L"\xE716", 0,
+            Unified::kAccountId, L"", true));
+        root.IsExpanded(true);
+        FolderTree().RootNodes().Append(root);
+        m_nodes[NodeKey(Unified::kAccountId, L"")] = root;
+
+        for (auto const& role : Unified::Roles())
+        {
+            hstring role_name{ role };
+            TreeViewNode node;
+            node.Content(EvolutionWin::FolderItem(hstring{ Unified::Title(role, UiIsEnglish()) }, FolderGlyph(role_name), 0,
+                Unified::kAccountId, role_name, false));
+            root.Children().Append(node);
+            m_nodes[NodeKey(Unified::kAccountId, role_name)] = node;
+        }
+    }
+
+    /* Met à jour le nombre de non lus de la Boîte de réception unifiée : somme
+     * des non lus des boîtes de réception des comptes inclus. */
+    void MainWindow::UpdateUnifiedCounts()
+    {
+        namespace Unified = ::EvolutionWin::UnifiedViews;
+
+        auto unified = m_nodes.find(NodeKey(Unified::kAccountId, L"inbox"));
+        if (unified == m_nodes.end())
+            return;
+
+        std::wstring included = L"," + std::wstring{ m_unified_accounts } + L",";
+        hstring inbox_glyph = FolderGlyph(L"inbox");
+        int unread = 0;
+
+        for (auto const& [key, node] : m_nodes)
+        {
+            auto item = node.Content().try_as<EvolutionWin::FolderItem>();
+            if (!item || item.IsAccount() || item.Glyph() != inbox_glyph || Unified::IsUnifiedAccount(std::wstring_view{ item.Account() }))
+                continue;
+            if (included.find(L"," + std::wstring{ item.Account() } + L",") != std::wstring::npos)
+                unread += item.Unread();
+        }
+
+        if (auto item = unified->second.Content().try_as<EvolutionWin::FolderItem>())
+            item.Unread(Unified::DisplayedUnread(L"inbox", unread));
+    }
+
+    /* Indique si un dossier réel alimente la vue unifiée affichée (même rôle,
+     * compte inclus) : ses changements doivent recharger la vue. */
+    bool MainWindow::UnifiedFolderMatches(hstring const& account, hstring const& folder) const
+    {
+        if (!IsUnifiedView())
+            return false;
+
+        auto node = m_nodes.find(NodeKey(account, folder));
+        if (node == m_nodes.end())
+            return false;
+
+        auto item = node->second.Content().try_as<EvolutionWin::FolderItem>();
+        if (!item || item.Glyph() != FolderGlyph(m_folder))
+            return false;
+
+        std::wstring included = L"," + std::wstring{ m_unified_accounts } + L",";
+        return included.find(L"," + std::wstring{ account } + L",") != std::wstring::npos;
+    }
+
     void MainWindow::OnFolderInvoked(TreeView const&, TreeViewItemInvokedEventArgs const& args)
     {
         auto node = args.InvokedItem().try_as<TreeViewNode>();
@@ -978,9 +1077,13 @@ namespace winrt::EvolutionWin::implementation
         m_folder = folder;
         ++m_search_request;
 
-        /* Mémorise le dernier dossier actif pour la restauration rapide au prochain démarrage */
-        ::EvolutionWin::Settings::Instance().SetString(L"session.account", m_account);
-        ::EvolutionWin::Settings::Instance().SetString(L"session.folder", m_folder);
+        /* Mémorise le dernier dossier actif pour la restauration rapide au prochain démarrage
+           (une vue unifiée n'est pas mémorisée : elle dépend des comptes présents) */
+        if (!IsUnifiedView())
+        {
+            ::EvolutionWin::Settings::Instance().SetString(L"session.account", m_account);
+            ::EvolutionWin::Settings::Instance().SetString(L"session.folder", m_folder);
+        }
 
         FolderTitle().Text(item.Name());
         LoadFolderSort();
@@ -1023,7 +1126,8 @@ namespace winrt::EvolutionWin::implementation
             hstring inbox_glyph = FolderGlyph(L"inbox");
             for (auto const& [key, node] : m_nodes)
             {
-                if (auto item = node.Content().try_as<EvolutionWin::FolderItem>(); item && !item.IsAccount() && item.Glyph() == inbox_glyph)
+                if (auto item = node.Content().try_as<EvolutionWin::FolderItem>(); item && !item.IsAccount() && item.Glyph() == inbox_glyph
+                    && !::EvolutionWin::UnifiedViews::IsUnifiedAccount(std::wstring_view{ item.Account() }))
                 {
                     target_node = node;
                     target_item = item;
@@ -1053,7 +1157,8 @@ namespace winrt::EvolutionWin::implementation
     /* Élément de l'arborescence du dossier affiché (nullptr sans dossier). */
     EvolutionWin::FolderItem MainWindow::CurrentFolderItem()
     {
-        if (m_account.empty() || m_folder.empty())
+        /* une vue unifiée n'est pas un dossier : aucune commande de dossier */
+        if (m_account.empty() || m_folder.empty() || IsUnifiedView())
             return nullptr;
         auto node = m_nodes.find(NodeKey(m_account, m_folder));
         return node != m_nodes.end() ? node->second.Content().try_as<EvolutionWin::FolderItem>() : nullptr;
@@ -1065,7 +1170,7 @@ namespace winrt::EvolutionWin::implementation
     {
         if (auto item = CurrentFolderItem())
             CreateFolderAsync(m_account, m_folder, item.Name());
-        else if (!m_account.empty())
+        else if (!m_account.empty() && !IsUnifiedView())
             CreateFolderAsync(m_account, L"", L"");
     }
 
@@ -1140,7 +1245,8 @@ namespace winrt::EvolutionWin::implementation
         {
             if (auto folder_item = node.Content().try_as<EvolutionWin::FolderItem>())
             {
-                if (folder_item.Glyph() == FolderGlyph(L"trash") && !folder_item.Folder().empty())
+                if (folder_item.Glyph() == FolderGlyph(L"trash") && !folder_item.Folder().empty()
+                    && !::EvolutionWin::UnifiedViews::IsUnifiedAccount(std::wstring_view{ folder_item.Account() }))
                 {
                     std::pair<std::wstring, std::wstring> p{ std::wstring{ folder_item.Account() }, std::wstring{ folder_item.Folder() } };
                     if (emptied.find(p) == emptied.end())
@@ -1158,7 +1264,7 @@ namespace winrt::EvolutionWin::implementation
      */
     void MainWindow::UpdateOutOfOfficeBanner()
     {
-        if (m_account.empty() || m_account == L"local")
+        if (m_account.empty() || m_account == L"local" || IsUnifiedView())
         {
             ClearBanner(L"oof:banner");
             return;
@@ -1208,11 +1314,11 @@ namespace winrt::EvolutionWin::implementation
                 L"La période d'absence programmée pour le compte « " + acc_name + L" » est terminée. Souhaitez-vous la désactiver ?",
                 InfoBarSeverity::Warning,
                 L"Désactiver",
-                [this, banner_id, oof_key, acc_name]()
+                [this, banner_id, account_uid = m_account]()
                 {
-                    ::EvolutionWin::Settings::Instance().SetBoolean(oof_key, false);
+                    /* désactivation sur le serveur (Microsoft 365 / Gmail), puis mise à jour du bandeau */
                     ClearBanner(banner_id);
-                    ShowStatus(L"Réponses automatiques désactivées pour « " + acc_name + L" »", InfoBarSeverity::Success);
+                    DisableAutoReply(account_uid);
                 }
             );
         }
@@ -1224,98 +1330,13 @@ namespace winrt::EvolutionWin::implementation
                 L"Les réponses automatiques d'absence du bureau sont actives pour le compte « " + acc_name + L" ».",
                 InfoBarSeverity::Informational,
                 L"Désactiver",
-                [this, banner_id, oof_key, acc_name]()
+                [this, banner_id, account_uid = m_account]()
                 {
-                    ::EvolutionWin::Settings::Instance().SetBoolean(oof_key, false);
+                    /* désactivation sur le serveur (Microsoft 365 / Gmail), puis mise à jour du bandeau */
                     ClearBanner(banner_id);
-                    ShowStatus(L"Réponses automatiques désactivées pour « " + acc_name + L" »", InfoBarSeverity::Success);
+                    DisableAutoReply(account_uid);
                 }
             );
-        }
-    }
-
-    /**
-     * @brief Affiche la boîte de dialogue de configuration des réponses automatiques (absence du bureau) pour un compte.
-     * @param account Identifiant du compte visé.
-     */
-    Windows::Foundation::IAsyncAction MainWindow::ShowOutOfOfficeDialogAsync(winrt::hstring account)
-    {
-        auto strong = get_strong();
-
-        if (m_dialog_open || !Content() || !Content().XamlRoot())
-            co_return;
-
-        m_dialog_open = true;
-
-        hstring acc_name = account;
-        if (m_accounts)
-        {
-            for (auto const& val : m_accounts)
-            {
-                auto acc_obj = val.GetObject();
-                if (acc_obj.GetNamedString(L"uid", L"") == account)
-                {
-                    acc_name = acc_obj.GetNamedString(L"name", account);
-                    break;
-                }
-            }
-        }
-
-        hstring oof_enabled_key = L"account." + account + L".out-of-office-enabled";
-        hstring oof_msg_key = L"account." + account + L".out-of-office-message";
-
-        bool is_enabled = ::EvolutionWin::Settings::Instance().GetBoolean(oof_enabled_key, false);
-        hstring msg = ::EvolutionWin::Settings::Instance().GetString(oof_msg_key,
-            L"Bonjour,\n\nJe suis actuellement absent(e) du bureau et je ne pourrai pas répondre immédiatement à votre message.\nJe prendrai connaissance de vos courriels dès mon retour.\n\nCordialement.");
-
-        ContentDialog dialog;
-        dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Réponses automatiques (absence) - " + acc_name));
-        dialog.PrimaryButtonText(L"Enregistrer");
-        dialog.CloseButtonText(L"Annuler");
-        dialog.DefaultButton(ContentDialogButton::Primary);
-
-        StackPanel panel;
-        panel.Spacing(14);
-        panel.MinWidth(440);
-
-        ToggleSwitch enabled_switch;
-        enabled_switch.Header(box_value(L"Envoyer des réponses automatiques"));
-        enabled_switch.IsOn(is_enabled);
-        panel.Children().Append(enabled_switch);
-
-        TextBlock note;
-        note.Text(L"Répondre automatiquement aux messages entrants pendant votre période d'absence :");
-        note.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
-        note.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
-        note.TextWrapping(TextWrapping::Wrap);
-        panel.Children().Append(note);
-
-        TextBox msg_box;
-        msg_box.Header(box_value(L"Message de réponse d'absence"));
-        msg_box.Text(msg);
-        msg_box.AcceptsReturn(true);
-        msg_box.TextWrapping(TextWrapping::Wrap);
-        msg_box.MinHeight(100);
-        msg_box.MaxHeight(200);
-        panel.Children().Append(msg_box);
-
-        dialog.Content(panel);
-
-        auto result = co_await dialog.ShowAsync();
-        m_dialog_open = false;
-
-        if (result == ContentDialogResult::Primary)
-        {
-            ::EvolutionWin::Settings::Instance().SetBoolean(oof_enabled_key, enabled_switch.IsOn());
-            ::EvolutionWin::Settings::Instance().SetString(oof_msg_key, msg_box.Text());
-
-            UpdateOutOfOfficeBanner();
-
-            ShowStatus(enabled_switch.IsOn()
-                ? L"Réponses automatiques activées pour « " + acc_name + L" »"
-                : L"Réponses automatiques désactivées pour « " + acc_name + L" »",
-                InfoBarSeverity::Success);
         }
     }
 }

@@ -41,13 +41,45 @@ c:\Users\chris\VSCode\Evolution-WindowsPort\
 ├── locks/                        # Verrous locaux JSON anti-collision multi-agents (ignoré Git)
 │
 ├── winui/
-│   ├── core/                     # Moteur C (evo-core.dll)
-│   │   ├── evo-core.c            # Implémentation du moteur EDS / Camel
-│   │   ├── evo-core.h            # Déclarations publiques et exports ABI
+│   ├── core/                     # Moteur C (evo-core.dll), découpé par domaine fonctionnel
+│   │   ├── evo-core.h            # API publique (déclarations et exports ABI)
+│   │   ├── evo-core-private.h    # En-tête privé : includes, struct EvoCore, types et prototypes partagés
+│   │   ├── evo-core.c            # Cycle de vie : journal, modules EDS, fil GLib, new/free, hors connexion
+│   │   ├── evo-core-session.c    # CamelSession : authentification, certificats TLS
+│   │   ├── evo-core-events.c     # Constructeurs JSON et émission des événements
+│   │   ├── evo-core-requests.c   # File des requêtes asynchrones (core_submit), magasins, connexion
+│   │   ├── evo-core-accounts.c   # Liste, compte par défaut, suppression
+│   │   ├── evo-core-account-setup.c  # Ajout, test, lecture, modification IMAP/POP3/SMTP, mots de passe
+│   │   ├── evo-core-account-cloud.c  # Comptes Microsoft 365 / Exchange (EWS) et Google
+│   │   ├── evo-core-detect.c     # Détection automatique (ISPDB, DNS, Autodiscover)
+│   │   ├── evo-core-oauth2.c     # Connexion OAuth2 et demandes d'identifiants
+│   │   ├── evo-core-folders.c    # Arborescence, rôles, suivi des dossiers ouverts
+│   │   ├── evo-core-folder-ops.c # Création, renommage, déplacement, copie, suppression, quota
+│   │   ├── evo-core-messages.c   # Liste des messages d'un dossier
+│   │   ├── evo-core-search.c     # Recherche (dossier, sous-dossiers, compte, tous) et vues unifiées multi-comptes
+│   │   ├── evo-core-message-read.c    # Lecture, pièces jointes, export .eml
+│   │   ├── evo-core-message-actions.c # Indicateurs, suivi, déplacement, copie, suppression
+│   │   ├── evo-core-refresh.c    # Relève, synchronisation périodique, reconnexion
+│   │   ├── evo-core-send.c       # Envoi MIME et Boîte d'envoi
+│   │   ├── evo-core-drafts.c     # Brouillons
+│   │   ├── evo-core-signatures.c # Signatures
+│   │   ├── evo-core-calendar.c   # Événements d'agenda
+│   │   ├── evo-core-tasks.c      # Tâches (VTODO)
+│   │   ├── evo-core-contacts.c   # Contacts et autocomplétion des destinataires
+│   │   ├── evo-core-sources.c    # Sources EDS et création d'agendas
+│   │   ├── evo-core-export.c     # Export vCard / iCalendar
 │   │   └── CMakeLists.txt        # Configuration CMake du moteur
 │   └── app/                      # Interface WinUI 3 (C++/WinRT)
 │       ├── App.xaml / App.xaml.cpp
-│       ├── MainWindow.xaml / .h  # Fenêtre principale et vue d'ensemble
+│       ├── MainWindow.xaml      # GÉNÉRÉ (ignoré par git) par tools\assemble-xaml.ps1 : ne jamais le modifier
+│       ├── MainWindow.xaml.h    # Fenêtre principale et vue d'ensemble
+│       ├── xaml/                # Sources du XAML de la fenêtre principale :
+│       │   ├── MainWindow.xaml.in            # Gabarit (coque : fenêtre, navigation, zones) avec lignes <!--#include xaml/X.xamlpart-->
+│       │   ├── TitleBar / NavigationMenuItems / StatusBar / TodoBar .xamlpart
+│       │   ├── Ribbon.Mail / .Calendar / .Contacts / .Tasks .xamlpart    # Rubans par module
+│       │   ├── Mail.Folders / .Splitters / .MessageList / .Reader .xamlpart
+│       │   ├── CalendarView / ContactsView / TasksView .xamlpart
+│       │   └── Settings.Navigation + Settings.<Catégorie>[.<Section>] .xamlpart   # Un fichier par catégorie ou section des Paramètres
 │       ├── MainWindow.*.cpp      # Découpage modulaire du code-behind :
 │       │   ├── MainWindow.Accounts.cpp       # Comptes, synchronisation, quota
 │       │   ├── MainWindow.Attachments.cpp    # Pièces jointes, aperçu, export EML
@@ -70,6 +102,7 @@ c:\Users\chris\VSCode\Evolution-WindowsPort\
 │       ├── MainWindow.Helpers.h  # Algorithmes autonomes, parsing MIME, localisation
 │       ├── CoreBridge.h          # Passerelle C++/WinRT encapsulant evo-core.dll
 │       ├── Settings.h            # Persistance JSON des réglages et préférences
+│       ├── UnifiedViews.h        # Vues unifiées multi-comptes : fonctions pures (uid composite, comptes inclus)
 │       ├── ComposeWindow.xaml / .cpp / .h # Fenêtre de rédaction de courriel
 │       ├── MessageWindow.xaml / .cpp / .h # Fenêtre autonome de visualisation de message
 │       └── EvolutionWin.vcxproj  # Projet MSBuild pour l'application WinUI
@@ -159,7 +192,8 @@ Les règles suivantes ont été définies par Pierre et doivent être respectée
 ## 6. Architecture & Modèles de Conception
 
 ### 6.1. Le Pont `evo-core` (C) <-> `CoreBridge` (C++/WinRT)
-- Toutes les opérations d'E/S (réseau, disque, protocoles IMAP/SMTP) s'exécutent sur des threads d'arrière-plan dans `evo-core.c` via `core_submit()`.
+- Toutes les opérations d'E/S (réseau, disque, protocoles IMAP/SMTP) s'exécutent sur des threads d'arrière-plan via `core_submit()` (`evo-core-requests.c`).
+- Le moteur est découpé en un fichier par domaine (`evo-core-<domaine>.c`) : chaque fonction publique `evo_core_xxx` est définie à côté de son exécutant `core_xxx_run`. Les fonctions internes partagées entre fichiers (préfixe `core_`) sont déclarées dans `evo-core-private.h` ; toute nouvelle fonction partagée y est ajoutée, et tout nouveau fichier `.c` est ajouté à `winui/core/CMakeLists.txt`. `evo-core.h` reste la seule interface publique.
 - La communication repose sur du **JSON** :
   - Entrée : chaîne JSON sérialisée ou paramètres typés C.
   - Sortie : fonction de rappel `EvoCoreResultFunc` de type `void (const char *json_result, const char *error_message, void *user_data)`.
@@ -170,6 +204,12 @@ Les règles suivantes ont été définies par Pierre et doivent être respectée
 - Accès singleton via `EvolutionWin::Settings::Instance()`.
 - Méthodes typées : `GetBoolean()`, `SetBoolean()`, `GetString()`, `SetString()`, `GetInt()`, `SetInt()`, `GetArray()`, etc.
 - Toujours fournir une valeur de repli par défaut lors de la lecture.
+
+### 6.2 bis. XAML de la fenêtre principale (fragments)
+- `winui/app/MainWindow.xaml` dépassait 5 800 lignes : il est **généré** à chaque build (cible MSBuild `AssembleMainWindowXaml`, `InitialTargets` de `EvolutionWin.vcxproj`) par `tools\assemble-xaml.ps1`, à partir du gabarit `winui/app/xaml/MainWindow.xaml.in` et des fragments `winui/app/xaml/*.xamlpart`. Le fichier généré est ignoré par git.
+- **Toujours modifier le gabarit ou un fragment, jamais `MainWindow.xaml`** (il serait écrasé). Une ligne `<!--#include xaml/Nom.xamlpart-->` du gabarit est remplacée telle quelle par le contenu du fragment ; un fragment est un sous-arbre XML bien formé (un ou plusieurs éléments voisins), sans en-tête XML ni déclaration d'espaces de noms (`local:`, `x:`, `controls:` viennent de la fenêtre).
+- Pour ajouter une section : créer `xaml/<Nom>.xamlpart`, y mettre l'élément, ajouter la ligne d'inclusion au bon endroit du gabarit. Pas de modification du code C++ : tous les éléments nommés (`x:Name`) restent des membres de `MainWindow` (c'est la raison de ce découpage plutôt que des `UserControl`).
+- Les erreurs du compilateur XAML citent `MainWindow.xaml` (généré) : ouvrir ce fichier à la ligne indiquée pour repérer l'élément fautif, puis le corriger dans le fragment correspondant.
 
 ### 6.3. Localisation et Unicode sous Windows MSVC
 - **Attention au pliage de casse Unicode (accents)** : `std::towlower` en C++ sous Windows n'applique pas la casse française par défaut. Toujours utiliser `::CharLowerBuffW(str.data(), len)` (provenant de `user32.lib`) pour les recherches insensibles à la casse et aux accents.

@@ -1,9 +1,11 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
 #include "MainWindow.Helpers.h"
+#include "FollowUp.h"
 #include "WindowIcon.h"
 #include "Settings.h"
 #include "ConversationThreads.h"
+#include "UnifiedViews.h"
 
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
@@ -45,6 +47,13 @@ namespace winrt::EvolutionWin::implementation
 
         if (account.empty() || folder.empty())
             return;
+
+        /* vue unifiée : agrégation des dossiers de même rôle de tous les comptes */
+        if (IsUnifiedView())
+        {
+            LoadUnifiedMessages(keep_selection);
+            return;
+        }
 
         if (keep_selection)
         {
@@ -95,6 +104,68 @@ namespace winrt::EvolutionWin::implementation
         });
     }
 
+    /* Charge une vue unifiée (Boîte de réception, Envoyés, Brouillons ou
+     * Corbeille de tous les comptes) et l'affiche comme un dossier ordinaire :
+     * chaque message garde son compte et son dossier d'origine (voir
+     * GetMessageLocation), donc lecture, indicateurs, déplacement,
+     * suppression et réponse agissent sur le dossier réel.
+     * Paramètres :
+     *   keep_selection : conserver le message sélectionné (rechargement) */
+    void MainWindow::LoadUnifiedMessages(bool keep_selection)
+    {
+        hstring account = m_account;
+        hstring role = m_folder;
+        hstring selected;
+
+        if (keep_selection)
+        {
+            selected = SelectedMessageUid();
+        }
+        else
+        {
+            CancelMarkAsReadTimer();
+            m_previous_selected_uid = L"";
+            MessageList().Items().Clear();
+            m_message_states.clear();
+            m_message_locations.clear();
+            ListProgress().IsActive(true);
+        }
+
+        m_core->ListUnified(role, m_unified_accounts, ::EvolutionWin::UnifiedViews::kMaxMessages,
+            [this, account, role, selected](hstring const& json, hstring const& error)
+        {
+            /* une autre vue a été choisie entre-temps */
+            if (account != m_account || role != m_folder)
+                return;
+
+            ListProgress().IsActive(false);
+
+            if (!error.empty())
+            {
+                ShowStatus(Tr(L"Vue unifiée : ", L"Unified view: ") + error, InfoBarSeverity::Error);
+                return;
+            }
+
+            m_all_messages = JsonArray::Parse(json);
+
+            if (!SearchBox().Text().empty())
+                FilterLocalMessages(SearchBox().Text());
+            else
+                ShowMessages(m_all_messages);
+
+            if (!selected.empty())
+            {
+                if (auto grid = FindMessageItem(selected))
+                {
+                    m_reselecting = true;
+                    MessageList().SelectedItem(grid);
+                    m_reselecting = false;
+                }
+            }
+
+            UpdateFolderStatusText();
+        });
+    }
     /* Construit et affiche les éléments de la liste de messages avec leurs
      * indicateurs (non lu, suivi, pièce jointe) et leur menu contextuel.
      * Paramètres :
@@ -219,6 +290,12 @@ namespace winrt::EvolutionWin::implementation
             m_message_locations[std::wstring{ uid }] = { msg_account, msg_folder, msg_folder_name, msg_account_name };
 
             m_message_states[std::wstring{ uid }] = MessageState{ seen, flagged, attachments };
+            {
+                auto& fu_state = m_message_states[std::wstring{ uid }];
+                fu_state.follow_up = std::wstring{ message.GetNamedString(L"follow_up", L"") };
+                fu_state.due_by = ::EvolutionWin::FollowUp::ParseEpoch(message.GetNamedString(L"due_by", L""));
+                fu_state.completed_on = ::EvolutionWin::FollowUp::ParseEpoch(message.GetNamedString(L"completed_on", L""));
+            }
 
             if (thread_row.hidden)
                 continue;
@@ -285,6 +362,8 @@ namespace winrt::EvolutionWin::implementation
             flag_icon.Glyph(L"\xE7C1");
             flag_icon.FontSize(12);
             flag_icon.Foreground(SolidColorBrush{ Windows::UI::Color{ 255, 247, 99, 12 } });
+            flag_icon.Tag(box_value(L"follow-flag"));
+            StyleFollowUpIcon(flag_icon, m_message_states[std::wstring{ uid }]);
             flag_icon.Visibility(flagged ? Visibility::Visible : Visibility::Collapsed);
             meta.Children().Append(flag_icon);
 
@@ -295,10 +374,12 @@ namespace winrt::EvolutionWin::implementation
             meta.Children().Append(attachment_icon);
 
             /* Affiche l'origine du message (dossier ou compte) pour les recherches transversales */
-            if (CurrentSearchScope() != L"folder" || msg_folder != m_folder || msg_account != m_account)
+            if (IsUnifiedView() || CurrentSearchScope() != L"folder" || msg_folder != m_folder || msg_account != m_account)
             {
                 std::wstring origin_text = L"";
-                if (CurrentSearchScope() == L"all" && !msg_account_name.empty())
+                if (IsUnifiedView())
+                    origin_text = !msg_account_name.empty() ? std::wstring{ msg_account_name } : std::wstring{ msg_account };
+                else if (CurrentSearchScope() == L"all" && !msg_account_name.empty())
                     origin_text = std::wstring{ msg_account_name } + L" › " + (!msg_folder_name.empty() ? std::wstring{ msg_folder_name } : std::wstring{ msg_folder });
                 else if (!msg_folder_name.empty())
                     origin_text = std::wstring{ msg_folder_name };
@@ -656,6 +737,13 @@ namespace winrt::EvolutionWin::implementation
                 });
                 menu_items.Append(flag_item);
 
+                MenuFlyoutSubItem follow_up_sub;
+                follow_up_sub.Text(hstring{ L"Suivi" + count_suffix });
+                follow_up_sub.Icon(FontIcon{});
+                follow_up_sub.Icon().as<FontIcon>().Glyph(L"\xE787");
+                PopulateFollowUpMenuItems(follow_up_sub.Items(), target_uids);
+                menu_items.Append(follow_up_sub);
+
                 MenuFlyoutSubItem cat_sub;
                 cat_sub.Text(hstring{ L"Catégoriser" + count_suffix });
                 cat_sub.Icon(FontIcon{});
@@ -754,6 +842,47 @@ namespace winrt::EvolutionWin::implementation
         if (it != m_message_locations.end() && !it->second.account.empty())
             return it->second;
         return { m_account, m_folder, L"", L"" };
+    }
+
+    /* Répartit des messages par compte et dossier d'origine (un seul groupe hors
+     * vue unifiée ou recherche multi-dossiers).
+     * Paramètres :
+     *   uids : identifiants affichés des messages
+     * Retourne : (compte, dossier) -> identifiants des messages. */
+    std::map<std::pair<std::wstring, std::wstring>, std::vector<hstring>> MainWindow::GroupUidsByLocation(std::vector<hstring> const& uids)
+    {
+        std::map<std::pair<std::wstring, std::wstring>, std::vector<hstring>> groups;
+        for (auto const& u : uids)
+        {
+            auto loc = GetMessageLocation(u);
+            groups[{ std::wstring{ loc.account }, std::wstring{ loc.folder } }].push_back(u);
+        }
+        return groups;
+    }
+
+    /* Requête d'export de messages pour le moteur : {"account", "folder", "uids"}.
+     * Dans une vue unifiée ou une recherche multi-dossiers, les messages peuvent venir
+     * de plusieurs dossiers : la requête porte sur le dossier du premier message, seuls
+     * les messages de ce dossier sont retenus ; les identifiants sont ramenés à l'uid réel.
+     * Paramètres :
+     *   uids : identifiants affichés des messages
+     * Retourne : objet JSON de la requête. */
+    JsonObject MainWindow::BuildMessagesRequest(std::vector<hstring> const& uids)
+    {
+        MessageLocation first = uids.empty() ? MessageLocation{ m_account, m_folder, L"", L"" } : GetMessageLocation(uids.front());
+        JsonArray real_uids;
+        for (auto const& u : uids)
+        {
+            auto loc = GetMessageLocation(u);
+            if (loc.account == first.account && loc.folder == first.folder)
+                real_uids.Append(JsonValue::CreateStringValue(hstring{ ::EvolutionWin::UnifiedViews::RealUid(std::wstring_view{ u }) }));
+        }
+
+        JsonObject request;
+        request.SetNamedValue(L"account", JsonValue::CreateStringValue(first.account));
+        request.SetNamedValue(L"folder", JsonValue::CreateStringValue(first.folder));
+        request.SetNamedValue(L"uids", real_uids);
+        return request;
     }
 
     /**
@@ -903,7 +1032,7 @@ namespace winrt::EvolutionWin::implementation
         hstring target_account = loc.account.empty() ? m_account : loc.account;
         hstring target_folder = loc.folder.empty() ? m_folder : loc.folder;
 
-        m_core->FetchMessage(target_account, target_folder, uid, [this, request, uid](hstring const& json, hstring const& error)
+        m_core->FetchMessage(target_account, target_folder, uid, [this, request, uid, target_account, target_folder](hstring const& json, hstring const& error)
         {
             if (request != m_message_request)
                 return;
@@ -917,6 +1046,8 @@ namespace winrt::EvolutionWin::implementation
             auto message = JsonObject::Parse(json);
             m_current_message = message;
             m_current_message_uid = uid;
+            m_current_message_account = target_account;
+            m_current_message_folder = target_folder;
             hstring to = message.GetNamedString(L"to", L"");
             hstring cc = message.GetNamedString(L"cc", L"");
 
@@ -925,6 +1056,8 @@ namespace winrt::EvolutionWin::implementation
             MessageTo().Text(L"À : " + to + (cc.empty() ? hstring{} : L"   Cc : " + cc));
             MessageDate().Text(FormatDate(message.GetNamedNumber(L"date", 0)));
             UpdateSecurityBanner(message.GetNamedObject(L"security", JsonObject{}));
+            UpdateReceiptBars(message);
+            UpdateInvitationBar(message);
             PopulateAttachments(message.GetNamedArray(L"attachments", JsonArray{}));
             MessageHeader().Visibility(Visibility::Visible);
             ReaderPlaceholder().Visibility(Visibility::Collapsed);
@@ -1184,6 +1317,9 @@ namespace winrt::EvolutionWin::implementation
 
     bool MainWindow::IsDraftsFolder()
     {
+        if (IsUnifiedView())
+            return m_folder == L"drafts";
+
         if (m_account.empty() || m_folder.empty())
             return false;
 
@@ -1204,6 +1340,9 @@ namespace winrt::EvolutionWin::implementation
      */
     bool MainWindow::IsTrashFolder()
     {
+        if (IsUnifiedView())
+            return m_folder == L"trash";
+
         if (m_account.empty() || m_folder.empty())
             return false;
 
@@ -1329,7 +1468,8 @@ namespace winrt::EvolutionWin::implementation
         /* Si le dossier courant est le dossier Brouillons, ouvrir la fenêtre de rédaction */
         if (IsDraftsFolder())
         {
-            m_core->FetchMessage(m_account, m_folder, uid, [this](hstring const& json, hstring const& error)
+            auto draft_loc = GetMessageLocation(uid);
+            m_core->FetchMessage(draft_loc.account, draft_loc.folder, uid, [this, draft_account = draft_loc.account](hstring const& json, hstring const& error)
             {
                 if (!error.empty())
                 {
@@ -1341,7 +1481,7 @@ namespace winrt::EvolutionWin::implementation
                     return;
 
                 ::EvolutionWin::ComposeData data;
-                data.account = m_account;
+                data.account = draft_account;
                 data.to = msg.GetNamedString(L"to", L"");
                 data.cc = msg.GetNamedString(L"cc", L"");
                 data.subject = msg.GetNamedString(L"subject", L"");
@@ -1438,24 +1578,34 @@ namespace winrt::EvolutionWin::implementation
         if (sel_uids.empty() || m_account.empty() || m_folder.empty() || !m_core)
             return;
 
-        JsonObject request;
-        request.SetNamedValue(L"account", JsonValue::CreateStringValue(m_account));
-        request.SetNamedValue(L"folder", JsonValue::CreateStringValue(m_folder));
-        JsonArray uids;
+        /* un lot par compte et dossier d'origine (vues unifiées, recherche multi-dossiers) ;
+           le moteur ne connaît que l'identifiant réel des messages */
+        std::map<std::pair<std::wstring, std::wstring>, JsonArray> batches;
         for (auto const& u : sel_uids)
-            uids.Append(JsonValue::CreateStringValue(u));
-        request.SetNamedValue(L"uids", uids);
-
-        m_core->ExportMessagesEml(request.Stringify(), [this](hstring const& json, hstring const& error)
         {
-            JsonArray paths;
-            if (error.empty() && JsonArray::TryParse(json, paths))
+            auto loc = GetMessageLocation(u);
+            batches[{ std::wstring{ loc.account }, std::wstring{ loc.folder } }].Append(
+                JsonValue::CreateStringValue(hstring{ ::EvolutionWin::UnifiedViews::RealUid(std::wstring_view{ u }) }));
+        }
+
+        m_drag_cached_files.clear();
+        for (auto const& [location, uids] : batches)
+        {
+            JsonObject request;
+            request.SetNamedValue(L"account", JsonValue::CreateStringValue(hstring{ location.first }));
+            request.SetNamedValue(L"folder", JsonValue::CreateStringValue(hstring{ location.second }));
+            request.SetNamedValue(L"uids", uids);
+
+            m_core->ExportMessagesEml(request.Stringify(), [this](hstring const& json, hstring const& error)
             {
-                m_drag_cached_files.clear();
-                for (auto const& p : paths)
-                    m_drag_cached_files.push_back(std::wstring{ p.GetString() });
-            }
-        });
+                JsonArray paths;
+                if (error.empty() && JsonArray::TryParse(json, paths))
+                {
+                    for (auto const& p : paths)
+                        m_drag_cached_files.push_back(std::wstring{ p.GetString() });
+                }
+            });
+        }
     }
 
     /**

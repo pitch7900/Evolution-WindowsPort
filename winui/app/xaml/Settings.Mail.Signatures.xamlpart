@@ -1,0 +1,122 @@
+                                <TextBlock Text="Signatures" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,16,0,0" />
+
+                                <!-- Carte 1 : Liste des signatures configurées et création -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="16">
+                                    <StackPanel Spacing="12">
+                                        <Grid>
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="Mes signatures" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                                <TextBlock Text="Signatures personnalisées en texte brut ou HTML avec mise en forme et images intégrées."
+                                                           Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            </StackPanel>
+                                            <Button HorizontalAlignment="Right" VerticalAlignment="Center" Click="OnNewSignatureClick" Style="{StaticResource AccentButtonStyle}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <FontIcon Glyph="&#xE710;" FontSize="14" />
+                                                    <TextBlock Text="Nouvelle signature" />
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
+
+                                        <Border x:Name="SignaturesEmpty" Visibility="Collapsed" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="6" Padding="16">
+                                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                                <FontIcon Glyph="&#xE946;" FontSize="18" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                <TextBlock Text="Aucune signature personnalisée. La signature automatique du compte reste disponible."
+                                                           Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <ListView x:Name="SignatureList" SelectionMode="None" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Éditeur de signature (panneau dépliable) -->
+                                <Border x:Name="SignatureEditorPanel" Visibility="Collapsed" Padding="20" CornerRadius="8" BorderThickness="1"
+                                        BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock x:Name="SignatureEditorTitle" Text="Nouvelle signature" Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                                        <TextBox x:Name="SignatureNameBox" Header="Nom de la signature" PlaceholderText="Professionnelle, Personnelle…" />
+
+                                        <RadioButtons x:Name="SignatureFormatChoice" Header="Format du contenu" MaxColumns="2"
+                                                      SelectionChanged="OnSignatureFormatChanged">
+                                            <x:String>HTML (mise en forme avancée)</x:String>
+                                            <x:String>Texte brut</x:String>
+                                        </RadioButtons>
+
+                                        <StackPanel x:Name="SignatureToolbar" Orientation="Horizontal" Spacing="4">
+                                            <Button Tag="bold" Click="OnSignatureToolClick" ToolTipService.ToolTip="Gras">
+                                                <FontIcon Glyph="&#xE8DD;" FontSize="14" />
+                                            </Button>
+                                            <Button Tag="italic" Click="OnSignatureToolClick" ToolTipService.ToolTip="Italique">
+                                                <FontIcon Glyph="&#xE8DB;" FontSize="14" />
+                                            </Button>
+                                            <Button Tag="underline" Click="OnSignatureToolClick" ToolTipService.ToolTip="Souligné">
+                                                <FontIcon Glyph="&#xE8DC;" FontSize="14" />
+                                            </Button>
+                                            <AppBarSeparator />
+                                            <Button Click="OnSignatureLinkClick" ToolTipService.ToolTip="Insérer un lien hypertexte">
+                                                <FontIcon Glyph="&#xE71B;" FontSize="14" />
+                                            </Button>
+                                            <Button Click="OnSignatureImageClick" ToolTipService.ToolTip="Insérer une image">
+                                                <FontIcon Glyph="&#xE8B9;" FontSize="14" />
+                                            </Button>
+                                            <Button Tag="removeFormat" Click="OnSignatureToolClick" ToolTipService.ToolTip="Effacer la mise en forme">
+                                                <FontIcon Glyph="&#xE8E6;" FontSize="14" />
+                                            </Button>
+                                        </StackPanel>
+
+                                        <Border x:Name="SignatureHtmlContainer" Height="200" Background="White" RequestedTheme="Light"
+                                                CornerRadius="6" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                            <controls:WebView2 x:Name="SignatureHtmlEditor" RequestedTheme="Light" DefaultBackgroundColor="White" />
+                                        </Border>
+
+                                        <TextBox x:Name="SignatureTextBox" Visibility="Collapsed" Height="200"
+                                                 AcceptsReturn="True" TextWrapping="Wrap" IsSpellCheckEnabled="True"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Auto" />
+
+                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,4,0,0">
+                                            <Button Content="Annuler" Click="OnSignatureEditorCancel" />
+                                            <Button Content="Enregistrer" Style="{StaticResource AccentButtonStyle}" Click="OnSignatureEditorSave" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Carte 2 : Position de la signature dans les réponses et transferts -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE890;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Position de la signature dans les réponses" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Placer la signature au-dessus du texte cité ou en bas de la chaîne de messages."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="SignatureAboveQuoteSwitch"
+                                                      OnContent="Au-dessus de la citation" OffContent="En dessous de la citation"
+                                                      Toggled="OnSignaturePlacementToggled" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Carte 3 : Attribution des signatures par compte -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="16">
+                                    <StackPanel Spacing="12">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Signature par compte" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Choisissez la signature à insérer automatiquement pour chaque compte de messagerie."
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+
+                                        <ListView x:Name="SignatureAccountList" SelectionMode="None" />
+                                    </StackPanel>
+                                </Border>
