@@ -108,6 +108,51 @@ namespace winrt::EvolutionWin::implementation
 
             button.ContextFlyout(flyout);
 
+            /* Glisser-déposer sortant : la pièce jointe est extraite dans le dossier
+             * temporaire de glisser-déposer au début du glissement (report asynchrone),
+             * puis offerte à l'Explorateur / au Bureau sous forme de fichier. */
+            button.CanDrag(true);
+            button.DragStarting([this, index, filename](UIElement const&, DragStartingEventArgs const& args)
+            {
+                hstring uid = SelectedMessageUid();
+                if (uid.empty() || m_account.empty() || m_folder.empty())
+                {
+                    args.Cancel(true);
+                    return;
+                }
+
+                std::wstring dir = ::EvolutionWin::Helpers::GetDragDropTempDir();
+                std::wstring path = dir + std::wstring{ SanitizeFileName(filename, L"piece-jointe") };
+                auto deferral = args.GetDeferral();
+                auto data = args.Data();
+                data.RequestedOperation(Windows::ApplicationModel::DataTransfer::DataPackageOperation::Copy);
+
+                m_core->SaveAttachment(m_account, m_folder, uid, index, hstring{ path },
+                    [this, deferral, data, path](hstring const&, hstring const& error)
+                {
+                    DispatcherQueue().TryEnqueue(::EvolutionWin::Helpers::KeepCoroutineAlive(
+                        [this, deferral, data, path, error]() -> Windows::Foundation::IAsyncAction
+                    {
+                        if (error.empty())
+                        {
+                            try
+                            {
+                                auto file = co_await Windows::Storage::StorageFile::GetFileFromPathAsync(path);
+                                data.SetStorageItems(single_threaded_vector<Windows::Storage::IStorageItem>({ file }));
+                            }
+                            catch (...)
+                            {
+                            }
+                        }
+                        else
+                        {
+                            ShowStatus(L"Impossible de glisser la pièce jointe : " + error, InfoBarSeverity::Error);
+                        }
+                        deferral.Complete();
+                    }));
+                });
+            });
+
             children.Append(button);
         }
 
@@ -286,7 +331,7 @@ namespace winrt::EvolutionWin::implementation
 
         m_core->ListMessages(account, folder, 0, [this, account, folder, folder_name, dest_dir](hstring const& json, hstring const& error)
         {
-            DispatcherQueue().TryEnqueue([this, account, folder, folder_name, dest_dir, json, error]() -> fire_and_forget
+            DispatcherQueue().TryEnqueue(::EvolutionWin::Helpers::KeepCoroutineAlive([this, account, folder, folder_name, dest_dir, json, error]() -> Windows::Foundation::IAsyncAction
             {
                 JsonArray msgs;
                 if (!error.empty() || !JsonArray::TryParse(json, msgs) || msgs.Size() == 0)
@@ -341,7 +386,7 @@ namespace winrt::EvolutionWin::implementation
                     }
                     ShowStatus(L"Exportation réussie : " + hstring{ std::to_wstring(count) } + L" messages de « " + folder_name + L" » enregistrés sous format .eml.", InfoBarSeverity::Success);
                 });
-            });
+            }));
         });
     }
 
@@ -540,7 +585,7 @@ namespace winrt::EvolutionWin::implementation
         m_core->SaveAttachment(account, folder, uid, index, m_preview_current_path,
             [this, strong, filename, temp_file](hstring const&, hstring const& error)
         {
-            DispatcherQueue().TryEnqueue([this, strong, filename, temp_file, error]() -> fire_and_forget
+            DispatcherQueue().TryEnqueue(::EvolutionWin::Helpers::KeepCoroutineAlive([this, strong, filename, temp_file, error]() -> Windows::Foundation::IAsyncAction
             {
                 PreviewLoadingRing().IsActive(false);
 
@@ -669,7 +714,7 @@ namespace winrt::EvolutionWin::implementation
                 {
                     PreviewUnsupported().Visibility(Visibility::Visible);
                 }
-            });
+            }));
         });
     }
 
@@ -737,7 +782,7 @@ namespace winrt::EvolutionWin::implementation
 
         m_core->ExportMessagesEml(request.Stringify(), [this](hstring const& json, hstring const& error)
         {
-            DispatcherQueue().TryEnqueue([this, json, error]() -> fire_and_forget
+            DispatcherQueue().TryEnqueue(::EvolutionWin::Helpers::KeepCoroutineAlive([this, json, error]() -> Windows::Foundation::IAsyncAction
             {
                 JsonArray paths;
                 if (!error.empty() || !JsonArray::TryParse(json, paths) || paths.Size() == 0)
@@ -854,7 +899,7 @@ namespace winrt::EvolutionWin::implementation
                 m_dialog_open = true;
                 co_await dialog.ShowAsync();
                 m_dialog_open = false;
-            });
+            }));
         });
 
         co_return;

@@ -2165,7 +2165,7 @@ namespace winrt::EvolutionWin::implementation
 
         {
 
-            DispatcherQueue().TryEnqueue([this, strong, filename, temp_file, error]() -> fire_and_forget
+            DispatcherQueue().TryEnqueue(::EvolutionWin::Helpers::KeepCoroutineAlive([this, strong, filename, temp_file, error]() -> Windows::Foundation::IAsyncAction
 
             {
 
@@ -2301,7 +2301,7 @@ namespace winrt::EvolutionWin::implementation
 
                 }
 
-            });
+            }));
 
         });
 
@@ -2522,7 +2522,7 @@ namespace winrt::EvolutionWin::implementation
 
         core->ExportMessagesEml(request.Stringify(), [this](hstring const& json, hstring const& error)
         {
-            DispatcherQueue().TryEnqueue([this, json, error]() -> fire_and_forget
+            DispatcherQueue().TryEnqueue(::EvolutionWin::Helpers::KeepCoroutineAlive([this, json, error]() -> Windows::Foundation::IAsyncAction
             {
                 JsonArray paths;
                 if (!error.empty() || !JsonArray::TryParse(json, paths) || paths.Size() == 0)
@@ -2639,7 +2639,7 @@ namespace winrt::EvolutionWin::implementation
                 m_dialog_open = true;
                 co_await dialog.ShowAsync();
                 m_dialog_open = false;
-            });
+            }));
         });
 
         co_return;

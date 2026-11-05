@@ -27,6 +27,25 @@ namespace EvolutionWin::Helpers
     using namespace Windows::Data::Json;
     using namespace Windows::Foundation;
 
+    /**
+     * @brief Exécute une lambda-coroutine en gardant ses captures vivantes.
+     *
+     * Une lambda dont le corps contient co_await perd ses captures (this, copies…) dès
+     * qu'elle retourne à la première suspension : le code qui reprend ensuite lit de la
+     * mémoire libérée (plantage). Cette fonction copie la lambda dans le cadre de la
+     * coroutine, qui vit jusqu'à la fin de l'exécution.
+     * @param fn Lambda sans paramètre retournant IAsyncAction.
+     * @return Gestionnaire (DispatcherQueueHandler) à passer à TryEnqueue.
+     */
+    template <typename F>
+    auto KeepCoroutineAlive(F fn)
+    {
+        return [fn]()
+        {
+            [](F copy) -> fire_and_forget { co_await copy(); }(fn);
+        };
+    }
+
     /* Segoe Fluent Icons glyphs (et Segoe UI Symbol pour le sablier de la boîte d'envoi) */
     inline hstring FolderGlyph(hstring const& type)
     {
