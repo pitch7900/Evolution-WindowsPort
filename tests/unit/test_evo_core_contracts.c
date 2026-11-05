@@ -701,6 +701,124 @@ static void test_itip_reply(void)
     TEST_CASE_END();
 }
 
+#include "../../winui/core/evo-core-gal-util.h"
+
+/**
+ * @brief Teste les fonctions pures de la recherche dans l'annuaire de l'organisation
+ * (evo-core-gal-util.h) : nettoyage de la saisie, encodage d'URL, adresses des API
+ * Microsoft Graph et Google People, normalisation des adresses.
+ */
+static void test_gal_helpers(void)
+{
+    char buf[2048];
+
+    TEST_CASE("GAL: nettoyage de la saisie (guillemets, antislashs, espaces)");
+    {
+        ASSERT_EQ_INT(4, (int) gal_sanitize_term("Jean", buf, sizeof (buf)));
+        ASSERT_EQ_STR("Jean", buf);
+        gal_sanitize_term("  Jean   \"Pierre\" \\ Dupont \t", buf, sizeof (buf));
+        ASSERT_EQ_STR("Jean Pierre Dupont", buf);
+        gal_sanitize_term("\"\"\\\\", buf, sizeof (buf));
+        ASSERT_EQ_STR("", buf);
+        gal_sanitize_term(NULL, buf, sizeof (buf));
+        ASSERT_EQ_STR("", buf);
+        gal_sanitize_term("é\xC3\xA9 ok", buf, sizeof (buf));
+        ASSERT_TRUE(strstr(buf, "ok") != NULL);   /* UTF-8 conserve */
+        /* troncature sans debordement */
+        gal_sanitize_term("abcdefghij", buf, 5);
+        ASSERT_EQ_STR("abcd", buf);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("GAL: longueur minimale de la recherche (caracteres UTF-8)");
+    {
+        ASSERT_FALSE(gal_query_valid(""));
+        ASSERT_FALSE(gal_query_valid("a"));
+        ASSERT_TRUE(gal_query_valid("ab"));
+        ASSERT_FALSE(gal_query_valid("\xC3\xA9"));          /* un seul caractere de 2 octets */
+        ASSERT_TRUE(gal_query_valid("\xC3\xA9\xC3\xA8"));   /* deux caracteres */
+        ASSERT_FALSE(gal_query_valid(NULL));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("GAL: encodage en pourcentage des URL");
+    {
+        ASSERT_TRUE(gal_url_encode("abc-._~123", buf, sizeof (buf)) == 10);
+        ASSERT_EQ_STR("abc-._~123", buf);
+        gal_url_encode("a b\"c:d", buf, sizeof (buf));
+        ASSERT_EQ_STR("a%20b%22c%3Ad", buf);
+        gal_url_encode("\xC3\xA9", buf, sizeof (buf));
+        ASSERT_EQ_STR("%C3%A9", buf);
+        /* trop petit : vide plutot qu'un encodage partiel */
+        ASSERT_EQ_INT(0, (int) gal_url_encode("a b c", buf, 6));
+        ASSERT_EQ_STR("", buf);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("GAL: nombre de resultats borne");
+    {
+        ASSERT_EQ_INT(15, gal_clamp_limit(0));
+        ASSERT_EQ_INT(15, gal_clamp_limit(-3));
+        ASSERT_EQ_INT(8, gal_clamp_limit(8));
+        ASSERT_EQ_INT(GAL_MAX_RESULTS, gal_clamp_limit(5000));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("GAL: adresse de recherche Microsoft Graph");
+    {
+        ASSERT_TRUE(gal_graph_search_url("marie", 10, GAL_GRAPH_SELECT_BASIC, buf, sizeof (buf)));
+        ASSERT_TRUE(strncmp(buf, "https://graph.microsoft.com/v1.0/users?$search=", 47) == 0);
+        ASSERT_TRUE(strstr(buf, "%22displayName%3Amarie%22%20OR%20%22mail%3Amarie%22") != NULL);
+        ASSERT_TRUE(strstr(buf, "&$top=10&") != NULL);
+        ASSERT_TRUE(strstr(buf, "&$select=displayName,givenName,surname,mail,userPrincipalName") != NULL);
+
+        /* saisie trop courte, absente, ou tampon trop petit : refus */
+        ASSERT_FALSE(gal_graph_search_url("m", 10, GAL_GRAPH_SELECT_BASIC, buf, sizeof (buf)));
+        ASSERT_FALSE(gal_graph_search_url(NULL, 10, GAL_GRAPH_SELECT_BASIC, buf, sizeof (buf)));
+        ASSERT_FALSE(gal_graph_search_url("marie", 10, GAL_GRAPH_SELECT_FULL, buf, 40));
+
+        /* un nom avec espace est encode dans l'expression */
+        ASSERT_TRUE(gal_graph_search_url("marie dupont", 99, GAL_GRAPH_SELECT_FULL, buf, sizeof (buf)));
+        ASSERT_TRUE(strstr(buf, "displayName%3Amarie%20dupont") != NULL);
+        ASSERT_TRUE(strstr(buf, "&$top=50&") != NULL);
+        ASSERT_TRUE(strstr(buf, "jobTitle,department,companyName,officeLocation,mobilePhone,businessPhones") != NULL);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("GAL: adresse de recherche Google People");
+    {
+        ASSERT_TRUE(gal_google_search_url("jean", 5, buf, sizeof (buf)));
+        ASSERT_TRUE(strncmp(buf, "https://people.googleapis.com/v1/people:searchDirectoryPeople?query=jean&pageSize=5&",
+                            strlen("https://people.googleapis.com/v1/people:searchDirectoryPeople?query=jean&pageSize=5&")) == 0);
+        ASSERT_TRUE(strstr(buf, "readMask=names,emailAddresses,organizations,phoneNumbers,locations") != NULL);
+        ASSERT_TRUE(strstr(buf, "sources=DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE") != NULL);
+        ASSERT_FALSE(gal_google_search_url("j", 5, buf, sizeof (buf)));
+        ASSERT_FALSE(gal_google_search_url("jean", 5, buf, 30));
+        ASSERT_TRUE(gal_google_search_url("o'neil & co", 5, buf, sizeof (buf)));
+        ASSERT_TRUE(strstr(buf, "query=o%27neil%20%26%20co&") != NULL);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("GAL: normalisation des adresses electroniques");
+    {
+        ASSERT_TRUE(gal_normalize_email("Marie.Dupont@Exemple.FR", buf, sizeof (buf)));
+        ASSERT_EQ_STR("marie.dupont@exemple.fr", buf);
+        ASSERT_TRUE(gal_normalize_email("SMTP:Marie@exemple.fr", buf, sizeof (buf)));
+        ASSERT_EQ_STR("marie@exemple.fr", buf);
+        ASSERT_TRUE(gal_normalize_email("  smtp:a@b.c  ", buf, sizeof (buf)));
+        ASSERT_EQ_STR("a@b.c", buf);
+        ASSERT_FALSE(gal_normalize_email("", buf, sizeof (buf)));
+        ASSERT_FALSE(gal_normalize_email(NULL, buf, sizeof (buf)));
+        ASSERT_FALSE(gal_normalize_email("sans-arobase", buf, sizeof (buf)));
+        ASSERT_FALSE(gal_normalize_email("@exemple.fr", buf, sizeof (buf)));
+        ASSERT_FALSE(gal_normalize_email("marie@", buf, sizeof (buf)));
+        ASSERT_FALSE(gal_normalize_email("a@b@c.fr", buf, sizeof (buf)));
+        ASSERT_FALSE(gal_normalize_email("marie dupont@exemple.fr", buf, sizeof (buf)));
+        ASSERT_FALSE(gal_normalize_email("x500:/o=Org/cn=Marie", buf, sizeof (buf)));
+    }
+    TEST_CASE_END();
+}
+
 /**
  * @brief Point d'entree de la suite de tests des contrats evo-core.
  * @return 0 si succes, 1 en cas d'echec.
@@ -720,6 +838,7 @@ int main(void)
     test_itip_parse();
     test_itip_decide();
     test_itip_reply();
+    test_gal_helpers();
 
     return test_suite_summary();
 }

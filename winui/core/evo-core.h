@@ -846,6 +846,31 @@ void		evo_core_search_recipients	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Recherche dans l'annuaire de l'organisation (carnet d'adresses global, GAL)
+ * des comptes Microsoft 365 / Exchange Online (Microsoft Graph, GET /users avec
+ * $search, portée User.ReadBasic.All ; les détails professionnels exigent
+ * User.Read.All, sinon seuls nom et adresse sont renvoyés) et Google Workspace
+ * (API People, portée directory.readonly : les comptes Google déjà connectés
+ * doivent être reconnectés). Le jeton OAuth2 est celui du compte, renouvelé par
+ * EDS. Exchange sur site (EWS) et IMAP générique ne sont pas interrogés.
+ * Les résultats des comptes joignables sont renvoyés même si un autre échoue ;
+ * l'erreur n'est signalée que si tous échouent ou si aucun compte compatible
+ * n'existe. Une saisie de moins de 2 caractères renvoie [].
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   text      : saisie (début du nom, du prénom ou de l'adresse)
+ *   max_count : nombre maximal de résultats (1 à 50, 15 par défaut)
+ *   func      : rappel recevant [{"name", "email", "given_name", "family_name",
+ *               "title", "department", "company", "office", "phone", "mobile",
+ *               "account", "provider": "microsoft365"|"google"}, ...],
+ *               une entrée par adresse
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_search_gal		(EvoCore *core,
+						 const char *text,
+						 int max_count,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Comme evo_core_list_contacts (), limité aux carnets book_uids (uids
  * séparés par des virgules ; NULL ou "" : tous les carnets activés). */
 void		evo_core_list_book_contacts	(EvoCore *core,

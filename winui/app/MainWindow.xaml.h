@@ -217,6 +217,15 @@ namespace winrt::EvolutionWin::implementation
         void OnDeleteContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnEditContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
+        /* Annuaire de l'organisation (GAL), MainWindow.Gal.cpp */
+        void OnGalDirectoryClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void SetGalMode(bool on);
+        void ScheduleGalSearch(hstring const& query);
+        void SearchGalDirectory(hstring const& query);
+        bool m_gal_mode{ false };
+        uint64_t m_gal_request{ 0 };
+        Microsoft::UI::Xaml::DispatcherTimer m_gal_timer{ nullptr };
+
         /* Gestionnaires des tâches */
         void OnNewTaskClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnNewTaskAccelerator(

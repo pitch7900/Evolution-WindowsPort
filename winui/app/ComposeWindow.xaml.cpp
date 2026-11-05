@@ -4,6 +4,7 @@
 #include "Signatures.h"
 #include "Settings.h"
 #include "MainWindow.Helpers.h"
+#include "Gal.h"
 #if __has_include("ComposeWindow.g.cpp")
 #include "ComposeWindow.g.cpp"
 #endif
@@ -1353,6 +1354,86 @@ namespace winrt::EvolutionWin::implementation
 
             sender.ItemsSource(items.Size() > 0 ? items : nullptr);
         });
+
+        /* annuaire de l'organisation (GAL) : interrogé après une pause de frappe,
+         * ses résultats complètent la liste sans doublon d'adresse */
+        namespace Gal = ::EvolutionWin::Gal;
+        if (m_gal_timer)
+            m_gal_timer.Stop();
+        if (!Gal::QueryEligible(std::wstring_view{ token }, Gal::kMinQueryCompose))
+            return;
+
+        m_gal_pending = [weak, sender, request, token]()
+        {
+            auto self = weak.get();
+            auto core_ref = self ? self->m_core.lock() : nullptr;
+            if (!self || !core_ref || request != self->m_recipient_request)
+                return;
+
+            core_ref->SearchGal(hstring{ token }, 8, [weak, sender, request](hstring const& json, hstring const& error)
+            {
+                auto self = weak.get();
+                if (!self || request != self->m_recipient_request || !error.empty())
+                    return;   /* périmé, ou annuaire indisponible : les suggestions locales suffisent */
+
+                Windows::Data::Json::JsonArray people;
+                if (!Windows::Data::Json::JsonArray::TryParse(json, people) || people.Size() == 0)
+                    return;
+
+                /* suggestions déjà affichées (adresses récentes et carnets) */
+                auto merged = single_threaded_vector<IInspectable>();
+                std::vector<std::wstring> shown;
+                if (sender.ItemsSource())
+                {
+                    if (auto current = sender.ItemsSource().try_as<Windows::Foundation::Collections::IVector<IInspectable>>())
+                    {
+                        for (auto const& entry : current)
+                        {
+                            merged.Append(entry);
+                            if (auto sug = entry.try_as<EvolutionWin::RecipientSuggestion>())
+                                shown.push_back(std::wstring{ sug.Address() });
+                        }
+                    }
+                }
+
+                bool added = false;
+                for (auto const& value : people)
+                {
+                    auto person = value.GetObject();
+                    Gal::Person entry;
+                    entry.name = person.GetNamedString(L"name", L"");
+                    entry.email = person.GetNamedString(L"email", L"");
+                    if (entry.email.empty() || Gal::ContainsEmail(shown, entry.email))
+                        continue;
+
+                    std::wstring address = Gal::RecipientAddress(entry);
+                    std::wstring label = address + L"  — " + std::wstring{ ::EvolutionWin::Helpers::Tr(L"Annuaire", L"Directory") };
+                    self->m_suggestion_values[label] = address;
+                    shown.push_back(address);
+                    merged.Append(make<RecipientSuggestion>(hstring{ label }, hstring{ address }, false));
+                    added = true;
+                }
+
+                if (added)
+                    sender.ItemsSource(merged);
+            });
+        };
+
+        if (!m_gal_timer)
+        {
+            m_gal_timer = Microsoft::UI::Xaml::DispatcherTimer();
+            m_gal_timer.Interval(std::chrono::milliseconds(400));
+            m_gal_timer.Tick([weak](IInspectable const&, IInspectable const&)
+            {
+                if (auto self = weak.get())
+                {
+                    self->m_gal_timer.Stop();
+                    if (self->m_gal_pending)
+                        self->m_gal_pending();
+                }
+            });
+        }
+        m_gal_timer.Start();
     }
 
     /* Suggestion choisie (Entrée, clic) : remplace le destinataire en cours

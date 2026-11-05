@@ -6431,6 +6431,74 @@ static void test_update_integrity(void)
     TEST_CASE_END();
 }
 
+#include "../../winui/app/Gal.h"
+
+static void test_gal(void)
+{
+    using namespace EvolutionWin::Gal;
+
+    TEST_CASE("GAL: seuils de declenchement de la recherche");
+    {
+        ASSERT_FALSE(QueryEligible(L"", kMinQueryContacts));
+        ASSERT_FALSE(QueryEligible(L"a", kMinQueryContacts));
+        ASSERT_FALSE(QueryEligible(L" a ", kMinQueryContacts));
+        ASSERT_TRUE(QueryEligible(L"ab", kMinQueryContacts));
+        ASSERT_TRUE(QueryEligible(L"  ab  ", kMinQueryContacts));
+        ASSERT_FALSE(QueryEligible(L"ab", kMinQueryCompose));
+        ASSERT_TRUE(QueryEligible(L"abc", kMinQueryCompose));
+        ASSERT_TRUE(Trim(L"\t x y \t") == L"x y");
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("GAL: formatage de la fiche d'annuaire");
+    {
+        Person p;
+        p.name = L"Marie Dupont";
+        p.email = L"marie.dupont@exemple.fr";
+        p.title = L"Directrice";
+        p.department = L"Finance";
+        p.company = L"Exemple SA";
+        p.office = L"B12";
+        p.phone = L"+33 1 23 45 67 89";
+        p.mobile = L"+33 6 12 34 56 78";
+        p.account = L"Exemple 365";
+
+        ASSERT_TRUE(DisplayName(p) == L"Marie Dupont");
+        ASSERT_TRUE(OrganizationLine(p) == L"Directrice · Finance · Exemple SA");
+        ASSERT_TRUE(PhoneLine(p, L"mobile") == L"+33 1 23 45 67 89 ; mobile +33 6 12 34 56 78");
+        ASSERT_TRUE(NoteLine(p, L"Bureau", L"Annuaire") == L"Bureau : B12 · Annuaire : Exemple 365");
+        ASSERT_TRUE(RecipientAddress(p) == L"Marie Dupont <marie.dupont@exemple.fr>");
+
+        /* champs vides : aucune separation parasite, nom de repli = adresse */
+        Person q;
+        q.email = L"service@exemple.fr";
+        q.department = L"Support";
+        q.mobile = L"0600";
+        ASSERT_TRUE(DisplayName(q) == L"service@exemple.fr");
+        ASSERT_TRUE(OrganizationLine(q) == L"Support");
+        ASSERT_TRUE(PhoneLine(q, L"mobile") == L"mobile 0600");
+        ASSERT_TRUE(NoteLine(q, L"Bureau", L"Annuaire").empty());
+        ASSERT_TRUE(RecipientAddress(q) == L"service@exemple.fr");
+        ASSERT_TRUE(JoinNonEmpty({ L"", L"  ", L"" }, L", ").empty());
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("GAL: fusion des suggestions sans doublon d'adresse");
+    {
+        ASSERT_TRUE(ExtractEmail(L"Marie <Marie@Exemple.FR>") == L"marie@exemple.fr");
+        ASSERT_TRUE(ExtractEmail(L"marie@exemple.fr") == L"marie@exemple.fr");
+        ASSERT_TRUE(ExtractEmail(L"  A@B.C ") == L"a@b.c");
+        ASSERT_TRUE(ExtractEmail(L"").empty());
+
+        std::vector<std::wstring> shown{ L"Marie Dupont <marie@exemple.fr>", L"paul@exemple.fr" };
+        ASSERT_TRUE(ContainsEmail(shown, L"MARIE@exemple.fr"));
+        ASSERT_TRUE(ContainsEmail(shown, L"paul@exemple.fr"));
+        ASSERT_FALSE(ContainsEmail(shown, L"jean@exemple.fr"));
+        ASSERT_FALSE(ContainsEmail({}, L"jean@exemple.fr"));
+    }
+    TEST_CASE_END();
+}
+
 int main(void)
 
 
@@ -6569,6 +6637,7 @@ int main(void)
     test_read_receipts();
     test_auto_reply();
     test_invitations_banner();
+    test_gal();
 return test_suite_summary();
 
 
