@@ -944,6 +944,7 @@ namespace winrt::EvolutionWin::implementation
             MessageDate().Text(FormatDate(message.GetNamedNumber(L"date", 0)));
             UpdateSecurityBanner(message.GetNamedObject(L"security", JsonObject{}));
             UpdateReceiptBars(message);
+            UpdateInvitationBar(message);
             PopulateAttachments(message.GetNamedArray(L"attachments", JsonArray{}));
             MessageHeader().Visibility(Visibility::Visible);
             ReaderPlaceholder().Visibility(Visibility::Collapsed);

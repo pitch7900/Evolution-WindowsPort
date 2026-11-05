@@ -9,7 +9,7 @@
 /* --- message content --- */
 
 /* transfer-decoded content of a part, converted to UTF-8 for text */
-static gchar *
+gchar *
 part_get_text (CamelMimePart *part,
 	       GCancellable *cancellable)
 {
@@ -718,6 +718,9 @@ core_get_message_run (EvoCore *core,
 			g_free (report);
 		}
 	}
+
+	/* Invitation iCalendar (réunion) : résumé affiché dans le bandeau d'action */
+	core_invitation_describe (core, args[0], folder, args[2], message, builder);
 
 	verify_or_decrypt_message (core, message, builder);
 

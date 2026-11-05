@@ -264,12 +264,24 @@ core_emit_folders_updated (EvoCore *core,
 
 /* evo-core-message-read.c */
 gchar *
+part_get_text (CamelMimePart *part,
+	       GCancellable *cancellable);
+gchar *
 html_to_text (const gchar *html);
 gchar *
 sanitize_filename (const gchar *raw,
 		   const gchar *fallback);
 const gchar *
 folder_info_find_inbox (CamelFolderInfo *fi);
+
+/* evo-core-invitations.c */
+void
+core_invitation_describe (EvoCore *core,
+			  const gchar *account_uid,
+			  CamelFolder *folder,
+			  const gchar *message_uid,
+			  CamelMimeMessage *message,
+			  JsonBuilder *builder);
 
 /* evo-core-refresh.c */
 gboolean
