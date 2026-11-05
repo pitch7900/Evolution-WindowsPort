@@ -6163,6 +6163,106 @@ static void test_follow_up(void)
     TEST_CASE_END();
 }
 
+#include "../../winui/app/AutoReply.h"
+
+static void test_auto_reply(void)
+{
+    TEST_CASE("Reponses automatiques: serialisation JSON et echappement");
+    {
+        using namespace EvolutionWin::AutoReply;
+        ASSERT_TRUE(JsonEscape("a\"b\\c\nd\te") == "a\\\"b\\\\c\\nd\\te");
+        ASSERT_TRUE(JsonEscape(std::string("\x01", 1)) == "\\u0001");
+        ASSERT_TRUE(JsonEscape("été — ok") == "été — ok");  /* UTF-8 conserve */
+
+        Settings s;
+        s.provider = "microsoft365";
+        s.enabled = true;
+        s.external_audience = "known";
+        s.start = 1700000000;
+        s.end = 1700086400;
+        s.subject = "Absent";
+        s.internal_message = "Ligne 1\nLigne \"2\"";
+        s.external_message = "Externe";
+        std::string json = BuildSettingsJson(s);
+        ASSERT_TRUE(json == "{\"enabled\":true,\"external_audience\":\"known\",\"start\":1700000000,"
+            "\"end\":1700086400,\"subject\":\"Absent\",\"internal_message\":\"Ligne 1\\nLigne \\\"2\\\"\","
+            "\"external_message\":\"Externe\"}");
+
+        s.enabled = false;
+        s.start = s.end = 0;
+        ASSERT_TRUE(BuildSettingsJson(s).find("\"enabled\":false,") != std::string::npos);
+        ASSERT_TRUE(BuildSettingsJson(s).find("\"start\":0,\"end\":0") != std::string::npos);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Reponses automatiques: validation du formulaire");
+    {
+        using namespace EvolutionWin::AutoReply;
+        Settings s;
+        s.provider = "microsoft365";
+        s.enabled = true;
+        s.external_message = "Je suis absent";
+        ASSERT_TRUE(Validate(s) == FormError::None);
+
+        s.start = 2000;
+        s.end = 1000;
+        ASSERT_TRUE(Validate(s) == FormError::EndBeforeStart);
+        s.end = 0;
+        ASSERT_TRUE(Validate(s) == FormError::IncompleteRange);   /* Microsoft 365 : les deux bornes */
+        s.provider = "gmail";
+        ASSERT_TRUE(Validate(s) == FormError::None);              /* Gmail : une seule borne acceptee */
+
+        s.start = s.end = 0;
+        s.external_message.clear();
+        ASSERT_TRUE(Validate(s) == FormError::EmptyMessage);
+        s.enabled = false;
+        ASSERT_TRUE(Validate(s) == FormError::None);              /* desactivation sans message */
+
+        ASSERT_TRUE(IsExpired(true, 100, 200));
+        ASSERT_FALSE(IsExpired(true, 300, 200));
+        ASSERT_FALSE(IsExpired(true, 0, 200));
+        ASSERT_FALSE(IsExpired(false, 100, 200));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Reponses automatiques: audience, dates locales et langue");
+    {
+        using namespace EvolutionWin::AutoReply;
+        ASSERT_TRUE(AudienceToIndex("none") == 0 && AudienceToIndex("known") == 1);
+        ASSERT_TRUE(AudienceToIndex("all") == 2 && AudienceToIndex("???") == 2);
+        ASSERT_TRUE(AudienceFromIndex(0) == "none" && AudienceFromIndex(1) == "known" && AudienceFromIndex(2) == "all");
+
+        /* aller-retour date locale <-> secondes Unix (independant du fuseau) */
+        int64_t t = LocalToEpoch(2026, 7, 14, 18, 45);
+        ASSERT_TRUE(t > 0);
+        std::tm local{};
+        ASSERT_TRUE(EpochToLocal(t, local));
+        ASSERT_TRUE(local.tm_year == 126 && local.tm_mon == 6 && local.tm_mday == 14);
+        ASSERT_TRUE(local.tm_hour == 18 && local.tm_min == 45);
+        ASSERT_TRUE(LocalToEpoch(2026, 7, 15, 18, 45) - t >= 86400 - 3600);  /* +1 jour (+- heure d'ete) */
+
+        ASSERT_TRUE(UseEnglish(L"en", L"fr-FR"));
+        ASSERT_TRUE(UseEnglish(L"en-GB", L"fr-FR"));
+        ASSERT_FALSE(UseEnglish(L"fr", L"en-US"));
+        ASSERT_TRUE(UseEnglish(L"system", L"en-US"));
+        ASSERT_FALSE(UseEnglish(L"", L"fr-FR"));
+        ASSERT_FALSE(UseEnglish(L"de", L"en-US"));
+
+        /* chaque libelle existe dans les deux langues, avec le meme nombre de « %s » */
+        for (int i = 0; i <= static_cast<int>(Str::NoAccount); ++i)
+        {
+            std::wstring fr = Tr(static_cast<Str>(i), false);
+            std::wstring en = Tr(static_cast<Str>(i), true);
+            ASSERT_FALSE(fr.empty());
+            ASSERT_FALSE(en.empty());
+            ASSERT_TRUE((fr.find(L"%s") == std::wstring::npos) == (en.find(L"%s") == std::wstring::npos));
+        }
+        ASSERT_TRUE(std::wstring(Tr(Str::Save, false)) == L"Enregistrer");
+        ASSERT_TRUE(std::wstring(Tr(Str::Save, true)) == L"Save");
+    }
+    TEST_CASE_END();
+}
+
 static void test_conversation_threads(void)
 {
     TEST_CASE("Conversations: regroupement par Message-ID, References et objet");
@@ -6388,6 +6488,7 @@ int main(void)
     test_conversation_threads();
     test_follow_up();
     test_read_receipts();
+    test_auto_reply();
 return test_suite_summary();
 
 

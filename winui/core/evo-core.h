@@ -990,6 +990,40 @@ void		evo_core_respond_tls_trust	(EvoCore *core,
 						 const char *trust_id,
 						 int trust_decision);
 
+/* Lit les réponses automatiques (absence du bureau) d'un compte Microsoft 365
+ * (Microsoft Graph, mailboxSettings/automaticRepliesSetting) ou Gmail
+ * (users.settings.getVacation), avec le jeton OAuth2 de la collection du compte.
+ * Erreur en français pour les comptes IMAP génériques et Exchange sur site (EWS).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   func        : rappel recevant {"provider": "microsoft365"|"gmail", "single_message",
+ *                 "enabled", "external_audience": "none"|"known"|"all", "start", "end"
+ *                 (secondes Unix, 0 = sans limite), "subject" (Gmail), "internal_message",
+ *                 "external_message" (texte brut)}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_get_auto_reply		(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Enregistre les réponses automatiques d'un compte Microsoft 365 ou Gmail.
+ * Microsoft 365 exige les deux dates ou aucune ; Gmail n'a qu'un message (celui des
+ * expéditeurs externes, sinon l'interne) ; l'audience « none » équivaut chez Gmail
+ * à « seulement mon domaine ». Portées OAuth2 requises : MailboxSettings.ReadWrite
+ * (Microsoft 365) et gmail.settings.basic (Gmail).
+ * Paramètres :
+ *   core          : instance du moteur evo-core
+ *   account_uid   : identifiant du compte
+ *   settings_json : réglages, mêmes champs que le résultat de evo_core_get_auto_reply
+ *   func          : rappel recevant les réglages enregistrés (même format)
+ *   user_data     : données utilisateur transmises au rappel */
+void		evo_core_set_auto_reply		(EvoCore *core,
+						 const char *account_uid,
+						 const char *settings_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Versions des composants du moteur, pour la boîte « À propos » et les
  * rapports de bug (sans instance du moteur, appel synchrone) :
  * {"evolution_data_server": "3.63.1", "evolution_ews": "3.63.1" (vide si

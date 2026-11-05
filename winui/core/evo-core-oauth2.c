@@ -79,6 +79,17 @@ core_oauth2_begin_run (EvoCore *core,
 
 	query_form = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
 	e_oauth2_service_prepare_authentication_uri_query (service, source, query_form);
+
+	/* Réponses automatiques Gmail (API users.settings.updateVacation) : portée
+	 * absente de la liste d'EDS, ajoutée à la demande de connexion Google */
+	if (g_strcmp0 (e_oauth2_service_get_name (service), "Google") == 0) {
+		const gchar *scope = g_hash_table_lookup (query_form, "scope");
+
+		if (scope && !strstr (scope, "gmail.settings.basic"))
+			g_hash_table_insert (query_form, g_strdup ("scope"),
+				g_strconcat (scope, " https://www.googleapis.com/auth/gmail.settings.basic", NULL));
+	}
+
 	if (custom_redirect)
 		g_hash_table_insert (query_form, g_strdup ("redirect_uri"), g_strdup (custom_redirect));
 	query = soup_form_encode_hash (query_form);

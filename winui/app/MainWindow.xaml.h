@@ -166,6 +166,8 @@ namespace winrt::EvolutionWin::implementation
         void RestoreSessionFolder();
         void UpdateOutOfOfficeBanner();
         Windows::Foundation::IAsyncAction ShowOutOfOfficeDialogAsync(winrt::hstring account);
+        void OnRibbonAutoReplyClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void DisableAutoReply(winrt::hstring const& account);
 
         /* Écran de démarrage (Splash screen) */
         void SetSplashWindow(winrt::EvolutionWin::SplashWindow const& splash);

@@ -172,6 +172,29 @@ namespace EvolutionWin
                 winrt::to_string(completed_on).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Lit les réponses automatiques (absence) d'un compte Microsoft 365 ou Gmail.
+         * Paramètres :
+         *   account : identifiant du compte
+         *   handler : rappel recevant {"provider", "single_message", "enabled",
+         *             "external_audience", "start", "end", "subject",
+         *             "internal_message", "external_message"} */
+        void GetAutoReply(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_get_auto_reply(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Enregistre les réponses automatiques (absence) d'un compte.
+         * Paramètres :
+         *   account       : identifiant du compte
+         *   settings_json : réglages (mêmes champs que GetAutoReply)
+         *   handler       : rappel recevant les réglages enregistrés */
+        void SetAutoReply(winrt::hstring const& account, winrt::hstring const& settings_json, CoreHandler handler)
+        {
+            evo_core_set_auto_reply(m_core, winrt::to_string(account).c_str(),
+                winrt::to_string(settings_json).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Supprime un message (vers la corbeille du compte ou définitivement).
          * Paramètres :
          *   account : identifiant du compte
