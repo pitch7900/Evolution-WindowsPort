@@ -17,36 +17,9 @@ namespace winrt::EvolutionWin::implementation
     /** @brief Clé de réglage : "ask" (par défaut), "never" ou "always". */
     static constexpr wchar_t const* ReadReceiptPolicyKey = L"mail.read-receipt-policy";
 
-    /**
-     * @brief Indique si la langue d'affichage de l'application est l'anglais.
-     * @return true pour une langue « en* », false sinon (français par défaut).
-     */
-    static bool UiIsEnglish()
-    {
-        try
-        {
-            auto languages = Windows::Globalization::ApplicationLanguages::Languages();
-            if (languages.Size() > 0)
-            {
-                hstring tag_text = languages.GetAt(0);
-                std::wstring_view tag{ tag_text };
-                return tag.size() >= 2 && (tag[0] == L'e' || tag[0] == L'E') && (tag[1] == L'n' || tag[1] == L'N');
-            }
-        }
-        catch (...) {}
-        return false;
-    }
-
-    /**
-     * @brief Choisit le texte de la langue d'affichage.
-     * @param fr Texte français.
-     * @param en Texte anglais.
-     * @return Le texte dans la langue courante.
-     */
-    static hstring Tr(wchar_t const* fr, wchar_t const* en)
-    {
-        return hstring{ UiIsEnglish() ? en : fr };
-    }
+    /* UiIsEnglish() et Tr(fr, en) sont partagés dans MainWindow.Helpers.h */
+    using ::EvolutionWin::Helpers::Tr;
+    using ::EvolutionWin::Helpers::UiIsEnglish;
 
     /** @brief Réglage enregistré par l'utilisateur pour les accusés de lecture. */
     static ::EvolutionWin::Receipts::Policy CurrentReceiptPolicy()

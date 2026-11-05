@@ -157,6 +157,20 @@ namespace EvolutionWin
                 winrt::to_string(uid).c_str(), send ? 1 : 0, &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Répond à une invitation iCalendar d'un message : met à jour l'agenda,
+         * envoie (ou non) la réponse iTIP à l'organisateur, mémorise la réponse.
+         * Paramètres :
+         *   response   : "accepted", "tentative", "declined" ou "remove" (réunion annulée)
+         *   send_reply : true pour envoyer la réponse à l'organisateur
+         *   handler    : rappel recevant {"response", "partstat", "calendar", "calendar_error"?, "sent", "to"} */
+        void RespondInvitation(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& uid,
+                               winrt::hstring const& response, bool send_reply, CoreHandler handler)
+        {
+            evo_core_respond_invitation(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                winrt::to_string(uid).c_str(), winrt::to_string(response).c_str(), send_reply ? 1 : 0,
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Définit ou efface le suivi d'un message.
          * Paramètres :
          *   label        : libellé ("" pour effacer)

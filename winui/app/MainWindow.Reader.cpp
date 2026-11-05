@@ -505,6 +505,7 @@ namespace winrt::EvolutionWin::implementation
         m_current_message_uid = L"";
         SecurityBar().IsOpen(false);
         HideReceiptBars();
+        HideInvitationBar();
         AttachmentBar().Children().Clear();
         AttachmentBar().Visibility(Visibility::Collapsed);
         MessageHeader().Visibility(Visibility::Collapsed);

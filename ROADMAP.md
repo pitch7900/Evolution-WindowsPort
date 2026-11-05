@@ -52,7 +52,7 @@ flowchart LR
 - [x] **Accusés de lecture et de réception** : gestion de l\'émission et du traitement des notifications d\'état de distribution.
 
 ### 2. Invitations & Réunions (§13, §15)
-- [ ] **Traitement des invitations iCalendar** : bandeau d\'action dans le volet de lecture (Accepter, Refuser, Provisoire) avec mise à jour du calendrier de l\'utilisateur (`#demo-invitations`).
+- [x] **Traitement des invitations iCalendar** : bandeau d\'action dans le volet de lecture (Accepter, Refuser, Provisoire) avec mise à jour du calendrier de l\'utilisateur (`#demo-invitations`).
 - [ ] **Carnet d\'adresses global (GAL)** : recherche et consultation de l\'annuaire d\'entreprise pour Exchange Online et Microsoft 365 (`#demo-gal`).
 
 ### 3. Gestion des absences (§3)

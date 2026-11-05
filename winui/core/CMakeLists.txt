@@ -48,6 +48,8 @@ add_library(evo-core SHARED
 	evo-core.h
 	evo-core-private.h
 	evo-core-mdn.h
+	evo-core-itip.h
+	evo-core-invitations.c
 	evo-core.c
 	evo-core-account-cloud.c
 	evo-core-account-setup.c

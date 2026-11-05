@@ -158,6 +158,36 @@ void		evo_core_send_read_receipt	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Répond à une invitation iCalendar (iTIP / iMIP) contenue dans un message
+ * (voir le membre "invitation" renvoyé par evo_core_get_message) :
+ *  - met à jour l'agenda de l'utilisateur sans créer de doublon (UID et SEQUENCE) :
+ *    ajout ou remplacement pour Accepter / Provisoire, retrait pour Refuser ou
+ *    pour une annulation (METHOD:CANCEL) ; le PARTSTAT du participant qui
+ *    correspond à l'identité du compte est mis à jour ;
+ *  - envoie à l'organisateur, par le serveur SMTP du compte, une réponse
+ *    METHOD:REPLY (multipart/alternative : texte lisible et text/calendar) ;
+ *  - mémorise la réponse sur le message (étiquette Camel "evo-invite-response").
+ * Paramètres :
+ *   account_uid      : identifiant du compte qui a reçu le message
+ *   folder_full_name : chemin complet du dossier
+ *   message_uid      : identifiant du message
+ *   response         : "accepted", "declined" ou "tentative" ; "remove" pour retirer
+ *                      de l'agenda une réunion annulée (METHOD:CANCEL)
+ *   send_reply       : non nul pour envoyer la réponse à l'organisateur ; 0 pour
+ *                      « sans envoyer de réponse »
+ *   func             : rappel recevant {"response", "partstat", "calendar", "sent", "to"} ;
+ *                      "calendar" vaut "added", "updated", "kept", "removed", "unchanged"
+ *                      ou "skipped" (occurrence isolée d'une série) ; "calendar_error"
+ *                      est présent si l'agenda n'a pas pu être mis à jour */
+void		evo_core_respond_invitation	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *message_uid,
+						 const char *response,
+						 int send_reply,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Envoie tous les messages en attente dans la Boîte d'envoi locale
  * ("local" / "Outbox") via leurs comptes respectifs. */
 void		evo_core_send_unsent_messages	(EvoCore *core);

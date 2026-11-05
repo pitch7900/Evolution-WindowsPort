@@ -261,6 +261,10 @@ namespace winrt::EvolutionWin::implementation
         /* Gestionnaires des paramètres / comptes */
         void OnAddAccountClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnReceiptSendClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnInviteAcceptClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnInviteTentativeClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnInviteDeclineClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnInviteRemoveClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnReceiptIgnoreClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnReadReceiptPolicyChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
         void OnRemoteContentModeChanged(
@@ -455,6 +459,9 @@ namespace winrt::EvolutionWin::implementation
         void UpdateRemoteContentBanner();
         void TrustCurrentSender(hstring const& key, std::wstring const& entry, hstring const& label);
         void RefreshPrivacyView();
+        void UpdateInvitationBar(Windows::Data::Json::JsonObject const& message);
+        void HideInvitationBar();
+        void RespondToInvitation(hstring const& response);
         void UpdateReceiptBars(Windows::Data::Json::JsonObject const& message);
         void HideReceiptBars();
         void RefreshReadReceiptSettings();

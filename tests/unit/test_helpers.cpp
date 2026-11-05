@@ -6075,6 +6075,85 @@ static std::wstring ToLowerCopyForTest(std::wstring text)
 #include "../../winui/app/ConversationThreads.h"
 #include "../../winui/app/FollowUp.h"
 #include "../../winui/app/Receipts.h"
+#include "../../winui/app/Invitations.h"
+
+static void test_invitations_banner(void)
+{
+    using namespace EvolutionWin::Invitations;
+
+    TEST_CASE("Invitations: methode iTIP et reponse du moteur")
+    {
+        ASSERT_TRUE(ParseKind(L"REQUEST") == Kind::Request);
+        ASSERT_TRUE(ParseKind(L"cancel") == Kind::Cancel);
+        ASSERT_TRUE(ParseKind(L"Reply") == Kind::Reply);
+        ASSERT_TRUE(ParseKind(L"PUBLISH") == Kind::None);
+        ASSERT_TRUE(ParseKind(L"") == Kind::None);
+        ASSERT_TRUE(ParseAnswer(L"accepted") == Answer::Accepted);
+        ASSERT_TRUE(ParseAnswer(L"tentative") == Answer::Tentative);
+        ASSERT_TRUE(ParseAnswer(L"declined") == Answer::Declined);
+        ASSERT_TRUE(ParseAnswer(L"needs-action") == Answer::NeedsAction);
+        ASSERT_TRUE(ParseAnswer(L"n'importe quoi") == Answer::NeedsAction);
+        ASSERT_TRUE(std::wstring{ AnswerToResponse(Answer::Accepted) } == L"accepted");
+        ASSERT_TRUE(std::wstring{ AnswerToResponse(Answer::Declined) } == L"declined");
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Invitations: aspect du bandeau selon la nature du message")
+    {
+        /* invitation recue : trois boutons et choix d'envoi de la reponse */
+        BannerState request = Decide(Kind::Request, false, true, false);
+        ASSERT_TRUE(request.visible && request.showResponseButtons && request.showSendChoice);
+        ASSERT_FALSE(request.showRemoveButton);
+        /* organisateur inconnu : pas de choix d'envoi (rien a envoyer) */
+        ASSERT_FALSE(Decide(Kind::Request, false, false, false).showSendChoice);
+        /* son propre message : information seulement */
+        BannerState own = Decide(Kind::Request, true, true, false);
+        ASSERT_TRUE(own.visible);
+        ASSERT_FALSE(own.showResponseButtons);
+        /* annulation : bouton de retrait seulement si l'evenement est dans l'agenda */
+        BannerState cancel = Decide(Kind::Cancel, false, true, true);
+        ASSERT_TRUE(cancel.visible && cancel.showRemoveButton && cancel.tone == Tone::Warning);
+        ASSERT_FALSE(cancel.showResponseButtons);
+        ASSERT_FALSE(Decide(Kind::Cancel, false, true, false).showRemoveButton);
+        /* reponse recue ; autre methode : rien */
+        BannerState reply = Decide(Kind::Reply, false, true, false);
+        ASSERT_TRUE(reply.visible && !reply.showResponseButtons && !reply.showRemoveButton);
+        ASSERT_FALSE(Decide(Kind::None, false, true, true).visible);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Invitations: textes d'etat et de reponse (francais et anglais)")
+    {
+        ASSERT_TRUE(DescribeState(Kind::Request, Answer::Accepted, true, false, false) == L"Vous avez accepté cette invitation.");
+        ASSERT_TRUE(DescribeState(Kind::Request, Answer::Declined, false, false, true) == L"You declined this invitation.");
+        ASSERT_TRUE(DescribeState(Kind::Request, Answer::NeedsAction, false, false, false) == L"Merci de répondre à cette invitation.");
+        ASSERT_TRUE(DescribeState(Kind::Request, Answer::NeedsAction, true, false, true).find(L"already in your calendar") != std::wstring::npos);
+        ASSERT_TRUE(DescribeState(Kind::Request, Answer::NeedsAction, false, true, false) == L"Vous êtes l'organisateur de cette réunion.");
+        ASSERT_TRUE(DescribeState(Kind::Cancel, Answer::NeedsAction, true, false, false).find(L"figure encore") != std::wstring::npos);
+        ASSERT_TRUE(DescribeState(Kind::Reply, Answer::Accepted, false, false, false).empty());
+
+        ASSERT_TRUE(DescribeReply(L"Marie", Answer::Accepted, false) == L"Marie a accepté la réunion.");
+        ASSERT_TRUE(DescribeReply(L"Marie", Answer::Declined, true) == L"Marie declined the meeting.");
+        ASSERT_TRUE(DescribeReply(L"", Answer::Tentative, false).find(L"Un participant") == 0);
+        ASSERT_TRUE(DisplayName(L"", L"a@b.fr") == L"a@b.fr");
+        ASSERT_TRUE(DisplayName(L"Marie", L"a@b.fr") == L"Marie");
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Invitations: message de confirmation apres reponse")
+    {
+        ASSERT_TRUE(DescribeResult(L"accepted", L"added", true, false)
+            == L"Invitation acceptée. Ajoutée à votre agenda. Réponse envoyée à l'organisateur.");
+        ASSERT_TRUE(DescribeResult(L"declined", L"removed", false, false) == L"Invitation refusée. Retirée de votre agenda.");
+        ASSERT_TRUE(DescribeResult(L"remove", L"removed", false, false) == L"Réunion retirée de votre agenda.");
+        ASSERT_TRUE(DescribeResult(L"tentative", L"updated", true, true)
+            == L"Invitation tentatively accepted. Calendar updated. Reply sent to the organizer.");
+        ASSERT_TRUE(DescribeResult(L"accepted", L"skipped", false, false).find(L"occurrence isolée") != std::wstring::npos);
+        ASSERT_TRUE(DescribeResult(L"accepted", L"unchanged", false, false) == L"Invitation acceptée.");
+    }
+    TEST_CASE_END();
+}
+
 
 static void test_read_receipts(void)
 {
@@ -6489,6 +6568,7 @@ int main(void)
     test_follow_up();
     test_read_receipts();
     test_auto_reply();
+    test_invitations_banner();
 return test_suite_summary();
 
 

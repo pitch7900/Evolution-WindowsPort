@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../../winui/core/evo-core-mdn.h"
+#include "../../winui/core/evo-core-itip.h"
 
 #define CREDENTIAL_CHUNK_MAX_SIZE 2048
 
@@ -483,6 +484,223 @@ static void test_mdn_fields(void)
     TEST_CASE_END();
 }
 
+/** @brief Invitation Outlook type : fuseau, VALARM imbrique, participants, lignes repliees. */
+static const char *SAMPLE_REQUEST =
+    "BEGIN:VCALENDAR\r\nMETHOD:REQUEST\r\nPRODID:Microsoft Exchange\r\nVERSION:2.0\r\n"
+    "BEGIN:VTIMEZONE\r\nTZID:Romance Standard Time\r\nBEGIN:STANDARD\r\nDTSTART:16011028T030000\r\nEND:STANDARD\r\nEND:VTIMEZONE\r\n"
+    "BEGIN:VEVENT\r\nUID:040000008200E00074C5B7101A82E008\r\nSEQUENCE:2\r\n"
+    "SUMMARY:Point projet\\, equipe\r\n"
+    "DTSTART;TZID=Romance Standard Time:20261105T090000\r\nDTEND;TZID=Romance Standard Time:20261105T100000\r\n"
+    "LOCATION:Salle 12\\; b\xC3\xA2" "timent A\r\n"
+    "ORGANIZER;CN=\"Durand, Marie\":mailto:marie@exemple.fr\r\n"
+    "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN=Pierre:mailto:Pierre@Exemple.fr\r\n"
+    "ATTENDEE;ROLE=OPT-PARTICIPANT;PARTSTAT=ACCEPTED;CN=Luc:MAILTO:luc@exemple.fr\r\n"
+    "RRULE:FREQ=WEEKLY;COUNT=4\r\n"
+    "DESCRIPTION:ligne longue qui se\r\n  poursuit ici\r\n"
+    "BEGIN:VALARM\r\nTRIGGER:-PT15M\r\nDESCRIPTION:Rappel\r\nEND:VALARM\r\n"
+    "END:VEVENT\r\nEND:VCALENDAR\r\n";
+
+/**
+ * @brief Teste la lecture du resume d'une invitation iCalendar (evo-core-itip.h).
+ */
+static void test_itip_parse(void)
+{
+    static EvoItip it;
+
+    TEST_CASE("iTIP: resume d'une invitation REQUEST (champs, fuseau, participants)");
+    {
+        ASSERT_TRUE(evo_itip_parse(SAMPLE_REQUEST, &it));
+        ASSERT_EQ_STR("REQUEST", it.method);
+        ASSERT_EQ_STR("040000008200E00074C5B7101A82E008", it.uid);
+        ASSERT_EQ_INT(2, it.sequence);
+        ASSERT_EQ_STR("Point projet, equipe", it.summary);
+        ASSERT_EQ_STR("20261105T090000", it.dtstart);
+        ASSERT_EQ_STR("Romance Standard Time", it.dtstart_tzid);
+        ASSERT_EQ_STR("20261105T100000", it.dtend);
+        ASSERT_FALSE(it.dtstart_is_date);
+        ASSERT_EQ_STR("Salle 12; b\xC3\xA2" "timent A", it.location);
+        ASSERT_EQ_STR("FREQ=WEEKLY;COUNT=4", it.rrule);
+        ASSERT_EQ_STR("marie@exemple.fr", it.organizer.email);
+        ASSERT_EQ_STR("Durand, Marie", it.organizer.name);
+        ASSERT_EQ_INT(2, it.n_attendees);
+        ASSERT_EQ_STR("NEEDS-ACTION", it.attendees[0].partstat);
+        ASSERT_EQ_STR("REQ-PARTICIPANT", it.attendees[0].role);
+        ASSERT_EQ_STR("luc@exemple.fr", it.attendees[1].email);
+        ASSERT_EQ_STR("ACCEPTED", it.attendees[1].partstat);
+        /* recherche du participant : insensible a la casse */
+        ASSERT_EQ_INT(0, evo_itip_find_attendee(&it, "pierre@exemple.FR"));
+        ASSERT_EQ_INT(-1, evo_itip_find_attendee(&it, "inconnu@exemple.fr"));
+        ASSERT_EQ_INT(-1, evo_itip_find_attendee(&it, ""));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("iTIP: journee entiere, annulation, DTSTART des VTIMEZONE et VALARM ignores");
+    {
+        const char *cancel =
+            "BEGIN:VCALENDAR\nMETHOD:CANCEL\nBEGIN:VEVENT\nUID:abc\nSEQUENCE:3\nSTATUS:cancelled\n"
+            "DTSTART;VALUE=DATE:20261224\nSUMMARY:Noel\nEND:VEVENT\nEND:VCALENDAR\n";
+        ASSERT_TRUE(evo_itip_parse(cancel, &it));
+        ASSERT_EQ_STR("CANCEL", it.method);
+        ASSERT_EQ_STR("CANCELLED", it.status);
+        ASSERT_TRUE(it.dtstart_is_date);
+        ASSERT_EQ_STR("20261224", it.dtstart);
+        ASSERT_EQ_INT(3, it.sequence);
+
+        /* seul le DTSTART du VEVENT compte (pas celui du VTIMEZONE) */
+        ASSERT_TRUE(evo_itip_parse(SAMPLE_REQUEST, &it));
+        ASSERT_TRUE(strstr(it.dtstart, "1601") == NULL);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("iTIP: documents invalides ou sans evenement");
+    {
+        ASSERT_FALSE(evo_itip_parse(NULL, &it));
+        ASSERT_FALSE(evo_itip_parse("", &it));
+        ASSERT_FALSE(evo_itip_parse("BEGIN:VCALENDAR\r\nMETHOD:PUBLISH\r\nEND:VCALENDAR\r\n", &it));
+        /* VEVENT sans UID */
+        ASSERT_FALSE(evo_itip_parse("BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nSUMMARY:x\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n", &it));
+        /* ligne sans separateur et methode en minuscules */
+        ASSERT_TRUE(evo_itip_parse("BEGIN:VCALENDAR\r\nmethod:request\r\ngarbage\r\nBEGIN:VEVENT\r\nUID:z\r\nEND:VEVENT\r\nEND:VCALENDAR", &it));
+        ASSERT_EQ_STR("REQUEST", it.method);
+    }
+    TEST_CASE_END();
+}
+
+/**
+ * @brief Teste la decision d'ajout, de mise a jour ou de retrait dans l'agenda (anti-doublons).
+ */
+static void test_itip_decide(void)
+{
+    TEST_CASE("iTIP: decision agenda (doublons via UID et SEQUENCE)");
+    {
+        /* absent : ajout ; refus d'un evenement absent : rien */
+        ASSERT_EQ_INT(EVO_ITIP_ADD, evo_itip_decide("REQUEST", 0, 0, 0, 0));
+        ASSERT_EQ_INT(EVO_ITIP_IGNORE, evo_itip_decide("REQUEST", 0, 0, 0, 1));
+        /* deja present : remplace par une version egale ou plus recente, jamais plus ancienne */
+        ASSERT_EQ_INT(EVO_ITIP_UPDATE, evo_itip_decide("REQUEST", 1, 1, 2, 0));
+        ASSERT_EQ_INT(EVO_ITIP_UPDATE, evo_itip_decide("REQUEST", 1, 2, 2, 0));
+        ASSERT_EQ_INT(EVO_ITIP_KEEP, evo_itip_decide("REQUEST", 1, 3, 2, 0));
+        /* refus : retire l'evenement */
+        ASSERT_EQ_INT(EVO_ITIP_REMOVE, evo_itip_decide("request", 1, 0, 0, 1));
+        /* annulation : retire si presente et non perimee */
+        ASSERT_EQ_INT(EVO_ITIP_REMOVE, evo_itip_decide("CANCEL", 1, 1, 2, 0));
+        ASSERT_EQ_INT(EVO_ITIP_IGNORE, evo_itip_decide("CANCEL", 0, 0, 5, 0));
+        ASSERT_EQ_INT(EVO_ITIP_IGNORE, evo_itip_decide("CANCEL", 1, 4, 2, 0));
+        /* autres methodes : aucune action */
+        ASSERT_EQ_INT(EVO_ITIP_IGNORE, evo_itip_decide("REPLY", 1, 0, 0, 0));
+        ASSERT_EQ_INT(EVO_ITIP_IGNORE, evo_itip_decide(NULL, 1, 0, 0, 0));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("iTIP: correspondance reponse de l'interface <-> PARTSTAT");
+    {
+        ASSERT_EQ_STR("ACCEPTED", evo_itip_partstat_from_response("accepted"));
+        ASSERT_EQ_STR("DECLINED", evo_itip_partstat_from_response("Declined"));
+        ASSERT_EQ_STR("TENTATIVE", evo_itip_partstat_from_response("tentative"));
+        ASSERT_NULL(evo_itip_partstat_from_response("remove"));
+        ASSERT_NULL(evo_itip_partstat_from_response(NULL));
+        ASSERT_EQ_STR("accepted", evo_itip_response_from_partstat("ACCEPTED"));
+        ASSERT_EQ_STR("declined", evo_itip_response_from_partstat("declined"));
+        ASSERT_EQ_STR("tentative", evo_itip_response_from_partstat("TENTATIVE"));
+        ASSERT_EQ_STR("needs-action", evo_itip_response_from_partstat("NEEDS-ACTION"));
+        ASSERT_EQ_STR("needs-action", evo_itip_response_from_partstat(""));
+    }
+    TEST_CASE_END();
+}
+
+/**
+ * @brief Teste la generation de la reponse iTIP METHOD:REPLY.
+ */
+static void test_itip_reply(void)
+{
+    static EvoItip it;
+    static char buf[4096];
+    int n;
+
+    TEST_CASE("iTIP: generation du REPLY (RFC 5546)");
+    {
+        ASSERT_TRUE(evo_itip_parse(SAMPLE_REQUEST, &it));
+        n = evo_itip_format_reply(buf, sizeof buf, &it, "pierre@exemple.fr", "Pierre", "ACCEPTED", "20261104T230000Z");
+        ASSERT_TRUE(n > 0);
+        ASSERT_EQ_INT(n, (int)strlen(buf));
+        ASSERT_TRUE(strncmp(buf, "BEGIN:VCALENDAR\r\n", 17) == 0);
+        ASSERT_TRUE(strstr(buf, "\r\nMETHOD:REPLY\r\n") != NULL);
+        ASSERT_TRUE(strstr(buf, "\r\nUID:040000008200E00074C5B7101A82E008\r\n") != NULL);
+        ASSERT_TRUE(strstr(buf, "\r\nSEQUENCE:2\r\n") != NULL);
+        ASSERT_TRUE(strstr(buf, "\r\nDTSTAMP:20261104T230000Z\r\n") != NULL);
+        /* organisateur avec nom entre guillemets (contient une virgule) */
+        ASSERT_TRUE(strstr(buf, "\r\nORGANIZER;CN=\"Durand, Marie\":mailto:marie@exemple.fr\r\n") != NULL);
+        ASSERT_TRUE(strstr(buf, "\r\nATTENDEE;PARTSTAT=ACCEPTED;CN=Pierre:mailto:pierre@exemple.fr\r\n") != NULL);
+        ASSERT_TRUE(strstr(buf, "\r\nSUMMARY:Point projet\\, ") != NULL);
+        ASSERT_TRUE(strstr(buf, "\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n") != NULL);
+        /* un seul participant dans la reponse ; DTSTART avec TZID omis (pas de VTIMEZONE) */
+        ASSERT_TRUE(strstr(buf, "luc@exemple.fr") == NULL);
+        ASSERT_TRUE(strstr(buf, "DTSTART") == NULL);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("iTIP: REPLY : DTSTART UTC repris, occurrence, refus, nom absent");
+    {
+        const char *ics =
+            "BEGIN:VCALENDAR\r\nMETHOD:REQUEST\r\nBEGIN:VEVENT\r\nUID:u1\r\nDTSTART:20261105T080000Z\r\n"
+            "RECURRENCE-ID:20261112T080000Z\r\nSUMMARY:Revue\r\nORGANIZER:mailto:chef@exemple.fr\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+        ASSERT_TRUE(evo_itip_parse(ics, &it));
+        n = evo_itip_format_reply(buf, sizeof buf, &it, "moi@exemple.fr", "", "DECLINED", "20261104T230000Z");
+        ASSERT_TRUE(n > 0);
+        ASSERT_TRUE(strstr(buf, "\r\nDTSTART:20261105T080000Z\r\n") != NULL);
+        ASSERT_TRUE(strstr(buf, "\r\nRECURRENCE-ID:20261112T080000Z\r\n") != NULL);
+        ASSERT_TRUE(strstr(buf, "\r\nORGANIZER:mailto:chef@exemple.fr\r\n") != NULL);
+        ASSERT_TRUE(strstr(buf, "\r\nATTENDEE;PARTSTAT=DECLINED:mailto:moi@exemple.fr\r\n") != NULL);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("iTIP: REPLY : anti-injection, repli a 75 octets, tampon trop petit, arguments invalides");
+    {
+        const char *ics =
+            "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:u2\r\nSUMMARY:Une reunion au titre tres tres long, qui depasse largement les soixante-quinze octets autorises par ligne\r\n"
+            "ORGANIZER:mailto:chef@exemple.fr\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+        char *line;
+        ASSERT_TRUE(evo_itip_parse(ics, &it));
+        n = evo_itip_format_reply(buf, sizeof buf, &it, "moi@exemple.fr\r\nBcc:x@y.fr", "Nom\r\nX-Evil: 1", "TENTATIVE", "20261104T230000Z");
+        ASSERT_TRUE(n > 0);
+        ASSERT_TRUE(strstr(buf, "\r\nBcc:") == NULL);
+        ASSERT_TRUE(strstr(buf, "\r\nX-Evil:") == NULL);
+        /* aucune ligne ne depasse 75 octets (hors CRLF) et le titre est replie avec une espace */
+        for (line = buf; *line; ) {
+            char *eol = strstr(line, "\r\n");
+            ASSERT_TRUE(eol != NULL);
+            ASSERT_TRUE((int)(eol - line) <= 75);
+            line = eol + 2;
+        }
+        ASSERT_TRUE(strstr(buf, "\r\n ") != NULL);
+
+        ASSERT_EQ_INT(-1, evo_itip_format_reply(buf, 100, &it, "moi@exemple.fr", "", "ACCEPTED", "20261104T230000Z"));
+        ASSERT_EQ_INT(-1, evo_itip_format_reply(buf, sizeof buf, &it, "", "", "ACCEPTED", "20261104T230000Z"));
+        ASSERT_EQ_INT(-1, evo_itip_format_reply(buf, sizeof buf, &it, "moi@exemple.fr", "", "", "20261104T230000Z"));
+        /* sans organisateur : pas de reponse possible */
+        it.organizer.email[0] = '\0';
+        ASSERT_EQ_INT(-1, evo_itip_format_reply(buf, sizeof buf, &it, "moi@exemple.fr", "", "ACCEPTED", "20261104T230000Z"));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("iTIP: objet et corps lisibles de la reponse");
+    {
+        evo_itip_reply_subject(buf, sizeof buf, "ACCEPTED", "Point projet");
+        ASSERT_EQ_STR("Accept\xC3\xA9 : Point projet", buf);
+        evo_itip_reply_subject(buf, sizeof buf, "DECLINED", "Point\r\nprojet");
+        ASSERT_EQ_STR("Refus\xC3\xA9 : Point  projet", buf);
+        evo_itip_reply_subject(buf, sizeof buf, "TENTATIVE", "X");
+        ASSERT_EQ_STR("Provisoire : X", buf);
+
+        evo_itip_reply_body(buf, sizeof buf, "Pierre", "ACCEPTED", "Point projet", "05/11/2026 09:00");
+        ASSERT_TRUE(strstr(buf, "Pierre a accept\xC3\xA9 l'invitation \xC2\xAB Point projet \xC2\xBB du 05/11/2026 09:00.") != NULL);
+        ASSERT_TRUE(strstr(buf, "Pierre has accepted the invitation \"Point projet\" on 05/11/2026 09:00.") != NULL);
+        evo_itip_reply_body(buf, sizeof buf, "Pierre", "DECLINED", "X", "");
+        ASSERT_TRUE(strstr(buf, "a refus\xC3\xA9 l'invitation \xC2\xAB X \xC2\xBB.") != NULL);
+    }
+    TEST_CASE_END();
+}
+
 /**
  * @brief Point d'entree de la suite de tests des contrats evo-core.
  * @return 0 si succes, 1 en cas d'echec.
@@ -499,6 +717,9 @@ int main(void)
     test_account_enabled_contract();
     test_mdn_fields();
     test_auto_reply_helpers();
+    test_itip_parse();
+    test_itip_decide();
+    test_itip_reply();
 
     return test_suite_summary();
 }
