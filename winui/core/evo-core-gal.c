@@ -1609,6 +1609,173 @@ nav_xml_end (GMarkupParseContext *context,
 	}
 }
 
+/* Texte d'erreur d'une réponse EWS (faultstring, MessageText ou code de réponse), sinon un
+ * extrait de la réponse. Retourne une chaîne à libérer (g_free). */
+static gchar *
+nav_error_detail (GBytes *bytes)
+{
+	gsize size = 0;
+	const gchar *data = bytes ? g_bytes_get_data (bytes, &size) : NULL;
+	gchar *text, *result = NULL;
+	static const gchar * const tags[][2] = {
+		{ "<faultstring>", "</faultstring>" },
+		{ "<m:MessageText>", "</m:MessageText>" },
+		{ "<MessageText>", "</MessageText>" },
+		{ "<m:ResponseCode>", "</m:ResponseCode>" },
+		{ "<ResponseCode>", "</ResponseCode>" }
+	};
+	guint ii;
+
+	if (!data || !size)
+		return g_strdup ("réponse vide");
+	text = g_strndup (data, size);
+	for (ii = 0; ii < G_N_ELEMENTS (tags) && !result; ii++) {
+		const gchar *start = strstr (text, tags[ii][0]);
+
+		if (start) {
+			const gchar *end = strstr (start + strlen (tags[ii][0]), tags[ii][1]);
+
+			if (end)
+				result = g_strndup (start + strlen (tags[ii][0]), end - start - strlen (tags[ii][0]));
+		}
+	}
+	if (!result)
+		result = g_strndup (text, MIN (size, 240));
+	g_free (text);
+
+	return result;
+}
+
+/* Recherche du dossier « Common Views » parmi les enfants de la racine de la boîte (FindFolder). */
+typedef struct {
+	gchar *current_id;
+	GString *text;
+	gboolean in_name;
+	gchar *found_id;
+	GString *names;		/* noms vus, pour le message d'erreur */
+} FolderParse;
+
+static void
+folder_xml_start (GMarkupParseContext *context,
+		  const gchar *element,
+		  const gchar **names,
+		  const gchar **values,
+		  gpointer user_data,
+		  GError **error)
+{
+	FolderParse *parse = user_data;
+	guint ii;
+
+	if (g_str_has_suffix (element, ":FolderId")) {
+		for (ii = 0; names[ii]; ii++)
+			if (g_strcmp0 (names[ii], "Id") == 0) {
+				g_free (parse->current_id);
+				parse->current_id = g_strdup (values[ii]);
+			}
+	} else if (g_str_has_suffix (element, ":DisplayName")) {
+		parse->in_name = TRUE;
+		g_string_truncate (parse->text, 0);
+	}
+}
+
+static void
+folder_xml_text (GMarkupParseContext *context,
+		 const gchar *text,
+		 gsize len,
+		 gpointer user_data,
+		 GError **error)
+{
+	FolderParse *parse = user_data;
+
+	if (parse->in_name)
+		g_string_append_len (parse->text, text, len);
+}
+
+static void
+folder_xml_end (GMarkupParseContext *context,
+		const gchar *element,
+		gpointer user_data,
+		GError **error)
+{
+	FolderParse *parse = user_data;
+
+	if (parse->in_name && g_str_has_suffix (element, ":DisplayName")) {
+		static const gchar * const wanted[] = { "Common Views", "Affichages communs", "Vues communes", "Gemeinsame Ansichten" };
+		guint ii;
+
+		parse->in_name = FALSE;
+		g_string_append_printf (parse->names, "%s%s", parse->names->len ? ", " : "", parse->text->str);
+		for (ii = 0; ii < G_N_ELEMENTS (wanted); ii++)
+			if (!parse->found_id && parse->current_id && g_ascii_strcasecmp (parse->text->str, wanted[ii]) == 0)
+				parse->found_id = g_strdup (parse->current_id);
+	}
+}
+
+/* Identifiant EWS du dossier « Common Views » (navigation des calendriers). Retourne NULL
+ * avec une erreur sinon.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   token : jeton EWS
+ *   error : emplacement pour une éventuelle erreur */
+static gchar *
+nav_find_common_views (EvoCore *core,
+		       const gchar *token,
+		       GError **error)
+{
+	static const gchar request[] =
+		"<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+		"<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" "
+		"xmlns:t=\"http://schemas.microsoft.com/exchange/services/2006/types\" "
+		"xmlns:m=\"http://schemas.microsoft.com/exchange/services/2006/messages\">"
+		"<soap:Header><t:RequestServerVersion Version=\"Exchange2013\"/></soap:Header>"
+		"<soap:Body><m:FindFolder Traversal=\"Shallow\">"
+		"<m:FolderShape><t:BaseShape>IdOnly</t:BaseShape><t:AdditionalProperties>"
+		"<t:FieldURI FieldURI=\"folder:DisplayName\"/></t:AdditionalProperties></m:FolderShape>"
+		"<m:ParentFolderIds><t:DistinguishedFolderId Id=\"root\"/></m:ParentFolderIds>"
+		"</m:FindFolder></soap:Body></soap:Envelope>";
+	GBytes *bytes;
+	guint status = 0;
+	FolderParse parse = { 0 };
+	GMarkupParser parser = { folder_xml_start, folder_xml_end, folder_xml_text, NULL, NULL };
+	GMarkupParseContext *context;
+	gconstpointer data;
+	gsize size = 0;
+	gchar *found = NULL;
+
+	bytes = gal_http_post (core, "https://outlook.office365.com/EWS/Exchange.asmx", token,
+		"text/xml; charset=utf-8", request, &status, error);
+	if (!bytes)
+		return NULL;
+	if (status < 200 || status >= 300) {
+		gchar *detail = nav_error_detail (bytes);
+
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+			"EWS : recherche du dossier de navigation refusée (HTTP %u) : %s", status, detail);
+		g_free (detail);
+		g_bytes_unref (bytes);
+		return NULL;
+	}
+
+	parse.text = g_string_new (NULL);
+	parse.names = g_string_new (NULL);
+	data = g_bytes_get_data (bytes, &size);
+	context = g_markup_parse_context_new (&parser, 0, &parse, NULL);
+	g_markup_parse_context_parse (context, data ? data : "", size, NULL);
+	g_markup_parse_context_end_parse (context, NULL);
+	g_markup_parse_context_free (context);
+	g_bytes_unref (bytes);
+
+	found = parse.found_id;
+	if (!found)
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+			"EWS : dossier « Common Views » introuvable (dossiers vus : %s).", parse.names->str);
+	g_free (parse.current_id);
+	g_string_free (parse.text, TRUE);
+	g_string_free (parse.names, TRUE);
+
+	return found;
+}
+
 /* Groupes de calendriers d'Outlook (navigation de la boîte aux lettres) lus par EWS :
  * FindItem « Associated » dans le dossier « Common Views », éléments
  * IPM.Microsoft.WunderBar.Link (un par calendrier de personne, de salle ou de groupe).
@@ -1640,10 +1807,10 @@ core_list_nav_calendars_run (EvoCore *core,
 		"<m:Restriction><t:IsEqualTo><t:FieldURI FieldURI=\"item:ItemClass\"/>"
 		"<t:FieldURIOrConstant><t:Constant Value=\"IPM.Microsoft.WunderBar.Link\"/></t:FieldURIOrConstant>"
 		"</t:IsEqualTo></m:Restriction>"
-		"<m:ParentFolderIds><t:DistinguishedFolderId Id=\"commonviews\"/></m:ParentFolderIds>"
+		"<m:ParentFolderIds><t:FolderId Id=\"%s\"/></m:ParentFolderIds>"
 		"</m:FindItem></soap:Body></soap:Envelope>";
 	ESource *source = gal_ref_m365_collection (core, args[0]);
-	gchar *ews_token = NULL, *graph_token = NULL, *json = NULL;
+	gchar *ews_token = NULL, *graph_token = NULL, *json = NULL, *common_views, *find_request;
 	GBytes *bytes;
 	guint status = 0;
 	NavParse parse = { 0 };
@@ -1669,16 +1836,29 @@ core_list_nav_calendars_run (EvoCore *core,
 	}
 	g_object_unref (source);
 
+	common_views = nav_find_common_views (core, ews_token, error);
+	if (!common_views) {
+		e_util_safe_free_string (ews_token);
+		e_util_safe_free_string (graph_token);
+		return NULL;
+	}
+	find_request = g_strdup_printf (request, common_views);
+	g_free (common_views);
+
 	bytes = gal_http_post (core, "https://outlook.office365.com/EWS/Exchange.asmx", ews_token,
-		"text/xml; charset=utf-8", request, &status, error);
+		"text/xml; charset=utf-8", find_request, &status, error);
+	g_free (find_request);
 	e_util_safe_free_string (ews_token);
 	if (!bytes) {
 		e_util_safe_free_string (graph_token);
 		return NULL;
 	}
 	if (status < 200 || status >= 300) {
+		gchar *detail = nav_error_detail (bytes);
+
 		g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-			"EWS a refusé la lecture de la navigation des calendriers (HTTP %u).", status);
+			"EWS a refusé la lecture de la navigation des calendriers (HTTP %u) : %s", status, detail);
+		g_free (detail);
 		g_bytes_unref (bytes);
 		e_util_safe_free_string (graph_token);
 		return NULL;

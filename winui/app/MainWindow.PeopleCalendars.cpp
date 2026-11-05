@@ -384,6 +384,13 @@ namespace winrt::EvolutionWin::implementation
         {
             auto group = group_value.GetObject();
             hstring group_name = group.GetNamedString(L"name", L"");
+            /* noms standard (boîte non francisée) : mêmes libellés que dans Outlook en français */
+            if (group_name == L"My Calendars")
+                group_name = L"Mes calendriers";
+            else if (group_name == L"Other Calendars")
+                group_name = L"Autres calendriers";
+            else if (group_name == L"People's Calendars")
+                group_name = L"Calendriers des contacts";
             bool counted = false;
             for (auto const& calendar_value : group.GetNamedArray(L"calendars", JsonArray{}))
             {
