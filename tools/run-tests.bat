@@ -88,6 +88,10 @@ rem Execution de la suite 4 : Categories unifiees
 "%TEST_BIN_DIR%\test_categories.exe"
 if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
+rem Execution du test d'assemblage du XAML de la fenetre principale
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%EVO_WORKSPACE%\tests\xaml\test_xaml_assembly.ps1"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
 rem Execution du test d'export ABI DLL
 if exist "%BUILD_DIR%\evo-core.dll" (
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%EVO_WORKSPACE%\tests\abi\test_abi_exports.ps1"
