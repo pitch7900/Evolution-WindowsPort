@@ -4,7 +4,11 @@
 #include "Settings.h"
 #include "CategoryStore.h"
 
+#include <winrt/Microsoft.UI.Input.h>
+#include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <algorithm>
+#include <cmath>
+#include <memory>
 #include <vector>
 
 /*
@@ -436,6 +440,95 @@ namespace winrt::EvolutionWin::implementation
             Grid::SetColumn(separator, day + 1);
             body.Children().Append(separator);
 
+            /* sélection d'un créneau à la souris (glisser) ou clic simple (1 h) : crée un événement.
+               Couche ajoutée avant les événements, qui restent cliquables au-dessus. */
+            {
+                Grid slot_layer;
+                slot_layer.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+                Grid::SetColumn(slot_layer, day + 1);
+
+                Border selection;
+                selection.VerticalAlignment(VerticalAlignment::Top);
+                selection.Visibility(Visibility::Collapsed);
+                selection.IsHitTestVisible(false);
+                selection.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));
+                selection.Background(ThemeBrush(L"AccentFillColorSecondaryBrush"));
+                selection.Opacity(0.45);
+                selection.Margin(ThicknessHelper::FromLengths(2, 0, 4, 0));
+                slot_layer.Children().Append(selection);
+
+                struct Drag { bool active{ false }; double y0{ 0 }; };
+                auto drag = std::make_shared<Drag>();
+                int64_t day_start = day_starts[day];
+                double hour_height = HourHeight;
+
+                auto snap = [hour_height](double y, bool up) -> int64_t
+                {
+                    double minutes = (std::max)(0.0, y) / hour_height * 60.0;
+                    int64_t quarters = static_cast<int64_t>(up ? std::ceil(minutes / 15.0) : std::floor(minutes / 15.0));
+                    return (std::min<int64_t>)(quarters, 96) * 900;
+                };
+
+                slot_layer.PointerPressed([drag, slot_layer, selection, snap, hour_height](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+                {
+                    auto point = args.GetCurrentPoint(slot_layer);
+                    if (!point.Properties().IsLeftButtonPressed())
+                        return;
+                    drag->active = true;
+                    drag->y0 = point.Position().Y;
+                    slot_layer.CapturePointer(args.Pointer());
+                    int64_t from_s = snap(drag->y0, false);
+                    selection.Margin(ThicknessHelper::FromLengths(2, from_s * hour_height / 3600, 4, 0));
+                    selection.Height(hour_height / 4);
+                    selection.Visibility(Visibility::Visible);
+                });
+                slot_layer.PointerMoved([drag, slot_layer, selection, snap, hour_height](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+                {
+                    if (!drag->active)
+                        return;
+                    double y1 = args.GetCurrentPoint(slot_layer).Position().Y;
+                    int64_t a = snap((std::min)(drag->y0, y1), false);
+                    int64_t b = snap((std::max)(drag->y0, y1), true);
+                    if (b <= a)
+                        b = a + 900;
+                    selection.Margin(ThicknessHelper::FromLengths(2, a * hour_height / 3600, 4, 0));
+                    selection.Height((b - a) * hour_height / 3600);
+                });
+                slot_layer.PointerReleased([this, drag, slot_layer, selection, snap, day_start](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+                {
+                    if (!drag->active)
+                        return;
+                    drag->active = false;
+                    slot_layer.ReleasePointerCapture(args.Pointer());
+                    selection.Visibility(Visibility::Collapsed);
+
+                    double y1 = args.GetCurrentPoint(slot_layer).Position().Y;
+                    int64_t a, b;
+                    if (std::abs(y1 - drag->y0) < 6.0)
+                    {
+                        /* simple clic : créneau d'une heure à partir de la demi-heure la plus proche */
+                        int64_t half = (snap(drag->y0, false) / 1800) * 1800;
+                        a = half;
+                        b = a + 3600;
+                    }
+                    else
+                    {
+                        a = snap((std::min)(drag->y0, y1), false);
+                        b = snap((std::max)(drag->y0, y1), true);
+                        if (b <= a)
+                            b = a + 900;
+                    }
+                    BeginEventFromSelection(day_start + a, day_start + b);
+                });
+                slot_layer.PointerCanceled([drag, selection](IInspectable const&, Input::PointerRoutedEventArgs const&)
+                {
+                    drag->active = false;
+                    selection.Visibility(Visibility::Collapsed);
+                });
+                ToolTipService::SetToolTip(slot_layer, box_value(L"Cliquer ou glisser pour créer un événement"));
+                body.Children().Append(slot_layer);
+            }
+
             /* chevauchements : groupes d'événements qui se recouvrent, une
                colonne (« couloir ») par événement simultané dans le groupe */
             auto& list = segments[day];
@@ -594,6 +687,13 @@ namespace winrt::EvolutionWin::implementation
                 cell.Background(ThemeBrush(L"SubtleFillColorSecondaryBrush"));
             Grid::SetRow(cell, index / 7 + 1);
             Grid::SetColumn(cell, index % 7);
+            if (cell.Background() == nullptr)
+                cell.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+            cell.Tapped([this, from](IInspectable const&, Input::TappedRoutedEventArgs const&)
+            {
+                /* clic dans une case vide : nouvel événement ce jour-là, à 9 h */
+                BeginEventFromSelection(from + 9 * 3600, from + 10 * 3600);
+            });
 
             StackPanel content;
             content.Spacing(2);

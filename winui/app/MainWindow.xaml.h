@@ -192,7 +192,6 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::CalendarViewSelectedDatesChangedEventArgs const& args);
         void OnRefreshCalendarClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnNewEventClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
-        void OnNewTeamsMeetingClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         /**
          * @brief Gestionnaire pour la création rapide d'un temps de travail individuel (Focus).
          * @param sender Bouton émetteur de l'action.
@@ -718,6 +717,9 @@ namespace winrt::EvolutionWin::implementation
         void ApplyFolderPaneState(hstring const& state);
         void ApplyFolderPaneVisibility(bool visible);
         int64_t m_selected_day_start{ 0 };	/* jour de référence (0 : aujourd'hui) */
+        int64_t m_new_event_start{ 0 };	/* créneau sélectionné dans la grille (nouvel événement), 0 : aucun */
+        int64_t m_new_event_end{ 0 };
+        void BeginEventFromSelection(int64_t start_unix, int64_t end_unix);
         hstring m_calendar_period{ L"week" };	/* "day", "week" ou "month" (calendar.period) */
         bool m_updating_period{ false };
         void SetCalendarPeriod(hstring const& period);

@@ -705,8 +705,6 @@
 
                                 HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
 
-                        <AppBarButton Label="Réunion Teams" Click="OnNewTeamsMeetingClick" ToolTipService.ToolTip="Nouvelle réunion en ligne Microsoft Teams (compte Exchange Online / Microsoft 365)"><AppBarButton.Icon><FontIcon Glyph="&#xE714;" /></AppBarButton.Icon></AppBarButton>
-
                         <AppBarButton Label="Nouvel événement" Click="OnNewEventClick">
 
                             <AppBarButton.Icon><FontIcon Glyph="&#xE710;" /></AppBarButton.Icon>

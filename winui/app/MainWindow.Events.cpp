@@ -651,18 +651,15 @@ namespace winrt::EvolutionWin::implementation
     }
 
     /**
-     * @brief Gestionnaire du bouton « Réunion Teams » : ouvre la fenêtre de nouvel événement avec
-     *        la réunion en ligne Microsoft Teams cochée (calendrier Exchange Online).
+     * @brief Ouvre la fenêtre de nouvel événement sur un créneau sélectionné dans la grille du calendrier.
+     * @param start_unix Début du créneau (secondes Unix).
+     * @param end_unix Fin du créneau (secondes Unix).
      */
-    void MainWindow::OnNewTeamsMeetingClick(IInspectable const&, RoutedEventArgs const&)
+    void MainWindow::BeginEventFromSelection(int64_t start_unix, int64_t end_unix)
     {
-        if (TeamsCalendarUid().empty())
-        {
-            ShowStatus(L"Aucun calendrier Exchange Online / Microsoft 365 : ajoutez un compte Microsoft 365 pour créer une réunion Teams.",
-                InfoBarSeverity::Warning);
-            return;
-        }
-        ShowEventDialogAsync(nullptr, L"", false, true);
+        m_new_event_start = start_unix;
+        m_new_event_end = end_unix;
+        ShowEventDialogAsync(nullptr);
     }
 
     /* Nouvel événement : fenêtre d'événement vide (calendrier actif). */
@@ -802,9 +799,18 @@ namespace winrt::EvolutionWin::implementation
         panel.Children().Append(location_box);
 
         /* début / fin : date et heure */
+        /* créneau sélectionné dans la grille du calendrier : utilisé une seule fois */
+        bool from_selection = !existing && m_new_event_start > 0 && m_new_event_end > m_new_event_start;
         time_t start_t = existing ? static_cast<time_t>(event.GetNamedNumber(L"start", 0))
-            : static_cast<time_t>(m_selected_day_start > 0 ? m_selected_day_start + 9 * 3600 : 0);
-        time_t end_t = existing ? static_cast<time_t>(event.GetNamedNumber(L"end", 0)) : start_t + (is_focus ? 7200 : 3600);
+            : static_cast<time_t>(from_selection ? m_new_event_start
+                : (m_selected_day_start > 0 ? m_selected_day_start + 9 * 3600 : 0));
+        time_t end_t = existing ? static_cast<time_t>(event.GetNamedNumber(L"end", 0))
+            : (from_selection ? static_cast<time_t>(m_new_event_end) : start_t + (is_focus ? 7200 : 3600));
+        if (!existing)
+        {
+            m_new_event_start = 0;
+            m_new_event_end = 0;
+        }
         if (!existing && start_t == 0)
         {
             time_t now = std::time(nullptr);

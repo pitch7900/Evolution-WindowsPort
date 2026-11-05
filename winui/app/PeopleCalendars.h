@@ -125,7 +125,8 @@ namespace EvolutionWin::People
             source.SetNamedValue(L"account_email", JsonValue::CreateStringValue(email));
             source.SetNamedValue(L"color", JsonValue::CreateStringValue(person.GetNamedString(L"color", L"")));
             source.SetNamedValue(L"backend", JsonValue::CreateStringValue(L"person"));
-            source.SetNamedValue(L"group_name", JsonValue::CreateStringValue(L""));
+            /* groupe de calendriers (ex. « Équipe : DUPONT Marie », « Team Infra N2 ») */
+            source.SetNamedValue(L"group_name", JsonValue::CreateStringValue(person.GetNamedString(L"group", L"")));
             source.SetNamedValue(L"default", JsonValue::CreateBooleanValue(false));
             merged.Append(source);
         }

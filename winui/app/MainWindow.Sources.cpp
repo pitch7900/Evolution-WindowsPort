@@ -52,7 +52,8 @@ namespace winrt::EvolutionWin::implementation
         std::vector<hstring> const& visible, hstring const& active,
         std::function<void(hstring const&, bool)> on_toggle, std::function<void(hstring const&)> on_activate,
         std::function<void(StackPanel const&, JsonObject const&)> group_footer = nullptr,
-        wchar_t const* collapse_key = L"sources.collapsed")
+        wchar_t const* collapse_key = L"sources.collapsed",
+        std::function<void(std::vector<hstring> const&, bool)> on_toggle_group = nullptr)
     {
         auto children = panel.Children();
         children.Clear();
@@ -93,6 +94,9 @@ namespace winrt::EvolutionWin::implementation
             ColumnDefinition chevron_col;
             chevron_col.Width(GridLengthHelper::Auto());
             header_row.ColumnDefinitions().Append(chevron_col);
+            ColumnDefinition group_check_col;
+            group_check_col.Width(GridLengthHelper::Auto());
+            header_row.ColumnDefinitions().Append(group_check_col);
             header_row.ColumnDefinitions().Append(ColumnDefinition{});
 
             FontIcon chevron;
@@ -101,11 +105,48 @@ namespace winrt::EvolutionWin::implementation
             chevron.VerticalAlignment(VerticalAlignment::Center);
             header_row.Children().Append(chevron);
 
+            /* case du groupe : coche / décoche tous ses éléments d'un coup (état partiel si mélangé) */
+            std::vector<hstring> group_uids;
+            for (auto const& value : sources)
+            {
+                auto member = value.GetObject();
+                if (group_title(member) == account)
+                    group_uids.push_back(member.GetNamedString(L"uid", L""));
+            }
+            if (on_toggle_group)
+            {
+                size_t shown_count = 0;
+                for (auto const& uid : group_uids)
+                    if (std::find(visible.begin(), visible.end(), uid) != visible.end())
+                        ++shown_count;
+
+                CheckBox group_check;
+                group_check.MinWidth(0);
+                group_check.Padding(ThicknessHelper::FromLengths(0, 0, 0, 0));
+                group_check.VerticalAlignment(VerticalAlignment::Center);
+                if (shown_count == group_uids.size() && !group_uids.empty())
+                    group_check.IsChecked(true);
+                else if (shown_count == 0)
+                    group_check.IsChecked(false);
+                else
+                    group_check.IsChecked(Windows::Foundation::IReference<bool>(nullptr));
+                bool all_shown = shown_count == group_uids.size() && !group_uids.empty();
+                ToolTipService::SetToolTip(group_check, box_value(L"Afficher / masquer tout le groupe"));
+                group_check.Tapped([](IInspectable const&, Input::TappedRoutedEventArgs const& args) { args.Handled(true); });
+                group_check.Click([group_uids, all_shown, on_toggle_group](IInspectable const&, RoutedEventArgs const&)
+                {
+                    on_toggle_group(group_uids, !all_shown);
+                });
+                Grid::SetColumn(group_check, 1);
+                header_row.Children().Append(group_check);
+            }
+
             TextBlock header;
             header.Text(account.empty() ? hstring{ L"Autres" } : account);
             header.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
             header.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
-            Grid::SetColumn(header, 1);
+            header.VerticalAlignment(VerticalAlignment::Center);
+            Grid::SetColumn(header, 2);
             header_row.Children().Append(header);
             ToolTipService::SetToolTip(header_row, box_value(L"Plier / déplier"));
             children.Append(header_row);
@@ -377,7 +418,14 @@ namespace winrt::EvolutionWin::implementation
                 ::EvolutionWin::Settings::Instance().SetString(L"calendar.active", uid);
                 RebuildCalendarSourcesPanel();
             },
-            nullptr, L"calendar.collapsed");
+            nullptr, L"calendar.collapsed",
+            [this](std::vector<hstring> const& uids, bool shown)
+            {
+                for (auto const& uid : uids)
+                    SetUidVisible(m_calendar_sources, L"calendar.visible", uid, shown);
+                RebuildCalendarSourcesPanel();
+                LoadEvents();
+            });
 
         ActiveCalendarText().Text(active_name.empty() ? hstring{}
             : L"Nouveaux événements dans : " + active_name);
@@ -462,7 +510,14 @@ namespace winrt::EvolutionWin::implementation
                 });
                 panel.Children().Append(directory);
             },
-            L"contacts.collapsed");
+            L"contacts.collapsed",
+            [this](std::vector<hstring> const& uids, bool shown)
+            {
+                for (auto const& uid : uids)
+                    SetUidVisible(m_contact_books, L"contacts.visible", uid, shown);
+                RebuildContactBooksPanel();
+                LoadContacts(ContactSearchBox().Text());
+            });
 
         /* le bouton global ne sert que s'il n'y a aucun compte avec annuaire (message explicatif) */
         GalDirectoryButton().Visibility(directory_accounts > 0 ? Visibility::Collapsed : Visibility::Visible);
