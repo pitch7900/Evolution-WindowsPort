@@ -696,6 +696,19 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Remplace les catégories d'un contact (champ vCard CATEGORIES).
+         * Paramètres :
+         *   book_uid        : identifiant du carnet d'adresses
+         *   contact_uid     : identifiant du contact
+         *   categories_json : tableau JSON de noms (["Travail", ...]), [] pour aucune
+         *   handler         : rappel sur le thread de l'interface */
+        void SetContactCategories(winrt::hstring const& book_uid, winrt::hstring const& contact_uid,
+            winrt::hstring const& categories_json, CoreHandler handler)
+        {
+            evo_core_set_contact_categories(m_core, winrt::to_string(book_uid).c_str(), winrt::to_string(contact_uid).c_str(),
+                winrt::to_string(categories_json).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Modifie un contact existant dans un carnet d'adresses.
          * Paramètres :
          *   contact_json : description JSON modifiée du contact

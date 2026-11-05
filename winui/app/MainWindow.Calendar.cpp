@@ -2,6 +2,7 @@
 #include "MainWindow.xaml.h"
 #include "MainWindow.Helpers.h"
 #include "Settings.h"
+#include "CategoryStore.h"
 
 #include <algorithm>
 #include <vector>
@@ -206,6 +207,8 @@ namespace winrt::EvolutionWin::implementation
                 args.Handled(true);
                 OpenCalendarEvent(calendar_uid, uid);
             });
+            AttachCategoryContextMenu(element, ::EvolutionWin::CategoryStore::CategoriesOf(ev),
+                [this, ev](std::vector<std::wstring> const& names) { SetEventCategories(ev, names); });
         };
 
         /* en-têtes des jours (« lun. 26 », aujourd'hui en couleur d'accent) */
@@ -299,8 +302,8 @@ namespace winrt::EvolutionWin::implementation
                 if (IsAllDay(ev))
                 {
                     Border chip;
-                    chip.Background(CalendarBrush(ev.GetNamedString(L"calendar_color", L""), 0x60));
-                    chip.BorderBrush(CalendarBrush(ev.GetNamedString(L"calendar_color", L""), 0xFF));
+                    chip.Background(CalendarBrush(::EvolutionWin::CategoryStore::EventColorHex(ev), 0x60));
+                    chip.BorderBrush(CalendarBrush(::EvolutionWin::CategoryStore::EventColorHex(ev), 0xFF));
                     chip.BorderThickness(ThicknessHelper::FromLengths(3, 0, 0, 0));
                     chip.CornerRadius(CornerRadiusHelper::FromUniformRadius(2));
                     chip.Padding(ThicknessHelper::FromLengths(4, 1, 4, 1));
@@ -475,7 +478,7 @@ namespace winrt::EvolutionWin::implementation
                 {
                     auto const& seg = list[index];
                     auto ev = seg.event;
-                    hstring color = ev.GetNamedString(L"calendar_color", L"");
+                    hstring color = ::EvolutionWin::CategoryStore::EventColorHex(ev);
                     int64_t event_start = static_cast<int64_t>(ev.GetNamedNumber(L"start", 0));
                     int64_t event_end = static_cast<int64_t>(ev.GetNamedNumber(L"end", 0));
 
@@ -629,7 +632,7 @@ namespace winrt::EvolutionWin::implementation
                 }
                 shown++;
 
-                hstring color = ev.GetNamedString(L"calendar_color", L"");
+                hstring color = ::EvolutionWin::CategoryStore::EventColorHex(ev);
                 bool all_day = IsAllDay(ev);
                 Border chip;
                 chip.CornerRadius(CornerRadiusHelper::FromUniformRadius(2));
@@ -667,6 +670,8 @@ namespace winrt::EvolutionWin::implementation
                     args.Handled(true);
                     OpenCalendarEvent(calendar_uid, uid);
                 });
+                AttachCategoryContextMenu(chip, ::EvolutionWin::CategoryStore::CategoriesOf(ev),
+                    [this, ev](std::vector<std::wstring> const& names) { SetEventCategories(ev, names); });
                 content.Children().Append(chip);
             }
 

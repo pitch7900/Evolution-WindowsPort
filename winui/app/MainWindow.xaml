@@ -1244,6 +1244,9 @@
 
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4">
 
+                                <Button x:Name="MailCategoryFilterButton" Click="OnMailCategoryFilterClick" Padding="8,4" ToolTipService.ToolTip="Filtrer par catégorie">
+    <FontIcon Glyph="&#xE8EC;" FontSize="13" />
+</Button>
                                 <ToggleButton x:Name="FlaggedFilterButton" Click="OnQuickFilterToggled"
 
                                               Padding="8,4" ToolTipService.ToolTip="Avec indicateur">
@@ -1918,6 +1921,9 @@
                             <AutoSuggestBox x:Name="CalendarSearchBox" Width="220" PlaceholderText="Filtrer les événements" QueryIcon="Find"
                                             TextChanged="OnCalendarSearchTextChanged" QuerySubmitted="OnCalendarSearchQuerySubmitted" />
 
+                            <Button x:Name="EventCategoryFilterButton" Click="OnEventCategoryFilterClick" Padding="8,4" ToolTipService.ToolTip="Filtrer par catégorie">
+    <FontIcon Glyph="&#xE8EC;" FontSize="13" />
+</Button>
                             <Button Click="OnExportCalendarClick" ToolTipService.ToolTip="Exporter un agenda ou une liste de tâches (.ics)">
 
                                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -2028,7 +2034,10 @@
 
                     </StackPanel>
 
-                    <AutoSuggestBox x:Name="ContactSearchBox" Grid.Row="1" PlaceholderText="Rechercher un contact" QueryIcon="Find"
+                    <Button x:Name="ContactCategoryFilterButton" Grid.Row="1" Click="OnContactCategoryFilterClick" Padding="8,4" HorizontalAlignment="Right" VerticalAlignment="Center" ToolTipService.ToolTip="Filtrer par catégorie">
+                        <FontIcon Glyph="&#xE8EC;" FontSize="13" />
+                    </Button>
+                    <AutoSuggestBox x:Name="ContactSearchBox" Grid.Row="1" PlaceholderText="Rechercher un contact" QueryIcon="Find" Margin="0,0,44,0"
 
                                     TextChanged="OnContactSearchChanged" QuerySubmitted="OnContactSearchSubmitted" />
 
@@ -2196,6 +2205,9 @@
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
 
+                        <Button x:Name="TaskCategoryFilterButton" Click="OnTaskCategoryFilterClick" Padding="8,4" ToolTipService.ToolTip="Filtrer par catégorie">
+    <FontIcon Glyph="&#xE8EC;" FontSize="13" />
+</Button>
                         <ComboBox x:Name="TaskSortChoice" SelectionChanged="OnTaskSortChanged" ToolTipService.ToolTip="Ordre des tâches">
 
                             <x:String>Trier par échéance</x:String>
@@ -2366,6 +2378,12 @@
 
                         </ListViewItem>
 
+                        <ListViewItem Tag="categories">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <FontIcon Glyph="&#xE8EC;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                <TextBlock Text="Catégories" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </ListViewItem>
                         <ListViewItem Tag="notifications">
 
                             <StackPanel Orientation="Horizontal" Spacing="12">
@@ -4075,6 +4093,15 @@
 
                             <!-- ======================================================== -->
 
+                            <!-- CATÉGORIES COMMUNES (codes couleur)                     -->
+                            <!-- ======================================================== -->
+                            <StackPanel x:Name="SettingsCategoryCategories" Visibility="Collapsed" Spacing="16">
+                                <TextBlock Text="Catégories et codes couleur" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                <TextBlock TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Les mêmes catégories et les mêmes couleurs servent pour les courriels, les contacts, les tâches et les événements du calendrier. Les premières portent les raccourcis Ctrl+F2 à Ctrl+F12 (courriels)." />
+                                <StackPanel x:Name="CategoriesEditorHost" Spacing="8" />
+                            </StackPanel>
+
+                            <!-- ======================================================== -->
                             <!-- CATÉGORIE 5 : TÂCHES                                    -->
 
                             <!-- ======================================================== -->

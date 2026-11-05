@@ -3,6 +3,7 @@
 #include "MainWindow.Helpers.h"
 #include "WindowIcon.h"
 #include "Settings.h"
+#include "CategoryStore.h"
 
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
@@ -339,6 +340,8 @@ namespace winrt::EvolutionWin::implementation
                 continue;
             if (!show_completed && task.GetNamedString(L"status", L"") == L"completed")
                 continue;
+            if (!::EvolutionWin::Categories::MatchesCategoryFilter(::EvolutionWin::CategoryStore::CategoriesOf(task), m_task_category_filter))
+                continue;
             if (MatchesTaskFilter(task, filter) && MatchesTaskSearch(task, m_task_search_query))
                 tasks.push_back(task);
         }
@@ -574,18 +577,6 @@ namespace winrt::EvolutionWin::implementation
             state += L" (" + std::to_wstring(percent) + L" %)";
         append(state);
 
-        std::wstring categories;
-        for (auto const& value : task.GetNamedArray(L"categories", JsonArray{}))
-        {
-            if (value.ValueType() != JsonValueType::String)
-                continue;
-            if (!categories.empty())
-                categories += L", ";
-            categories += value.GetString();
-        }
-        if (!categories.empty())
-            append(L"Catégories : " + categories);
-
         if (show_list)
             append(L"Liste : " + std::wstring{ task.GetNamedString(L"list_name", L"") });
 
@@ -595,6 +586,11 @@ namespace winrt::EvolutionWin::implementation
         info_text.Text(line.Children().Size() > 0 ? L"  •  " + info : info);
         line.Children().Append(info_text);
         details.Children().Append(line);
+
+        /* pastilles de couleur des catégories (registre unique) */
+        auto task_categories = ::EvolutionWin::CategoryStore::CategoriesOf(task);
+        if (!task_categories.empty())
+            details.Children().Append(BuildCategoryChips(task_categories));
 
         hstring description = task.GetNamedString(L"description", L"");
         if (!description.empty())
@@ -624,6 +620,15 @@ namespace winrt::EvolutionWin::implementation
             DeleteTaskItem(task);
         });
         row.Children().Append(delete_button);
+
+        /* menu contextuel « Catégoriser » (listes modifiables seulement) */
+        if (!readonly)
+        {
+            AttachCategoryContextMenu(row, task_categories, [this, task](std::vector<std::wstring> const& names)
+            {
+                SetTaskCategories(task, names);
+            });
+        }
 
         return row;
     }

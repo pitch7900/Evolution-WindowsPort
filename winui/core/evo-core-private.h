@@ -105,7 +105,21 @@ typedef struct {
 	gchar *calendar_color;	/* "#rrggbb" (ESourceSelectable) ou NULL */
 	gboolean all_day;
 	gboolean recurring;
+	gchar **categories;	/* noms de catégories (NULL-terminé) */
 } CalEventItem;
+
+/* Catégories iCalendar communes aux événements et aux tâches (evo-core-calendar.c) */
+gchar **
+ical_dup_categories (ICalComponent *icomp);
+void
+builder_add_categories (JsonBuilder *builder,
+			const gchar * const *names);
+void
+ical_add_categories (JsonBuilder *builder,
+		     ICalComponent *icomp);
+void
+ical_apply_categories_json (ICalComponent *icomp,
+			    JsonObject *object);
 
 /* --- exportation vCard / iCalendar --- */
 

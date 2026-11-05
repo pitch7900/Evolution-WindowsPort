@@ -1606,14 +1606,17 @@ namespace winrt::EvolutionWin::implementation
             }
         }
 
-        auto categories = ::EvolutionWin::Helpers::GetDefaultCategories();
+        /* Registre unique des catégories (modifiable dans Paramètres > Catégories) */
+        auto const& categories = ::EvolutionWin::CategoryStore::Registry().Items();
 
+        size_t cat_index = 0;
         for (auto const& cat : categories)
         {
             ToggleMenuFlyoutItem item;
             item.Text(hstring{ cat.name });
-            if (!cat.shortcut.empty())
-                item.KeyboardAcceleratorTextOverride(hstring{ cat.shortcut });
+            std::wstring cat_shortcut = ::EvolutionWin::Categories::CategoryRegistry::ShortcutForIndex(cat_index++);
+            if (!cat_shortcut.empty())
+                item.KeyboardAcceleratorTextOverride(hstring{ cat_shortcut });
 
             FontIcon icon;
             icon.Glyph(L"\xF127");
@@ -1814,7 +1817,7 @@ namespace winrt::EvolutionWin::implementation
         }
         if (!uids.empty())
         {
-            auto cats = ::EvolutionWin::Helpers::GetDefaultCategories();
+            auto const& cats = ::EvolutionWin::CategoryStore::Registry().Items();
             if (!cats.empty())
             {
                 ToggleCategoryForMessages(uids, cats.front().name, true);

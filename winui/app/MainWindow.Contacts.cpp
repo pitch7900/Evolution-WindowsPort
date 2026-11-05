@@ -3,6 +3,7 @@
 #include "MainWindow.Helpers.h"
 #include "WindowIcon.h"
 #include "Settings.h"
+#include "CategoryStore.h"
 
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
@@ -40,6 +41,7 @@ namespace winrt::EvolutionWin::implementation
      *   query : texte de filtrage optionnel sur le nom ou l'adresse e-mail */
     void MainWindow::LoadContacts(hstring const& query)
     {
+        m_contact_query = query;
         /* revenir des fiches de l'annuaire de l'organisation aux carnets */
         SetGalMode(false);
 
@@ -83,39 +85,72 @@ namespace winrt::EvolutionWin::implementation
                 }
             }
 
-            auto items = ContactList().Items();
-            items.Clear();
-            m_selected_contact = nullptr;
-            ContactDetailPane().Visibility(Visibility::Collapsed);
-            ContactPlaceholder().Visibility(Visibility::Visible);
-
-            auto contacts = JsonArray::Parse(json);
-            for (auto const& value : contacts)
-            {
-                auto contact = value.GetObject();
-                hstring full_name = contact.GetNamedString(L"full_name", L"(Sans nom)");
-                hstring email = contact.GetNamedString(L"email", L"");
-
-                StackPanel row;
-                row.Padding(ThicknessHelper::FromLengths(8, 6, 8, 6));
-                row.Tag(box_value(contact.Stringify()));
-
-                TextBlock name_text;
-                name_text.Text(full_name);
-                name_text.Style(Application::Current().Resources().Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>());
-                row.Children().Append(name_text);
-
-                if (!email.empty())
-                {
-                    TextBlock email_text;
-                    email_text.Text(email);
-                    email_text.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
-                    row.Children().Append(email_text);
-                }
-
-                items.Append(row);
-            }
+            JsonArray contacts;
+            if (!JsonArray::TryParse(json, contacts))
+                contacts = JsonArray{};
+            m_all_contacts = contacts;
+            ShowContacts();
         });
+    }
+
+    /* Affiche les contacts chargés (m_all_contacts) : nom, adresse, pastilles
+     * des catégories et menu contextuel « Catégoriser ». */
+    void MainWindow::ShowContacts()
+    {
+        auto items = ContactList().Items();
+        items.Clear();
+        m_selected_contact = nullptr;
+        ContactDetailPane().Visibility(Visibility::Collapsed);
+        ContactPlaceholder().Visibility(Visibility::Visible);
+
+        if (!m_all_contacts)
+            return;
+
+        for (auto const& value : m_all_contacts)
+        {
+            auto contact = value.GetObject();
+            hstring full_name = contact.GetNamedString(L"full_name", L"(Sans nom)");
+            hstring email = contact.GetNamedString(L"email", L"");
+            auto categories = ::EvolutionWin::CategoryStore::CategoriesOf(contact);
+            if (!::EvolutionWin::Categories::MatchesCategoryFilter(categories, m_contact_category_filter))
+                continue;
+
+            StackPanel row;
+            row.Padding(ThicknessHelper::FromLengths(8, 6, 8, 6));
+            row.Tag(box_value(contact.Stringify()));
+
+            TextBlock name_text;
+            name_text.Text(full_name);
+            name_text.Style(Application::Current().Resources().Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>());
+            row.Children().Append(name_text);
+
+            if (!email.empty())
+            {
+                TextBlock email_text;
+                email_text.Text(email);
+                email_text.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+                row.Children().Append(email_text);
+            }
+
+            if (!categories.empty())
+                row.Children().Append(BuildCategoryChips(categories));
+
+            AttachCategoryContextMenu(row, categories, [this, contact](std::vector<std::wstring> const& names)
+            {
+                SetContactCategories(contact, names);
+            });
+
+            items.Append(row);
+        }
+
+        if (items.Size() == 0 && m_all_contacts.Size() > 0)
+        {
+            TextBlock none;
+            none.Text(L"Aucun contact ne correspond au filtre par catégorie.");
+            none.TextWrapping(TextWrapping::Wrap);
+            none.Padding(ThicknessHelper::FromLengths(8, 8, 8, 8));
+            items.Append(none);
+        }
     }
 
     /* Gestionnaire de modification du champ de recherche de contacts. */

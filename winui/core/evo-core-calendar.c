@@ -5,6 +5,112 @@
 
 #include "evo-core-private.h"
 
+/* --- catégories communes (CATEGORIES iCalendar / vCard) --- */
+
+/* Catégories d'un composant iCalendar (propriétés CATEGORIES, chacune
+ * pouvant contenir plusieurs valeurs séparées par des virgules).
+ * Paramètres :
+ *   icomp : composant VEVENT / VTODO
+ * Retourne : tableau de chaînes terminé par NULL (g_strfreev), jamais NULL. */
+gchar **
+ical_dup_categories (ICalComponent *icomp)
+{
+	GPtrArray *names = g_ptr_array_new ();
+	ICalProperty *prop;
+
+	for (prop = i_cal_component_get_first_property (icomp, I_CAL_CATEGORIES_PROPERTY);
+	     prop;
+	     g_object_unref (prop), prop = i_cal_component_get_next_property (icomp, I_CAL_CATEGORIES_PROPERTY)) {
+		const gchar *value = i_cal_property_get_categories (prop);
+		gchar **parts;
+		guint ii;
+
+		if (!value)
+			continue;
+
+		parts = g_strsplit (value, ",", -1);
+		for (ii = 0; parts[ii]; ii++) {
+			g_strstrip (parts[ii]);
+			if (*parts[ii])
+				g_ptr_array_add (names, g_strdup (parts[ii]));
+		}
+		g_strfreev (parts);
+	}
+
+	g_ptr_array_add (names, NULL);
+
+	return (gchar **) g_ptr_array_free (names, FALSE);
+}
+
+/* Ajoute au JSON le membre "categories" (tableau de chaînes).
+ * Paramètres :
+ *   builder : constructeur JSON, dans un objet
+ *   names   : noms de catégories (terminé par NULL), NULL pour un tableau vide */
+void
+builder_add_categories (JsonBuilder *builder,
+			const gchar * const *names)
+{
+	guint ii;
+
+	json_builder_set_member_name (builder, "categories");
+	json_builder_begin_array (builder);
+	for (ii = 0; names && names[ii]; ii++)
+		json_builder_add_string_value (builder, names[ii]);
+	json_builder_end_array (builder);
+}
+
+/* Ajoute au JSON les catégories d'un composant iCalendar.
+ * Paramètres :
+ *   builder : constructeur JSON, dans un objet
+ *   icomp   : composant VEVENT / VTODO */
+void
+ical_add_categories (JsonBuilder *builder,
+		     ICalComponent *icomp)
+{
+	gchar **names = ical_dup_categories (icomp);
+
+	builder_add_categories (builder, (const gchar * const *) names);
+	g_strfreev (names);
+}
+
+/* Remplace les catégories d'un composant iCalendar si l'objet JSON contient
+ * le membre "categories" (tableau de chaînes) ; sinon ne touche à rien.
+ * Une propriété CATEGORIES est écrite par catégorie ; les noms vides ou
+ * contenant une virgule sont ignorés.
+ * Paramètres :
+ *   icomp  : composant VEVENT / VTODO à modifier
+ *   object : objet JSON décrivant la modification */
+void
+ical_apply_categories_json (ICalComponent *icomp,
+			    JsonObject *object)
+{
+	JsonNode *node;
+
+	if (!json_object_has_member (object, "categories"))
+		return;
+
+	node = json_object_get_member (object, "categories");
+	e_cal_util_component_remove_property_by_kind (icomp, I_CAL_CATEGORIES_PROPERTY, TRUE);
+
+	if (node && JSON_NODE_HOLDS_ARRAY (node)) {
+		JsonArray *array = json_node_get_array (node);
+		guint ii;
+
+		for (ii = 0; ii < json_array_get_length (array); ii++) {
+			const gchar *category = json_array_get_string_element (array, ii);
+			gchar *clean;
+
+			if (!category)
+				continue;
+
+			clean = g_strstrip (g_strdup (category));
+			if (*clean && !strchr (clean, ','))
+				i_cal_component_take_property (icomp, i_cal_property_new_categories (clean));
+			g_free (clean);
+		}
+	}
+}
+
 /* Ouvre l'agenda calendar_uid (connexion EDS). */
 static EClient *
 core_connect_calendar (EvoCore *core,
@@ -129,6 +235,8 @@ core_get_event_run (EvoCore *core,
 
 	json_builder_set_member_name (builder, "readonly");
 	json_builder_add_boolean_value (builder, e_client_is_readonly (client));
+
+	ical_add_categories (builder, icomp);
 
 	prop = i_cal_component_get_first_property (icomp, I_CAL_ORGANIZER_PROPERTY);
 	json_builder_set_member_name (builder, "organizer");
@@ -385,16 +493,24 @@ core_modify_event_run (EvoCore *core,
 	location = json_object_get_string_member_with_default (object, "location", "");
 	description = json_object_get_string_member_with_default (object, "description", "");
 
-	i_cal_component_set_summary (icomp, *summary ? summary : "(Sans titre)");
-	i_cal_component_set_location (icomp, location);
+	/* modification partielle : seuls les champs présents dans le JSON sont
+	 * touchés (ex. {"calendar_uid", "uid", "categories"} ne change que les
+	 * catégories) */
+	if (json_object_has_member (object, "summary"))
+		i_cal_component_set_summary (icomp, *summary ? summary : "(Sans titre)");
+	if (json_object_has_member (object, "location"))
+		i_cal_component_set_location (icomp, location);
 
-	while ((prop = i_cal_component_get_first_property (icomp, I_CAL_DESCRIPTION_PROPERTY)) != NULL) {
-		i_cal_component_remove_property (icomp, prop);
-		g_object_unref (prop);
+	if (json_object_has_member (object, "description")) {
+		while ((prop = i_cal_component_get_first_property (icomp, I_CAL_DESCRIPTION_PROPERTY)) != NULL) {
+			i_cal_component_remove_property (icomp, prop);
+			g_object_unref (prop);
+		}
+		if (*description)
+			i_cal_component_take_property (icomp, i_cal_property_new_description (description));
 	}
-	if (*description)
-		i_cal_component_take_property (icomp, i_cal_property_new_description (description));
 
+	ical_apply_categories_json (icomp, object);
 	event_apply_times_and_attendees (E_CAL_CLIENT (client), icomp, object);
 
 	if (json_object_has_member (object, "reminder_minutes"))
@@ -430,6 +546,7 @@ cal_event_item_free (gpointer data)
 	g_free (item->calendar_uid);
 	g_free (item->calendar_name);
 	g_free (item->calendar_color);
+	g_strfreev (item->categories);
 	g_free (item);
 }
 
@@ -489,6 +606,8 @@ cal_event_item_new (ICalComponent *icomp,
 	item->recurring = prop != NULL || e_cal_util_component_has_recurrences (icomp) ||
 		e_cal_util_component_is_instance (icomp);
 	g_clear_object (&prop);
+
+	item->categories = ical_dup_categories (icomp);
 
 	item->all_day = start && i_cal_time_is_date (start);
 	item->start = cal_time_to_unix (start);
@@ -639,6 +758,7 @@ core_list_events_run (EvoCore *core,
 		json_builder_add_boolean_value (builder, item->all_day);
 		json_builder_set_member_name (builder, "recurring");
 		json_builder_add_boolean_value (builder, item->recurring);
+		builder_add_categories (builder, (const gchar * const *) item->categories);
 		json_builder_end_object (builder);
 	}
 
@@ -724,6 +844,7 @@ core_create_event_run (EvoCore *core,
 		i_cal_component_take_property (icomp, prop);
 	}
 
+	ical_apply_categories_json (icomp, object);
 	event_apply_times_and_attendees (E_CAL_CLIENT (client), icomp, object);
 
 	if (json_object_has_member (object, "reminder_minutes"))

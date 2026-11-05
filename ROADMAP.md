@@ -72,8 +72,8 @@ flowchart LR
 - [ ] **Gestion des autorisations déléguées** : consultation et révocation des droits accordés depuis l\'interface d\'EvolutionWin.
 
 ### 2. Catégorisation transverse (§17)
-- [ ] **Système de catégories unifiées** : palette de codes couleur et libellés partagés entre e-mails, contacts, tâches et événements de calendrier (`#demo-categories`).
-- [ ] **Filtres par catégorie** : filtrage rapide dans les listes selon les catégories attribuées.
+- [x] **Système de catégories unifiées** : palette de codes couleur et libellés partagés entre e-mails, contacts, tâches et événements de calendrier (`#demo-categories`).
+- [x] **Filtres par catégorie** : filtrage rapide dans les listes selon les catégories attribuées.
 
 ### 3. Vues unifiées multi-comptes (§11)
 - [x] **Boîte de réception unifiée** : vue agrégée virtuelle (`CamelVeeFolder`) regroupant les messages reçus de l\'ensemble des comptes.

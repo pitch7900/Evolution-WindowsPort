@@ -5,6 +5,7 @@
 #include "ComposeWindow.xaml.h"
 #include "MessageWindow.xaml.h"
 #include "SplashWindow.xaml.h"
+#include "Categories.h"
 
 #include <map>
 #include <set>
@@ -97,6 +98,10 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::SelectorBar const& sender,
             Microsoft::UI::Xaml::Controls::SelectorBarSelectionChangedEventArgs const& args);
         void OnQuickFilterToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnMailCategoryFilterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnTaskCategoryFilterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnContactCategoryFilterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnEventCategoryFilterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnSaveMessageClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnOpenInBrowserClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnViewRawMimeClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -451,6 +456,28 @@ namespace winrt::EvolutionWin::implementation
             std::vector<hstring> const& uids);
         void ToggleCategoryForMessages(std::vector<hstring> const& uids, std::wstring const& category_name, bool apply);
         void ClearCategoriesForMessages(std::vector<hstring> const& uids);
+
+        /* Catégories unifiées (MainWindow.Categories.cpp) */
+        void RefreshCategoriesView();
+        void OnCategoriesRegistryChanged();
+        void PopulateItemCategoryMenu(
+            Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items,
+            std::vector<std::wstring> const& current,
+            std::function<void(std::vector<std::wstring> const&)> apply);
+        void AttachCategoryContextMenu(
+            Microsoft::UI::Xaml::UIElement const& element,
+            std::vector<std::wstring> const& current,
+            std::function<void(std::vector<std::wstring> const&)> apply);
+        Microsoft::UI::Xaml::UIElement BuildCategoryChips(std::vector<std::wstring> const& names);
+        void SetTaskCategories(Windows::Data::Json::JsonObject const& task, std::vector<std::wstring> const& names);
+        void SetEventCategories(Windows::Data::Json::JsonObject const& event, std::vector<std::wstring> const& names);
+        void SetContactCategories(Windows::Data::Json::JsonObject const& contact, std::vector<std::wstring> const& names);
+        void ShowContacts();
+        void ShowCategoryFilterMenu(
+            Microsoft::UI::Xaml::FrameworkElement const& anchor,
+            ::EvolutionWin::Categories::CategoryFilter& filter,
+            std::function<void()> changed);
+        void UpdateCategoryFilterButtons();
         void RememberRecentFolder(hstring const& account, hstring const& folder);
         void RemoveMessageFromList(hstring const& uid);
         void ClearReader();
@@ -718,6 +745,12 @@ namespace winrt::EvolutionWin::implementation
         Windows::Data::Json::JsonArray m_all_tasks{ nullptr };
         hstring m_task_list_uid;
         hstring m_task_search_query;
+        Windows::Data::Json::JsonArray m_all_contacts{ nullptr };
+        hstring m_contact_query;
+        ::EvolutionWin::Categories::CategoryFilter m_mail_category_filter;
+        ::EvolutionWin::Categories::CategoryFilter m_task_category_filter;
+        ::EvolutionWin::Categories::CategoryFilter m_contact_category_filter;
+        ::EvolutionWin::Categories::CategoryFilter m_event_category_filter;
         /* préférences de la vue relues ; contrôles mis à jour par le code */
         bool m_task_view_restored{ false };
         bool m_updating_task_view{ false };

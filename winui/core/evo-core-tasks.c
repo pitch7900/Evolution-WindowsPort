@@ -152,42 +152,6 @@ task_status_name (ICalComponent *icomp)
 	return name;
 }
 
-/* Ajoute au JSON les catégories d'une tâche (propriétés CATEGORIES, chacune
- * pouvant contenir plusieurs valeurs séparées par des virgules).
- * Paramètres :
- *   builder : constructeur JSON, dans un objet
- *   icomp   : composant VTODO */
-static void
-task_add_categories (JsonBuilder *builder,
-		     ICalComponent *icomp)
-{
-	ICalProperty *prop;
-
-	json_builder_set_member_name (builder, "categories");
-	json_builder_begin_array (builder);
-
-	for (prop = i_cal_component_get_first_property (icomp, I_CAL_CATEGORIES_PROPERTY);
-	     prop;
-	     g_object_unref (prop), prop = i_cal_component_get_next_property (icomp, I_CAL_CATEGORIES_PROPERTY)) {
-		const gchar *value = i_cal_property_get_categories (prop);
-		gchar **parts;
-		guint ii;
-
-		if (!value)
-			continue;
-
-		parts = g_strsplit (value, ",", -1);
-		for (ii = 0; parts[ii]; ii++) {
-			g_strstrip (parts[ii]);
-			if (*parts[ii])
-				json_builder_add_string_value (builder, parts[ii]);
-		}
-		g_strfreev (parts);
-	}
-
-	json_builder_end_array (builder);
-}
-
 typedef struct {
 	gint64 due;
 	gint priority;
@@ -310,7 +274,7 @@ task_item_new (EvoCore *core,
 	builder_add_string (builder, "status", task_status_name (icomp));
 	json_builder_set_member_name (builder, "percent");
 	json_builder_add_int_value (builder, percent);
-	task_add_categories (builder, icomp);
+	ical_add_categories (builder, icomp);
 	builder_add_string (builder, "list_uid", e_source_get_uid (source));
 	builder_add_string (builder, "list_name", e_source_get_display_name (source));
 	builder_add_string (builder, "account_name", account_name ? account_name : "");
@@ -489,29 +453,7 @@ task_apply_json (ICalComponent *icomp,
 			i_cal_component_take_property (icomp, i_cal_property_new_priority (priority));
 	}
 
-	if (json_object_has_member (object, "categories")) {
-		JsonNode *node = json_object_get_member (object, "categories");
-
-		e_cal_util_component_remove_property_by_kind (icomp, I_CAL_CATEGORIES_PROPERTY, TRUE);
-		if (node && JSON_NODE_HOLDS_ARRAY (node)) {
-			JsonArray *array = json_node_get_array (node);
-			guint ii;
-
-			/* une propriété CATEGORIES par catégorie */
-			for (ii = 0; ii < json_array_get_length (array); ii++) {
-				const gchar *category = json_array_get_string_element (array, ii);
-				gchar *clean;
-
-				if (!category)
-					continue;
-
-				clean = g_strstrip (g_strdup (category));
-				if (*clean && !strchr (clean, ','))
-					i_cal_component_take_property (icomp, i_cal_property_new_categories (clean));
-				g_free (clean);
-			}
-		}
-	}
+	ical_apply_categories_json (icomp, object);
 
 	if (json_object_has_member (object, "percent"))
 		percent = CLAMP (json_object_get_int_member_with_default (object, "percent", 0), 0, 100);

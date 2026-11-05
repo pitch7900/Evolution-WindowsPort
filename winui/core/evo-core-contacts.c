@@ -16,7 +16,69 @@ typedef struct {
 	gchar *notes;
 	gchar *book_uid;
 	gchar *book_name;
+	gchar **categories;	/* noms de catégories (NULL-terminé) */
 } ContactItem;
+
+/* Catégories d'un contact (champ vCard CATEGORIES : valeurs séparées par des
+ * virgules).
+ * Paramètres :
+ *   contact : contact evolution-data-server
+ * Retourne : tableau de chaînes terminé par NULL (g_strfreev), jamais NULL. */
+static gchar **
+contact_dup_categories (EContact *contact)
+{
+	const gchar *value = e_contact_get_const (contact, E_CONTACT_CATEGORIES);
+	GPtrArray *names = g_ptr_array_new ();
+
+	if (value && *value) {
+		gchar **parts = g_strsplit (value, ",", -1);
+		guint ii;
+
+		for (ii = 0; parts[ii]; ii++) {
+			g_strstrip (parts[ii]);
+			if (*parts[ii])
+				g_ptr_array_add (names, g_strdup (parts[ii]));
+		}
+		g_strfreev (parts);
+	}
+
+	g_ptr_array_add (names, NULL);
+
+	return (gchar **) g_ptr_array_free (names, FALSE);
+}
+
+/* Remplace les catégories d'un contact par le contenu d'un tableau JSON de
+ * chaînes (noms vides ou contenant une virgule ignorés ; tableau vide : plus
+ * aucune catégorie).
+ * Paramètres :
+ *   contact : contact à modifier
+ *   array   : tableau JSON de noms de catégories */
+static void
+contact_apply_categories (EContact *contact,
+			  JsonArray *array)
+{
+	GString *joined = g_string_new ("");
+	guint ii;
+
+	for (ii = 0; array && ii < json_array_get_length (array); ii++) {
+		const gchar *category = json_array_get_string_element (array, ii);
+		gchar *clean;
+
+		if (!category)
+			continue;
+
+		clean = g_strstrip (g_strdup (category));
+		if (*clean && !strchr (clean, ',')) {
+			if (joined->len > 0)
+				g_string_append_c (joined, ',');
+			g_string_append (joined, clean);
+		}
+		g_free (clean);
+	}
+
+	e_contact_set (contact, E_CONTACT_CATEGORIES, joined->len > 0 ? joined->str : NULL);
+	g_string_free (joined, TRUE);
+}
 
 /* Libère un élément de contact temporaire.
  * Paramètres :
@@ -37,6 +99,7 @@ contact_item_free (gpointer data)
 	g_free (item->notes);
 	g_free (item->book_uid);
 	g_free (item->book_name);
+	g_strfreev (item->categories);
 	g_free (item);
 }
 
@@ -141,6 +204,7 @@ core_list_contacts_run (EvoCore *core,
 				item->notes = g_strdup (notes ? notes : "");
 				item->book_uid = g_strdup (e_source_get_uid (source));
 				item->book_name = g_strdup (e_source_get_display_name (source));
+				item->categories = contact_dup_categories (contact);
 
 				g_ptr_array_add (items, item);
 			}
@@ -171,6 +235,7 @@ core_list_contacts_run (EvoCore *core,
 		builder_add_string (builder, "notes", item->notes);
 		builder_add_string (builder, "book_uid", item->book_uid);
 		builder_add_string (builder, "book_name", item->book_name);
+		builder_add_categories (builder, (const gchar * const *) item->categories);
 		json_builder_end_object (builder);
 	}
 
@@ -252,6 +317,8 @@ core_create_contact_run (EvoCore *core,
 		e_contact_set (contact, E_CONTACT_ORG, org);
 	if (notes && *notes)
 		e_contact_set (contact, E_CONTACT_NOTE, notes);
+	if (json_object_has_member (object, "categories") && JSON_NODE_HOLDS_ARRAY (json_object_get_member (object, "categories")))
+		contact_apply_categories (contact, json_object_get_array_member (object, "categories"));
 
 	if (!e_book_client_add_contact_sync (E_BOOK_CLIENT (client), contact, E_BOOK_OPERATION_FLAG_NONE,
 		&created_uid, core->cancellable, error))
@@ -389,6 +456,65 @@ exit:
 	json_node_unref (root);
 
 	return ok ? g_strdup ("{}") : NULL;
+}
+
+/* Remplace les catégories d'un contact existant.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = book_uid, [1] = contact_uid, [2] = tableau JSON de noms
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : "{}" en cas de succès, NULL sinon. */
+static gchar *
+core_set_contact_categories_run (EvoCore *core,
+				 gchar **args,
+				 GError **error)
+{
+	JsonNode *root;
+	ESource *source = NULL;
+	EClient *client;
+	EContact *contact = NULL;
+	gchar *json = NULL;
+
+	root = json_from_string (args[2], error);
+	if (!root)
+		return NULL;
+
+	if (!JSON_NODE_HOLDS_ARRAY (root)) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Liste de catégories invalide");
+		json_node_unref (root);
+		return NULL;
+	}
+
+	if (args[0] && *args[0])
+		source = e_source_registry_ref_source (core->registry, args[0]);
+	if (!source)
+		source = e_source_registry_ref_default_address_book (core->registry);
+
+	if (!source) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "Carnet d'adresses introuvable");
+		json_node_unref (root);
+		return NULL;
+	}
+
+	client = e_book_client_connect_sync (source, 5, core->cancellable, error);
+	g_object_unref (source);
+	if (!client) {
+		json_node_unref (root);
+		return NULL;
+	}
+
+	if (e_book_client_get_contact_sync (E_BOOK_CLIENT (client), args[1], &contact, core->cancellable, error)) {
+		contact_apply_categories (contact, json_node_get_array (root));
+		if (e_book_client_modify_contact_sync (E_BOOK_CLIENT (client), contact, E_BOOK_OPERATION_FLAG_NONE,
+			core->cancellable, error))
+			json = g_strdup ("{}");
+	}
+
+	g_clear_object (&contact);
+	g_object_unref (client);
+	json_node_unref (root);
+
+	return json;
 }
 
 /* --- autocomplétion des destinataires --- */
@@ -631,6 +757,30 @@ evo_core_create_contact (EvoCore *core,
 	g_return_if_fail (contact_json != NULL);
 
 	core_submit (core, core_create_contact_run, g_strdupv (args), func, user_data);
+}
+
+/* Soumet une requête de remplacement des catégories d'un contact.
+ * Paramètres :
+ *   core            : instance du moteur evo-core
+ *   book_uid        : identifiant du carnet d'adresses
+ *   contact_uid     : identifiant du contact
+ *   categories_json : tableau JSON de noms de catégories (["Travail", ...])
+ *   func            : rappel recevant {}
+ *   user_data       : données utilisateur transmises au rappel */
+void
+evo_core_set_contact_categories (EvoCore *core,
+				 const char *book_uid,
+				 const char *contact_uid,
+				 const char *categories_json,
+				 EvoCoreResultFunc func,
+				 void *user_data)
+{
+	gchar *args[] = { (gchar *) (book_uid ? book_uid : ""), (gchar *) contact_uid, (gchar *) categories_json, NULL };
+
+	g_return_if_fail (contact_uid != NULL);
+	g_return_if_fail (categories_json != NULL);
+
+	core_submit (core, core_set_contact_categories_run, g_strdupv (args), func, user_data);
 }
 
 /* Soumet une requête de suppression d'un contact.

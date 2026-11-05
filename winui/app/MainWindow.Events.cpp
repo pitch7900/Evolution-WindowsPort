@@ -3,6 +3,7 @@
 #include "MainWindow.Helpers.h"
 #include "WindowIcon.h"
 #include "Settings.h"
+#include "CategoryStore.h"
 
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
@@ -360,7 +361,8 @@ namespace winrt::EvolutionWin::implementation
             hstring summary = ev.GetNamedString(L"summary", L"");
             hstring location = ev.GetNamedString(L"location", L"");
             hstring description = ev.GetNamedString(L"description", L"");
-            if (MatchCalendarEvent(summary, location, description, query))
+            if (::EvolutionWin::Categories::MatchesCategoryFilter(::EvolutionWin::CategoryStore::CategoriesOf(ev), m_event_category_filter) &&
+                MatchCalendarEvent(summary, location, description, query))
             {
                 filtered_events.Append(value);
             }
@@ -403,11 +405,12 @@ namespace winrt::EvolutionWin::implementation
             del_col.Width(GridLengthHelper::Auto());
             row.ColumnDefinitions().Append(del_col);
 
-            /* couleur du calendrier (EDS), sinon couleur d'accent */
+            /* couleur de la première catégorie, sinon couleur du calendrier (EDS), sinon couleur d'accent */
             Border color_bar;
             color_bar.Width(4);
             color_bar.CornerRadius(CornerRadiusHelper::FromUniformRadius(2));
-            std::wstring color{ ev.GetNamedString(L"calendar_color", L"") };
+            auto event_categories = ::EvolutionWin::CategoryStore::CategoriesOf(ev);
+            std::wstring color{ ::EvolutionWin::CategoryStore::EventColorHex(ev) };
             if (color.size() == 7 && color[0] == L'#')
             {
                 auto channel = [&](size_t at) { return static_cast<uint8_t>(std::wcstoul(color.substr(at, 2).c_str(), nullptr, 16)); };
@@ -445,8 +448,16 @@ namespace winrt::EvolutionWin::implementation
                 details.Children().Append(desc);
             }
 
+            if (!event_categories.empty())
+                details.Children().Append(BuildCategoryChips(event_categories));
+
             Grid::SetColumn(details, 1);
             row.Children().Append(details);
+
+            AttachCategoryContextMenu(row, event_categories, [this, ev](std::vector<std::wstring> const& names)
+            {
+                SetEventCategories(ev, names);
+            });
 
             Button del_btn;
             FontIcon del_icon;

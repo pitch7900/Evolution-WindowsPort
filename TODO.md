@@ -815,15 +815,15 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 ## 17. Catégories et codes couleur — 🟡
 
 - [ ] 🟡 **Catégories communes et classements personnalisés** : nom + code couleur (palette de couleurs configurables par l'utilisateur), gérées dans les Réglages (créer, renommer, choisir la couleur, supprimer) <a id="demo-categories"></a>
-  - [ ] Stockage : étiquettes Camel pour les mails, propriété `CATEGORIES` pour les contacts (vCard), les événements et les tâches (iCalendar)
+  - [x] Stockage : étiquettes Camel pour les mails, propriété `CATEGORIES` pour les contacts (vCard), les événements et les tâches (iCalendar)
   - [ ] 🟠 **Réutilisation et synchronisation avec Exchange Online / Microsoft 365** : synchronisation bidirectionnelle avec la liste principale des catégories (*Master Category List* via Graph `/me/outlook/masterCategories` ou EWS `GetUserSettings`) ; si des catégories préexistantes sont présentes sur le compte O365, elles sont automatiquement récupérées et réutilisées avec leurs intitulés et codes couleur d'origine.
-  - [ ] Possibilité pour chaque utilisateur de créer des classements personnalisés supplémentaires et d'adapter les catégories selon ses besoins.
+  - [x] Possibilité pour chaque utilisateur de créer des classements personnalisés supplémentaires et d'adapter les catégories selon ses besoins.
 - [x] 🟡 **Catégoriser** un élément (plusieurs catégories possibles) : menu contextuel, bouton _Catégoriser_ / _Classer_ du ruban (courriels et événements d'agenda), catégories récentes ; raccourci vers une catégorie (Ctrl+F2…F12)
 - [ ] **Affichage des codes couleur sur les courriels et les événements de l'agenda** :
   - [x] 🟡 **Mails** : pastilles et badges de couleur dans la liste des messages (`MainWindow.MessageList`) et dans l'en-tête du volet / de la fenêtre de lecture (`MessageWindow`)
-  - [ ] 🟡 **Événements de l'agenda** : affichage de la couleur de la catégorie dans la grille du calendrier (Jour / Semaine / Mois : bande latérale ou bloc d'événement coloré) et dans la vue Liste
+  - [x] 🟡 **Événements de l'agenda** : affichage de la couleur de la catégorie dans la grille du calendrier (Jour / Semaine / Mois : bande latérale ou bloc d'événement coloré) et dans la vue Liste
   - [ ] 🟡 **Contacts** : pastilles dans la liste et sur la fiche
-  - [ ] 🟡 **Tâches** : pastilles dans la liste des tâches
+  - [x] 🟡 **Tâches** : pastilles dans la liste des tâches
 - [ ] 🟠 **Mise en forme conditionnelle** : couleur automatique selon des règles (expéditeur, domaine, mots de l'objet, importance, organisateur…), pour la liste des messages (§5) comme pour le calendrier (§12)
 - [x] 🟢 **Filtrer / trier / regrouper par catégorie** dans toutes les vues ; recherche par catégorie (§10)
 
