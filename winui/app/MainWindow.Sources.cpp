@@ -51,7 +51,8 @@ namespace winrt::EvolutionWin::implementation
     static hstring BuildSourcesPanel(StackPanel const& panel, JsonArray const& sources,
         std::vector<hstring> const& visible, hstring const& active,
         std::function<void(hstring const&, bool)> on_toggle, std::function<void(hstring const&)> on_activate,
-        std::function<void(StackPanel const&, JsonObject const&)> group_footer = nullptr)
+        std::function<void(StackPanel const&, JsonObject const&)> group_footer = nullptr,
+        wchar_t const* collapse_key = L"sources.collapsed")
     {
         auto children = panel.Children();
         children.Clear();
@@ -73,14 +74,63 @@ namespace winrt::EvolutionWin::implementation
                 accounts.push_back(account);
         }
 
+        /* groupes repliés (mémorisés par titre de groupe) */
+        auto& collapse_settings = ::EvolutionWin::Settings::Instance();
+        auto collapsed_titles = std::make_shared<std::vector<hstring>>();
+        for (auto const& entry : collapse_settings.GetArray(collapse_key))
+            if (entry.ValueType() == JsonValueType::String)
+                collapsed_titles->push_back(entry.GetString());
+
         for (auto const& account : accounts)
         {
+            bool collapsed = std::find(collapsed_titles->begin(), collapsed_titles->end(), account) != collapsed_titles->end();
+
+            /* en-tête cliquable : chevron + titre du groupe, plie / déplie la liste */
+            Grid header_row;
+            header_row.ColumnSpacing(6);
+            header_row.Margin(ThicknessHelper::FromLengths(4, 8, 0, 2));
+            header_row.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+            ColumnDefinition chevron_col;
+            chevron_col.Width(GridLengthHelper::Auto());
+            header_row.ColumnDefinitions().Append(chevron_col);
+            header_row.ColumnDefinitions().Append(ColumnDefinition{});
+
+            FontIcon chevron;
+            chevron.Glyph(collapsed ? L"\uE76C" : L"\uE70D");
+            chevron.FontSize(10);
+            chevron.VerticalAlignment(VerticalAlignment::Center);
+            header_row.Children().Append(chevron);
+
             TextBlock header;
             header.Text(account.empty() ? hstring{ L"Autres" } : account);
             header.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
             header.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
-            header.Margin(ThicknessHelper::FromLengths(4, 8, 0, 2));
-            children.Append(header);
+            Grid::SetColumn(header, 1);
+            header_row.Children().Append(header);
+            ToolTipService::SetToolTip(header_row, box_value(L"Plier / déplier"));
+            children.Append(header_row);
+
+            StackPanel group_items;
+            group_items.Visibility(collapsed ? Visibility::Collapsed : Visibility::Visible);
+            children.Append(group_items);
+
+            header_row.Tapped([group_items, chevron, account, collapsed_titles, collapse_key](IInspectable const&, Input::TappedRoutedEventArgs const&)
+            {
+                bool now_collapsed = group_items.Visibility() == Visibility::Visible;
+                group_items.Visibility(now_collapsed ? Visibility::Collapsed : Visibility::Visible);
+                chevron.Glyph(now_collapsed ? L"\uE76C" : L"\uE70D");
+
+                auto it = std::find(collapsed_titles->begin(), collapsed_titles->end(), account);
+                if (now_collapsed && it == collapsed_titles->end())
+                    collapsed_titles->push_back(account);
+                else if (!now_collapsed && it != collapsed_titles->end())
+                    collapsed_titles->erase(it);
+
+                JsonArray stored;
+                for (auto const& title : *collapsed_titles)
+                    stored.Append(JsonValue::CreateStringValue(title));
+                ::EvolutionWin::Settings::Instance().Set(collapse_key, stored);
+            });
 
             for (auto const& value : sources)
             {
@@ -150,7 +200,7 @@ namespace winrt::EvolutionWin::implementation
                 Grid::SetColumn(label, 1);
                 row.Children().Append(label);
 
-                children.Append(row);
+                group_items.Children().Append(row);
             }
 
             /* pied de groupe (ex. « Annuaire de l'organisation » du compte) */
@@ -161,7 +211,7 @@ namespace winrt::EvolutionWin::implementation
                     auto source = value.GetObject();
                     if (group_title(source) == account && source.GetNamedString(L"group_name", L"").empty())
                     {
-                        group_footer(panel, source);
+                        group_footer(group_items, source);
                         break;
                     }
                 }
@@ -216,6 +266,50 @@ namespace winrt::EvolutionWin::implementation
 
     /* Liste des calendriers (comptes, couleurs, calendrier par défaut), puis
      * événements des calendriers affichés. */
+    /* Rend visibles les calendriers Exchange Online (et Exchange) encore jamais vus : ceux que
+     * l'utilisateur a déjà ajoutés à son compte (calendriers partagés, de personnes, d'équipes)
+     * apparaissent d'eux-mêmes ; un calendrier décoché ensuite le reste (il est alors « connu »).
+     * Paramètres :
+     *   sources : calendriers renvoyés par evo_core_list_sources () */
+    static void AutoShowExchangeCalendars(JsonArray const& sources)
+    {
+        auto& settings = ::EvolutionWin::Settings::Instance();
+        std::vector<hstring> known;
+        for (auto const& entry : settings.GetArray(L"calendar.known"))
+            if (entry.ValueType() == JsonValueType::String)
+                known.push_back(entry.GetString());
+
+        JsonArray visible = settings.GetArray(L"calendar.visible");
+        auto is_visible = [&visible](hstring const& uid)
+        {
+            for (auto const& entry : visible)
+                if (entry.ValueType() == JsonValueType::String && entry.GetString() == uid)
+                    return true;
+            return false;
+        };
+
+        bool changed = false;
+        JsonArray updated_known;
+        for (auto const& value : sources)
+        {
+            auto source = value.GetObject();
+            hstring uid = source.GetNamedString(L"uid", L"");
+            hstring backend = source.GetNamedString(L"backend", L"");
+            updated_known.Append(JsonValue::CreateStringValue(uid));
+            if (std::find(known.begin(), known.end(), uid) != known.end())
+                continue;
+            if ((backend == L"microsoft365" || backend == L"ews") && !is_visible(uid))
+            {
+                visible.Append(JsonValue::CreateStringValue(uid));
+                changed = true;
+            }
+        }
+
+        settings.Set(L"calendar.known", updated_known);
+        if (changed)
+            settings.Set(L"calendar.visible", visible);
+    }
+
     void MainWindow::LoadCalendarSources()
     {
         m_core->ListSources(L"calendar", [this](hstring const& json, hstring const& error)
@@ -246,6 +340,7 @@ namespace winrt::EvolutionWin::implementation
                 settings.Set(L"calendar.visible", visible);
                 settings.SetBoolean(L"calendar.visible-init", true);
             }
+            AutoShowExchangeCalendars(sources);
 
             RebuildCalendarSourcesPanel();
             LoadEvents();
@@ -281,7 +376,8 @@ namespace winrt::EvolutionWin::implementation
             {
                 ::EvolutionWin::Settings::Instance().SetString(L"calendar.active", uid);
                 RebuildCalendarSourcesPanel();
-            });
+            },
+            nullptr, L"calendar.collapsed");
 
         ActiveCalendarText().Text(active_name.empty() ? hstring{}
             : L"Nouveaux événements dans : " + active_name);
@@ -365,7 +461,8 @@ namespace winrt::EvolutionWin::implementation
                     OnGalDirectoryForAccount(account_uid);
                 });
                 panel.Children().Append(directory);
-            });
+            },
+            L"contacts.collapsed");
 
         /* le bouton global ne sert que s'il n'y a aucun compte avec annuaire (message explicatif) */
         GalDirectoryButton().Visibility(directory_accounts > 0 ? Visibility::Collapsed : Visibility::Visible);
@@ -592,7 +689,10 @@ namespace winrt::EvolutionWin::implementation
                     {
                         JsonArray sources;
                         if (error.empty() && JsonArray::TryParse(json, sources))
+                        {
+                            AutoShowExchangeCalendars(sources);
                             m_calendar_sources = ::EvolutionWin::People::MergeIntoSources(sources);
+                        }
                         fill();
                         ring.IsActive(false);
                         ring.Visibility(Visibility::Collapsed);

@@ -94,6 +94,18 @@ namespace EvolutionWin::People
         for (auto const& value : real)
             merged.Append(value);
 
+        /* nom du compte (groupe de la liste des calendriers) d'après son identifiant */
+        auto account_name = [&real](winrt::hstring const& account_uid)
+        {
+            for (auto const& value : real)
+            {
+                auto source = value.GetObject();
+                if (!account_uid.empty() && source.GetNamedString(L"account_uid", L"") == account_uid)
+                    return source.GetNamedString(L"account", L"");
+            }
+            return winrt::hstring{ kGroupName };
+        };
+
         for (auto const& value : Load())
         {
             if (value.ValueType() != JsonValueType::Object)
@@ -107,7 +119,8 @@ namespace EvolutionWin::People
             source.SetNamedValue(L"uid", JsonValue::CreateStringValue(UidFor(email)));
             source.SetNamedValue(L"name", JsonValue::CreateStringValue(person.GetNamedString(L"name", email)));
             source.SetNamedValue(L"kind", JsonValue::CreateStringValue(L"calendar"));
-            source.SetNamedValue(L"account", JsonValue::CreateStringValue(kGroupName));
+            /* le calendrier d'une personne reste dans la partie de son compte (ex. EVAM) */
+            source.SetNamedValue(L"account", JsonValue::CreateStringValue(account_name(person.GetNamedString(L"account_uid", L""))));
             source.SetNamedValue(L"account_uid", JsonValue::CreateStringValue(person.GetNamedString(L"account_uid", L"")));
             source.SetNamedValue(L"account_email", JsonValue::CreateStringValue(email));
             source.SetNamedValue(L"color", JsonValue::CreateStringValue(person.GetNamedString(L"color", L"")));
