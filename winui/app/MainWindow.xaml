@@ -295,6 +295,9 @@
                         <AppBarButton Label="Espace disque" Click="OnRibbonAccountQuotaClick" ToolTipService.ToolTip="Afficher l'espace disque et le quota du compte">
                             <AppBarButton.Icon><FontIcon Glyph="&#xEDA2;" /></AppBarButton.Icon>
                         </AppBarButton>
+                        <AppBarButton Label="Réponses automatiques" Click="OnRibbonAutoReplyClick" ToolTipService.ToolTip="Configurer les réponses automatiques (absence du bureau) du compte">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE789;" /></AppBarButton.Icon>
+                        </AppBarButton>
                         <AppBarButton Label="Paramètres" Click="OnRibbonSettingsClick">
 
                             <AppBarButton.Icon><FontIcon Glyph="&#xE713;" /></AppBarButton.Icon>

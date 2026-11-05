@@ -305,14 +305,14 @@ Dans Microsoft 365 / Exchange Online, les utilisateurs disposent souvent d'une b
 
 - [ ] **Gestion des réponses automatiques** (_Fichier › Réponses automatiques_ et menu contextuel du compte) : <a id="demo-reponses-auto"></a>
   - [ ] 🟡 Exchange on-premise (EWS `GetUserOofSettings` / `SetUserOofSettings`, déjà présents dans evolution-ews)
-  - [ ] 🟡 Microsoft 365 (Graph `mailboxSettings/automaticRepliesSetting`)
-  - [ ] 🟠 Gmail / Google Workspace (API Gmail _vacation settings_, nouvelle portée OAuth2)
+  - [x] 🟡 Microsoft 365 (Graph `mailboxSettings/automaticRepliesSetting`) — `evo_core_get_auto_reply` / `evo_core_set_auto_reply`, portée `MailboxSettings.ReadWrite` ; _reste à valider sur un compte réel_ (tenant M365)
+  - [x] 🟠 Gmail / Google Workspace (API Gmail _vacation settings_, nouvelle portée OAuth2) — portée `gmail.settings.basic` ajoutée à la connexion Google ; _reste à valider sur un compte réel_ (le client OAuth doit autoriser cette portée ; comptes déjà connectés à reconnecter)
   - [ ] 🟠 IMAP avec Sieve / ManageSieve (extension `vacation` ; client ManageSieve à écrire)
-  - [ ] 🟢 Option grisée pour les comptes qui ne la supportent pas
+  - [ ] 🟢 Option grisée pour les comptes qui ne la supportent pas _(partiel : le bouton reste actif, la boîte affiche une erreur explicite pour IMAP générique et EWS)_
 - [ ] **Options** :
-  - [ ] 🟢 Activer / désactiver ; plage de dates ou durée indéterminée
-  - [ ] 🟢 Messages distincts interne / externe (éditeur HTML)
-  - [ ] 🟢 Externe : tous les expéditeurs ou seulement les contacts
+  - [x] 🟢 Activer / désactiver ; plage de dates ou durée indéterminée _(à valider sur un compte réel)_
+  - [ ] 🟢 Messages distincts interne / externe (éditeur HTML) _(messages distincts en texte brut faits ; éditeur HTML restant ; Gmail n'a qu'un message)_
+  - [x] 🟢 Externe : tous les expéditeurs ou seulement les contacts _(plus « personne » ; à valider sur un compte réel)_
   - [ ] 🟡 Exchange / M365 : bloquer le calendrier, refuser les nouvelles invitations, annuler les réunions de la période
 - [x] 🟢 **Indicateur visible** : bandeau « Réponses automatiques activées pour ce compte » + _Désactiver_ ; rappel à l'ouverture si la période est expirée
 

@@ -50,6 +50,8 @@ add_library(evo-core SHARED
 	evo-core.c
 	evo-core-account-cloud.c
 	evo-core-account-setup.c
+	evo-core-autoreply.c
+	evo-core-autoreply-util.h
 	evo-core-accounts.c
 	evo-core-calendar.c
 	evo-core-contacts.c

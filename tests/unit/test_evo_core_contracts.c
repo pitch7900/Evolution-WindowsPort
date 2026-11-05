@@ -370,6 +370,78 @@ static void test_calendar_url_validation(void)
     TEST_CASE_END();
 }
 
+#include "../../winui/core/evo-core-autoreply-util.h"
+
+/**
+ * @brief Teste les fonctions pures des reponses automatiques (evo-core-autoreply-util.h) :
+ * dates ISO 8601 de Microsoft Graph, audiences Graph / Gmail et validation des plages.
+ */
+static void test_auto_reply_helpers(void)
+{
+    char buf[48];
+
+    TEST_CASE("Reponses automatiques: conversion des dates ISO 8601 UTC <-> secondes Unix");
+    {
+        ASSERT_TRUE(autoreply_epoch_from_iso_utc("1971-01-02T00:00:00") == 31622400);
+        ASSERT_TRUE(autoreply_epoch_from_iso_utc("2024-02-29T12:30:45.0000000") == 1709209845);
+        ASSERT_TRUE(autoreply_epoch_from_iso_utc("2026-11-04T07:30:00Z") == 1793777400);
+        ASSERT_TRUE(autoreply_epoch_from_iso_utc("") == 0);
+        ASSERT_TRUE(autoreply_epoch_from_iso_utc(NULL) == 0);
+        ASSERT_TRUE(autoreply_epoch_from_iso_utc("pas une date") == 0);
+        ASSERT_TRUE(autoreply_epoch_from_iso_utc("2026-13-40T00:00:00") == 0);
+        ASSERT_TRUE(autoreply_epoch_from_iso_utc("1969-12-31T23:59:59") == 0);
+
+        autoreply_iso_from_epoch_utc(1709209845, buf, sizeof (buf));
+        ASSERT_EQ_STR("2024-02-29T12:30:45.0000000", buf);
+        autoreply_iso_from_epoch_utc(1793777400, buf, sizeof (buf));
+        ASSERT_EQ_STR("2026-11-04T07:30:00.0000000", buf);
+        /* aller-retour sur une annee bissextile et un changement de siecle */
+        autoreply_iso_from_epoch_utc(autoreply_epoch_from_iso_utc("2100-03-01T00:00:01"), buf, sizeof (buf));
+        ASSERT_EQ_STR("2100-03-01T00:00:01.0000000", buf);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Reponses automatiques: audiences Microsoft Graph et Gmail");
+    {
+        int contacts = -1, domain = -1;
+
+        ASSERT_EQ_STR("none", autoreply_audience_to_graph("none"));
+        ASSERT_EQ_STR("contactsOnly", autoreply_audience_to_graph("known"));
+        ASSERT_EQ_STR("all", autoreply_audience_to_graph("all"));
+        ASSERT_EQ_STR("all", autoreply_audience_to_graph(NULL));
+        ASSERT_EQ_STR("known", autoreply_audience_from_graph("contactsOnly"));
+        ASSERT_EQ_STR("none", autoreply_audience_from_graph("none"));
+        ASSERT_EQ_STR("all", autoreply_audience_from_graph("inconnu"));
+
+        autoreply_audience_to_gmail("known", &contacts, &domain);
+        ASSERT_TRUE(contacts == 1 && domain == 0);
+        autoreply_audience_to_gmail("none", &contacts, &domain);
+        ASSERT_TRUE(contacts == 0 && domain == 1);
+        autoreply_audience_to_gmail("all", &contacts, &domain);
+        ASSERT_TRUE(contacts == 0 && domain == 0);
+        ASSERT_EQ_STR("known", autoreply_audience_from_gmail(1, 0));
+        ASSERT_EQ_STR("none", autoreply_audience_from_gmail(0, 1));
+        ASSERT_EQ_STR("all", autoreply_audience_from_gmail(0, 0));
+
+        ASSERT_TRUE(autoreply_audience_valid("known"));
+        ASSERT_FALSE(autoreply_audience_valid("tous"));
+        ASSERT_FALSE(autoreply_audience_valid(NULL));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Reponses automatiques: validation de la plage de dates");
+    {
+        ASSERT_EQ_INT(AUTOREPLY_RANGE_OK, autoreply_validate_range(0, 0, 1));
+        ASSERT_EQ_INT(AUTOREPLY_RANGE_OK, autoreply_validate_range(100, 200, 1));
+        ASSERT_EQ_INT(AUTOREPLY_RANGE_END_BEFORE_START, autoreply_validate_range(200, 100, 0));
+        ASSERT_EQ_INT(AUTOREPLY_RANGE_END_BEFORE_START, autoreply_validate_range(100, 100, 1));
+        ASSERT_EQ_INT(AUTOREPLY_RANGE_INCOMPLETE, autoreply_validate_range(100, 0, 1));
+        ASSERT_EQ_INT(AUTOREPLY_RANGE_OK, autoreply_validate_range(100, 0, 0));
+        ASSERT_EQ_INT(AUTOREPLY_RANGE_OK, autoreply_validate_range(0, 200, 0));
+    }
+    TEST_CASE_END();
+}
+
 /**
  * @brief Point d'entree de la suite de tests des contrats evo-core.
  * @return 0 si succes, 1 en cas d'echec.
@@ -384,6 +456,7 @@ int main(void)
     test_json_event_contracts();
     test_calendar_url_validation();
     test_account_enabled_contract();
+    test_auto_reply_helpers();
 
     return test_suite_summary();
 }

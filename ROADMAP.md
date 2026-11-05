@@ -56,7 +56,7 @@ flowchart LR
 - [ ] **Carnet d\'adresses global (GAL)** : recherche et consultation de l\'annuaire d\'entreprise pour Exchange Online et Microsoft 365 (`#demo-gal`).
 
 ### 3. Gestion des absences (§3)
-- [ ] **Réponses automatiques (Out of Office)** : interface de configuration des messages d\'absence pour Microsoft 365 et Gmail (`#demo-reponses-auto`).
+- [ ] **Réponses automatiques (Out of Office)** : interface de configuration des messages d\'absence pour Microsoft 365 et Gmail (`#demo-reponses-auto`). _Implémenté (moteur, boîte de dialogue, tests) ; reste à valider sur un compte réel (tenant M365, compte Gmail) avant de cocher._
 
 ---
 
