@@ -8,6 +8,7 @@
 #include "Categories.h"
 
 #include <map>
+#include <set>
 
 namespace winrt::EvolutionWin::implementation
 {
@@ -122,6 +123,9 @@ namespace winrt::EvolutionWin::implementation
         void OnForwardClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnForwardAsAttachmentClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnToggleReadClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnFollowUpButtonClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void PopulateFollowUpMenuItems(Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items, std::vector<hstring> const& uids);
+        void ApplyFollowUp(std::vector<hstring> const& uids, std::wstring const& label, int due_choice, bool completed);
         void OnToggleFlagClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnDeleteClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnArchiveClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -167,6 +171,8 @@ namespace winrt::EvolutionWin::implementation
         void RestoreSessionFolder();
         void UpdateOutOfOfficeBanner();
         Windows::Foundation::IAsyncAction ShowOutOfOfficeDialogAsync(winrt::hstring account);
+        void OnRibbonAutoReplyClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void DisableAutoReply(winrt::hstring const& account);
 
         /* Écran de démarrage (Splash screen) */
         void SetSplashWindow(winrt::EvolutionWin::SplashWindow const& splash);
@@ -214,6 +220,16 @@ namespace winrt::EvolutionWin::implementation
         void OnExportContactsClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnComposeToContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnDeleteContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnEditContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
+        /* Annuaire de l'organisation (GAL), MainWindow.Gal.cpp */
+        void OnGalDirectoryClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void SetGalMode(bool on);
+        void ScheduleGalSearch(hstring const& query);
+        void SearchGalDirectory(hstring const& query);
+        bool m_gal_mode{ false };
+        uint64_t m_gal_request{ 0 };
+        Microsoft::UI::Xaml::DispatcherTimer m_gal_timer{ nullptr };
 
         /* Gestionnaires des tâches */
         void OnNewTaskClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -258,6 +274,13 @@ namespace winrt::EvolutionWin::implementation
 
         /* Gestionnaires des paramètres / comptes */
         void OnAddAccountClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnReceiptSendClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnInviteAcceptClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnInviteTentativeClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnInviteDeclineClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnInviteRemoveClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnReceiptIgnoreClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnReadReceiptPolicyChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
         void OnRemoteContentModeChanged(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
@@ -371,7 +394,12 @@ namespace winrt::EvolutionWin::implementation
             bool seen{ true };
             bool flagged{ false };
             bool attachments{ false };
+            std::wstring follow_up;        ///< libellé du suivi (vide : aucun)
+            int64_t due_by{ 0 };           ///< échéance (secondes Unix, 0 : aucune)
+            int64_t completed_on{ 0 };     ///< date de fin (secondes Unix, 0 : non terminé)
         };
+
+        void StyleFollowUpIcon(Microsoft::UI::Xaml::Controls::FontIcon const& icon, MessageState const& state);
 
         std::vector<std::wstring> m_drag_cached_files;
 
@@ -467,6 +495,13 @@ namespace winrt::EvolutionWin::implementation
         void UpdateRemoteContentBanner();
         void TrustCurrentSender(hstring const& key, std::wstring const& entry, hstring const& label);
         void RefreshPrivacyView();
+        void UpdateInvitationBar(Windows::Data::Json::JsonObject const& message);
+        void HideInvitationBar();
+        void RespondToInvitation(hstring const& response);
+        void UpdateReceiptBars(Windows::Data::Json::JsonObject const& message);
+        void HideReceiptBars();
+        void RefreshReadReceiptSettings();
+        void ProcessReadReceipt(bool send, bool automatic);
 
         /* Étape 1 : Notifications Windows et pièces jointes */
         void ShowNewMailNotification(Windows::Data::Json::JsonObject const& object);
@@ -545,6 +580,7 @@ namespace winrt::EvolutionWin::implementation
         fire_and_forget ShowNewFocusEventDialogAsync();
         void LoadContacts(hstring const& query);
         fire_and_forget ShowNewContactDialogAsync();
+        fire_and_forget ShowEditContactDialogAsync();
 
         /* Exportation vCard / iCalendar */
         fire_and_forget ExportCalendarAsync(Windows::Data::Json::JsonArray sources);
@@ -591,6 +627,8 @@ namespace winrt::EvolutionWin::implementation
         /* message shown in the reader, for replies */
         Windows::Data::Json::JsonObject m_current_message{ nullptr };
         hstring m_current_message_uid;
+        hstring m_current_message_account;   ///< compte du message affiché (accusé de lecture)
+        hstring m_current_message_folder;    ///< dossier du message affiché
         /* contact sélectionné dans la vue Contacts */
         Windows::Data::Json::JsonObject m_selected_contact{ nullptr };
         /* folder tree nodes by NodeKey() */
@@ -607,6 +645,10 @@ namespace winrt::EvolutionWin::implementation
         bool m_startup_synced{ false };
         hstring m_update_tag;	/* version plus récente disponible (vide : aucune connue) */
         hstring m_update_page;
+        hstring m_update_msi_url;	/* installeur MSI de la version plus récente */
+        hstring m_update_msi_name;
+        hstring m_update_sha_url;	/* fichier .sha256 correspondant */
+        fire_and_forget DownloadAndInstallUpdateAsync();
         /* fenêtres indépendantes de lecture ouvertes par UID */
         std::map<std::wstring, winrt::EvolutionWin::MessageWindow> m_open_message_windows;
         /* fenêtres de rédaction ouvertes */
@@ -637,6 +679,9 @@ namespace winrt::EvolutionWin::implementation
         void LoadFolderSort();
         void SaveFolderSort();
         bool m_conversations_enabled{ false };
+        /* fils développés (clé : objet normalisé) et derniers messages affichés */
+        std::set<std::wstring> m_expanded_threads;
+        Windows::Data::Json::JsonArray m_last_shown_messages{ nullptr };
         void LoadFolderConversations();
         void SaveFolderConversations(bool enabled);
         void UpdateSortHeader();
@@ -671,6 +716,7 @@ namespace winrt::EvolutionWin::implementation
         Windows::Data::Json::JsonArray m_calendar_sources{ nullptr };
         void LoadCalendarSources();
         fire_and_forget ShowAddCalendarDialogAsync();
+        fire_and_forget ShowAddExchangeCalendarDialogAsync();
         /* carnets d'adresses affichés (contacts.visible) et actif (contacts.active) */
         Windows::Data::Json::JsonArray m_contact_books{ nullptr };
         void LoadContactBooks();

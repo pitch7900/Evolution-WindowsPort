@@ -471,6 +471,11 @@ namespace winrt::EvolutionWin::implementation
         PreviewTextScroll().Visibility(Visibility::Collapsed);
         PreviewUnsupported().Visibility(Visibility::Collapsed);
         PreviewLoadingRing().IsActive(false);
+        PreviewPdfPages().Children().Clear();
+        PreviewPdfScroll().Visibility(Visibility::Collapsed);
+        PreviewWeb().Visibility(Visibility::Collapsed);
+        if (PreviewWeb().CoreWebView2())
+            PreviewWeb().CoreWebView2().NavigateToString(L"<html></html>");
 
         if (!m_preview_current_path.empty())
         {
@@ -528,6 +533,8 @@ namespace winrt::EvolutionWin::implementation
         PreviewImageScroll().Visibility(Visibility::Collapsed);
         PreviewTextScroll().Visibility(Visibility::Collapsed);
         PreviewUnsupported().Visibility(Visibility::Collapsed);
+        PreviewPdfScroll().Visibility(Visibility::Collapsed);
+        PreviewWeb().Visibility(Visibility::Collapsed);
         PreviewLoadingRing().IsActive(true);
 
         m_core->SaveAttachment(account, folder, uid, index, m_preview_current_path,
@@ -558,6 +565,66 @@ namespace winrt::EvolutionWin::implementation
                     }
                     catch (...)
                     {
+                        PreviewUnsupported().Visibility(Visibility::Visible);
+                    }
+                }
+                else if (kind == AttachmentPreviewKind::Pdf)
+                {
+                    try
+                    {
+                        auto file = co_await Windows::Storage::StorageFile::GetFileFromPathAsync(temp_file);
+                        auto doc = co_await Windows::Data::Pdf::PdfDocument::LoadFromFileAsync(file);
+                        PreviewPdfPages().Children().Clear();
+                        uint32_t count = (std::min)(doc.PageCount(), 60u);
+                        for (uint32_t p = 0; p < count; ++p)
+                        {
+                            auto page = doc.GetPage(p);
+                            Windows::Storage::Streams::InMemoryRandomAccessStream mem;
+                            Windows::Data::Pdf::PdfPageRenderOptions opts;
+                            opts.DestinationWidth(900);
+                            co_await page.RenderToStreamAsync(mem, opts);
+                            Microsoft::UI::Xaml::Media::Imaging::BitmapImage bitmap;
+                            co_await bitmap.SetSourceAsync(mem);
+                            Image img;
+                            img.Source(bitmap);
+                            img.Width(900);
+                            img.Stretch(Microsoft::UI::Xaml::Media::Stretch::Uniform);
+                            PreviewPdfPages().Children().Append(img);
+                            PreviewPdfScroll().Visibility(Visibility::Visible);
+                        }
+                    }
+                    catch (...)
+                    {
+                        PreviewPdfScroll().Visibility(Visibility::Collapsed);
+                        PreviewUnsupported().Visibility(Visibility::Visible);
+                    }
+                }
+                else if (kind == AttachmentPreviewKind::Html)
+                {
+                    try
+                    {
+                        co_await PreviewWeb().EnsureCoreWebView2Async();
+                        auto core = PreviewWeb().CoreWebView2();
+                        core.Settings().IsScriptEnabled(false);
+                        core.Settings().AreDevToolsEnabled(false);
+                        core.Settings().AreDefaultContextMenusEnabled(false);
+                        core.NavigationStarting([](auto const&, Microsoft::Web::WebView2::Core::CoreWebView2NavigationStartingEventArgs const& a)
+                        {
+                            /* seule la page injectee (data:) est autorisee : pas de lien ni de redirection */
+                            if (std::wstring_view{ a.Uri() }.rfind(L"data:", 0) != 0)
+                                a.Cancel(true);
+                        });
+                        core.NewWindowRequested([](auto const&, Microsoft::Web::WebView2::Core::CoreWebView2NewWindowRequestedEventArgs const& a) { a.Handled(true); });
+                        auto file = co_await Windows::Storage::StorageFile::GetFileFromPathAsync(temp_file);
+                        hstring html = co_await Windows::Storage::FileIO::ReadTextAsync(file);
+                        /* CSP : aucune ressource distante, images integrees seulement */
+                        std::wstring doc = L"<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src data:; style-src 'unsafe-inline'\">" + std::wstring{ html };
+                        PreviewWeb().Visibility(Visibility::Visible);
+                        core.NavigateToString(hstring{ doc });
+                    }
+                    catch (...)
+                    {
+                        PreviewWeb().Visibility(Visibility::Collapsed);
                         PreviewUnsupported().Visibility(Visibility::Visible);
                     }
                 }

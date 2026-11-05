@@ -138,8 +138,8 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] **Vérification de version** : dernière Release lue par l'API `https://api.github.com/repos/pitch7900/Evolution-WindowsPort/releases/latest` (champ `tag_name` pour la version, `assets` pour l'URL du MSI et de son `.sha256`), comparée à la version compilée dans l'exécutable (comparaison numérique `x.y.z`, pas textuelle) ; préversions via `releases` pour le canal « préversions »
   - [x] Fréquence : au démarrage (après quelques minutes, pour ne pas ralentir la relève) puis une fois par jour ; bouton _Rechercher les mises à jour_ dans la boîte « À propos »
   - [x] **Notification** de la nouvelle version (bandeau / toast) avec les nouveautés extraites du [CHANGELOG.md](CHANGELOG.md), boutons _Installer maintenant_, _Plus tard_, _Ignorer cette version_
-  - [ ] **Téléchargement automatique** du MSI joint à la Release GitHub (`Evolution-<version>-x64.msi`) en arrière-plan, avec progression dans la barre d'état (§4), dans `%LOCALAPPDATA%\EvolutionWin\Updates`
-  - [ ] **Vérification d'intégrité avant installation** : empreinte SHA-256 publiée à côté du MSI (`.sha256`) et signature Authenticode du MSI (`WinVerifyTrust`, éditeur attendu) ; refus d'installer si la vérification échoue
+  - [x] **Téléchargement automatique** du MSI joint à la Release GitHub (`Evolution-<version>-x64.msi`) en arrière-plan, avec progression dans la barre d'état (§4), dans `%LOCALAPPDATA%\EvolutionWin\Updates`
+  - [x] **Vérification d'intégrité avant installation** : empreinte SHA-256 publiée à côté du MSI (`.sha256`) et signature Authenticode du MSI (`WinVerifyTrust`, éditeur attendu) ; refus d'installer si la vérification échoue
   - [ ] **Installation** : fermeture propre de l'application (boîte d'envoi vidée, synchronisation terminée), lancement de `msiexec /i … /passive` (élévation UAC, installation par machine), redémarrage automatique d'EvolutionWin à la fin
   - [ ] Nettoyage des MSI téléchargés après installation réussie
   - [ ] **Paramètres** (§19) : mise à jour automatique / notification seulement / désactivée ; canal (versions stables, préversions)
@@ -305,14 +305,14 @@ Dans Microsoft 365 / Exchange Online, les utilisateurs disposent souvent d'une b
 
 - [ ] **Gestion des réponses automatiques** (_Fichier › Réponses automatiques_ et menu contextuel du compte) : <a id="demo-reponses-auto"></a>
   - [ ] 🟡 Exchange on-premise (EWS `GetUserOofSettings` / `SetUserOofSettings`, déjà présents dans evolution-ews)
-  - [ ] 🟡 Microsoft 365 (Graph `mailboxSettings/automaticRepliesSetting`)
-  - [ ] 🟠 Gmail / Google Workspace (API Gmail _vacation settings_, nouvelle portée OAuth2)
+  - [x] 🟡 Microsoft 365 (Graph `mailboxSettings/automaticRepliesSetting`) — `evo_core_get_auto_reply` / `evo_core_set_auto_reply`, portée `MailboxSettings.ReadWrite` ; _reste à valider sur un compte réel_ (tenant M365)
+  - [x] 🟠 Gmail / Google Workspace (API Gmail _vacation settings_, nouvelle portée OAuth2) — portée `gmail.settings.basic` ajoutée à la connexion Google ; _reste à valider sur un compte réel_ (le client OAuth doit autoriser cette portée ; comptes déjà connectés à reconnecter)
   - [ ] 🟠 IMAP avec Sieve / ManageSieve (extension `vacation` ; client ManageSieve à écrire)
-  - [ ] 🟢 Option grisée pour les comptes qui ne la supportent pas
+  - [ ] 🟢 Option grisée pour les comptes qui ne la supportent pas _(partiel : le bouton reste actif, la boîte affiche une erreur explicite pour IMAP générique et EWS)_
 - [ ] **Options** :
-  - [ ] 🟢 Activer / désactiver ; plage de dates ou durée indéterminée
-  - [ ] 🟢 Messages distincts interne / externe (éditeur HTML)
-  - [ ] 🟢 Externe : tous les expéditeurs ou seulement les contacts
+  - [x] 🟢 Activer / désactiver ; plage de dates ou durée indéterminée _(à valider sur un compte réel)_
+  - [ ] 🟢 Messages distincts interne / externe (éditeur HTML) _(messages distincts en texte brut faits ; éditeur HTML restant ; Gmail n'a qu'un message)_
+  - [x] 🟢 Externe : tous les expéditeurs ou seulement les contacts _(plus « personne » ; à valider sur un compte réel)_
   - [ ] 🟡 Exchange / M365 : bloquer le calendrier, refuser les nouvelles invitations, annuler les réunions de la période
 - [x] 🟢 **Indicateur visible** : bandeau « Réponses automatiques activées pour ce compte » + _Désactiver_ ; rappel à l'ouverture si la période est expirée
 
@@ -328,19 +328,19 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
 - [ ] 🟡 **Microsoft 365 / Exchange Online** : vérifier de bout en bout que la collection `microsoft365` (Graph) découvre et synchronise les calendriers et carnets d'adresses du compte ; les afficher sous le nom du compte dans les vues Calendrier et Contacts <a id="demo-cal-contacts-m365"></a>
   - [x] Portées OAuth2 nécessaires (`Calendars.ReadWrite`, `Contacts.ReadWrite`) demandées à la connexion ; consentement manquant → message clair et _Se reconnecter_
   - [ ] Exchange on-premise (collection `ews`) : même vérification dès qu'un serveur de test est disponible
-- [ ] 🟠 **Gmail / Google Workspace** : à l'ajout d'un compte Gmail, créer aussi une collection Google (backend `google` d'EDS : calendriers CalDAV, contacts CardDAV / Google People) avec le même jeton OAuth2 <a id="demo-cal-contacts-gmail"></a>
+- [x] 🟠 **Gmail / Google Workspace** : à l'ajout d'un compte Gmail, créer aussi une collection Google (backend `google` d'EDS : calendriers CalDAV, contacts CardDAV / Google People) avec le même jeton OAuth2 <a id="demo-cal-contacts-gmail"></a>
   - [x] Portées OAuth2 Calendar et Contacts ajoutées à la connexion Google (en plus de la messagerie)
-  - [ ] Comptes Gmail déjà configurés : bouton _Activer le calendrier et les contacts_ dans la page du compte (nouvelle connexion pour accorder les portées)
+  - [x] Comptes Gmail déjà configurés : bouton _Activer le calendrier et les contacts_ dans la page du compte (nouvelle connexion pour accorder les portées)
 - [ ] 🟡 **Gestion simple du calendrier du compte** : <a id="demo-gestion-calendrier"></a>
   - [x] Événements du calendrier principal (et des autres calendriers du compte) affichés avec la couleur du calendrier
   - [x] Créer un événement dans le calendrier choisi (calendrier principal du compte par défaut) : titre, lieu, date, heures ou journée entière, description
   - [x] **Modifier** un événement existant (manquant aujourd'hui) et le supprimer, avec envoi au serveur — _clic sur l'événement : fenêtre modifiable (lecture seule si l'agenda l'est), organisateur et participants_
-  - [ ] Modifications faites ailleurs (Outlook Web, Google Agenda, téléphone) visibles à la synchronisation suivante ; bouton _Actualiser_
+  - [x] Modifications faites ailleurs (Outlook Web, Google Agenda, téléphone) visibles à la synchronisation suivante ; bouton _Actualiser_
   - [x] Événements périodiques existants affichés correctement (occurrences développées), en lecture seule tant que l'éditeur complet (§13) n'existe pas
 - [ ] 🟡 **Gestion simple des contacts du compte** : <a id="demo-gestion-contacts"></a>
   - [x] Contacts du compte (et sous-dossiers / groupes de contacts) listés avec le nom du carnet d'origine — _volet « Carnets d'adresses » par compte, cases à cocher mémorisées, carnet actif_
   - [x] Créer un contact dans le carnet choisi (carnet du compte par défaut) : nom, prénom, adresses email, téléphones, société, fonction, notes
-  - [ ] **Modifier** un contact existant (manquant aujourd'hui) et le supprimer, avec envoi au serveur
+  - [x] **Modifier** un contact existant et le supprimer, avec envoi au serveur (fonction evo_core_modify_contact et bouton Modifier)
   - [ ] Contacts utilisables dans l'autocomplétion des destinataires (§15)
 - [x] 🟢 Erreurs de synchronisation du calendrier / des contacts remontées dans l'indicateur d'état des connexions (§4)
 
@@ -430,8 +430,8 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
 ### Conversations
 
 - [ ] 🟠 **Grouper par discussion** (_Affichage › Afficher sous forme de conversations_) : <a id="demo-conversations"></a>
-  - [ ] Regroupement par `Message-ID` / `In-Reply-To` / `References` (`CamelFolderThread`), repli sur l'objet normalisé « RE: / TR: »
-  - [ ] Fil réductible / développable, nombre de messages et de non lus
+  - [x] Regroupement par `Message-ID` / `In-Reply-To` / `References` (`CamelFolderThread`), repli sur l'objet normalisé « RE: / TR: » — _empreintes Camel exposées par `evo-core` (`msgid`, `refs`), regroupement dans `ConversationThreads.h`_
+  - [x] Fil réductible / développable, nombre de messages et de non lus
   - [ ] 🟠 Inclure les messages d'autres dossiers (réponses envoyées)
   - [x] 🟢 Choix mémorisé par dossier : préférence booléenne `conversations.<compte>/<dossier>` et bouton à bascule dans le ruban Affichage
 - [ ] 🟡 **Paramètres de conversation** : expéditeurs au-dessus de l'objet, toujours développer la conversation sélectionnée, retrait classique
@@ -458,8 +458,8 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
   - [ ] **Rendu sécurisé, sans exécution de code actif** :
     - [x] 🟢 Images (PNG, JPEG, GIF, BMP, WebP, SVG converti en image fixe) : décodage natif (`BitmapImage` / WIC), SVG sans scripts
     - [x] 🟢 Texte, CSV, JSON, XML, code : affichage en texte brut (jamais interprété)
-    - [ ] 🟡 PDF : rendu page par page en images avec `Windows.Data.Pdf` (aucun JavaScript, formulaire, lien de lancement ni pièce jointe imbriquée exécutés), zoom et défilement
-    - [ ] 🟡 HTML / EML / MSG joint : WebView2 isolé avec scripts désactivés et contenu distant bloqué (même règles que le lecteur, §6)
+    - [x] 🟡 PDF : rendu page par page en images avec `Windows.Data.Pdf` (aucun JavaScript, formulaire, lien de lancement ni pièce jointe imbriquée exécutés), zoom et défilement
+    - [x] 🟡 HTML / EML / MSG joint : WebView2 isolé avec scripts désactivés et contenu distant bloqué (même règles que le lecteur, §6)
     - [ ] 🟠 Office (Word, Excel, PowerPoint, OpenDocument) : rendu en lecture seule **sans macros ni contenu actif** — conversion en PDF / image hors processus, ou gestionnaires d'aperçu Windows (`IPreviewHandler`) exécutés dans un processus isolé à faibles privilèges ; macros VBA, objets OLE / ActiveX, liens externes et DDE jamais exécutés
     - [x] 🟢 Types non pris en charge ou à risque (`.exe`, `.js`, `.vbs`, `.ps1`, `.lnk`, `.hta`, archives…) : pas d'aperçu, simple fiche (nom, type, taille) avec avertissement
   - [x] 🟡 Fichiers d'aperçu temporaires dans un dossier privé, supprimés à la fermeture ; taille maximale configurable pour l'aperçu
@@ -510,12 +510,12 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
 Trois notions distinctes, comme dans Outlook : le **suivi** (drapeau avec libellé et échéance : ce que _je_ dois faire), l'**importance** (fixée par l'expéditeur) et les **catégories** (classement en couleur, §17).
 
 - [ ] 🟡 **Suivi des messages** (évolution du drapeau simple existant) :
-  - [ ] **Libellé du suivi** : Urgent, À traiter, À répondre, Pour information, En attente, et libellés personnalisés
-  - [ ] **Échéance** : aujourd'hui, demain, cette semaine, semaine prochaine, sans date, date personnalisée
-  - [ ] Choix depuis le menu contextuel, le ruban et des raccourcis clavier
-  - [ ] Icône et couleur distinctes dans la liste des messages (ex. rouge pour Urgent, orange pour À traiter, échéance dépassée en rouge) et libellé + échéance dans l'en-tête du volet de lecture
-  - [ ] Stockage dans les indicateurs Camel (`follow-up`, `due-by`, `completed-on`), synchronisé avec le serveur (mots-clés IMAP, `flag` Exchange / Graph)
-  - [ ] _Marquer comme terminé_ en un clic (avec date de fin), _Effacer l'indicateur_
+  - [x] **Libellé du suivi** : Urgent, À traiter, À répondre, Pour information, En attente, et libellés personnalisés
+  - [x] **Échéance** : aujourd'hui, demain, cette semaine, semaine prochaine, sans date, date personnalisée
+  - [x] Choix depuis le menu contextuel, le ruban et des raccourcis clavier
+  - [x] Icône et couleur distinctes dans la liste des messages (ex. rouge pour Urgent, orange pour À traiter, échéance dépassée en rouge) et libellé + échéance dans l'en-tête du volet de lecture
+  - [x] Stockage dans les indicateurs Camel (`follow-up`, `due-by`, `completed-on`), synchronisé avec le serveur (mots-clés IMAP, `flag` Exchange / Graph)
+  - [x] _Marquer comme terminé_ en un clic (avec date de fin), _Effacer l'indicateur_
   - [ ] Filtres rapides « Urgents » et « À traiter » (§5) et dossiers de recherche correspondants (§9)
   - [ ] 🟠 Rappel sur un suivi — dépend de la fenêtre des rappels (§2)
 - [x] 🟡 **Importance** (haute / normale / basse) : affichée dans la liste (icône d'exclamation rouge ou flèche bleue) et choisie à la rédaction dans ComposeWindow ; filtre rapide « Importants » (§5)
@@ -705,7 +705,8 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
     - [ ] Menu déroulant **« Classer »** (icône 4 carrés de couleur) : attribution de catégories avec codes couleur (synchronisées avec la liste principale Exchange Online).
     - [ ] Boutons d'importance : **! Importance haute** et **↓ Importance faible** (propriété `PRIORITY`).
 - [x] 🟢 **Ajouter du temps de travail individuel** (bloc « focus » sans participants, bouton ruban dédié et durée 2h préremplie)
-- [ ] 🟡 **Répondre aux invitations reçues** depuis le volet de lecture du Mail (Accepter / Provisoire / Refuser / Proposer un nouvel horaire) <a id="demo-invitations"></a>
+- [x] 🟡 **Répondre aux invitations reçues** depuis le volet de lecture du Mail (Accepter / Provisoire / Refuser) <a id="demo-invitations"></a>
+  - [ ] _Proposer un nouvel horaire_ (iTIP `COUNTER`) : non traité pour l'instant
 - [ ] 🔴 **Affichage Planification** (Scheduling Assistant) : une ligne par personne / ressource, heures en abscisse, créneaux libres / occupés / provisoires / absent (EWS `GetUserAvailability`, Graph `getSchedule`, CalDAV free-busy), suggestion de créneau commun
 - [ ] 🟡 **Glisser-déposer d'un email vers le calendrier** pour créer un rendez-vous
 - [ ] 🟠 **Emplacement de travail** par jour / créneau (bureau, télétravail, hors ligne), synchronisé avec Exchange Online si disponible, visible en vue Planification
@@ -730,10 +731,10 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
 
 Constat : sur un compte Exchange Online / Microsoft 365 (ex. EVAM), EvolutionWin n'affiche aujourd'hui qu'une liste plate et très partielle de calendriers découverts (quelques collègues seulement sous le compte), alors qu'Outlook reflète l'intégralité des calendriers organisés en groupes structurés (_Mes calendriers_, _Équipe : Manager_, _Équipe : Mes collaborateurs direct reports_, _Autres calendriers_, _Salles_).
 
-- [ ] 🟠 **Découverte exhaustive et reflet fidèle de tous les calendriers Exchange Online / M365 (Graph / EWS)** :
-  - [ ] 🟠 **Exploration complète de l'API Graph / EWS** : interroger tous les groupes de calendriers (`GET /me/calendarGroups` et `GET /me/calendarGroups/{id}/calendars` sous Microsoft Graph, ou `FindFolder` / `CalendarFolder` avec `calendarGroup` sous EWS) pour récupérer l'ensemble des calendriers personnels, souscrits, partagés, d'équipe et de ressources (salles de réunion), sans omission.
-  - [ ] 🟡 **Arborescence hiérarchique par groupes dans le volet latéral** : reproduire fidèlement l'organisation d'Outlook avec groupes repliables/dépliables (_Mes calendriers_, _Équipe : Nom du manager_, _Équipe : Mes collaborateurs_, _Autres calendriers_, _Salles_), au lieu d'une simple liste plate.
-  - [ ] 🟢 **Sélection et couleurs individuelles** : case à cocher par calendrier, couleur d'accent propre conservée, mémorisation des calendriers cochés entre les sessions.
+- [x] 🟠 **Découverte exhaustive et reflet fidèle de tous les calendriers Exchange Online / M365 (Graph / EWS)** :
+  - [x] 🟠 **Exploration complète de l'API Graph / EWS** : interroger tous les groupes de calendriers (`GET /me/calendarGroups` et `GET /me/calendarGroups/{id}/calendars` sous Microsoft Graph, ou `FindFolder` / `CalendarFolder` avec `calendarGroup` sous EWS) pour récupérer l'ensemble des calendriers personnels, souscrits, partagés, d'équipe et de ressources (salles de réunion), sans omission.
+  - [x] 🟡 **Arborescence hiérarchique par groupes dans le volet latéral** : reproduire fidèlement l'organisation d'Outlook avec groupes repliables/dépliables (_Mes calendriers_, _Équipe : Nom du manager_, _Équipe : Mes collaborateurs_, _Autres calendriers_, _Salles_), au lieu d'une simple liste plate.
+  - [x] 🟢 **Sélection et couleurs individuelles** : case à cocher par calendrier, couleur d'accent propre conservée, mémorisation des calendriers cochés entre les sessions.
   - [ ] 🟡 **Gestion des groupes de calendriers** : création, renommage et suppression de groupes de calendriers répercutés sur le serveur Exchange Online.
 
 - Calendriers de groupes Microsoft 365 : cf. « Groupes Microsoft 365 », §7
@@ -741,6 +742,9 @@ Constat : sur un compte Exchange Online / Microsoft 365 (ex. EVAM), EvolutionWin
 ## 15. Contacts — 🟡
 
 - [ ] 🟡 **Carnet d'adresses global** (GAL) Exchange / M365 : recherche et sélection des destinataires (backend evolution-ews) <a id="demo-gal"></a>
+  - [x] Moteur : `evo_core_search_gal` (Microsoft Graph `GET /users?$search=` pour Microsoft 365 / Exchange Online, API People `searchDirectoryPeople` pour Google Workspace) avec le jeton OAuth2 du compte ; _reste à valider sur un tenant réel_ (Microsoft 365 et Google Workspace)
+  - [x] Consultation : bouton « Annuaire de l'organisation » dans la vue Contacts (recherche dès 2 caractères, fiche en lecture seule : fonction, service, société, téléphones, bureau, bouton _Écrire un message_)
+  - [ ] Exchange sur site (EWS `ResolveNames`) : non pris en charge (les carnets GAL EDS d'EWS restent visibles dans les carnets habituels)
 - Contacts unifiés et doublons : cf. §11 ; recherche rapide de contacts : cf. §10 ; export par glisser-déposer vers l'extérieur : cf. §18
 - [ ] 🟡 **Fenêtre de sélection de destinataires** (carnet d'adresses, comme le bouton _À…_ d'Outlook) :
   - [ ] Ouverte par un bouton en face de chaque ligne _À_, _Cc_, _Cci_ de la fenêtre de rédaction, et en face de la ligne des participants (_Obligatoires_, _Facultatifs_, _Ressources_) d'une invitation (§13)
@@ -751,6 +755,7 @@ Constat : sur un compte Exchange Online / Microsoft 365 (ex. EVAM), EvolutionWin
   - [ ] Fiche du contact accessible depuis la liste (clic droit › _Propriétés_), création d'un nouveau contact depuis la fenêtre
 - [ ] 🟡 **Autocomplétion des adresses** dans les champs _À_, _Cc_, _Cci_ de la rédaction et dans les participants d'une invitation : <a id="demo-autocompletion"></a>
   - [x] Suggestions au fil de la frappe (à partir de 2 caractères) depuis tous les carnets d'adresses (requête préfixe `EBookClient` sur nom, prénom, adresse), puis l'annuaire GAL pour les comptes Exchange / M365
+  - [x] Annuaire de l'organisation (GAL Microsoft 365 / Google Workspace via `evo_core_search_gal`) ajouté aux suggestions à partir de 3 caractères, après une pause de frappe de 400 ms, sans doublon d'adresse ; _reste à valider sur un tenant réel_
   - [x] Adresses récemment utilisées en tête (destinataires des derniers messages envoyés), même si absentes des contacts
   - [x] Liste déroulante : nom, adresse, carnet d'origine ; navigation aux flèches, validation par Entrée / Tab / point-virgule
   - [ ] Destinataire validé affiché en « jeton » (nom, adresse en info-bulle), supprimable, double-clic pour le modifier ; adresse inconnue ou mal formée soulignée

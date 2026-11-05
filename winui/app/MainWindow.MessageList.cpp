@@ -1,8 +1,10 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
 #include "MainWindow.Helpers.h"
+#include "FollowUp.h"
 #include "WindowIcon.h"
 #include "Settings.h"
+#include "ConversationThreads.h"
 
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
@@ -16,6 +18,7 @@
 #include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include <algorithm>
+#include <map>
 #include <chrono>
 #include <cmath>
 #include <cwctype>
@@ -121,8 +124,90 @@ namespace winrt::EvolutionWin::implementation
         }
         SortMessages(shown);
 
+        /* Regroupement par discussion : le premier message (selon le tri) de
+         * chaque fil sert d'en-tête ; les autres sont masqués tant que le fil
+         * n'est pas développé */
+        struct ThreadRow { bool header{ true }; bool hidden{ false }; size_t count{ 1 }; size_t unread{ 0 }; std::wstring key; };
+        std::vector<ThreadRow> rows(shown.size());
+        m_last_shown_messages = messages;
+        if (m_conversations_enabled)
+        {
+            std::vector<::EvolutionWin::Conversations::ThreadMessage> inputs;
+            inputs.reserve(shown.size());
+            for (auto const& message : shown)
+            {
+                ::EvolutionWin::Conversations::ThreadMessage input;
+                input.message_id = message.GetNamedString(L"msgid", L"").c_str();
+                for (auto const& ref : message.GetNamedArray(L"refs", JsonArray{}))
+                    input.references.push_back(ref.GetString().c_str());
+                input.subject = message.GetNamedString(L"subject", L"").c_str();
+                inputs.push_back(std::move(input));
+            }
+            auto roots = ::EvolutionWin::Conversations::BuildThreads(inputs);
+
+            /* un fil se range à la place de son premier message affiché */
+            std::map<size_t, size_t> head_of;
+            for (size_t i = 0; i < shown.size(); ++i)
+                head_of.emplace(roots[i], i);
+            std::vector<size_t> order;
+            order.reserve(shown.size());
+            for (size_t i = 0; i < shown.size(); ++i)
+            {
+                if (head_of[roots[i]] != i)
+                    continue;
+                for (size_t j = 0; j < shown.size(); ++j)
+                    if (roots[j] == roots[i])
+                        order.push_back(j);
+            }
+            std::vector<JsonObject> grouped;
+            std::vector<size_t> grouped_roots;
+            grouped.reserve(shown.size());
+            for (size_t index : order)
+            {
+                grouped.push_back(shown[index]);
+                grouped_roots.push_back(roots[index]);
+            }
+            shown = std::move(grouped);
+
+            for (size_t i = 0; i < shown.size();)
+            {
+                size_t end = i;
+                size_t unread = 0;
+                while (end < shown.size() && grouped_roots[end] == grouped_roots[i])
+                {
+                    if (!shown[end].GetNamedBoolean(L"seen", true))
+                        ++unread;
+                    ++end;
+                }
+                std::wstring key = ::EvolutionWin::Conversations::NormalizeThreadSubject(
+                    shown[i].GetNamedString(L"subject", L"").c_str());
+                if (key.empty())
+                    key = shown[i].GetNamedString(L"uid").c_str();
+                bool expanded = m_expanded_threads.count(key) != 0;
+                /* le message sélectionné ne doit pas disparaître dans un fil replié */
+                for (size_t k = i; k < end && !expanded; ++k)
+                    if (!selected.empty() && shown[k].GetNamedString(L"uid") == selected)
+                    {
+                        expanded = true;
+                        m_expanded_threads.insert(key);
+                    }
+                for (size_t k = i; k < end; ++k)
+                {
+                    rows[k].key = key;
+                    rows[k].count = end - i;
+                    rows[k].unread = unread;
+                    rows[k].header = (k == i);
+                    rows[k].hidden = (k != i) && !expanded;
+                }
+                i = end;
+            }
+        }
+
+        size_t row_index = static_cast<size_t>(-1);
         for (auto const& message : shown)
         {
+            ++row_index;
+            ThreadRow const thread_row = rows[row_index];
             hstring uid = message.GetNamedString(L"uid");
             bool seen = message.GetNamedBoolean(L"seen", true);
             bool flagged = message.GetNamedBoolean(L"flagged", false);
@@ -135,6 +220,15 @@ namespace winrt::EvolutionWin::implementation
             m_message_locations[std::wstring{ uid }] = { msg_account, msg_folder, msg_folder_name, msg_account_name };
 
             m_message_states[std::wstring{ uid }] = MessageState{ seen, flagged, attachments };
+            {
+                auto& fu_state = m_message_states[std::wstring{ uid }];
+                fu_state.follow_up = std::wstring{ message.GetNamedString(L"follow_up", L"") };
+                fu_state.due_by = ::EvolutionWin::FollowUp::ParseEpoch(message.GetNamedString(L"due_by", L""));
+                fu_state.completed_on = ::EvolutionWin::FollowUp::ParseEpoch(message.GetNamedString(L"completed_on", L""));
+            }
+
+            if (thread_row.hidden)
+                continue;
 
             Grid item;
             if (m_compact_density)
@@ -146,6 +240,8 @@ namespace winrt::EvolutionWin::implementation
              * soit détecté sur toute la surface de la ligne et pas uniquement sur le texte */
             item.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
             item.Tag(box_value(uid));
+            if (m_conversations_enabled && !thread_row.header)
+                item.Margin(ThicknessHelper::FromLengths(24, 0, 0, 0));
             item.ColumnDefinitions().Append(ColumnDefinition{});
             ColumnDefinition date_column;
             date_column.Width(GridLengthHelper::Auto());
@@ -196,6 +292,8 @@ namespace winrt::EvolutionWin::implementation
             flag_icon.Glyph(L"\xE7C1");
             flag_icon.FontSize(12);
             flag_icon.Foreground(SolidColorBrush{ Windows::UI::Color{ 255, 247, 99, 12 } });
+            flag_icon.Tag(box_value(L"follow-flag"));
+            StyleFollowUpIcon(flag_icon, m_message_states[std::wstring{ uid }]);
             flag_icon.Visibility(flagged ? Visibility::Visible : Visibility::Collapsed);
             meta.Children().Append(flag_icon);
 
@@ -255,6 +353,48 @@ namespace winrt::EvolutionWin::implementation
                         meta.Children().Append(badge);
                     }
                 }
+            }
+
+            /* Fil de discussion : bouton replier / développer, nombre de messages et de non lus */
+            if (m_conversations_enabled && thread_row.header && thread_row.count > 1)
+            {
+                bool expanded = m_expanded_threads.count(thread_row.key) != 0;
+                Button toggle;
+                FontIcon chevron;
+                chevron.Glyph(expanded ? L"\xE70D" : L"\xE76C");
+                chevron.FontSize(10);
+                toggle.Content(chevron);
+                toggle.Padding(ThicknessHelper::FromLengths(4, 2, 4, 2));
+                toggle.MinWidth(0);
+                toggle.MinHeight(0);
+                toggle.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+                toggle.BorderThickness(ThicknessHelper::FromUniformLength(0));
+                ToolTipService::SetToolTip(toggle, box_value(expanded ? L"Replier la conversation" : L"Développer la conversation"));
+                std::wstring key = thread_row.key;
+                toggle.Click([this, key](IInspectable const&, RoutedEventArgs const&)
+                {
+                    if (!m_expanded_threads.erase(key))
+                        m_expanded_threads.insert(key);
+                    if (m_last_shown_messages)
+                        ShowMessages(m_last_shown_messages);
+                });
+                meta.Children().Append(toggle);
+
+                Border count_badge;
+                count_badge.CornerRadius(CornerRadiusHelper::FromUniformRadius(8));
+                count_badge.Padding(ThicknessHelper::FromLengths(6, 0, 6, 0));
+                count_badge.VerticalAlignment(VerticalAlignment::Center);
+                count_badge.Background(SolidColorBrush{ thread_row.unread > 0
+                    ? Windows::UI::Color{ 255, 0, 120, 212 } : Windows::UI::Color{ 255, 128, 128, 128 } });
+                TextBlock count_text;
+                std::wstring label = std::to_wstring(thread_row.count);
+                if (thread_row.unread > 0)
+                    label += L" · " + std::to_wstring(thread_row.unread) + L" non lu" + (thread_row.unread > 1 ? L"s" : L"");
+                count_text.Text(hstring{ label });
+                count_text.FontSize(10);
+                count_text.Foreground(SolidColorBrush{ Microsoft::UI::Colors::White() });
+                count_badge.Child(count_text);
+                meta.Children().Append(count_badge);
             }
 
             TextBlock date;
@@ -525,6 +665,13 @@ namespace winrt::EvolutionWin::implementation
                 });
                 menu_items.Append(flag_item);
 
+                MenuFlyoutSubItem follow_up_sub;
+                follow_up_sub.Text(hstring{ L"Suivi" + count_suffix });
+                follow_up_sub.Icon(FontIcon{});
+                follow_up_sub.Icon().as<FontIcon>().Glyph(L"çC1");
+                PopulateFollowUpMenuItems(follow_up_sub.Items(), target_uids);
+                menu_items.Append(follow_up_sub);
+
                 MenuFlyoutSubItem cat_sub;
                 cat_sub.Text(hstring{ L"Catégoriser" + count_suffix });
                 cat_sub.Icon(FontIcon{});
@@ -772,7 +919,7 @@ namespace winrt::EvolutionWin::implementation
         hstring target_account = loc.account.empty() ? m_account : loc.account;
         hstring target_folder = loc.folder.empty() ? m_folder : loc.folder;
 
-        m_core->FetchMessage(target_account, target_folder, uid, [this, request, uid](hstring const& json, hstring const& error)
+        m_core->FetchMessage(target_account, target_folder, uid, [this, request, uid, target_account, target_folder](hstring const& json, hstring const& error)
         {
             if (request != m_message_request)
                 return;
@@ -786,6 +933,8 @@ namespace winrt::EvolutionWin::implementation
             auto message = JsonObject::Parse(json);
             m_current_message = message;
             m_current_message_uid = uid;
+            m_current_message_account = target_account;
+            m_current_message_folder = target_folder;
             hstring to = message.GetNamedString(L"to", L"");
             hstring cc = message.GetNamedString(L"cc", L"");
 
@@ -794,6 +943,8 @@ namespace winrt::EvolutionWin::implementation
             MessageTo().Text(L"À : " + to + (cc.empty() ? hstring{} : L"   Cc : " + cc));
             MessageDate().Text(FormatDate(message.GetNamedNumber(L"date", 0)));
             UpdateSecurityBanner(message.GetNamedObject(L"security", JsonObject{}));
+            UpdateReceiptBars(message);
+            UpdateInvitationBar(message);
             PopulateAttachments(message.GetNamedArray(L"attachments", JsonArray{}));
             MessageHeader().Visibility(Visibility::Visible);
             ReaderPlaceholder().Visibility(Visibility::Collapsed);

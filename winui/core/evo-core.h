@@ -138,6 +138,56 @@ void		evo_core_send_message		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Traite la demande d'accusé de lecture d'un message (en-tête
+ * Disposition-Notification-To ou Return-Receipt-To) : construit un vrai MDN
+ * (RFC 8098, multipart/report; report-type=disposition-notification), l'envoie
+ * par le serveur SMTP du compte du message, puis pose l'étiquette Camel
+ * "$MDNSent" pour ne plus reproposer l'accusé.
+ * Paramètres :
+ *   account_uid      : identifiant du compte qui a reçu le message
+ *   folder_full_name : chemin complet du dossier
+ *   message_uid      : identifiant du message
+ *   send             : non nul pour envoyer l'accusé ; 0 pour seulement marquer
+ *                      le message comme traité (« Ne pas envoyer »)
+ *   func             : rappel recevant {"sent": bool, "processed": true, "to": "adresse"} */
+void		evo_core_send_read_receipt	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *message_uid,
+						 int send,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Répond à une invitation iCalendar (iTIP / iMIP) contenue dans un message
+ * (voir le membre "invitation" renvoyé par evo_core_get_message) :
+ *  - met à jour l'agenda de l'utilisateur sans créer de doublon (UID et SEQUENCE) :
+ *    ajout ou remplacement pour Accepter / Provisoire, retrait pour Refuser ou
+ *    pour une annulation (METHOD:CANCEL) ; le PARTSTAT du participant qui
+ *    correspond à l'identité du compte est mis à jour ;
+ *  - envoie à l'organisateur, par le serveur SMTP du compte, une réponse
+ *    METHOD:REPLY (multipart/alternative : texte lisible et text/calendar) ;
+ *  - mémorise la réponse sur le message (étiquette Camel "evo-invite-response").
+ * Paramètres :
+ *   account_uid      : identifiant du compte qui a reçu le message
+ *   folder_full_name : chemin complet du dossier
+ *   message_uid      : identifiant du message
+ *   response         : "accepted", "declined" ou "tentative" ; "remove" pour retirer
+ *                      de l'agenda une réunion annulée (METHOD:CANCEL)
+ *   send_reply       : non nul pour envoyer la réponse à l'organisateur ; 0 pour
+ *                      « sans envoyer de réponse »
+ *   func             : rappel recevant {"response", "partstat", "calendar", "sent", "to"} ;
+ *                      "calendar" vaut "added", "updated", "kept", "removed", "unchanged"
+ *                      ou "skipped" (occurrence isolée d'une série) ; "calendar_error"
+ *                      est présent si l'agenda n'a pas pu être mis à jour */
+void		evo_core_respond_invitation	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *message_uid,
+						 const char *response,
+						 int send_reply,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Envoie tous les messages en attente dans la Boîte d'envoi locale
  * ("local" / "Outbox") via leurs comptes respectifs. */
 void		evo_core_send_unsent_messages	(EvoCore *core);
@@ -159,6 +209,23 @@ void		evo_core_set_message_flags	(EvoCore *core,
 						 const char *message_uid,
 						 const char *flag_name,
 						 int value,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Définit ou efface le suivi d'un message (libellé, échéance, date de fin ;
+ * étiquettes Camel "follow-up", "due-by", "completed-on").
+ * Paramètres :
+ *   label        : libellé du suivi, "" pour effacer
+ *   due_by       : échéance en secondes Unix (texte) ou "" ;
+ *   completed_on : date de fin en secondes Unix (texte) ou ""
+ *   func         : rappel recevant {"flagged", "follow_up", "due_by", "completed_on"} */
+void		evo_core_set_follow_up		(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *message_uid,
+						 const char *label,
+						 const char *due_by,
+						 const char *completed_on,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
@@ -546,6 +613,21 @@ void		evo_core_add_google_account	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Active l'agenda et les contacts Google d'un compte Gmail configuré sans
+ * ces services : active ceux de sa collection « google » ou crée une
+ * collection dédiée (sans courrier) réutilisant l'identifiant du compte.
+ * La connexion OAuth2 se fait ensuite par evo_core_oauth2_begin () sur
+ * "collection_uid".
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   email     : adresse e-mail du compte Gmail
+ *   func      : rappel recevant {"collection_uid", "created", "already_enabled"}
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_enable_google_services	(EvoCore *core,
+						 const char *email,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Connexion OAuth2 interactive d'un compte (Microsoft 365...), en deux
  * étapes, aussi en réponse à l'événement "oauth2-required"
  * ({"source_uid", "name", "user"}) :
@@ -624,6 +706,12 @@ void		evo_core_get_event		(EvoCore *core,
  * absent : dates inchangées ; "categories" remplace les catégories). */
 void		evo_core_modify_event		(EvoCore *core,
 						 const char *event_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Actualise les agendas activés auprès des serveurs distants (Google Agenda,
+ * Outlook, CalDAV) ; rappel : {}. */
+void		evo_core_refresh_calendars	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
@@ -762,6 +850,31 @@ void		evo_core_search_recipients	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Recherche dans l'annuaire de l'organisation (carnet d'adresses global, GAL)
+ * des comptes Microsoft 365 / Exchange Online (Microsoft Graph, GET /users avec
+ * $search, portée User.ReadBasic.All ; les détails professionnels exigent
+ * User.Read.All, sinon seuls nom et adresse sont renvoyés) et Google Workspace
+ * (API People, portée directory.readonly : les comptes Google déjà connectés
+ * doivent être reconnectés). Le jeton OAuth2 est celui du compte, renouvelé par
+ * EDS. Exchange sur site (EWS) et IMAP générique ne sont pas interrogés.
+ * Les résultats des comptes joignables sont renvoyés même si un autre échoue ;
+ * l'erreur n'est signalée que si tous échouent ou si aucun compte compatible
+ * n'existe. Une saisie de moins de 2 caractères renvoie [].
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   text      : saisie (début du nom, du prénom ou de l'adresse)
+ *   max_count : nombre maximal de résultats (1 à 50, 15 par défaut)
+ *   func      : rappel recevant [{"name", "email", "given_name", "family_name",
+ *               "title", "department", "company", "office", "phone", "mobile",
+ *               "account", "provider": "microsoft365"|"google"}, ...],
+ *               une entrée par adresse
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_search_gal		(EvoCore *core,
+						 const char *text,
+						 int max_count,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Comme evo_core_list_contacts (), limité aux carnets book_uids (uids
  * séparés par des virgules ; NULL ou "" : tous les carnets activés). */
 void		evo_core_list_book_contacts	(EvoCore *core,
@@ -800,6 +913,20 @@ void		evo_core_create_contact		(EvoCore *core,
 void		evo_core_delete_contact		(EvoCore *core,
 						 const char *book_uid,
 						 const char *contact_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Modifie un contact existant dans son carnet d'adresses.
+ * Format attendu pour contact_json :
+ * {"book_uid": "...", "uid": "...", "full_name": "...", "email": "...",
+ *  "phone": "...", "org": "...", "notes": "..."}
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   contact_json : description modifiée du contact au format JSON UTF-8
+ *   func         : rappel recevant {}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_modify_contact		(EvoCore *core,
+						 const char *contact_json,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
@@ -940,6 +1067,40 @@ void		evo_core_set_account_signature	(EvoCore *core,
 void		evo_core_respond_tls_trust	(EvoCore *core,
 						 const char *trust_id,
 						 int trust_decision);
+
+/* Lit les réponses automatiques (absence du bureau) d'un compte Microsoft 365
+ * (Microsoft Graph, mailboxSettings/automaticRepliesSetting) ou Gmail
+ * (users.settings.getVacation), avec le jeton OAuth2 de la collection du compte.
+ * Erreur en français pour les comptes IMAP génériques et Exchange sur site (EWS).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   func        : rappel recevant {"provider": "microsoft365"|"gmail", "single_message",
+ *                 "enabled", "external_audience": "none"|"known"|"all", "start", "end"
+ *                 (secondes Unix, 0 = sans limite), "subject" (Gmail), "internal_message",
+ *                 "external_message" (texte brut)}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_get_auto_reply		(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Enregistre les réponses automatiques d'un compte Microsoft 365 ou Gmail.
+ * Microsoft 365 exige les deux dates ou aucune ; Gmail n'a qu'un message (celui des
+ * expéditeurs externes, sinon l'interne) ; l'audience « none » équivaut chez Gmail
+ * à « seulement mon domaine ». Portées OAuth2 requises : MailboxSettings.ReadWrite
+ * (Microsoft 365) et gmail.settings.basic (Gmail).
+ * Paramètres :
+ *   core          : instance du moteur evo-core
+ *   account_uid   : identifiant du compte
+ *   settings_json : réglages, mêmes champs que le résultat de evo_core_get_auto_reply
+ *   func          : rappel recevant les réglages enregistrés (même format)
+ *   user_data     : données utilisateur transmises au rappel */
+void		evo_core_set_auto_reply		(EvoCore *core,
+						 const char *account_uid,
+						 const char *settings_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
 
 /* Versions des composants du moteur, pour la boîte « À propos » et les
  * rapports de bug (sans instance du moteur, appel synchrone) :

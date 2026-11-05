@@ -145,6 +145,17 @@ m365_backend_populate (ECollectionBackend *collection_backend)
 }
 
 static void
+m365_backend_update_resource_with_group (EM365Backend *m365_backend,
+					 const gchar *extension_name,
+					 const gchar *id,
+					 const gchar *group_id,
+					 const gchar *display_name,
+					 gboolean is_default,
+					 const gchar *calendar_color,
+					 const gchar *group_name);
+
+/* Mise a jour d'une ressource sans nom de groupe de calendriers. */
+static void
 m365_backend_update_resource (EM365Backend *m365_backend,
 			      const gchar *extension_name,
 			      const gchar *id,
@@ -152,6 +163,22 @@ m365_backend_update_resource (EM365Backend *m365_backend,
 			      const gchar *display_name,
 			      gboolean is_default,
 			      const gchar *calendar_color)
+{
+	m365_backend_update_resource_with_group (m365_backend, extension_name, id, group_id,
+		display_name, is_default, calendar_color, NULL);
+}
+
+/* Cree ou met a jour la source d'un dossier ; group_name (nom du groupe de
+ * calendriers, ex. "Equipe de ...") est conserve dans l'extension du dossier. */
+static void
+m365_backend_update_resource_with_group (EM365Backend *m365_backend,
+					 const gchar *extension_name,
+					 const gchar *id,
+					 const gchar *group_id,
+					 const gchar *display_name,
+					 gboolean is_default,
+					 const gchar *calendar_color,
+					 const gchar *group_name)
 {
 	ESource *source;
 	gboolean is_new;
@@ -177,6 +204,8 @@ m365_backend_update_resource (EM365Backend *m365_backend,
 			e_source_set_display_name (source, display_name);
 
 		e_source_m365_folder_set_display_name (folder_ext, display_name);
+		if (group_name)
+			e_source_m365_folder_set_group_name (folder_ext, group_name);
 
 		if (calendar_color && g_ascii_strcasecmp (calendar_color, "auto") != 0 && (
 		    g_strcmp0 (extension_name, E_SOURCE_EXTENSION_CALENDAR) == 0 ||
@@ -507,12 +536,13 @@ m365_backend_sync_calendar_folders_sync (EM365Backend *m365_backend,
 					if (!color || !*color)
 						color = e_m365_calendar_color_to_rgb (e_m365_calendar_get_color (calendar));
 
-					m365_backend_update_resource (m365_backend, extension_name,
+					m365_backend_update_resource_with_group (m365_backend, extension_name,
 						e_m365_calendar_get_id (calendar),
 						e_m365_calendar_group_get_id (group),
 						e_m365_calendar_get_name (calendar),
 						FALSE,
-						color);
+						color,
+						e_m365_calendar_group_get_name (group));
 
 					g_hash_table_remove (known_ids, e_m365_calendar_get_id (calendar));
 				}

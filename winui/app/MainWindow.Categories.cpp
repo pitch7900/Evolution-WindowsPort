@@ -19,6 +19,8 @@ using namespace Microsoft::UI::Xaml::Media;
 using namespace Windows::Data::Json;
 using namespace Windows::Foundation;
 
+using namespace ::EvolutionWin::Helpers;
+
 namespace
 {
     using ::EvolutionWin::CategoryStore;
@@ -78,7 +80,7 @@ namespace winrt::EvolutionWin::implementation
             ShowTasks();
         if (m_all_calendar_events)
             FilterAndRenderCalendarEvents();
-        if (m_all_contacts)
+        if (m_all_contacts && !m_gal_mode)
             ShowContacts();
     }
 
@@ -135,7 +137,7 @@ namespace winrt::EvolutionWin::implementation
             swatch.Height(32);
             swatch.Padding(ThicknessHelper::FromUniformLength(0));
             swatch.Background(SolidColorBrush{ Windows::UI::Color{ 255, cat.r, cat.g, cat.b } });
-            Controls::ToolTipService::SetToolTip(swatch, box_value(L"Choisir la couleur"));
+            Controls::ToolTipService::SetToolTip(swatch, box_value(Tr(L"Choisir la couleur", L"Choose the colour")));
 
             ColorPicker picker;
             picker.IsAlphaEnabled(false);
@@ -169,14 +171,14 @@ namespace winrt::EvolutionWin::implementation
                     return;
                 if (!::EvolutionWin::CategoryStore::Registry().Rename(*current, wanted))
                 {
-                    ShowStatus(L"Nom de catégorie vide, contenant une virgule ou déjà utilisé.", InfoBarSeverity::Warning);
+                    ShowStatus(Tr(L"Nom de catégorie vide, contenant une virgule ou déjà utilisé.", L"Category name is empty, contains a comma or is already used."), InfoBarSeverity::Warning);
                     box.Text(hstring{ *current });
                     return;
                 }
                 *current = wanted;
                 box.Text(hstring{ wanted });
                 OnCategoriesRegistryChanged();
-                ShowStatus(L"Catégorie renommée. Les éléments déjà classés gardent l'ancien nom.", InfoBarSeverity::Informational);
+                ShowStatus(Tr(L"Catégorie renommée. Les éléments déjà classés gardent l'ancien nom.", L"Category renamed. Items already categorised keep the old name."), InfoBarSeverity::Informational);
             });
             name_box.KeyDown([swatch](IInspectable const&, Input::KeyRoutedEventArgs const& args)
             {
@@ -200,14 +202,14 @@ namespace winrt::EvolutionWin::implementation
             delete_icon.Glyph(L"\xE74D");
             delete_icon.FontSize(14);
             delete_button.Content(delete_icon);
-            Controls::ToolTipService::SetToolTip(delete_button, box_value(L"Supprimer la catégorie"));
+            Controls::ToolTipService::SetToolTip(delete_button, box_value(Tr(L"Supprimer la catégorie", L"Delete category")));
             delete_button.Click([this, current](IInspectable const&, RoutedEventArgs const&)
             {
                 if (::EvolutionWin::CategoryStore::Registry().Remove(*current))
                 {
                     OnCategoriesRegistryChanged();
                     RefreshCategoriesView();
-                    ShowStatus(L"Catégorie supprimée de la palette. Les éléments déjà classés la conservent.", InfoBarSeverity::Informational);
+                    ShowStatus(Tr(L"Catégorie supprimée de la palette. Les éléments déjà classés la conservent.", L"Category removed from the palette. Items already categorised keep it."), InfoBarSeverity::Informational);
                 }
             });
             Grid::SetColumn(delete_button, 3);
@@ -228,12 +230,12 @@ namespace winrt::EvolutionWin::implementation
         add_row.ColumnDefinitions().Append(add_col);
 
         TextBox new_name;
-        new_name.PlaceholderText(L"Nom de la nouvelle catégorie");
+        new_name.PlaceholderText(Tr(L"Nom de la nouvelle catégorie", L"New category name"));
         new_name.MaxLength(100);
         add_row.Children().Append(new_name);
 
         Button add_button;
-        add_button.Content(box_value(L"Ajouter une catégorie"));
+        add_button.Content(box_value(Tr(L"Ajouter une catégorie", L"Add a category")));
         auto add_action = [this, new_name]()
         {
             std::wstring name = Cat::TrimName(std::wstring_view{ new_name.Text() });
@@ -241,7 +243,7 @@ namespace winrt::EvolutionWin::implementation
             Cat::FallbackColor(name, r, g, b);
             if (!::EvolutionWin::CategoryStore::Registry().Add(name, r, g, b))
             {
-                ShowStatus(L"Nom de catégorie vide, contenant une virgule ou déjà utilisé.", InfoBarSeverity::Warning);
+                ShowStatus(Tr(L"Nom de catégorie vide, contenant une virgule ou déjà utilisé.", L"Category name is empty, contains a comma or is already used."), InfoBarSeverity::Warning);
                 return;
             }
             OnCategoriesRegistryChanged();
@@ -259,19 +261,19 @@ namespace winrt::EvolutionWin::implementation
 
         /* palette standard */
         Button reset_button;
-        reset_button.Content(box_value(L"Rétablir la palette standard"));
+        reset_button.Content(box_value(Tr(L"Rétablir la palette standard", L"Restore the standard palette")));
         reset_button.Margin(ThicknessHelper::FromLengths(0, 8, 0, 0));
         reset_button.Click([this](IInspectable const&, RoutedEventArgs const&)
         {
             ::EvolutionWin::CategoryStore::Registry() = ::EvolutionWin::Categories::CategoryRegistry{};
             OnCategoriesRegistryChanged();
             RefreshCategoriesView();
-            ShowStatus(L"Palette de catégories rétablie.", InfoBarSeverity::Informational);
+            ShowStatus(Tr(L"Palette de catégories rétablie.", L"Category palette restored."), InfoBarSeverity::Informational);
         });
         host.Children().Append(reset_button);
 
         TextBlock note;
-        note.Text(L"Supprimer ou renommer une catégorie ne modifie pas les éléments déjà classés : ils gardent leur ancien nom, avec une couleur calculée à partir de ce nom.");
+        note.Text(Tr(L"Supprimer ou renommer une catégorie ne modifie pas les éléments déjà classés : ils gardent leur ancien nom, avec une couleur calculée à partir de ce nom.", L"Deleting or renaming a category does not change items already categorised: they keep their old name, with a colour derived from that name."));
         note.TextWrapping(TextWrapping::Wrap);
         note.Style(caption_style);
         note.Foreground(secondary_brush);
@@ -329,7 +331,7 @@ namespace winrt::EvolutionWin::implementation
         items.Append(MenuFlyoutSeparator{});
 
         MenuFlyoutItem clear_item;
-        clear_item.Text(L"Effacer toutes les catégories");
+        clear_item.Text(Tr(L"Effacer toutes les catégories", L"Clear all categories"));
         FontIcon clear_icon;
         clear_icon.Glyph(L"\xE74D");
         clear_item.Icon(clear_icon);
@@ -341,7 +343,7 @@ namespace winrt::EvolutionWin::implementation
         items.Append(clear_item);
 
         MenuFlyoutItem manage_item;
-        manage_item.Text(L"Gérer les catégories…");
+        manage_item.Text(Tr(L"Gérer les catégories…", L"Manage categories..."));
         FontIcon manage_icon;
         manage_icon.Glyph(L"\xE713");
         manage_item.Icon(manage_icon);
@@ -366,7 +368,7 @@ namespace winrt::EvolutionWin::implementation
     {
         MenuFlyout flyout;
         MenuFlyoutSubItem sub;
-        sub.Text(L"Catégoriser");
+        sub.Text(Tr(L"Catégoriser", L"Categorise"));
         FontIcon icon;
         icon.Glyph(L"\xE8EC");
         sub.Icon(icon);
@@ -406,7 +408,7 @@ namespace winrt::EvolutionWin::implementation
         m_core->ModifyTask(request.Stringify(), [this](hstring const&, hstring const& error)
         {
             if (!error.empty())
-                ShowStatus(L"Catégories de la tâche : " + error, InfoBarSeverity::Error);
+                ShowStatus(Tr(L"Catégories de la tâche : ", L"Task categories: ") + error, InfoBarSeverity::Error);
             LoadTasks();
         });
     }
@@ -426,7 +428,7 @@ namespace winrt::EvolutionWin::implementation
         m_core->ModifyEvent(request.Stringify(), [this](hstring const&, hstring const& error)
         {
             if (!error.empty())
-                ShowStatus(L"Catégories de l'événement : " + error, InfoBarSeverity::Error);
+                ShowStatus(Tr(L"Catégories de l'événement : ", L"Event categories: ") + error, InfoBarSeverity::Error);
             LoadEvents();
         });
     }
@@ -445,7 +447,7 @@ namespace winrt::EvolutionWin::implementation
             [this](hstring const&, hstring const& error)
         {
             if (!error.empty())
-                ShowStatus(L"Catégories du contact : " + error, InfoBarSeverity::Error);
+                ShowStatus(Tr(L"Catégories du contact : ", L"Contact categories: ") + error, InfoBarSeverity::Error);
             LoadContacts(m_contact_query);
         });
     }
@@ -487,7 +489,7 @@ namespace winrt::EvolutionWin::implementation
         flyout.Items().Append(MenuFlyoutSeparator{});
 
         ToggleMenuFlyoutItem none_item;
-        none_item.Text(L"Sans catégorie");
+        none_item.Text(Tr(L"Sans catégorie", L"No category"));
         none_item.IsChecked(filter.include_uncategorized);
         none_item.Click([this, target, changed](IInspectable const&, RoutedEventArgs const&)
         {
@@ -498,7 +500,7 @@ namespace winrt::EvolutionWin::implementation
         flyout.Items().Append(none_item);
 
         MenuFlyoutItem clear_item;
-        clear_item.Text(L"Effacer le filtre");
+        clear_item.Text(Tr(L"Effacer le filtre", L"Clear filter"));
         clear_item.IsEnabled(!filter.IsEmpty());
         clear_item.Click([this, target, changed](IInspectable const&, RoutedEventArgs const&)
         {
@@ -528,12 +530,12 @@ namespace winrt::EvolutionWin::implementation
             if (!filter.IsEmpty())
                 icon.Foreground(Application::Current().Resources().Lookup(box_value(L"AccentTextFillColorPrimaryBrush")).as<Brush>());
 
-            std::wstring tip = L"Filtrer par catégorie";
+            std::wstring tip{ Tr(L"Filtrer par catégorie", L"Filter by category") };
             if (!filter.IsEmpty())
             {
                 std::vector<std::wstring> shown = filter.selected;
                 if (filter.include_uncategorized)
-                    shown.push_back(L"Sans catégorie");
+                    shown.push_back(std::wstring{ Tr(L"Sans catégorie", L"No category") });
                 tip += L" : " + Cat::JoinCategories(shown);
             }
             button.Content(icon);
@@ -561,7 +563,7 @@ namespace winrt::EvolutionWin::implementation
     /** @brief Bouton de filtre par catégorie de la liste des contacts. */
     void MainWindow::OnContactCategoryFilterClick(IInspectable const& sender, RoutedEventArgs const&)
     {
-        ShowCategoryFilterMenu(sender.as<FrameworkElement>(), m_contact_category_filter, [this]() { ShowContacts(); });
+        ShowCategoryFilterMenu(sender.as<FrameworkElement>(), m_contact_category_filter, [this]() { if (!m_gal_mode) ShowContacts(); });
     }
 
     /** @brief Bouton de filtre par catégorie du calendrier (liste et grilles). */

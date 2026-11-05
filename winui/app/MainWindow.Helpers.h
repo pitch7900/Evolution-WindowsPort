@@ -106,6 +106,37 @@ namespace EvolutionWin::Helpers
     }
 
     /**
+     * @brief Indique si la langue d'affichage de l'application est l'anglais.
+     * @return true pour une langue « en* », false sinon (français par défaut).
+     */
+    inline bool UiIsEnglish()
+    {
+        try
+        {
+            auto languages = Windows::Globalization::ApplicationLanguages::Languages();
+            if (languages.Size() > 0)
+            {
+                hstring tag_text = languages.GetAt(0);
+                std::wstring_view tag{ tag_text };
+                return tag.size() >= 2 && (tag[0] == L'e' || tag[0] == L'E') && (tag[1] == L'n' || tag[1] == L'N');
+            }
+        }
+        catch (...) {}
+        return false;
+    }
+
+    /**
+     * @brief Choisit le texte de la langue d'affichage (il n'y a pas de fichier de ressources).
+     * @param fr Texte français.
+     * @param en Texte anglais.
+     * @return Le texte dans la langue courante.
+     */
+    inline hstring Tr(wchar_t const* fr, wchar_t const* en)
+    {
+        return hstring{ UiIsEnglish() ? en : fr };
+    }
+
+    /**
      * @brief Formate une date et une heure selon la locale active (shortdate shorttime).
      * @param unix_time Horodatage Unix en secondes.
      * @return Chaîne formatée localisée.
@@ -775,6 +806,8 @@ namespace EvolutionWin::Helpers
     {
         Image,       ///< Fichier image décodable directement par BitmapImage
         Text,        ///< Fichier texte brut, code source, CSV, JSON, logs
+        Pdf,         ///< Document PDF rendu page par page (Windows.Data.Pdf)
+        Html,        ///< Page HTML affichée dans un WebView2 isolé (sans script ni contenu distant)
         Unsupported  ///< Type non pris en charge ou exécutable à risque
     };
 
@@ -798,8 +831,16 @@ namespace EvolutionWin::Helpers
             return AttachmentPreviewKind::Image;
         }
 
+        // PDF : rendu en images, aucun code actif exécuté
+        if (ext == L".pdf")
+            return AttachmentPreviewKind::Pdf;
+
+        // HTML : WebView2 isolé (scripts désactivés, contenu distant bloqué)
+        if (ext == L".html" || ext == L".htm")
+            return AttachmentPreviewKind::Html;
+
         // Fichiers texte brut affichés sans interprétation de code
-        if (ext == L".txt" || ext == L".csv" || ext == L".tsv" || ext == L".log" ||
+        if (ext == L".eml" || ext == L".txt" || ext == L".csv" || ext == L".tsv" || ext == L".log" ||
             ext == L".json" || ext == L".xml" || ext == L".ini" || ext == L".cfg" ||
             ext == L".conf" || ext == L".md" || ext == L".patch" || ext == L".diff" ||
             ext == L".yaml" || ext == L".yml" || ext == L".sql" || ext == L".c" ||

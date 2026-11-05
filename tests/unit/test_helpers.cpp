@@ -4691,6 +4691,14 @@ enum class AttachmentPreviewKind
 
 
 
+    Pdf,
+
+
+
+    Html,
+
+
+
     Unsupported
 
 
@@ -4767,7 +4775,23 @@ static AttachmentPreviewKind DetectAttachmentPreviewKind(std::wstring_view filen
 
 
 
-    if (ext == L".txt" || ext == L".csv" || ext == L".tsv" || ext == L".log" ||
+    if (ext == L".pdf")
+
+
+
+        return AttachmentPreviewKind::Pdf;
+
+
+
+    if (ext == L".html" || ext == L".htm")
+
+
+
+        return AttachmentPreviewKind::Html;
+
+
+
+    if (ext == L".eml" || ext == L".txt" || ext == L".csv" || ext == L".tsv" || ext == L".log" ||
 
 
 
@@ -4910,6 +4934,40 @@ static void test_attachment_preview_kind(void)
     TEST_CASE_END();
 
 
+
+
+
+
+
+    TEST_CASE("DetectAttachmentPreviewKind: PDF, HTML et EML");
+
+
+
+    {
+
+
+
+        ASSERT_TRUE(DetectAttachmentPreviewKind(L"facture.PDF") == AttachmentPreviewKind::Pdf);
+
+
+
+        ASSERT_TRUE(DetectAttachmentPreviewKind(L"page.html") == AttachmentPreviewKind::Html);
+
+
+
+        ASSERT_TRUE(DetectAttachmentPreviewKind(L"page.htm") == AttachmentPreviewKind::Html);
+
+
+
+        ASSERT_TRUE(DetectAttachmentPreviewKind(L"message.eml") == AttachmentPreviewKind::Text);
+
+
+
+    }
+
+
+
+    TEST_CASE_END();
 
 
 
@@ -6005,6 +6063,442 @@ static void test_message_importance_parsing()
     TEST_CASE_END();
 }
 
+#include "../../winui/app/UpdateIntegrity.h"
+
+static std::wstring ToLowerCopyForTest(std::wstring text)
+{
+    for (auto& c : text)
+        c = static_cast<wchar_t>(std::towlower(c));
+    return text;
+}
+
+#include "../../winui/app/ConversationThreads.h"
+#include "../../winui/app/FollowUp.h"
+#include "../../winui/app/Receipts.h"
+#include "../../winui/app/Invitations.h"
+
+static void test_invitations_banner(void)
+{
+    using namespace EvolutionWin::Invitations;
+
+    TEST_CASE("Invitations: methode iTIP et reponse du moteur")
+    {
+        ASSERT_TRUE(ParseKind(L"REQUEST") == Kind::Request);
+        ASSERT_TRUE(ParseKind(L"cancel") == Kind::Cancel);
+        ASSERT_TRUE(ParseKind(L"Reply") == Kind::Reply);
+        ASSERT_TRUE(ParseKind(L"PUBLISH") == Kind::None);
+        ASSERT_TRUE(ParseKind(L"") == Kind::None);
+        ASSERT_TRUE(ParseAnswer(L"accepted") == Answer::Accepted);
+        ASSERT_TRUE(ParseAnswer(L"tentative") == Answer::Tentative);
+        ASSERT_TRUE(ParseAnswer(L"declined") == Answer::Declined);
+        ASSERT_TRUE(ParseAnswer(L"needs-action") == Answer::NeedsAction);
+        ASSERT_TRUE(ParseAnswer(L"n'importe quoi") == Answer::NeedsAction);
+        ASSERT_TRUE(std::wstring{ AnswerToResponse(Answer::Accepted) } == L"accepted");
+        ASSERT_TRUE(std::wstring{ AnswerToResponse(Answer::Declined) } == L"declined");
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Invitations: aspect du bandeau selon la nature du message")
+    {
+        /* invitation recue : trois boutons et choix d'envoi de la reponse */
+        BannerState request = Decide(Kind::Request, false, true, false);
+        ASSERT_TRUE(request.visible && request.showResponseButtons && request.showSendChoice);
+        ASSERT_FALSE(request.showRemoveButton);
+        /* organisateur inconnu : pas de choix d'envoi (rien a envoyer) */
+        ASSERT_FALSE(Decide(Kind::Request, false, false, false).showSendChoice);
+        /* son propre message : information seulement */
+        BannerState own = Decide(Kind::Request, true, true, false);
+        ASSERT_TRUE(own.visible);
+        ASSERT_FALSE(own.showResponseButtons);
+        /* annulation : bouton de retrait seulement si l'evenement est dans l'agenda */
+        BannerState cancel = Decide(Kind::Cancel, false, true, true);
+        ASSERT_TRUE(cancel.visible && cancel.showRemoveButton && cancel.tone == Tone::Warning);
+        ASSERT_FALSE(cancel.showResponseButtons);
+        ASSERT_FALSE(Decide(Kind::Cancel, false, true, false).showRemoveButton);
+        /* reponse recue ; autre methode : rien */
+        BannerState reply = Decide(Kind::Reply, false, true, false);
+        ASSERT_TRUE(reply.visible && !reply.showResponseButtons && !reply.showRemoveButton);
+        ASSERT_FALSE(Decide(Kind::None, false, true, true).visible);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Invitations: textes d'etat et de reponse (francais et anglais)")
+    {
+        ASSERT_TRUE(DescribeState(Kind::Request, Answer::Accepted, true, false, false) == L"Vous avez accepté cette invitation.");
+        ASSERT_TRUE(DescribeState(Kind::Request, Answer::Declined, false, false, true) == L"You declined this invitation.");
+        ASSERT_TRUE(DescribeState(Kind::Request, Answer::NeedsAction, false, false, false) == L"Merci de répondre à cette invitation.");
+        ASSERT_TRUE(DescribeState(Kind::Request, Answer::NeedsAction, true, false, true).find(L"already in your calendar") != std::wstring::npos);
+        ASSERT_TRUE(DescribeState(Kind::Request, Answer::NeedsAction, false, true, false) == L"Vous êtes l'organisateur de cette réunion.");
+        ASSERT_TRUE(DescribeState(Kind::Cancel, Answer::NeedsAction, true, false, false).find(L"figure encore") != std::wstring::npos);
+        ASSERT_TRUE(DescribeState(Kind::Reply, Answer::Accepted, false, false, false).empty());
+
+        ASSERT_TRUE(DescribeReply(L"Marie", Answer::Accepted, false) == L"Marie a accepté la réunion.");
+        ASSERT_TRUE(DescribeReply(L"Marie", Answer::Declined, true) == L"Marie declined the meeting.");
+        ASSERT_TRUE(DescribeReply(L"", Answer::Tentative, false).find(L"Un participant") == 0);
+        ASSERT_TRUE(DisplayName(L"", L"a@b.fr") == L"a@b.fr");
+        ASSERT_TRUE(DisplayName(L"Marie", L"a@b.fr") == L"Marie");
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Invitations: message de confirmation apres reponse")
+    {
+        ASSERT_TRUE(DescribeResult(L"accepted", L"added", true, false)
+            == L"Invitation acceptée. Ajoutée à votre agenda. Réponse envoyée à l'organisateur.");
+        ASSERT_TRUE(DescribeResult(L"declined", L"removed", false, false) == L"Invitation refusée. Retirée de votre agenda.");
+        ASSERT_TRUE(DescribeResult(L"remove", L"removed", false, false) == L"Réunion retirée de votre agenda.");
+        ASSERT_TRUE(DescribeResult(L"tentative", L"updated", true, true)
+            == L"Invitation tentatively accepted. Calendar updated. Reply sent to the organizer.");
+        ASSERT_TRUE(DescribeResult(L"accepted", L"skipped", false, false).find(L"occurrence isolée") != std::wstring::npos);
+        ASSERT_TRUE(DescribeResult(L"accepted", L"unchanged", false, false) == L"Invitation acceptée.");
+    }
+    TEST_CASE_END();
+}
+
+
+static void test_read_receipts(void)
+{
+    TEST_CASE("Accuses de lecture: politique, adresses et decision");
+    {
+        using namespace EvolutionWin::Receipts;
+        ASSERT_TRUE(ParsePolicy(L"never") == Policy::Never);
+        ASSERT_TRUE(ParsePolicy(L"always") == Policy::Always);
+        ASSERT_TRUE(ParsePolicy(L"ask") == Policy::Ask);
+        ASSERT_TRUE(ParsePolicy(L"n'importe quoi") == Policy::Ask);   /* defaut : demander */
+        ASSERT_TRUE(PolicyToString(Policy::Always) == L"always");
+        ASSERT_TRUE(AddressOf(L"Jean Dupont <Jean@Exemple.FR>") == L"jean@exemple.fr");
+        ASSERT_TRUE(AddressOf(L"jean@exemple.fr") == L"jean@exemple.fr");
+        ASSERT_TRUE(AddressOf(L"pas une adresse").empty());
+        ASSERT_TRUE(AddressOf(L"Nom <cassee@x.fr").empty());
+        ASSERT_TRUE(DomainOf(L"jean@exemple.fr") == L"exemple.fr");
+
+        const wchar_t* from = L"Jean <jean@exemple.fr>";
+        const wchar_t* same = L"jean@exemple.fr";
+        const wchar_t* other = L"espion@autre.com";
+        ASSERT_FALSE(IsReceiptAddressSuspicious(same, from));
+        ASSERT_TRUE(IsReceiptAddressSuspicious(other, from));
+
+        /* jamais d'envoi automatique sans reglage explicite */
+        ASSERT_TRUE(Decide(Policy::Ask, same, from, false) == Action::Ask);
+        ASSERT_TRUE(Decide(Policy::Always, same, from, false) == Action::SendAuto);
+        ASSERT_TRUE(Decide(Policy::Always, other, from, false) == Action::Ask);   /* adresse etrangere */
+        ASSERT_TRUE(Decide(Policy::Never, same, from, false) == Action::None);
+        ASSERT_TRUE(Decide(Policy::Ask, same, from, true) == Action::None);       /* deja traite */
+        ASSERT_TRUE(Decide(Policy::Ask, L"", from, false) == Action::None);       /* pas de demande */
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Accuses de lecture: analyse et description d'un MDN recu");
+    {
+        using namespace EvolutionWin::Receipts;
+        Mdn m = ParseDispositionNotification(
+            L"Reporting-UA: EvolutionWin\r\n"
+            L"final-recipient: RFC822; marie@exemple.fr\r\n"
+            L"Original-Message-ID: <abc@exemple.fr>\r\n"
+            L"Disposition: manual-action/MDN-sent-manually; displayed\r\n");
+        ASSERT_TRUE(m.valid);
+        ASSERT_TRUE(m.final_recipient == L"marie@exemple.fr");
+        ASSERT_TRUE(m.original_message_id == L"<abc@exemple.fr>");
+        ASSERT_TRUE(m.disposition_type == L"displayed");
+        ASSERT_TRUE(DescribeMdn(m, L"4 nov. 2026", false) == L"Accusé de lecture : lu par marie@exemple.fr le 4 nov. 2026");
+        ASSERT_TRUE(DescribeMdn(m, L"Nov 4, 2026", true) == L"Read receipt: read by marie@exemple.fr on Nov 4, 2026");
+
+        /* lignes repliees, modificateurs, type different */
+        Mdn d = ParseDispositionNotification(
+            L"Final-Recipient: rfc822;\r\n paul@exemple.fr\n"
+            L"Disposition: automatic-action/MDN-sent-automatically; deleted/error\n");
+        ASSERT_TRUE(d.final_recipient == L"paul@exemple.fr");
+        ASSERT_TRUE(d.disposition_type == L"deleted");
+        ASSERT_TRUE(DescribeMdn(d, L"", true) == L"Read receipt: deleted by paul@exemple.fr");
+
+        Mdn bad = ParseDispositionNotification(L"n'importe quoi\r\n");
+        ASSERT_FALSE(bad.valid);
+    }
+    TEST_CASE_END();
+}
+
+static void test_follow_up(void)
+{
+    TEST_CASE("Suivi: echeances, retard et lecture des dates");
+    {
+        using namespace EvolutionWin::FollowUp;
+        ASSERT_TRUE(DueOffsetDays(Due::Today, 3) == 0);
+        ASSERT_TRUE(DueOffsetDays(Due::Tomorrow, 3) == 1);
+        ASSERT_TRUE(DueOffsetDays(Due::ThisWeek, 3) == 2);   /* mercredi -> vendredi */
+        ASSERT_TRUE(DueOffsetDays(Due::ThisWeek, 5) == 0);   /* vendredi */
+        ASSERT_TRUE(DueOffsetDays(Due::ThisWeek, 0) == 5);   /* dimanche -> vendredi */
+        ASSERT_TRUE(DueOffsetDays(Due::NextWeek, 1) == 7);   /* lundi -> lundi suivant */
+        ASSERT_TRUE(DueOffsetDays(Due::NextWeek, 0) == 1);   /* dimanche -> lundi */
+        ASSERT_TRUE(DueOffsetDays(Due::NextWeek, 6) == 2);   /* samedi -> lundi */
+        ASSERT_TRUE(DueOffsetDays(Due::None, 2) == -1);
+        ASSERT_TRUE(IsOverdue(100, 0, 200));
+        ASSERT_FALSE(IsOverdue(100, 150, 200));  /* termine */
+        ASSERT_FALSE(IsOverdue(0, 0, 200));      /* sans echeance */
+        ASSERT_FALSE(IsOverdue(300, 0, 200));
+        ASSERT_TRUE(ParseEpoch(L"1700000000") == 1700000000);
+        ASSERT_TRUE(ParseEpoch(L"") == 0);
+        ASSERT_TRUE(ParseEpoch(L"12ab") == 0);
+        ASSERT_TRUE(DefaultLabels().size() == 5);
+    }
+    TEST_CASE_END();
+}
+
+#include "../../winui/app/AutoReply.h"
+
+static void test_auto_reply(void)
+{
+    TEST_CASE("Reponses automatiques: serialisation JSON et echappement");
+    {
+        using namespace EvolutionWin::AutoReply;
+        ASSERT_TRUE(JsonEscape("a\"b\\c\nd\te") == "a\\\"b\\\\c\\nd\\te");
+        ASSERT_TRUE(JsonEscape(std::string("\x01", 1)) == "\\u0001");
+        ASSERT_TRUE(JsonEscape("été — ok") == "été — ok");  /* UTF-8 conserve */
+
+        Settings s;
+        s.provider = "microsoft365";
+        s.enabled = true;
+        s.external_audience = "known";
+        s.start = 1700000000;
+        s.end = 1700086400;
+        s.subject = "Absent";
+        s.internal_message = "Ligne 1\nLigne \"2\"";
+        s.external_message = "Externe";
+        std::string json = BuildSettingsJson(s);
+        ASSERT_TRUE(json == "{\"enabled\":true,\"external_audience\":\"known\",\"start\":1700000000,"
+            "\"end\":1700086400,\"subject\":\"Absent\",\"internal_message\":\"Ligne 1\\nLigne \\\"2\\\"\","
+            "\"external_message\":\"Externe\"}");
+
+        s.enabled = false;
+        s.start = s.end = 0;
+        ASSERT_TRUE(BuildSettingsJson(s).find("\"enabled\":false,") != std::string::npos);
+        ASSERT_TRUE(BuildSettingsJson(s).find("\"start\":0,\"end\":0") != std::string::npos);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Reponses automatiques: validation du formulaire");
+    {
+        using namespace EvolutionWin::AutoReply;
+        Settings s;
+        s.provider = "microsoft365";
+        s.enabled = true;
+        s.external_message = "Je suis absent";
+        ASSERT_TRUE(Validate(s) == FormError::None);
+
+        s.start = 2000;
+        s.end = 1000;
+        ASSERT_TRUE(Validate(s) == FormError::EndBeforeStart);
+        s.end = 0;
+        ASSERT_TRUE(Validate(s) == FormError::IncompleteRange);   /* Microsoft 365 : les deux bornes */
+        s.provider = "gmail";
+        ASSERT_TRUE(Validate(s) == FormError::None);              /* Gmail : une seule borne acceptee */
+
+        s.start = s.end = 0;
+        s.external_message.clear();
+        ASSERT_TRUE(Validate(s) == FormError::EmptyMessage);
+        s.enabled = false;
+        ASSERT_TRUE(Validate(s) == FormError::None);              /* desactivation sans message */
+
+        ASSERT_TRUE(IsExpired(true, 100, 200));
+        ASSERT_FALSE(IsExpired(true, 300, 200));
+        ASSERT_FALSE(IsExpired(true, 0, 200));
+        ASSERT_FALSE(IsExpired(false, 100, 200));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Reponses automatiques: audience, dates locales et langue");
+    {
+        using namespace EvolutionWin::AutoReply;
+        ASSERT_TRUE(AudienceToIndex("none") == 0 && AudienceToIndex("known") == 1);
+        ASSERT_TRUE(AudienceToIndex("all") == 2 && AudienceToIndex("???") == 2);
+        ASSERT_TRUE(AudienceFromIndex(0) == "none" && AudienceFromIndex(1) == "known" && AudienceFromIndex(2) == "all");
+
+        /* aller-retour date locale <-> secondes Unix (independant du fuseau) */
+        int64_t t = LocalToEpoch(2026, 7, 14, 18, 45);
+        ASSERT_TRUE(t > 0);
+        std::tm local{};
+        ASSERT_TRUE(EpochToLocal(t, local));
+        ASSERT_TRUE(local.tm_year == 126 && local.tm_mon == 6 && local.tm_mday == 14);
+        ASSERT_TRUE(local.tm_hour == 18 && local.tm_min == 45);
+        ASSERT_TRUE(LocalToEpoch(2026, 7, 15, 18, 45) - t >= 86400 - 3600);  /* +1 jour (+- heure d'ete) */
+
+        ASSERT_TRUE(UseEnglish(L"en", L"fr-FR"));
+        ASSERT_TRUE(UseEnglish(L"en-GB", L"fr-FR"));
+        ASSERT_FALSE(UseEnglish(L"fr", L"en-US"));
+        ASSERT_TRUE(UseEnglish(L"system", L"en-US"));
+        ASSERT_FALSE(UseEnglish(L"", L"fr-FR"));
+        ASSERT_FALSE(UseEnglish(L"de", L"en-US"));
+
+        /* chaque libelle existe dans les deux langues, avec le meme nombre de « %s » */
+        for (int i = 0; i <= static_cast<int>(Str::NoAccount); ++i)
+        {
+            std::wstring fr = Tr(static_cast<Str>(i), false);
+            std::wstring en = Tr(static_cast<Str>(i), true);
+            ASSERT_FALSE(fr.empty());
+            ASSERT_FALSE(en.empty());
+            ASSERT_TRUE((fr.find(L"%s") == std::wstring::npos) == (en.find(L"%s") == std::wstring::npos));
+        }
+        ASSERT_TRUE(std::wstring(Tr(Str::Save, false)) == L"Enregistrer");
+        ASSERT_TRUE(std::wstring(Tr(Str::Save, true)) == L"Save");
+    }
+    TEST_CASE_END();
+}
+
+static void test_conversation_threads(void)
+{
+    TEST_CASE("Conversations: regroupement par Message-ID, References et objet");
+    {
+        using namespace EvolutionWin::Conversations;
+        bool prefixed = false;
+        ASSERT_TRUE(NormalizeThreadSubject(L"RE: TR: Bilan ÉTÉ", &prefixed) == L"bilan été");
+        ASSERT_TRUE(prefixed);
+        NormalizeThreadSubject(L"Reunion", &prefixed);
+        ASSERT_FALSE(prefixed);
+
+        /* A <- B (In-Reply-To A) <- C (References A, B) ; D indépendant */
+        std::vector<ThreadMessage> msgs = {
+            { L"1", {}, L"Projet" },
+            { L"2", { L"1" }, L"autre objet" },
+            { L"3", { L"1", L"2" }, L"zzz" },
+            { L"4", {}, L"Facture" },
+        };
+        auto roots = BuildThreads(msgs);
+        ASSERT_TRUE(roots[0] == 0 && roots[1] == 0 && roots[2] == 0);
+        ASSERT_TRUE(roots[3] == 3);
+
+        /* deux réponses à un message absent de la liste : même fil */
+        std::vector<ThreadMessage> orphans = {
+            { L"10", { L"99" }, L"x" },
+            { L"11", { L"99" }, L"y" },
+            { L"12", {}, L"z" },
+        };
+        auto o = BuildThreads(orphans);
+        ASSERT_TRUE(o[0] == o[1]);
+        ASSERT_TRUE(o[2] != o[0]);
+
+        /* repli sur l'objet : seule une réponse rejoint le message d'origine */
+        std::vector<ThreadMessage> bysubject = {
+            { L"0", {}, L"Rendez-vous" },
+            { L"0", {}, L"RE: Rendez-vous" },
+            { L"0", {}, L"Rendez-vous" },
+        };
+        auto b = BuildThreads(bysubject);
+        ASSERT_TRUE(b[1] == b[0]);
+        ASSERT_TRUE(b[2] == b[0]);
+        std::vector<ThreadMessage> same = { { L"", {}, L"Newsletter" }, { L"", {}, L"Newsletter" } };
+        auto n = BuildThreads(same);
+        ASSERT_TRUE(n[0] != n[1]);
+    }
+    TEST_CASE_END();
+}
+
+static void test_update_integrity(void)
+{
+    using namespace EvolutionWin::UpdateIntegrity;
+    const std::wstring h1 = L"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789abcdef";
+    const std::wstring h2 = L"fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
+
+    TEST_CASE("UpdateIntegrity: IsHexSha256 valide la longueur et les chiffres");
+    {
+        ASSERT_TRUE(IsHexSha256(h1));
+        ASSERT_TRUE(!IsHexSha256(L"abc"));
+        ASSERT_TRUE(!IsHexSha256(h1.substr(0, 63) + L"g"));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("UpdateIntegrity: ParseSha256File au format sha256sum");
+    {
+        std::wstring file = h1 + L" *Evolution-0.9.8-x64.msi\n";
+        ASSERT_TRUE(ParseSha256File(file, L"Evolution-0.9.8-x64.msi") == ToLowerCopyForTest(h1));
+        ASSERT_TRUE(ParseSha256File(file, L"evolution-0.9.8-X64.MSI") == ToLowerCopyForTest(h1));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("UpdateIntegrity: plusieurs lignes, nom absent ou fichier corrompu");
+    {
+        std::wstring two = h2 + L"  autre.msi\r\n" + h1 + L" *Evolution.msi\r\n";
+        ASSERT_TRUE(ParseSha256File(two, L"Evolution.msi") == ToLowerCopyForTest(h1));
+        ASSERT_TRUE(ParseSha256File(two, L"inconnu.msi").empty());
+        ASSERT_TRUE(ParseSha256File(h2 + L"\n", L"quelconque.msi") == h2);
+        ASSERT_TRUE(ParseSha256File(L"<html>404</html>", L"x.msi").empty());
+        ASSERT_TRUE(ParseSha256File(L"", L"x.msi").empty());
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("UpdateIntegrity: ToHex");
+    {
+        const unsigned char bytes[] = { 0x00, 0xAB, 0xFF };
+        ASSERT_TRUE(ToHex(bytes, 3) == L"00abff");
+    }
+    TEST_CASE_END();
+}
+
+#include "../../winui/app/Gal.h"
+
+static void test_gal(void)
+{
+    using namespace EvolutionWin::Gal;
+
+    TEST_CASE("GAL: seuils de declenchement de la recherche");
+    {
+        ASSERT_FALSE(QueryEligible(L"", kMinQueryContacts));
+        ASSERT_FALSE(QueryEligible(L"a", kMinQueryContacts));
+        ASSERT_FALSE(QueryEligible(L" a ", kMinQueryContacts));
+        ASSERT_TRUE(QueryEligible(L"ab", kMinQueryContacts));
+        ASSERT_TRUE(QueryEligible(L"  ab  ", kMinQueryContacts));
+        ASSERT_FALSE(QueryEligible(L"ab", kMinQueryCompose));
+        ASSERT_TRUE(QueryEligible(L"abc", kMinQueryCompose));
+        ASSERT_TRUE(Trim(L"\t x y \t") == L"x y");
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("GAL: formatage de la fiche d'annuaire");
+    {
+        Person p;
+        p.name = L"Marie Dupont";
+        p.email = L"marie.dupont@exemple.fr";
+        p.title = L"Directrice";
+        p.department = L"Finance";
+        p.company = L"Exemple SA";
+        p.office = L"B12";
+        p.phone = L"+33 1 23 45 67 89";
+        p.mobile = L"+33 6 12 34 56 78";
+        p.account = L"Exemple 365";
+
+        ASSERT_TRUE(DisplayName(p) == L"Marie Dupont");
+        ASSERT_TRUE(OrganizationLine(p) == L"Directrice · Finance · Exemple SA");
+        ASSERT_TRUE(PhoneLine(p, L"mobile") == L"+33 1 23 45 67 89 ; mobile +33 6 12 34 56 78");
+        ASSERT_TRUE(NoteLine(p, L"Bureau", L"Annuaire") == L"Bureau : B12 · Annuaire : Exemple 365");
+        ASSERT_TRUE(RecipientAddress(p) == L"Marie Dupont <marie.dupont@exemple.fr>");
+
+        /* champs vides : aucune separation parasite, nom de repli = adresse */
+        Person q;
+        q.email = L"service@exemple.fr";
+        q.department = L"Support";
+        q.mobile = L"0600";
+        ASSERT_TRUE(DisplayName(q) == L"service@exemple.fr");
+        ASSERT_TRUE(OrganizationLine(q) == L"Support");
+        ASSERT_TRUE(PhoneLine(q, L"mobile") == L"mobile 0600");
+        ASSERT_TRUE(NoteLine(q, L"Bureau", L"Annuaire").empty());
+        ASSERT_TRUE(RecipientAddress(q) == L"service@exemple.fr");
+        ASSERT_TRUE(JoinNonEmpty({ L"", L"  ", L"" }, L", ").empty());
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("GAL: fusion des suggestions sans doublon d'adresse");
+    {
+        ASSERT_TRUE(ExtractEmail(L"Marie <Marie@Exemple.FR>") == L"marie@exemple.fr");
+        ASSERT_TRUE(ExtractEmail(L"marie@exemple.fr") == L"marie@exemple.fr");
+        ASSERT_TRUE(ExtractEmail(L"  A@B.C ") == L"a@b.c");
+        ASSERT_TRUE(ExtractEmail(L"").empty());
+
+        std::vector<std::wstring> shown{ L"Marie Dupont <marie@exemple.fr>", L"paul@exemple.fr" };
+        ASSERT_TRUE(ContainsEmail(shown, L"MARIE@exemple.fr"));
+        ASSERT_TRUE(ContainsEmail(shown, L"paul@exemple.fr"));
+        ASSERT_FALSE(ContainsEmail(shown, L"jean@exemple.fr"));
+        ASSERT_FALSE(ContainsEmail({}, L"jean@exemple.fr"));
+    }
+    TEST_CASE_END();
+}
+
 int main(void)
 
 
@@ -6137,6 +6631,13 @@ int main(void)
     test_calendar_search_matching();
     test_localized_file_size_and_dates();
         test_font_size_preset_to_zoom();
+    test_update_integrity();
+    test_conversation_threads();
+    test_follow_up();
+    test_read_receipts();
+    test_auto_reply();
+    test_invitations_banner();
+    test_gal();
 return test_suite_summary();
 
 

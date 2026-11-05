@@ -42,6 +42,9 @@ namespace winrt::EvolutionWin::implementation
     void MainWindow::LoadContacts(hstring const& query)
     {
         m_contact_query = query;
+        /* revenir des fiches de l'annuaire de l'organisation aux carnets */
+        SetGalMode(false);
+
         if (!m_contact_books)
         {
             LoadContactBooks();
@@ -153,14 +156,22 @@ namespace winrt::EvolutionWin::implementation
     /* Gestionnaire de modification du champ de recherche de contacts. */
     void MainWindow::OnContactSearchChanged(AutoSuggestBox const& sender, AutoSuggestBoxTextChangedEventArgs const& args)
     {
-        if (args.Reason() == AutoSuggestionBoxTextChangeReason::UserInput)
+        if (args.Reason() != AutoSuggestionBoxTextChangeReason::UserInput)
+            return;
+
+        if (m_gal_mode)
+            ScheduleGalSearch(sender.Text());
+        else
             LoadContacts(sender.Text());
     }
 
     /* Gestionnaire de validation de la recherche de contacts. */
     void MainWindow::OnContactSearchSubmitted(AutoSuggestBox const&, AutoSuggestBoxQuerySubmittedEventArgs const& args)
     {
-        LoadContacts(args.QueryText());
+        if (m_gal_mode)
+            SearchGalDirectory(args.QueryText());
+        else
+            LoadContacts(args.QueryText());
     }
 
     /* Gestionnaire de sélection d'un contact dans la liste : affiche sa fiche détaillée. */
@@ -267,6 +278,112 @@ namespace winrt::EvolutionWin::implementation
                 return;
             }
             ShowStatus(L"Contact enregistré.", InfoBarSeverity::Success);
+            LoadContacts(ContactSearchBox().Text());
+        });
+    }
+
+    /**
+     * @brief Gestionnaire de commande pour modifier la fiche du contact actuellement selectionne.
+     * @param sender Bouton ou element d'interface emetteur.
+     * @param args Arguments associes a l'evenement.
+     */
+    void MainWindow::OnEditContactClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (!m_selected_contact)
+            return;
+
+        if (m_gal_mode)
+        {
+            ShowStatus(Tr(L"Les fiches de l'annuaire de l'organisation sont en lecture seule.",
+                          L"Organization directory entries are read-only."), InfoBarSeverity::Informational);
+            return;
+        }
+
+        ShowEditContactDialogAsync();
+    }
+
+    /**
+     * @brief Affiche la boite de dialogue modale d'edition d'un contact et persiste les modifications.
+     */
+    fire_and_forget MainWindow::ShowEditContactDialogAsync()
+    {
+        auto strong = get_strong();
+        if (m_dialog_open || !m_selected_contact || !Content() || !Content().XamlRoot())
+            co_return;
+
+        m_dialog_open = true;
+
+        hstring book_uid = m_selected_contact.GetNamedString(L"book_uid", L"");
+        hstring contact_uid = m_selected_contact.GetNamedString(L"uid", L"");
+        hstring current_name = m_selected_contact.GetNamedString(L"full_name", L"");
+        hstring current_email = m_selected_contact.GetNamedString(L"email", L"");
+        hstring current_phone = m_selected_contact.GetNamedString(L"phone", L"");
+        hstring current_org = m_selected_contact.GetNamedString(L"org", L"");
+        hstring current_notes = m_selected_contact.GetNamedString(L"notes", L"");
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(L"Modifier le contact"));
+        dialog.PrimaryButtonText(L"Enregistrer");
+        dialog.CloseButtonText(L"Annuler");
+        dialog.DefaultButton(ContentDialogButton::Primary);
+
+        StackPanel panel;
+        panel.Spacing(10);
+        panel.MinWidth(380);
+
+        TextBox name_box;
+        name_box.Header(box_value(L"Nom complet"));
+        name_box.Text(current_name);
+        panel.Children().Append(name_box);
+
+        TextBox email_box;
+        email_box.Header(box_value(L"Adresse électronique"));
+        email_box.Text(current_email);
+        panel.Children().Append(email_box);
+
+        TextBox phone_box;
+        phone_box.Header(box_value(L"Téléphone"));
+        phone_box.Text(current_phone);
+        panel.Children().Append(phone_box);
+
+        TextBox org_box;
+        org_box.Header(box_value(L"Organisation"));
+        org_box.Text(current_org);
+        panel.Children().Append(org_box);
+
+        TextBox note_box;
+        note_box.Header(box_value(L"Notes"));
+        note_box.AcceptsReturn(true);
+        note_box.Height(72);
+        note_box.Text(current_notes);
+        panel.Children().Append(note_box);
+
+        dialog.Content(panel);
+
+        auto result = co_await dialog.ShowAsync();
+        m_dialog_open = false;
+
+        if (result != ContentDialogResult::Primary || name_box.Text().empty())
+            co_return;
+
+        JsonObject payload;
+        payload.SetNamedValue(L"book_uid", JsonValue::CreateStringValue(book_uid));
+        payload.SetNamedValue(L"uid", JsonValue::CreateStringValue(contact_uid));
+        payload.SetNamedValue(L"full_name", JsonValue::CreateStringValue(name_box.Text()));
+        payload.SetNamedValue(L"email", JsonValue::CreateStringValue(email_box.Text()));
+        payload.SetNamedValue(L"phone", JsonValue::CreateStringValue(phone_box.Text()));
+        payload.SetNamedValue(L"org", JsonValue::CreateStringValue(org_box.Text()));
+        payload.SetNamedValue(L"notes", JsonValue::CreateStringValue(note_box.Text()));
+
+        m_core->ModifyContact(payload.Stringify(), [this](hstring const&, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                ShowStatus(L"Modification du contact : " + error, InfoBarSeverity::Error);
+                return;
+            }
+            ShowStatus(L"Contact modifié avec succès.", InfoBarSeverity::Success);
             LoadContacts(ContactSearchBox().Text());
         });
     }
@@ -424,7 +541,7 @@ namespace winrt::EvolutionWin::implementation
 
         hstring book_uid = m_selected_contact.GetNamedString(L"book_uid", L"");
         hstring uid = m_selected_contact.GetNamedString(L"uid", L"");
-        if (book_uid.empty() || uid.empty())
+        if (m_gal_mode || book_uid.empty() || uid.empty())
             return;
 
         m_core->DeleteContact(book_uid, uid, [this](hstring const&, hstring const& error)

@@ -32,7 +32,7 @@ Ce document constitue le manuel de référence complet destiné à tout agent IA
 
 ```
 c:\Users\chris\VSCode\Evolution-WindowsPort\
-├── VERSION                       # Numéro de version SemVer courante (ex: 0.9.7)
+├── VERSION                       # Numéro de version SemVer courante (ex: 0.9.8)
 ├── ROADMAP.md                    # Feuille de route par jalons de versions (v0.9.8, v1.0.0...)
 ├── CHANGELOG.md                  # Historique des modifications (Keep a Changelog)
 ├── TODO.md                       # Référentiel exhaustif des spécifications et tâches
@@ -41,9 +41,33 @@ c:\Users\chris\VSCode\Evolution-WindowsPort\
 ├── locks/                        # Verrous locaux JSON anti-collision multi-agents (ignoré Git)
 │
 ├── winui/
-│   ├── core/                     # Moteur C (evo-core.dll)
-│   │   ├── evo-core.c            # Implémentation du moteur EDS / Camel
-│   │   ├── evo-core.h            # Déclarations publiques et exports ABI
+│   ├── core/                     # Moteur C (evo-core.dll), découpé par domaine fonctionnel
+│   │   ├── evo-core.h            # API publique (déclarations et exports ABI)
+│   │   ├── evo-core-private.h    # En-tête privé : includes, struct EvoCore, types et prototypes partagés
+│   │   ├── evo-core.c            # Cycle de vie : journal, modules EDS, fil GLib, new/free, hors connexion
+│   │   ├── evo-core-session.c    # CamelSession : authentification, certificats TLS
+│   │   ├── evo-core-events.c     # Constructeurs JSON et émission des événements
+│   │   ├── evo-core-requests.c   # File des requêtes asynchrones (core_submit), magasins, connexion
+│   │   ├── evo-core-accounts.c   # Liste, compte par défaut, suppression
+│   │   ├── evo-core-account-setup.c  # Ajout, test, lecture, modification IMAP/POP3/SMTP, mots de passe
+│   │   ├── evo-core-account-cloud.c  # Comptes Microsoft 365 / Exchange (EWS) et Google
+│   │   ├── evo-core-detect.c     # Détection automatique (ISPDB, DNS, Autodiscover)
+│   │   ├── evo-core-oauth2.c     # Connexion OAuth2 et demandes d'identifiants
+│   │   ├── evo-core-folders.c    # Arborescence, rôles, suivi des dossiers ouverts
+│   │   ├── evo-core-folder-ops.c # Création, renommage, déplacement, copie, suppression, quota
+│   │   ├── evo-core-messages.c   # Liste des messages d'un dossier
+│   │   ├── evo-core-search.c     # Recherche (dossier, sous-dossiers, compte, tous)
+│   │   ├── evo-core-message-read.c    # Lecture, pièces jointes, export .eml
+│   │   ├── evo-core-message-actions.c # Indicateurs, suivi, déplacement, copie, suppression
+│   │   ├── evo-core-refresh.c    # Relève, synchronisation périodique, reconnexion
+│   │   ├── evo-core-send.c       # Envoi MIME et Boîte d'envoi
+│   │   ├── evo-core-drafts.c     # Brouillons
+│   │   ├── evo-core-signatures.c # Signatures
+│   │   ├── evo-core-calendar.c   # Événements d'agenda
+│   │   ├── evo-core-tasks.c      # Tâches (VTODO)
+│   │   ├── evo-core-contacts.c   # Contacts et autocomplétion des destinataires
+│   │   ├── evo-core-sources.c    # Sources EDS et création d'agendas
+│   │   ├── evo-core-export.c     # Export vCard / iCalendar
 │   │   └── CMakeLists.txt        # Configuration CMake du moteur
 │   └── app/                      # Interface WinUI 3 (C++/WinRT)
 │       ├── App.xaml / App.xaml.cpp
@@ -145,7 +169,7 @@ Les règles suivantes ont été définies par Pierre et doivent être respectée
    - Penser à déspécialiser les apostrophes dans les sorties console si nécessaire.
 
 2. **Stratégie de Git & Commits** :
-   - Travailler sur la branche active de la version en cours (actuellement `0.9.7`).
+   - Travailler sur la branche active de la version en cours (actuellement `0.9.8`).
    - Réaliser **un commit atomique après chaque tâche traitée**.
    - Format de commit conventionnel : `feat(<scope>): <description en français>` ou `fix(<scope>): <description>`.
    - Toujours pousser (`git push origin <branche>`) après avoir validé un ensemble de tâches.
@@ -159,7 +183,8 @@ Les règles suivantes ont été définies par Pierre et doivent être respectée
 ## 6. Architecture & Modèles de Conception
 
 ### 6.1. Le Pont `evo-core` (C) <-> `CoreBridge` (C++/WinRT)
-- Toutes les opérations d'E/S (réseau, disque, protocoles IMAP/SMTP) s'exécutent sur des threads d'arrière-plan dans `evo-core.c` via `core_submit()`.
+- Toutes les opérations d'E/S (réseau, disque, protocoles IMAP/SMTP) s'exécutent sur des threads d'arrière-plan via `core_submit()` (`evo-core-requests.c`).
+- Le moteur est découpé en un fichier par domaine (`evo-core-<domaine>.c`) : chaque fonction publique `evo_core_xxx` est définie à côté de son exécutant `core_xxx_run`. Les fonctions internes partagées entre fichiers (préfixe `core_`) sont déclarées dans `evo-core-private.h` ; toute nouvelle fonction partagée y est ajoutée, et tout nouveau fichier `.c` est ajouté à `winui/core/CMakeLists.txt`. `evo-core.h` reste la seule interface publique.
 - La communication repose sur du **JSON** :
   - Entrée : chaîne JSON sérialisée ou paramètres typés C.
   - Sortie : fonction de rappel `EvoCoreResultFunc` de type `void (const char *json_result, const char *error_message, void *user_data)`.
@@ -186,7 +211,7 @@ Ce fichier `LLM.md` ne contient volontairement **aucun listing statique de tâch
 > Les fichiers [`TODO.md`](TODO.md) et [`QUICKWINS.md`](QUICKWINS.md) **ne sont jamais statiques ni figés**. Pierre peut les modifier ou y injecter régulièrement de nouvelles tâches, exigences ou priorités au fil de l'eau. L'agent IA doit toujours relire l'état réel et à jour de ces fichiers plutôt que de se baser sur un souvenir ou une supposition.
 
 ### 7.1. Fichiers sources à lire obligatoirement :
-1. **[`VERSION`](VERSION)** : Indique la version SemVer courante du projet (ainsi que le nom de la branche de développement active, ex. `0.9.7`).
+1. **[`VERSION`](VERSION)** : Indique la version SemVer courante du projet (ainsi que le nom de la branche de développement active, ex. `0.9.8`).
 2. **[`ROADMAP.md`](ROADMAP.md)** : **Feuille de route stratégique par jalons de version** (v0.9.8, v1.0.0, v1.1.0, etc.). Elle indique à l'agent IA **quelles tâches de `TODO.md` traiter en priorité** pour la version cible en cours.
 3. **[`CHANGELOG.md`](CHANGELOG.md)** : Registre historique officiel listant l'ensemble des fonctionnalités déjà réalisées, testées et validées, regroupées par version.
 4. **[`QUICKWINS.md`](QUICKWINS.md)** : Liste des tâches prioritaires à fort impact utilisateur et faible coût d'implémentation. Ce fichier évolue régulièrement avec de nouveaux ajouts de Pierre ; l'agent doit toujours y traiter en priorité absolue les tâches ouvertes (`- [ ]`).

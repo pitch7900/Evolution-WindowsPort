@@ -552,7 +552,16 @@ namespace winrt::EvolutionWin::implementation
     /* Gestionnaire du bouton d'actualisation du calendrier. */
     void MainWindow::OnRefreshCalendarClick(IInspectable const&, RoutedEventArgs const&)
     {
+        /* affichage immédiat du cache local, puis actualisation des agendas distants */
         LoadEvents();
+        if (!m_core)
+            return;
+        ShowStatus(L"Actualisation des agendas distants…", InfoBarSeverity::Informational);
+        m_core->RefreshCalendars([this](hstring const&, hstring const&)
+        {
+            LoadEvents();
+            ShowStatus(L"Agendas actualisés.", InfoBarSeverity::Success);
+        });
     }
 
     /* Gestionnaire du bouton « Nouvel événement ». */
@@ -712,6 +721,28 @@ namespace winrt::EvolutionWin::implementation
             start_t = mktime(&next);
             end_t = start_t + 3600;
         }
+        /* événement daté dans un fuseau (TZID) : les sélecteurs affichent
+         * l'heure murale de ce fuseau « AAAAMMJJTHHMMSS » */
+        hstring event_tz = existing ? event.GetNamedString(L"timezone", L"") : hstring{};
+        auto wall_to_time = [](hstring const& wall, time_t fallback) -> time_t
+        {
+            int y = 0, mo = 0, d = 0, h = 0, mi = 0;
+            if (swscanf_s(wall.c_str(), L"%4d%2d%2dT%2d%2d", &y, &mo, &d, &h, &mi) != 5)
+                return fallback;
+            struct tm local{};
+            local.tm_year = y - 1900;
+            local.tm_mon = mo - 1;
+            local.tm_mday = d;
+            local.tm_hour = h;
+            local.tm_min = mi;
+            local.tm_isdst = -1;
+            return mktime(&local);
+        };
+        if (existing && !event_tz.empty() && !all_day)
+        {
+            start_t = wall_to_time(event.GetNamedString(L"start_wall", L""), start_t);
+            end_t = wall_to_time(event.GetNamedString(L"end_wall", L""), end_t);
+        }
         /* journée entière : la fin (exclusive) est le lendemain */
         if (all_day && end_t > start_t)
             end_t -= 86400;
@@ -763,16 +794,76 @@ namespace winrt::EvolutionWin::implementation
         end_row.Children().Append(end_time);
         panel.Children().Append(end_row);
 
-        auto update_times = [start_time, end_time](bool day)
+        /* rappel (VALARM) : délai avant le début */
+        static constexpr int reminder_values[] = { -1, 0, 5, 15, 30, 60, 120, 1440 };
+        ComboBox reminder_combo;
+        reminder_combo.Header(box_value(L"Rappel"));
+        reminder_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
+        reminder_combo.IsEnabled(!readonly);
+        for (hstring label : { L"Aucun", L"À l'heure de l'événement", L"5 minutes avant", L"15 minutes avant",
+                               L"30 minutes avant", L"1 heure avant", L"2 heures avant", L"1 jour avant" })
+            reminder_combo.Items().Append(box_value(label));
+        {
+            int current = existing ? static_cast<int>(event.GetNamedNumber(L"reminder_minutes", -1)) : 15;
+            int selected = 0;
+            for (int i = 0; i < 8; ++i)
+                if (reminder_values[i] == current)
+                    selected = i;
+            reminder_combo.SelectedIndex(selected);
+        }
+        panel.Children().Append(reminder_combo);
+
+        /* fuseau horaire (noms IANA) : le premier choix conserve l'heure
+         * de cet ordinateur, enregistrée en UTC */
+        std::vector<hstring> zone_ids{ L"", L"Europe/Zurich", L"Europe/Paris", L"Europe/London", L"Europe/Berlin",
+            L"Europe/Madrid", L"Europe/Rome", L"America/New_York", L"America/Chicago", L"America/Denver",
+            L"America/Los_Angeles", L"America/Sao_Paulo", L"Asia/Dubai", L"Asia/Kolkata", L"Asia/Shanghai",
+            L"Asia/Tokyo", L"Australia/Sydney", L"UTC" };
+        if (!event_tz.empty() && std::find(zone_ids.begin(), zone_ids.end(), event_tz) == zone_ids.end())
+            zone_ids.push_back(event_tz);
+        ComboBox zone_combo;
+        zone_combo.Header(box_value(L"Fuseau horaire"));
+        zone_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
+        zone_combo.IsEnabled(!readonly);
+        for (auto const& zone : zone_ids)
+            zone_combo.Items().Append(box_value(zone.empty() ? hstring{ L"Heure de cet ordinateur" } : zone));
+        {
+            auto found = std::find(zone_ids.begin(), zone_ids.end(), event_tz);
+            zone_combo.SelectedIndex(static_cast<int>(found - zone_ids.begin()));
+        }
+        panel.Children().Append(zone_combo);
+
+        auto update_times = [start_time, end_time, zone_combo](bool day)
         {
             start_time.Visibility(day ? Visibility::Collapsed : Visibility::Visible);
             end_time.Visibility(day ? Visibility::Collapsed : Visibility::Visible);
+            zone_combo.Visibility(day ? Visibility::Collapsed : Visibility::Visible);
         };
         update_times(all_day);
         all_day_box.Click([all_day_box, update_times](IInspectable const&, RoutedEventArgs const&)
         {
             update_times(all_day_box.IsChecked() && all_day_box.IsChecked().GetBoolean());
         });
+
+        /* participants modifiables : adresses séparées par des points-virgules */
+        TextBox attendees_box;
+        attendees_box.Header(box_value(L"Participants (adresses séparées par « ; »)"));
+        attendees_box.IsReadOnly(readonly);
+        attendees_box.PlaceholderText(L"alice@exemple.ch; bob@exemple.ch");
+        if (existing)
+        {
+            std::wstring joined;
+            for (auto const& value : event.GetNamedArray(L"attendees", JsonArray{}))
+            {
+                hstring email = value.GetObject().GetNamedString(L"email", L"");
+                if (email.empty())
+                    continue;
+                joined += (joined.empty() ? L"" : L"; ");
+                joined += email.c_str();
+            }
+            attendees_box.Text(hstring{ joined });
+        }
+        panel.Children().Append(attendees_box);
 
         /* organisateur et participants (lecture seule) */
         if (existing)
@@ -868,6 +959,52 @@ namespace winrt::EvolutionWin::implementation
         payload.SetNamedValue(L"start", JsonValue::CreateNumberValue(static_cast<double>(start_unix)));
         payload.SetNamedValue(L"end", JsonValue::CreateNumberValue(static_cast<double>(end_unix)));
         payload.SetNamedValue(L"all_day", JsonValue::CreateBooleanValue(day));
+        {
+            int sel = reminder_combo.SelectedIndex();
+            payload.SetNamedValue(L"reminder_minutes",
+                JsonValue::CreateNumberValue(sel >= 0 && sel < 8 ? reminder_values[sel] : -1));
+        }
+
+        /* fuseau choisi : heures murales envoyées au moteur */
+        int zone_sel = zone_combo.SelectedIndex();
+        if (!day && zone_sel > 0 && zone_sel < static_cast<int>(zone_ids.size()))
+        {
+            auto wall = [](int64_t t)
+            {
+                time_t raw = static_cast<time_t>(t);
+                struct tm local{};
+                localtime_s(&local, &raw);
+                wchar_t text[32]{};
+                swprintf_s(text, L"%04d%02d%02dT%02d%02d00", local.tm_year + 1900, local.tm_mon + 1,
+                           local.tm_mday, local.tm_hour, local.tm_min);
+                return hstring{ text };
+            };
+            payload.SetNamedValue(L"timezone", JsonValue::CreateStringValue(zone_ids[zone_sel]));
+            payload.SetNamedValue(L"start_wall", JsonValue::CreateStringValue(wall(start_unix)));
+            payload.SetNamedValue(L"end_wall", JsonValue::CreateStringValue(wall(end_unix)));
+        }
+
+        /* participants : adresses distinctes séparées par « ; », « , » ou espaces */
+        {
+            JsonArray list;
+            std::wstring text{ attendees_box.Text() };
+            std::vector<std::wstring> seen;
+            size_t pos = 0;
+            while (pos <= text.size())
+            {
+                size_t next = text.find_first_of(L";, \r\n\t", pos);
+                if (next == std::wstring::npos)
+                    next = text.size();
+                std::wstring item = text.substr(pos, next - pos);
+                if (item.find(L'@') != std::wstring::npos && std::find(seen.begin(), seen.end(), item) == seen.end())
+                {
+                    seen.push_back(item);
+                    list.Append(JsonValue::CreateStringValue(item));
+                }
+                pos = next + 1;
+            }
+            payload.SetNamedValue(L"attendees", list);
+        }
 
         if (existing)
         {

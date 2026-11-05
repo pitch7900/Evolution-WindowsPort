@@ -796,6 +796,36 @@ namespace winrt::EvolutionWin::implementation
                 });
                 actions.Children().Append(edit_btn);
 
+                /* Gmail déjà configuré sans agenda ni contacts : activation a posteriori */
+                std::wstring domain{ address };
+                domain = ::EvolutionWin::Helpers::ToLower(domain.substr(domain.find(L'@') == std::wstring::npos ? domain.size() : domain.find(L'@') + 1));
+                if (domain == L"gmail.com" || domain == L"googlemail.com")
+                {
+                    Button google_btn;
+                    google_btn.Content(box_value(L"Activer le calendrier et les contacts"));
+                    ToolTipService::SetToolTip(google_btn, box_value(L"Synchronise Google Agenda et Google Contacts avec ce compte (nouvelle autorisation Google)"));
+                    google_btn.Click([this, address, name](IInspectable const&, RoutedEventArgs const&)
+                    {
+                        m_core->EnableGoogleServices(address, [this, name](hstring const& json, hstring const& error)
+                        {
+                            JsonObject result;
+                            if (!error.empty() || !JsonObject::TryParse(json, result))
+                            {
+                                ShowStatus(L"Activation du calendrier et des contacts : " + error, InfoBarSeverity::Error);
+                                return;
+                            }
+                            if (result.GetNamedBoolean(L"already_enabled", false))
+                            {
+                                ShowStatus(L"Le calendrier et les contacts de « " + name + L" » sont déjà activés.", InfoBarSeverity::Informational);
+                                return;
+                            }
+                            ShowStatus(L"Autorisez l'accès à Google Agenda et Google Contacts dans le navigateur.", InfoBarSeverity::Informational);
+                            SignInGoogleOAuth2BrowserAsync(result.GetNamedString(L"collection_uid", L""), name);
+                        });
+                    });
+                    actions.Children().Append(google_btn);
+                }
+
                 Button remove_btn;
                 remove_btn.Content(box_value(L"Supprimer"));
                 remove_btn.Click([this, uid, name](IInspectable const&, RoutedEventArgs const&)
