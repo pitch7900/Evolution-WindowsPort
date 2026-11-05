@@ -441,6 +441,17 @@ namespace winrt::EvolutionWin::implementation
                     RemergeCalendarSources();
                     RebuildCalendarSourcesPanel();
                 });
+
+                /* groupes d'Outlook déjà importés : mise à jour silencieuse (EWS), sans message en cas d'échec */
+                if (::EvolutionWin::Settings::Instance().GetBoolean(L"calendar.nav-import", false))
+                {
+                    m_core->ListNavCalendars(account_uid, [this, account_uid](hstring const& nav_json, hstring const& nav_error)
+                    {
+                        JsonArray nav_groups;
+                        if (nav_error.empty() && JsonArray::TryParse(nav_json, nav_groups))
+                            ApplyOutlookGroups(nav_groups, account_uid, false);
+                    });
+                }
             }
         });
     }

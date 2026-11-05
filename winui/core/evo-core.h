@@ -997,6 +997,38 @@ void		evo_core_list_calendar_groups	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Groupes de calendriers d'Outlook (« Team Infra N2 », « Salles », équipes...) avec
+ * leurs membres, lus par EWS dans la navigation de la boîte aux lettres
+ * (dossier Common Views, éléments IPM.Microsoft.WunderBar.Link) : Microsoft Graph
+ * ne les expose pas. Le jeton EWS est demandé avec le jeton de renouvellement du
+ * compte ; l'application doit y être autorisée (sinon une erreur explicite est
+ * renvoyée). L'adresse de chaque membre est cherchée par son nom dans l'annuaire.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte Microsoft 365 ("" : premier compte)
+ *   func        : rappel recevant [{"name": groupe, "calendars": [{"name",
+ *                 "email"}]}, ...] ("email" vide si introuvable)
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_list_nav_calendars	(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Adresse de la page d'autorisation Microsoft qui permet à l'application de lire,
+ * par EWS, la navigation des calendriers d'Outlook (groupes d'équipes et de salles :
+ * voir evo_core_list_nav_calendars). À ouvrir dans le navigateur ; une fois
+ * l'autorisation accordée, evo_core_list_nav_calendars () réussit. Un administrateur
+ * peut devoir donner son accord (selon la stratégie du tenant).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte Microsoft 365 ("" : premier compte)
+ *   func        : rappel recevant {"url": "..."}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_get_ews_consent_url	(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Comme evo_core_list_contacts (), limité aux carnets book_uids (uids
  * séparés par des virgules ; NULL ou "" : tous les carnets activés). */
 void		evo_core_list_book_contacts	(EvoCore *core,

@@ -679,6 +679,20 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Groupes de calendriers d'Outlook lus par EWS : [{"name": groupe, "calendars": [{"name", "email"}]}]. */
+        void ListNavCalendars(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_list_nav_calendars(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Page d'autorisation Microsoft pour l'accès EWS : {"url": "..."}. */
+        void GetEwsConsentUrl(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_get_ews_consent_url(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Groupes de calendriers Outlook du compte : [{"name", "class_id", "calendars": [{"name", "address"}]}]. */
         void ListCalendarGroups(winrt::hstring const& account, CoreHandler handler)
         {

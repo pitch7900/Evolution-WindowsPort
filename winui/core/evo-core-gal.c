@@ -1350,3 +1350,531 @@ evo_core_list_calendar_groups (EvoCore *core,
 
 	core_submit (core, core_list_calendar_groups_run, g_strdupv (args), func, user_data);
 }
+
+/* --- groupes de calendriers d'Outlook lus par EWS (navigation de la boîte aux lettres) --- */
+
+/* Requête POST authentifiée (Bearer) ; retourne le corps de la réponse (même en
+ * erreur HTTP), NULL si injoignable.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   uri          : adresse du service
+ *   token        : jeton d'accès, ou NULL pour aucune authentification
+ *   content_type : type du corps
+ *   body         : corps de la requête
+ *   out_status   : reçoit le code HTTP (0 si injoignable)
+ *   error        : emplacement pour une erreur réseau */
+static GBytes *
+gal_http_post (EvoCore *core,
+	       const gchar *uri,
+	       const gchar *token,
+	       const gchar *content_type,
+	       const gchar *body,
+	       guint *out_status,
+	       GError **error)
+{
+	SoupSession *soup;
+	SoupMessage *msg;
+	GBytes *request_body, *bytes;
+	GError *local_error = NULL;
+
+	soup = soup_session_new_with_options ("timeout", 30, "user-agent", "Evolution (Windows)", NULL);
+	msg = soup_message_new ("POST", uri);
+	if (token) {
+		gchar *authorization = g_strdup_printf ("Bearer %s", token);
+
+		soup_message_headers_replace (soup_message_get_request_headers (msg), "Authorization", authorization);
+		g_free (authorization);
+	}
+	request_body = g_bytes_new (body, strlen (body));
+	soup_message_set_request_body_from_bytes (msg, content_type, request_body);
+	g_bytes_unref (request_body);
+
+	bytes = soup_session_send_and_read (soup, msg, core->cancellable, &local_error);
+	*out_status = bytes ? soup_message_get_status (msg) : 0;
+	if (!bytes)
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_HOST_NOT_FOUND,
+			"Le serveur est injoignable : %s", local_error ? local_error->message : "erreur réseau");
+
+	g_clear_error (&local_error);
+	g_object_unref (msg);
+	g_object_unref (soup);
+
+	return bytes;
+}
+
+/* Jeton d'accès pour EWS (Exchange Online, EWS.AccessAsUser.All) obtenu avec le jeton de
+ * renouvellement du compte Microsoft 365. Le jeton n'est pas mémorisé : les jetons Graph
+ * du compte restent intacts. Échoue si l'application n'est pas autorisée à accéder à EWS
+ * (consentement de l'administrateur).
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   source    : source de la collection Microsoft 365
+ *   out_token : reçoit le jeton (e_util_safe_free_string)
+ *   error     : emplacement pour une éventuelle erreur */
+static gboolean
+gal_get_ews_token (EvoCore *core,
+		   ESource *source,
+		   gchar **out_token,
+		   GError **error)
+{
+	ESourceAuthentication *authentication;
+	gchar *user, *store_id, *uid, *secret = NULL, *client_id = NULL, *form, *scope, *refresh_enc, *scope_enc, *client_enc;
+	const gchar *refresh_token = NULL;
+	JsonNode *secret_root = NULL, *token_root = NULL;
+	JsonObject *secret_object, *token_object;
+	GBytes *bytes;
+	guint status = 0;
+	gboolean ok = FALSE;
+
+	*out_token = NULL;
+	if (!e_source_has_extension (source, E_SOURCE_EXTENSION_AUTHENTICATION)) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED, "Compte sans authentification OAuth2");
+		return FALSE;
+	}
+	authentication = e_source_get_extension (source, E_SOURCE_EXTENSION_AUTHENTICATION);
+	user = e_source_authentication_dup_user (authentication);
+	store_id = e_source_authentication_dup_credential_store_id (authentication);
+	if (store_id && *store_id)
+		uid = g_strdup_printf ("OAuth2::Microsoft365[%s][%s]", user ? user : "", store_id);
+	else
+		uid = g_strdup_printf ("OAuth2::Microsoft365[%s]", user ? user : "");
+	g_free (user);
+	g_free (store_id);
+
+	if (!e_secret_store_lookup_sync (uid, &secret, core->cancellable, error))
+		goto exit;
+	if (!secret) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "Jeton de renouvellement du compte introuvable");
+		goto exit;
+	}
+
+	secret_root = json_from_string (secret, NULL);
+	secret_object = secret_root && JSON_NODE_HOLDS_OBJECT (secret_root) ? json_node_get_object (secret_root) : NULL;
+	refresh_token = secret_object ? gal_string_member (secret_object, "refresh_token") : NULL;
+	if (!refresh_token || !*refresh_token) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "Jeton de renouvellement du compte vide");
+		goto exit;
+	}
+
+	if (e_source_has_extension (source, "Microsoft365 Backend")) {
+		GObject *extension = G_OBJECT (e_source_get_extension (source, "Microsoft365 Backend"));
+
+		if (g_object_class_find_property (G_OBJECT_GET_CLASS (extension), "oauth2-client-id"))
+			g_object_get (extension, "oauth2-client-id", &client_id, NULL);
+	}
+	if (!client_id || !*client_id) {
+		g_free (client_id);
+		client_id = g_strdup ("20460e5d-ce91-49af-a3a5-70b6be7486d1");
+	}
+
+	scope = g_strdup ("https://outlook.office365.com/EWS.AccessAsUser.All offline_access");
+	scope_enc = g_uri_escape_string (scope, NULL, FALSE);
+	refresh_enc = g_uri_escape_string (refresh_token, NULL, FALSE);
+	client_enc = g_uri_escape_string (client_id, NULL, FALSE);
+	form = g_strdup_printf ("client_id=%s&grant_type=refresh_token&refresh_token=%s&scope=%s"
+		"&redirect_uri=https%%3A%%2F%%2Flogin.microsoftonline.com%%2Fcommon%%2Foauth2%%2Fnativeclient",
+		client_enc, refresh_enc, scope_enc);
+	g_free (scope);
+	g_free (scope_enc);
+	g_free (refresh_enc);
+	g_free (client_enc);
+
+	bytes = gal_http_post (core, "https://login.microsoftonline.com/common/oauth2/v2.0/token", NULL,
+		"application/x-www-form-urlencoded", form, &status, error);
+	e_util_safe_free_string (form);
+	if (!bytes)
+		goto exit;
+
+	token_object = gal_parse_response (bytes, &token_root, NULL);
+	if (token_object && *gal_string_member (token_object, "access_token")) {
+		*out_token = g_strdup (gal_string_member (token_object, "access_token"));
+		ok = TRUE;
+	} else {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED,
+			"Accès EWS refusé pour l'application (HTTP %u) : %s", status,
+			token_object && *gal_string_member (token_object, "error_description")
+			? gal_string_member (token_object, "error_description") : "réponse inattendue");
+	}
+	g_bytes_unref (bytes);
+
+ exit:
+	if (token_root)
+		json_node_unref (token_root);
+	if (secret_root)
+		json_node_unref (secret_root);
+	e_util_safe_free_string (secret);
+	g_free (client_id);
+	g_free (uid);
+
+	return ok;
+}
+
+/* Lien de navigation (raccourci vers un calendrier) lu dans « Common Views ». */
+typedef struct {
+	gchar *name;		/* nom affiché du calendrier (objet de l'élément) */
+	gchar *group;		/* nom du groupe de navigation */
+	gint link_type;		/* PidTagWlinkType (2 : calendrier) ; -1 si absent */
+} NavLink;
+
+static void
+nav_link_free (gpointer data)
+{
+	NavLink *link = data;
+
+	g_free (link->name);
+	g_free (link->group);
+	g_free (link);
+}
+
+typedef struct {
+	GPtrArray *links;
+	NavLink *current;
+	gchar *pending_tag;	/* PropertyTag de la propriété étendue en cours */
+	GString *text;		/* texte de l'élément en cours */
+	gboolean in_subject;
+	gboolean in_value;
+} NavParse;
+
+/* Éléments EWS d'un élément de la liste : ouverture. */
+static void
+nav_xml_start (GMarkupParseContext *context,
+	       const gchar *element,
+	       const gchar **names,
+	       const gchar **values,
+	       gpointer user_data,
+	       GError **error)
+{
+	NavParse *parse = user_data;
+	guint ii;
+
+	if (g_str_has_suffix (element, ":Message") || g_str_has_suffix (element, ":Item") ||
+	    g_str_has_suffix (element, ":PostItem")) {
+		parse->current = g_new0 (NavLink, 1);
+		parse->current->link_type = -1;
+	} else if (parse->current && g_str_has_suffix (element, ":Subject")) {
+		parse->in_subject = TRUE;
+		g_string_truncate (parse->text, 0);
+	} else if (parse->current && g_str_has_suffix (element, ":ExtendedFieldURI")) {
+		g_clear_pointer (&parse->pending_tag, g_free);
+		for (ii = 0; names[ii]; ii++)
+			if (g_strcmp0 (names[ii], "PropertyTag") == 0)
+				parse->pending_tag = g_strdup (values[ii]);
+	} else if (parse->current && g_str_has_suffix (element, ":Value")) {
+		parse->in_value = TRUE;
+		g_string_truncate (parse->text, 0);
+	}
+}
+
+/* Texte d'un élément. */
+static void
+nav_xml_text (GMarkupParseContext *context,
+	      const gchar *text,
+	      gsize len,
+	      gpointer user_data,
+	      GError **error)
+{
+	NavParse *parse = user_data;
+
+	if (parse->in_subject || parse->in_value)
+		g_string_append_len (parse->text, text, len);
+}
+
+/* Fermeture d'un élément : valeur de propriété, objet ou fin d'élément. */
+static void
+nav_xml_end (GMarkupParseContext *context,
+	     const gchar *element,
+	     gpointer user_data,
+	     GError **error)
+{
+	NavParse *parse = user_data;
+
+	if (parse->in_subject && g_str_has_suffix (element, ":Subject")) {
+		parse->in_subject = FALSE;
+		if (parse->current)
+			parse->current->name = g_strdup (parse->text->str);
+	} else if (parse->in_value && g_str_has_suffix (element, ":Value")) {
+		parse->in_value = FALSE;
+		if (parse->current && parse->pending_tag) {
+			if (g_ascii_strcasecmp (parse->pending_tag, "0x6851") == 0) {
+				g_free (parse->current->group);
+				parse->current->group = g_strdup (parse->text->str);
+			} else if (g_ascii_strcasecmp (parse->pending_tag, "0x6849") == 0) {
+				parse->current->link_type = (gint) g_ascii_strtoll (parse->text->str, NULL, 10);
+			}
+		}
+	} else if (parse->current && (g_str_has_suffix (element, ":Message") || g_str_has_suffix (element, ":Item") ||
+		   g_str_has_suffix (element, ":PostItem"))) {
+		g_ptr_array_add (parse->links, parse->current);
+		parse->current = NULL;
+	}
+}
+
+/* Groupes de calendriers d'Outlook (navigation de la boîte aux lettres) lus par EWS :
+ * FindItem « Associated » dans le dossier « Common Views », éléments
+ * IPM.Microsoft.WunderBar.Link (un par calendrier de personne, de salle ou de groupe).
+ * Le jeton EWS est demandé avec le jeton de renouvellement du compte ; si l'application
+ * n'y est pas autorisée, l'erreur du serveur est renvoyée telle quelle.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = compte (collection)
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : [{"name": groupe, "calendars": [{"name", "email"}]}, ...]. */
+static gchar *
+core_list_nav_calendars_run (EvoCore *core,
+			     gchar **args,
+			     GError **error)
+{
+	static const gchar request[] =
+		"<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+		"<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" "
+		"xmlns:t=\"http://schemas.microsoft.com/exchange/services/2006/types\" "
+		"xmlns:m=\"http://schemas.microsoft.com/exchange/services/2006/messages\">"
+		"<soap:Header><t:RequestServerVersion Version=\"Exchange2013\"/></soap:Header>"
+		"<soap:Body><m:FindItem Traversal=\"Associated\">"
+		"<m:ItemShape><t:BaseShape>IdOnly</t:BaseShape><t:AdditionalProperties>"
+		"<t:FieldURI FieldURI=\"item:Subject\"/>"
+		"<t:ExtendedFieldURI PropertyTag=\"0x6849\" PropertyType=\"Integer\"/>"
+		"<t:ExtendedFieldURI PropertyTag=\"0x6851\" PropertyType=\"String\"/>"
+		"</t:AdditionalProperties></m:ItemShape>"
+		"<m:IndexedPageItemView MaxEntriesReturned=\"500\" Offset=\"0\" BasePoint=\"Beginning\"/>"
+		"<m:Restriction><t:IsEqualTo><t:FieldURI FieldURI=\"item:ItemClass\"/>"
+		"<t:FieldURIOrConstant><t:Constant Value=\"IPM.Microsoft.WunderBar.Link\"/></t:FieldURIOrConstant>"
+		"</t:IsEqualTo></m:Restriction>"
+		"<m:ParentFolderIds><t:DistinguishedFolderId Id=\"commonviews\"/></m:ParentFolderIds>"
+		"</m:FindItem></soap:Body></soap:Envelope>";
+	ESource *source = gal_ref_m365_collection (core, args[0]);
+	gchar *ews_token = NULL, *graph_token = NULL, *json = NULL;
+	GBytes *bytes;
+	guint status = 0;
+	NavParse parse = { 0 };
+	GMarkupParser parser = { nav_xml_start, nav_xml_end, nav_xml_text, NULL, NULL };
+	GMarkupParseContext *context;
+	GHashTable *groups;	/* nom du groupe -> tableau de NavLink * (non possédés) */
+	GList *group_names, *glink;
+	JsonBuilder *builder;
+	gconstpointer data;
+	gsize size = 0;
+	guint ii;
+
+	if (!source) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			"Les groupes de calendriers ne sont disponibles que pour les comptes Microsoft 365.");
+		return NULL;
+	}
+	if (!gal_get_ews_token (core, source, &ews_token, error) ||
+	    !gal_get_token (core, source, &graph_token, error)) {
+		g_object_unref (source);
+		e_util_safe_free_string (ews_token);
+		return NULL;
+	}
+	g_object_unref (source);
+
+	bytes = gal_http_post (core, "https://outlook.office365.com/EWS/Exchange.asmx", ews_token,
+		"text/xml; charset=utf-8", request, &status, error);
+	e_util_safe_free_string (ews_token);
+	if (!bytes) {
+		e_util_safe_free_string (graph_token);
+		return NULL;
+	}
+	if (status < 200 || status >= 300) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+			"EWS a refusé la lecture de la navigation des calendriers (HTTP %u).", status);
+		g_bytes_unref (bytes);
+		e_util_safe_free_string (graph_token);
+		return NULL;
+	}
+
+	parse.links = g_ptr_array_new_with_free_func (nav_link_free);
+	parse.text = g_string_new (NULL);
+	data = g_bytes_get_data (bytes, &size);
+	context = g_markup_parse_context_new (&parser, 0, &parse, NULL);
+	if (!g_markup_parse_context_parse (context, data ? data : "", size, NULL) ||
+	    !g_markup_parse_context_end_parse (context, NULL)) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA, "Réponse EWS illisible");
+		g_markup_parse_context_free (context);
+		g_bytes_unref (bytes);
+		g_ptr_array_unref (parse.links);
+		g_string_free (parse.text, TRUE);
+		g_free (parse.pending_tag);
+		e_util_safe_free_string (graph_token);
+		return NULL;
+	}
+	g_markup_parse_context_free (context);
+	g_bytes_unref (bytes);
+
+	/* regroupe les raccourcis de calendrier par groupe de navigation */
+	groups = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, (GDestroyNotify) g_ptr_array_unref);
+	for (ii = 0; ii < parse.links->len; ii++) {
+		NavLink *link = parse.links->pdata[ii];
+		GPtrArray *members;
+		const gchar *group = link->group && *link->group ? link->group : "";
+
+		if (!link->name || !*link->name || (link->link_type != -1 && link->link_type != 2))
+			continue;
+		members = g_hash_table_lookup (groups, group);
+		if (!members) {
+			members = g_ptr_array_new ();
+			g_hash_table_insert (groups, g_strdup (group), members);
+		}
+		g_ptr_array_add (members, link);
+	}
+
+	builder = json_builder_new ();
+	json_builder_begin_array (builder);
+	group_names = g_hash_table_get_keys (groups);
+	group_names = g_list_sort (group_names, (GCompareFunc) g_strcmp0);
+	for (glink = group_names; glink; glink = g_list_next (glink)) {
+		GPtrArray *members = g_hash_table_lookup (groups, glink->data);
+
+		json_builder_begin_object (builder);
+		builder_add_string (builder, "name", glink->data);
+		json_builder_set_member_name (builder, "calendars");
+		json_builder_begin_array (builder);
+		for (ii = 0; ii < members->len; ii++) {
+			NavLink *link = members->pdata[ii];
+			gchar term[160];
+			GPtrArray *people = g_ptr_array_new_with_free_func (gal_person_free);
+			const gchar *email = "";
+			guint kk;
+
+			/* adresse de la personne ou de la salle : recherche de son nom dans l'annuaire */
+			gal_sanitize_term (link->name, term, sizeof (term));
+			if (gal_query_valid (term) &&
+			    gal_search_graph (core, "", graph_token, term, 5, people, NULL)) {
+				for (kk = 0; kk < people->len; kk++) {
+					GalPerson *person = people->pdata[kk];
+
+					if (person->name && g_ascii_strcasecmp (person->name, link->name) == 0) {
+						email = person->email;
+						break;
+					}
+				}
+			}
+			json_builder_begin_object (builder);
+			builder_add_string (builder, "name", link->name);
+			builder_add_string (builder, "email", email);
+			json_builder_end_object (builder);
+			g_ptr_array_unref (people);
+		}
+		json_builder_end_array (builder);
+		json_builder_end_object (builder);
+	}
+	json_builder_end_array (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+
+	g_list_free (group_names);
+	g_hash_table_destroy (groups);
+	g_ptr_array_unref (parse.links);
+	g_string_free (parse.text, TRUE);
+	g_free (parse.pending_tag);
+	e_util_safe_free_string (graph_token);
+
+	return json;
+}
+
+/* Soumet la lecture des groupes de calendriers d'Outlook par EWS (voir
+ * evo_core_list_nav_calendars dans evo-core.h).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte Microsoft 365 ("" : premier compte)
+ *   func        : rappel recevant [{"name": groupe, "calendars": [{"name", "email"}]}]
+ *   user_data   : données utilisateur transmises au rappel */
+void
+evo_core_list_nav_calendars (EvoCore *core,
+			     const char *account_uid,
+			     EvoCoreResultFunc func,
+			     void *user_data)
+{
+	gchar *args[] = { (gchar *) (account_uid ? account_uid : ""), NULL };
+
+	g_return_if_fail (core != NULL);
+
+	core_submit (core, core_list_nav_calendars_run, g_strdupv (args), func, user_data);
+}
+
+/* Adresse de la page d'autorisation Microsoft pour l'accès EWS (lecture de la
+ * navigation des calendriers d'Outlook). L'utilisateur y accorde l'accès à Exchange
+ * Online pour l'application ; la page se termine sur une page blanche de Microsoft,
+ * sans autre action (l'autorisation est mémorisée côté Microsoft).
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = compte (collection)
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : {"url": "https://login.microsoftonline.com/..."}. */
+static gchar *
+core_ews_consent_url_run (EvoCore *core,
+			  gchar **args,
+			  GError **error)
+{
+	ESource *source = gal_ref_m365_collection (core, args[0]);
+	ESourceAuthentication *authentication;
+	gchar *user, *client_id = NULL, *client_enc, *hint_enc, *scope_enc, *redirect_enc, *url, *json;
+	JsonBuilder *builder;
+
+	if (!source) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			"L'autorisation EWS n'est disponible que pour les comptes Microsoft 365.");
+		return NULL;
+	}
+
+	if (e_source_has_extension (source, "Microsoft365 Backend")) {
+		GObject *extension = G_OBJECT (e_source_get_extension (source, "Microsoft365 Backend"));
+
+		if (g_object_class_find_property (G_OBJECT_GET_CLASS (extension), "oauth2-client-id"))
+			g_object_get (extension, "oauth2-client-id", &client_id, NULL);
+	}
+	if (!client_id || !*client_id) {
+		g_free (client_id);
+		client_id = g_strdup ("20460e5d-ce91-49af-a3a5-70b6be7486d1");
+	}
+	authentication = e_source_has_extension (source, E_SOURCE_EXTENSION_AUTHENTICATION)
+		? e_source_get_extension (source, E_SOURCE_EXTENSION_AUTHENTICATION) : NULL;
+	user = authentication ? e_source_authentication_dup_user (authentication) : NULL;
+	g_object_unref (source);
+
+	client_enc = g_uri_escape_string (client_id, NULL, FALSE);
+	hint_enc = g_uri_escape_string (user ? user : "", NULL, FALSE);
+	scope_enc = g_uri_escape_string ("https://outlook.office365.com/EWS.AccessAsUser.All offline_access", NULL, FALSE);
+	redirect_enc = g_uri_escape_string ("https://login.microsoftonline.com/common/oauth2/nativeclient", NULL, FALSE);
+	url = g_strdup_printf ("https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=%s&response_type=code"
+		"&redirect_uri=%s&response_mode=query&scope=%s&login_hint=%s&prompt=consent",
+		client_enc, redirect_enc, scope_enc, hint_enc);
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	builder_add_string (builder, "url", url);
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+
+	g_free (url);
+	g_free (client_enc);
+	g_free (hint_enc);
+	g_free (scope_enc);
+	g_free (redirect_enc);
+	g_free (client_id);
+	g_free (user);
+
+	return json;
+}
+
+/* Soumet la lecture de l'adresse de la page d'autorisation EWS (voir
+ * evo_core_get_ews_consent_url dans evo-core.h).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte Microsoft 365 ("" : premier compte)
+ *   func        : rappel recevant {"url": "..."}
+ *   user_data   : données utilisateur transmises au rappel */
+void
+evo_core_get_ews_consent_url (EvoCore *core,
+			      const char *account_uid,
+			      EvoCoreResultFunc func,
+			      void *user_data)
+{
+	gchar *args[] = { (gchar *) (account_uid ? account_uid : ""), NULL };
+
+	g_return_if_fail (core != NULL);
+
+	core_submit (core, core_ews_consent_url_run, g_strdupv (args), func, user_data);
+}

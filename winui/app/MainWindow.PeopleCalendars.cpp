@@ -3,6 +3,7 @@
 #include "MainWindow.Helpers.h"
 #include "PeopleCalendars.h"
 
+#include <winrt/Windows.System.h>
 #include <algorithm>
 #include <functional>
 #include <map>
@@ -156,6 +157,24 @@ namespace winrt::EvolutionWin::implementation
             panel.Children().Append(none);
         }
 
+        /* import des groupes d'Outlook (équipes, salles, Team...) lus par EWS */
+        auto import_requested = std::make_shared<bool>(false);
+        if (!account_uid.empty())
+        {
+            Button import_button;
+            import_button.Content(box_value(Tr(L"Importer mes groupes Outlook (équipes, salles…)", L"Import my Outlook groups (teams, rooms…)")));
+            import_button.HorizontalAlignment(HorizontalAlignment::Stretch);
+            ToolTipService::SetToolTip(import_button, box_value(Tr(
+                L"Lit les groupes de calendriers de votre boîte Outlook (nécessite une autorisation Microsoft la première fois)",
+                L"Reads the calendar groups of your Outlook mailbox (needs a Microsoft authorization the first time)")));
+            import_button.Click([import_requested, dialog](IInspectable const&, RoutedEventArgs const&)
+            {
+                *import_requested = true;
+                dialog.Hide();
+            });
+            panel.Children().Append(import_button);
+        }
+
         /* personnes déjà ajoutées */
         StackPanel added_list;
         added_list.Spacing(2);
@@ -297,6 +316,11 @@ namespace winrt::EvolutionWin::implementation
         m_dialog_open = true;
         auto result = co_await dialog.ShowAsync();
         m_dialog_open = false;
+        if (*import_requested)
+        {
+            ImportOutlookGroupsAsync();
+            co_return;
+        }
         if (result != ContentDialogResult::Primary)
             co_return;
 
@@ -341,5 +365,143 @@ namespace winrt::EvolutionWin::implementation
         ShowStatus(Tr(L"Calendriers de personnes mis à jour.", L"People calendars updated."), InfoBarSeverity::Success);
         RebuildCalendarSourcesPanel();
         LoadEvents();
+    }
+}
+
+namespace winrt::EvolutionWin::implementation
+{
+    /**
+     * @brief Mémorise les calendriers des groupes d'Outlook lus par EWS et les affiche dans leurs groupes.
+     * @param groups Résultat de evo_core_list_nav_calendars : [{"name", "calendars": [{"name", "email"}]}].
+     * @param account_uid Compte Microsoft 365 concerné.
+     * @param announce true pour indiquer le résultat dans la barre d'état.
+     */
+    void MainWindow::ApplyOutlookGroups(JsonArray const& groups, hstring const& account_uid, bool announce)
+    {
+        JsonArray nav;
+        uint32_t index = 0, groups_count = 0;
+        for (auto const& group_value : groups)
+        {
+            auto group = group_value.GetObject();
+            hstring group_name = group.GetNamedString(L"name", L"");
+            bool counted = false;
+            for (auto const& calendar_value : group.GetNamedArray(L"calendars", JsonArray{}))
+            {
+                auto calendar = calendar_value.GetObject();
+                hstring email = calendar.GetNamedString(L"email", L"");
+                if (email.empty())
+                    continue;   /* adresse introuvable dans l'annuaire : calendrier non lisible */
+                JsonObject person;
+                person.SetNamedValue(L"email", JsonValue::CreateStringValue(email));
+                person.SetNamedValue(L"name", JsonValue::CreateStringValue(calendar.GetNamedString(L"name", email)));
+                person.SetNamedValue(L"group", JsonValue::CreateStringValue(group_name));
+                person.SetNamedValue(L"color", JsonValue::CreateStringValue(::EvolutionWin::People::ColorFor(index++)));
+                person.SetNamedValue(L"account_uid", JsonValue::CreateStringValue(account_uid));
+                nav.Append(person);
+                counted = true;
+            }
+            if (counted)
+                ++groups_count;
+        }
+
+        ::EvolutionWin::People::SaveNav(nav);
+        ::EvolutionWin::Settings::Instance().SetBoolean(L"calendar.nav-import", true);
+        RemergeCalendarSources();
+        RebuildCalendarSourcesPanel();
+
+        if (announce)
+            ShowStatus(Tr(L"Groupes Outlook importés : ", L"Outlook groups imported: ") + to_hstring(nav.Size()) +
+                Tr(L" calendriers dans ", L" calendars in ") + to_hstring(groups_count) + Tr(L" groupes.", L" groups."),
+                InfoBarSeverity::Success);
+    }
+
+    /**
+     * @brief Importe les groupes de calendriers d'Outlook (équipes, salles, groupes personnels) lus par EWS.
+     *        Si Microsoft n'a pas encore autorisé l'application, propose la page d'autorisation.
+     */
+    fire_and_forget MainWindow::ImportOutlookGroupsAsync()
+    {
+        auto strong = get_strong();
+        hstring account_uid = PeopleCalendarAccountUid();
+        if (account_uid.empty())
+            co_return;
+
+        ShowStatus(Tr(L"Lecture des groupes de calendriers Outlook…", L"Reading the Outlook calendar groups…"), InfoBarSeverity::Informational);
+        m_core->ListNavCalendars(account_uid, [this, account_uid](hstring const& json, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                std::wstring text{ error };
+                if (text.find(L"AADSTS65001") != std::wstring::npos || text.find(L"consent") != std::wstring::npos)
+                    ShowEwsConsentDialogAsync();
+                else
+                    ShowStatus(Tr(L"Groupes Outlook : ", L"Outlook groups: ") + error, InfoBarSeverity::Error);
+                return;
+            }
+            JsonArray groups;
+            if (!JsonArray::TryParse(json, groups))
+            {
+                ShowStatus(Tr(L"Groupes Outlook : réponse illisible.", L"Outlook groups: unreadable response."), InfoBarSeverity::Error);
+                return;
+            }
+            ApplyOutlookGroups(groups, account_uid, true);
+        });
+        co_return;
+    }
+
+    /**
+     * @brief Boîte d'autorisation : ouvre la page Microsoft qui accorde l'accès EWS (une seule fois),
+     *        puis relance l'import. Selon la stratégie de l'organisation, l'accord d'un administrateur
+     *        peut être nécessaire.
+     */
+    fire_and_forget MainWindow::ShowEwsConsentDialogAsync()
+    {
+        auto strong = get_strong();
+        if (!Content() || !Content().XamlRoot())
+            co_return;
+
+        hstring account_uid = PeopleCalendarAccountUid();
+        while (!m_dialog_open)
+        {
+            ContentDialog dialog;
+            dialog.XamlRoot(Content().XamlRoot());
+            dialog.Title(box_value(Tr(L"Autorisation Microsoft requise", L"Microsoft authorization required")));
+            TextBlock text;
+            text.TextWrapping(TextWrapping::Wrap);
+            text.MaxWidth(520);
+            text.Text(Tr(
+                L"Pour lire vos groupes de calendriers Outlook (équipes, salles, groupes personnels), l'application doit être autorisée une fois "
+                L"à accéder à Exchange Online.\n\n1. Cliquez sur « Ouvrir la page d'autorisation » et acceptez dans votre navigateur "
+                L"(la page se termine sur une page blanche, c'est normal).\n2. Revenez ici et cliquez sur « J'ai autorisé : réessayer ».\n\n"
+                L"Si Microsoft indique qu'un administrateur doit approuver l'application, transmettez-lui la demande : "
+                L"l'import ne sera possible qu'après son accord.",
+                L"To read your Outlook calendar groups (teams, rooms, personal groups), the application must be authorized once to access "
+                L"Exchange Online.\n\n1. Click \"Open the authorization page\" and accept in your browser (the page ends on a blank page, "
+                L"this is normal).\n2. Come back and click \"I authorized: retry\".\n\n"
+                L"If Microsoft says an administrator must approve the application, forward the request: the import will only work after approval."));
+            dialog.Content(text);
+            dialog.PrimaryButtonText(Tr(L"Ouvrir la page d'autorisation", L"Open the authorization page"));
+            dialog.SecondaryButtonText(Tr(L"J'ai autorisé : réessayer", L"I authorized: retry"));
+            dialog.CloseButtonText(Tr(L"Annuler", L"Cancel"));
+            dialog.DefaultButton(ContentDialogButton::Primary);
+
+            m_dialog_open = true;
+            auto result = co_await dialog.ShowAsync();
+            m_dialog_open = false;
+
+            if (result == ContentDialogResult::Primary)
+            {
+                m_core->GetEwsConsentUrl(account_uid, [](hstring const& json, hstring const&)
+                {
+                    JsonObject object;
+                    if (JsonObject::TryParse(json, object))
+                        Windows::System::Launcher::LaunchUriAsync(Windows::Foundation::Uri{ object.GetNamedString(L"url", L"") });
+                });
+                continue;   /* la boîte revient : l'utilisateur coche « réessayer » après avoir autorisé */
+            }
+            if (result == ContentDialogResult::Secondary)
+                ImportOutlookGroupsAsync();
+            break;
+        }
     }
 }

@@ -157,6 +157,16 @@ main (int argc,
 		return 0;
 	}
 
+	/* --nav : groupes de calendriers d'Outlook lus par EWS */
+	if (argc > 1 && strcmp (argv[1], "--nav") == 0) {
+		done_event = CreateEvent (NULL, FALSE, FALSE, NULL);
+		core = evo_core_new (on_event, NULL);
+		evo_core_list_nav_calendars (core, "", on_result, NULL);
+		wait_result ("groupes de calendriers EWS");
+		evo_core_free (core);
+		return 0;
+	}
+
 	/* --photo adresse : photo de profil de l'annuaire (taille de la réponse) */
 	if (argc > 2 && strcmp (argv[1], "--photo") == 0) {
 		done_event = CreateEvent (NULL, FALSE, FALSE, NULL);

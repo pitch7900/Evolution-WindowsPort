@@ -9,8 +9,10 @@
 #include "Settings.h"
 
 #include <winrt/Windows.Data.Json.h>
+#include <algorithm>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace EvolutionWin::People
 {
@@ -70,6 +72,50 @@ namespace EvolutionWin::People
     inline winrt::Windows::Data::Json::JsonArray Load()
     {
         return ::EvolutionWin::Settings::Instance().GetArray(L"calendar.people");
+    }
+
+    /**
+     * @brief Calendriers importés des groupes d'Outlook (lus par EWS), mémorisés dans les réglages.
+     * @return Tableau d'objets {"email", "name", "group", "color", "account_uid"}.
+     */
+    inline winrt::Windows::Data::Json::JsonArray LoadNav()
+    {
+        return ::EvolutionWin::Settings::Instance().GetArray(L"calendar.nav");
+    }
+
+    /**
+     * @brief Mémorise les calendriers importés des groupes d'Outlook.
+     * @param people Tableau d'objets {"email", "name", "group", "color", "account_uid"}.
+     */
+    inline void SaveNav(winrt::Windows::Data::Json::JsonArray const& people)
+    {
+        ::EvolutionWin::Settings::Instance().Set(L"calendar.nav", people);
+    }
+
+    /**
+     * @brief Toutes les personnes : celles ajoutées à la main, puis celles importées d'Outlook (sans doublon d'adresse).
+     * @return Tableau d'objets {"email", "name", "group", "color", "account_uid"}.
+     */
+    inline winrt::Windows::Data::Json::JsonArray LoadAll()
+    {
+        using namespace winrt::Windows::Data::Json;
+
+        JsonArray all;
+        std::vector<std::wstring> seen;
+        for (auto const& list : { ::EvolutionWin::Settings::Instance().GetArray(L"calendar.people"), LoadNav() })
+        {
+            for (auto const& value : list)
+            {
+                if (value.ValueType() != JsonValueType::Object)
+                    continue;
+                std::wstring email{ value.GetObject().GetNamedString(L"email", L"") };
+                if (email.empty() || std::find(seen.begin(), seen.end(), email) != seen.end())
+                    continue;
+                seen.push_back(email);
+                all.Append(value);
+            }
+        }
+        return all;
     }
 
     /**
@@ -184,13 +230,25 @@ namespace EvolutionWin::People
             return winrt::hstring{ kGroupName };
         };
 
-        for (auto const& value : Load())
+        /* calendriers déjà fournis par EDS (même nom, même compte) : non répétés */
+        auto is_real = [&real](winrt::hstring const& account_uid, winrt::hstring const& name)
+        {
+            for (auto const& value : real)
+            {
+                auto source = value.GetObject();
+                if (source.GetNamedString(L"account_uid", L"") == account_uid && source.GetNamedString(L"name", L"") == name)
+                    return true;
+            }
+            return false;
+        };
+
+        for (auto const& value : LoadAll())
         {
             if (value.ValueType() != JsonValueType::Object)
                 continue;
             auto person = value.GetObject();
             winrt::hstring email = person.GetNamedString(L"email", L"");
-            if (email.empty())
+            if (email.empty() || is_real(person.GetNamedString(L"account_uid", L""), person.GetNamedString(L"name", L"")))
                 continue;
 
             JsonObject source;

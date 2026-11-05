@@ -345,7 +345,7 @@ namespace winrt::EvolutionWin::implementation
         {
             hstring email = ::EvolutionWin::People::EmailFromUid(uid);
             hstring name = email, color, account_uid;
-            for (auto const& value : ::EvolutionWin::People::Load())
+            for (auto const& value : ::EvolutionWin::People::LoadAll())
             {
                 auto person = value.GetObject();
                 if (person.GetNamedString(L"email", L"") == email)

@@ -239,6 +239,9 @@ namespace winrt::EvolutionWin::implementation
         hstring PeopleCalendarAccountUid();
         Windows::Data::Json::JsonArray m_calendar_groups{ nullptr };	/* groupes de calendriers Outlook (noms) */
         void RemergeCalendarSources();
+        winrt::fire_and_forget ImportOutlookGroupsAsync();
+        winrt::fire_and_forget ShowEwsConsentDialogAsync();
+        void ApplyOutlookGroups(Windows::Data::Json::JsonArray const& groups, hstring const& account_uid, bool announce);
         void RestoreCalendarSidebarWidth();
         bool m_calendar_dragging{ false };
         bool m_calendar_sidebar_restored{ false };
