@@ -955,6 +955,15 @@ namespace winrt::EvolutionWin::implementation
         }
 
         /* événement privé : détails masqués aux personnes avec qui le calendrier est partagé */
+        ComboBox show_as_combo;
+        show_as_combo.Header(box_value(Tr(L"Afficher comme", L"Show as")));
+        show_as_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
+        show_as_combo.Items().Append(box_value(Tr(L"Occupé(e)", L"Busy")));
+        show_as_combo.Items().Append(box_value(Tr(L"Libre / Disponible", L"Free / Available")));
+        show_as_combo.SelectedIndex(existing && event.GetNamedBoolean(L"free", false) ? 1 : 0);
+        show_as_combo.IsEnabled(!readonly);
+        panel.Children().Append(show_as_combo);
+
         CheckBox private_check;
         private_check.Content(box_value(Tr(L"Privé (détails masqués aux personnes avec qui le calendrier est partagé)",
                                            L"Private (details hidden from people the calendar is shared with)")));
@@ -1293,6 +1302,8 @@ namespace winrt::EvolutionWin::implementation
         JsonObject payload;
         payload.SetNamedValue(L"summary", JsonValue::CreateStringValue(summary_box.Text()));
         payload.SetNamedValue(L"location", JsonValue::CreateStringValue(location_box.Text()));
+        if (!readonly)
+            payload.SetNamedValue(L"free", JsonValue::CreateBooleanValue(show_as_combo.SelectedIndex() == 1));
         if (!readonly)
             payload.SetNamedValue(L"private", JsonValue::CreateBooleanValue(private_check.IsChecked() && private_check.IsChecked().GetBoolean()));
         payload.SetNamedValue(L"description", JsonValue::CreateStringValue(desc_box.Text()));

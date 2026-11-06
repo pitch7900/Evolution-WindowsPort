@@ -12,6 +12,23 @@
  * Paramètres :
  *   icomp  : composant VEVENT à modifier
  *   object : objet JSON décrivant l'événement */
+/* Disponibilité d'un événement (propriété TRANSP) : applique le membre JSON "free" s'il est présent
+ * (true : TRANSPARENT « libre », false : OPAQUE « occupé ») ; sans ce membre, ne touche à rien.
+ * Paramètres :
+ *   icomp  : composant VEVENT à modifier
+ *   object : objet JSON décrivant l'événement */
+static void
+event_apply_transp (ICalComponent *icomp,
+		    JsonObject *object)
+{
+	if (!json_object_has_member (object, "free"))
+		return;
+
+	e_cal_util_component_remove_property_by_kind (icomp, I_CAL_TRANSP_PROPERTY, TRUE);
+	i_cal_component_take_property (icomp, i_cal_property_new_transp (
+		json_object_get_boolean_member_with_default (object, "free", FALSE) ? I_CAL_TRANSP_TRANSPARENT : I_CAL_TRANSP_OPAQUE));
+}
+
 static void
 event_apply_class (ICalComponent *icomp,
 		   JsonObject *object)
@@ -329,7 +346,15 @@ core_get_event_run (EvoCore *core,
 		ICalProperty *class_prop = i_cal_component_get_first_property (icomp, I_CAL_CLASS_PROPERTY);
 		ICalProperty_Class event_class = class_prop ? i_cal_property_get_class (class_prop) : I_CAL_CLASS_NONE;
 
-		json_builder_set_member_name (builder, "private");
+		{
+		ICalProperty *transp_prop = i_cal_component_get_first_property (icomp, I_CAL_TRANSP_PROPERTY);
+
+		json_builder_set_member_name (builder, "free");
+		json_builder_add_boolean_value (builder, transp_prop && i_cal_property_get_transp (transp_prop) == I_CAL_TRANSP_TRANSPARENT);
+		g_clear_object (&transp_prop);
+	}
+
+	json_builder_set_member_name (builder, "private");
 		json_builder_add_boolean_value (builder, event_class == I_CAL_CLASS_PRIVATE || event_class == I_CAL_CLASS_CONFIDENTIAL);
 		g_clear_object (&class_prop);
 	}
@@ -608,6 +633,7 @@ core_modify_event_run (EvoCore *core,
 
 	ical_apply_categories_json (icomp, object);
 	event_apply_class (icomp, object);
+	event_apply_transp (icomp, object);
 	event_apply_times_and_attendees (E_CAL_CLIENT (client), icomp, object);
 
 	if (json_object_has_member (object, "reminder_minutes"))
@@ -946,6 +972,7 @@ core_create_event_run (EvoCore *core,
 
 	ical_apply_categories_json (icomp, object);
 	event_apply_class (icomp, object);
+	event_apply_transp (icomp, object);
 	event_apply_times_and_attendees (E_CAL_CLIENT (client), icomp, object);
 
 	if (json_object_has_member (object, "reminder_minutes"))
