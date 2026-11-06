@@ -290,7 +290,7 @@ namespace winrt::EvolutionWin::implementation
                 for (auto const& value : m_accounts ? m_accounts : JsonArray{})
                 {
                     auto account = value.GetObject();
-                    if (account.GetNamedString(L"uid", L"") == item.Account() && account.GetNamedString(L"backend", L"") == L"microsoft365")
+                    if (account.GetNamedString(L"uid", L"") == item.Account() && account.GetNamedString(L"protocol", L"") == L"microsoft365")
                         m365_account = true;
                 }
                 if (m365_account)
