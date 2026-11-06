@@ -284,6 +284,29 @@ namespace winrt::EvolutionWin::implementation
                 });
                 menu.Items().Append(notif_account_item);
                 menu.Items().Append(MenuFlyoutSeparator{});
+
+                /* compte Microsoft 365 : ouverture d'une boîte partagée ou d'un autre utilisateur */
+                bool m365_account = false;
+                for (auto const& value : m_accounts ? m_accounts : JsonArray{})
+                {
+                    auto account = value.GetObject();
+                    if (account.GetNamedString(L"uid", L"") == item.Account() && account.GetNamedString(L"backend", L"") == L"microsoft365")
+                        m365_account = true;
+                }
+                if (m365_account)
+                {
+                    MenuFlyoutItem shared_item;
+                    shared_item.Text(Tr(L"Ouvrir la boîte d'un autre utilisateur…", L"Open another user's mailbox…"));
+                    FontIcon shared_icon;
+                    shared_icon.Glyph(L"\xE716");
+                    shared_item.Icon(shared_icon);
+                    shared_item.Click([this, account_uid = item.Account()](IInspectable const&, RoutedEventArgs const&)
+                    {
+                        ShowSharedMailboxDialogAsync(account_uid);
+                    });
+                    menu.Items().Append(shared_item);
+                    menu.Items().Append(MenuFlyoutSeparator{});
+                }
             }
 
             AppendFolderManagementItems(menu, item, NodeFolderName(node));

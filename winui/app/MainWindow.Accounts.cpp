@@ -2316,4 +2316,81 @@ namespace winrt::EvolutionWin::implementation
         dialog.Content(panel);
         co_await dialog.ShowAsync();
     }
+
+    /**
+     * @brief Boîte de dialogue « Ouvrir la boîte d'un autre utilisateur » : ajoute une boîte aux lettres
+     *        partagée (ou celle d'un collègue qui a donné son accord) d'un compte Microsoft 365. Un
+     *        compte courrier est créé avec les identifiants du compte d'origine (une connexion
+     *        Microsoft est demandée) et l'adresse de la boîte partagée comme adresse d'expédition.
+     * @param account_uid Compte Microsoft 365 d'origine.
+     */
+    fire_and_forget MainWindow::ShowSharedMailboxDialogAsync(hstring account_uid)
+    {
+        auto strong = get_strong();
+        if (m_dialog_open || !Content() || !Content().XamlRoot())
+            co_return;
+
+        hstring owner_email, owner_name;
+        for (auto const& value : m_accounts ? m_accounts : JsonArray{})
+        {
+            auto account = value.GetObject();
+            if (account.GetNamedString(L"uid", L"") == account_uid)
+            {
+                owner_email = account.GetNamedString(L"address", L"");
+                owner_name = account.GetNamedString(L"display_name", L"");
+            }
+        }
+        if (owner_email.empty())
+            co_return;
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(Tr(L"Ouvrir la boîte d'un autre utilisateur", L"Open another user's mailbox")));
+        StackPanel panel;
+        panel.Spacing(10);
+        panel.MinWidth(420);
+        TextBlock hint;
+        hint.TextWrapping(TextWrapping::Wrap);
+        hint.Text(Tr(L"Adresse d'une boîte partagée (support, info…) ou de la boîte d'un collègue sur laquelle vous avez le droit d'accès complet (« FullAccess »). "
+                     L"Une connexion Microsoft sera demandée avec votre compte.",
+                     L"Address of a shared mailbox (support, info…) or of a colleague's mailbox you have full access to (\"FullAccess\"). "
+                     L"A Microsoft sign-in will be requested with your account."));
+        panel.Children().Append(hint);
+        TextBox address_box;
+        address_box.Header(box_value(Tr(L"Adresse de la boîte", L"Mailbox address")));
+        address_box.PlaceholderText(L"equipe@entreprise.com");
+        panel.Children().Append(address_box);
+        TextBox name_box;
+        name_box.Header(box_value(Tr(L"Nom affiché (facultatif)", L"Display name (optional)")));
+        panel.Children().Append(name_box);
+        dialog.Content(panel);
+        dialog.PrimaryButtonText(Tr(L"Ouvrir", L"Open"));
+        dialog.CloseButtonText(Tr(L"Annuler", L"Cancel"));
+        dialog.DefaultButton(ContentDialogButton::Primary);
+
+        m_dialog_open = true;
+        auto result = co_await dialog.ShowAsync();
+        m_dialog_open = false;
+        hstring shared{ Trim(address_box.Text()) };
+        if (result != ContentDialogResult::Primary || shared.empty() || std::wstring{ shared }.find(L'@') == std::wstring::npos)
+            co_return;
+
+        hstring name = name_box.Text().empty() ? shared : hstring{ Trim(name_box.Text()) };
+        JsonObject m365;
+        m365.SetNamedValue(L"email", JsonValue::CreateStringValue(owner_email));
+        m365.SetNamedValue(L"impersonate_user", JsonValue::CreateStringValue(shared));
+        m365.SetNamedValue(L"display_name", JsonValue::CreateStringValue(name));
+        m365.SetNamedValue(L"full_name", JsonValue::CreateStringValue(name));
+        m_core->AddMicrosoft365Account(m365.Stringify(), [this, name](hstring const& json, hstring const& error)
+        {
+            JsonObject created;
+            if (!error.empty() || !JsonObject::TryParse(json, created))
+            {
+                ShowStatus(Tr(L"Ouverture de la boîte : ", L"Opening the mailbox: ") + error, InfoBarSeverity::Error);
+                return;
+            }
+            LoadAccounts();
+            SignInOAuth2Async(created.GetNamedString(L"collection_uid", L""), name);
+        });
+    }
 }

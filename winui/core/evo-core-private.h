@@ -342,6 +342,10 @@ core_set_m365_settings (ESource *source,
 			const gchar *client_id,
 			const gchar *tenant);
 
+void
+core_set_m365_impersonation (ESource *source,
+			     const gchar *shared);
+
 /* evo-core-account-cloud.c */
 ESource *
 core_ref_credentials_source (EvoCore *core,

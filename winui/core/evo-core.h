@@ -605,7 +605,10 @@ void		evo_core_set_default_account	(EvoCore *core,
  * Format attendu pour account_json :
  * {"email": "...", "display_name": "...", "full_name": "...",
  *  "client_id": "..." (facultatif : application Entra ID propre),
- *  "tenant": "..." (facultatif : "common" par défaut)}
+ *  "tenant": "..." (facultatif : "common" par défaut),
+ *  "impersonate_user": "..." (facultatif : boîte aux lettres partagée ou d'un autre
+ *  utilisateur ; "email" reste l'identité de connexion, l'adresse d'expédition
+ *  devient celle de la boîte partagée ; courrier seul, sans agenda ni contacts)}
  * Avec "backend": "ews", compte Exchange de l'entreprise : "hosturl" (URL
  * EWS), "user" (facultatif : l'adresse) et "password" (NTLM). Pas de
  * connexion OAuth2 ensuite.

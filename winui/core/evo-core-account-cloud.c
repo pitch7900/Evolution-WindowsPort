@@ -28,7 +28,7 @@ core_add_m365_account_run (EvoCore *core,
 	JsonNode *root;
 	JsonObject *object;
 	const gchar *email, *name, *real_name, *client_id, *tenant;
-	const gchar *backend, *hosturl, *user, *password;
+	const gchar *backend, *hosturl, *user, *password, *shared;
 	ESource *collection_source, *account_source, *identity_source, *transport_source;
 	ESourceCollection *collection;
 	ESourceAuthentication *authentication;
@@ -82,6 +82,9 @@ core_add_m365_account_run (EvoCore *core,
 		real_name = name;
 	client_id = json_object_get_string_member_with_default (object, "client_id", "");
 	tenant = json_object_get_string_member_with_default (object, "tenant", "");
+	/* boîte partagée : adresse de la boîte ouverte avec les identifiants de "email" */
+	shared = g_str_equal (backend, "microsoft365")
+		? json_object_get_string_member_with_default (object, "impersonate_user", "") : "";
 
 	collection_source = e_source_new (NULL, NULL, NULL);
 	account_source = e_source_new (NULL, NULL, NULL);
@@ -101,8 +104,8 @@ core_add_m365_account_run (EvoCore *core,
 	e_source_backend_set_backend_name (E_SOURCE_BACKEND (collection), backend);
 	e_source_collection_set_identity (collection, email);
 	e_source_collection_set_mail_enabled (collection, TRUE);
-	e_source_collection_set_calendar_enabled (collection, TRUE);
-	e_source_collection_set_contacts_enabled (collection, TRUE);
+	e_source_collection_set_calendar_enabled (collection, !*shared);
+	e_source_collection_set_contacts_enabled (collection, !*shared);
 
 	authentication = e_source_get_extension (collection_source, E_SOURCE_EXTENSION_AUTHENTICATION);
 	if (g_str_equal (backend, "ews")) {
@@ -118,15 +121,19 @@ core_add_m365_account_run (EvoCore *core,
 	}
 	e_source_authentication_set_user (authentication, user);
 	core_set_m365_settings (collection_source, backend, email, user, hosturl, client_id, tenant);
+	if (*shared)
+		core_set_m365_impersonation (collection_source, shared);
 
 	mail_account = e_source_get_extension (account_source, E_SOURCE_EXTENSION_MAIL_ACCOUNT);
 	e_source_backend_set_backend_name (E_SOURCE_BACKEND (mail_account), backend);
 	e_source_mail_account_set_identity_uid (mail_account, e_source_get_uid (identity_source));
 	core_set_m365_settings (account_source, backend, email, user, hosturl, client_id, tenant);
+	if (*shared)
+		core_set_m365_impersonation (account_source, shared);
 
 	mail_identity = e_source_get_extension (identity_source, E_SOURCE_EXTENSION_MAIL_IDENTITY);
 	e_source_mail_identity_set_name (mail_identity, real_name);
-	e_source_mail_identity_set_address (mail_identity, email);
+	e_source_mail_identity_set_address (mail_identity, *shared ? shared : email);
 	mail_submission = e_source_get_extension (identity_source, E_SOURCE_EXTENSION_MAIL_SUBMISSION);
 	e_source_mail_submission_set_transport_uid (mail_submission, e_source_get_uid (transport_source));
 	/* the server saves sent messages itself */
@@ -136,6 +143,8 @@ core_add_m365_account_run (EvoCore *core,
 	mail_transport = e_source_get_extension (transport_source, E_SOURCE_EXTENSION_MAIL_TRANSPORT);
 	e_source_backend_set_backend_name (E_SOURCE_BACKEND (mail_transport), backend);
 	core_set_m365_settings (transport_source, backend, email, user, hosturl, client_id, tenant);
+	if (*shared)
+		core_set_m365_impersonation (transport_source, shared);
 
 	/* parents before children */
 	sources = g_list_append (sources, collection_source);
