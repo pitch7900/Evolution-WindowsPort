@@ -2401,7 +2401,7 @@ recoverable_get_token (EvoCore *core,
  *   core  : instance du moteur evo-core
  *   args  : [0] = uid du compte courrier
  *   error : emplacement pour une éventuelle erreur
- * Retourne : [{"id", "subject", "from", "received"}] (100 plus récents), NULL sinon. */
+ * Retourne : [{"id", "subject", "from", "to", "received", "deleted"}] (100 plus récents), NULL sinon. */
 static gchar *
 core_list_recoverable_run (EvoCore *core,
 			   gchar **args,
@@ -2417,7 +2417,7 @@ core_list_recoverable_run (EvoCore *core,
 
 	base = recoverable_mailbox_base (core, args[0]);
 	uri = g_strdup_printf ("%s/mailFolders/recoverableitemsdeletions/messages?$top=100"
-		"&$select=id,subject,from,receivedDateTime&$orderby=receivedDateTime%%20desc", base);
+		"&$select=id,subject,from,toRecipients,receivedDateTime,lastModifiedDateTime&$orderby=lastModifiedDateTime%%20desc", base);
 	bytes = gal_http_get (core, GAL_PROVIDER_MICROSOFT365, uri, token, &status, error);
 	g_free (uri);
 	g_free (base);
@@ -2442,7 +2442,29 @@ core_list_recoverable_run (EvoCore *core,
 				const gchar *name = address ? json_object_get_string_member_with_default (address, "name", "") : "";
 				const gchar *mail = address ? json_object_get_string_member_with_default (address, "address", "") : "";
 				const gchar *received = json_object_get_string_member_with_default (item, "receivedDateTime", "");
+				const gchar *modified = json_object_get_string_member_with_default (item, "lastModifiedDateTime", "");
 				GDateTime *date = *received ? g_date_time_new_from_iso8601 (received, NULL) : NULL;
+				GDateTime *deleted = *modified ? g_date_time_new_from_iso8601 (modified, NULL) : NULL;
+				JsonArray *recipients = json_object_has_member (item, "toRecipients") &&
+					JSON_NODE_HOLDS_ARRAY (json_object_get_member (item, "toRecipients"))
+					? json_object_get_array_member (item, "toRecipients") : NULL;
+				GString *to = g_string_new (NULL);
+				guint rr;
+
+				for (rr = 0; recipients && rr < json_array_get_length (recipients); rr++) {
+					JsonObject *recipient = json_array_get_object_element (recipients, rr);
+					JsonObject *to_address = recipient && json_object_has_member (recipient, "emailAddress") &&
+						JSON_NODE_HOLDS_OBJECT (json_object_get_member (recipient, "emailAddress"))
+						? json_object_get_object_member (recipient, "emailAddress") : NULL;
+					const gchar *to_name = to_address ? json_object_get_string_member_with_default (to_address, "name", "") : "";
+					const gchar *to_mail = to_address ? json_object_get_string_member_with_default (to_address, "address", "") : "";
+
+					if (!*to_name && !*to_mail)
+						continue;
+					if (to->len)
+						g_string_append (to, "; ");
+					g_string_append (to, *to_name ? to_name : to_mail);
+				}
 
 				json_builder_begin_object (builder);
 				builder_add_string (builder, "id", json_object_get_string_member_with_default (item, "id", ""));
@@ -2450,9 +2472,15 @@ core_list_recoverable_run (EvoCore *core,
 				builder_add_string (builder, "from", *name ? name : mail);
 				json_builder_set_member_name (builder, "received");
 				json_builder_add_int_value (builder, date ? g_date_time_to_unix (date) : 0);
+				json_builder_set_member_name (builder, "deleted");
+				json_builder_add_int_value (builder, deleted ? g_date_time_to_unix (deleted) : 0);
+				builder_add_string (builder, "to", to->str);
 				json_builder_end_object (builder);
+				g_string_free (to, TRUE);
 				if (date)
 					g_date_time_unref (date);
+				if (deleted)
+					g_date_time_unref (deleted);
 			}
 			json_builder_end_array (builder);
 			json = json_from_builder (builder);
@@ -2476,7 +2504,8 @@ core_list_recoverable_run (EvoCore *core,
 /* Restaure des éléments récupérables dans la Boîte de réception (Graph : déplacement du message).
  * Paramètres :
  *   core  : instance du moteur evo-core
- *   args  : [0] = uid du compte, [1] = identifiants Graph des messages séparés par des espaces
+ *   args  : [0] = uid du compte, [1] = identifiants Graph des messages séparés par des espaces,
+ *           [2] = "restore" (Boîte de réception) ou "purge" (suppression définitive)
  *   error : emplacement pour une éventuelle erreur
  * Retourne : {"restored": n, "failed": n, "error": "premier échec"}, NULL en cas d'erreur globale. */
 static gchar *
@@ -2486,6 +2515,7 @@ core_restore_recoverable_run (EvoCore *core,
 {
 	gchar *token = NULL, *base, *json;
 	gchar **ids = g_strsplit (args[1] ? args[1] : "", " ", -1);
+	gboolean purge = g_strcmp0 (args[2], "purge") == 0;
 	gchar *first_error = NULL;
 	guint restored = 0, failed = 0, ii;
 	JsonBuilder *builder;
@@ -2504,8 +2534,8 @@ core_restore_recoverable_run (EvoCore *core,
 		if (!*ids[ii])
 			continue;
 		encoded = g_uri_escape_string (ids[ii], NULL, FALSE);
-		uri = g_strdup_printf ("%s/messages/%s/move", base, encoded);
-		bytes = gal_http_send_json (core, "POST", uri, token, "{\"destinationId\":\"inbox\"}", &status, NULL);
+		uri = g_strdup_printf (purge ? "%s/messages/%s/permanentDelete" : "%s/messages/%s/move", base, encoded);
+		bytes = gal_http_send_json (core, "POST", uri, token, purge ? "{}" : "{\"destinationId\":\"inbox\"}", &status, NULL);
 		if (bytes && status >= 200 && status < 300) {
 			restored++;
 		} else {
@@ -2564,7 +2594,23 @@ evo_core_restore_recoverable_items (EvoCore *core,
 				    EvoCoreResultFunc func,
 				    void *user_data)
 {
-	gchar *args[] = { (gchar *) account_uid, (gchar *) message_ids, NULL };
+	gchar *args[] = { (gchar *) account_uid, (gchar *) message_ids, (gchar *) "restore", NULL };
+
+	g_return_if_fail (core != NULL);
+	g_return_if_fail (account_uid != NULL && message_ids != NULL);
+
+	core_submit (core, core_restore_recoverable_run, g_strdupv (args), func, user_data);
+}
+
+/* Soumet la suppression définitive d'éléments récupérables (voir evo_core_purge_recoverable_items dans evo-core.h). */
+void
+evo_core_purge_recoverable_items (EvoCore *core,
+				  const char *account_uid,
+				  const char *message_ids,
+				  EvoCoreResultFunc func,
+				  void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, (gchar *) message_ids, (gchar *) "purge", NULL };
 
 	g_return_if_fail (core != NULL);
 	g_return_if_fail (account_uid != NULL && message_ids != NULL);

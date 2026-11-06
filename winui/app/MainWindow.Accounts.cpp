@@ -13,6 +13,8 @@
 #include <winrt/Windows.Web.Http.h>
 #include <winrt/Windows.Web.Http.Headers.h>
 #include <winrt/Microsoft.UI.Input.h>
+#include <winrt/Microsoft.UI.Xaml.Media.h>
+#include <winrt/Microsoft.UI.Windowing.h>
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
@@ -2453,81 +2455,270 @@ namespace winrt::EvolutionWin::implementation
     }
 
     /**
-     * @brief « Récupérer les éléments supprimés du serveur » : liste le dossier des éléments récupérables
-     *        (suppressions conservées par Exchange Online) d'un compte Microsoft 365, avec filtre, et
-     *        restaure les éléments cochés dans la Boîte de réception.
+     * @brief « Récupérer les éléments supprimés du serveur » : fenêtre redimensionnable listant le dossier
+     *        des éléments récupérables (suppressions conservées par Exchange Online) d'un compte Microsoft 365
+     *        (objet, date de suppression, expéditeur, date de réception, destinataires), avec filtre et tri par
+     *        colonne ; restaure les éléments sélectionnés dans la Boîte de réception ou les supprime définitivement.
      * @param account_uid Compte courrier Microsoft 365.
      */
-    fire_and_forget MainWindow::ShowRecoverableItemsDialogAsync(hstring account_uid)
+    void MainWindow::ShowRecoverableItemsDialogAsync(hstring account_uid)
     {
-        auto strong = get_strong();
-        if (m_dialog_open || !Content() || !Content().XamlRoot())
-            co_return;
-
-        struct Entry { std::wstring id; std::wstring text; };
+        struct Entry { std::wstring id, subject, from, to; int64_t received{ 0 }, deleted{ 0 }; };
         struct State
         {
             std::vector<Entry> entries;
             std::set<std::wstring> selected;
             bool filling{ false };
+            int sort_column{ 1 };       /* 0 objet, 1 supprimé le, 2 de, 3 reçu, 4 envoyé à */
+            bool ascending{ false };
         };
         auto state = std::make_shared<State>();
 
-        ContentDialog dialog;
-        dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(Tr(L"Éléments supprimés récupérables", L"Recoverable deleted items")));
-        StackPanel panel;
-        panel.Spacing(8);
-        panel.MinWidth(560);
+        Window window;
+        window.Title(Tr(L"Récupérer les éléments supprimés", L"Recover deleted items"));
+        window.AppWindow().Resize({ 1150, 700 });
+        ::EvolutionWin::SetWindowIcon(window.AppWindow());
+
+        Grid root;
+        root.Padding(ThicknessHelper::FromLengths(16, 12, 16, 12));
+        root.RowSpacing(8);
+        root.Background(Application::Current().Resources().Lookup(box_value(L"ApplicationPageBackgroundThemeBrush")).as<Media::Brush>());
+        for (int i = 0; i < 5; ++i)
+        {
+            RowDefinition row;
+            row.Height(i == 2 ? GridLengthHelper::FromValueAndType(1, GridUnitType::Star) : GridLengthHelper::Auto());
+            root.RowDefinitions().Append(row);
+        }
+
+        StackPanel top;
+        top.Spacing(8);
         TextBlock info;
         info.TextWrapping(TextWrapping::Wrap);
-        info.Text(Tr(L"Messages supprimés définitivement mais encore conservés par le serveur (100 plus récents). Cochez ceux à restaurer dans la Boîte de réception.",
-                     L"Messages deleted permanently but still kept by the server (100 most recent). Select those to restore to the Inbox."));
-        panel.Children().Append(info);
+        info.Text(Tr(L"Messages supprimés définitivement mais encore conservés par le serveur (100 plus récents). Sélectionnez ceux à traiter (Ctrl / Maj pour plusieurs).",
+                     L"Messages deleted permanently but still kept by the server (100 most recent). Select the ones to process (Ctrl / Shift for several)."));
+        top.Children().Append(info);
         TextBox filter_box;
-        filter_box.PlaceholderText(Tr(L"Filtrer par expéditeur, objet ou date", L"Filter by sender, subject or date"));
-        panel.Children().Append(filter_box);
+        filter_box.PlaceholderText(Tr(L"Filtrer par objet, expéditeur, destinataire ou date", L"Filter by subject, sender, recipient or date"));
+        top.Children().Append(filter_box);
+        Grid::SetRow(top, 0);
+        root.Children().Append(top);
+
+        /* colonnes communes à l'en-tête et aux lignes (proportionnelles : le texte suit la taille de la fenêtre) */
+        auto make_columns = [](Grid const& grid)
+        {
+            static constexpr double widths[] = { 3.0, 1.6, 1.8, 1.6, 2.6 };
+            for (double width : widths)
+            {
+                ColumnDefinition column;
+                column.Width(GridLengthHelper::FromValueAndType(width, GridUnitType::Star));
+                column.MinWidth(70);
+                grid.ColumnDefinitions().Append(column);
+            }
+        };
+
+        Grid body;
+        body.RowSpacing(0);
+        {
+            RowDefinition header_row;
+            header_row.Height(GridLengthHelper::Auto());
+            body.RowDefinitions().Append(header_row);
+            RowDefinition list_row;
+            list_row.Height(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+            body.RowDefinitions().Append(list_row);
+        }
+        Grid header;
+        header.Padding(ThicknessHelper::FromLengths(12, 0, 28, 0));
+        make_columns(header);
+        std::vector<Button> header_buttons;
+        static const wchar_t* const titles_fr[] = { L"Objet", L"Supprimé le", L"De", L"Reçu", L"Envoyé à" };
+        static const wchar_t* const titles_en[] = { L"Subject", L"Deleted on", L"From", L"Received", L"Sent to" };
+        for (int c = 0; c < 5; ++c)
+        {
+            Button button;
+            button.Content(box_value(Tr(titles_fr[c], titles_en[c])));
+            button.Background(SolidColorBrush(Windows::UI::Colors::Transparent()));
+            button.BorderThickness(ThicknessHelper::FromUniformLength(0));
+            button.HorizontalAlignment(HorizontalAlignment::Stretch);
+            button.HorizontalContentAlignment(HorizontalAlignment::Left);
+            Grid::SetColumn(button, c);
+            header.Children().Append(button);
+            header_buttons.push_back(button);
+        }
+        Grid::SetRow(header, 0);
+        body.Children().Append(header);
+
+        ListView list;
+        list.SelectionMode(ListViewSelectionMode::Extended);
+        Grid::SetRow(list, 1);
+        body.Children().Append(list);
         ProgressRing ring;
         ring.IsActive(true);
-        ring.Width(28);
-        ring.Height(28);
-        panel.Children().Append(ring);
-        ListView list;
-        list.SelectionMode(ListViewSelectionMode::Multiple);
-        list.MaxHeight(360);
-        panel.Children().Append(list);
+        ring.Width(32);
+        ring.Height(32);
+        ring.HorizontalAlignment(HorizontalAlignment::Center);
+        ring.VerticalAlignment(VerticalAlignment::Center);
+        Grid::SetRow(ring, 1);
+        body.Children().Append(ring);
+        Grid::SetRow(body, 2);
+        root.Children().Append(body);
+
+        StackPanel options;
+        options.Spacing(6);
+        RadioButtons action_choice;
+        action_choice.Items().Append(box_value(Tr(L"Restaurer les éléments sélectionnés (dans la Boîte de réception)", L"Restore the selected items (to the Inbox)")));
+        action_choice.Items().Append(box_value(Tr(L"Supprimer définitivement les éléments sélectionnés", L"Permanently delete the selected items")));
+        action_choice.SelectedIndex(0);
+        options.Children().Append(action_choice);
         TextBlock status;
         status.TextWrapping(TextWrapping::Wrap);
-        panel.Children().Append(status);
-        dialog.Content(panel);
-        dialog.PrimaryButtonText(Tr(L"Restaurer la sélection", L"Restore selection"));
-        dialog.IsPrimaryButtonEnabled(false);
-        dialog.CloseButtonText(Tr(L"Fermer", L"Close"));
+        options.Children().Append(status);
+        Grid::SetRow(options, 3);
+        root.Children().Append(options);
 
-        /* remplit la liste selon le filtre, en conservant la sélection */
-        auto fill = [state, list, filter_box]()
+        Grid buttons;
+        {
+            ColumnDefinition spacer;
+            spacer.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+            buttons.ColumnDefinitions().Append(spacer);
+            ColumnDefinition auto_a, auto_b;
+            auto_a.Width(GridLengthHelper::Auto());
+            auto_b.Width(GridLengthHelper::Auto());
+            buttons.ColumnDefinitions().Append(auto_a);
+            buttons.ColumnDefinitions().Append(auto_b);
+            buttons.ColumnSpacing(8);
+        }
+        Button select_all;
+        select_all.Content(box_value(Tr(L"Sélectionner tout", L"Select all")));
+        Grid::SetColumn(select_all, 0);
+        select_all.HorizontalAlignment(HorizontalAlignment::Left);
+        Button ok;
+        ok.Content(box_value(L"OK"));
+        ok.Style(Application::Current().Resources().Lookup(box_value(L"AccentButtonStyle")).as<Style>());
+        ok.IsEnabled(false);
+        ok.MinWidth(96);
+        Grid::SetColumn(ok, 1);
+        Button cancel;
+        cancel.Content(box_value(Tr(L"Annuler", L"Cancel")));
+        cancel.MinWidth(96);
+        Grid::SetColumn(cancel, 2);
+        buttons.Children().Append(select_all);
+        buttons.Children().Append(ok);
+        buttons.Children().Append(cancel);
+        Grid::SetRow(buttons, 4);
+        root.Children().Append(buttons);
+        window.Content(root);
+
+        auto fmt = [](int64_t unix_time) -> std::wstring
+        {
+            if (unix_time <= 0)
+                return L"";
+            time_t t = static_cast<time_t>(unix_time);
+            struct tm local{};
+            localtime_s(&local, &t);
+            wchar_t buffer[32];
+            swprintf_s(buffer, L"%02d.%02d.%04d %02d:%02d", local.tm_mday, local.tm_mon + 1, local.tm_year + 1900, local.tm_hour, local.tm_min);
+            return buffer;
+        };
+
+        /* (re)remplit la liste : tri, filtre, sélection conservée */
+        auto fill = [state, list, filter_box, header_buttons, fmt, make_columns]()
         {
             std::wstring needle{ filter_box.Text() };
             std::transform(needle.begin(), needle.end(), needle.begin(), ::towlower);
+            auto key = [&](Entry const& e, int column) -> std::wstring
+            {
+                switch (column)
+                {
+                case 0: return e.subject;
+                case 2: return e.from;
+                case 4: return e.to;
+                default: return L"";
+                }
+            };
+            std::stable_sort(state->entries.begin(), state->entries.end(), [&](Entry const& a, Entry const& b)
+            {
+                int c = state->sort_column;
+                bool less;
+                if (c == 1 || c == 3)
+                {
+                    int64_t x = c == 1 ? a.deleted : a.received, y = c == 1 ? b.deleted : b.received;
+                    less = state->ascending ? x < y : x > y;
+                }
+                else
+                {
+                    std::wstring x = key(a, c), y = key(b, c);
+                    std::transform(x.begin(), x.end(), x.begin(), ::towlower);
+                    std::transform(y.begin(), y.end(), y.begin(), ::towlower);
+                    less = state->ascending ? x < y : x > y;
+                }
+                return less;
+            });
+            for (int c = 0; c < 5; ++c)
+            {
+                std::wstring title{ unbox_value<hstring>(header_buttons[c].Content()) };
+                while (!title.empty() && (title.back() == L'\u25B2' || title.back() == L'\u25BC' || title.back() == L' '))
+                    title.pop_back();
+                if (c == state->sort_column)
+                    title += state->ascending ? L" \u25B2" : L" \u25BC";
+                header_buttons[c].Content(box_value(hstring{ title }));
+            }
+
             state->filling = true;
             list.Items().Clear();
             for (auto const& entry : state->entries)
             {
-                std::wstring lowered = entry.text;
-                std::transform(lowered.begin(), lowered.end(), lowered.begin(), ::towlower);
-                if (!needle.empty() && lowered.find(needle) == std::wstring::npos)
+                std::wstring haystack = entry.subject + L" " + entry.from + L" " + entry.to + L" " + fmt(entry.received) + L" " + fmt(entry.deleted);
+                std::transform(haystack.begin(), haystack.end(), haystack.begin(), ::towlower);
+                if (!needle.empty() && haystack.find(needle) == std::wstring::npos)
                     continue;
+
+                Grid cells;
+                make_columns(cells);
+                std::wstring values[] = { entry.subject.empty() ? std::wstring{ L"(sans objet)" } : entry.subject, fmt(entry.deleted), entry.from, fmt(entry.received), entry.to };
+                for (int c = 0; c < 5; ++c)
+                {
+                    TextBlock cell;
+                    cell.Text(hstring{ values[c] });
+                    cell.TextTrimming(TextTrimming::CharacterEllipsis);
+                    cell.VerticalAlignment(VerticalAlignment::Center);
+                    cell.Margin(ThicknessHelper::FromLengths(0, 0, 8, 0));
+                    Grid::SetColumn(cell, c);
+                    cells.Children().Append(cell);
+                }
                 ListViewItem row;
-                row.Content(box_value(hstring{ entry.text }));
+                row.HorizontalContentAlignment(HorizontalAlignment::Stretch);
+                row.Content(cells);
                 row.Tag(box_value(hstring{ entry.id }));
+                ToolTipService::SetToolTip(row, box_value(hstring{ values[0] + L"\n" + values[2] + L" → " + values[4] + L"\n" + values[3] }));
                 list.Items().Append(row);
                 if (state->selected.count(entry.id))
                     row.IsSelected(true);
             }
             state->filling = false;
         };
+
+        for (int c = 0; c < 5; ++c)
+            header_buttons[c].Click([state, fill, c](IInspectable const&, RoutedEventArgs const&)
+            {
+                if (state->sort_column == c)
+                    state->ascending = !state->ascending;
+                else
+                {
+                    state->sort_column = c;
+                    state->ascending = (c == 0 || c == 2 || c == 4);
+                }
+                fill();
+            });
         filter_box.TextChanged([fill](auto&&, auto&&) { fill(); });
-        list.SelectionChanged([state, dialog](IInspectable const&, SelectionChangedEventArgs const& args)
+        select_all.Click([list](auto&&, auto&&) { list.SelectAll(); });
+        cancel.Click([window](auto&&, auto&&) { window.Close(); });
+        action_choice.SelectionChanged([status, action_choice](auto&&, auto&&)
+        {
+            status.Text(action_choice.SelectedIndex() == 1
+                ? Tr(L"Attention : la suppression définitive est irréversible.", L"Warning: permanent deletion cannot be undone.")
+                : hstring{});
+        });
+        list.SelectionChanged([state, ok](IInspectable const&, SelectionChangedEventArgs const& args)
         {
             if (state->filling)
                 return;
@@ -2537,7 +2728,42 @@ namespace winrt::EvolutionWin::implementation
             for (auto const& removed : args.RemovedItems())
                 if (auto row = removed.try_as<ListViewItem>())
                     state->selected.erase(std::wstring{ unbox_value_or<hstring>(row.Tag(), L"") });
-            dialog.IsPrimaryButtonEnabled(!state->selected.empty());
+            ok.IsEnabled(!state->selected.empty());
+        });
+
+        ok.Click([this, state, window, account_uid, action_choice, ok, cancel](auto&&, auto&&)
+        {
+            if (state->selected.empty())
+                return;
+            std::wstring ids;
+            for (auto const& id : state->selected)
+                ids += (ids.empty() ? L"" : L" ") + id;
+            bool purge = action_choice.SelectedIndex() == 1;
+            ok.IsEnabled(false);
+            cancel.IsEnabled(false);
+            auto done = [this, window, purge](hstring const& json, hstring const& error)
+            {
+                window.Close();
+                JsonObject outcome;
+                if (!error.empty() || !JsonObject::TryParse(json, outcome))
+                {
+                    ShowStatus(Tr(L"Éléments supprimés : ", L"Deleted items: ") + error, InfoBarSeverity::Error);
+                    return;
+                }
+                int count = static_cast<int>(outcome.GetNamedNumber(L"restored", 0));
+                int failed = static_cast<int>(outcome.GetNamedNumber(L"failed", 0));
+                hstring done_text = hstring{ std::to_wstring(count) } + (purge ? Tr(L" élément(s) supprimé(s) définitivement", L" item(s) permanently deleted")
+                                                                                : Tr(L" élément(s) restauré(s) dans la Boîte de réception", L" item(s) restored to the Inbox"));
+                if (failed > 0)
+                    ShowStatus(done_text + L", " + hstring{ std::to_wstring(failed) } + Tr(L" échec(s) : ", L" failure(s): ") + outcome.GetNamedString(L"error", L""),
+                        InfoBarSeverity::Warning);
+                else
+                    ShowStatus(done_text + L".", InfoBarSeverity::Success);
+            };
+            if (purge)
+                m_core->PurgeRecoverableItems(account_uid, hstring{ ids }, done);
+            else
+                m_core->RestoreRecoverableItems(account_uid, hstring{ ids }, done);
         });
 
         m_core->ListRecoverableItems(account_uid, [state, ring, status, fill](hstring const& json, hstring const& error)
@@ -2553,48 +2779,15 @@ namespace winrt::EvolutionWin::implementation
             for (auto const& value : items)
             {
                 auto item = value.GetObject();
-                time_t received = static_cast<time_t>(item.GetNamedNumber(L"received", 0));
-                struct tm local{};
-                localtime_s(&local, &received);
-                wchar_t when[32];
-                swprintf_s(when, L"%02d/%02d/%04d %02d:%02d", local.tm_mday, local.tm_mon + 1, local.tm_year + 1900, local.tm_hour, local.tm_min);
-                std::wstring subject{ item.GetNamedString(L"subject", L"") };
-                state->entries.push_back({ std::wstring{ item.GetNamedString(L"id", L"") },
-                    std::wstring{ when } + L"  " + std::wstring{ item.GetNamedString(L"from", L"") } + L" — " +
-                    (subject.empty() ? std::wstring{ L"(sans objet)" } : subject) });
+                state->entries.push_back({ std::wstring{ item.GetNamedString(L"id", L"") }, std::wstring{ item.GetNamedString(L"subject", L"") },
+                    std::wstring{ item.GetNamedString(L"from", L"") }, std::wstring{ item.GetNamedString(L"to", L"") },
+                    static_cast<int64_t>(item.GetNamedNumber(L"received", 0)), static_cast<int64_t>(item.GetNamedNumber(L"deleted", 0)) });
             }
             if (state->entries.empty())
                 status.Text(Tr(L"Aucun élément récupérable.", L"No recoverable items."));
             fill();
         });
 
-        m_dialog_open = true;
-        auto result = co_await dialog.ShowAsync();
-        m_dialog_open = false;
-        if (result != ContentDialogResult::Primary || state->selected.empty())
-            co_return;
-
-        std::wstring ids;
-        for (auto const& id : state->selected)
-            ids += (ids.empty() ? L"" : L" ") + id;
-        ShowStatus(Tr(L"Restauration des éléments…", L"Restoring items…"), InfoBarSeverity::Informational);
-        m_core->RestoreRecoverableItems(account_uid, hstring{ ids }, [this](hstring const& json, hstring const& error)
-        {
-            JsonObject outcome;
-            if (!error.empty() || !JsonObject::TryParse(json, outcome))
-            {
-                ShowStatus(Tr(L"Restauration : ", L"Restore: ") + error, InfoBarSeverity::Error);
-                return;
-            }
-            int restored = static_cast<int>(outcome.GetNamedNumber(L"restored", 0));
-            int failed = static_cast<int>(outcome.GetNamedNumber(L"failed", 0));
-            if (failed > 0)
-                ShowStatus(hstring{ std::to_wstring(restored) } + Tr(L" élément(s) restauré(s), ", L" item(s) restored, ") +
-                    hstring{ std::to_wstring(failed) } + Tr(L" échec(s) : ", L" failure(s): ") + outcome.GetNamedString(L"error", L""),
-                    InfoBarSeverity::Warning);
-            else
-                ShowStatus(hstring{ std::to_wstring(restored) } + Tr(L" élément(s) restauré(s) dans la Boîte de réception.", L" item(s) restored to the Inbox."),
-                    InfoBarSeverity::Success);
-        });
+        window.Activate();
     }
 }

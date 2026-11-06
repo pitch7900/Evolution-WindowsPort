@@ -714,6 +714,13 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Supprime définitivement des éléments récupérables (identifiants séparés par des espaces). */
+        void PurgeRecoverableItems(winrt::hstring const& account, winrt::hstring const& ids, CoreHandler handler)
+        {
+            evo_core_purge_recoverable_items(m_core, winrt::to_string(account).c_str(), winrt::to_string(ids).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Restaure des éléments récupérables dans la Boîte de réception (identifiants séparés par des espaces). */
         void RestoreRecoverableItems(winrt::hstring const& account, winrt::hstring const& ids, CoreHandler handler)
         {

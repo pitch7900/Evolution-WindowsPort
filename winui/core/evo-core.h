@@ -1055,10 +1055,20 @@ void		evo_core_add_google_meet	(EvoCore *core,
  * Paramètres :
  *   core        : instance du moteur evo-core
  *   account_uid : compte courrier Microsoft 365
- *   func        : rappel recevant [{"id", "subject", "from", "received" (secondes Unix)}]
+ *   func        : rappel recevant [{"id", "subject", "from", "to" (destinataires), "received",
+ *                 "deleted" (secondes Unix)}]
  *   user_data   : données utilisateur transmises au rappel */
 void		evo_core_list_recoverable_items	(EvoCore *core,
 						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Supprime définitivement des éléments récupérables (irréversible, si la stratégie de
+ * rétention le permet). Mêmes paramètres et résultat que evo_core_restore_recoverable_items (). */
+void		evo_core_purge_recoverable_items
+						(EvoCore *core,
+						 const char *account_uid,
+						 const char *message_ids,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
