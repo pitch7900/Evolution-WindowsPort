@@ -14,22 +14,24 @@ Pour chaque point : compte nécessaire entre parenthèses. « Test » = compte d
 - [x] Aperçu des pièces jointes : PDF, image, texte (Test) — validé.
 - [x] Glisser-déposer d'une pièce jointe vers le Bureau (Test) — validé.
 - [x] Suivi des messages : drapeau, échéance, terminé, effacer (Test) — validé.
-- [ ] Aperçu d'une pièce jointe HTML (WebView2 isolé, scripts désactivés) (Test).
+- [x] Aperçu d'une pièce jointe HTML (WebView2 isolé, scripts désactivés) (Test).
 - [x] Accusé de lecture : bandeau « Envoyer l'accusé / Ignorer », envoi, mémorisation (Test) — validé.
-- [ ] Réglage des accusés de lecture Demander / Jamais / Toujours (Paramètres › Confidentialité et sécurité) : présence et conservation après redémarrage.
-- [ ] Accusé de lecture hors-ligne : message d'erreur au lieu d'un envoi (Test).
-- [ ] Boîte de réception unifiée et dossiers virtuels globaux (Envoyés, Brouillons, Supprimés de tous les comptes) : mélange par date, compte d'origine par ligne, actions (lire, marquer, déplacer, supprimer, répondre) sur le bon compte (au moins deux comptes distants).
-- [ ] Messages d'état compacts dans la barre du bas : lisibilité, durée d'affichage (7 s / 12 s / 20 s), bouton de fermeture.
+- [x] Réglage des accusés de lecture Demander / Jamais / Toujours (Paramètres › Confidentialité et sécurité) : présence et conservation après redémarrage.
+- [x] Accusé de lecture hors-ligne : message d'erreur au lieu d'un envoi (Test).
+- [x] Boîte de réception unifiée et dossiers virtuels globaux (Envoyés, Brouillons, Supprimés de tous les comptes) : mélange par date, compte d'origine par ligne, actions (lire, marquer, déplacer, supprimer, répondre) sur le bon compte (au moins deux comptes distants).
+- [x] Messages d'état compacts dans la barre du bas : lisibilité, durée d'affichage (7 s / 12 s / 20 s), bouton de fermeture.
 
 ## 2. Invitations et réunions
 
 - [x] Invitation reçue : bandeau Accepter / Provisoire / Refuser, mise à jour de l'agenda, réponse envoyée à l'organisateur (M365 vers Test) — validé.
 - [x] Invitation annulée : bandeau orange et « Retirer de l'agenda » — validé.
-- [ ] Invitation reçue : réponse d'un invité visible chez l'organisateur (« X a accepté la réunion »).
+- [x] Invitation reçue : réponse d'un invité visible chez l'organisateur (« X a accepté la réunion »).
 - [ ] Création d'un événement avec participants : choix du compte expéditeur et envoi des invitations pour un agenda local, arrivée chez un destinataire Gmail (agenda « Sur cet ordinateur »).
 - [ ] Création d'un événement avec participants sur un agenda Exchange Online / Google : le serveur envoie les invitations (pas de doublon envoyé par l'application).
+- [ ] Création d'un événement : liste « Calendrier » (calendrier par défaut pré-sélectionné, pas de calendrier de personne) ; un calendrier en lecture seule (partagé) refuse l'écriture avec un message clair puis disparaît de la liste (retour d'un test : « RemoteCalendarAccessDenied » en créant une invitation vers Gmail depuis Exchange Online, à refaire).
+- [ ] Événement privé : case « Privé » à la création et à la modification ; contrôle dans Outlook Online (cadenas, détails masqués pour un autre utilisateur).
 - [ ] Réunion en ligne Microsoft Teams : case dans la fenêtre d'un nouvel événement (M365) ; lien de visio, identifiant de réunion et numéros d'appel présents dans l'invitation.
-- [ ] Création d'un événement par sélection dans le calendrier : glisser (Jour / Semaine), clic simple (1 h), clic dans une case du mois.
+- [x] Création d'un événement par sélection dans le calendrier : glisser (Jour / Semaine), clic simple (1 h), clic dans une case du mois.
 
 ## 3. Annuaire de l'organisation
 

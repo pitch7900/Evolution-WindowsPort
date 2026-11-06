@@ -774,7 +774,9 @@ void		evo_core_list_events		(EvoCore *core,
 /* Crée un nouvel événement dans l'agenda par défaut (ou celui indiqué par
  * "calendar_uid"). Format attendu pour event_json :
  * {"calendar_uid": "..." (optionnel), "summary": "...", "location": "...",
- *  "description": "...", "start": 1730000000, "end": 1730003600}
+ *  "description": "...", "start": 1730000000, "end": 1730003600,
+ *  "private": true|false (optionnel : événement privé, propriété CLASS:PRIVATE,
+ *  détails masqués aux personnes avec qui l'agenda est partagé)}
  * Paramètres :
  *   core       : instance du moteur evo-core
  *   event_json : description de l'événement au format JSON UTF-8

@@ -12,9 +12,13 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.0.2] — en cours
 
+### Ajouté
+
+- **Événement privé** : case « Privé » dans la fenêtre d'événement (création et modification), enregistrée dans la propriété `CLASS:PRIVATE` ; Exchange Online la traduit en sensibilité « privé » (détails masqués aux personnes avec qui le calendrier est partagé). Lecture du réglage à l'ouverture d'un événement existant (champ `private` de `evo_core_get_event`).
+
 ### Corrigé
 
-- _(à compléter au fil des corrections issues de `VALIDATION.md`)_
+- **Création d'événement : « Accès refusé » (RemoteCalendarAccessDenied)** : un nouvel événement était créé dans le calendrier « actif », qui pouvait être un calendrier partagé en lecture seule. La fenêtre d'événement propose maintenant la liste « Calendrier » (calendriers du compte, hors calendriers de personnes), pré-sélectionne le calendrier actif ou par défaut, et un calendrier qui refuse l'écriture est mémorisé en lecture seule, écarté des propositions, avec un message qui explique comment en choisir un autre.
 
 ## [1.0.1] — 2026-11-05
 

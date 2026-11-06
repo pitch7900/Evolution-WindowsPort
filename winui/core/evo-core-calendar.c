@@ -5,6 +5,25 @@
 
 #include "evo-core-private.h"
 
+/* Confidentialité d'un événement (propriété CLASS) : applique le membre JSON "private" s'il est
+ * présent (true : PRIVATE, false : PUBLIC) ; sans ce membre, ne touche à rien. Exchange Online
+ * traduit CLASS:PRIVATE en sensibilité « privé » (détails masqués aux personnes avec qui le
+ * calendrier est partagé).
+ * Paramètres :
+ *   icomp  : composant VEVENT à modifier
+ *   object : objet JSON décrivant l'événement */
+static void
+event_apply_class (ICalComponent *icomp,
+		   JsonObject *object)
+{
+	if (!json_object_has_member (object, "private"))
+		return;
+
+	e_cal_util_component_remove_property_by_kind (icomp, I_CAL_CLASS_PROPERTY, TRUE);
+	if (json_object_get_boolean_member_with_default (object, "private", FALSE))
+		i_cal_component_take_property (icomp, i_cal_property_new_class (I_CAL_CLASS_PRIVATE));
+}
+
 /* --- catégories communes (CATEGORIES iCalendar / vCard) --- */
 
 /* Catégories d'un composant iCalendar (propriétés CATEGORIES, chacune
@@ -237,6 +256,15 @@ core_get_event_run (EvoCore *core,
 	json_builder_add_boolean_value (builder, e_client_is_readonly (client));
 
 	ical_add_categories (builder, icomp);
+
+	{
+		ICalProperty *class_prop = i_cal_component_get_first_property (icomp, I_CAL_CLASS_PROPERTY);
+		ICalProperty_Class event_class = class_prop ? i_cal_property_get_class (class_prop) : I_CAL_CLASS_NONE;
+
+		json_builder_set_member_name (builder, "private");
+		json_builder_add_boolean_value (builder, event_class == I_CAL_CLASS_PRIVATE || event_class == I_CAL_CLASS_CONFIDENTIAL);
+		g_clear_object (&class_prop);
+	}
 
 	prop = i_cal_component_get_first_property (icomp, I_CAL_ORGANIZER_PROPERTY);
 	json_builder_set_member_name (builder, "organizer");
@@ -511,6 +539,7 @@ core_modify_event_run (EvoCore *core,
 	}
 
 	ical_apply_categories_json (icomp, object);
+	event_apply_class (icomp, object);
 	event_apply_times_and_attendees (E_CAL_CLIENT (client), icomp, object);
 
 	if (json_object_has_member (object, "reminder_minutes"))
@@ -845,6 +874,7 @@ core_create_event_run (EvoCore *core,
 	}
 
 	ical_apply_categories_json (icomp, object);
+	event_apply_class (icomp, object);
 	event_apply_times_and_attendees (E_CAL_CLIENT (client), icomp, object);
 
 	if (json_object_has_member (object, "reminder_minutes"))

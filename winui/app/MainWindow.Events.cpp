@@ -628,6 +628,64 @@ namespace winrt::EvolutionWin::implementation
     }
 
     /**
+     * @brief Indique si un calendrier a déjà refusé une écriture (accès refusé par le serveur) : il est alors
+     *        écarté de la liste des calendriers proposés pour un nouvel événement.
+     * @param uid Identifiant du calendrier.
+     * @return true si le calendrier est mémorisé en lecture seule.
+     */
+    static bool IsKnownReadOnlyCalendar(hstring const& uid)
+    {
+        for (auto const& entry : ::EvolutionWin::Settings::Instance().GetArray(L"calendar.readonly"))
+            if (entry.ValueType() == JsonValueType::String && entry.GetString() == uid)
+                return true;
+        return false;
+    }
+
+    /**
+     * @brief Mémorise qu'un calendrier refuse les écritures.
+     * @param uid Identifiant du calendrier.
+     */
+    static void MarkReadOnlyCalendar(hstring const& uid)
+    {
+        if (uid.empty() || IsKnownReadOnlyCalendar(uid))
+            return;
+        auto& settings = ::EvolutionWin::Settings::Instance();
+        JsonArray list = settings.GetArray(L"calendar.readonly");
+        list.Append(JsonValue::CreateStringValue(uid));
+        settings.Set(L"calendar.readonly", list);
+    }
+
+    /**
+     * @brief Message d'erreur d'enregistrement d'un événement : si le serveur refuse l'accès, le calendrier est
+     *        mémorisé en lecture seule et le message explique comment choisir un autre calendrier.
+     * @param sources Calendriers connus (m_calendar_sources).
+     * @param calendar_uid Calendrier visé.
+     * @param action Début du message (« Création de l'événement : »).
+     * @param error Erreur renvoyée par le moteur.
+     * @return Texte à afficher.
+     */
+    static hstring EventSaveErrorText(JsonArray const& sources, hstring const& calendar_uid, hstring const& action, hstring const& error)
+    {
+        std::wstring text{ error };
+        bool denied = text.find(L"AccessDenied") != std::wstring::npos || text.find(L"Access is denied") != std::wstring::npos ||
+            text.find(L"ErrorAccessDenied") != std::wstring::npos;
+        if (!denied)
+            return action + error;
+
+        MarkReadOnlyCalendar(calendar_uid);
+        hstring name = calendar_uid;
+        for (auto const& value : sources ? sources : JsonArray{})
+        {
+            auto source = value.GetObject();
+            if (source.GetNamedString(L"uid", L"") == calendar_uid)
+                name = source.GetNamedString(L"name", calendar_uid);
+        }
+        return Tr(L"Le calendrier « ", L"The calendar \"") + name +
+            Tr(L" » est en lecture seule pour vous (accès refusé par le serveur). Choisissez un autre calendrier dans la liste « Calendrier » de la fenêtre d'événement.",
+               L"\" is read-only for you (access denied by the server). Pick another calendar in the \"Calendar\" list of the event window.");
+    }
+
+    /**
      * @brief Calendrier Microsoft 365 qui recevra une réunion Teams : le calendrier actif s'il est
      *        Microsoft 365, sinon le calendrier par défaut (ou le premier) d'un compte Microsoft 365.
      * @return Identifiant du calendrier ("" si aucun compte Microsoft 365 n'a de calendrier).
@@ -642,6 +700,8 @@ namespace winrt::EvolutionWin::implementation
             if (source.GetNamedString(L"backend", L"") != L"microsoft365")
                 continue;
             hstring uid = source.GetNamedString(L"uid", L"");
+            if (IsKnownReadOnlyCalendar(uid))
+                continue;
             if (uid == active)
                 return uid;
             if (fallback.empty() || source.GetNamedBoolean(L"default", false) || source.GetNamedString(L"name", L"") == L"Calendrier")
@@ -797,6 +857,50 @@ namespace winrt::EvolutionWin::implementation
         if (existing)
             location_box.Text(event.GetNamedString(L"location", L""));
         panel.Children().Append(location_box);
+
+        /* calendrier de destination d'un nouvel événement (les calendriers refusant l'écriture sont écartés) */
+        ComboBox calendar_combo;
+        calendar_combo.Header(box_value(Tr(L"Calendrier", L"Calendar")));
+        calendar_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
+        std::vector<hstring> calendar_uids;
+        if (!existing && !readonly)
+        {
+            hstring active_uid = ActiveCalendarUid();
+            int selected = -1, default_index = -1;
+            for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
+            {
+                auto source = value.GetObject();
+                hstring backend = source.GetNamedString(L"backend", L"");
+                hstring uid = source.GetNamedString(L"uid", L"");
+                if (backend == L"person" || backend == L"group" || source.GetNamedBoolean(L"placeholder", false) ||
+                    uid.empty() || IsKnownReadOnlyCalendar(uid))
+                    continue;
+                hstring account = source.GetNamedString(L"account", L"");
+                hstring group = source.GetNamedString(L"group_name", L"");
+                std::wstring label{ source.GetNamedString(L"name", uid) };
+                if (!account.empty())
+                    label = std::wstring{ account } + L" \u203A " + (group.empty() ? L"" : std::wstring{ group } + L" \u203A ") + label;
+                calendar_combo.Items().Append(box_value(hstring{ label }));
+                if (uid == active_uid)
+                    selected = static_cast<int>(calendar_uids.size());
+                if (source.GetNamedBoolean(L"default", false))
+                    default_index = static_cast<int>(calendar_uids.size());
+                calendar_uids.push_back(uid);
+            }
+            if (!calendar_uids.empty())
+            {
+                calendar_combo.SelectedIndex(selected >= 0 ? selected : (default_index >= 0 ? default_index : 0));
+                panel.Children().Append(calendar_combo);
+            }
+        }
+
+        /* événement privé : détails masqués aux personnes avec qui le calendrier est partagé */
+        CheckBox private_check;
+        private_check.Content(box_value(Tr(L"Privé (détails masqués aux personnes avec qui le calendrier est partagé)",
+                                           L"Private (details hidden from people the calendar is shared with)")));
+        private_check.IsChecked(existing && event.GetNamedBoolean(L"private", false));
+        private_check.IsEnabled(!readonly);
+        panel.Children().Append(private_check);
 
         /* début / fin : date et heure */
         /* créneau sélectionné dans la grille du calendrier : utilisé une seule fois */
@@ -1096,6 +1200,8 @@ namespace winrt::EvolutionWin::implementation
         JsonObject payload;
         payload.SetNamedValue(L"summary", JsonValue::CreateStringValue(summary_box.Text()));
         payload.SetNamedValue(L"location", JsonValue::CreateStringValue(location_box.Text()));
+        if (!readonly)
+            payload.SetNamedValue(L"private", JsonValue::CreateBooleanValue(private_check.IsChecked() && private_check.IsChecked().GetBoolean()));
         payload.SetNamedValue(L"description", JsonValue::CreateStringValue(desc_box.Text()));
         payload.SetNamedValue(L"start", JsonValue::CreateNumberValue(static_cast<double>(start_unix)));
         payload.SetNamedValue(L"end", JsonValue::CreateNumberValue(static_cast<double>(end_unix)));
@@ -1164,7 +1270,7 @@ namespace winrt::EvolutionWin::implementation
             {
                 if (!error.empty())
                 {
-                    ShowStatus(L"Modification de l'événement : " + error, InfoBarSeverity::Error);
+                    ShowStatus(EventSaveErrorText(m_calendar_sources, edit_calendar, L"Modification de l'événement : ", error), InfoBarSeverity::Error);
                     return;
                 }
                 ShowStatus(L"Événement modifié.", InfoBarSeverity::Success);
@@ -1174,14 +1280,25 @@ namespace winrt::EvolutionWin::implementation
             co_return;
         }
 
-        if (hstring active = ActiveCalendarUid(); !active.empty())
-            payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(active));
+        hstring chosen_calendar = ActiveCalendarUid();
+        if (calendar_combo.SelectedIndex() >= 0 && static_cast<size_t>(calendar_combo.SelectedIndex()) < calendar_uids.size())
+            chosen_calendar = calendar_uids[calendar_combo.SelectedIndex()];
+        if (!chosen_calendar.empty())
+            payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(chosen_calendar));
 
-        /* réunion Teams : l'événement est créé dans un calendrier Microsoft 365 */
+        /* réunion Teams : l'événement doit être dans un calendrier Microsoft 365 (celui choisi s'il l'est, sinon un autre) */
         if (teams_check.IsChecked() && teams_check.IsChecked().GetBoolean())
         {
-            if (hstring teams_calendar = TeamsCalendarUid(); !teams_calendar.empty())
-                payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(teams_calendar));
+            bool chosen_is_m365 = false;
+            for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
+            {
+                auto source = value.GetObject();
+                if (source.GetNamedString(L"uid", L"") == chosen_calendar && source.GetNamedString(L"backend", L"") == L"microsoft365")
+                    chosen_is_m365 = true;
+            }
+            if (!chosen_is_m365)
+                if (hstring teams_calendar = TeamsCalendarUid(); !teams_calendar.empty())
+                    payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(teams_calendar));
             payload.SetNamedValue(L"online_meeting", JsonValue::CreateBooleanValue(true));
         }
 
@@ -1190,7 +1307,7 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus(L"Création de l'événement : " + error, InfoBarSeverity::Error);
+                ShowStatus(EventSaveErrorText(m_calendar_sources, create_calendar, L"Création de l'événement : ", error), InfoBarSeverity::Error);
                 return;
             }
             ShowStatus(L"Événement enregistré.", InfoBarSeverity::Success);
