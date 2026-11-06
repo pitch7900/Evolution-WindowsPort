@@ -3,7 +3,7 @@
 Liste des fonctions livrées en 1.0.0 qui ont été codées et testées par les tests unitaires, mais **pas (ou pas entièrement) validées à la main** sur un compte réel. Les corrections issues de ces validations feront l'objet de versions mineures (1.0.x).
 
 Légende : `[ ]` à valider · `[x]` validé · `[!]` essayé, défaut constaté (voir la note).
-Pour chaque point : compte nécessaire entre parenthèses. « Test » = compte de test `pierre.christensen@free.fr` (IMAP, jetable) ; « M365 » = Exchange Online / Microsoft 365 ; « Gmail » = compte Google.
+Pour chaque point : compte nécessaire entre parenthèses. « Test » = compte de test (IMAP, jetable) ; « M365 » = Exchange Online / Microsoft 365 ; « Gmail » = compte Google.
 
 > Mise à jour : cocher la case, ajouter la date et une note courte. Un défaut devient une ligne dans `TODO.md` (section concernée) et une entrée du `CHANGELOG.md` de la version corrective.
 
