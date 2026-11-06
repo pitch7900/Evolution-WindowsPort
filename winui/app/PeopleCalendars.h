@@ -109,9 +109,13 @@ namespace EvolutionWin::People
                 if (value.ValueType() != JsonValueType::Object)
                     continue;
                 std::wstring email{ value.GetObject().GetNamedString(L"email", L"") };
-                if (email.empty() || std::find(seen.begin(), seen.end(), email) != seen.end())
+                if (email.empty())
                     continue;
-                seen.push_back(email);
+                /* une personne peut figurer dans plusieurs groupes : dédoublonnage sur adresse + groupe */
+                std::wstring key = email + L"|" + std::wstring{ value.GetObject().GetNamedString(L"group", L"") };
+                if (std::find(seen.begin(), seen.end(), key) != seen.end())
+                    continue;
+                seen.push_back(key);
                 all.Append(value);
             }
         }

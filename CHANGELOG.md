@@ -10,6 +10,12 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
+## [1.0.1] — 2026-11-05
+
+### Corrigé
+
+- **Groupes de calendriers Outlook vides** : une personne déjà ajoutée à la main (« Personnes et équipes… ») n'apparaissait pas dans le groupe Outlook où elle figure (Team Infra N2, etc.) : le dédoublonnage se faisait sur l'adresse seule ; il se fait maintenant sur l'adresse et le groupe, la personne apparaît dans chacun de ses groupes.
+
 ## [1.0.0] — 2026-11-05
 
 > Les points codés mais pas encore validés à la main sur un compte réel sont listés dans [`VALIDATION.md`](VALIDATION.md) ; les corrections seront livrées en versions 1.0.x.
