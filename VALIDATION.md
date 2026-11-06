@@ -26,11 +26,12 @@ Pour chaque point : compte nécessaire entre parenthèses. « Test » = compte d
 - [x] Invitation reçue : bandeau Accepter / Provisoire / Refuser, mise à jour de l'agenda, réponse envoyée à l'organisateur (M365 vers Test) — validé.
 - [x] Invitation annulée : bandeau orange et « Retirer de l'agenda » — validé.
 - [x] Invitation reçue : réponse d'un invité visible chez l'organisateur (« X a accepté la réunion »).
-- [ ] Création d'un événement avec participants : choix du compte expéditeur et envoi des invitations pour un agenda local, arrivée chez un destinataire Gmail (agenda « Sur cet ordinateur »).
-- [ ] Création d'un événement avec participants sur un agenda Exchange Online / Google : le serveur envoie les invitations (pas de doublon envoyé par l'application).
-- [ ] Création d'un événement : liste « Calendrier » (calendrier par défaut pré-sélectionné, pas de calendrier de personne) ; un calendrier en lecture seule (partagé) refuse l'écriture avec un message clair puis disparaît de la liste (retour d'un test : « RemoteCalendarAccessDenied » en créant une invitation vers Gmail depuis Exchange Online, à refaire).
-- [ ] Événement privé : case « Privé » à la création et à la modification ; contrôle dans Outlook Online (cadenas, détails masqués pour un autre utilisateur).
-- [ ] Réunion en ligne Microsoft Teams : case dans la fenêtre d'un nouvel événement (M365) ; lien de visio, identifiant de réunion et numéros d'appel présents dans l'invitation.
+- [x] Création d'un événement avec participants : choix du compte expéditeur et envoi des invitations pour un agenda local, arrivée chez un destinataire Gmail (agenda « Sur cet ordinateur »).
+- [x] Création d'un événement avec participants sur un agenda Exchange Online / Google : le serveur envoie les invitations (pas de doublon envoyé par l'application).
+- [x] Création d'un événement : liste « Calendrier » (calendrier par défaut pré-sélectionné, pas de calendrier de personne) ; un calendrier en lecture seule (partagé) refuse l'écriture avec un message clair puis disparaît de la liste (retour d'un test : « RemoteCalendarAccessDenied » en créant une invitation vers Gmail depuis Exchange Online, à refaire).
+- [x] Événement privé : case « Privé » à la création et à la modification ; contrôle dans Outlook Online (cadenas, détails masqués pour un autre utilisateur).
+- [x] Réunion en ligne Microsoft Teams : case dans la fenêtre d'un nouvel événement (M365) ; lien de visio, identifiant de réunion et numéros d'appel présents dans l'invitation.
+- [ ] Réunion Google Meet : case dans la fenêtre d'un nouvel événement d'un calendrier Gmail (icône Meet, exclusive avec Teams) ; lien `meet.google.com` présent dans l'événement et dans l'invitation reçue.
 - [x] Création d'un événement par sélection dans le calendrier : glisser (Jour / Semaine), clic simple (1 h), clic dans une case du mois.
 
 ## 3. Annuaire de l'organisation
@@ -42,14 +43,14 @@ Pour chaque point : compte nécessaire entre parenthèses. « Test » = compte d
 
 ## 4. Réponses automatiques (Out of Office)
 
-- [ ] Exchange Online : lecture des réglages du serveur (état, dates, texte interne, texte externe) affichés **lisibles** dans les deux onglets (« Au sein » / « En dehors »).
-- [ ] Exchange Online : modification du texte, de la période et du public externe ; enregistrement ; contrôle dans Outlook Online.
-- [ ] Exchange Online : date de fin avant la date de début refusée, fenêtre qui reste ouverte.
-- [ ] Bandeau « Réponses automatiques activées » et bouton « Désactiver » (désactivation confirmée côté serveur).
-- [ ] Gmail : reconnexion du compte (écran « Google n'a pas validé cette application » : continuer via les paramètres avancés), accès aux réglages Gmail accordé ; lecture, activation et désactivation.
-- [ ] Gmail : la réponse automatique est reçue par un expéditeur extérieur.
+- [x] Exchange Online : lecture des réglages du serveur (état, dates, texte interne, texte externe) affichés **lisibles** dans les deux onglets (« Au sein » / « En dehors »).
+- [x] Exchange Online : modification du texte, de la période et du public externe ; enregistrement ; contrôle dans Outlook Online.
+- [x] Exchange Online : date de fin avant la date de début refusée, fenêtre qui reste ouverte.
+- [x] Bandeau « Réponses automatiques activées » et bouton « Désactiver » (désactivation confirmée côté serveur).
+- [x] Gmail : reconnexion du compte (écran « Google n'a pas validé cette application » : continuer via les paramètres avancés), accès aux réglages Gmail accordé ; lecture, activation et désactivation.
+- [x] Gmail : la réponse automatique est reçue par un expéditeur extérieur.
 - [x] Compte IMAP : message clair « type de compte non pris en charge » — validé.
-- [ ] Éditeur HTML des messages (non fait : texte brut seulement) — voir `TODO.md`.
+- [x] Éditeur HTML des messages (non fait : texte brut seulement) — voir `TODO.md`.
 
 ## 5. Calendrier
 

@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
 #include "MainWindow.xaml.h"
 #include "MainWindow.Helpers.h"
 #include "WindowIcon.h"
@@ -711,6 +712,65 @@ namespace winrt::EvolutionWin::implementation
     }
 
     /**
+     * @brief Calendrier Gmail qui recevra une réunion Google Meet : le calendrier actif s'il est
+     *        Gmail, sinon le calendrier par défaut (ou le premier) d'un compte Gmail.
+     * @return Identifiant du calendrier ("" si aucun compte Gmail n'a de calendrier).
+     */
+    hstring MainWindow::GoogleCalendarUid()
+    {
+        hstring active = ActiveCalendarUid();
+        hstring fallback;
+        for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
+        {
+            auto source = value.GetObject();
+            if (source.GetNamedString(L"backend", L"") != L"google")
+                continue;
+            hstring uid = source.GetNamedString(L"uid", L"");
+            if (IsKnownReadOnlyCalendar(uid))
+                continue;
+            if (uid == active)
+                return uid;
+            if (fallback.empty() || source.GetNamedBoolean(L"default", false))
+                fallback = uid;
+        }
+        return fallback;
+    }
+
+    /**
+     * @brief Contenu d'une case à cocher : icône SVG (dossier Assets à côté de l'exécutable) puis libellé.
+     * @param check Case à cocher.
+     * @param svg_name Nom du fichier SVG dans Assets.
+     * @param label Libellé.
+     */
+    static void SetIconContent(CheckBox const& check, std::wstring const& svg_name, hstring const& label)
+    {
+        StackPanel content;
+        content.Orientation(Orientation::Horizontal);
+        content.Spacing(8);
+        wchar_t exe_path[MAX_PATH]{};
+        if (GetModuleFileNameW(nullptr, exe_path, MAX_PATH))
+        {
+            std::wstring svg_path{ exe_path };
+            svg_path = svg_path.substr(0, svg_path.find_last_of(L"\\/")) + L"\\Assets\\" + svg_name;
+            if (GetFileAttributesW(svg_path.c_str()) != INVALID_FILE_ATTRIBUTES)
+            {
+                Microsoft::UI::Xaml::Media::Imaging::SvgImageSource svg{ Windows::Foundation::Uri{ L"file:///" + hstring{ svg_path } } };
+                Image icon;
+                icon.Source(svg);
+                icon.Width(20);
+                icon.Height(20);
+                icon.VerticalAlignment(VerticalAlignment::Center);
+                content.Children().Append(icon);
+            }
+        }
+        TextBlock text;
+        text.Text(label);
+        text.VerticalAlignment(VerticalAlignment::Center);
+        content.Children().Append(text);
+        check.Content(content);
+    }
+
+    /**
      * @brief Ouvre la fenêtre de nouvel événement sur un créneau sélectionné dans la grille du calendrier.
      * @param start_unix Début du créneau (secondes Unix).
      * @param end_unix Fin du créneau (secondes Unix).
@@ -1072,11 +1132,22 @@ namespace winrt::EvolutionWin::implementation
 
         /* réunion en ligne Microsoft Teams (nouvel événement d'un calendrier Exchange Online) */
         CheckBox teams_check;
-        teams_check.Content(box_value(Tr(L"Réunion en ligne Microsoft Teams (lien de visio ajouté à l'invitation)",
-                                         L"Microsoft Teams online meeting (join link added to the invitation)")));
+        SetIconContent(teams_check, L"Microsoft_Office_Teams.svg",
+            Tr(L"Réunion en ligne Microsoft Teams (lien de visio ajouté à l'invitation)",
+               L"Microsoft Teams online meeting (join link added to the invitation)"));
         teams_check.IsChecked(teams);
         if (!existing && !readonly && !TeamsCalendarUid().empty())
             panel.Children().Append(teams_check);
+
+        /* réunion Google Meet (nouvel événement d'un calendrier Gmail) ; exclusive avec Teams */
+        CheckBox meet_check;
+        SetIconContent(meet_check, L"Google_meet.svg",
+            Tr(L"Réunion en ligne Google Meet (lien de visio ajouté à l'invitation)",
+               L"Google Meet online meeting (join link added to the invitation)"));
+        if (!existing && !readonly && !GoogleCalendarUid().empty())
+            panel.Children().Append(meet_check);
+        teams_check.Checked([meet_check](IInspectable const&, RoutedEventArgs const&) { meet_check.IsChecked(false); });
+        meet_check.Checked([teams_check](IInspectable const&, RoutedEventArgs const&) { teams_check.IsChecked(false); });
 
         /* invitations : compte de messagerie expéditeur (adresse de l'organisateur) */
         ComboBox sender_combo;
@@ -1302,8 +1373,25 @@ namespace winrt::EvolutionWin::implementation
             payload.SetNamedValue(L"online_meeting", JsonValue::CreateBooleanValue(true));
         }
 
+        /* réunion Google Meet : l'événement doit être dans un calendrier Gmail (celui choisi s'il l'est, sinon un autre) ;
+         * le lien est ajouté par l'API Google Agenda une fois l'événement créé */
+        bool want_meet = meet_check.IsChecked() && meet_check.IsChecked().GetBoolean();
+        if (want_meet)
+        {
+            bool chosen_is_google = false;
+            for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
+            {
+                auto source = value.GetObject();
+                if (source.GetNamedString(L"uid", L"") == chosen_calendar && source.GetNamedString(L"backend", L"") == L"google")
+                    chosen_is_google = true;
+            }
+            if (!chosen_is_google)
+                if (hstring google_calendar = GoogleCalendarUid(); !google_calendar.empty())
+                    payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(google_calendar));
+        }
+
         hstring create_calendar = payload.GetNamedString(L"calendar_uid", L"");
-        m_core->CreateEvent(payload.Stringify(), [this, sender_uid, create_calendar](hstring const& json, hstring const& error)
+        m_core->CreateEvent(payload.Stringify(), [this, sender_uid, create_calendar, want_meet](hstring const& json, hstring const& error)
         {
             if (!error.empty())
             {
@@ -1314,7 +1402,27 @@ namespace winrt::EvolutionWin::implementation
             LoadEvents();
             JsonObject created;
             if (JsonObject::TryParse(json, created))
-                SendEventInvitations(sender_uid, create_calendar, created.GetNamedString(L"uid", L""));
+            {
+                hstring created_uid = created.GetNamedString(L"uid", L"");
+                SendEventInvitations(sender_uid, create_calendar, created_uid);
+                if (want_meet)
+                {
+                    ShowStatus(L"Ajout de la réunion Google Meet…", InfoBarSeverity::Informational);
+                    m_core->AddGoogleMeet(create_calendar, created_uid, [this](hstring const& meet_json, hstring const& meet_error)
+                    {
+                        if (!meet_error.empty())
+                        {
+                            ShowStatus(L"Réunion Google Meet : " + meet_error, InfoBarSeverity::Error);
+                            return;
+                        }
+                        JsonObject meet;
+                        hstring link = JsonObject::TryParse(meet_json, meet) ? meet.GetNamedString(L"link", L"") : hstring{};
+                        ShowStatus(link.empty() ? hstring{ L"Réunion Google Meet ajoutée (le lien apparaîtra après la synchronisation)." }
+                                                : L"Réunion Google Meet ajoutée : " + link, InfoBarSeverity::Success);
+                        LoadEvents();
+                    });
+                }
+            }
         });
     }
 

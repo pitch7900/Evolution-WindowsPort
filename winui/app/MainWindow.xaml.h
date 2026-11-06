@@ -749,6 +749,7 @@ namespace winrt::EvolutionWin::implementation
         void SetCalendarPeriod(hstring const& period);
         fire_and_forget ShowEventDialogAsync(Windows::Data::Json::JsonObject event, hstring const& summary_preset = L"", bool is_focus = false, bool teams = false);
         hstring TeamsCalendarUid();
+        hstring GoogleCalendarUid();
         /* grille du calendrier (MainWindow.Calendar.cpp) */
         void OpenCalendarEvent(hstring const& calendar_uid, hstring const& uid);
         void RenderCalendarGrid(Windows::Data::Json::JsonArray const& events, int64_t start_unix, int days);

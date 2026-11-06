@@ -15,10 +15,14 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 ### Ajouté
 
 - **Événement privé** : case « Privé » dans la fenêtre d'événement (création et modification), enregistrée dans la propriété `CLASS:PRIVATE` ; Exchange Online la traduit en sensibilité « privé » (détails masqués aux personnes avec qui le calendrier est partagé). Lecture du réglage à l'ouverture d'un événement existant (champ `private` de `evo_core_get_event`).
+- **Réunion Google Meet** : case « Réunion en ligne Google Meet » (icône Google Meet) dans la fenêtre d'un nouvel événement d'un calendrier Gmail, exclusive avec Teams ; après la création, `evo_core_add_google_meet` ajoute le lien par l'API Google Agenda (`conferenceData.createRequest`, jeton OAuth2 du compte) et les participants reçoivent la mise à jour. À valider sur un compte Gmail.
+- **Icône Teams** sur la case « Réunion en ligne Microsoft Teams ».
 
 ### Corrigé
 
 - **Création d'événement : « Accès refusé » (RemoteCalendarAccessDenied)** : un nouvel événement était créé dans le calendrier « actif », qui pouvait être un calendrier partagé en lecture seule. La fenêtre d'événement propose maintenant la liste « Calendrier » (calendriers du compte, hors calendriers de personnes), pré-sélectionne le calendrier actif ou par défaut, et un calendrier qui refuse l'écriture est mémorisé en lecture seule, écarté des propositions, avec un message qui explique comment en choisir un autre.
+- **Groupes de calendriers vides** : « Autres calendriers », « Tous les calendriers de groupe » et les autres groupes Outlook sans calendrier ne sont plus affichés (ils venaient du compte Outlook, pas du code).
+- **Bandeau des réponses automatiques** plus visible : gravité « Avertissement » (fond ambre) au lieu d'« Information ».
 
 ## [1.0.1] — 2026-11-05
 

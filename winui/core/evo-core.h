@@ -1031,6 +1031,21 @@ void		evo_core_get_ews_consent_url	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Ajoute une réunion Google Meet à un événement d'un calendrier Gmail (API Google Agenda,
+ * conferenceData.createRequest, avec le jeton OAuth2 du compte). Les participants reçoivent
+ * la mise à jour avec le lien. À appeler après la création de l'événement.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   calendar_uid : calendrier Gmail de l'événement
+ *   event_uid    : identifiant de l'événement créé
+ *   func         : rappel recevant {"link": "https://meet.google.com/..."}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_add_google_meet	(EvoCore *core,
+						 const char *calendar_uid,
+						 const char *event_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Comme evo_core_list_contacts (), limité aux carnets book_uids (uids
  * séparés par des virgules ; NULL ou "" : tous les carnets activés). */
 void		evo_core_list_book_contacts	(EvoCore *core,

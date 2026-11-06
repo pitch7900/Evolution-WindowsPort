@@ -1328,7 +1328,7 @@ namespace winrt::EvolutionWin::implementation
                 banner_id,
                 L"Réponses automatiques activées",
                 L"Les réponses automatiques d'absence du bureau sont actives pour le compte « " + acc_name + L" ».",
-                InfoBarSeverity::Informational,
+                InfoBarSeverity::Warning, /* fond ambre : se détache du reste de l'interface */
                 L"Désactiver",
                 [this, banner_id, account_uid = m_account]()
                 {

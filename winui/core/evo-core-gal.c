@@ -2058,3 +2058,279 @@ evo_core_get_ews_consent_url (EvoCore *core,
 
 	core_submit (core, core_ews_consent_url_run, g_strdupv (args), func, user_data);
 }
+
+/* Requête JSON authentifiée (Bearer) avec une méthode HTTP quelconque (PATCH...).
+ * Paramètres :
+ *   core       : instance du moteur evo-core
+ *   method     : méthode HTTP
+ *   uri        : adresse du service
+ *   token      : jeton d'accès
+ *   body       : corps JSON
+ *   out_status : reçoit le code HTTP (0 si injoignable)
+ *   error      : emplacement pour une erreur réseau
+ * Retourne : le corps de la réponse (même en erreur HTTP), NULL si injoignable. */
+static GBytes *
+gal_http_send_json (EvoCore *core,
+		    const gchar *method,
+		    const gchar *uri,
+		    const gchar *token,
+		    const gchar *body,
+		    guint *out_status,
+		    GError **error)
+{
+	SoupSession *soup;
+	SoupMessage *msg;
+	GBytes *request_body, *bytes;
+	GError *local_error = NULL;
+	gchar *authorization;
+
+	soup = soup_session_new_with_options ("timeout", 30, "user-agent", "Evolution (Windows)", NULL);
+	msg = soup_message_new (method, uri);
+	authorization = g_strdup_printf ("Bearer %s", token);
+	soup_message_headers_replace (soup_message_get_request_headers (msg), "Authorization", authorization);
+	g_free (authorization);
+	request_body = g_bytes_new (body, strlen (body));
+	soup_message_set_request_body_from_bytes (msg, "application/json", request_body);
+	g_bytes_unref (request_body);
+
+	bytes = soup_session_send_and_read (soup, msg, core->cancellable, &local_error);
+	*out_status = bytes ? soup_message_get_status (msg) : 0;
+	if (!bytes)
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_HOST_NOT_FOUND,
+			"Google Agenda est injoignable : %s", local_error ? local_error->message : "erreur réseau");
+
+	g_clear_error (&local_error);
+	g_object_unref (msg);
+	g_object_unref (soup);
+
+	return bytes;
+}
+
+/* Identifiant Google Agenda d'un calendrier EDS : segment suivant « /v2/ » dans l'adresse CalDAV
+ * (https://apidata.googleusercontent.com/caldav/v2/<id>/events), « primary » à défaut.
+ * Paramètres :
+ *   source : source du calendrier
+ * Retourne : identifiant (g_free). */
+static gchar *
+google_calendar_id (ESource *source)
+{
+	gchar *id = NULL;
+
+	if (e_source_has_extension (source, E_SOURCE_EXTENSION_WEBDAV_BACKEND)) {
+		ESourceWebdav *webdav = e_source_get_extension (source, E_SOURCE_EXTENSION_WEBDAV_BACKEND);
+		GUri *uri = e_source_webdav_dup_uri (webdav);
+
+		if (uri) {
+			const gchar *path = g_uri_get_path (uri);
+			const gchar *v2 = path ? strstr (path, "/v2/") : NULL;
+
+			if (v2) {
+				gchar **parts = g_strsplit (v2 + 4, "/", 2);
+
+				if (parts[0] && *parts[0])
+					id = g_uri_unescape_string (parts[0], NULL);
+				g_strfreev (parts);
+			}
+			g_uri_unref (uri);
+		}
+	}
+
+	return id ? id : g_strdup ("primary");
+}
+
+/* Texte JSON d'une réponse HTTP -> noeud racine (json_node_unref), NULL si illisible. */
+static JsonNode *
+gal_bytes_to_json (GBytes *bytes)
+{
+	gsize size = 0;
+	const gchar *data = g_bytes_get_data (bytes, &size);
+	gchar *text = g_strndup (data ? data : "", size);
+	JsonNode *root = json_from_string (text, NULL);
+
+	g_free (text);
+	return root;
+}
+
+/* Identifiant Google d'un événement d'après son UID iCalendar ; NULL s'il n'est pas (encore) publié.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   token       : jeton d'accès
+ *   calendar_id : identifiant de calendrier déjà encodé pour une adresse
+ *   ical_uid    : UID de l'événement
+ *   error       : emplacement pour une erreur (autre que « introuvable ») */
+static gchar *
+google_find_event_id (EvoCore *core,
+		      const gchar *token,
+		      const gchar *calendar_id,
+		      const gchar *ical_uid,
+		      GError **error)
+{
+	gchar *uid_enc = g_uri_escape_string (ical_uid, NULL, FALSE);
+	gchar *uri = g_strdup_printf ("https://www.googleapis.com/calendar/v3/calendars/%s/events?iCalUID=%s&maxResults=1",
+		calendar_id, uid_enc);
+	gchar *event_id = NULL;
+	guint status = 0;
+	GBytes *bytes = gal_http_get (core, GAL_PROVIDER_GOOGLE, uri, token, &status, error);
+
+	if (bytes) {
+		if (status == 200) {
+			JsonNode *root = gal_bytes_to_json (bytes);
+
+			if (root && JSON_NODE_HOLDS_OBJECT (root)) {
+				JsonArray *items = json_object_get_array_member (json_node_get_object (root), "items");
+
+				if (items && json_array_get_length (items) > 0)
+					event_id = g_strdup (json_object_get_string_member_with_default (
+						json_array_get_object_element (items, 0), "id", ""));
+			}
+			if (root)
+				json_node_unref (root);
+			if (event_id && !*event_id)
+				g_clear_pointer (&event_id, g_free);
+		} else if (error && !*error) {
+			gchar *message = gal_response_error_message (bytes);
+
+			g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Google Agenda (HTTP %u) : %s", status,
+				message ? message : "erreur");
+			g_free (message);
+		}
+		g_bytes_unref (bytes);
+	}
+
+	g_free (uid_enc);
+	g_free (uri);
+	return event_id;
+}
+
+/* Ajoute une réunion Google Meet à un événement d'un calendrier Gmail (API Google Agenda,
+ * conferenceData.createRequest), puis actualise le calendrier.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = calendar_uid, [1] = event_uid
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : {"link": "..."} (vide si Google n'a pas encore fourni le lien), NULL en cas d'erreur. */
+static gchar *
+core_add_google_meet_run (EvoCore *core,
+			  gchar **args,
+			  GError **error)
+{
+	ESource *source, *parent = NULL;
+	GalProvider provider;
+	gchar *token = NULL, *calendar_id, *calendar_enc, *event_id = NULL, *link = NULL, *json = NULL;
+	guint attempt;
+
+	source = e_source_registry_ref_source (core->registry, args[0]);
+	if (source && e_source_get_parent (source))
+		parent = e_source_registry_ref_source (core->registry, e_source_get_parent (source));
+	if (!parent || !gal_collection_provider (parent, &provider) || provider != GAL_PROVIDER_GOOGLE) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			"Google Meet n'est disponible que pour les calendriers d'un compte Gmail.");
+		g_clear_object (&source);
+		g_clear_object (&parent);
+		return NULL;
+	}
+
+	if (!gal_get_token (core, parent, &token, error)) {
+		g_object_unref (source);
+		g_object_unref (parent);
+		return NULL;
+	}
+
+	calendar_id = google_calendar_id (source);
+	calendar_enc = g_uri_escape_string (calendar_id, NULL, FALSE);
+
+	/* l'événement vient d'être créé : quelques essais le temps que Google le publie */
+	for (attempt = 0; attempt < 5 && !event_id && !(error && *error); attempt++) {
+		if (attempt)
+			g_usleep (2 * G_USEC_PER_SEC);
+		event_id = google_find_event_id (core, token, calendar_enc, args[1], error);
+	}
+
+	if (event_id) {
+		gchar *request_id = g_uuid_string_random ();
+		gchar *body = g_strdup_printf ("{\"conferenceData\":{\"createRequest\":{\"requestId\":\"%s\","
+			"\"conferenceSolutionKey\":{\"type\":\"hangoutsMeet\"}}}}", request_id);
+		gchar *uri = g_strdup_printf ("https://www.googleapis.com/calendar/v3/calendars/%s/events/%s"
+			"?conferenceDataVersion=1&sendUpdates=all", calendar_enc, event_id);
+		guint status = 0;
+		GBytes *bytes = gal_http_send_json (core, "PATCH", uri, token, body, &status, error);
+
+		if (bytes) {
+			if (status == 200) {
+				JsonNode *root = gal_bytes_to_json (bytes);
+
+				link = g_strdup ("");
+				if (root && JSON_NODE_HOLDS_OBJECT (root)) {
+					g_free (link);
+					link = g_strdup (json_object_get_string_member_with_default (
+						json_node_get_object (root), "hangoutLink", ""));
+				}
+				if (root)
+					json_node_unref (root);
+			} else {
+				gchar *message = gal_response_error_message (bytes);
+
+				g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Google Meet (HTTP %u) : %s", status,
+					message ? message : "erreur");
+				g_free (message);
+			}
+			g_bytes_unref (bytes);
+		}
+		g_free (uri);
+		g_free (body);
+		g_free (request_id);
+	} else if (error && !*error) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+			"L'événement n'est pas encore visible chez Google : réessayez dans un instant.");
+	}
+
+	if (link) {
+		/* le calendrier récupère l'événement mis à jour (lien dans la fiche) */
+		EClient *client = e_cal_client_connect_sync (source, E_CAL_CLIENT_SOURCE_TYPE_EVENTS, 5,
+			core->cancellable, NULL);
+		JsonBuilder *builder = json_builder_new ();
+
+		if (client) {
+			e_client_refresh_sync (client, core->cancellable, NULL);
+			g_object_unref (client);
+		}
+
+		json_builder_begin_object (builder);
+		builder_add_string (builder, "link", link);
+		json_builder_end_object (builder);
+		json = json_from_builder (builder);
+		g_object_unref (builder);
+	}
+
+	e_util_safe_free_string (token);
+	g_free (calendar_id);
+	g_free (calendar_enc);
+	g_free (event_id);
+	g_free (link);
+	g_object_unref (source);
+	g_object_unref (parent);
+
+	return json;
+}
+
+/* Soumet l'ajout d'une réunion Google Meet (voir evo_core_add_google_meet dans evo-core.h).
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   calendar_uid : calendrier Gmail de l'événement
+ *   event_uid    : identifiant de l'événement
+ *   func         : rappel recevant {"link": "..."}
+ *   user_data    : données utilisateur transmises au rappel */
+void
+evo_core_add_google_meet (EvoCore *core,
+			  const char *calendar_uid,
+			  const char *event_uid,
+			  EvoCoreResultFunc func,
+			  void *user_data)
+{
+	gchar *args[] = { (gchar *) calendar_uid, (gchar *) event_uid, NULL };
+
+	g_return_if_fail (core != NULL);
+	g_return_if_fail (calendar_uid != NULL && event_uid != NULL);
+
+	core_submit (core, core_add_google_meet_run, g_strdupv (args), func, user_data);
+}

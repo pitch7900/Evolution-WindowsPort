@@ -125,6 +125,13 @@
     <CopyFileToFolders Include="Assets\EvolutionWin.png">
       <DestinationFolders>$(OutDir)Assets</DestinationFolders>
     </CopyFileToFolders>
+    <!-- icônes Teams et Google Meet des cases « Réunion en ligne » -->
+    <CopyFileToFolders Include="Assets\Microsoft_Office_Teams.svg">
+      <DestinationFolders>$(OutDir)Assets</DestinationFolders>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="Assets\Google_meet.svg">
+      <DestinationFolders>$(OutDir)Assets</DestinationFolders>
+    </CopyFileToFolders>
   </ItemGroup>
 
   <!-- Version de l'application : fichier VERSION à la racine du dépôt (comme

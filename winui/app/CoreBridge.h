@@ -700,6 +700,13 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Ajoute une réunion Google Meet à un événement d'un calendrier Gmail : {"link": "..."}. */
+        void AddGoogleMeet(winrt::hstring const& calendar_uid, winrt::hstring const& event_uid, CoreHandler handler)
+        {
+            evo_core_add_google_meet(m_core, winrt::to_string(calendar_uid).c_str(), winrt::to_string(event_uid).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Équipe de l'utilisateur (responsable, collaborateurs, collègues) : [{"name", "email", "relation"}]. */
         void ListTeam(winrt::hstring const& account, CoreHandler handler)
         {

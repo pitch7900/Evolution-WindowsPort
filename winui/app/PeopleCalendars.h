@@ -201,12 +201,27 @@ namespace EvolutionWin::People
         }
 
         /* groupes Outlook (même vides) : repères affichés comme sous-groupes du compte */
+        /* seuls les groupes qui contiennent au moins un calendrier de l'annuaire ou d'Exchange restent affichés ;
+         * un groupe vide (« Autres calendriers », « Tous les calendriers de groupe »…) n'apporte rien */
+        auto group_has_content = [&](winrt::hstring const& display)
+        {
+            for (auto const& value : merged)
+            {
+                auto item = value.GetObject();
+                if (item.GetNamedString(L"group_name", L"") == display && !item.GetNamedBoolean(L"placeholder", false))
+                    return true;
+            }
+            for (auto const& value : LoadAll())
+                if (value.ValueType() == JsonValueType::Object && value.GetObject().GetNamedString(L"group", L"") == display)
+                    return true;
+            return false;
+        };
         if (groups && !m365_account_uid.empty())
         {
             for (auto const& group_value : groups)
             {
                 winrt::hstring display = GroupDisplayName(group_value.GetObject());
-                if (display.empty())
+                if (display.empty() || !group_has_content(display))
                     continue;
                 JsonObject marker;
                 marker.SetNamedValue(L"uid", JsonValue::CreateStringValue(L"group:" + m365_account_uid + L":" + display));
