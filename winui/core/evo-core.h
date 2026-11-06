@@ -608,7 +608,8 @@ void		evo_core_set_default_account	(EvoCore *core,
  *  "tenant": "..." (facultatif : "common" par défaut),
  *  "impersonate_user": "..." (facultatif : boîte aux lettres partagée ou d'un autre
  *  utilisateur ; "email" reste l'identité de connexion, l'adresse d'expédition
- *  devient celle de la boîte partagée ; courrier seul, sans agenda ni contacts)}
+ *  devient celle de la boîte partagée ; agenda et contacts seulement si
+ *  "shared_calendar" / "shared_contacts" valent true)}
  * Avec "backend": "ews", compte Exchange de l'entreprise : "hosturl" (URL
  * EWS), "user" (facultatif : l'adresse) et "password" (NTLM). Pas de
  * connexion OAuth2 ensuite.

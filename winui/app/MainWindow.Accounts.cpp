@@ -2363,6 +2363,12 @@ namespace winrt::EvolutionWin::implementation
         TextBox name_box;
         name_box.Header(box_value(Tr(L"Nom affiché (facultatif)", L"Display name (optional)")));
         panel.Children().Append(name_box);
+        CheckBox calendar_check;
+        calendar_check.Content(box_value(Tr(L"Ouvrir aussi son agenda (droit d'accès au calendrier requis)", L"Also open its calendar (calendar access right required)")));
+        panel.Children().Append(calendar_check);
+        CheckBox contacts_check;
+        contacts_check.Content(box_value(Tr(L"Ouvrir aussi ses contacts", L"Also open its contacts")));
+        panel.Children().Append(contacts_check);
         dialog.Content(panel);
         dialog.PrimaryButtonText(Tr(L"Ouvrir", L"Open"));
         dialog.CloseButtonText(Tr(L"Annuler", L"Cancel"));
@@ -2379,6 +2385,8 @@ namespace winrt::EvolutionWin::implementation
         JsonObject m365;
         m365.SetNamedValue(L"email", JsonValue::CreateStringValue(owner_email));
         m365.SetNamedValue(L"impersonate_user", JsonValue::CreateStringValue(shared));
+        m365.SetNamedValue(L"shared_calendar", JsonValue::CreateBooleanValue(calendar_check.IsChecked() && calendar_check.IsChecked().GetBoolean()));
+        m365.SetNamedValue(L"shared_contacts", JsonValue::CreateBooleanValue(contacts_check.IsChecked() && contacts_check.IsChecked().GetBoolean()));
         m365.SetNamedValue(L"display_name", JsonValue::CreateStringValue(name));
         m365.SetNamedValue(L"full_name", JsonValue::CreateStringValue(name));
         m_core->AddMicrosoft365Account(m365.Stringify(), [this, name](hstring const& json, hstring const& error)
@@ -2391,6 +2399,55 @@ namespace winrt::EvolutionWin::implementation
             }
             LoadAccounts();
             SignInOAuth2Async(created.GetNamedString(L"collection_uid", L""), name);
+        });
+    }
+
+    /**
+     * @brief « Fermer la boîte partagée » : retire du client le compte de la boîte partagée (la boîte
+     *        elle-même, côté Exchange, n'est pas touchée) après confirmation.
+     * @param account_uid Compte de la boîte partagée.
+     */
+    fire_and_forget MainWindow::CloseSharedMailboxAsync(hstring account_uid)
+    {
+        auto strong = get_strong();
+        if (m_dialog_open || !Content() || !Content().XamlRoot())
+            co_return;
+
+        hstring name = account_uid;
+        for (auto const& value : m_accounts ? m_accounts : JsonArray{})
+        {
+            auto account = value.GetObject();
+            if (account.GetNamedString(L"uid", L"") == account_uid)
+                name = account.GetNamedString(L"name", account_uid);
+        }
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(Tr(L"Fermer la boîte partagée", L"Close the shared mailbox")));
+        TextBlock text;
+        text.TextWrapping(TextWrapping::Wrap);
+        text.Text(Tr(L"Retirer « ", L"Remove \"") + name + Tr(L" » d'EvolutionWin ? La boîte aux lettres elle-même n'est pas modifiée ; vous pourrez la rouvrir à tout moment.",
+                                                             L"\" from EvolutionWin? The mailbox itself is not modified; you can reopen it at any time."));
+        dialog.Content(text);
+        dialog.PrimaryButtonText(Tr(L"Fermer la boîte", L"Close mailbox"));
+        dialog.CloseButtonText(Tr(L"Annuler", L"Cancel"));
+        dialog.DefaultButton(ContentDialogButton::Close);
+
+        m_dialog_open = true;
+        auto result = co_await dialog.ShowAsync();
+        m_dialog_open = false;
+        if (result != ContentDialogResult::Primary)
+            co_return;
+
+        m_core->RemoveAccount(account_uid, [this, name](hstring const&, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                ShowStatus(Tr(L"Fermeture de la boîte : ", L"Closing the mailbox: ") + error, InfoBarSeverity::Error);
+                return;
+            }
+            ShowStatus(Tr(L"Boîte « ", L"Mailbox \"") + name + Tr(L" » fermée.", L"\" closed."), InfoBarSeverity::Informational);
+            LoadAccounts();
         });
     }
 }

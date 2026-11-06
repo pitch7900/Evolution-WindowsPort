@@ -286,14 +286,31 @@ namespace winrt::EvolutionWin::implementation
                 menu.Items().Append(MenuFlyoutSeparator{});
 
                 /* compte Microsoft 365 : ouverture d'une boîte partagée ou d'un autre utilisateur */
-                bool m365_account = false;
+                bool m365_account = false, shared_account = false;
                 for (auto const& value : m_accounts ? m_accounts : JsonArray{})
                 {
                     auto account = value.GetObject();
                     if (account.GetNamedString(L"uid", L"") == item.Account() && account.GetNamedString(L"protocol", L"") == L"microsoft365")
+                    {
                         m365_account = true;
+                        shared_account = !account.GetNamedString(L"shared", L"").empty();
+                    }
                 }
-                if (m365_account)
+                if (shared_account)
+                {
+                    MenuFlyoutItem close_item;
+                    close_item.Text(Tr(L"Fermer la boîte partagée", L"Close the shared mailbox"));
+                    FontIcon close_icon;
+                    close_icon.Glyph(L"\xE711");
+                    close_item.Icon(close_icon);
+                    close_item.Click([this, account_uid = item.Account()](IInspectable const&, RoutedEventArgs const&)
+                    {
+                        CloseSharedMailboxAsync(account_uid);
+                    });
+                    menu.Items().Append(close_item);
+                    menu.Items().Append(MenuFlyoutSeparator{});
+                }
+                else if (m365_account)
                 {
                     MenuFlyoutItem shared_item;
                     shared_item.Text(Tr(L"Ouvrir la boîte d'un autre utilisateur…", L"Open another user's mailbox…"));

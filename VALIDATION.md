@@ -33,6 +33,7 @@ Pour chaque point : compte nécessaire entre parenthèses. « Test » = compte d
 - [x] Réunion en ligne Microsoft Teams : case dans la fenêtre d'un nouvel événement (M365) ; lien de visio, identifiant de réunion et numéros d'appel présents dans l'invitation.
 - [ ] Réunion Google Meet : case dans la fenêtre d'un nouvel événement d'un calendrier Gmail (icône Meet, exclusive avec Teams) ; lien `meet.google.com` présent dans l'événement et dans l'invitation reçue.
 - [x] Boîte partagée Microsoft 365 : clic droit sur le compte › « Ouvrir la boîte d'un autre utilisateur… », connexion Microsoft, dossiers de la boîte partagée, envoi avec l'adresse de la boîte partagée (M365 + boîte partagée avec droit FullAccess).
+- [ ] Boîte partagée : agenda et contacts partagés (cases à l'ouverture), « Fermer la boîte partagée » (clic droit), choix de la boîte dans « De : » à la rédaction (envoi avec l'adresse de la boîte partagée, copie dans ses éléments envoyés).
 - [x] Création d'un événement par sélection dans le calendrier : glisser (Jour / Semaine), clic simple (1 h), clic dans une case du mois.
 
 ## 3. Annuaire de l'organisation

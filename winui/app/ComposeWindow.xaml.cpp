@@ -96,7 +96,10 @@ namespace winrt::EvolutionWin::implementation
                 selected = static_cast<int>(m_account_uids.size());
 
             m_account_uids.push_back(uid);
-            FromBox().Items().Append(box_value(address.empty() || address == name ? name : name + L" <" + address + L">"));
+            hstring label = address.empty() || address == name ? name : name + L" <" + address + L">";
+            if (!account.GetNamedString(L"shared", L"").empty())
+                label = label + L" — boîte partagée (Send As)";
+            FromBox().Items().Append(box_value(label));
         }
 
         if (!m_account_uids.empty())

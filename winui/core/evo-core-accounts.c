@@ -117,6 +117,24 @@ core_list_accounts_run (EvoCore *core,
 		ESource *src = e_source_registry_ref_source (core->registry, camel_service_get_uid (service));
 		json_builder_set_member_name (builder, "enabled");
 		json_builder_add_boolean_value (builder, src ? e_source_get_enabled (src) : TRUE);
+		{
+			/* boîte partagée Microsoft 365 (emprunt d'identité) : adresse de la boîte ouverte */
+			gchar *shared = NULL;
+
+			if (src && provider && g_strcmp0 (provider->protocol, "microsoft365") == 0 &&
+			    e_source_has_extension (src, e_source_camel_get_extension_name ("microsoft365"))) {
+				CamelSettings *settings = e_source_camel_get_settings (
+					e_source_get_extension (src, e_source_camel_get_extension_name ("microsoft365")));
+				gboolean use = FALSE;
+
+				g_object_get (settings, "use-impersonation", &use, "impersonate-user", &shared, NULL);
+				if (!use || !shared || !*shared)
+					g_clear_pointer (&shared, g_free);
+			}
+			json_builder_set_member_name (builder, "shared");
+			json_builder_add_string_value (builder, shared ? shared : "");
+			g_free (shared);
+		}
 		g_clear_object (&src);
 		core_builder_add_identity_signature (core, builder, camel_service_get_uid (service));
 		json_builder_end_object (builder);

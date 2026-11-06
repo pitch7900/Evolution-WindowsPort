@@ -104,8 +104,11 @@ core_add_m365_account_run (EvoCore *core,
 	e_source_backend_set_backend_name (E_SOURCE_BACKEND (collection), backend);
 	e_source_collection_set_identity (collection, email);
 	e_source_collection_set_mail_enabled (collection, TRUE);
-	e_source_collection_set_calendar_enabled (collection, !*shared);
-	e_source_collection_set_contacts_enabled (collection, !*shared);
+	/* boîte partagée : agenda et contacts seulement sur demande (droits d'accès à part) */
+	e_source_collection_set_calendar_enabled (collection, !*shared ||
+		json_object_get_boolean_member_with_default (object, "shared_calendar", FALSE));
+	e_source_collection_set_contacts_enabled (collection, !*shared ||
+		json_object_get_boolean_member_with_default (object, "shared_contacts", FALSE));
 
 	authentication = e_source_get_extension (collection_source, E_SOURCE_EXTENSION_AUTHENTICATION);
 	if (g_str_equal (backend, "ews")) {
