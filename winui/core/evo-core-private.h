@@ -105,6 +105,7 @@ typedef struct {
 	gchar *calendar_color;	/* "#rrggbb" (ESourceSelectable) ou NULL */
 	gboolean all_day;
 	gboolean recurring;
+	gint reminder_minutes;	/* rappel avant le début (minutes), -1 : aucun */
 	gchar **categories;	/* noms de catégories (NULL-terminé) */
 } CalEventItem;
 

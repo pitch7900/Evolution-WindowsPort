@@ -861,6 +861,12 @@ namespace winrt::EvolutionWin::implementation
         std::vector<NotificationItemRecord> m_notifications;
         uint64_t m_next_notification_id{ 1 };
         void AddNotificationItem(winrt::hstring const& title, winrt::hstring const& body);
+        /* rappels d'événements (MainWindow.Reminders.cpp) */
+        Microsoft::UI::Xaml::DispatcherTimer m_reminder_timer{ nullptr };
+        bool m_reminder_check_running{ false };
+        void StartEventReminders();
+        void CheckEventReminders();
+        void ShowEventReminder(Windows::Data::Json::JsonObject const& event, long long seconds_left, long long start);
         void DismissNotificationItem(winrt::hstring const& id);
         void ClearAllNotifications();
         void UpdateNotificationsUI();

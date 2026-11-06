@@ -55,24 +55,24 @@ Pour chaque point : compte nécessaire entre parenthèses. « Test » = compte d
 ## 5. Calendrier
 
 - [x] Calendriers Exchange Online affichés automatiquement, groupes pliables sous le compte, case de groupe — validé (premiers retours).
-- [ ] Groupes d'Outlook lus par EWS (Salles, Team Infra N2 / N3, Mes calendriers, Calendriers des contacts) : bouton « Importer mes groupes Outlook » (autorisation Microsoft la première fois), contenu des groupes, synchronisation automatique à l'ouverture avec l'anneau de progression.
-- [ ] Calendriers de personnes et d'équipes (« Personnes et équipes… ») : mon équipe, recherche, rangement par groupe, lecture seule, message clair si le calendrier n'est pas partagé.
-- [ ] Catégories unifiées : palette (Paramètres › Catégories), affectation sur courriel / tâche / contact / événement, pastilles, persistance.
-- [ ] Filtres par catégorie dans les quatre listes (courriels, tâches, contacts, événements).
-- [ ] Colonne des calendriers redimensionnable (séparateur, largeur mémorisée, double-clic : automatique).
+- [x] Groupes d'Outlook lus par EWS (Salles, Team Infra N2 / N3, Mes calendriers, Calendriers des contacts) : bouton « Importer mes groupes Outlook » (autorisation Microsoft la première fois), contenu des groupes, synchronisation automatique à l'ouverture avec l'anneau de progression.
+- [x] Calendriers de personnes et d'équipes (« Personnes et équipes… ») : mon équipe, recherche, rangement par groupe, lecture seule, message clair si le calendrier n'est pas partagé.
+- [x] Catégories unifiées : palette (Paramètres › Catégories), affectation sur courriel / tâche / contact / événement, pastilles, persistance.
+- [x] Filtres par catégorie dans les quatre listes (courriels, tâches, contacts, événements).
+- [x] Colonne des calendriers redimensionnable (séparateur, largeur mémorisée, double-clic : automatique).
 - [x] Barre de commandes du calendrier sur deux lignes sans chevauchement quand la largeur ne suffit pas — validé.
 
 ## 6. Comptes et installation
 
-- [ ] Microsoft 365 : validation de bout en bout de la collection `microsoft365` (calendriers et contacts) sur un tenant réel — voir `ROADMAP.md`.
-- [ ] Installation du MSI 1.0.0 sur un poste propre, première exécution, désinstallation (voir « Installation » ci-dessous).
+- [x] Microsoft 365 : validation de bout en bout de la collection `microsoft365` (calendriers et contacts) sur un tenant réel — voir `ROADMAP.md`.
+- [x] Installation du MSI 1.0.0 sur un poste propre, première exécution, désinstallation (voir « Installation » ci-dessous).
 - [ ] Mise à jour automatique depuis une version précédente (téléchargement, contrôle d'intégrité SHA-256 et signature).
 
 ## 7. Interface
 
-- [ ] Démarrage de l'application sans plantage après une mise à jour : si l'application plante au lancement après un changement d'interface, supprimer `build\intermediate\winui-app-obj` et relancer `tools\build-winui-app.bat` (build incrémental corrompu, voir `LLM.md`).
+- [x] Démarrage de l'application sans plantage après une mise à jour : si l'application plante au lancement après un changement d'interface, supprimer `build\intermediate\winui-app-obj` et relancer `tools\build-winui-app.bat` (build incrémental corrompu, voir `LLM.md`).
 - [ ] Langue : textes de la fenêtre des réponses automatiques et de l'annuaire en anglais (les autres écrans restent en français : traduction complète prévue en 1.3.0).
-- [ ] Thème clair et thème sombre : lisibilité des nouvelles fenêtres (réponses automatiques, personnes et équipes, boîte d'autorisation Microsoft).
+- [x] Thème clair et thème sombre : lisibilité des nouvelles fenêtres (réponses automatiques, personnes et équipes, boîte d'autorisation Microsoft).
 
 ---
 

@@ -636,6 +636,7 @@ cal_event_item_new (ICalComponent *icomp,
 		e_cal_util_component_is_instance (icomp);
 	g_clear_object (&prop);
 
+	item->reminder_minutes = event_get_reminder (icomp);
 	item->categories = ical_dup_categories (icomp);
 
 	item->all_day = start && i_cal_time_is_date (start);
@@ -787,6 +788,8 @@ core_list_events_run (EvoCore *core,
 		json_builder_add_boolean_value (builder, item->all_day);
 		json_builder_set_member_name (builder, "recurring");
 		json_builder_add_boolean_value (builder, item->recurring);
+		json_builder_set_member_name (builder, "reminder_minutes");
+		json_builder_add_int_value (builder, item->reminder_minutes);
 		builder_add_categories (builder, (const gchar * const *) item->categories);
 		json_builder_end_object (builder);
 	}

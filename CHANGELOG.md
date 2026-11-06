@@ -16,6 +16,7 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 - **Événement privé** : case « Privé » dans la fenêtre d'événement (création et modification), enregistrée dans la propriété `CLASS:PRIVATE` ; Exchange Online la traduit en sensibilité « privé » (détails masqués aux personnes avec qui le calendrier est partagé). Lecture du réglage à l'ouverture d'un événement existant (champ `private` de `evo_core_get_event`).
 - **Réunion Google Meet** : case « Réunion en ligne Google Meet » (icône Google Meet) dans la fenêtre d'un nouvel événement d'un calendrier Gmail, exclusive avec Teams ; après la création, `evo_core_add_google_meet` ajoute le lien par l'API Google Agenda (`conferenceData.createRequest`, jeton OAuth2 du compte) et les participants reçoivent la mise à jour. À valider sur un compte Gmail.
+- **Rappels d'événements** : le rappel d'un événement (« x minutes avant », défini dans la fenêtre d'événement) déclenche une notification Windows (titre, délai restant, heure, lieu) ; contrôle toutes les 30 secondes des événements des 25 prochaines heures (occurrences d'événements périodiques comprises), rappels déjà émis mémorisés (pas de répétition, même après redémarrage) ; respecte les réglages « Activer les rappels », son et durée d'affichage (persistante : bouton « Ouvrir » / « Fermer »). Le champ `reminder_minutes` est maintenant fourni par `evo_core_list_events`.
 - **Icône Teams** sur la case « Réunion en ligne Microsoft Teams ».
 
 ### Corrigé

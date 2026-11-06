@@ -218,6 +218,7 @@ namespace winrt::EvolutionWin::implementation
 
         InitializeReaderAsync();
         CheckForUpdateOnStartup();
+        StartEventReminders();
 
         /* Module affiché au démarrage configuré dans les préférences (Courrier par défaut) */
         hstring startup_view = ::EvolutionWin::Settings::Instance().GetString(L"appearance.startup-view", L"mail");
