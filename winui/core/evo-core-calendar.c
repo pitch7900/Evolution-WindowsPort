@@ -167,6 +167,65 @@ builder_add_ical_person (JsonBuilder *builder,
 	g_clear_object (&cn);
 }
 
+/* Lien de réunion en ligne (Teams, Google Meet, Zoom) d'un événement : cherché dans la description,
+ * le lieu et la propriété URL (les serveurs y placent le lien de visio).
+ * Paramètres :
+ *   icomp    : composant VEVENT
+ *   out_kind : reçoit « teams », « meet » ou « zoom » (statique)
+ * Retourne : adresse de la réunion (g_free), NULL s'il n'y en a pas. */
+static gchar *
+event_find_meeting_url (ICalComponent *icomp,
+			const gchar **out_kind)
+{
+	static GRegex *regex = NULL;
+	ICalProperty *prop;
+	GString *text = g_string_new (NULL);
+	GMatchInfo *match = NULL;
+	gchar *url = NULL;
+
+	if (!regex)
+		regex = g_regex_new ("https://(?:[a-z0-9-]+\\.)?teams\\.microsoft\\.com/l/meetup-join/[^\\s\"'<>)\\]]+|"
+			"https://teams\\.live\\.com/meet/[^\\s\"'<>)\\]]+|"
+			"https://meet\\.google\\.com/[a-z0-9-]+|"
+			"https://(?:[a-z0-9-]+\\.)?zoom\\.us/j/[^\\s\"'<>)\\]]+",
+			G_REGEX_CASELESS, 0, NULL);
+
+	prop = i_cal_component_get_first_property (icomp, I_CAL_DESCRIPTION_PROPERTY);
+	if (prop && i_cal_property_get_description (prop))
+		g_string_append (text, i_cal_property_get_description (prop));
+	g_clear_object (&prop);
+	if (i_cal_component_get_location (icomp)) {
+		g_string_append_c (text, ' ');
+		g_string_append (text, i_cal_component_get_location (icomp));
+	}
+	prop = i_cal_component_get_first_property (icomp, I_CAL_URL_PROPERTY);
+	if (prop && i_cal_property_get_url (prop)) {
+		g_string_append_c (text, ' ');
+		g_string_append (text, i_cal_property_get_url (prop));
+	}
+	g_clear_object (&prop);
+
+	if (regex && g_regex_match (regex, text->str, 0, &match)) {
+		url = g_match_info_fetch (match, 0);
+		if (strstr (url, "&amp;")) {
+			gchar *plain = g_strjoinv ("&", g_strsplit (url, "&amp;", -1));
+
+			g_free (url);
+			url = plain;
+		}
+		if (strstr (url, "teams."))
+			*out_kind = "teams";
+		else if (strstr (url, "meet.google"))
+			*out_kind = "meet";
+		else
+			*out_kind = "zoom";
+	}
+	g_match_info_free (match);
+	g_string_free (text, TRUE);
+
+	return url;
+}
+
 /* Détail d'un événement : champs modifiables, organisateur, participants
  * et leur réponse, périodicité, agenda en lecture seule.
  * Paramètres :
@@ -216,6 +275,15 @@ core_get_event_run (EvoCore *core,
 	prop = i_cal_component_get_first_property (icomp, I_CAL_DESCRIPTION_PROPERTY);
 	builder_add_string (builder, "description", prop ? i_cal_property_get_description (prop) : "");
 	g_clear_object (&prop);
+
+	{
+		const gchar *meeting_kind = "";
+		gchar *meeting_url = event_find_meeting_url (icomp, &meeting_kind);
+
+		builder_add_string (builder, "online_meeting_url", meeting_url ? meeting_url : "");
+		builder_add_string (builder, "online_meeting_kind", meeting_kind);
+		g_free (meeting_url);
+	}
 
 	json_builder_set_member_name (builder, "start");
 	json_builder_add_int_value (builder, st);

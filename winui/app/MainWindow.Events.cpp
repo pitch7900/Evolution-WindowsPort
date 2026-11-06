@@ -742,13 +742,13 @@ namespace winrt::EvolutionWin::implementation
      * @param svg_name Nom du fichier SVG dans Assets.
      * @param label Libellé.
      */
-    static void SetIconContent(CheckBox const& check, std::wstring const& svg_name, hstring const& label)
+    static void SetIconContent(ContentControl const& check, std::wstring const& svg_name, hstring const& label)
     {
         StackPanel content;
         content.Orientation(Orientation::Horizontal);
         content.Spacing(8);
         wchar_t exe_path[MAX_PATH]{};
-        if (GetModuleFileNameW(nullptr, exe_path, MAX_PATH))
+        if (!svg_name.empty() && GetModuleFileNameW(nullptr, exe_path, MAX_PATH))
         {
             std::wstring svg_path{ exe_path };
             svg_path = svg_path.substr(0, svg_path.find_last_of(L"\\/")) + L"\\Assets\\" + svg_name;
@@ -1146,6 +1146,28 @@ namespace winrt::EvolutionWin::implementation
                L"Google Meet online meeting (join link added to the invitation)"));
         if (!existing && !readonly && !GoogleCalendarUid().empty())
             panel.Children().Append(meet_check);
+        /* événement existant avec une réunion en ligne (Teams, Google Meet, Zoom) : bouton « Rejoindre » */
+        if (existing)
+        {
+            hstring meeting_url = event.GetNamedString(L"online_meeting_url", L"");
+            hstring meeting_kind = event.GetNamedString(L"online_meeting_kind", L"");
+            if (!meeting_url.empty())
+            {
+                Button join_button;
+                join_button.Style(Application::Current().Resources().Lookup(box_value(L"AccentButtonStyle")).as<Style>());
+                if (meeting_kind == L"teams")
+                    SetIconContent(join_button, L"Microsoft_Office_Teams.svg", Tr(L"Rejoindre la réunion Teams", L"Join the Teams meeting"));
+                else if (meeting_kind == L"meet")
+                    SetIconContent(join_button, L"Google_meet.svg", Tr(L"Rejoindre la réunion Google Meet", L"Join the Google Meet meeting"));
+                else
+                    SetIconContent(join_button, L"", Tr(L"Rejoindre la réunion en ligne", L"Join the online meeting"));
+                join_button.Click([meeting_url](IInspectable const&, RoutedEventArgs const&)
+                {
+                    Windows::System::Launcher::LaunchUriAsync(Windows::Foundation::Uri{ meeting_url });
+                });
+                panel.Children().Append(join_button);
+            }
+        }
         teams_check.Checked([meet_check](IInspectable const&, RoutedEventArgs const&) { meet_check.IsChecked(false); });
         meet_check.Checked([teams_check](IInspectable const&, RoutedEventArgs const&) { teams_check.IsChecked(false); });
 
