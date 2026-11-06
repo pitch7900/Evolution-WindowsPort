@@ -707,6 +707,20 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Éléments récupérables d'un compte Microsoft 365 : [{"id", "subject", "from", "received"}]. */
+        void ListRecoverableItems(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_list_recoverable_items(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Restaure des éléments récupérables dans la Boîte de réception (identifiants séparés par des espaces). */
+        void RestoreRecoverableItems(winrt::hstring const& account, winrt::hstring const& ids, CoreHandler handler)
+        {
+            evo_core_restore_recoverable_items(m_core, winrt::to_string(account).c_str(), winrt::to_string(ids).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Équipe de l'utilisateur (responsable, collaborateurs, collègues) : [{"name", "email", "relation"}]. */
         void ListTeam(winrt::hstring const& account, CoreHandler handler)
         {

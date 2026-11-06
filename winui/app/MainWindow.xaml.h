@@ -576,6 +576,7 @@ namespace winrt::EvolutionWin::implementation
         fire_and_forget SignInOAuth2Async(hstring source_uid, hstring name);
         fire_and_forget ShowSharedMailboxDialogAsync(hstring account_uid);
         fire_and_forget CloseSharedMailboxAsync(hstring account_uid);
+        fire_and_forget ShowRecoverableItemsDialogAsync(hstring account_uid);
         Windows::Foundation::IAsyncOperation<hstring> StartOAuth2SignInAsync(
             int provider_index, hstring client_id, hstring tenant_id, hstring login_hint);
         void RefreshAccountsView();

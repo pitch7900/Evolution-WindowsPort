@@ -1050,6 +1050,32 @@ void		evo_core_add_google_meet	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Éléments récupérables d'un compte Microsoft 365 (suppressions conservées par le serveur,
+ * dossier « Recoverable Items » de Microsoft Graph) : liste des 100 plus récents.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte courrier Microsoft 365
+ *   func        : rappel recevant [{"id", "subject", "from", "received" (secondes Unix)}]
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_list_recoverable_items	(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Restaure des éléments récupérables dans la Boîte de réception.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte courrier Microsoft 365
+ *   message_ids : "id" des éléments (evo_core_list_recoverable_items) séparés par des espaces
+ *   func        : rappel recevant {"restored": n, "failed": n, "error": "premier échec"}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_restore_recoverable_items
+						(EvoCore *core,
+						 const char *account_uid,
+						 const char *message_ids,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Comme evo_core_list_contacts (), limité aux carnets book_uids (uids
  * séparés par des virgules ; NULL ou "" : tous les carnets activés). */
 void		evo_core_list_book_contacts	(EvoCore *core,

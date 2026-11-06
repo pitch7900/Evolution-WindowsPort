@@ -20,6 +20,7 @@
 #include <chrono>
 #include <cmath>
 #include <cwctype>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -2448,6 +2449,152 @@ namespace winrt::EvolutionWin::implementation
             }
             ShowStatus(Tr(L"Boîte « ", L"Mailbox \"") + name + Tr(L" » fermée.", L"\" closed."), InfoBarSeverity::Informational);
             LoadAccounts();
+        });
+    }
+
+    /**
+     * @brief « Récupérer les éléments supprimés du serveur » : liste le dossier des éléments récupérables
+     *        (suppressions conservées par Exchange Online) d'un compte Microsoft 365, avec filtre, et
+     *        restaure les éléments cochés dans la Boîte de réception.
+     * @param account_uid Compte courrier Microsoft 365.
+     */
+    fire_and_forget MainWindow::ShowRecoverableItemsDialogAsync(hstring account_uid)
+    {
+        auto strong = get_strong();
+        if (m_dialog_open || !Content() || !Content().XamlRoot())
+            co_return;
+
+        struct Entry { std::wstring id; std::wstring text; };
+        struct State
+        {
+            std::vector<Entry> entries;
+            std::set<std::wstring> selected;
+            bool filling{ false };
+        };
+        auto state = std::make_shared<State>();
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(Tr(L"Éléments supprimés récupérables", L"Recoverable deleted items")));
+        StackPanel panel;
+        panel.Spacing(8);
+        panel.MinWidth(560);
+        TextBlock info;
+        info.TextWrapping(TextWrapping::Wrap);
+        info.Text(Tr(L"Messages supprimés définitivement mais encore conservés par le serveur (100 plus récents). Cochez ceux à restaurer dans la Boîte de réception.",
+                     L"Messages deleted permanently but still kept by the server (100 most recent). Select those to restore to the Inbox."));
+        panel.Children().Append(info);
+        TextBox filter_box;
+        filter_box.PlaceholderText(Tr(L"Filtrer par expéditeur, objet ou date", L"Filter by sender, subject or date"));
+        panel.Children().Append(filter_box);
+        ProgressRing ring;
+        ring.IsActive(true);
+        ring.Width(28);
+        ring.Height(28);
+        panel.Children().Append(ring);
+        ListView list;
+        list.SelectionMode(ListViewSelectionMode::Multiple);
+        list.MaxHeight(360);
+        panel.Children().Append(list);
+        TextBlock status;
+        status.TextWrapping(TextWrapping::Wrap);
+        panel.Children().Append(status);
+        dialog.Content(panel);
+        dialog.PrimaryButtonText(Tr(L"Restaurer la sélection", L"Restore selection"));
+        dialog.IsPrimaryButtonEnabled(false);
+        dialog.CloseButtonText(Tr(L"Fermer", L"Close"));
+
+        /* remplit la liste selon le filtre, en conservant la sélection */
+        auto fill = [state, list, filter_box]()
+        {
+            std::wstring needle{ filter_box.Text() };
+            std::transform(needle.begin(), needle.end(), needle.begin(), ::towlower);
+            state->filling = true;
+            list.Items().Clear();
+            for (auto const& entry : state->entries)
+            {
+                std::wstring lowered = entry.text;
+                std::transform(lowered.begin(), lowered.end(), lowered.begin(), ::towlower);
+                if (!needle.empty() && lowered.find(needle) == std::wstring::npos)
+                    continue;
+                ListViewItem row;
+                row.Content(box_value(hstring{ entry.text }));
+                row.Tag(box_value(hstring{ entry.id }));
+                list.Items().Append(row);
+                if (state->selected.count(entry.id))
+                    row.IsSelected(true);
+            }
+            state->filling = false;
+        };
+        filter_box.TextChanged([fill](auto&&, auto&&) { fill(); });
+        list.SelectionChanged([state, dialog](IInspectable const&, SelectionChangedEventArgs const& args)
+        {
+            if (state->filling)
+                return;
+            for (auto const& added : args.AddedItems())
+                if (auto row = added.try_as<ListViewItem>())
+                    state->selected.insert(std::wstring{ unbox_value_or<hstring>(row.Tag(), L"") });
+            for (auto const& removed : args.RemovedItems())
+                if (auto row = removed.try_as<ListViewItem>())
+                    state->selected.erase(std::wstring{ unbox_value_or<hstring>(row.Tag(), L"") });
+            dialog.IsPrimaryButtonEnabled(!state->selected.empty());
+        });
+
+        m_core->ListRecoverableItems(account_uid, [state, ring, status, fill](hstring const& json, hstring const& error)
+        {
+            ring.IsActive(false);
+            ring.Visibility(Visibility::Collapsed);
+            JsonArray items;
+            if (!error.empty() || !JsonArray::TryParse(json, items))
+            {
+                status.Text(Tr(L"Lecture impossible : ", L"Unable to read: ") + error);
+                return;
+            }
+            for (auto const& value : items)
+            {
+                auto item = value.GetObject();
+                time_t received = static_cast<time_t>(item.GetNamedNumber(L"received", 0));
+                struct tm local{};
+                localtime_s(&local, &received);
+                wchar_t when[32];
+                swprintf_s(when, L"%02d/%02d/%04d %02d:%02d", local.tm_mday, local.tm_mon + 1, local.tm_year + 1900, local.tm_hour, local.tm_min);
+                std::wstring subject{ item.GetNamedString(L"subject", L"") };
+                state->entries.push_back({ std::wstring{ item.GetNamedString(L"id", L"") },
+                    std::wstring{ when } + L"  " + std::wstring{ item.GetNamedString(L"from", L"") } + L" — " +
+                    (subject.empty() ? std::wstring{ L"(sans objet)" } : subject) });
+            }
+            if (state->entries.empty())
+                status.Text(Tr(L"Aucun élément récupérable.", L"No recoverable items."));
+            fill();
+        });
+
+        m_dialog_open = true;
+        auto result = co_await dialog.ShowAsync();
+        m_dialog_open = false;
+        if (result != ContentDialogResult::Primary || state->selected.empty())
+            co_return;
+
+        std::wstring ids;
+        for (auto const& id : state->selected)
+            ids += (ids.empty() ? L"" : L" ") + id;
+        ShowStatus(Tr(L"Restauration des éléments…", L"Restoring items…"), InfoBarSeverity::Informational);
+        m_core->RestoreRecoverableItems(account_uid, hstring{ ids }, [this](hstring const& json, hstring const& error)
+        {
+            JsonObject outcome;
+            if (!error.empty() || !JsonObject::TryParse(json, outcome))
+            {
+                ShowStatus(Tr(L"Restauration : ", L"Restore: ") + error, InfoBarSeverity::Error);
+                return;
+            }
+            int restored = static_cast<int>(outcome.GetNamedNumber(L"restored", 0));
+            int failed = static_cast<int>(outcome.GetNamedNumber(L"failed", 0));
+            if (failed > 0)
+                ShowStatus(hstring{ std::to_wstring(restored) } + Tr(L" élément(s) restauré(s), ", L" item(s) restored, ") +
+                    hstring{ std::to_wstring(failed) } + Tr(L" échec(s) : ", L" failure(s): ") + outcome.GetNamedString(L"error", L""),
+                    InfoBarSeverity::Warning);
+            else
+                ShowStatus(hstring{ std::to_wstring(restored) } + Tr(L" élément(s) restauré(s) dans la Boîte de réception.", L" item(s) restored to the Inbox."),
+                    InfoBarSeverity::Success);
         });
     }
 }

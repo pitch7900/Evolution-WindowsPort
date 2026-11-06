@@ -324,6 +324,20 @@ namespace winrt::EvolutionWin::implementation
                     menu.Items().Append(shared_item);
                     menu.Items().Append(MenuFlyoutSeparator{});
                 }
+                if (m365_account)
+                {
+                    MenuFlyoutItem recover_item;
+                    recover_item.Text(Tr(L"Récupérer les éléments supprimés du serveur…", L"Recover deleted items from the server…"));
+                    FontIcon recover_icon;
+                    recover_icon.Glyph(L"\xE777");
+                    recover_item.Icon(recover_icon);
+                    recover_item.Click([this, account_uid = item.Account()](IInspectable const&, RoutedEventArgs const&)
+                    {
+                        ShowRecoverableItemsDialogAsync(account_uid);
+                    });
+                    menu.Items().Append(recover_item);
+                    menu.Items().Append(MenuFlyoutSeparator{});
+                }
             }
 
             AppendFolderManagementItems(menu, item, NodeFolderName(node));

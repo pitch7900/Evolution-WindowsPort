@@ -2334,3 +2334,240 @@ evo_core_add_google_meet (EvoCore *core,
 
 	core_submit (core, core_add_google_meet_run, g_strdupv (args), func, user_data);
 }
+
+/* Racine Graph de la boîte d'un compte Microsoft 365 : « me » ou « users/<boîte partagée> ».
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte courrier
+ * Retourne : adresse (g_free). */
+static gchar *
+recoverable_mailbox_base (EvoCore *core,
+			  const gchar *account_uid)
+{
+	ESource *account = e_source_registry_ref_source (core->registry, account_uid);
+	gchar *shared = NULL, *base;
+
+	if (account && e_source_has_extension (account, e_source_camel_get_extension_name ("microsoft365"))) {
+		CamelSettings *settings = e_source_camel_get_settings (
+			e_source_get_extension (account, e_source_camel_get_extension_name ("microsoft365")));
+		gboolean use = FALSE;
+
+		g_object_get (settings, "use-impersonation", &use, "impersonate-user", &shared, NULL);
+		if (!use)
+			g_clear_pointer (&shared, g_free);
+	}
+	g_clear_object (&account);
+
+	if (shared && *shared) {
+		gchar *encoded = g_uri_escape_string (shared, NULL, FALSE);
+
+		base = g_strdup_printf ("https://graph.microsoft.com/v1.0/users/%s", encoded);
+		g_free (encoded);
+	} else {
+		base = g_strdup ("https://graph.microsoft.com/v1.0/me");
+	}
+	g_free (shared);
+
+	return base;
+}
+
+/* Jeton Graph du compte Microsoft 365 (collection du compte courrier). */
+static gboolean
+recoverable_get_token (EvoCore *core,
+		       const gchar *account_uid,
+		       gchar **token,
+		       GError **error)
+{
+	ESource *credentials = core_ref_credentials_source (core, account_uid, error);
+	GalProvider provider;
+	gboolean ok;
+
+	if (!credentials)
+		return FALSE;
+	if (!gal_collection_provider (credentials, &provider) || provider != GAL_PROVIDER_MICROSOFT365) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			"La récupération des éléments supprimés n'est disponible que pour les comptes Microsoft 365.");
+		g_object_unref (credentials);
+		return FALSE;
+	}
+	ok = gal_get_token (core, credentials, token, error);
+	g_object_unref (credentials);
+	return ok;
+}
+
+/* Éléments du dossier « Éléments récupérables » (suppressions) d'un compte Microsoft 365 : Microsoft Graph,
+ * /mailFolders/recoverableitemsdeletions/messages.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = uid du compte courrier
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : [{"id", "subject", "from", "received"}] (100 plus récents), NULL sinon. */
+static gchar *
+core_list_recoverable_run (EvoCore *core,
+			   gchar **args,
+			   GError **error)
+{
+	gchar *token = NULL, *base, *uri, *json = NULL;
+	GBytes *bytes;
+	guint status = 0;
+	JsonBuilder *builder;
+
+	if (!recoverable_get_token (core, args[0], &token, error))
+		return NULL;
+
+	base = recoverable_mailbox_base (core, args[0]);
+	uri = g_strdup_printf ("%s/mailFolders/recoverableitemsdeletions/messages?$top=100"
+		"&$select=id,subject,from,receivedDateTime&$orderby=receivedDateTime%%20desc", base);
+	bytes = gal_http_get (core, GAL_PROVIDER_MICROSOFT365, uri, token, &status, error);
+	g_free (uri);
+	g_free (base);
+
+	if (bytes) {
+		if (status == 200) {
+			JsonNode *root = gal_bytes_to_json (bytes);
+			JsonArray *items = root && JSON_NODE_HOLDS_OBJECT (root)
+				? json_object_get_array_member (json_node_get_object (root), "value") : NULL;
+			guint ii;
+
+			builder = json_builder_new ();
+			json_builder_begin_array (builder);
+			for (ii = 0; items && ii < json_array_get_length (items); ii++) {
+				JsonObject *item = json_array_get_object_element (items, ii);
+				JsonObject *from = json_object_has_member (item, "from") &&
+					JSON_NODE_HOLDS_OBJECT (json_object_get_member (item, "from"))
+					? json_object_get_object_member (item, "from") : NULL;
+				JsonObject *address = from && json_object_has_member (from, "emailAddress") &&
+					JSON_NODE_HOLDS_OBJECT (json_object_get_member (from, "emailAddress"))
+					? json_object_get_object_member (from, "emailAddress") : NULL;
+				const gchar *name = address ? json_object_get_string_member_with_default (address, "name", "") : "";
+				const gchar *mail = address ? json_object_get_string_member_with_default (address, "address", "") : "";
+				const gchar *received = json_object_get_string_member_with_default (item, "receivedDateTime", "");
+				GDateTime *date = *received ? g_date_time_new_from_iso8601 (received, NULL) : NULL;
+
+				json_builder_begin_object (builder);
+				builder_add_string (builder, "id", json_object_get_string_member_with_default (item, "id", ""));
+				builder_add_string (builder, "subject", json_object_get_string_member_with_default (item, "subject", ""));
+				builder_add_string (builder, "from", *name ? name : mail);
+				json_builder_set_member_name (builder, "received");
+				json_builder_add_int_value (builder, date ? g_date_time_to_unix (date) : 0);
+				json_builder_end_object (builder);
+				if (date)
+					g_date_time_unref (date);
+			}
+			json_builder_end_array (builder);
+			json = json_from_builder (builder);
+			g_object_unref (builder);
+			if (root)
+				json_node_unref (root);
+		} else {
+			gchar *message = gal_response_error_message (bytes);
+
+			g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Microsoft Graph (HTTP %u) : %s", status,
+				message ? message : "erreur");
+			g_free (message);
+		}
+		g_bytes_unref (bytes);
+	}
+
+	e_util_safe_free_string (token);
+	return json;
+}
+
+/* Restaure des éléments récupérables dans la Boîte de réception (Graph : déplacement du message).
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = uid du compte, [1] = identifiants Graph des messages séparés par des espaces
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : {"restored": n, "failed": n, "error": "premier échec"}, NULL en cas d'erreur globale. */
+static gchar *
+core_restore_recoverable_run (EvoCore *core,
+			      gchar **args,
+			      GError **error)
+{
+	gchar *token = NULL, *base, *json;
+	gchar **ids = g_strsplit (args[1] ? args[1] : "", " ", -1);
+	gchar *first_error = NULL;
+	guint restored = 0, failed = 0, ii;
+	JsonBuilder *builder;
+
+	if (!recoverable_get_token (core, args[0], &token, error)) {
+		g_strfreev (ids);
+		return NULL;
+	}
+
+	base = recoverable_mailbox_base (core, args[0]);
+	for (ii = 0; ids[ii]; ii++) {
+		gchar *encoded, *uri;
+		GBytes *bytes;
+		guint status = 0;
+
+		if (!*ids[ii])
+			continue;
+		encoded = g_uri_escape_string (ids[ii], NULL, FALSE);
+		uri = g_strdup_printf ("%s/messages/%s/move", base, encoded);
+		bytes = gal_http_send_json (core, "POST", uri, token, "{\"destinationId\":\"inbox\"}", &status, NULL);
+		if (bytes && status >= 200 && status < 300) {
+			restored++;
+		} else {
+			failed++;
+			if (!first_error) {
+				gchar *message = bytes ? gal_response_error_message (bytes) : NULL;
+
+				first_error = g_strdup_printf ("HTTP %u : %s", status, message ? message : "erreur");
+				g_free (message);
+			}
+		}
+		if (bytes)
+			g_bytes_unref (bytes);
+		g_free (uri);
+		g_free (encoded);
+	}
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	json_builder_set_member_name (builder, "restored");
+	json_builder_add_int_value (builder, restored);
+	json_builder_set_member_name (builder, "failed");
+	json_builder_add_int_value (builder, failed);
+	builder_add_string (builder, "error", first_error ? first_error : "");
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+
+	g_free (first_error);
+	g_free (base);
+	g_strfreev (ids);
+	e_util_safe_free_string (token);
+	return json;
+}
+
+/* Soumet la lecture des éléments récupérables (voir evo_core_list_recoverable_items dans evo-core.h). */
+void
+evo_core_list_recoverable_items (EvoCore *core,
+				 const char *account_uid,
+				 EvoCoreResultFunc func,
+				 void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, NULL };
+
+	g_return_if_fail (core != NULL);
+	g_return_if_fail (account_uid != NULL);
+
+	core_submit (core, core_list_recoverable_run, g_strdupv (args), func, user_data);
+}
+
+/* Soumet la restauration d'éléments récupérables (voir evo_core_restore_recoverable_items dans evo-core.h). */
+void
+evo_core_restore_recoverable_items (EvoCore *core,
+				    const char *account_uid,
+				    const char *message_ids,
+				    EvoCoreResultFunc func,
+				    void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, (gchar *) message_ids, NULL };
+
+	g_return_if_fail (core != NULL);
+	g_return_if_fail (account_uid != NULL && message_ids != NULL);
+
+	core_submit (core, core_restore_recoverable_run, g_strdupv (args), func, user_data);
+}
