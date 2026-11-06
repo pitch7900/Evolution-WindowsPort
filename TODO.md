@@ -186,7 +186,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 ### Fenêtres et lecture
 
 - [ ] 🟡 **Ouvrir un événement ou un dossier dans une nouvelle fenêtre** (pour un message : fenêtre de lecture indépendante, §6) ; [x] 🟢 **Fermer tous les éléments ouverts**
-- [ ] 🟠 **Fenêtre des rappels** : rappels des rendez-vous (alarmes EDS) et des messages en suivi, avec Reporter / Ignorer
+- [ ] 🟠 **Fenêtre des rappels** : rappels des rendez-vous (alarmes EDS) et des messages en suivi, avec Reporter / Ignorer _(partiel : notification Windows à l'heure du rappel des événements, vérifiée toutes les 30 s, sans répétition ; restent Reporter / Ignorer, les messages en suivi et les tâches)_
 - [ ] 🟡 **Lecteur immersif** : vue de lecture plein écran épurée (taille du texte, espacement)
 - [x] 🟢 **Lecture à voix haute** du message (`Windows.Media.SpeechSynthesis`)
 
@@ -243,13 +243,13 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 ### Boîtes partagées et accès délégués Exchange Online (Mail, Calendrier, Contacts) — 🟠
 
 En entreprise (Exchange Online / Microsoft 365, Exchange on-premise), les utilisateurs accèdent fréquemment à des boîtes aux lettres partagées (ex. support, info, boîtes de service) et disposent d'accès délégués sur la boîte ou le calendrier d'autres collaborateurs (délégation avec droits de lecture, d'édition ou de gestion).
-
-- [ ] 🟠 **Ouverture et ajout d'une boîte aux lettres ou d'un calendrier délégué (clic droit sur le compte Exchange)** :
+ _(fait : clic droit sur un compte Microsoft 365 › « Ouvrir la boîte d'un autre utilisateur… »)_
+- [ ] 🟠 **Ouverture et ajout d'une boîte aux lettres ou d'un calendrier délégué (clic droit sur le compte Exchange)** : _(partiel : saisie directe de l'adresse ; la recherche dans l'annuaire reste à faire)_
   - [ ] 🟡 **Menu contextuel du compte** : action _« Ouvrir le dossier / la boîte déléguée d'un autre utilisateur… »_ (accessible par clic droit sur le compte Exchange dans l'arborescence Mail, Calendrier et Contacts).
-  - [ ] 🟡 **Boîte de dialogue de sélection** : recherche de l'utilisateur ou de la boîte partagée par nom ou adresse email dans l'annuaire (GAL) ou saisie directe de l'adresse (ex. `equipe@entreprise.com` ou `collegue@entreprise.com`).
-  - [ ] 🟠 **Rattachement dynamique sous le compte Exchange principal** :
-    - [ ] **Courrier (Mail)** : arborescence complète de la boîte partagée / déléguée montée sous le compte principal (accès aux dossiers Boîte de réception, Éléments envoyés, dossiers personnalisés selon les autorisations Exchange `FullAccess` / délégation EWS ou Microsoft Graph `/users/{id}/mailFolders`).
-    - [ ] **Calendrier** : ajout du calendrier partagé / délégué sous le groupe _Calendriers partagés_ ou _Autres calendriers_, avec synchronisation et affichage superposé ou côte à côte.
+  - [x] 🟡 **Boîte de dialogue de sélection** : recherche de l'utilisateur ou de la boîte partagée par nom ou adresse email dans l'annuaire (GAL) ou saisie directe de l'adresse (ex. `equipe@entreprise.com` ou `collegue@entreprise.com`). _(fait : un compte courrier par boîte partagée, emprunt d'identité Exchange Online, droit Full Access ; validé)_
+  - [x] 🟠 **Rattachement dynamique sous le compte Exchange principal** : _(fait : case « Ouvrir aussi son agenda » à l'ouverture de la boîte)_
+    - [x] **Courrier (Mail)** : arborescence complète de la boîte partagée / déléguée montée sous le compte principal (accès aux dossiers Boîte de réception, Éléments envoyés, dossiers personnalisés selon les autorisations Exchange `FullAccess` / délégation EWS ou Microsoft Graph `/users/{id}/mailFolders`). _(fait : case « Ouvrir aussi ses contacts »)_
+    - [x] **Calendrier** : ajout du calendrier partagé / délégué sous le groupe _Calendriers partagés_ ou _Autres calendriers_, avec synchronisation et affichage superposé ou côte à côte. _(fait : comptes mémorisés comme tout compte ; « Fermer la boîte partagée » au clic droit)_
     - [ ] **Contacts** : ajout du carnet d'adresses partagé de l'utilisateur sélectionné.
   - [ ] 🟢 **Mémorisation et retrait** : persistance des comptes et calendriers délégués ouverts entre les sessions ; option _« Masquer / Fermer la boîte partagée »_ par clic droit.
   - Récupération des éléments supprimés du compte Exchange Online (Recoverable Items en self-service) : cf. §9
@@ -257,10 +257,10 @@ En entreprise (Exchange Online / Microsoft 365, Exchange on-premise), les utilis
   - [ ] 🟡 **Droits sur les messages et dossiers** : adaptation dynamique des actions possibles selon le niveau de délégation effectif (lecture seule / relecture, auteur, éditeur, accès complet `FullAccess`) : lecture, déplacement, création / suppression de sous-dossiers, marquage lu/non lu.
   - [ ] 🟡 **Droits sur le calendrier délégué** : création, modification, déplacement et suppression de rendez-vous ou invitations de réunion selon les autorisations accordées (Auteur, Éditeur, Délégué).
 - [ ] 🟡 **Envoi d'emails « En tant que » (Send As) et « De la part de » (Send on Behalf)** :
-  - [ ] **Sélecteur d'expéditeur étendu (`FromBox`)** : dans la fenêtre de rédaction (`ComposeWindow`), sélection automatique ou manuelle des adresses de boîtes déléguées / partagées autorisées dans le champ déroulant _De :_.
-  - [ ] **Envoi « En tant que » (`Send As`)** : émission directe avec l'adresse de la boîte déléguée en en-tête `From:`, sans mention de l'identité personnelle (droits `SendAs` Exchange Online / Graph).
+  - [x] **Sélecteur d'expéditeur étendu (`FromBox`)** : dans la fenêtre de rédaction (`ComposeWindow`), sélection automatique ou manuelle des adresses de boîtes déléguées / partagées autorisées dans le champ déroulant _De :_. _(fait : les boîtes partagées figurent dans « De : » avec la mention Send As)_
+  - [x] **Envoi « En tant que » (`Send As`)** : émission directe avec l'adresse de la boîte déléguée en en-tête `From:`, sans mention de l'identité personnelle (droits `SendAs` Exchange Online / Graph). _(fait et validé ; le droit Send As met jusqu'à environ une heure à être pris en compte côté Exchange)_
   - [ ] **Envoi « De la part de » (`Send on Behalf`)** : émission avec l'en-tête `Sender:` (adresse de l'utilisateur) et `From:` (adresse du titulaire), affichant « [Utilisateur] de la part de [Titulaire] ».
-  - [ ] 🟢 **Copie dans les Éléments envoyés** : enregistrement automatique de la copie du message envoyé dans le dossier *Éléments envoyés* de la boîte partagée / déléguée correspondante (respect des paramètres Exchange `MessageCopyForSentAsEnabled` et `MessageCopyForSendOnBehalfEnabled`).
+  - [x] 🟢 **Copie dans les Éléments envoyés** : enregistrement automatique de la copie du message envoyé dans le dossier *Éléments envoyés* de la boîte partagée / déléguée correspondante (respect des paramètres Exchange `MessageCopyForSentAsEnabled` et `MessageCopyForSendOnBehalfEnabled`). _(fait : via le compte de la boîte partagée, la copie va dans ses éléments envoyés)_
 - [ ] 🟠 **Gestion des permissions et délégations d'accès à la boîte mail depuis l'interface (Exchange Online et Gmail)** :
   - Permettre à l'utilisateur de visualiser, modifier et révoquer directement depuis EvolutionWin les autorisations d'accès accordées à des tiers sur sa boîte mail ou ses dossiers, sans recourir aux interfaces d'administration web.
   - [ ] **Accès depuis l'interface** : onglet ou section dédiée *« Délégations et autorisations »* dans la boîte de modification du compte (accessible par clic droit sur le compte › *Propriétés du compte* ou depuis les Paramètres).
@@ -695,6 +695,7 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
     - [x] Bouton dédié *« Réunion Teams »* dans la barre d'outils / ruban pour générer automatiquement une réunion en ligne Microsoft Teams via Microsoft Graph (`isOnlineMeeting: true`, `onlineMeetingProvider: teamsForBusiness`). _(fait : bouton « Réunion Teams » du ruban Calendrier et case « Réunion en ligne Microsoft Teams » dans la fenêtre d'un nouvel événement ; la propriété `X-M365-ONLINE-MEETING` est transformée en réunion Teams par le backend Microsoft 365. **À valider sur un tenant réel**)_
     - [ ] Insertion automatique du lien de visio, de l'ID de réunion, du code secret et des coordonnées de connexion dans le corps de l'invitation. _(le lien et les coordonnées d'appel sont ajoutés par Exchange Online au corps de l'invitation ; à vérifier sur un tenant réel. Reste à faire : afficher le lien dans la fenêtre d'événement avec un bouton « Rejoindre », et lire l'ID de réunion / le code secret du serveur)_
     - [ ] Afficher « Rejoindre la réunion Teams » dans la fenêtre d'un événement existant (lien `onlineMeeting.joinUrl` du serveur) et ajouter Teams à un événement déjà créé (aujourd'hui : uniquement à la création)
+    - [x] **Réunion Google Meet (compte Gmail)** : case « Réunion en ligne Google Meet » avec l'icône Meet dans la fenêtre d'un nouvel événement ; le lien est ajouté par l'API Google Agenda (`conferenceData.createRequest`) après la création (`evo_core_add_google_meet`), exclusive avec Teams. _(fait ; à valider sur un compte Gmail)_
   - [ ] 🟠 **Emplacements et réservation des ressources de l'entreprise (salles et équipements)** :
     - [ ] Champ *Emplacement* relié aux listes de salles Exchange Online (_room lists_ et boîtes de ressources).
     - [ ] Consultation en direct de la disponibilité des salles et réservation automatique lors de l'enregistrement de la réunion (acceptation / refus automatique par la ressource).
@@ -703,7 +704,7 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
     - [ ] Report visuel du statut sur la grille du calendrier (bandeau latéral coloré ou hachuré selon le statut : blanc pour libre, rayures bleues pour provisoire, plein pour occupé, rayures violettes pour absent, pointillés pour travaille ailleurs).
     - [ ] Sélecteur de **Rappel** (aucun, 0 min, 5 min, 10 min, 15 min, 30 min, 1 h, etc.) et bouton de **Périodicité** (règles RRULE iCalendar : récurrence quotidienne, hebdomadaire, mensuelle, annuelle avec gestion des exceptions).
   - [ ] 🟡 **Indicateurs, confidentialité et classement par couleur** :
-    - [ ] Bouton bascule **« Privé »** (icône cadenas) : marque l'événement avec `CLASS:PRIVATE` (ou `sensitivity: private` Exchange) pour masquer les détails (titre, lieu, participants) aux autres utilisateurs lors du partage de calendrier ou de l'accès délégué.
+    - [x] Bouton bascule **« Privé »** (icône cadenas) : marque l'événement avec `CLASS:PRIVATE` (ou `sensitivity: private` Exchange) pour masquer les détails (titre, lieu, participants) aux autres utilisateurs lors du partage de calendrier ou de l'accès délégué. _(fait : case « Privé » à la création et à la modification, `CLASS:PRIVATE` ; à vérifier dans Outlook Online)_
     - [ ] Menu déroulant **« Classer »** (icône 4 carrés de couleur) : attribution de catégories avec codes couleur (synchronisées avec la liste principale Exchange Online).
     - [ ] Boutons d'importance : **! Importance haute** et **↓ Importance faible** (propriété `PRIORITY`).
 - [x] 🟢 **Ajouter du temps de travail individuel** (bloc « focus » sans participants, bouton ruban dédié et durée 2h préremplie)
