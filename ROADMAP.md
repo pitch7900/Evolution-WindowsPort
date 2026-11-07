@@ -68,9 +68,7 @@ flowchart LR
 ### 1. Boîtes partagées & Délégations (§3)
 - [x] **Ouverture dynamique de boîtes déléguées** : ajout d'une boîte ou d'un calendrier partagé via clic droit sur un compte Exchange / M365. _(fait en 1.1.0 : courrier, agenda et contacts partagés ; « Fermer la boîte partagée » ; validé sur un tenant réel pour le courrier)_
 - [x] **Envoi délégué** : prise en charge des modes « En tant que » (*Send As*) et « De la part de » (*Send on Behalf*). _(« En tant que » fait et validé ; « De la part de » codé (From = boîte partagée, Sender = utilisateur, par le compte d'origine), reste à valider sur un tenant réel)_
-- [ ] **Boîte d'archivage en ligne (*In-Place Archive*)** : détection et affichage d'un nœud d'archives distant séparé. _(bloqué : Microsoft Graph n'expose pas l'archive en ligne, aucun backend EWS/Graph d'evolution-ews ne la gère)_
 - [x] **Éléments récupérables (*Recoverable Items*)** : restauration en libre-service des éléments supprimés sur Exchange Online. _(fait en 1.1.0 : fenêtre redimensionnable, restauration ou suppression définitive ; validé)_
-- [ ] **Gestion des autorisations déléguées** : consultation et révocation des droits accordés depuis l'interface d'EvolutionWin. _(Exchange Online : pas d'API Graph pour FullAccess / SendAs / SendOnBehalf ; Gmail : codé, clic droit sur le compte › « Délégations et autorisations… », reste à valider sur un compte Google Workspace)_
 
 - [x] **Boîte de réception prioritaire (*Focused Inbox*)** : onglets Prioritaire / Autres avec compteurs, déplacement par clic droit et règle par expéditeur, réglage par compte. _(fait en 1.1.0 ; à valider sur un tenant réel)_
 - [x] **Favoris du courrier** : section Favoris en tête du volet des dossiers, réordonnable. _(fait en 1.1.0)_
@@ -103,6 +101,11 @@ flowchart LR
 ### 3. Moteur de recherche avancé (§10)
 - [ ] **Indexation plein texte locale** : recherche instantanée dans le corps des messages et le contenu des pièces jointes indexables.
 - [x] **Dossiers de recherche enregistrés** : création de dossiers dynamiques basés sur des requêtes de recherche persistantes. _(fait en 1.1.0 : modèles et opérateurs `is:unread`, `has:attachment`, `larger:`, `from:` ; devancé depuis ce jalon)_
+
+### 4. Boîtes partagées & délégations (reporté de la 1.1.0, §3)
+
+- [ ] **Boîte d'archivage en ligne (*In-Place Archive*)** : détection et affichage d'un nœud d'archives distant séparé. _(bloqué : Microsoft Graph n'expose pas l'archive en ligne, aucun backend EWS/Graph d'evolution-ews ne la gère)_
+- [ ] **Gestion des autorisations déléguées** : consultation et révocation des droits accordés depuis l'interface d'EvolutionWin. _(Exchange Online : pas d'API Graph pour FullAccess / SendAs / SendOnBehalf ; Gmail : codé, clic droit sur le compte › « Délégations et autorisations… », reste à valider sur un compte Google Workspace)_
 
 ---
 

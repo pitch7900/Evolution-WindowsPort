@@ -10,7 +10,10 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
-## [1.1.0] — en cours
+## [1.1.0] — 2026-11-07
+
+- **Corrections issues de la validation** : les boutons du bandeau « Contenu externe bloqué » sont empilés (plus de bouton tronqué) ; une conversation dépliée peut de nouveau être repliée, et un clic sur une conversation repliée affiche son message le plus récent ; un cache de traduction mémorisait à tort les textes introuvables (libellés vides).
+- **Reporté à la 1.2.0** : boîte d'archivage en ligne (*In-Place Archive*, non exposée par Microsoft Graph) et gestion des autorisations déléguées Exchange Online (pas d'API Graph pour FullAccess / SendAs / SendOnBehalf) ; la gestion des délégués Gmail est codée et reste à valider sur un compte Google Workspace.
 
 - **Téléchargement hors connexion avec progression** : le bouton « Synchroniser maintenant » de la boîte « Synchronisation hors connexion… » enregistre les réglages puis télécharge les messages manquants du compte (ou du dossier) selon l'état de chaque dossier et la limite d'ancienneté (`evo_core_offline_sync_now`). La barre d'état affiche « Téléchargement hors connexion : dossier (n/m) » avec sa barre de progression, puis « Synchronisation hors connexion terminée » ; la boîte mémorise et affiche le dernier résultat (date, messages téléchargés, échecs).
 
