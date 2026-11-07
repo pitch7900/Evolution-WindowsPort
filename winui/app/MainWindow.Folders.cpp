@@ -57,6 +57,7 @@ namespace winrt::EvolutionWin::implementation
             m_nodes.clear();
             m_favorite_nodes.clear();
             m_favorites_root = nullptr;
+            m_search_root = nullptr;
             m_account_folders.clear();
             m_accounts = JsonArray::Parse(json);
             RefreshAccountsView();
@@ -100,7 +101,7 @@ namespace winrt::EvolutionWin::implementation
                 bool enabled = account.GetNamedBoolean(L"enabled", true);
                 hstring acc_name = account.GetNamedString(L"name", uid);
                 if (!enabled)
-                    acc_name = acc_name + L" (Désactivé)";
+                    acc_name = acc_name + Tr(L" (Désactivé)", L" (Disabled)");
 
                 TreeViewNode node;
                 node.Content(EvolutionWin::FolderItem(acc_name,
@@ -126,6 +127,9 @@ namespace winrt::EvolutionWin::implementation
                 });
             }
 
+            /* dossiers de recherche enregistrés : groupe en bas de l'arborescence */
+            RefreshSearchFoldersNode();
+
             /* Relève automatique au démarrage si l'option mail.sync-on-startup est activée */
             if (!m_startup_synced && ::EvolutionWin::Settings::Instance().GetBoolean(L"mail.sync-on-startup", true))
             {
@@ -150,13 +154,13 @@ namespace winrt::EvolutionWin::implementation
      * (« INBOX », « Sent Items »…) ; vide pour un dossier ordinaire. */
     static hstring SpecialFolderName(hstring const& type)
     {
-        if (type == L"inbox") return L"Boîte de réception";
-        if (type == L"drafts") return L"Brouillons";
-        if (type == L"sent") return L"Éléments envoyés";
-        if (type == L"trash") return L"Éléments supprimés";
-        if (type == L"archive") return L"Archive";
-        if (type == L"junk") return L"Courrier indésirable";
-        if (type == L"outbox") return L"Boîte d'envoi";
+        if (type == L"inbox") return Tr(L"Boîte de réception", L"Inbox");
+        if (type == L"drafts") return Tr(L"Brouillons", L"Drafts");
+        if (type == L"sent") return Tr(L"Éléments envoyés", L"Sent Items");
+        if (type == L"trash") return Tr(L"Éléments supprimés", L"Deleted Items");
+        if (type == L"archive") return Tr(L"Archive", L"Archive");
+        if (type == L"junk") return Tr(L"Courrier indésirable", L"Junk Email");
+        if (type == L"outbox") return Tr(L"Boîte d'envoi", L"Outbox");
         return {};
     }
 
@@ -247,6 +251,20 @@ namespace winrt::EvolutionWin::implementation
         if (!item)
             return;
         args.Handled(true);
+
+        /* dossiers de recherche : menu propre (nouveau, modifier, supprimer) */
+        if (item.Account() == ::EvolutionWin::UnifiedViews::kSearchAccountId)
+        {
+            MenuFlyout search_menu;
+            BuildSearchFolderMenu(search_menu, item);
+            Microsoft::UI::Xaml::Controls::Primitives::FlyoutShowOptions search_options;
+            Point search_position;
+            if (args.TryGetPosition(container, search_position))
+                search_options.Position(search_position);
+            if (search_menu.Items().Size() > 0)
+                search_menu.ShowAt(container, search_options);
+            return;
+        }
 
         /* vues unifiées : pas de gestion de dossier (ce ne sont pas de vrais dossiers) ; idem pour le groupe « Favoris » */
         if (::EvolutionWin::UnifiedViews::IsUnifiedAccount(std::wstring_view{ item.Account() }) ||
@@ -400,7 +418,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         MenuFlyoutItem mark_read;
-        mark_read.Text(L"Marquer tout comme lu");
+        mark_read.Text(Tr(L"Marquer tout comme lu", L"Mark all as read"));
         mark_read.Icon(FontIcon{});
         mark_read.Icon().as<FontIcon>().Glyph(L"\xE8C3");
         mark_read.Click([this, item](IInspectable const&, RoutedEventArgs const&)
@@ -411,7 +429,9 @@ namespace winrt::EvolutionWin::implementation
         menu.Items().Append(MenuFlyoutSeparator{});
 
         MenuFlyoutItem empty;
-        empty.Text(trash ? L"Vider la Corbeille" : junk ? L"Vider les Indésirables" : L"Vider le dossier");
+        empty.Text(trash ? Tr(L"Vider la Corbeille", L"Empty Deleted Items")
+                         : junk ? Tr(L"Vider les Indésirables", L"Empty Junk Email")
+                                : Tr(L"Vider le dossier", L"Empty folder"));
         empty.Icon(FontIcon{});
         empty.Icon().as<FontIcon>().Glyph(L"\xE74D");
         empty.Click([this, item](IInspectable const&, RoutedEventArgs const&)
@@ -420,7 +440,7 @@ namespace winrt::EvolutionWin::implementation
         });
         menu.Items().Append(empty);
         ToggleMenuFlyoutItem notif_folder_item;
-        notif_folder_item.Text(L"Notifications pour ce dossier");
+        notif_folder_item.Text(Tr(L"Notifications pour ce dossier", L"Notifications for this folder"));
         FontIcon notif_icon_fld;
         notif_icon_fld.Glyph(L"\xEA8F");
         notif_folder_item.Icon(notif_icon_fld);
@@ -459,15 +479,19 @@ namespace winrt::EvolutionWin::implementation
 
             ContentDialog confirm;
             confirm.XamlRoot(Content().XamlRoot());
-            confirm.Title(box_value(permanent ? L"Supprimer définitivement ?" : L"Vider le dossier ?"));
+            confirm.Title(box_value(permanent
+                ? Tr(L"Supprimer définitivement ?", L"Permanently delete?")
+                : Tr(L"Vider le dossier ?", L"Empty folder?")));
             TextBlock text;
             text.TextWrapping(TextWrapping::Wrap);
             text.Text(permanent
-                ? L"Tous les messages de « " + item.Name() + L" » seront supprimés définitivement. Cette action est irréversible."
-                : L"Tous les messages de « " + item.Name() + L" » seront déplacés vers la Corbeille.");
+                ? (Tr(L"Tous les messages de « ", L"All messages in \"") + item.Name() +
+                   Tr(L" » seront supprimés définitivement. Cette action est irréversible.", L"\" will be permanently deleted. This action cannot be undone."))
+                : (Tr(L"Tous les messages de « ", L"All messages in \"") + item.Name() +
+                   Tr(L" » seront déplacés vers la Corbeille.", L"\" will be moved to Deleted Items.")));
             confirm.Content(text);
-            confirm.PrimaryButtonText(L"Supprimer");
-            confirm.CloseButtonText(L"Annuler");
+            confirm.PrimaryButtonText(permanent ? Tr(L"Supprimer", L"Delete") : Tr(L"Vider", L"Empty"));
+            confirm.CloseButtonText(Tr(L"Annuler", L"Cancel"));
             confirm.DefaultButton(ContentDialogButton::Close);
 
             m_dialog_open = true;
@@ -634,7 +658,7 @@ namespace winrt::EvolutionWin::implementation
             menu.Items().Append(entry);
         };
 
-        add_item(L"Nouveau dossier…", L"\xE8F4", selectable,
+        add_item(Tr(L"Nouveau dossier…", L"New folder…"), L"\xE8F4", selectable,
             [this, account, full_name, name](IInspectable const&, RoutedEventArgs const&)
             {
                 CreateFolderAsync(account, full_name, name);
@@ -644,7 +668,7 @@ namespace winrt::EvolutionWin::implementation
         {
             // Sous-menu de tri des dossiers pour ce compte
             MenuFlyoutSubItem sort_sub;
-            sort_sub.Text(L"Ordre des dossiers");
+            sort_sub.Text(Tr(L"Ordre des dossiers", L"Folder sort order"));
             sort_sub.Icon(FontIcon{});
             sort_sub.Icon().as<FontIcon>().Glyph(L"\xE8CB");
 
@@ -655,7 +679,7 @@ namespace winrt::EvolutionWin::implementation
                 : ::EvolutionWin::Settings::Instance().GetString(L"mail.folder-sort", L"special-first");
 
             MenuFlyoutItem special_first_item;
-            special_first_item.Text((effective_sort != L"alphabetical" ? L"✔ " : L"    ") + hstring{ L"Dossiers spéciaux d'abord" });
+            special_first_item.Text((effective_sort != L"alphabetical" ? L"✔ " : L"    ") + Tr(L"Dossiers spéciaux d'abord", L"Special folders first"));
             special_first_item.Click([this, acc_sort_key](IInspectable const&, RoutedEventArgs const&)
             {
                 ::EvolutionWin::Settings::Instance().SetString(acc_sort_key, L"special-first");
@@ -664,7 +688,7 @@ namespace winrt::EvolutionWin::implementation
             sort_sub.Items().Append(special_first_item);
 
             MenuFlyoutItem alpha_item;
-            alpha_item.Text((effective_sort == L"alphabetical" ? L"✔ " : L"    ") + hstring{ L"Trier tous les dossiers de A à Z" });
+            alpha_item.Text((effective_sort == L"alphabetical" ? L"✔ " : L"    ") + Tr(L"Trier tous les dossiers de A à Z", L"Sort all folders A to Z"));
             alpha_item.Click([this, acc_sort_key](IInspectable const&, RoutedEventArgs const&)
             {
                 ::EvolutionWin::Settings::Instance().SetString(acc_sort_key, L"alphabetical");
@@ -676,7 +700,7 @@ namespace winrt::EvolutionWin::implementation
             {
                 sort_sub.Items().Append(MenuFlyoutSeparator{});
                 MenuFlyoutItem reset_item;
-                reset_item.Text(L"Rétablir l'ordre global par défaut");
+                reset_item.Text(Tr(L"Rétablir l'ordre global par défaut", L"Reset to default global sort order"));
                 reset_item.Click([this, acc_sort_key](IInspectable const&, RoutedEventArgs const&)
                 {
                     ::EvolutionWin::Settings::Instance().SetString(acc_sort_key, L"");
@@ -690,13 +714,13 @@ namespace winrt::EvolutionWin::implementation
 
             if (account != L"local")
             {
-                add_item(L"Réponses automatiques (absence du bureau)…", L"\xE789", true,
+                add_item(Tr(L"Réponses automatiques (absence du bureau)…", L"Automatic replies (Out of Office)…"), L"\xE789", true,
                     [this, account](IInspectable const&, RoutedEventArgs const&)
                     {
                         ShowOutOfOfficeDialogAsync(account);
                     });
 
-                add_item(L"Propriétés du compte…", L"\xE713", true,
+                add_item(Tr(L"Propriétés du compte…", L"Account properties…"), L"\xE713", true,
                     [this, account](IInspectable const&, RoutedEventArgs const&)
                     {
                         ShowEditAccountDialogAsync(account);
@@ -705,7 +729,7 @@ namespace winrt::EvolutionWin::implementation
             return;
         }
 
-        add_item(L"Renommer…", L"\xE8AC", !special,
+        add_item(Tr(L"Renommer…", L"Rename…"), L"\xE8AC", !special,
             [this, account, full_name, name](IInspectable const&, RoutedEventArgs const&)
             {
                 RenameFolderAsync(account, full_name, name);
@@ -721,7 +745,7 @@ namespace winrt::EvolutionWin::implementation
         for (bool copy : { false, true })
         {
             MenuFlyoutSubItem sub;
-            sub.Text(copy ? L"Copier vers" : L"Déplacer vers");
+            sub.Text(copy ? Tr(L"Copier vers", L"Copy to") : Tr(L"Déplacer vers", L"Move to"));
             sub.Icon(FontIcon{});
             sub.Icon().as<FontIcon>().Glyph(copy ? L"\xE8C8" : L"\xE8DE");
             sub.IsEnabled(copy ? selectable : !special);
@@ -734,7 +758,7 @@ namespace winrt::EvolutionWin::implementation
             if (!parent.empty())
             {
                 MenuFlyoutItem top;
-                top.Text(L"Premier niveau du compte");
+                top.Text(Tr(L"Premier niveau du compte", L"Top level of account"));
                 top.Icon(FontIcon{});
                 top.Icon().as<FontIcon>().Glyph(L"\xE715");
                 top.Click([on_pick](IInspectable const&, RoutedEventArgs const&) { on_pick(L""); });
@@ -746,21 +770,21 @@ namespace winrt::EvolutionWin::implementation
             if (sub.Items().Size() == 0)
             {
                 MenuFlyoutItem none;
-                none.Text(L"Aucun dossier disponible");
+                none.Text(Tr(L"Aucun dossier disponible", L"No available folder"));
                 none.IsEnabled(false);
                 sub.Items().Append(none);
             }
             menu.Items().Append(sub);
         }
 
-        add_item(L"Supprimer le dossier…", L"\xE74D", !special && !has_children,
+        add_item(Tr(L"Supprimer le dossier…", L"Delete folder…"), L"\xE74D", !special && !has_children,
             [this, account, full_name, name, folder](IInspectable const&, RoutedEventArgs const&)
             {
                 DeleteFolderAsync(account, full_name, name, static_cast<int32_t>(folder.GetNamedNumber(L"total", 0)));
             });
 
         menu.Items().Append(MenuFlyoutSeparator{});
-        add_item(L"Exporter tous les messages (.eml)…", L"\xEDE1", true,
+        add_item(Tr(L"Exporter tous les messages (.eml)…", L"Export all messages (.eml)…"), L"\xEDE1", true,
             [this, account, full_name, name](IInspectable const&, RoutedEventArgs const&)
             {
                 ExportFolderEmlAsync(account, full_name, name);

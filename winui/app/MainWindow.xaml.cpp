@@ -507,7 +507,7 @@ namespace winrt::EvolutionWin::implementation
         if (unread <= 0)
         {
             MailItem().InfoBadge(nullptr);
-            ToolTipService::SetToolTip(MailItem(), box_value(L"Courrier"));
+            ToolTipService::SetToolTip(MailItem(), box_value(Tr(L"Courrier", L"Mail")));
             UpdateTaskbarBadge(0);
             return;
         }
@@ -515,7 +515,8 @@ namespace winrt::EvolutionWin::implementation
         InfoBadge badge;
         badge.Value(unread);
         MailItem().InfoBadge(badge);
-        ToolTipService::SetToolTip(MailItem(), box_value(L"Courrier (" + to_hstring(unread) + L" non lus)"));
+        ToolTipService::SetToolTip(MailItem(), box_value(Tr(L"Courrier (", L"Mail (") + to_hstring(unread) +
+            (unread > 1 ? Tr(L" non lus)", L" unread)") : Tr(L" non lu)", L" unread)"))));
         UpdateTaskbarBadge(unread);
     }
 
@@ -572,18 +573,18 @@ namespace winrt::EvolutionWin::implementation
         if (auto box = SearchBox())
         {
             if (tag == L"contacts")
-                box.PlaceholderText(L"Rechercher un contact (Ctrl+E)");
+                box.PlaceholderText(Tr(L"Rechercher un contact (Ctrl+E)", L"Search contact (Ctrl+E)"));
             else if (tag == L"mail")
                 UpdateSearchPlaceholder();
             else if (tag == L"tasks")
-                box.PlaceholderText(L"Rechercher dans les tâches (Ctrl+E)");
+                box.PlaceholderText(Tr(L"Rechercher dans les tâches (Ctrl+E)", L"Search in tasks (Ctrl+E)"));
             else if (tag == L"calendar")
             {
-                box.PlaceholderText(L"Rechercher un événement (Ctrl+E)");
+                box.PlaceholderText(Tr(L"Rechercher un événement (Ctrl+E)", L"Search event (Ctrl+E)"));
                 box.Text(m_calendar_search_query);
             }
             else
-                box.PlaceholderText(L"Rechercher (Ctrl+E)");
+                box.PlaceholderText(Tr(L"Rechercher (Ctrl+E)", L"Search (Ctrl+E)"));
         }
 
         SearchScopeBox().Visibility(tag == L"mail" ? Visibility::Visible : Visibility::Collapsed);
