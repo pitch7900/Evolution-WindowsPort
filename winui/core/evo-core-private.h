@@ -106,6 +106,9 @@ typedef struct {
 	gboolean all_day;
 	gboolean recurring;
 	gint reminder_minutes;	/* rappel avant le début (minutes), -1 : aucun */
+	gboolean is_private;	/* CLASS:PRIVATE ou CONFIDENTIAL */
+	const gchar *show_as;	/* free, working, tentative, busy, oof (statique) */
+	gint priority;	/* PRIORITY iCalendar (0 : aucune) */
 	gchar **categories;	/* noms de catégories (NULL-terminé) */
 } CalEventItem;
 

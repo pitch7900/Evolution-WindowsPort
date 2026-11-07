@@ -501,6 +501,8 @@ namespace winrt::EvolutionWin::implementation
         Microsoft::UI::Xaml::UIElement BuildCategoryChips(std::vector<std::wstring> const& names);
         void SetTaskCategories(Windows::Data::Json::JsonObject const& task, std::vector<std::wstring> const& names);
         void SetEventCategories(Windows::Data::Json::JsonObject const& event, std::vector<std::wstring> const& names);
+        void AttachEventContextMenu(Microsoft::UI::Xaml::UIElement const& element, Windows::Data::Json::JsonObject const& event);
+        void PatchEvent(Windows::Data::Json::JsonObject const& event, Windows::Data::Json::JsonObject const& changes);
         void SetContactCategories(Windows::Data::Json::JsonObject const& contact, std::vector<std::wstring> const& names);
         void ShowContacts();
         void ShowCategoryFilterMenu(
@@ -750,7 +752,7 @@ namespace winrt::EvolutionWin::implementation
         hstring m_calendar_period{ L"week" };	/* "day", "week" ou "month" (calendar.period) */
         bool m_updating_period{ false };
         void SetCalendarPeriod(hstring const& period);
-        fire_and_forget ShowEventDialogAsync(Windows::Data::Json::JsonObject event, hstring const& summary_preset = L"", bool is_focus = false, bool teams = false);
+        void ShowEventDialogAsync(Windows::Data::Json::JsonObject event, hstring const& summary_preset = L"", bool is_focus = false, bool teams = false);
         hstring TeamsCalendarUid();
         hstring GoogleCalendarUid();
         /* grille du calendrier (MainWindow.Calendar.cpp) */

@@ -212,8 +212,7 @@ namespace winrt::EvolutionWin::implementation
                 args.Handled(true);
                 OpenCalendarEvent(calendar_uid, uid);
             });
-            AttachCategoryContextMenu(element, ::EvolutionWin::CategoryStore::CategoriesOf(ev),
-                [this, ev](std::vector<std::wstring> const& names) { SetEventCategories(ev, names); });
+            AttachEventContextMenu(element, ev);
         };
 
         /* en-têtes des jours (« lun. 26 », aujourd'hui en couleur d'accent) */
@@ -771,8 +770,7 @@ namespace winrt::EvolutionWin::implementation
                     args.Handled(true);
                     OpenCalendarEvent(calendar_uid, uid);
                 });
-                AttachCategoryContextMenu(chip, ::EvolutionWin::CategoryStore::CategoriesOf(ev),
-                    [this, ev](std::vector<std::wstring> const& names) { SetEventCategories(ev, names); });
+                AttachEventContextMenu(chip, ev);
                 content.Children().Append(chip);
             }
 

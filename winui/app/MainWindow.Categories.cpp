@@ -433,6 +433,132 @@ namespace winrt::EvolutionWin::implementation
         });
     }
 
+
+    /**
+     * @brief Modifie quelques champs d'un événement (sans ouvrir sa fenêtre) puis recharge le calendrier.
+     * @param event Événement au format JSON du moteur (calendar_uid, uid).
+     * @param changes Champs à modifier (show_as, private, importance, categories…).
+     */
+    void MainWindow::PatchEvent(JsonObject const& event, JsonObject const& changes)
+    {
+        JsonObject request = JsonObject::Parse(changes.Stringify());
+        request.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(event.GetNamedString(L"calendar_uid", L"")));
+        request.SetNamedValue(L"uid", JsonValue::CreateStringValue(event.GetNamedString(L"uid", L"")));
+        m_core->ModifyEvent(request.Stringify(), [this](hstring const&, hstring const& error)
+        {
+            if (!error.empty())
+                ShowStatus(Tr(L"Modification de l'événement : ", L"Event update: ") + error, InfoBarSeverity::Error);
+            LoadEvents();
+        });
+    }
+
+    /**
+     * @brief Menu contextuel d'un événement du calendrier : Ouvrir, Classer (catégories), Afficher comme,
+     *        Privé et Importance, comme le bandeau de la fenêtre de l'événement.
+     * @param element Élément qui reçoit le clic droit (bloc de la grille, ligne de liste).
+     * @param event Événement au format JSON de la liste du moteur.
+     */
+    void MainWindow::AttachEventContextMenu(UIElement const& element, JsonObject const& event)
+    {
+        MenuFlyout flyout;
+        hstring calendar_uid = event.GetNamedString(L"calendar_uid", L"");
+        hstring uid = event.GetNamedString(L"uid", L"");
+
+        MenuFlyoutItem open_item;
+        open_item.Text(Tr(L"Ouvrir", L"Open"));
+        FontIcon open_icon;
+        open_icon.Glyph(L"\xE8A7");
+        open_item.Icon(open_icon);
+        open_item.Click([this, calendar_uid, uid](IInspectable const&, RoutedEventArgs const&) { OpenCalendarEvent(calendar_uid, uid); });
+        flyout.Items().Append(open_item);
+        flyout.Items().Append(MenuFlyoutSeparator{});
+
+        /* Classer : catégories */
+        MenuFlyoutSubItem classify;
+        classify.Text(Tr(L"Classer", L"Categorise"));
+        FontIcon classify_icon;
+        classify_icon.Glyph(L"\xE8EC");
+        classify.Icon(classify_icon);
+        PopulateItemCategoryMenu(classify.Items(), ::EvolutionWin::CategoryStore::CategoriesOf(event),
+            [this, event](std::vector<std::wstring> const& names) { SetEventCategories(event, names); });
+        flyout.Items().Append(classify);
+
+        /* Afficher comme : les états d'Outlook */
+        MenuFlyoutSubItem show_as;
+        show_as.Text(Tr(L"Afficher comme", L"Show as"));
+        FontIcon show_as_icon;
+        show_as_icon.Glyph(L"\xE787");
+        show_as.Icon(show_as_icon);
+        {
+            static const wchar_t* const values[] = { L"free", L"working", L"tentative", L"busy", L"oof" };
+            hstring current = event.GetNamedString(L"show_as", L"busy");
+            std::vector<hstring> labels{ Tr(L"Disponible", L"Free"), Tr(L"Travaille ailleurs", L"Working elsewhere"),
+                Tr(L"Provisoire", L"Tentative"), Tr(L"Occupé(e)", L"Busy"), Tr(L"Absent(e)", L"Out of office") };
+            for (int i = 0; i < 5; ++i)
+            {
+                RadioMenuFlyoutItem item;
+                item.Text(labels[i]);
+                item.GroupName(L"show_as");
+                item.IsChecked(current == values[i]);
+                hstring value = values[i];
+                item.Click([this, event, value](IInspectable const&, RoutedEventArgs const&)
+                {
+                    JsonObject changes;
+                    changes.SetNamedValue(L"show_as", JsonValue::CreateStringValue(value));
+                    PatchEvent(event, changes);
+                });
+                show_as.Items().Append(item);
+            }
+        }
+        flyout.Items().Append(show_as);
+
+        /* Privé */
+        ToggleMenuFlyoutItem private_item;
+        private_item.Text(Tr(L"Privé", L"Private"));
+        FontIcon private_icon;
+        private_icon.Glyph(L"\xE72E");
+        private_item.Icon(private_icon);
+        bool is_private = event.GetNamedBoolean(L"private", false);
+        private_item.IsChecked(is_private);
+        private_item.Click([this, event, is_private](IInspectable const&, RoutedEventArgs const&)
+        {
+            JsonObject changes;
+            changes.SetNamedValue(L"private", JsonValue::CreateBooleanValue(!is_private));
+            PatchEvent(event, changes);
+        });
+        flyout.Items().Append(private_item);
+
+        /* Importance */
+        MenuFlyoutSubItem importance;
+        importance.Text(Tr(L"Importance", L"Importance"));
+        FontIcon importance_icon;
+        importance_icon.Glyph(L"\xE783");
+        importance.Icon(importance_icon);
+        {
+            static const wchar_t* const values[] = { L"high", L"normal", L"low" };
+            hstring current = event.GetNamedString(L"importance", L"normal");
+            std::vector<hstring> labels{ Tr(L"Haute", L"High"), Tr(L"Normale", L"Normal"), Tr(L"Faible", L"Low") };
+            for (int i = 0; i < 3; ++i)
+            {
+                RadioMenuFlyoutItem item;
+                item.Text(labels[i]);
+                item.GroupName(L"importance");
+                item.IsChecked(current == values[i]);
+                hstring value = values[i];
+                item.Click([this, event, value](IInspectable const&, RoutedEventArgs const&)
+                {
+                    JsonObject changes;
+                    changes.SetNamedValue(L"importance", JsonValue::CreateStringValue(value));
+                    PatchEvent(event, changes);
+                });
+                importance.Items().Append(item);
+            }
+        }
+        flyout.Items().Append(importance);
+
+        element.ContextFlyout(flyout);
+    }
+
     /**
      * @brief Remplace les catégories d'un contact (champ vCard CATEGORIES) puis recharge la liste.
      * @param contact Contact au format JSON du moteur (book_uid, uid).

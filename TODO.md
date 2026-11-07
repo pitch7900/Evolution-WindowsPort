@@ -686,7 +686,7 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
 ### Éditeur d'événement et organisation de réunions (fenêtre indépendante)
 
 - [ ] 🔴 **Fenêtre indépendante redimensionnable de création / édition d'événement (`EventWindow`)** (comme pour les nouveaux courriels) : <a id="demo-editeur-evenement"></a>
-  - [ ] **Fenêtre autonome (`EventWindow`)** : fenêtre indépendante redimensionnable (`OverlappedPresenter`), non modale, permettant de créer et modifier plusieurs événements en parallèle tout en conservant sa taille et position d'une session à l'autre.
+  - [ ] **Fenêtre autonome (`EventWindow`)** : fenêtre indépendante redimensionnable (`OverlappedPresenter`), non modale, permettant de créer et modifier plusieurs événements en parallèle tout en conservant sa taille et position d'une session à l'autre. _(partiel : fenêtre redimensionnable avec bandeau faite (non modale) ; sans `OverlappedPresenter` dédié ni mémorisation de la taille)_
   - [ ] **Invitation de participants et organisation de réunion** :
     - [ ] Bouton *« Inviter des personnes »* transformant le rendez-vous individuel en réunion avec champs *Obligatoires*, *Facultatifs*, *Ressources*.
     - [ ] Autocomplétion dynamique des destinataires depuis les contacts locaux et l'annuaire d'entreprise (GAL Exchange Online / Microsoft 365).
@@ -702,11 +702,11 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
   - [ ] 🟡 **Options d'affichage et de disponibilité (façon Outlook)** :
     - [x] Sélecteur déroulant **« Afficher comme : »** avec icône et motifs visuels : *Libre / Disponible*, *Provisoire*, *Occupé(e)*, *Absent(e) / Congé (Out of Office)*, *Travaille ailleurs (Working Elsewhere)*. _(fait : les cinq états d'Outlook, transmis à Exchange Online par le module Microsoft 365 ; pas encore les motifs visuels dans la liste)_
     - [ ] Report visuel du statut sur la grille du calendrier (bandeau latéral coloré ou hachuré selon le statut : blanc pour libre, rayures bleues pour provisoire, plein pour occupé, rayures violettes pour absent, pointillés pour travaille ailleurs).
-    - [ ] Sélecteur de **Rappel** (aucun, 0 min, 5 min, 10 min, 15 min, 30 min, 1 h, etc.) et bouton de **Périodicité** (règles RRULE iCalendar : récurrence quotidienne, hebdomadaire, mensuelle, annuelle avec gestion des exceptions).
+    - [x] Sélecteur de **Rappel** (aucun, 0 min, 5 min, 10 min, 15 min, 30 min, 1 h, etc.) et bouton de **Périodicité** (règles RRULE iCalendar : récurrence quotidienne, hebdomadaire, mensuelle, annuelle avec gestion des exceptions). _(fait : rappels du bandeau ; périodicité simple (jour, semaine, mois, an, intervalle, nombre d'occurrences), sans gestion des exceptions)_
   - [ ] 🟡 **Indicateurs, confidentialité et classement par couleur** :
     - [x] Bouton bascule **« Privé »** (icône cadenas) : marque l'événement avec `CLASS:PRIVATE` (ou `sensitivity: private` Exchange) pour masquer les détails (titre, lieu, participants) aux autres utilisateurs lors du partage de calendrier ou de l'accès délégué. _(fait : case « Privé » à la création et à la modification, `CLASS:PRIVATE` ; à vérifier dans Outlook Online)_
-    - [ ] Menu déroulant **« Classer »** (icône 4 carrés de couleur) : attribution de catégories avec codes couleur (synchronisées avec la liste principale Exchange Online).
-    - [ ] Boutons d'importance : **! Importance haute** et **↓ Importance faible** (propriété `PRIORITY`).
+    - [x] Menu déroulant **« Classer »** (icône 4 carrés de couleur) : attribution de catégories avec codes couleur (synchronisées avec la liste principale Exchange Online). _(fait : bandeau de la fenêtre d'événement et clic droit sur l'événement)_
+    - [x] Boutons d'importance : **! Importance haute** et **↓ Importance faible** (propriété `PRIORITY`). _(fait : bandeau de la fenêtre d'événement et clic droit)_
 - [x] 🟢 **Ajouter du temps de travail individuel** (bloc « focus » sans participants, bouton ruban dédié et durée 2h préremplie)
 - [x] 🟡 **Répondre aux invitations reçues** depuis le volet de lecture du Mail (Accepter / Provisoire / Refuser) <a id="demo-invitations"></a>
   - [ ] _Proposer un nouvel horaire_ (iTIP `COUNTER`) : non traité pour l'instant

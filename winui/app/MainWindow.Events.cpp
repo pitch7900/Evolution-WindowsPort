@@ -31,6 +31,7 @@ using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
 using namespace Microsoft::UI::Xaml::Media;
+using namespace Microsoft::UI::Xaml::Controls::Primitives;
 using namespace Windows::Data::Json;
 using namespace Windows::Foundation;
 
@@ -512,10 +513,7 @@ namespace winrt::EvolutionWin::implementation
             Grid::SetColumn(details, 1);
             row.Children().Append(details);
 
-            AttachCategoryContextMenu(row, event_categories, [this, ev](std::vector<std::wstring> const& names)
-            {
-                SetEventCategories(ev, names);
-            });
+            AttachEventContextMenu(row, ev);
 
             Button del_btn;
             FontIcon del_icon;
@@ -837,27 +835,19 @@ namespace winrt::EvolutionWin::implementation
      * organisateur et participants, suppression).
      * Paramètres :
      *   event : détail renvoyé par evo_core_get_event (), ou nullptr */
-    fire_and_forget MainWindow::ShowEventDialogAsync(JsonObject event, hstring const& summary_preset, bool is_focus, bool teams)
+    void MainWindow::ShowEventDialogAsync(JsonObject event, hstring const& summary_preset, bool is_focus, bool teams)
     {
-        auto strong = get_strong();
-        if (m_dialog_open || !Content() || !Content().XamlRoot())
-            co_return;
-
-        m_dialog_open = true;
+        if (!Content())
+            return;
 
         bool existing = static_cast<bool>(event);
         bool readonly = existing && event.GetNamedBoolean(L"readonly", false);
         bool all_day = existing && event.GetNamedBoolean(L"all_day", false);
 
-        ContentDialog dialog;
-        dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(existing ? (readonly ? L"Événement (lecture seule)" : L"Événement") : (is_focus ? L"Temps individuel (Focus)" : L"Nouvel événement")));
-        if (!readonly)
-            dialog.PrimaryButtonText(L"Enregistrer");
-        if (existing && !readonly)
-            dialog.SecondaryButtonText(L"Supprimer");
-        dialog.CloseButtonText(existing ? L"Fermer" : L"Annuler");
-        dialog.DefaultButton(readonly ? ContentDialogButton::Close : ContentDialogButton::Primary);
+        Window window;
+        window.Title(existing ? (readonly ? L"Événement (lecture seule)" : L"Événement") : (is_focus ? L"Temps individuel (Focus)" : L"Nouvel événement"));
+        window.AppWindow().Resize({ 1050, 820 });
+        ::EvolutionWin::SetWindowIcon(window.AppWindow());
 
         StackPanel panel;
         panel.Spacing(10);
@@ -893,9 +883,9 @@ namespace winrt::EvolutionWin::implementation
             create_task_btn.Content(btn_content);
             create_task_btn.HorizontalAlignment(HorizontalAlignment::Left);
             create_task_btn.Margin(ThicknessHelper::FromLengths(0, 2, 0, 4));
-            create_task_btn.Click([this, event, &dialog](IInspectable const&, RoutedEventArgs const&)
+            create_task_btn.Click([this, event, window](IInspectable const&, RoutedEventArgs const&)
             {
-                dialog.Hide();
+                window.Close();
                 CreateTaskFromEvent(event);
             });
             panel.Children().Append(create_task_btn);
@@ -974,14 +964,12 @@ namespace winrt::EvolutionWin::implementation
             show_as_combo.SelectedIndex(show_as_index);
         }
         show_as_combo.IsEnabled(!readonly);
-        panel.Children().Append(show_as_combo);
 
         CheckBox private_check;
         private_check.Content(box_value(Tr(L"Privé (détails masqués aux personnes avec qui le calendrier est partagé)",
                                            L"Private (details hidden from people the calendar is shared with)")));
         private_check.IsChecked(existing && event.GetNamedBoolean(L"private", false));
         private_check.IsEnabled(!readonly);
-        panel.Children().Append(private_check);
 
         /* début / fin : date et heure */
         /* créneau sélectionné dans la grille du calendrier : utilisé une seule fois */
@@ -1097,7 +1085,6 @@ namespace winrt::EvolutionWin::implementation
                     selected = i;
             reminder_combo.SelectedIndex(selected);
         }
-        panel.Children().Append(reminder_combo);
 
         /* fuseau horaire (noms IANA) : le premier choix conserve l'heure
          * de cet ordinateur, enregistrée en UTC */
@@ -1262,32 +1249,329 @@ namespace winrt::EvolutionWin::implementation
             desc_box.Text(event.GetNamedString(L"description", L""));
         panel.Children().Append(desc_box);
 
-        ScrollViewer scroll;
-        scroll.Content(panel);
-        scroll.MaxHeight(600);
-        dialog.Content(scroll);
 
-        auto result = co_await dialog.ShowAsync();
-        m_dialog_open = false;
+        /* ------------------------------------------------------------------ */
+        /* Fenêtre de l'événement : bandeau d'actions (Enregistrer, Supprimer, Afficher comme,      */
+        /* Rappel, Périodicité, Classer, Privé, Importance) puis formulaire                        */
+        /* ------------------------------------------------------------------ */
 
-        if (existing && result == ContentDialogResult::Secondary)
+        /* catégories de l'événement (modifiables par « Classer ») */
+        auto categories = std::make_shared<std::vector<std::wstring>>(
+            existing ? ::EvolutionWin::CategoryStore::CategoriesOf(event) : std::vector<std::wstring>{});
+        StackPanel category_chips;
+        panel.Children().InsertAt(0, category_chips);
+        auto refresh_chips = [this, category_chips, categories]()
         {
-            m_core->DeleteEvent(event.GetNamedString(L"calendar_uid", L""), event.GetNamedString(L"uid", L""),
-                [this](hstring const&, hstring const& error)
+            category_chips.Children().Clear();
+            category_chips.Children().Append(BuildCategoryChips(*categories));
+        };
+        refresh_chips();
+
+        /* périodicité : règle RRULE, renvoyée seulement si l'utilisateur l'a modifiée */
+        auto rrule = std::make_shared<std::wstring>(existing ? std::wstring{ event.GetNamedString(L"rrule", L"") } : std::wstring{});
+        auto rrule_touched = std::make_shared<bool>(false);
+
+        auto icon_button = [](ContentControl const& button, hstring const& glyph, hstring const& label, Windows::UI::Color const& tint)
+        {
+            StackPanel content;
+            content.Spacing(4);
+            content.HorizontalAlignment(HorizontalAlignment::Center);
+            FontIcon icon;
+            icon.Glyph(glyph);
+            icon.FontSize(20);
+            icon.HorizontalAlignment(HorizontalAlignment::Center);
+            if (tint.A != 0)
+                icon.Foreground(SolidColorBrush(tint));
+            TextBlock text;
+            text.Text(label);
+            text.FontSize(12);
+            text.HorizontalAlignment(HorizontalAlignment::Center);
+            content.Children().Append(icon);
+            content.Children().Append(text);
+            button.Content(content);
+            button.MinWidth(76);
+        };
+        Windows::UI::Color no_tint{ 0, 0, 0, 0 };
+
+        Button save_button;
+        icon_button(save_button, L"\xE74E", Tr(L"Enregistrer", L"Save"), no_tint);
+        save_button.Style(Application::Current().Resources().Lookup(box_value(L"AccentButtonStyle")).as<Style>());
+        save_button.IsEnabled(!readonly);
+        Button delete_button;
+        icon_button(delete_button, L"\xE74D", Tr(L"Supprimer", L"Delete"), no_tint);
+        delete_button.IsEnabled(existing && !readonly);
+        Button close_button;
+        icon_button(close_button, L"\xE711", Tr(L"Fermer", L"Close"), no_tint);
+
+        StackPanel actions_row;
+        actions_row.Orientation(Orientation::Horizontal);
+        actions_row.Spacing(4);
+        actions_row.Children().Append(save_button);
+        if (existing)
+            actions_row.Children().Append(delete_button);
+        actions_row.Children().Append(close_button);
+
+        /* options : Afficher comme, Rappel, Périodicité */
+        auto labelled = [](hstring const& label, FrameworkElement const& control)
+        {
+            Grid row;
+            row.ColumnSpacing(8);
+            ColumnDefinition a, b;
+            a.Width(GridLengthHelper::FromPixels(110));
+            b.Width(GridLengthHelper::Auto());
+            row.ColumnDefinitions().Append(a);
+            row.ColumnDefinitions().Append(b);
+            TextBlock text;
+            text.Text(label);
+            text.VerticalAlignment(VerticalAlignment::Center);
+            Grid::SetColumn(control, 1);
+            row.Children().Append(text);
+            row.Children().Append(control);
+            return row;
+        };
+        show_as_combo.Header(nullptr);
+        show_as_combo.Width(180);
+        reminder_combo.Header(nullptr);
+        reminder_combo.Width(180);
+        StackPanel option_fields;
+        option_fields.Spacing(6);
+        option_fields.Children().Append(labelled(Tr(L"Afficher comme :", L"Show as:"), show_as_combo));
+        option_fields.Children().Append(labelled(Tr(L"Rappel :", L"Reminder:"), reminder_combo));
+
+        Button recurrence_button;
+        icon_button(recurrence_button, L"\xE72C", Tr(L"Périodicité", L"Recurrence"), no_tint);
+        recurrence_button.IsEnabled(!readonly);
+        {
+            ComboBox freq_combo;
+            freq_combo.Header(box_value(Tr(L"Répétition", L"Repeat")));
+            freq_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
+            for (auto const& label : { Tr(L"Aucune", L"None"), Tr(L"Tous les jours", L"Daily"), Tr(L"Toutes les semaines", L"Weekly"),
+                                       Tr(L"Tous les mois", L"Monthly"), Tr(L"Tous les ans", L"Yearly") })
+                freq_combo.Items().Append(box_value(label));
+            NumberBox interval_box;
+            interval_box.Header(box_value(Tr(L"Tous les (intervalle)", L"Every (interval)")));
+            interval_box.Minimum(1);
+            interval_box.Maximum(99);
+            interval_box.Value(1);
+            interval_box.SpinButtonPlacementMode(NumberBoxSpinButtonPlacementMode::Inline);
+            ComboBox end_combo;
+            end_combo.Header(box_value(Tr(L"Fin", L"End")));
+            end_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
+            end_combo.Items().Append(box_value(Tr(L"Jamais", L"Never")));
+            end_combo.Items().Append(box_value(Tr(L"Après un nombre d'occurrences", L"After a number of occurrences")));
+            NumberBox count_box;
+            count_box.Header(box_value(Tr(L"Nombre d'occurrences", L"Number of occurrences")));
+            count_box.Minimum(1);
+            count_box.Maximum(999);
+            count_box.Value(10);
+            count_box.SpinButtonPlacementMode(NumberBoxSpinButtonPlacementMode::Inline);
+            TextBlock note;
+            note.TextWrapping(TextWrapping::Wrap);
+            note.MaxWidth(280);
+            Windows::UI::Color grey{ 255, 128, 128, 128 };
+            note.Foreground(SolidColorBrush(grey));
+
+            /* état initial d'après la règle existante */
             {
-                if (!error.empty())
+                std::wstring rule = *rrule;
+                auto value_of = [&rule](std::wstring const& key) -> std::wstring
                 {
-                    ShowStatus(L"Suppression de l'événement : " + error, InfoBarSeverity::Error);
+                    size_t at = rule.find(key + L"=");
+                    if (at == std::wstring::npos)
+                        return L"";
+                    size_t from = at + key.size() + 1;
+                    size_t to = rule.find(L';', from);
+                    return rule.substr(from, to == std::wstring::npos ? std::wstring::npos : to - from);
+                };
+                std::wstring freq = value_of(L"FREQ");
+                freq_combo.SelectedIndex(freq == L"DAILY" ? 1 : freq == L"WEEKLY" ? 2 : freq == L"MONTHLY" ? 3 : freq == L"YEARLY" ? 4 : 0);
+                if (!value_of(L"INTERVAL").empty())
+                    interval_box.Value(_wtof(value_of(L"INTERVAL").c_str()));
+                if (!value_of(L"COUNT").empty())
+                {
+                    end_combo.SelectedIndex(1);
+                    count_box.Value(_wtof(value_of(L"COUNT").c_str()));
+                }
+                else
+                    end_combo.SelectedIndex(0);
+                if (!rule.empty() && (rule.find(L"BYDAY") != std::wstring::npos || rule.find(L"UNTIL") != std::wstring::npos ||
+                                      rule.find(L"BYMONTH") != std::wstring::npos || rule.find(L"BYSETPOS") != std::wstring::npos))
+                    note.Text(Tr(L"Règle personnalisée : elle est conservée tant que vous ne modifiez pas ces réglages.",
+                                 L"Custom rule: it is kept as long as you do not change these settings."));
+            }
+            count_box.IsEnabled(end_combo.SelectedIndex() == 1);
+
+            /* recompose la règle à chaque changement */
+            auto rebuild = [rrule, rrule_touched, freq_combo, interval_box, end_combo, count_box, note]()
+            {
+                *rrule_touched = true;
+                note.Text(L"");
+                count_box.IsEnabled(end_combo.SelectedIndex() == 1);
+                static const wchar_t* const freqs[] = { L"", L"DAILY", L"WEEKLY", L"MONTHLY", L"YEARLY" };
+                int index = freq_combo.SelectedIndex();
+                if (index <= 0 || index > 4)
+                {
+                    rrule->clear();
                     return;
                 }
-                ShowStatus(L"Événement supprimé.", InfoBarSeverity::Success);
-                LoadEvents();
-            });
-            co_return;
+                std::wstring rule = std::wstring{ L"FREQ=" } + freqs[index];
+                int interval = static_cast<int>(interval_box.Value() >= 1 ? interval_box.Value() : 1);
+                if (interval > 1)
+                    rule += L";INTERVAL=" + std::to_wstring(interval);
+                if (end_combo.SelectedIndex() == 1)
+                    rule += L";COUNT=" + std::to_wstring(static_cast<int>(count_box.Value() >= 1 ? count_box.Value() : 1));
+                *rrule = rule;
+            };
+            freq_combo.SelectionChanged([rebuild](auto&&, auto&&) { rebuild(); });
+            end_combo.SelectionChanged([rebuild](auto&&, auto&&) { rebuild(); });
+            interval_box.ValueChanged([rebuild](auto&&, auto&&) { rebuild(); });
+            count_box.ValueChanged([rebuild](auto&&, auto&&) { rebuild(); });
+
+            StackPanel flyout_panel;
+            flyout_panel.Spacing(8);
+            flyout_panel.Width(300);
+            flyout_panel.Children().Append(freq_combo);
+            flyout_panel.Children().Append(interval_box);
+            flyout_panel.Children().Append(end_combo);
+            flyout_panel.Children().Append(count_box);
+            flyout_panel.Children().Append(note);
+            Flyout flyout;
+            flyout.Content(flyout_panel);
+            recurrence_button.Flyout(flyout);
         }
 
-        if (readonly || result != ContentDialogResult::Primary || summary_box.Text().empty())
-            co_return;
+        Grid options_row;
+        options_row.ColumnSpacing(8);
+        {
+            ColumnDefinition a, b;
+            a.Width(GridLengthHelper::Auto());
+            b.Width(GridLengthHelper::Auto());
+            options_row.ColumnDefinitions().Append(a);
+            options_row.ColumnDefinitions().Append(b);
+        }
+        options_row.Children().Append(option_fields);
+        Grid::SetColumn(recurrence_button, 1);
+        options_row.Children().Append(recurrence_button);
+
+        /* indicateurs : Classer, Privé, Importance */
+        DropDownButton classify_button;
+        icon_button(classify_button, L"\xE8EC", Tr(L"Classer", L"Categorise"), no_tint);
+        classify_button.IsEnabled(!readonly);
+        MenuFlyout classify_flyout;
+        classify_button.Flyout(classify_flyout);
+        auto repopulate = std::make_shared<std::function<void()>>();
+        *repopulate = [this, classify_flyout, categories, refresh_chips, repopulate]()
+        {
+            PopulateItemCategoryMenu(classify_flyout.Items(), *categories,
+                [categories, refresh_chips, repopulate](std::vector<std::wstring> const& names)
+                {
+                    *categories = names;
+                    refresh_chips();
+                    (*repopulate)();
+                });
+        };
+        (*repopulate)();
+
+        ToggleButton private_toggle;
+        icon_button(private_toggle, L"\xE72E", Tr(L"Privé", L"Private"), no_tint);
+        private_toggle.IsChecked(existing && event.GetNamedBoolean(L"private", false));
+        private_toggle.IsEnabled(!readonly);
+        /* « private_check » reste la source de la valeur enregistrée */
+        private_check.IsChecked(private_toggle.IsChecked());
+        private_toggle.Click([private_toggle, private_check](auto&&, auto&&) { private_check.IsChecked(private_toggle.IsChecked()); });
+
+        Windows::UI::Color red{ 255, 232, 17, 35 };
+        Windows::UI::Color blue{ 255, 0, 120, 212 };
+        ToggleButton importance_high;
+        icon_button(importance_high, L"\xE783", Tr(L"Importance haute", L"High importance"), red);
+        ToggleButton importance_low;
+        icon_button(importance_low, L"\xE74B", Tr(L"Importance faible", L"Low importance"), blue);
+        {
+            hstring importance = existing ? event.GetNamedString(L"importance", L"normal") : hstring{ L"normal" };
+            importance_high.IsChecked(importance == L"high");
+            importance_low.IsChecked(importance == L"low");
+        }
+        importance_high.IsEnabled(!readonly);
+        importance_low.IsEnabled(!readonly);
+        importance_high.Click([importance_high, importance_low](auto&&, auto&&) { if (importance_high.IsChecked().Value()) importance_low.IsChecked(false); });
+        importance_low.Click([importance_high, importance_low](auto&&, auto&&) { if (importance_low.IsChecked().Value()) importance_high.IsChecked(false); });
+
+        StackPanel indicators_row;
+        indicators_row.Orientation(Orientation::Horizontal);
+        indicators_row.Spacing(4);
+        indicators_row.Children().Append(classify_button);
+        indicators_row.Children().Append(private_toggle);
+        {
+            StackPanel importance_column;
+            importance_column.Spacing(2);
+            importance_column.Children().Append(importance_high);
+            importance_column.Children().Append(importance_low);
+            indicators_row.Children().Append(importance_column);
+        }
+
+        auto group = [](hstring const& title, UIElement const& body)
+        {
+            StackPanel column;
+            column.Spacing(2);
+            column.Children().Append(body);
+            TextBlock caption_text;
+            caption_text.Text(title);
+            caption_text.FontSize(12);
+            caption_text.HorizontalAlignment(HorizontalAlignment::Center);
+            caption_text.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+            column.Children().Append(caption_text);
+            Border border;
+            border.Child(column);
+            border.Padding(ThicknessHelper::FromLengths(10, 4, 10, 4));
+            border.BorderThickness(ThicknessHelper::FromLengths(0, 0, 1, 0));
+            border.BorderBrush(Application::Current().Resources().Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>());
+            return border;
+        };
+        StackPanel ribbon_row;
+        ribbon_row.Orientation(Orientation::Horizontal);
+        ribbon_row.Children().Append(group(Tr(L"Actions", L"Actions"), actions_row));
+        ribbon_row.Children().Append(group(Tr(L"Options", L"Options"), options_row));
+        ribbon_row.Children().Append(group(Tr(L"Indicateurs", L"Tags"), indicators_row));
+        ScrollViewer ribbon;
+        ribbon.HorizontalScrollBarVisibility(ScrollBarVisibility::Auto);
+        ribbon.VerticalScrollBarVisibility(ScrollBarVisibility::Disabled);
+        ribbon.HorizontalScrollMode(ScrollMode::Auto);
+        ribbon.VerticalScrollMode(ScrollMode::Disabled);
+        ribbon.Content(ribbon_row);
+        ribbon.Background(Application::Current().Resources().Lookup(box_value(L"CardBackgroundFillColorDefaultBrush")).as<Brush>());
+
+        ScrollViewer scroll;
+        scroll.Content(panel);
+        panel.Margin(ThicknessHelper::FromLengths(16, 12, 16, 12));
+        panel.MaxWidth(900);
+        panel.HorizontalAlignment(HorizontalAlignment::Stretch);
+
+        Grid window_root;
+        window_root.Background(Application::Current().Resources().Lookup(box_value(L"ApplicationPageBackgroundThemeBrush")).as<Brush>());
+        {
+            RowDefinition ribbon_row_def, content_row_def;
+            ribbon_row_def.Height(GridLengthHelper::Auto());
+            content_row_def.Height(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+            window_root.RowDefinitions().Append(ribbon_row_def);
+            window_root.RowDefinitions().Append(content_row_def);
+        }
+        Grid::SetRow(ribbon, 0);
+        Grid::SetRow(scroll, 1);
+        window_root.Children().Append(ribbon);
+        window_root.Children().Append(scroll);
+        window.Content(window_root);
+
+        /* enregistrement : retourne true si la fenêtre peut se fermer */
+        auto commit = [=]() -> bool
+        {
+        if (readonly)
+            return true;
+        if (summary_box.Text().empty())
+        {
+            ShowStatus(Tr(L"Saisissez un titre pour l'événement.", L"Enter a title for the event."), InfoBarSeverity::Warning);
+            summary_box.Focus(FocusState::Programmatic);
+            return false;
+        }
 
         /* date du sélecteur + heure du sélecteur (minuit en journée entière) */
         bool day = all_day_box.IsChecked() && all_day_box.IsChecked().GetBoolean();
@@ -1320,6 +1604,11 @@ namespace winrt::EvolutionWin::implementation
         if (!readonly)
             payload.SetNamedValue(L"private", JsonValue::CreateBooleanValue(private_check.IsChecked() && private_check.IsChecked().GetBoolean()));
         payload.SetNamedValue(L"description", JsonValue::CreateStringValue(desc_box.Text()));
+        payload.SetNamedValue(L"categories", ::EvolutionWin::CategoryStore::ToJsonArray(*categories));
+        payload.SetNamedValue(L"importance", JsonValue::CreateStringValue(
+            importance_high.IsChecked().Value() ? L"high" : (importance_low.IsChecked().Value() ? L"low" : L"normal")));
+        if (*rrule_touched)
+            payload.SetNamedValue(L"rrule", JsonValue::CreateStringValue(hstring{ *rrule }));
         payload.SetNamedValue(L"start", JsonValue::CreateNumberValue(static_cast<double>(start_unix)));
         payload.SetNamedValue(L"end", JsonValue::CreateNumberValue(static_cast<double>(end_unix)));
         payload.SetNamedValue(L"all_day", JsonValue::CreateBooleanValue(day));
@@ -1394,7 +1683,7 @@ namespace winrt::EvolutionWin::implementation
                 LoadEvents();
                 SendEventInvitations(sender_uid, edit_calendar, edit_uid);
             });
-            co_return;
+            return true;
         }
 
         hstring chosen_calendar = ActiveCalendarUid();
@@ -1470,6 +1759,32 @@ namespace winrt::EvolutionWin::implementation
                 }
             }
         });
+        return true;
+        };
+
+        save_button.Click([commit, window](auto&&, auto&&)
+        {
+            if (commit())
+                window.Close();
+        });
+        delete_button.Click([this, event, window](auto&&, auto&&)
+        {
+            m_core->DeleteEvent(event.GetNamedString(L"calendar_uid", L""), event.GetNamedString(L"uid", L""),
+                [this](hstring const&, hstring const& error)
+            {
+                if (!error.empty())
+                {
+                    ShowStatus(L"Suppression de l'événement : " + error, InfoBarSeverity::Error);
+                    return;
+                }
+                ShowStatus(L"Événement supprimé.", InfoBarSeverity::Success);
+                LoadEvents();
+            });
+            window.Close();
+        });
+        close_button.Click([window](auto&&, auto&&) { window.Close(); });
+
+        window.Activate();
     }
 
     /**
