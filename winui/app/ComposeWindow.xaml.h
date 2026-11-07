@@ -149,6 +149,8 @@ namespace winrt::EvolutionWin::implementation
         void RemoveRecentRecipient(std::wstring const& address);
         EvolutionWin::RecipientSuggestion m_focused_suggestion{ nullptr };
         std::vector<hstring> m_account_uids;
+        /* adresse du titulaire pour une entrée « De la part de » (vide : envoi ordinaire ou Send As) */
+        std::vector<hstring> m_on_behalf;
         std::vector<hstring> m_attachments;
         ::EvolutionWin::ComposeData m_data;
         bool m_html_mode{ true };

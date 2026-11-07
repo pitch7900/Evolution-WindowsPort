@@ -131,7 +131,9 @@ void		evo_core_reconnect_account	(EvoCore *core,
  *  "subject": "...", "text": "corps en texte brut",
  *  "html": "<html>...</html>" (optionnel, génère un multipart/alternative),
  *  "attachments": ["C:\\chemin\\fichier", ...] (optionnel),
- *  "in_reply_to": "<message id>", "references": "<...>" (optionnel)}
+ *  "in_reply_to": "<message id>", "references": "<...>" (optionnel),
+ *  "on_behalf_of": "<adresse du titulaire>" (optionnel : envoi « De la part de »,
+ *   From = titulaire, en-tête Sender = identité du compte)}
  * Le résultat est {"saved": true|false} (copie enregistrée dans Envoyés). */
 void		evo_core_send_message		(EvoCore *core,
 						 const char *message_json,

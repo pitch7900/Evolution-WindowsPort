@@ -164,5 +164,8 @@
   <data name="SearchScope_Folder" xml:space="preserve">
     <value>Rechercher dans le dossier (Ctrl+E)</value>
   </data>
+  <data name="Compose_FromSendOnBehalf" xml:space="preserve">
+    <value> — de la part de (Send on Behalf)</value>
+  </data>
 </root>
 

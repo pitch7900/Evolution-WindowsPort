@@ -259,7 +259,7 @@ En entreprise (Exchange Online / Microsoft 365, Exchange on-premise), les utilis
 - [ ] 🟡 **Envoi d'emails « En tant que » (Send As) et « De la part de » (Send on Behalf)** :
   - [x] **Sélecteur d'expéditeur étendu (`FromBox`)** : dans la fenêtre de rédaction (`ComposeWindow`), sélection automatique ou manuelle des adresses de boîtes déléguées / partagées autorisées dans le champ déroulant _De :_. _(fait : les boîtes partagées figurent dans « De : » avec la mention Send As)_
   - [x] **Envoi « En tant que » (`Send As`)** : émission directe avec l'adresse de la boîte déléguée en en-tête `From:`, sans mention de l'identité personnelle (droits `SendAs` Exchange Online / Graph). _(fait et validé ; le droit Send As met jusqu'à environ une heure à être pris en compte côté Exchange)_
-  - [ ] **Envoi « De la part de » (`Send on Behalf`)** : émission avec l'en-tête `Sender:` (adresse de l'utilisateur) et `From:` (adresse du titulaire), affichant « [Utilisateur] de la part de [Titulaire] ».
+  - [x] **Envoi « De la part de » (`Send on Behalf`)** : émission avec l'en-tête `Sender:` (adresse de l'utilisateur) et `From:` (adresse du titulaire), affichant « [Utilisateur] de la part de [Titulaire] ». _(codé : entrée « De la part de » dans « De : » ; reste à valider sur un tenant réel avec le droit Send on Behalf)_
   - [x] 🟢 **Copie dans les Éléments envoyés** : enregistrement automatique de la copie du message envoyé dans le dossier *Éléments envoyés* de la boîte partagée / déléguée correspondante (respect des paramètres Exchange `MessageCopyForSentAsEnabled` et `MessageCopyForSendOnBehalfEnabled`). _(fait : via le compte de la boîte partagée, la copie va dans ses éléments envoyés)_
 - [ ] 🟠 **Gestion des permissions et délégations d'accès à la boîte mail depuis l'interface (Exchange Online et Gmail)** :
   - Permettre à l'utilisateur de visualiser, modifier et révoquer directement depuis EvolutionWin les autorisations d'accès accordées à des tiers sur sa boîte mail ou ses dossiers, sans recourir aux interfaces d'administration web.
@@ -439,7 +439,7 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
 
 ### Boîte de réception Prioritaire
 
-- [x] 🟠 **Onglets _Prioritaire_ / _Autres_** (classement Exchange Online `inferenceClassification` via Graph ; sans objet pour les autres comptes) _(fait en 1.0.2 : onglets dans la Boîte de réception des comptes Microsoft 365, à valider sur un tenant réel)_
+- [x] 🟠 **Onglets _Prioritaire_ / _Autres_** (classement Exchange Online `inferenceClassification` via Graph ; sans objet pour les autres comptes) _(fait en 1.1.0 : onglets dans la Boîte de réception des comptes Microsoft 365, à valider sur un tenant réel)_
   - [x] Déplacer un message vers _Autres_ / _Prioritaire_ (clic droit), avec règle _Toujours déplacer_ pour l'expéditeur
   - [x] Activer / désactiver par compte (clic droit sur le compte)
   - [x] Compteurs de non lus par onglet (d'après les 500 messages chargés du dossier)
@@ -598,9 +598,9 @@ Sécurisation de bout en bout des courriels par signature et chiffrement avec un
     - [x] **Consultation du dossier des éléments récupérables** : fenêtre ou vue dédiée affichant la liste des messages présents dans le dossier de rétention serveur (`Recoverable Items` / `Deletions`, accessible via Microsoft Graph `/mailFolders/recoverableitemsdeletions/messages` ou EWS `recoverableitemsdeletions`) avec colonnes objet, expéditeur, date de suppression/réception, taille _(fait via Graph : colonnes Objet, Supprimé le, De, Reçu, Envoyé à ; 100 plus récents)_
     - [x] **Restauration en self-service** : sélection unitaire ou multiple d'éléments avec bouton _Restaurer les éléments sélectionnés_ (rétablissement direct dans la Boîte de réception ou le dossier d'origine) et bouton _Supprimer définitivement_ (purge manuelle si autorisée par la stratégie de rétention) _(fait : fenêtre redimensionnable, restauration dans la Boîte de réception ou suppression définitive ; pas de restauration vers le dossier d'origine)_
     - [x] **Recherche et tri** : filtrage par expéditeur, objet ou date de suppression pour localiser rapidement les courriels purgés par erreur _(fait : filtre texte et tri par colonne)_
-- [x] 🟡 **Favoris** : section _Favoris_ en haut du volet des dossiers, réordonnable _(fait en 1.0.2 : ajout / retrait par clic droit, Monter / Descendre ; pas de glisser-déposer)_
+- [x] 🟡 **Favoris** : section _Favoris_ en haut du volet des dossiers, réordonnable _(fait en 1.1.0 : ajout / retrait par clic droit, Monter / Descendre ; pas de glisser-déposer)_
 - [x] 🟢 **Afficher dans le navigateur** (OWA / webmail du fournisseur)
-- [x] 🟠 **Dossiers de recherche** (dossiers virtuels `CamelVeeFolder`, aujourd'hui ignorés par `evo-core`), avec modèles prédéfinis : non lus, marqués, de personnes spécifiques, gros messages… _(fait en 1.0.2 sans `CamelVeeFolder` : requêtes enregistrées évaluées par le moteur à l'ouverture ; modèles non lus, marqués, pièces jointes, gros messages, d'une personne ; limité aux 500 plus récents ; pas de compteur de non lus ni de mise à jour automatique à l'arrivée d'un message)_
+- [x] 🟠 **Dossiers de recherche** (dossiers virtuels `CamelVeeFolder`, aujourd'hui ignorés par `evo-core`), avec modèles prédéfinis : non lus, marqués, de personnes spécifiques, gros messages… _(fait en 1.1.0 sans `CamelVeeFolder` : requêtes enregistrées évaluées par le moteur à l'ouverture ; modèles non lus, marqués, pièces jointes, gros messages, d'une personne ; limité aux 500 plus récents ; pas de compteur de non lus ni de mise à jour automatique à l'arrivée d'un message)_
 - [ ] **Propriétés du dossier** :
   - [ ] 🟡 Taille, nombre d'éléments, afficher le total ou les non-lus (quota du compte : §3)
   - [ ] 🟠 Autorisations du dossier (partage / délégation Exchange, ACL IMAP)

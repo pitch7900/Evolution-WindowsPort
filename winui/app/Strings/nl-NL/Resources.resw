@@ -164,5 +164,8 @@
   <data name="SearchScope_Folder" xml:space="preserve">
     <value>In map zoeken (Ctrl+E)</value>
   </data>
+  <data name="Compose_FromSendOnBehalf" xml:space="preserve">
+    <value> — namens (Send on Behalf)</value>
+  </data>
 </root>
 

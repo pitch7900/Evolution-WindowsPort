@@ -255,7 +255,7 @@ core_send_message_run (EvoCore *core,
 	CamelInternetAddress *from = NULL, *to = NULL, *cc = NULL, *bcc = NULL, *recipients = NULL;
 	CamelMimeMessage *message = NULL;
 	CamelService *transport = NULL;
-	const gchar *account_uid, *subject, *text, *html, *header;
+	const gchar *account_uid, *subject, *text, *html, *header, *on_behalf = NULL;
 	gboolean saved = FALSE, sent_message_saved = FALSE;
 	gchar *json = NULL;
 
@@ -283,9 +283,16 @@ core_send_message_run (EvoCore *core,
 	}
 
 	from = camel_internet_address_new ();
-	camel_internet_address_add (from,
-		e_source_mail_identity_get_name (identity_extension),
-		e_source_mail_identity_get_address (identity_extension));
+	on_behalf = json_object_get_string_member_with_default (object, "on_behalf_of", "");
+	if (on_behalf && *on_behalf) {
+		/* « De la part de » (Send on Behalf) : From = titulaire de la boîte, Sender = utilisateur */
+		camel_internet_address_add (from, NULL, on_behalf);
+	} else {
+		on_behalf = NULL;
+		camel_internet_address_add (from,
+			e_source_mail_identity_get_name (identity_extension),
+			e_source_mail_identity_get_address (identity_extension));
+	}
 
 	to = parse_addresses (object, "to");
 	cc = parse_addresses (object, "cc");
@@ -308,6 +315,19 @@ core_send_message_run (EvoCore *core,
 	message = camel_mime_message_new ();
 	camel_mime_message_set_subject (message, subject);
 	camel_mime_message_set_from (message, from);
+	if (on_behalf) {
+		CamelInternetAddress *sender = camel_internet_address_new ();
+		gchar *formatted;
+
+		camel_internet_address_add (sender,
+			e_source_mail_identity_get_name (identity_extension),
+			e_source_mail_identity_get_address (identity_extension));
+		formatted = camel_address_encode (CAMEL_ADDRESS (sender));
+		if (formatted && *formatted)
+			camel_medium_set_header (CAMEL_MEDIUM (message), "Sender", formatted);
+		g_free (formatted);
+		g_object_unref (sender);
+	}
 	camel_mime_message_set_recipients (message, CAMEL_RECIPIENT_TYPE_TO, to);
 	if (camel_address_length (CAMEL_ADDRESS (cc)) > 0)
 		camel_mime_message_set_recipients (message, CAMEL_RECIPIENT_TYPE_CC, cc);

@@ -119,7 +119,7 @@ core_list_accounts_run (EvoCore *core,
 		json_builder_add_boolean_value (builder, src ? e_source_get_enabled (src) : TRUE);
 		{
 			/* boîte partagée Microsoft 365 (emprunt d'identité) : adresse de la boîte ouverte */
-			gchar *shared = NULL;
+			gchar *shared = NULL, *owner = NULL;
 
 			if (src && provider && g_strcmp0 (provider->protocol, "microsoft365") == 0 &&
 			    e_source_has_extension (src, e_source_camel_get_extension_name ("microsoft365"))) {
@@ -127,13 +127,19 @@ core_list_accounts_run (EvoCore *core,
 					e_source_get_extension (src, e_source_camel_get_extension_name ("microsoft365")));
 				gboolean use = FALSE;
 
-				g_object_get (settings, "use-impersonation", &use, "impersonate-user", &shared, NULL);
-				if (!use || !shared || !*shared)
+				g_object_get (settings, "use-impersonation", &use, "impersonate-user", &shared, "user", &owner, NULL);
+				if (!use || !shared || !*shared) {
 					g_clear_pointer (&shared, g_free);
+					g_clear_pointer (&owner, g_free);
+				}
 			}
 			json_builder_set_member_name (builder, "shared");
 			json_builder_add_string_value (builder, shared ? shared : "");
+			/* identifiant (adresse) du compte d'origine, utile à l'envoi « De la part de » */
+			json_builder_set_member_name (builder, "shared_owner");
+			json_builder_add_string_value (builder, owner ? owner : "");
 			g_free (shared);
+			g_free (owner);
 		}
 		g_clear_object (&src);
 		core_builder_add_identity_signature (core, builder, camel_service_get_uid (service));

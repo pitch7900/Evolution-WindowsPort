@@ -96,10 +96,35 @@ namespace winrt::EvolutionWin::implementation
                 selected = static_cast<int>(m_account_uids.size());
 
             m_account_uids.push_back(uid);
+            m_on_behalf.push_back(L"");
             hstring label = address.empty() || address == name ? name : name + L" <" + address + L">";
+            hstring shared_owner = account.GetNamedString(L"shared_owner", L"");
             if (!account.GetNamedString(L"shared", L"").empty())
                 label = label + L" — boîte partagée (Send As)";
             FromBox().Items().Append(box_value(label));
+
+            /* « De la part de » : envoi par le compte d'origine, From = boîte partagée, Sender = utilisateur */
+            if (!account.GetNamedString(L"shared", L"").empty() && !shared_owner.empty())
+            {
+                for (auto const& other_value : accounts)
+                {
+                    auto other = other_value.GetObject();
+                    if (other.GetNamedBoolean(L"local", false) || !other.GetNamedString(L"shared", L"").empty())
+                        continue;
+                    std::wstring other_address{ other.GetNamedString(L"address", L"") };
+                    std::wstring owner{ shared_owner };
+                    if (other_address.empty()
+                        || ::CompareStringOrdinal(other_address.c_str(), -1, owner.c_str(), -1, TRUE) != CSTR_EQUAL)
+                        continue;
+                    m_account_uids.push_back(other.GetNamedString(L"uid"));
+                    m_on_behalf.push_back(account.GetNamedString(L"address", L""));
+                    FromBox().Items().Append(box_value(
+                        account.GetNamedString(L"name", uid) + L" <" + account.GetNamedString(L"address", L"")
+                        + L">" + ::EvolutionWin::Helpers::Tr(L" — de la part de (Send on Behalf)",
+                            L" — on behalf of (Send on Behalf)", L"Compose_FromSendOnBehalf")));
+                    break;
+                }
+            }
         }
 
         if (!m_account_uids.empty())
@@ -1141,6 +1166,8 @@ namespace winrt::EvolutionWin::implementation
 
         JsonObject message;
         message.SetNamedValue(L"account", JsonValue::CreateStringValue(account_uid));
+        if (index < static_cast<int>(m_on_behalf.size()) && !m_on_behalf[index].empty())
+            message.SetNamedValue(L"on_behalf_of", JsonValue::CreateStringValue(m_on_behalf[index]));
         message.SetNamedValue(L"to", JsonValue::CreateStringValue(to_text));
         message.SetNamedValue(L"cc", JsonValue::CreateStringValue(cc_text));
         message.SetNamedValue(L"bcc", JsonValue::CreateStringValue(bcc_text));

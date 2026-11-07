@@ -10,7 +10,11 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
-## [1.0.2] — en cours
+## [1.1.0] — en cours
+
+- **Envoi « De la part de » (Send on Behalf)** : pour chaque boîte partagée Microsoft 365 ouverte, la liste « De : » de la rédaction propose une entrée supplémentaire « … — de la part de (Send on Behalf) » : le message part par le compte d'origine avec `From:` = adresse de la boîte partagée et `Sender:` = identité de l'utilisateur (clé JSON `on_behalf_of` de `evo_core_send_message`, champ `shared_owner` de `evo_core_list_accounts`). Libellé traduit dans les 7 langues (`Compose_FromSendOnBehalf`). À valider sur un tenant réel (droit « Send on Behalf » accordé).
+
+> Version mineure : les fonctionnalités ajoutées depuis la 1.0.1 (boîtes partagées, Boîte de réception prioritaire, favoris, dossiers de recherche, fenêtre d'événement, rappels, Google Meet, chiffrement S/MIME…) dépassent le cadre d'un correctif ; la 1.0.2 n'a jamais été publiée.
 
 ### Signature et chiffrement des courriels (S/MIME natif Windows)
 
