@@ -246,6 +246,18 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Télécharge pour le mode hors connexion un compte ou un dossier (progression par
+         * l'événement « progress » de type « offline »).
+         * Paramètres :
+         *   account : identifiant du compte
+         *   folder  : chemin complet du dossier, vide pour tout le compte
+         *   handler : rappel recevant {"folders", "messages", "downloaded", "failed", "cancelled"} */
+        void OfflineSyncNow(winrt::hstring const& account, winrt::hstring const& folder, CoreHandler handler)
+        {
+            evo_core_offline_sync_now(m_core, winrt::to_string(account).c_str(),
+                winrt::to_string(folder).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Délégués de la boîte Gmail : liste.
          * Paramètres :
          *   account : identifiant du compte

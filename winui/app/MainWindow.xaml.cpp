@@ -362,7 +362,19 @@ namespace winrt::EvolutionWin::implementation
         {
             bool active = object.GetNamedBoolean(L"active", true);
             int32_t percent = static_cast<int32_t>(object.GetNamedNumber(L"percent", -1));
-            UpdateStatusBarProgress(active, message, percent);
+            hstring progress_text = message;
+            if (object.GetNamedString(L"kind", L"") == L"offline")
+            {
+                /* téléchargement hors connexion : texte composé ici, dans la langue de l'interface */
+                hstring folder_name = object.GetNamedString(L"folder", L"");
+                int32_t total = static_cast<int32_t>(object.GetNamedNumber(L"total", 0));
+                progress_text = !active ? Tr(L"Synchronisation hors connexion terminée")
+                    : total > 0
+                        ? Fmt(Tr(L"Téléchargement hors connexion : {0} ({1}/{2})"),
+                            { folder_name, to_hstring(static_cast<int32_t>(object.GetNamedNumber(L"done", 0))), to_hstring(total) })
+                        : Fmt(Tr(L"Préparation du téléchargement hors connexion : {0}"), { folder_name });
+            }
+            UpdateStatusBarProgress(active, progress_text, percent);
         }
         else if (event == L"connection-status")
         {

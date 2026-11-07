@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
 #include "MainWindow.Helpers.h"
+#include <ctime>
+#include <vector>
 
 /* Synchronisation hors connexion : boîte de dialogue des plages de synchronisation
  * d'un compte (téléchargement des dossiers, limite d'ancienneté) ou d'un dossier
@@ -183,10 +185,8 @@ namespace winrt::EvolutionWin::implementation
             panel.Children().Append(folder_choice);
         }
 
-        dialog.Content(panel);
-
-        dialog.PrimaryButtonClick([this, strong, account, folder, name, folder_mode, stay_box, limit_box, limit_value, limit_unit, folder_choice]
-            (ContentDialog const&, ContentDialogButtonClickEventArgs const&)
+        /* réglages saisis, au format attendu par evo_core_set_offline_sync */
+        auto collect = [account, folder, folder_mode, stay_box, limit_box, limit_value, limit_unit, folder_choice]() -> JsonObject
         {
             JsonObject settings;
             settings.SetNamedValue(L"account", JsonValue::CreateStringValue(account));
@@ -205,8 +205,90 @@ namespace winrt::EvolutionWin::implementation
                 settings.SetNamedValue(L"folder", JsonValue::CreateStringValue(folder));
                 settings.SetNamedValue(L"folder_offline_sync", JsonValue::CreateStringValue(index == 1 ? L"on" : index == 2 ? L"off" : L"inherit"));
             }
+            return settings;
+        };
 
-            m_core->SetOfflineSync(settings.Stringify(), [this, strong, name](hstring const&, hstring const& error)
+        if (supported)
+        {
+            /* dernier résultat mémorisé : « heure|dossiers|messages|téléchargés|échecs » */
+            hstring state_key = L"offline-sync." + account + L"." + folder;
+            TextBlock sync_info;
+            sync_info.TextWrapping(TextWrapping::Wrap);
+            sync_info.Foreground(secondary_brush);
+
+            auto describe = [state_key]() -> hstring
+            {
+                std::wstring value{ ::EvolutionWin::Settings::Instance().GetString(state_key, L"") };
+                std::vector<std::wstring> parts;
+                size_t pos = 0;
+                while (true)
+                {
+                    size_t next = value.find(L'|', pos);
+                    parts.push_back(value.substr(pos, next == std::wstring::npos ? next : next - pos));
+                    if (next == std::wstring::npos)
+                        break;
+                    pos = next + 1;
+                }
+                if (value.empty() || parts.size() < 5)
+                    return Tr(L"Aucune synchronisation hors connexion effectuée avec ce réglage.");
+                int failed = _wtoi(parts[4].c_str());
+                return Fmt(Tr(L"Dernière synchronisation : {0} - {1} message(s) téléchargé(s) sur {2}{3}"),
+                    { FormatDate(_wtof(parts[0].c_str())), hstring{ parts[3] }, hstring{ parts[2] },
+                      failed > 0 ? Fmt(Tr(L", {0} en échec"), { hstring{ parts[4] } }) : hstring{} });
+            };
+            sync_info.Text(describe());
+            panel.Children().Append(sync_info);
+
+            Button sync_button;
+            sync_button.Content(box_value(Tr(L"Synchroniser maintenant")));
+            panel.Children().Append(sync_button);
+
+            sync_button.Click([this, strong, account, folder, collect, sync_info, sync_button, describe, state_key]
+                (IInspectable const&, RoutedEventArgs const&)
+            {
+                sync_button.IsEnabled(false);
+                sync_info.Text(Tr(L"Synchronisation en cours… (progression dans la barre d'état)"));
+
+                /* les réglages affichés sont enregistrés avant de lancer le téléchargement */
+                m_core->SetOfflineSync(collect().Stringify(), [this, strong, account, folder, sync_info, sync_button, describe, state_key]
+                    (hstring const&, hstring const& save_error)
+                {
+                    if (!save_error.empty())
+                    {
+                        sync_button.IsEnabled(true);
+                        sync_info.Text(Fmt(Tr(L"Synchronisation hors connexion : {0}"), { save_error }));
+                        return;
+                    }
+                    m_core->OfflineSyncNow(account, folder, [this, strong, sync_info, sync_button, describe, state_key]
+                        (hstring const& json, hstring const& sync_error)
+                    {
+                        sync_button.IsEnabled(true);
+                        JsonObject result;
+                        if (!sync_error.empty() || !JsonObject::TryParse(json, result))
+                        {
+                            sync_info.Text(Fmt(Tr(L"Synchronisation hors connexion : {0}"), { sync_error }));
+                            return;
+                        }
+                        hstring record = to_hstring(static_cast<int64_t>(std::time(nullptr))) + L"|"
+                            + to_hstring(static_cast<int32_t>(result.GetNamedNumber(L"folders", 0))) + L"|"
+                            + to_hstring(static_cast<int32_t>(result.GetNamedNumber(L"messages", 0))) + L"|"
+                            + to_hstring(static_cast<int32_t>(result.GetNamedNumber(L"downloaded", 0))) + L"|"
+                            + to_hstring(static_cast<int32_t>(result.GetNamedNumber(L"failed", 0)));
+                        ::EvolutionWin::Settings::Instance().SetString(state_key, record);
+                        sync_info.Text(describe());
+                        ShowStatus(Fmt(Tr(L"Synchronisation hors connexion terminée : {0} message(s) téléchargé(s)."),
+                            { to_hstring(static_cast<int32_t>(result.GetNamedNumber(L"downloaded", 0))) }),
+                            InfoBarSeverity::Success);
+                    });
+                });
+            });
+        }
+
+        dialog.Content(panel);
+
+        dialog.PrimaryButtonClick([this, strong, name, collect](ContentDialog const&, ContentDialogButtonClickEventArgs const&)
+        {
+            m_core->SetOfflineSync(collect().Stringify(), [this, strong, name](hstring const&, hstring const& error)
             {
                 if (!error.empty())
                     ShowStatus(Fmt(Tr(L"Synchronisation hors connexion : {0}"), { error }), InfoBarSeverity::Error);

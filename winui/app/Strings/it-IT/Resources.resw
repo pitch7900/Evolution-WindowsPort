@@ -6795,5 +6795,41 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Deleghe e autorizzazioni…</value>
     <comment>Délégations et autorisations…</comment>
   </data>
+  <data name="T_C12A5244" xml:space="preserve">
+    <value>Nessuna sincronizzazione offline eseguita con questa impostazione.</value>
+    <comment>Aucune synchronisation hors connexion effectuée avec ce réglage.</comment>
+  </data>
+  <data name="T_0F74906B" xml:space="preserve">
+    <value>Ultima sincronizzazione: {0} - {1} messaggio/i scaricato/i su {2}{3}</value>
+    <comment>Dernière synchronisation : {0} - {1} message(s) téléchargé(s) sur {2}{3}</comment>
+  </data>
+  <data name="T_A8D5A094" xml:space="preserve">
+    <value>, {0} non riuscito/i</value>
+    <comment>, {0} en échec</comment>
+  </data>
+  <data name="T_6026A0D3" xml:space="preserve">
+    <value>Sincronizza ora</value>
+    <comment>Synchroniser maintenant</comment>
+  </data>
+  <data name="T_FF0FAF41" xml:space="preserve">
+    <value>Sincronizzazione in corso… (avanzamento nella barra di stato)</value>
+    <comment>Synchronisation en cours… (progression dans la barre d'état)</comment>
+  </data>
+  <data name="T_65875DFB" xml:space="preserve">
+    <value>Sincronizzazione offline terminata: {0} messaggio/i scaricato/i.</value>
+    <comment>Synchronisation hors connexion terminée : {0} message(s) téléchargé(s).</comment>
+  </data>
+  <data name="T_9D3D3E6E" xml:space="preserve">
+    <value>Sincronizzazione offline terminata</value>
+    <comment>Synchronisation hors connexion terminée</comment>
+  </data>
+  <data name="T_82B08671" xml:space="preserve">
+    <value>Download offline: {0} ({1}/{2})</value>
+    <comment>Téléchargement hors connexion : {0} ({1}/{2})</comment>
+  </data>
+  <data name="T_C8958B94" xml:space="preserve">
+    <value>Preparazione del download offline: {0}</value>
+    <comment>Préparation du téléchargement hors connexion : {0}</comment>
+  </data>
 </root>
 

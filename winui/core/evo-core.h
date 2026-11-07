@@ -1396,6 +1396,23 @@ void		evo_core_set_offline_sync	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Lance le téléchargement hors connexion d'un compte ou d'un dossier, sans attendre la relève
+ * périodique (dossiers « jamais » ignorés, « comme le compte » selon le réglage du compte).
+ * Progression : événements « progress » avec "kind": "offline", "folder", "folder_index",
+ * "folder_count", "done", "total", "percent", "active".
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   folder_name : nom complet du dossier, "" pour tous les dossiers du compte
+ *   func        : rappel recevant {"folders", "messages" (à télécharger), "downloaded",
+ *                 "failed", "cancelled"}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_offline_sync_now	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_name,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Liste les délégués de la boîte Gmail d'un compte (API Gmail settings.delegates, portée
  * gmail.settings.sharing, comptes Google Workspace). Erreur explicative pour les autres
  * comptes (Microsoft 365 : droits gérés dans le centre d'administration Exchange).
