@@ -207,7 +207,9 @@ namespace winrt::EvolutionWin::implementation
         {
             hstring calendar_uid = ev.GetNamedString(L"calendar_uid", L"");
             hstring uid = ev.GetNamedString(L"uid", L"");
-            element.Tapped([this, calendar_uid, uid](IInspectable const&, Input::TappedRoutedEventArgs const& args)
+            /* simple clic : sans effet (le clic ne crée pas de sélection) ; double clic : ouvre la fenêtre de l'événement */
+            element.Tapped([](IInspectable const&, Input::TappedRoutedEventArgs const& args) { args.Handled(true); });
+            element.DoubleTapped([this, calendar_uid, uid](IInspectable const&, Input::DoubleTappedRoutedEventArgs const& args)
             {
                 args.Handled(true);
                 OpenCalendarEvent(calendar_uid, uid);
@@ -765,7 +767,8 @@ namespace winrt::EvolutionWin::implementation
                     ev.GetNamedString(L"calendar_name", L"")));
                 hstring calendar_uid = ev.GetNamedString(L"calendar_uid", L"");
                 hstring uid = ev.GetNamedString(L"uid", L"");
-                chip.Tapped([this, calendar_uid, uid](IInspectable const&, Input::TappedRoutedEventArgs const& args)
+                chip.Tapped([](IInspectable const&, Input::TappedRoutedEventArgs const& args) { args.Handled(true); });
+                chip.DoubleTapped([this, calendar_uid, uid](IInspectable const&, Input::DoubleTappedRoutedEventArgs const& args)
                 {
                     args.Handled(true);
                     OpenCalendarEvent(calendar_uid, uid);

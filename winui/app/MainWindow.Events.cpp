@@ -537,7 +537,7 @@ namespace winrt::EvolutionWin::implementation
             });
             row.Children().Append(del_btn);
 
-            /* ouverture au clic (OnEventItemClick) : "<agenda>\x1F<événement>" */
+            /* ouverture au double clic (OnEventListDoubleTapped) : "<agenda>\x1F<événement>" */
             row.Tag(box_value(calendar_uid + L"\x1F" + uid));
             items.Append(row);
         }
@@ -803,21 +803,26 @@ namespace winrt::EvolutionWin::implementation
         co_return;
     }
 
-    /* Clic sur un événement de la liste : détail lu par evo-core, puis
-     * fenêtre de l'événement. */
-    void MainWindow::OnEventItemClick(IInspectable const&, ItemClickEventArgs const& args)
+    /* Double clic sur un événement de la liste : détail lu par evo-core, puis fenêtre de l'événement
+     * (un simple clic n'ouvre rien : la fenêtre passerait au second plan au second clic). */
+    void MainWindow::OnEventListDoubleTapped(IInspectable const&, Input::DoubleTappedRoutedEventArgs const& args)
     {
-        auto row = args.ClickedItem().try_as<FrameworkElement>();
-        hstring key = row ? unbox_value_or<hstring>(row.Tag(), L"") : hstring{};
-        std::wstring text{ key };
-        auto sep = text.find(L'\x1F');
-        if (sep == std::wstring::npos)
-            return;
-
-        hstring calendar_uid{ text.substr(0, sep) };
-        hstring uid{ text.substr(sep + 1) };
-
-        OpenCalendarEvent(calendar_uid, uid);
+        DependencyObject element = args.OriginalSource().try_as<DependencyObject>();
+        while (element)
+        {
+            if (auto framework = element.try_as<FrameworkElement>())
+            {
+                std::wstring text{ unbox_value_or<hstring>(framework.Tag(), L"") };
+                auto sep = text.find(L'');
+                if (sep != std::wstring::npos)
+                {
+                    args.Handled(true);
+                    OpenCalendarEvent(hstring{ text.substr(0, sep) }, hstring{ text.substr(sep + 1) });
+                    return;
+                }
+            }
+            element = VisualTreeHelper::GetParent(element);
+        }
     }
 
     /* Réponse d'un participant en clair. */

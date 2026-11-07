@@ -155,7 +155,7 @@
 
                     <ListView x:Name="EventList" Grid.Row="1" SelectionMode="None" Visibility="Collapsed"
 
-                              IsItemClickEnabled="True" ItemClick="OnEventItemClick" />
+                              DoubleTapped="OnEventListDoubleTapped" />
 
                     <!-- grille Jour / Semaine / Mois (MainWindow.Calendar.cpp) -->
 
