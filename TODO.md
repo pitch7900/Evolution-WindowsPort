@@ -600,7 +600,7 @@ Sécurisation de bout en bout des courriels par signature et chiffrement avec un
     - [x] **Recherche et tri** : filtrage par expéditeur, objet ou date de suppression pour localiser rapidement les courriels purgés par erreur _(fait : filtre texte et tri par colonne)_
 - [x] 🟡 **Favoris** : section _Favoris_ en haut du volet des dossiers, réordonnable _(fait en 1.0.2 : ajout / retrait par clic droit, Monter / Descendre ; pas de glisser-déposer)_
 - [x] 🟢 **Afficher dans le navigateur** (OWA / webmail du fournisseur)
-- [ ] 🟠 **Dossiers de recherche** (dossiers virtuels `CamelVeeFolder`, aujourd'hui ignorés par `evo-core`), avec modèles prédéfinis : non lus, marqués, de personnes spécifiques, gros messages…
+- [x] 🟠 **Dossiers de recherche** (dossiers virtuels `CamelVeeFolder`, aujourd'hui ignorés par `evo-core`), avec modèles prédéfinis : non lus, marqués, de personnes spécifiques, gros messages… _(fait en 1.0.2 sans `CamelVeeFolder` : requêtes enregistrées évaluées par le moteur à l'ouverture ; modèles non lus, marqués, pièces jointes, gros messages, d'une personne ; limité aux 500 plus récents ; pas de compteur de non lus ni de mise à jour automatique à l'arrivée d'un message)_
 - [ ] **Propriétés du dossier** :
   - [ ] 🟡 Taille, nombre d'éléments, afficher le total ou les non-lus (quota du compte : §3)
   - [ ] 🟠 Autorisations du dossier (partage / délégation Exchange, ACL IMAP)

@@ -133,7 +133,7 @@ namespace winrt::EvolutionWin::implementation
             ListProgress().IsActive(true);
         }
 
-        m_core->ListUnified(role, m_unified_accounts, ::EvolutionWin::UnifiedViews::kMaxMessages,
+        RequestUnifiedMessages(role,
             [this, account, role, selected](hstring const& json, hstring const& error)
         {
             /* une autre vue a été choisie entre-temps */

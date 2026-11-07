@@ -702,6 +702,12 @@ namespace winrt::EvolutionWin::implementation
         void SetFavoriteFolder(hstring const& account, hstring const& folder, bool favorite);
         void MoveFavoriteFolder(hstring const& account, hstring const& folder, int delta);
         void SetFolderUnread(hstring const& account, hstring const& folder, int32_t unread);
+        /* Dossiers de recherche enregistrés (MainWindow.SearchFolders.cpp) */
+        Microsoft::UI::Xaml::Controls::TreeViewNode m_search_root{ nullptr };
+        void RefreshSearchFoldersNode();
+        void RequestUnifiedMessages(hstring const& role, std::function<void(hstring const&, hstring const&)> handler);
+        void BuildSearchFolderMenu(Microsoft::UI::Xaml::Controls::MenuFlyout const& menu, EvolutionWin::FolderItem const& item);
+        fire_and_forget ShowSearchFolderDialogAsync(Windows::Data::Json::JsonObject definition);
         /* arborescence JSON des dossiers par identifiant de compte */
         std::map<std::wstring, Windows::Data::Json::JsonArray> m_account_folders;
         /* état courant (lu, suivi, pièces jointes) des messages affichés par UID */

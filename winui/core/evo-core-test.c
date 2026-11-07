@@ -177,6 +177,21 @@ main (int argc,
 		return 0;
 	}
 
+	/* --search portee requete : recherche multi-dossiers (operateurs is:unread, has:attachment...) ; affiche le nombre de messages */
+	if (argc > 3 && strcmp (argv[1], "--search") == 0) {
+		done_event = CreateEvent (NULL, FALSE, FALSE, NULL);
+		core = evo_core_new (on_event, NULL);
+		Sleep (10000);
+		evo_core_search_messages_scoped (core, "", "", argv[2], argv[3], 500, on_result, NULL);
+		WaitForSingleObject (done_event, INFINITE);
+		if (last_error)
+			printf ("[search] ERREUR : %s\n", last_error);
+		else
+			printf ("[search] %d messages pour « %s » (%s)\n", count_uids (last_json), argv[3], argv[2]);
+		evo_core_free (core);
+		return 0;
+	}
+
 	/* --nav : groupes de calendriers d'Outlook lus par EWS */
 	if (argc > 1 && strcmp (argv[1], "--nav") == 0) {
 		done_event = CreateEvent (NULL, FALSE, FALSE, NULL);

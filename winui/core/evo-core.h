@@ -460,7 +460,10 @@ void		evo_core_search_messages	(EvoCore *core,
  *   account_uid      : identifiant du compte (pour portée folder/subfolders/account)
  *   folder_full_name : chemin complet du dossier de base (pour portée folder/subfolders)
  *   scope            : portée ("folder", "subfolders", "account", "all")
- *   query            : texte recherché (mots séparés par des espaces)
+ *   query            : texte recherché (mots séparés par des espaces) ; opérateurs combinables (ET) :
+ *                      is:unread, is:read, is:flagged, has:attachment, larger:<octets>, from:<texte>
+ *                      (avec un opérateur, la corbeille et les indésirables sont ignorés ; une requête
+ *                      d'opérateurs seuls renvoie tous les messages qui les respectent)
  *   max_count        : nombre maximal de messages renvoyés (0 pour tous)
  *   func             : rappel recevant le tableau JSON des messages
  *   user_data        : données utilisateur transmises au rappel */
