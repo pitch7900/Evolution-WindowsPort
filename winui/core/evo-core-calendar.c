@@ -12,8 +12,21 @@
  * Paramètres :
  *   icomp  : composant VEVENT à modifier
  *   object : objet JSON décrivant l'événement */
-/* Disponibilité d'un événement (propriété TRANSP) : applique le membre JSON "free" s'il est présent
- * (true : TRANSPARENT « libre », false : OPAQUE « occupé ») ; sans ce membre, ne touche à rien.
+/* États « Afficher comme » d'Outlook : valeur JSON, valeur X-MICROSOFT-CDO-BUSYSTATUS, TRANSP associé. */
+static const struct {
+	const gchar *json;
+	const gchar *busy_status;
+	gboolean transparent;
+} event_show_as_states[] = {
+	{ "free", "FREE", TRUE },
+	{ "working", "WORKINGELSEWHERE", TRUE },
+	{ "tentative", "TENTATIVE", FALSE },
+	{ "busy", "BUSY", FALSE },
+	{ "oof", "OOF", FALSE }
+};
+
+/* Disponibilité d'un événement : applique le membre JSON "show_as" (free, working, tentative, busy, oof)
+ * s'il est présent, par TRANSP et X-MICROSOFT-CDO-BUSYSTATUS ; sans ce membre, ne touche à rien.
  * Paramètres :
  *   icomp  : composant VEVENT à modifier
  *   object : objet JSON décrivant l'événement */
@@ -21,12 +34,23 @@ static void
 event_apply_transp (ICalComponent *icomp,
 		    JsonObject *object)
 {
-	if (!json_object_has_member (object, "free"))
+	const gchar *value;
+	guint ii;
+
+	if (!json_object_has_member (object, "show_as"))
 		return;
 
-	e_cal_util_component_remove_property_by_kind (icomp, I_CAL_TRANSP_PROPERTY, TRUE);
-	i_cal_component_take_property (icomp, i_cal_property_new_transp (
-		json_object_get_boolean_member_with_default (object, "free", FALSE) ? I_CAL_TRANSP_TRANSPARENT : I_CAL_TRANSP_OPAQUE));
+	value = json_object_get_string_member_with_default (object, "show_as", "busy");
+	for (ii = 0; ii < G_N_ELEMENTS (event_show_as_states); ii++) {
+		if (g_strcmp0 (value, event_show_as_states[ii].json) != 0)
+			continue;
+
+		e_cal_util_component_remove_property_by_kind (icomp, I_CAL_TRANSP_PROPERTY, TRUE);
+		i_cal_component_take_property (icomp, i_cal_property_new_transp (
+			event_show_as_states[ii].transparent ? I_CAL_TRANSP_TRANSPARENT : I_CAL_TRANSP_OPAQUE));
+		e_cal_util_component_set_x_property (icomp, "X-MICROSOFT-CDO-BUSYSTATUS", event_show_as_states[ii].busy_status);
+		return;
+	}
 }
 
 static void
@@ -348,9 +372,16 @@ core_get_event_run (EvoCore *core,
 
 		{
 		ICalProperty *transp_prop = i_cal_component_get_first_property (icomp, I_CAL_TRANSP_PROPERTY);
+		gchar *busy_status = e_cal_util_component_dup_x_property (icomp, "X-MICROSOFT-CDO-BUSYSTATUS");
+		const gchar *show_as = transp_prop && i_cal_property_get_transp (transp_prop) == I_CAL_TRANSP_TRANSPARENT ? "free" : "busy";
+		guint ii;
 
-		json_builder_set_member_name (builder, "free");
-		json_builder_add_boolean_value (builder, transp_prop && i_cal_property_get_transp (transp_prop) == I_CAL_TRANSP_TRANSPARENT);
+		for (ii = 0; busy_status && ii < G_N_ELEMENTS (event_show_as_states); ii++) {
+			if (g_ascii_strcasecmp (busy_status, event_show_as_states[ii].busy_status) == 0)
+				show_as = event_show_as_states[ii].json;
+		}
+		builder_add_string (builder, "show_as", show_as);
+		g_free (busy_status);
 		g_clear_object (&transp_prop);
 	}
 

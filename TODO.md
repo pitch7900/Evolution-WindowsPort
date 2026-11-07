@@ -700,7 +700,7 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
     - [ ] Champ *Emplacement* relié aux listes de salles Exchange Online (_room lists_ et boîtes de ressources).
     - [ ] Consultation en direct de la disponibilité des salles et réservation automatique lors de l'enregistrement de la réunion (acceptation / refus automatique par la ressource).
   - [ ] 🟡 **Options d'affichage et de disponibilité (façon Outlook)** :
-    - [ ] Sélecteur déroulant **« Afficher comme : »** avec icône et motifs visuels : *Libre / Disponible*, *Provisoire*, *Occupé(e)*, *Absent(e) / Congé (Out of Office)*, *Travaille ailleurs (Working Elsewhere)*. _(partiel : Occupé(e) / Libre seulement (`TRANSP`) ; Provisoire, Absent(e) et Travaille ailleurs ne sont pas transmis par le module Microsoft 365)_
+    - [x] Sélecteur déroulant **« Afficher comme : »** avec icône et motifs visuels : *Libre / Disponible*, *Provisoire*, *Occupé(e)*, *Absent(e) / Congé (Out of Office)*, *Travaille ailleurs (Working Elsewhere)*. _(fait : les cinq états d'Outlook, transmis à Exchange Online par le module Microsoft 365 ; pas encore les motifs visuels dans la liste)_
     - [ ] Report visuel du statut sur la grille du calendrier (bandeau latéral coloré ou hachuré selon le statut : blanc pour libre, rayures bleues pour provisoire, plein pour occupé, rayures violettes pour absent, pointillés pour travaille ailleurs).
     - [ ] Sélecteur de **Rappel** (aucun, 0 min, 5 min, 10 min, 15 min, 30 min, 1 h, etc.) et bouton de **Périodicité** (règles RRULE iCalendar : récurrence quotidienne, hebdomadaire, mensuelle, annuelle avec gestion des exceptions).
   - [ ] 🟡 **Indicateurs, confidentialité et classement par couleur** :

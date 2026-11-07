@@ -958,9 +958,21 @@ namespace winrt::EvolutionWin::implementation
         ComboBox show_as_combo;
         show_as_combo.Header(box_value(Tr(L"Afficher comme", L"Show as")));
         show_as_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
+        /* mêmes états qu'Outlook (dans l'ordre de la liste d'Outlook) */
+        static const wchar_t* const show_as_values[] = { L"free", L"working", L"tentative", L"busy", L"oof" };
+        show_as_combo.Items().Append(box_value(Tr(L"Disponible", L"Free")));
+        show_as_combo.Items().Append(box_value(Tr(L"Travaille ailleurs", L"Working elsewhere")));
+        show_as_combo.Items().Append(box_value(Tr(L"Provisoire", L"Tentative")));
         show_as_combo.Items().Append(box_value(Tr(L"Occupé(e)", L"Busy")));
-        show_as_combo.Items().Append(box_value(Tr(L"Libre / Disponible", L"Free / Available")));
-        show_as_combo.SelectedIndex(existing && event.GetNamedBoolean(L"free", false) ? 1 : 0);
+        show_as_combo.Items().Append(box_value(Tr(L"Absent(e)", L"Out of office")));
+        {
+            int show_as_index = 3;
+            if (existing)
+                for (int i = 0; i < 5; ++i)
+                    if (event.GetNamedString(L"show_as", L"busy") == show_as_values[i])
+                        show_as_index = i;
+            show_as_combo.SelectedIndex(show_as_index);
+        }
         show_as_combo.IsEnabled(!readonly);
         panel.Children().Append(show_as_combo);
 
@@ -1303,7 +1315,8 @@ namespace winrt::EvolutionWin::implementation
         payload.SetNamedValue(L"summary", JsonValue::CreateStringValue(summary_box.Text()));
         payload.SetNamedValue(L"location", JsonValue::CreateStringValue(location_box.Text()));
         if (!readonly)
-            payload.SetNamedValue(L"free", JsonValue::CreateBooleanValue(show_as_combo.SelectedIndex() == 1));
+            payload.SetNamedValue(L"show_as", JsonValue::CreateStringValue(
+                show_as_values[show_as_combo.SelectedIndex() >= 0 && show_as_combo.SelectedIndex() < 5 ? show_as_combo.SelectedIndex() : 3]));
         if (!readonly)
             payload.SetNamedValue(L"private", JsonValue::CreateBooleanValue(private_check.IsChecked() && private_check.IsChecked().GetBoolean()));
         payload.SetNamedValue(L"description", JsonValue::CreateStringValue(desc_box.Text()));

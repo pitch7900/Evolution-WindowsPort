@@ -779,6 +779,9 @@ void		evo_core_list_events		(EvoCore *core,
  * "calendar_uid"). Format attendu pour event_json :
  * {"calendar_uid": "..." (optionnel), "summary": "...", "location": "...",
  *  "description": "...", "start": 1730000000, "end": 1730003600,
+ *  "show_as": "free"|"working"|"tentative"|"busy"|"oof" (optionnel : « Afficher comme »
+ *  d'Outlook : disponible, travaille ailleurs, provisoire, occupé, absent ; TRANSP et
+ *  X-MICROSOFT-CDO-BUSYSTATUS),
  *  "private": true|false (optionnel : événement privé, propriété CLASS:PRIVATE,
  *  détails masqués aux personnes avec qui l'agenda est partagé)}
  * Paramètres :

@@ -806,15 +806,85 @@ ecb_m365_get_show_as (EM365Connection *cnc,
 	EM365FreeBusyStatusType value;
 	ICalPropertyTransp transp = I_CAL_TRANSP_NONE;
 
+	const gchar *busy_status = NULL;
+
 	value = e_m365_event_get_show_as (m365_event);
 
-	if (value == E_M365_FREE_BUSY_STATUS_FREE)
+	/* états d'Outlook (Disponible, Travaille ailleurs, Provisoire, Occupé, Absent) : la propriété
+	 * X-MICROSOFT-CDO-BUSYSTATUS les conserve, TRANSP ne distinguant que libre / occupé */
+	switch (value) {
+	case E_M365_FREE_BUSY_STATUS_FREE:
 		transp = I_CAL_TRANSP_TRANSPARENT;
-	else if (value == E_M365_FREE_BUSY_STATUS_BUSY)
+		busy_status = "FREE";
+		break;
+	case E_M365_FREE_BUSY_STATUS_WORKING_ELSEWHERE:
+		transp = I_CAL_TRANSP_TRANSPARENT;
+		busy_status = "WORKINGELSEWHERE";
+		break;
+	case E_M365_FREE_BUSY_STATUS_TENTATIVE:
 		transp = I_CAL_TRANSP_OPAQUE;
+		busy_status = "TENTATIVE";
+		break;
+	case E_M365_FREE_BUSY_STATUS_BUSY:
+		transp = I_CAL_TRANSP_OPAQUE;
+		busy_status = "BUSY";
+		break;
+	case E_M365_FREE_BUSY_STATUS_OOF:
+		transp = I_CAL_TRANSP_OPAQUE;
+		busy_status = "OOF";
+		break;
+	default:
+		break;
+	}
 
 	if (transp != I_CAL_TRANSP_NONE)
 		i_cal_component_take_property (inout_comp, i_cal_property_new_transp (transp));
+	if (busy_status)
+		e_cal_util_component_set_x_property (inout_comp, "X-MICROSOFT-CDO-BUSYSTATUS", busy_status);
+}
+
+/* État « Afficher comme » d'un composant : X-MICROSOFT-CDO-BUSYSTATUS d'abord, TRANSP à défaut. */
+static EM365FreeBusyStatusType
+ecb_m365_comp_show_as (ICalComponent *comp,
+		       ICalPropertyKind prop_kind)
+{
+	EM365FreeBusyStatusType value = E_M365_FREE_BUSY_STATUS_NOT_SET;
+	gchar *xvalue;
+	ICalProperty *prop;
+
+	if (!comp)
+		return value;
+
+	xvalue = e_cal_util_component_dup_x_property (comp, "X-MICROSOFT-CDO-BUSYSTATUS");
+	if (xvalue && *xvalue) {
+		if (g_ascii_strcasecmp (xvalue, "FREE") == 0)
+			value = E_M365_FREE_BUSY_STATUS_FREE;
+		else if (g_ascii_strcasecmp (xvalue, "TENTATIVE") == 0)
+			value = E_M365_FREE_BUSY_STATUS_TENTATIVE;
+		else if (g_ascii_strcasecmp (xvalue, "BUSY") == 0)
+			value = E_M365_FREE_BUSY_STATUS_BUSY;
+		else if (g_ascii_strcasecmp (xvalue, "OOF") == 0)
+			value = E_M365_FREE_BUSY_STATUS_OOF;
+		else if (g_ascii_strcasecmp (xvalue, "WORKINGELSEWHERE") == 0)
+			value = E_M365_FREE_BUSY_STATUS_WORKING_ELSEWHERE;
+	}
+	g_free (xvalue);
+
+	if (value != E_M365_FREE_BUSY_STATUS_NOT_SET)
+		return value;
+
+	prop = i_cal_component_get_first_property (comp, prop_kind);
+	if (prop) {
+		ICalPropertyTransp transp = i_cal_property_get_transp (prop);
+
+		if (transp == I_CAL_TRANSP_TRANSPARENT)
+			value = E_M365_FREE_BUSY_STATUS_FREE;
+		else if (transp == I_CAL_TRANSP_OPAQUE)
+			value = E_M365_FREE_BUSY_STATUS_BUSY;
+		g_clear_object (&prop);
+	}
+
+	return value;
 }
 
 static void
@@ -827,33 +897,13 @@ ecb_m365_add_show_as (EM365Connection *cnc,
 		      ICalPropertyKind prop_kind,
 		      JsonBuilder *builder)
 {
-	ICalPropertyTransp new_value = I_CAL_TRANSP_NONE, old_value = I_CAL_TRANSP_NONE;
-	ICalProperty *prop;
+	EM365FreeBusyStatusType new_value, old_value;
 
-	prop = i_cal_component_get_first_property (new_comp, prop_kind);
+	new_value = ecb_m365_comp_show_as (new_comp, prop_kind);
+	old_value = ecb_m365_comp_show_as (old_comp, prop_kind);
 
-	if (prop) {
-		new_value = i_cal_property_get_transp (prop);
-		g_clear_object (&prop);
-	}
-
-	prop = old_comp ? i_cal_component_get_first_property (old_comp, prop_kind) : NULL;
-
-	if (prop) {
-		old_value = i_cal_property_get_transp (prop);
-		g_clear_object (&prop);
-	}
-
-	if (new_value != old_value) {
-		EM365FreeBusyStatusType value = E_M365_FREE_BUSY_STATUS_NOT_SET;
-
-		if (new_value == I_CAL_TRANSP_TRANSPARENT)
-			value = E_M365_FREE_BUSY_STATUS_FREE;
-		else if (new_value == I_CAL_TRANSP_OPAQUE)
-			value = E_M365_FREE_BUSY_STATUS_BUSY;
-
-		e_m365_event_add_show_as (builder, value);
-	}
+	if (new_value != old_value)
+		e_m365_event_add_show_as (builder, new_value);
 }
 
 static void
