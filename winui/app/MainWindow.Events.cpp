@@ -845,9 +845,12 @@ namespace winrt::EvolutionWin::implementation
         bool all_day = existing && event.GetNamedBoolean(L"all_day", false);
 
         Window window;
-        window.Title(existing ? (readonly ? L"Événement (lecture seule)" : L"Événement") : (is_focus ? L"Temps individuel (Focus)" : L"Nouvel événement"));
-        window.AppWindow().Resize({ 1050, 820 });
+        hstring window_title = existing ? (readonly ? L"Événement (lecture seule)" : L"Événement") : (is_focus ? L"Temps individuel (Focus)" : L"Nouvel événement");
+        window.Title(window_title);
+        window.AppWindow().Resize({ 1200, 860 });
         ::EvolutionWin::SetWindowIcon(window.AppWindow());
+        window.SystemBackdrop(Microsoft::UI::Xaml::Media::MicaBackdrop{});
+        window.ExtendsContentIntoTitleBar(true);
 
         StackPanel panel;
         panel.Spacing(10);
@@ -869,26 +872,6 @@ namespace winrt::EvolutionWin::implementation
             if (event.GetNamedBoolean(L"recurring", false))
                 panel.Children().Append(caption(L"Événement périodique : la modification s'applique à toute la série."));
 
-            Button create_task_btn;
-            StackPanel btn_content;
-            btn_content.Orientation(Orientation::Horizontal);
-            btn_content.Spacing(6);
-            FontIcon task_btn_icon;
-            task_btn_icon.Glyph(L"\xE9D5");
-            task_btn_icon.FontSize(13);
-            btn_content.Children().Append(task_btn_icon);
-            TextBlock btn_label;
-            btn_label.Text(L"Créer une tâche liée à cet événement");
-            btn_content.Children().Append(btn_label);
-            create_task_btn.Content(btn_content);
-            create_task_btn.HorizontalAlignment(HorizontalAlignment::Left);
-            create_task_btn.Margin(ThicknessHelper::FromLengths(0, 2, 0, 4));
-            create_task_btn.Click([this, event, window](IInspectable const&, RoutedEventArgs const&)
-            {
-                window.Close();
-                CreateTaskFromEvent(event);
-            });
-            panel.Children().Append(create_task_btn);
         }
 
         TextBox summary_box;
@@ -1251,15 +1234,14 @@ namespace winrt::EvolutionWin::implementation
 
 
         /* ------------------------------------------------------------------ */
-        /* Fenêtre de l'événement : bandeau d'actions (Enregistrer, Supprimer, Afficher comme,      */
-        /* Rappel, Périodicité, Classer, Privé, Importance) puis formulaire                        */
+        /* Fenêtre de l'événement : barre de commandes (Enregistrer, Supprimer, tâche liée, Afficher */
+        /* comme, Rappel, Périodicité, Classer, Privé, Importance) puis formulaire façon Outlook    */
         /* ------------------------------------------------------------------ */
 
         /* catégories de l'événement (modifiables par « Classer ») */
         auto categories = std::make_shared<std::vector<std::wstring>>(
             existing ? ::EvolutionWin::CategoryStore::CategoriesOf(event) : std::vector<std::wstring>{});
         StackPanel category_chips;
-        panel.Children().InsertAt(0, category_chips);
         auto refresh_chips = [this, category_chips, categories]()
         {
             category_chips.Children().Clear();
@@ -1271,76 +1253,97 @@ namespace winrt::EvolutionWin::implementation
         auto rrule = std::make_shared<std::wstring>(existing ? std::wstring{ event.GetNamedString(L"rrule", L"") } : std::wstring{});
         auto rrule_touched = std::make_shared<bool>(false);
 
-        auto icon_button = [](ContentControl const& button, hstring const& glyph, hstring const& label, Windows::UI::Color const& tint)
+        auto set_icon = [](auto const& button, hstring const& glyph, hstring const& label)
         {
-            StackPanel content;
-            content.Spacing(4);
-            content.HorizontalAlignment(HorizontalAlignment::Center);
+            button.Label(label);
             FontIcon icon;
             icon.Glyph(glyph);
-            icon.FontSize(20);
-            icon.HorizontalAlignment(HorizontalAlignment::Center);
-            if (tint.A != 0)
-                icon.Foreground(SolidColorBrush(tint));
-            TextBlock text;
-            text.Text(label);
-            text.FontSize(12);
-            text.HorizontalAlignment(HorizontalAlignment::Center);
-            content.Children().Append(icon);
-            content.Children().Append(text);
-            button.Content(content);
-            button.MinWidth(76);
+            button.Icon(icon);
         };
-        Windows::UI::Color no_tint{ 0, 0, 0, 0 };
 
-        Button save_button;
-        icon_button(save_button, L"\xE74E", Tr(L"Enregistrer", L"Save"), no_tint);
-        save_button.Style(Application::Current().Resources().Lookup(box_value(L"AccentButtonStyle")).as<Style>());
+        AppBarButton save_button;
+        set_icon(save_button, L"\xE74E", Tr(L"Enregistrer", L"Save"));
         save_button.IsEnabled(!readonly);
-        Button delete_button;
-        icon_button(delete_button, L"\xE74D", Tr(L"Supprimer", L"Delete"), no_tint);
-        delete_button.IsEnabled(existing && !readonly);
-        Button close_button;
-        icon_button(close_button, L"\xE711", Tr(L"Fermer", L"Close"), no_tint);
-
-        StackPanel actions_row;
-        actions_row.Orientation(Orientation::Horizontal);
-        actions_row.Spacing(4);
-        actions_row.Children().Append(save_button);
-        if (existing)
-            actions_row.Children().Append(delete_button);
-        actions_row.Children().Append(close_button);
-
-        /* options : Afficher comme, Rappel, Périodicité */
-        auto labelled = [](hstring const& label, FrameworkElement const& control)
         {
-            Grid row;
-            row.ColumnSpacing(8);
-            ColumnDefinition a, b;
-            a.Width(GridLengthHelper::FromPixels(110));
-            b.Width(GridLengthHelper::Auto());
-            row.ColumnDefinitions().Append(a);
-            row.ColumnDefinitions().Append(b);
-            TextBlock text;
-            text.Text(label);
-            text.VerticalAlignment(VerticalAlignment::Center);
-            Grid::SetColumn(control, 1);
-            row.Children().Append(text);
-            row.Children().Append(control);
-            return row;
-        };
-        show_as_combo.Header(nullptr);
-        show_as_combo.Width(180);
-        reminder_combo.Header(nullptr);
-        reminder_combo.Width(180);
-        StackPanel option_fields;
-        option_fields.Spacing(6);
-        option_fields.Children().Append(labelled(Tr(L"Afficher comme :", L"Show as:"), show_as_combo));
-        option_fields.Children().Append(labelled(Tr(L"Rappel :", L"Reminder:"), reminder_combo));
+            Microsoft::UI::Xaml::Input::KeyboardAccelerator accelerator;
+            accelerator.Modifiers(Windows::System::VirtualKeyModifiers::Control);
+            accelerator.Key(Windows::System::VirtualKey::S);
+            save_button.KeyboardAccelerators().Append(accelerator);
+        }
+        AppBarButton delete_button;
+        set_icon(delete_button, L"\xE74D", Tr(L"Supprimer", L"Delete"));
+        delete_button.IsEnabled(existing && !readonly);
+        AppBarButton task_button;
+        set_icon(task_button, L"\xE9D5", Tr(L"Créer une tâche", L"Create a task"));
+        ToolTipService::SetToolTip(task_button, box_value(Tr(L"Créer une tâche liée à cet événement", L"Create a task linked to this event")));
+        task_button.IsEnabled(existing);
+        task_button.Click([this, event, window](IInspectable const&, RoutedEventArgs const&)
+        {
+            window.Close();
+            CreateTaskFromEvent(event);
+        });
+        AppBarButton close_button;
+        set_icon(close_button, L"\xE711", Tr(L"Fermer", L"Close"));
 
-        Button recurrence_button;
-        icon_button(recurrence_button, L"\xE72C", Tr(L"Périodicité", L"Recurrence"), no_tint);
+        /* Afficher comme : états d'Outlook (la liste déroulante cachée garde la valeur enregistrée) */
+        AppBarButton show_as_button;
+        set_icon(show_as_button, L"\xE787", Tr(L"Afficher comme", L"Show as"));
+        show_as_button.IsEnabled(!readonly);
+        auto update_show_as = [show_as_button, show_as_combo]()
+        {
+            show_as_button.Label(Tr(L"Afficher comme : ", L"Show as: ") + unbox_value<hstring>(show_as_combo.SelectedItem()));
+        };
+        update_show_as();
+        {
+            MenuFlyout menu;
+            for (uint32_t i = 0; i < show_as_combo.Items().Size(); ++i)
+            {
+                RadioMenuFlyoutItem item;
+                item.Text(unbox_value<hstring>(show_as_combo.Items().GetAt(i)));
+                item.GroupName(L"event_show_as");
+                item.IsChecked(static_cast<int>(i) == show_as_combo.SelectedIndex());
+                item.Click([show_as_combo, update_show_as, i](IInspectable const&, RoutedEventArgs const&)
+                {
+                    show_as_combo.SelectedIndex(static_cast<int>(i));
+                    update_show_as();
+                });
+                menu.Items().Append(item);
+            }
+            show_as_button.Flyout(menu);
+        }
+
+        /* Rappel */
+        AppBarButton reminder_button;
+        set_icon(reminder_button, L"\xEA8F", Tr(L"Rappel", L"Reminder"));
+        reminder_button.IsEnabled(!readonly);
+        auto update_reminder = [reminder_button, reminder_combo]()
+        {
+            reminder_button.Label(Tr(L"Rappel : ", L"Reminder: ") + unbox_value<hstring>(reminder_combo.SelectedItem()));
+        };
+        update_reminder();
+        {
+            MenuFlyout menu;
+            for (uint32_t i = 0; i < reminder_combo.Items().Size(); ++i)
+            {
+                RadioMenuFlyoutItem item;
+                item.Text(unbox_value<hstring>(reminder_combo.Items().GetAt(i)));
+                item.GroupName(L"event_reminder");
+                item.IsChecked(static_cast<int>(i) == reminder_combo.SelectedIndex());
+                item.Click([reminder_combo, update_reminder, i](IInspectable const&, RoutedEventArgs const&)
+                {
+                    reminder_combo.SelectedIndex(static_cast<int>(i));
+                    update_reminder();
+                });
+                menu.Items().Append(item);
+            }
+            reminder_button.Flyout(menu);
+        }
+
+        /* Périodicité */
+        AppBarButton recurrence_button;
+        set_icon(recurrence_button, L"\xE72C", Tr(L"Périodicité", L"Recurrence"));
         recurrence_button.IsEnabled(!readonly);
+        Flyout recurrence_flyout;
         {
             ComboBox freq_combo;
             freq_combo.Header(box_value(Tr(L"Répétition", L"Repeat")));
@@ -1435,27 +1438,13 @@ namespace winrt::EvolutionWin::implementation
             flyout_panel.Children().Append(end_combo);
             flyout_panel.Children().Append(count_box);
             flyout_panel.Children().Append(note);
-            Flyout flyout;
-            flyout.Content(flyout_panel);
-            recurrence_button.Flyout(flyout);
+            recurrence_flyout.Content(flyout_panel);
+            recurrence_button.Flyout(recurrence_flyout);
         }
 
-        Grid options_row;
-        options_row.ColumnSpacing(8);
-        {
-            ColumnDefinition a, b;
-            a.Width(GridLengthHelper::Auto());
-            b.Width(GridLengthHelper::Auto());
-            options_row.ColumnDefinitions().Append(a);
-            options_row.ColumnDefinitions().Append(b);
-        }
-        options_row.Children().Append(option_fields);
-        Grid::SetColumn(recurrence_button, 1);
-        options_row.Children().Append(recurrence_button);
-
-        /* indicateurs : Classer, Privé, Importance */
-        DropDownButton classify_button;
-        icon_button(classify_button, L"\xE8EC", Tr(L"Classer", L"Categorise"), no_tint);
+        /* Classer : catégories */
+        AppBarButton classify_button;
+        set_icon(classify_button, L"\xE8EC", Tr(L"Classer", L"Categorise"));
         classify_button.IsEnabled(!readonly);
         MenuFlyout classify_flyout;
         classify_button.Flyout(classify_flyout);
@@ -1472,8 +1461,8 @@ namespace winrt::EvolutionWin::implementation
         };
         (*repopulate)();
 
-        ToggleButton private_toggle;
-        icon_button(private_toggle, L"\xE72E", Tr(L"Privé", L"Private"), no_tint);
+        AppBarToggleButton private_toggle;
+        set_icon(private_toggle, L"\xE72E", Tr(L"Privé", L"Private"));
         private_toggle.IsChecked(existing && event.GetNamedBoolean(L"private", false));
         private_toggle.IsEnabled(!readonly);
         /* « private_check » reste la source de la valeur enregistrée */
@@ -1482,10 +1471,12 @@ namespace winrt::EvolutionWin::implementation
 
         Windows::UI::Color red{ 255, 232, 17, 35 };
         Windows::UI::Color blue{ 255, 0, 120, 212 };
-        ToggleButton importance_high;
-        icon_button(importance_high, L"\xE783", Tr(L"Importance haute", L"High importance"), red);
-        ToggleButton importance_low;
-        icon_button(importance_low, L"\xE74B", Tr(L"Importance faible", L"Low importance"), blue);
+        AppBarToggleButton importance_high;
+        set_icon(importance_high, L"\xE783", Tr(L"Importance haute", L"High importance"));
+        importance_high.Icon().as<FontIcon>().Foreground(SolidColorBrush(red));
+        AppBarToggleButton importance_low;
+        set_icon(importance_low, L"\xE74B", Tr(L"Importance faible", L"Low importance"));
+        importance_low.Icon().as<FontIcon>().Foreground(SolidColorBrush(blue));
         {
             hstring importance = existing ? event.GetNamedString(L"importance", L"normal") : hstring{ L"normal" };
             importance_high.IsChecked(importance == L"high");
@@ -1496,68 +1487,205 @@ namespace winrt::EvolutionWin::implementation
         importance_high.Click([importance_high, importance_low](auto&&, auto&&) { if (importance_high.IsChecked().Value()) importance_low.IsChecked(false); });
         importance_low.Click([importance_high, importance_low](auto&&, auto&&) { if (importance_low.IsChecked().Value()) importance_high.IsChecked(false); });
 
-        StackPanel indicators_row;
-        indicators_row.Orientation(Orientation::Horizontal);
-        indicators_row.Spacing(4);
-        indicators_row.Children().Append(classify_button);
-        indicators_row.Children().Append(private_toggle);
+        CommandBar command_bar;
+        command_bar.DefaultLabelPosition(CommandBarDefaultLabelPosition::Right);
+        command_bar.HorizontalAlignment(HorizontalAlignment::Stretch);
+        command_bar.IsOpen(false);
         {
-            StackPanel importance_column;
-            importance_column.Spacing(2);
-            importance_column.Children().Append(importance_high);
-            importance_column.Children().Append(importance_low);
-            indicators_row.Children().Append(importance_column);
+            auto commands = command_bar.PrimaryCommands();
+            commands.Append(save_button);
+            if (existing)
+            {
+                commands.Append(delete_button);
+                commands.Append(task_button);
+            }
+            commands.Append(close_button);
+            commands.Append(AppBarSeparator{});
+            commands.Append(show_as_button);
+            commands.Append(reminder_button);
+            commands.Append(recurrence_button);
+            commands.Append(AppBarSeparator{});
+            commands.Append(classify_button);
+            commands.Append(private_toggle);
+            commands.Append(importance_high);
+            commands.Append(importance_low);
         }
 
-        auto group = [](hstring const& title, UIElement const& body)
+        /* ---- formulaire pleine largeur, sur le modèle d'un événement Outlook ---- */
+        std::vector<UIElement> others;
+        for (auto const& child : panel.Children())
+            others.push_back(child);
+        panel.Children().Clear();
+        auto is_named = [&](UIElement const& child)
         {
-            StackPanel column;
-            column.Spacing(2);
-            column.Children().Append(body);
-            TextBlock caption_text;
-            caption_text.Text(title);
-            caption_text.FontSize(12);
-            caption_text.HorizontalAlignment(HorizontalAlignment::Center);
-            caption_text.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
-            column.Children().Append(caption_text);
-            Border border;
-            border.Child(column);
-            border.Padding(ThicknessHelper::FromLengths(10, 4, 10, 4));
-            border.BorderThickness(ThicknessHelper::FromLengths(0, 0, 1, 0));
-            border.BorderBrush(Application::Current().Resources().Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>());
-            return border;
+            for (UIElement const& named : std::initializer_list<UIElement>{
+                     summary_box, location_box, calendar_combo, all_day_box, start_row, end_row, zone_combo, attendees_box,
+                     teams_check, meet_check, sender_combo, invite_check, desc_box })
+                if (named == child)
+                    return true;
+            return false;
         };
-        StackPanel ribbon_row;
-        ribbon_row.Orientation(Orientation::Horizontal);
-        ribbon_row.Children().Append(group(Tr(L"Actions", L"Actions"), actions_row));
-        ribbon_row.Children().Append(group(Tr(L"Options", L"Options"), options_row));
-        ribbon_row.Children().Append(group(Tr(L"Indicateurs", L"Tags"), indicators_row));
-        ScrollViewer ribbon;
-        ribbon.HorizontalScrollBarVisibility(ScrollBarVisibility::Auto);
-        ribbon.VerticalScrollBarVisibility(ScrollBarVisibility::Disabled);
-        ribbon.HorizontalScrollMode(ScrollMode::Auto);
-        ribbon.VerticalScrollMode(ScrollMode::Disabled);
-        ribbon.Content(ribbon_row);
-        ribbon.Background(Application::Current().Resources().Lookup(box_value(L"CardBackgroundFillColorDefaultBrush")).as<Brush>());
 
-        ScrollViewer scroll;
-        scroll.Content(panel);
-        panel.Margin(ThicknessHelper::FromLengths(16, 12, 16, 12));
-        panel.MaxWidth(900);
-        panel.HorizontalAlignment(HorizontalAlignment::Stretch);
+        summary_box.Header(nullptr);
+        summary_box.PlaceholderText(Tr(L"Ajouter un titre", L"Add a title"));
+        summary_box.FontSize(22);
+        location_box.Header(nullptr);
+        attendees_box.Header(nullptr);
+        attendees_box.PlaceholderText(Tr(L"Ajouter des participants (adresses séparées par « ; »)", L"Add attendees (addresses separated by \";\")"));
+        calendar_combo.Header(nullptr);
+        sender_combo.Header(nullptr);
+        zone_combo.Header(nullptr);
+        start_date.Header(nullptr);
+        end_date.Header(nullptr);
+        start_time.Header(nullptr);
+        end_time.Header(nullptr);
+        desc_box.Header(nullptr);
+        desc_box.Height(NAN);
+        desc_box.MinHeight(160);
+        desc_box.VerticalAlignment(VerticalAlignment::Stretch);
+        desc_box.PlaceholderText(Tr(L"Description", L"Description"));
+
+        /* date, heure et options sur une ligne : les sélecteurs sortent de leurs grilles de départ */
+        start_row.Children().Clear();
+        end_row.Children().Clear();
+        StackPanel start_line;
+        start_line.Orientation(Orientation::Horizontal);
+        start_line.Spacing(10);
+        start_line.Children().Append(start_date);
+        start_line.Children().Append(start_time);
+        start_line.Children().Append(zone_combo);
+        start_line.Children().Append(all_day_box);
+        StackPanel end_line;
+        end_line.Orientation(Orientation::Horizontal);
+        end_line.Spacing(10);
+        end_line.Children().Append(end_date);
+        end_line.Children().Append(end_time);
+        HyperlinkButton make_recurring;
+        make_recurring.Content(box_value(Tr(L"Rendre périodique", L"Make recurring")));
+        make_recurring.IsEnabled(!readonly);
+        make_recurring.Click([recurrence_flyout, make_recurring](auto&&, auto&&) { recurrence_flyout.ShowAt(make_recurring); });
+        end_line.Children().Append(make_recurring);
+
+        Grid form;
+        form.Margin(ThicknessHelper::FromLengths(24, 12, 24, 16));
+        form.RowSpacing(10);
+        form.ColumnSpacing(12);
+        {
+            ColumnDefinition label_column, field_column;
+            label_column.Width(GridLengthHelper::FromPixels(120));
+            field_column.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+            form.ColumnDefinitions().Append(label_column);
+            form.ColumnDefinitions().Append(field_column);
+        }
+        int form_row = 0;
+        auto add_row = [&](hstring const& label, UIElement const& field, bool stretch_height)
+        {
+            RowDefinition row;
+            row.Height(stretch_height ? GridLengthHelper::FromValueAndType(1, GridUnitType::Star) : GridLengthHelper::Auto());
+            form.RowDefinitions().Append(row);
+            if (!label.empty())
+            {
+                TextBlock text;
+                text.Text(label);
+                text.VerticalAlignment(stretch_height ? VerticalAlignment::Top : VerticalAlignment::Center);
+                text.Margin(ThicknessHelper::FromLengths(0, stretch_height ? 8 : 0, 0, 0));
+                text.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+                Grid::SetRow(text, form_row);
+                form.Children().Append(text);
+            }
+            Grid::SetRow(field.as<FrameworkElement>(), form_row);
+            Grid::SetColumn(field.as<FrameworkElement>(), 1);
+            form.Children().Append(field);
+            ++form_row;
+        };
+
+        /* informations (calendrier, organisateur, participants, catégories, bouton Rejoindre…) */
+        StackPanel info_stack;
+        info_stack.Spacing(6);
+        info_stack.Children().Append(category_chips);
+        for (auto const& child : others)
+            if (!is_named(child))
+                info_stack.Children().Append(child);
+        {
+            RowDefinition row;
+            row.Height(GridLengthHelper::Auto());
+            form.RowDefinitions().Append(row);
+            Grid::SetRow(info_stack, form_row);
+            Grid::SetColumnSpan(info_stack, 2);
+            form.Children().Append(info_stack);
+            ++form_row;
+        }
+
+        add_row(Tr(L"Titre", L"Title"), summary_box, false);
+        if (std::find_if(others.begin(), others.end(), [&](UIElement const& c) { return c == calendar_combo; }) != others.end())
+            add_row(Tr(L"Calendrier", L"Calendar"), calendar_combo, false);
+        add_row(Tr(L"Participants", L"Attendees"), attendees_box, false);
+        add_row(Tr(L"Heure de début", L"Start"), start_line, false);
+        add_row(Tr(L"Heure de fin", L"End"), end_line, false);
+        add_row(Tr(L"Emplacement", L"Location"), location_box, false);
+
+        /* réunion en ligne et invitations */
+        {
+            StackPanel extras;
+            extras.Spacing(8);
+            bool any_extra = false;
+            for (UIElement const& candidate : std::initializer_list<UIElement>{ teams_check, meet_check, sender_combo, invite_check })
+                if (std::find_if(others.begin(), others.end(), [&](UIElement const& c) { return c == candidate; }) != others.end())
+                {
+                    if (candidate == sender_combo)
+                    {
+                        TextBlock sender_label;
+                        sender_label.Text(Tr(L"Envoyer les invitations depuis", L"Send invitations from"));
+                        sender_label.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+                        extras.Children().Append(sender_label);
+                    }
+                    extras.Children().Append(candidate);
+                    any_extra = true;
+                }
+            if (any_extra)
+                add_row(Tr(L"Réunion en ligne", L"Online meeting"), extras, false);
+        }
+        add_row(Tr(L"Description", L"Description"), desc_box, true);
 
         Grid window_root;
-        window_root.Background(Application::Current().Resources().Lookup(box_value(L"ApplicationPageBackgroundThemeBrush")).as<Brush>());
         {
-            RowDefinition ribbon_row_def, content_row_def;
-            ribbon_row_def.Height(GridLengthHelper::Auto());
+            RowDefinition title_row_def, bar_row_def, content_row_def;
+            title_row_def.Height(GridLengthHelper::Auto());
+            bar_row_def.Height(GridLengthHelper::Auto());
             content_row_def.Height(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
-            window_root.RowDefinitions().Append(ribbon_row_def);
+            window_root.RowDefinitions().Append(title_row_def);
+            window_root.RowDefinitions().Append(bar_row_def);
             window_root.RowDefinitions().Append(content_row_def);
         }
-        Grid::SetRow(ribbon, 0);
-        Grid::SetRow(scroll, 1);
-        window_root.Children().Append(ribbon);
+        /* barre de titre personnalisée : icône et titre, comme les autres fenêtres de l'application */
+        Grid title_bar;
+        title_bar.Height(40);
+        title_bar.Padding(ThicknessHelper::FromLengths(12, 0, 0, 0));
+        {
+            StackPanel title_content;
+            title_content.Orientation(Orientation::Horizontal);
+            title_content.VerticalAlignment(VerticalAlignment::Center);
+            title_content.Spacing(8);
+            FontIcon title_icon;
+            title_icon.Glyph(L"\xE787");
+            title_icon.FontSize(14);
+            TextBlock title_text;
+            title_text.Text(window_title);
+            title_text.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+            title_text.VerticalAlignment(VerticalAlignment::Center);
+            title_content.Children().Append(title_icon);
+            title_content.Children().Append(title_text);
+            title_bar.Children().Append(title_content);
+        }
+        window.SetTitleBar(title_bar);
+        Grid::SetRow(title_bar, 0);
+        Grid::SetRow(command_bar, 1);
+        ScrollViewer scroll;
+        scroll.Content(form);
+        scroll.VerticalScrollBarVisibility(ScrollBarVisibility::Auto);
+        Grid::SetRow(scroll, 2);
+        window_root.Children().Append(title_bar);
+        window_root.Children().Append(command_bar);
         window_root.Children().Append(scroll);
         window.Content(window_root);
 
