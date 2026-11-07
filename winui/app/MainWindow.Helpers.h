@@ -280,6 +280,23 @@ namespace EvolutionWin::Helpers
                 prefix.data(), static_cast<int>(prefix.size()), TRUE) == CSTR_EQUAL;
     }
 
+    /* Affiche une fenêtre secondaire (événement, éléments récupérables…) au premier plan : elle est « possédée »
+     * par la fenêtre principale (elle reste donc au-dessus d'elle, comme une fenêtre fille) puis activée.
+     * Paramètres :
+     *   window : fenêtre à afficher
+     *   owner  : fenêtre principale (propriétaire) */
+    inline void ShowOwnedWindow(winrt::Microsoft::UI::Xaml::Window const& window, HWND owner)
+    {
+        HWND handle = nullptr;
+        if (auto native = window.try_as<::IWindowNative>())
+            native->get_WindowHandle(&handle);
+        if (handle && owner)
+            SetWindowLongPtrW(handle, GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(owner));
+        window.Activate();
+        if (handle)
+            SetForegroundWindow(handle);
+    }
+
     /* Plages (début, longueur) des adresses web (http://, https://) d'un texte.
      * Une adresse s'arrête à un espace, « < », « > », une guillemet ou, dans un texte déjà échappé en HTML
      * (escaped = true), à « &lt; », « &gt; » ou « &quot; » ; la ponctuation finale (.,;:!?)]) est écartée. */

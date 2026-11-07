@@ -1943,7 +1943,10 @@ namespace winrt::EvolutionWin::implementation
         });
         close_button.Click([window](auto&&, auto&&) { window.Close(); });
 
-        window.Activate();
+        HWND owner_handle = nullptr;
+        if (auto native = try_as<::IWindowNative>())
+            native->get_WindowHandle(&owner_handle);
+        ::EvolutionWin::Helpers::ShowOwnedWindow(window, owner_handle);
     }
 
     /**

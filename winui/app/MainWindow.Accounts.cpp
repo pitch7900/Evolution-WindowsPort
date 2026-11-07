@@ -2788,6 +2788,9 @@ namespace winrt::EvolutionWin::implementation
             fill();
         });
 
-        window.Activate();
+        HWND owner_handle = nullptr;
+        if (auto native = try_as<::IWindowNative>())
+            native->get_WindowHandle(&owner_handle);
+        ::EvolutionWin::Helpers::ShowOwnedWindow(window, owner_handle);
     }
 }
