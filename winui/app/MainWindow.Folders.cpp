@@ -49,7 +49,7 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus(L"Comptes : " + error, InfoBarSeverity::Error);
+                ShowStatus(Tr(L"Comptes : ") + error, InfoBarSeverity::Error);
                 return;
             }
 
@@ -101,7 +101,7 @@ namespace winrt::EvolutionWin::implementation
                 bool enabled = account.GetNamedBoolean(L"enabled", true);
                 hstring acc_name = account.GetNamedString(L"name", uid);
                 if (!enabled)
-                    acc_name = acc_name + Tr(L" (Désactivé)", L" (Disabled)");
+                    acc_name = Fmt(Tr(L"{0} (Désactivé)", L"{0} (Disabled)"), { acc_name });
 
                 TreeViewNode node;
                 node.Content(EvolutionWin::FolderItem(acc_name,
@@ -114,7 +114,7 @@ namespace winrt::EvolutionWin::implementation
                 {
                     if (!folders_error.empty())
                     {
-                        ShowStatus(L"Dossiers : " + folders_error, InfoBarSeverity::Warning);
+                        ShowStatus(Tr(L"Dossiers : ") + folders_error, InfoBarSeverity::Warning);
                         return;
                     }
 
@@ -286,7 +286,7 @@ namespace winrt::EvolutionWin::implementation
             if (item.IsAccount())
             {
                 ToggleMenuFlyoutItem notif_account_item;
-                notif_account_item.Text(L"Notifications pour ce compte");
+                notif_account_item.Text(Tr(L"Notifications pour ce compte"));
                 FontIcon notif_icon;
                 notif_icon.Glyph(L"\xEA8F");
                 notif_account_item.Icon(notif_icon);
@@ -485,10 +485,10 @@ namespace winrt::EvolutionWin::implementation
             TextBlock text;
             text.TextWrapping(TextWrapping::Wrap);
             text.Text(permanent
-                ? (Tr(L"Tous les messages de « ", L"All messages in \"") + item.Name() +
-                   Tr(L" » seront supprimés définitivement. Cette action est irréversible.", L"\" will be permanently deleted. This action cannot be undone."))
-                : (Tr(L"Tous les messages de « ", L"All messages in \"") + item.Name() +
-                   Tr(L" » seront déplacés vers la Corbeille.", L"\" will be moved to Deleted Items.")));
+                ? Fmt(Tr(L"Tous les messages de « {0} » seront supprimés définitivement. Cette action est irréversible.",
+                         L"All messages in \"{0}\" will be permanently deleted. This action cannot be undone."), { item.Name() })
+                : Fmt(Tr(L"Tous les messages de « {0} » seront déplacés vers la Corbeille.",
+                         L"All messages in \"{0}\" will be moved to Deleted Items."), { item.Name() }));
             confirm.Content(text);
             confirm.PrimaryButtonText(permanent ? Tr(L"Supprimer", L"Delete", L"Common_Delete") : Tr(L"Vider", L"Empty", L"Common_Empty"));
             confirm.CloseButtonText(Tr(L"Annuler", L"Cancel", L"Common_Cancel"));
@@ -504,22 +504,22 @@ namespace winrt::EvolutionWin::implementation
         hstring account = item.Account();
         hstring folder = item.Folder();
         hstring name = item.Name();
-        ShowStatus((action == L"empty" ? L"Suppression des messages de « " : L"Marquage comme lus dans « ") + name + L" »…",
+        ShowStatus(Fmt(action == L"empty" ? Tr(L"Suppression des messages de « {0} »…") : Tr(L"Marquage comme lus dans « {0} »…"), { name }),
             InfoBarSeverity::Informational);
 
         m_core->FolderAction(account, folder, action, [this, account, folder, name, action](hstring const& json, hstring const& error)
         {
             if (!error.empty())
             {
-                ShowStatus(L"« " + name + L" » : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"« {0} » : {1}"), { name, error }), InfoBarSeverity::Error);
                 return;
             }
 
             JsonObject result;
             uint32_t count = JsonObject::TryParse(json, result) ? static_cast<uint32_t>(result.GetNamedNumber(L"count", 0)) : 0;
             ShowStatus(action == L"empty"
-                ? hstring{ std::to_wstring(count) + L" message(s) supprimé(s) de « " } + name + L" »."
-                : hstring{ std::to_wstring(count) + L" message(s) marqué(s) comme lu(s) dans « " } + name + L" ».",
+                ? Fmt(Tr(L"{0} message(s) supprimé(s) de « {1} »."), { to_hstring(count), name })
+                : Fmt(Tr(L"{0} message(s) marqué(s) comme lu(s) dans « {1} »."), { to_hstring(count), name }),
                 InfoBarSeverity::Success);
 
             if (account == m_account && folder == m_folder)
@@ -821,8 +821,8 @@ namespace winrt::EvolutionWin::implementation
         box.SelectAll();
         box.MinWidth(320);
         dialog.Content(box);
-        dialog.PrimaryButtonText(L"OK");
-        dialog.CloseButtonText(L"Annuler");
+        dialog.PrimaryButtonText(Tr(L"OK"));
+        dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Primary);
         dialog.IsPrimaryButtonEnabled(!trimmed(initial).empty());
         box.TextChanged([dialog, trimmed](IInspectable const& sender, TextChangedEventArgs const&)
@@ -848,25 +848,25 @@ namespace winrt::EvolutionWin::implementation
     fire_and_forget MainWindow::CreateFolderAsync(hstring account, hstring parent, hstring parent_name)
     {
         auto strong = get_strong();
-        hstring name = co_await PromptFolderNameAsync(L"Nouveau dossier",
-            (parent.empty() ? L"Nom du nouveau dossier au premier niveau de « " : L"Nom du nouveau sous-dossier de « ") +
-                parent_name + L" »",
+        hstring name = co_await PromptFolderNameAsync(Tr(L"Nouveau dossier"),
+            Fmt(parent.empty() ? Tr(L"Nom du nouveau dossier au premier niveau de « {0} »") : Tr(L"Nom du nouveau sous-dossier de « {0} »"),
+                { parent_name }),
             L"");
         if (name.empty())
             co_return;
 
-        ShowStatus(L"Création du dossier « " + name + L" »…", InfoBarSeverity::Informational);
+        ShowStatus(Fmt(Tr(L"Création du dossier « {0} »…"), { name }), InfoBarSeverity::Informational);
         m_core->CreateFolder(account, parent, name, [this, account, name](hstring const& json, hstring const& error)
         {
             if (!error.empty())
             {
-                ShowStatus(L"Nouveau dossier « " + name + L" » : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Nouveau dossier « {0} » : {1}"), { name, error }), InfoBarSeverity::Error);
                 return;
             }
 
             JsonObject result;
             hstring full_name = JsonObject::TryParse(json, result) ? result.GetNamedString(L"full_name", L"") : hstring{};
-            ShowStatus(L"Dossier « " + name + L" » créé.", InfoBarSeverity::Success);
+            ShowStatus(Fmt(Tr(L"Dossier « {0} » créé."), { name }), InfoBarSeverity::Success);
             ReloadAccountFolders(account, L"", full_name);
         });
     }
@@ -879,23 +879,23 @@ namespace winrt::EvolutionWin::implementation
     fire_and_forget MainWindow::RenameFolderAsync(hstring account, hstring full_name, hstring name)
     {
         auto strong = get_strong();
-        hstring new_name = co_await PromptFolderNameAsync(L"Renommer le dossier", L"Nouveau nom de « " + name + L" »", name);
+        hstring new_name = co_await PromptFolderNameAsync(Tr(L"Renommer le dossier"), Fmt(Tr(L"Nouveau nom de « {0} »"), { name }), name);
         if (new_name.empty() || new_name == name)
             co_return;
 
-        ShowStatus(L"Renommage de « " + name + L" »…", InfoBarSeverity::Informational);
+        ShowStatus(Fmt(Tr(L"Renommage de « {0} »…"), { name }), InfoBarSeverity::Informational);
         m_core->RenameFolder(account, full_name, new_name,
             [this, account, full_name, name, new_name](hstring const& json, hstring const& error)
         {
             if (!error.empty())
             {
-                ShowStatus(L"Renommer « " + name + L" » : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Renommer « {0} » : {1}"), { name, error }), InfoBarSeverity::Error);
                 return;
             }
 
             JsonObject result;
             hstring renamed = JsonObject::TryParse(json, result) ? result.GetNamedString(L"full_name", L"") : hstring{};
-            ShowStatus(L"Dossier « " + name + L" » renommé en « " + new_name + L" ».", InfoBarSeverity::Success);
+            ShowStatus(Fmt(Tr(L"Dossier « {0} » renommé en « {1} »."), { name, new_name }), InfoBarSeverity::Success);
             ReloadAccountFolders(account, full_name, renamed);
         });
     }
@@ -910,7 +910,7 @@ namespace winrt::EvolutionWin::implementation
     void MainWindow::MoveOrCopyFolder(hstring const& account, hstring const& full_name, hstring const& name,
                                       hstring const& parent, bool copy)
     {
-        ShowStatus((copy ? L"Copie du dossier « " : L"Déplacement du dossier « ") + name + L" »…",
+        ShowStatus(Fmt(copy ? Tr(L"Copie du dossier « {0} »…") : Tr(L"Déplacement du dossier « {0} »…"), { name }),
             InfoBarSeverity::Informational);
 
         m_core->MoveOrCopyFolder(account, full_name, parent, copy,
@@ -918,7 +918,7 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus((copy ? L"Copier « " : L"Déplacer « ") + name + L" » : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(copy ? Tr(L"Copier « {0} » : {1}") : Tr(L"Déplacer « {0} » : {1}"), { name, error }), InfoBarSeverity::Error);
                 /* une copie interrompue laisse le dossier créé */
                 if (copy)
                     ReloadAccountFolders(account, L"", L"");
@@ -933,13 +933,13 @@ namespace winrt::EvolutionWin::implementation
             if (copy)
             {
                 auto count = static_cast<uint32_t>(result.GetNamedNumber(L"count", 0));
-                ShowStatus(hstring{ L"Dossier « " } + name + L" » copié (" + to_hstring(count) + L" message(s)).",
+                ShowStatus(Fmt(Tr(L"Dossier « {0} » copié ({1} message(s))."), { name, to_hstring(count) }),
                     InfoBarSeverity::Success);
                 ReloadAccountFolders(account, L"", target);
             }
             else
             {
-                ShowStatus(L"Dossier « " + name + L" » déplacé.", InfoBarSeverity::Success);
+                ShowStatus(Fmt(Tr(L"Dossier « {0} » déplacé."), { name }), InfoBarSeverity::Success);
                 ReloadAccountFolders(account, full_name, target);
             }
         });
@@ -960,17 +960,17 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog confirm;
         confirm.XamlRoot(Content().XamlRoot());
-        confirm.Title(box_value(L"Supprimer le dossier ?"));
+        confirm.Title(box_value(Tr(L"Supprimer le dossier ?")));
         TextBlock text;
         text.TextWrapping(TextWrapping::Wrap);
         text.Text(total > 0
-            ? hstring{ L"Le dossier « " } + name + L" » et ses " + to_hstring(total) +
-                L" message(s) seront supprimés définitivement. Cette action est irréversible."
-            : L"Le dossier « " + name + L" » et tous les messages qu'il contient seront supprimés définitivement. "
-                L"Cette action est irréversible.");
+            ? Fmt(Tr(L"Le dossier « {0} » et ses {1} message(s) seront supprimés définitivement. Cette action est irréversible."),
+                { name, to_hstring(total) })
+            : Fmt(Tr(L"Le dossier « {0} » et tous les messages qu'il contient seront supprimés définitivement. Cette action est irréversible."),
+                { name }));
         confirm.Content(text);
-        confirm.PrimaryButtonText(L"Supprimer");
-        confirm.CloseButtonText(L"Annuler");
+        confirm.PrimaryButtonText(Tr(L"Supprimer"));
+        confirm.CloseButtonText(Tr(L"Annuler"));
         confirm.DefaultButton(ContentDialogButton::Close);
 
         m_dialog_open = true;
@@ -979,18 +979,18 @@ namespace winrt::EvolutionWin::implementation
         if (result != ContentDialogResult::Primary)
             co_return;
 
-        ShowStatus(L"Suppression du dossier « " + name + L" »…", InfoBarSeverity::Informational);
+        ShowStatus(Fmt(Tr(L"Suppression du dossier « {0} »…"), { name }), InfoBarSeverity::Informational);
         m_core->DeleteFolder(account, full_name, [this, account, full_name, name](hstring const& json, hstring const& error)
         {
             if (!error.empty())
             {
-                ShowStatus(L"Supprimer « " + name + L" » : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Supprimer « {0} » : {1}"), { name, error }), InfoBarSeverity::Error);
                 return;
             }
 
             JsonObject result;
             auto count = JsonObject::TryParse(json, result) ? static_cast<uint32_t>(result.GetNamedNumber(L"count", 0)) : 0u;
-            ShowStatus(hstring{ L"Dossier « " } + name + L" » supprimé (" + to_hstring(count) + L" message(s)).",
+            ShowStatus(Fmt(Tr(L"Dossier « {0} » supprimé ({1} message(s))."), { name, to_hstring(count) }),
                 InfoBarSeverity::Success);
             ReloadAccountFolders(account, full_name, L"");
         });
@@ -1048,7 +1048,7 @@ namespace winrt::EvolutionWin::implementation
             if (!error.empty() || account_node == m_nodes.end())
             {
                 if (!error.empty())
-                    ShowStatus(L"Dossiers : " + error, InfoBarSeverity::Warning);
+                    ShowStatus(Tr(L"Dossiers : ") + error, InfoBarSeverity::Warning);
                 return;
             }
 
@@ -1274,11 +1274,25 @@ namespace winrt::EvolutionWin::implementation
         FolderTree().RootNodes().Append(root);
         m_nodes[NodeKey(Unified::kAccountId, L"")] = root;
 
+        /* titre traduisible de chaque vue unifiée (équivalent localisé de Unified::Title) */
+        auto unified_title = [](std::wstring_view role) -> hstring
+        {
+            if (role == L"inbox")
+                return Tr(L"Boîte de réception unifiée", L"Unified Inbox");
+            if (role == L"sent")
+                return Tr(L"Tous les éléments envoyés", L"All Sent Items");
+            if (role == L"drafts")
+                return Tr(L"Tous les brouillons", L"All Drafts");
+            if (role == L"trash")
+                return Tr(L"Tous les éléments supprimés", L"All Deleted Items");
+            return hstring{};
+        };
+
         for (auto const& role : Unified::Roles())
         {
             hstring role_name{ role };
             TreeViewNode node;
-            node.Content(EvolutionWin::FolderItem(hstring{ Unified::Title(role, UiIsEnglish()) }, FolderGlyph(role_name), 0,
+            node.Content(EvolutionWin::FolderItem(unified_title(role), FolderGlyph(role_name), 0,
                 Unified::kAccountId, role_name, false));
             root.Children().Append(node);
             m_nodes[NodeKey(Unified::kAccountId, role_name)] = node;
@@ -1585,10 +1599,10 @@ namespace winrt::EvolutionWin::implementation
         {
             ShowBanner(
                 banner_id,
-                L"Réponses automatiques expirées",
-                L"La période d'absence programmée pour le compte « " + acc_name + L" » est terminée. Souhaitez-vous la désactiver ?",
+                Tr(L"Réponses automatiques expirées"),
+                Fmt(Tr(L"La période d'absence programmée pour le compte « {0} » est terminée. Souhaitez-vous la désactiver ?"), { acc_name }),
                 InfoBarSeverity::Warning,
-                L"Désactiver",
+                Tr(L"Désactiver"),
                 [this, banner_id, account_uid = m_account]()
                 {
                     /* désactivation sur le serveur (Microsoft 365 / Gmail), puis mise à jour du bandeau */
@@ -1601,10 +1615,10 @@ namespace winrt::EvolutionWin::implementation
         {
             ShowBanner(
                 banner_id,
-                L"Réponses automatiques activées",
-                L"Les réponses automatiques d'absence du bureau sont actives pour le compte « " + acc_name + L" ».",
+                Tr(L"Réponses automatiques activées"),
+                Fmt(Tr(L"Les réponses automatiques d'absence du bureau sont actives pour le compte « {0} »."), { acc_name }),
                 InfoBarSeverity::Warning, /* fond ambre : se détache du reste de l'interface */
-                L"Désactiver",
+                Tr(L"Désactiver"),
                 [this, banner_id, account_uid = m_account]()
                 {
                     /* désactivation sur le serveur (Microsoft 365 / Gmail), puis mise à jour du bandeau */

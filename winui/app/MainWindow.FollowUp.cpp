@@ -13,9 +13,30 @@ using namespace Microsoft::UI::Xaml::Controls;
 using namespace Microsoft::UI::Xaml::Media;
 using namespace Windows::Data::Json;
 using namespace Windows::Foundation;
+using namespace ::EvolutionWin::Helpers;
 
 namespace winrt::EvolutionWin::implementation
 {
+    namespace
+    {
+        /* Libellé affiché d'un suivi : les libellés prédéfinis (stockés en français dans le message) sont traduits,
+         * les libellés personnalisés sont affichés tels quels. */
+        hstring FollowUpDisplayLabel(std::wstring const& label)
+        {
+            if (label == L"Urgent")
+                return Tr(L"Urgent");
+            if (label == L"À traiter")
+                return Tr(L"À traiter");
+            if (label == L"À répondre")
+                return Tr(L"À répondre");
+            if (label == L"Pour information")
+                return Tr(L"Pour information");
+            if (label == L"En attente")
+                return Tr(L"En attente");
+            return hstring{ label };
+        }
+    }
+
     /**
      * @brief Calcule l'échéance (minuit local, en secondes Unix) d'un choix de suivi.
      * @param choice Choix d'échéance.
@@ -51,7 +72,7 @@ namespace winrt::EvolutionWin::implementation
         {
             icon.Glyph(L"\xE7C1");
             icon.Foreground(SolidColorBrush{ Color{ 255, 247, 99, 12 } });
-            ToolTipService::SetToolTip(icon, box_value(L"Message suivi"));
+            ToolTipService::SetToolTip(icon, box_value(Tr(L"Message suivi")));
             return;
         }
 
@@ -67,9 +88,9 @@ namespace winrt::EvolutionWin::implementation
         else
             icon.Foreground(SolidColorBrush{ Color{ 255, 247, 99, 12 } });
 
-        std::wstring tip = state.follow_up;
+        hstring tip = FollowUpDisplayLabel(state.follow_up);
         if (done)
-            tip += L" — terminé";
+            tip = Fmt(Tr(L"{0} — terminé"), { tip });
         else if (state.due_by > 0)
         {
             std::time_t due = static_cast<std::time_t>(state.due_by);
@@ -77,9 +98,9 @@ namespace winrt::EvolutionWin::implementation
             localtime_s(&tm, &due);
             wchar_t buf[64]{};
             wcsftime(buf, 63, L"%d/%m/%Y", &tm);
-            tip += std::wstring{ L" — échéance " } + buf + (overdue ? L" (dépassée)" : L"");
+            tip = Fmt(overdue ? Tr(L"{0} — échéance {1} (dépassée)") : Tr(L"{0} — échéance {1}"), { tip, hstring{ buf } });
         }
-        ToolTipService::SetToolTip(icon, box_value(hstring{ tip }));
+        ToolTipService::SetToolTip(icon, box_value(tip));
     }
 
     /**
@@ -141,7 +162,7 @@ namespace winrt::EvolutionWin::implementation
                 [this](hstring const&, hstring const& error)
             {
                 if (!error.empty())
-                    ShowStatus(L"Suivi : " + error, InfoBarSeverity::Error);
+                    ShowStatus(Tr(L"Suivi : ") + error, InfoBarSeverity::Error);
             });
         }
     }
@@ -155,20 +176,22 @@ namespace winrt::EvolutionWin::implementation
     {
         using ::EvolutionWin::FollowUp::Due;
 
-        struct DueEntry { Due due; const wchar_t* text; };
+        struct DueEntry { Due due; hstring (*text)(); };
         static const DueEntry dues[] = {
-            { Due::Today, L"Aujourd'hui" }, { Due::Tomorrow, L"Demain" },
-            { Due::ThisWeek, L"Cette semaine" }, { Due::NextWeek, L"La semaine prochaine" },
-            { Due::None, L"Sans date" } };
+            { Due::Today, []() -> hstring { return Tr(L"Aujourd'hui"); } },
+            { Due::Tomorrow, []() -> hstring { return Tr(L"Demain"); } },
+            { Due::ThisWeek, []() -> hstring { return Tr(L"Cette semaine"); } },
+            { Due::NextWeek, []() -> hstring { return Tr(L"La semaine prochaine"); } },
+            { Due::None, []() -> hstring { return Tr(L"Sans date"); } } };
 
         for (auto const& label : ::EvolutionWin::FollowUp::DefaultLabels())
         {
             MenuFlyoutSubItem sub;
-            sub.Text(hstring{ label });
+            sub.Text(FollowUpDisplayLabel(label));
             for (auto const& d : dues)
             {
                 MenuFlyoutItem entry;
-                entry.Text(d.text);
+                entry.Text(d.text());
                 int choice = static_cast<int>(d.due);
                 entry.Click([this, uids, label, choice](IInspectable const&, RoutedEventArgs const&)
                 {
@@ -182,7 +205,7 @@ namespace winrt::EvolutionWin::implementation
         items.Append(MenuFlyoutSeparator{});
 
         MenuFlyoutItem done_item;
-        done_item.Text(L"Marquer comme terminé");
+        done_item.Text(Tr(L"Marquer comme terminé"));
         done_item.Click([this, uids](IInspectable const&, RoutedEventArgs const&)
         {
             ApplyFollowUp(uids, L"", 0, true);
@@ -190,7 +213,7 @@ namespace winrt::EvolutionWin::implementation
         items.Append(done_item);
 
         MenuFlyoutItem clear_item;
-        clear_item.Text(L"Effacer le suivi");
+        clear_item.Text(Tr(L"Effacer le suivi"));
         clear_item.Click([this, uids](IInspectable const&, RoutedEventArgs const&)
         {
             ApplyFollowUp(uids, L"", static_cast<int>(Due::None), false);

@@ -156,9 +156,9 @@ namespace
 
             JsonObject release;
             if (response.StatusCode() == Windows::Web::Http::HttpStatusCode::NotFound)
-                check.failure = L"aucune version publiée";
+                check.failure = Tr(L"aucune version publiée");
             else if (!response.IsSuccessStatusCode() || !JsonObject::TryParse(body, release))
-                check.failure = L"réponse GitHub " + to_hstring(static_cast<int>(response.StatusCode()));
+                check.failure = Fmt(Tr(L"réponse GitHub {0}"), { to_hstring(static_cast<int>(response.StatusCode())) });
             else
             {
                 check.tag = release.GetNamedString(L"tag_name", L"");
@@ -182,7 +182,7 @@ namespace
                         check.sha_url = url;
                 }
                 if (check.tag.empty())
-                    check.failure = L"version inconnue";
+                    check.failure = Tr(L"version inconnue");
                 else
                     check.newer = IsNewerVersion(check.tag.c_str(), EVO_VERSION_W);
             }
@@ -205,33 +205,33 @@ namespace
     {
         if (!check.failure.empty())
         {
-            status.Text(L"Mise à jour : vérification impossible (" + check.failure + L")");
+            status.Text(Fmt(Tr(L"Mise à jour : vérification impossible ({0})"), { check.failure }));
             return;
         }
         if (!check.newer)
         {
-            status.Text(L"Vous utilisez la dernière version.");
+            status.Text(Tr(L"Vous utilisez la dernière version."));
             return;
         }
 
-        status.Text(L"Nouvelle version disponible : " + check.tag);
+        status.Text(Fmt(Tr(L"Nouvelle version disponible : {0}"), { check.tag }));
         status.FontWeight(Microsoft::UI::Text::FontWeights::SemiBold());
         status.Opacity(1);
-        banner.Title(L"Nouvelle version disponible : " + check.tag);
-        banner.Message(L"Vous utilisez la version " EVO_VERSION_W L".");
+        banner.Title(Fmt(Tr(L"Nouvelle version disponible : {0}"), { check.tag }));
+        banner.Message(Fmt(Tr(L"Vous utilisez la version {0}."), { EVO_VERSION_W }));
         try
         {
             if (install && !check.msi_url.empty())
             {
                 Button download;
-                download.Content(box_value(L"Télécharger et installer"));
+                download.Content(box_value(Tr(L"Télécharger et installer")));
                 download.Click([install](IInspectable const&, RoutedEventArgs const&) { install(); });
                 banner.ActionButton(download);
             }
             else
             {
                 HyperlinkButton download;
-                download.Content(box_value(L"Télécharger"));
+                download.Content(box_value(Tr(L"Télécharger")));
                 download.NavigateUri(Uri{ check.page });
                 banner.ActionButton(download);
             }
@@ -356,7 +356,7 @@ namespace
             std::wstring expected = sha_response.IsSuccessStatusCode()
                 ? ::EvolutionWin::UpdateIntegrity::ParseSha256File(sha_text.c_str(), msi_name.c_str()) : std::wstring{};
             if (expected.empty())
-                outcome.error = L"empreinte SHA-256 de la version introuvable";
+                outcome.error = Tr(L"empreinte SHA-256 de la version introuvable").c_str();
 
             if (outcome.error.empty())
             {
@@ -369,7 +369,7 @@ namespace
 
                 auto response = co_await http.GetAsync(Uri{ msi_url }, Windows::Web::Http::HttpCompletionOption::ResponseHeadersRead);
                 if (!response.IsSuccessStatusCode())
-                    outcome.error = L"réponse GitHub " + std::to_wstring(static_cast<int>(response.StatusCode()));
+                    outcome.error = Fmt(Tr(L"réponse GitHub {0}"), { to_hstring(static_cast<int>(response.StatusCode())) }).c_str();
                 else
                 {
                     uint64_t total = 0;
@@ -398,8 +398,9 @@ namespace
                             progress.IsIndeterminate(false);
                             progress.Value(static_cast<double>(received) * 100.0 / static_cast<double>(total));
                         }
-                        status.Text(L"Téléchargement : " + FormatFileSize(static_cast<int64_t>(received)) +
-                                    (total > 0 ? L" / " + FormatFileSize(static_cast<int64_t>(total)) : hstring{}));
+                        status.Text(total > 0
+                            ? Fmt(Tr(L"Téléchargement : {0} / {1}"), { FormatFileSize(static_cast<int64_t>(received)), FormatFileSize(static_cast<int64_t>(total)) })
+                            : Fmt(Tr(L"Téléchargement : {0}"), { FormatFileSize(static_cast<int64_t>(received)) }));
                     }
                     file.close();
 
@@ -409,10 +410,10 @@ namespace
                         std::filesystem::remove(outcome.path, ec);
                     }
                     else if (!file || (total > 0 && received != total))
-                        outcome.error = L"téléchargement incomplet";
+                        outcome.error = Tr(L"téléchargement incomplet").c_str();
                     else if (!::EvolutionWin::UpdateIntegrity::EqualsNoCase(hash.Finish(), expected))
                     {
-                        outcome.error = L"l'empreinte SHA-256 ne correspond pas : fichier corrompu ou altéré, il a été supprimé";
+                        outcome.error = Tr(L"l'empreinte SHA-256 ne correspond pas : fichier corrompu ou altéré, il a été supprimé").c_str();
                         std::filesystem::remove(outcome.path, ec);
                     }
                 }
@@ -442,7 +443,7 @@ namespace winrt::EvolutionWin::implementation
 
         // Numéro de version de l'application
         if (auto v = AboutVersionText())
-            v.Text(L"Version " EVO_VERSION_W L" — Portage Windows 11 natif d'Evolution");
+            v.Text(Fmt(Tr(L"Version {0} — Portage Windows 11 natif d'Evolution"), { EVO_VERSION_W }));
 
         // Remplissage dynamique des composants du moteur et de l'environnement
         if (auto grid = AboutComponentsGrid())
@@ -486,7 +487,7 @@ namespace winrt::EvolutionWin::implementation
                 grid.Children().Append(label);
 
                 TextBlock val;
-                val.Text(version.empty() ? L"non installé" : version);
+                val.Text(version.empty() ? Tr(L"non installé") : hstring{ version });
                 val.Style(LookupAboutStyle(L"BodyTextBlockStyle"));
                 val.IsTextSelectionEnabled(true);
                 val.VerticalAlignment(VerticalAlignment::Center);
@@ -521,7 +522,7 @@ namespace winrt::EvolutionWin::implementation
             return;
         }
 
-        status.Text(L"Recherche de mises à jour en cours…");
+        status.Text(Tr(L"Recherche de mises à jour en cours…"));
         status.Opacity(0.7);
         banner.IsOpen(false);
 
@@ -586,7 +587,7 @@ namespace winrt::EvolutionWin::implementation
         Windows::ApplicationModel::DataTransfer::Clipboard::SetContent(package);
 
         if (auto btn_text = AboutCopySystemInfoButtonText())
-            btn_text.Text(L"Informations copiées !");
+            btn_text.Text(Tr(L"Informations copiées !"));
     }
 
     /* Télécharge le MSI de la dernière version avec une barre de progression,
@@ -601,21 +602,21 @@ namespace winrt::EvolutionWin::implementation
             co_return;
         if (m_update_sha_url.empty())
         {
-            ShowStatus(L"Mise à jour : empreinte SHA-256 absente de la version, installation automatique refusée.", InfoBarSeverity::Warning);
+            ShowStatus(Tr(L"Mise à jour : empreinte SHA-256 absente de la version, installation automatique refusée."), InfoBarSeverity::Warning);
             co_return;
         }
         m_dialog_open = true;
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Téléchargement de " + m_update_tag));
-        dialog.CloseButtonText(L"Annuler");
+        dialog.Title(box_value(Fmt(Tr(L"Téléchargement de {0}"), { m_update_tag })));
+        dialog.CloseButtonText(Tr(L"Annuler"));
 
         StackPanel panel;
         panel.Spacing(8);
         panel.MinWidth(380);
         TextBlock status;
-        status.Text(L"Connexion à GitHub…");
+        status.Text(Tr(L"Connexion à GitHub…"));
         ProgressBar progress;
         progress.IsIndeterminate(true);
         progress.Minimum(0);
@@ -645,7 +646,7 @@ namespace winrt::EvolutionWin::implementation
             co_return;
         if (!outcome->error.empty())
         {
-            ShowStatus(L"Mise à jour impossible : " + hstring{ outcome->error }, InfoBarSeverity::Error);
+            ShowStatus(Fmt(Tr(L"Mise à jour impossible : {0}"), { hstring{ outcome->error } }), InfoBarSeverity::Error);
             co_return;
         }
         if (outcome->path.empty())
@@ -656,17 +657,17 @@ namespace winrt::EvolutionWin::implementation
         {
             std::error_code ec;
             std::filesystem::remove(outcome->path, ec);
-            ShowStatus(L"Mise à jour refusée : la signature Authenticode de l'installeur n'est pas valide.", InfoBarSeverity::Error);
+            ShowStatus(Tr(L"Mise à jour refusée : la signature Authenticode de l'installeur n'est pas valide."), InfoBarSeverity::Error);
             co_return;
         }
         if (signature == SignatureState::Unsigned)
         {
             ContentDialog confirm;
             confirm.XamlRoot(Content().XamlRoot());
-            confirm.Title(box_value(L"Installeur non signé"));
-            confirm.Content(box_value(L"L'empreinte SHA-256 est correcte, mais l'installeur n'est pas signé (Authenticode). Installer quand même ?"));
-            confirm.PrimaryButtonText(L"Installer");
-            confirm.CloseButtonText(L"Annuler");
+            confirm.Title(box_value(Tr(L"Installeur non signé")));
+            confirm.Content(box_value(Tr(L"L'empreinte SHA-256 est correcte, mais l'installeur n'est pas signé (Authenticode). Installer quand même ?")));
+            confirm.PrimaryButtonText(Tr(L"Installer"));
+            confirm.CloseButtonText(Tr(L"Annuler"));
             m_dialog_open = true;
             auto answer = co_await confirm.ShowAsync();
             m_dialog_open = false;
@@ -677,9 +678,9 @@ namespace winrt::EvolutionWin::implementation
         std::wstring arguments = L"/i \"" + outcome->path + L"\"";
         auto launched = reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr, L"open", L"msiexec.exe", arguments.c_str(), nullptr, SW_SHOWNORMAL));
         if (launched <= 32)
-            ShowStatus(L"Impossible de lancer l'installeur.", InfoBarSeverity::Error);
+            ShowStatus(Tr(L"Impossible de lancer l'installeur."), InfoBarSeverity::Error);
         else
-            ShowStatus(L"Installation de " + m_update_tag + L" lancée.", InfoBarSeverity::Success);
+            ShowStatus(Fmt(Tr(L"Installation de {0} lancée."), { m_update_tag }), InfoBarSeverity::Success);
     }
 
     /* Au démarrage : vérifie en arrière-plan si une version plus récente est
@@ -712,17 +713,17 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Nouvelle version disponible"));
-        dialog.Content(box_value(L"Evolution " + m_update_tag + L" est disponible. Vous utilisez la version " EVO_VERSION_W L"."));
+        dialog.Title(box_value(Tr(L"Nouvelle version disponible")));
+        dialog.Content(box_value(Fmt(Tr(L"Evolution {0} est disponible. Vous utilisez la version {1}."), { m_update_tag, EVO_VERSION_W })));
         bool can_install = !m_update_msi_url.empty();
         if (can_install)
         {
-            dialog.PrimaryButtonText(L"Télécharger et installer");
-            dialog.SecondaryButtonText(L"Voir les détails");
+            dialog.PrimaryButtonText(Tr(L"Télécharger et installer"));
+            dialog.SecondaryButtonText(Tr(L"Voir les détails"));
         }
         else
-            dialog.PrimaryButtonText(L"Voir les détails");
-        dialog.CloseButtonText(L"Plus tard");
+            dialog.PrimaryButtonText(Tr(L"Voir les détails"));
+        dialog.CloseButtonText(Tr(L"Plus tard"));
         dialog.DefaultButton(ContentDialogButton::Primary);
 
         auto result = co_await dialog.ShowAsync();
@@ -776,8 +777,8 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Raccourcis clavier d'Evolution"));
-        dialog.CloseButtonText(L"Fermer");
+        dialog.Title(box_value(Tr(L"Raccourcis clavier d'Evolution")));
+        dialog.CloseButtonText(Tr(L"Fermer"));
         dialog.DefaultButton(ContentDialogButton::Close);
 
         Grid root;
@@ -802,7 +803,7 @@ namespace winrt::EvolutionWin::implementation
         top_bar.ColumnDefinitions().Append(col_combo);
 
         AutoSuggestBox search_box;
-        search_box.PlaceholderText(L"Rechercher une action ou un raccourci...");
+        search_box.PlaceholderText(Tr(L"Rechercher une action ou un raccourci..."));
         FontIcon search_icon;
         search_icon.Glyph(L"\xE721");
         search_box.QueryIcon(search_icon);
@@ -812,10 +813,10 @@ namespace winrt::EvolutionWin::implementation
         ComboBox profile_combo;
         profile_combo.MinWidth(180);
         ComboBoxItem item_outlook;
-        item_outlook.Content(box_value(L"Profil Outlook (défaut)"));
+        item_outlook.Content(box_value(Tr(L"Profil Outlook (défaut)")));
         item_outlook.Tag(box_value(L"outlook"));
         ComboBoxItem item_evo;
-        item_evo.Content(box_value(L"Profil Evolution GNOME"));
+        item_evo.Content(box_value(Tr(L"Profil Evolution GNOME")));
         item_evo.Tag(box_value(L"evolution"));
         profile_combo.Items().Append(item_outlook);
         profile_combo.Items().Append(item_evo);
@@ -851,7 +852,7 @@ namespace winrt::EvolutionWin::implementation
             if (filtered.empty())
             {
                 TextBlock empty_txt;
-                empty_txt.Text(L"Aucun raccourci ne correspond à votre recherche.");
+                empty_txt.Text(Tr(L"Aucun raccourci ne correspond à votre recherche."));
                 empty_txt.Margin(ThicknessHelper::FromLengths(0, 24, 0, 24));
                 empty_txt.HorizontalAlignment(HorizontalAlignment::Center);
                 empty_txt.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());

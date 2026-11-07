@@ -219,8 +219,8 @@ namespace winrt::EvolutionWin::implementation
         auto items = FocusedBar().Items();
         if (items.Size() >= 2)
         {
-            items.GetAt(0).Text(focused > 0 ? Tr(L"Prioritaire", L"Focused") + L" (" + hstring{ std::to_wstring(focused) } + L")" : Tr(L"Prioritaire", L"Focused"));
-            items.GetAt(1).Text(other > 0 ? Tr(L"Autres", L"Other") + L" (" + hstring{ std::to_wstring(other) } + L")" : Tr(L"Autres", L"Other"));
+            items.GetAt(0).Text(focused > 0 ? Fmt(Tr(L"Prioritaire ({0})", L"Focused ({0})"), { to_hstring(focused) }) : Tr(L"Prioritaire", L"Focused"));
+            items.GetAt(1).Text(other > 0 ? Fmt(Tr(L"Autres ({0})", L"Other ({0})"), { to_hstring(other) }) : Tr(L"Autres", L"Other"));
         }
     }
 
@@ -266,7 +266,7 @@ namespace winrt::EvolutionWin::implementation
             hstring text = to_other ? Tr(L"Message déplacé vers « Autres ».", L"Message moved to \"Other\".")
                                     : Tr(L"Message déplacé vers « Prioritaire ».", L"Message moved to \"Focused\".");
             if (remember_sender && !override_error.empty())
-                ShowStatus(text + Tr(L" La règle pour l'expéditeur n'a pas pu être mémorisée : ", L" The sender rule could not be saved: ") + override_error,
+                ShowStatus(Fmt(Tr(L"{0} La règle pour l'expéditeur n'a pas pu être mémorisée : {1}", L"{0} The sender rule could not be saved: {1}"), { text, override_error }),
                     InfoBarSeverity::Warning);
             else
                 ShowStatus(text, InfoBarSeverity::Success);
@@ -477,7 +477,7 @@ namespace winrt::EvolutionWin::implementation
 
             if (!error.empty())
             {
-                ShowStatus(L"Recherche : " + error, InfoBarSeverity::Error);
+                ShowStatus(Tr(L"Recherche : ") + error, InfoBarSeverity::Error);
                 return;
             }
 
@@ -487,7 +487,7 @@ namespace winrt::EvolutionWin::implementation
                 m_all_messages = results;
                 ShowMessages(results);
                 if (results.Size() == 0)
-                    ShowStatus(L"Aucun message trouvé pour cette recherche.", InfoBarSeverity::Informational);
+                    ShowStatus(Tr(L"Aucun message trouvé pour cette recherche."), InfoBarSeverity::Informational);
             }
         });
     }
@@ -508,20 +508,20 @@ namespace winrt::EvolutionWin::implementation
     struct SortCriterion
     {
         wchar_t const* key;
-        wchar_t const* label;
+        hstring (*label)();
         bool descending;
     };
 
     static SortCriterion const SortCriteria[] = {
-        { L"date", L"Date", true },
-        { L"from", L"Expéditeur", false },
-        { L"to", L"Destinataire", false },
-        { L"subject", L"Objet", false },
-        { L"size", L"Taille", true },
-        { L"attachments", L"Pièces jointes", true },
-        { L"flagged", L"Indicateur", true },
-        { L"seen", L"Lu / non lu", false },
-        { L"categories", L"Catégories", false },
+        { L"date", []() -> hstring { return Tr(L"Date"); }, true },
+        { L"from", []() -> hstring { return Tr(L"Expéditeur"); }, false },
+        { L"to", []() -> hstring { return Tr(L"Destinataire"); }, false },
+        { L"subject", []() -> hstring { return Tr(L"Objet"); }, false },
+        { L"size", []() -> hstring { return Tr(L"Taille"); }, true },
+        { L"attachments", []() -> hstring { return Tr(L"Pièces jointes"); }, true },
+        { L"flagged", []() -> hstring { return Tr(L"Indicateur"); }, true },
+        { L"seen", []() -> hstring { return Tr(L"Lu / non lu"); }, false },
+        { L"categories", []() -> hstring { return Tr(L"Catégories"); }, false },
     };
 
     /* Préférence de tri du dossier affiché ("sort.<compte>/<dossier>" =
@@ -569,7 +569,7 @@ namespace winrt::EvolutionWin::implementation
      */
     void MainWindow::UpdateGroupHeader()
     {
-        GroupButton().Content(box_value(m_conversations_enabled ? L"Conversation" : L"Aucun"));
+        GroupButton().Content(box_value(m_conversations_enabled ? Tr(L"Conversation") : Tr(L"Aucun")));
         if (auto toggle = RibbonMailConversationToggle())
             toggle.IsChecked(m_conversations_enabled);
     }
@@ -585,7 +585,7 @@ namespace winrt::EvolutionWin::implementation
         for (bool conversation : { false, true })
         {
             RadioMenuFlyoutItem entry;
-            entry.Text(conversation ? L"Conversation" : L"Aucun");
+            entry.Text(conversation ? Tr(L"Conversation") : Tr(L"Aucun"));
             entry.GroupName(L"group-key");
             entry.IsChecked(m_conversations_enabled == conversation);
             entry.Click([this, conversation](IInspectable const&, RoutedEventArgs const&)
@@ -653,11 +653,11 @@ namespace winrt::EvolutionWin::implementation
     {
         for (auto const& criterion : SortCriteria)
             if (m_sort_key == criterion.key)
-                SortButton().Content(box_value(hstring{ criterion.label }));
+                SortButton().Content(box_value(criterion.label()));
         SortDirectionIcon().Glyph(m_sort_descending ? L"\xE74B" : L"\xE74A");
         ToolTipService::SetToolTip(SortDirectionButton(), box_value(m_sort_descending
-            ? L"Ordre décroissant (cliquer pour inverser)"
-            : L"Ordre croissant (cliquer pour inverser)"));
+            ? Tr(L"Ordre décroissant (cliquer pour inverser)")
+            : Tr(L"Ordre croissant (cliquer pour inverser)")));
     }
 
     /* Menu « Trier par » (ligne au-dessus de la liste et ruban Affichage) :
@@ -670,7 +670,7 @@ namespace winrt::EvolutionWin::implementation
         for (auto const& criterion : SortCriteria)
         {
             RadioMenuFlyoutItem entry;
-            entry.Text(criterion.label);
+            entry.Text(criterion.label());
             entry.GroupName(L"sort-key");
             entry.IsChecked(m_sort_key == criterion.key);
             hstring key = criterion.key;
@@ -691,7 +691,7 @@ namespace winrt::EvolutionWin::implementation
         for (bool descending : { false, true })
         {
             RadioMenuFlyoutItem entry;
-            entry.Text(descending ? L"Décroissant" : L"Croissant");
+            entry.Text(descending ? Tr(L"Décroissant") : Tr(L"Croissant"));
             entry.GroupName(L"sort-direction");
             entry.IsChecked(m_sort_descending == descending);
             entry.Click([this, descending](IInspectable const&, RoutedEventArgs const&)

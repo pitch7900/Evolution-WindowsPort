@@ -12,6 +12,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.1.0] — en cours
 
+- **Traduction complète de l'interface** : tous les textes affichés (C++ et XAML, environ 1 600 libellés) sont désormais traduits en anglais, allemand, italien, espagnol, portugais et néerlandais. Les textes sont identifiés par leur libellé français (clé `T_<hachage>` calculée automatiquement, `I18n::KeyFor`), `Tr(L"…")` et le nouveau `Fmt(Tr(L"… {0} …"), {…})` (phrases à valeurs, sans fragments concaténés) ; les textes statiques du XAML sont traduits à l'ouverture des fenêtres par `UiTranslate.h`. L'outil `tools\i18n-sync.py` (`check`, `merge`, `extract`, `missing`) contrôle que chaque texte existe dans les 7 catalogues ; `check` est exécuté par `toolsun-tests.bat`. Documentation : `TRANSLATIONS.md` et `llm.md`.
+
 - **Envoi « De la part de » (Send on Behalf)** : pour chaque boîte partagée Microsoft 365 ouverte, la liste « De : » de la rédaction propose une entrée supplémentaire « … — de la part de (Send on Behalf) » : le message part par le compte d'origine avec `From:` = adresse de la boîte partagée et `Sender:` = identité de l'utilisateur (clé JSON `on_behalf_of` de `evo_core_send_message`, champ `shared_owner` de `evo_core_list_accounts`). Libellé traduit dans les 7 langues (`Compose_FromSendOnBehalf`). À valider sur un tenant réel (droit « Send on Behalf » accordé).
 
 > Version mineure : les fonctionnalités ajoutées depuis la 1.0.1 (boîtes partagées, Boîte de réception prioritaire, favoris, dossiers de recherche, fenêtre d'événement, rappels, Google Meet, chiffrement S/MIME…) dépassent le cadre d'un correctif ; la 1.0.2 n'a jamais été publiée.

@@ -10,7 +10,7 @@ EvolutionWin repose sur l'infrastructure moderne **MRT Core** (Microsoft Windows
 1. Les chaînes traduites sont stockées dans des fichiers `Resources.resw` organisés par code de culture BCP-47 (`fr-FR`, `en-US`, `de-DE`, etc.).
 2. Le projet MSBuild compile automatiquement ces ressources en un fichier binaire `resources.pri` via `makepri.exe` au moment de la génération.
 3. Le loader C++/WinRT `EvolutionWin::I18n::GetString` (défini dans [`winui/app/I18n.h`](winui/app/I18n.h)) charge dynamiquement la chaîne appropriée à l'exécution en fonction de la langue active de l'utilisateur ou du système.
-4. Le helper `EvolutionWin::Helpers::Tr(fr, en, resourceId)` assure un chargement prioritaire depuis le catalogue de ressources avec repli en mémoire immédiat si nécessaire.
+4. Le helper `EvolutionWin::Helpers::Tr(fr)` (ou `Tr(fr, en, resourceId)`) retrouve la traduction par la clé déduite du libellé français, avec repli sur le libellé source si elle manque. Les textes statiques du XAML sont traduits au chargement par `UiTranslate.h`.
 
 ---
 
@@ -42,15 +42,11 @@ tools/
 
 ---
 
-## 3. Conventions de Nommage des Clés de Ressource
+## 3. Identification des Textes : le Libellé Français est la Source
 
-Les identifiants (`name` dans les fichiers `.resw`) doivent être explicites et catégorisés par préfixe :
-- `Nav_<Module>` : Rubriques de navigation principale (ex: `Nav_Mail`, `Nav_Calendar`).
-- `SpecialFolder_<Type>` : Dossiers système de messagerie (ex: `SpecialFolder_Inbox`, `SpecialFolder_Sent`).
-- `FolderAction_<Action>` : Actions sur les dossiers dans l'arborescence (ex: `FolderAction_NewFolder`, `FolderAction_Rename`).
-- `Common_<Action>` : Boutons et actions usuelles (ex: `Common_Cancel`, `Common_Delete`, `Common_Save`).
-- `SearchScope_<Scope>` : Portées et champs de recherche (ex: `SearchScope_Subfolders`, `SearchScope_Folder`).
-- `Dialog_<Sujet>_<Element>` : Textes des boîtes de dialogue et messages de confirmation.
+Chaque texte de l'interface est identifié par son **libellé français** (langue source). La clé de ressource est calculée automatiquement : `T_` suivi du hachage FNV-1a 32 bits (unités UTF-16) du libellé, en hexadécimal majuscule (`I18n::KeyFor` dans [`winui/app/I18n.h`](winui/app/I18n.h), même calcul dans [`tools/i18n-sync.py`](tools/i18n-sync.py)). **On n'écrit jamais ces clés à la main.** Chaque entrée des `.resw` porte le libellé français dans son `<comment>` pour la relecture.
+
+Les anciennes clés nommées (`Nav_Mail`, `SpecialFolder_Inbox`, `FolderAction_*`, `Common_*`, `SearchScope_*`…) restent valables : on les utilise en passant le troisième argument de `Tr(fr, en, "Cle")`. Ce sont des exceptions ; la règle générale est la clé déduite du libellé.
 
 ---
 
@@ -58,28 +54,38 @@ Les identifiants (`name` dans les fichiers `.resw`) doivent être explicites et 
 
 ### 4.1. Dans le code C++ (`MainWindow.*.cpp`, etc.)
 
-Pour afficher un texte dans l'interface, utiliser systématiquement la fonction `Tr()` définie dans `MainWindow.Helpers.h` en lui passant la clé de ressource `.resw` :
-
 ```cpp
 #include "MainWindow.Helpers.h"
 using namespace ::EvolutionWin::Helpers;
 
-// 1. Appel recommandé avec clé .resw (charge depuis resources.pri, repli sur fr ou en) :
-hstring label = Tr(L"Boîte de réception", L"Inbox", L"SpecialFolder_Inbox");
+// Texte simple : le libellé français sert de clé (l'anglais éventuel n'est qu'un repli)
+hstring label = Tr(L"Boîte de réception");
+button.Content(box_value(Tr(L"Répondre à tous")));
 
-// 2. Appel direct via le loader MRT Core (si le texte n'a pas de repli en dur) :
-#include "I18n.h"
-hstring titre = ::EvolutionWin::I18n::GetString(L"Dialog_Confirm_Title", L"Confirmation");
+// Phrase avec des valeurs : UN SEUL modèle avec marqueurs {0}, {1}…
+// (jamais de fragments traduits concaténés autour d'une valeur : l'ordre des mots change selon la langue)
+ShowStatus(Fmt(Tr(L"{0} message(s) supprimé(s) de {1}"), { to_hstring(count), folder_name }));
 ```
 
-### 4.2. Dans les fichiers XAML (`.xamlpart`, `.xaml.in`)
+- Ne jamais comparer un texte **affiché** à un littéral français : utiliser le `Tag`, l'index ou une valeur interne.
+- Ne pas traduire : clés de ressources XAML, valeurs de `Tag`, champs JSON, chemins, URL, formats techniques, messages de journal.
 
-Pour les contrôles déclarés en XAML, associer une directive `x:Uid` au contrôle correspondant :
+### 4.2. Dans les fichiers XAML (`.xamlpart`, `.xaml.in`, `*.xaml`)
+
+On écrit simplement le **texte français** dans l'attribut (`Text`, `Content`, `Label`, `Header`, `PlaceholderText`, `Title`, `ToolTipService.ToolTip`, `AutomationProperties.Name`, texte d'un `Run`…) :
 ```xml
-<TextBlock x:Uid="Nav_Mail" Text="Courrier" />
+<AppBarButton Label="Nouveau message" />
 ```
-Et dans les fichiers `.resw`, définir :
-- `Nav_Mail.Text` = `Courrier` (fr-FR) / `Mail` (en-US) / `E-Mail` (de-DE)...
+`winui/app/UiTranslate.h` (`UiTranslate::ApplyToWindow`) parcourt l'arbre au chargement de chaque fenêtre et remplace le texte par sa traduction ; un texte inconnu reste en français. Pas d'`x:Uid`, pas de `x:Name` supplémentaire.
+
+### 4.3. Outil `tools/i18n-sync.py`
+
+| Commande | Effet |
+|----------|-------|
+| `python tools\i18n-sync.py check` | Vérifie que **chaque** texte source (appels `Tr(L"…")` sans clé explicite et textes XAML) existe dans les 7 catalogues avec les mêmes marqueurs `{n}` ; code 1 sinon. Exécuté par `tools\run-tests.bat`. |
+| `python tools\i18n-sync.py missing` | Liste en JSON les textes absents d'au moins un catalogue. |
+| `python tools\i18n-sync.py extract [fichiers]` | Liste en JSON les textes sources des fichiers donnés. |
+| `python tools\i18n-sync.py merge traductions.json` | Ajoute aux catalogues les traductions `{"texte fr": {"en": "…", "de": "…", "it": "…", "es": "…", "pt": "…", "nl": "…"}}` (clé et commentaire générés). |
 
 ---
 
@@ -87,16 +93,8 @@ Et dans les fichiers `.resw`, définir :
 
 > [!IMPORTANT]
 > **Règle pour tout agent IA ou contributeur** :
-> Dès qu'un nouveau libellé, bouton, menu, infobulle ou dialogue est ajouté ou modifié dans l'interface :
-> 1. Définir une clé de ressource claire dans `winui/app/Strings/fr-FR/Resources.resw`.
-> 2. Répercuter la clé avec sa traduction équivalente dans **tous les autres catalogues** :
->    - `en-US/Resources.resw`
->    - `de-DE/Resources.resw`
->    - `it-IT/Resources.resw`
->    - `es-ES/Resources.resw`
->    - `pt-PT/Resources.resw`
->    - `nl-NL/Resources.resw`
-> 3. Utiliser les traductions officielles du projet Evolution GNOME comme référence terminologique (disponibles dans `evolution/po/*.po`).
-> 4. Raccorder le code C++ ou XAML en utilisant `Tr(fr, en, resourceId)` ou `x:Uid`.
-> 5. Valider avec `tools\build-winui-app.bat` et `tools\run-tests.bat`.
-
+> Dès qu'un libellé, bouton, menu, infobulle, message d'état ou dialogue est ajouté ou modifié :
+> 1. L'écrire en français : `Tr(L"…")` / `Fmt(Tr(L"… {0} …"), {...})` en C++, texte brut en XAML. **Aucun texte français en dur** dans un setter d'interface.
+> 2. Écrire un fichier JSON avec ses traductions `en`, `de`, `it`, `es`, `pt`, `nl` (terminologie officielle d'Evolution : `evolution/po/*.po`) et le fusionner : `python tools\i18n-sync.py merge fichier.json`.
+> 3. Vérifier : `python tools\i18n-sync.py check` (et `tools\run-tests.bat`).
+> 4. Contrôle rapide des textes oubliés : `grep -rnF --include="*.cpp" --include="*.h" -e 'box_value(L"' -e 'Text(L"' winui/app` ne doit plus montrer que des clés techniques (brosses, styles…).

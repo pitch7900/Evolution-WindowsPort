@@ -252,7 +252,7 @@ namespace winrt::EvolutionWin::implementation
             if (account.GetNamedBoolean(L"local", false) && account.GetNamedString(L"uid", L"") != L"local")
                 continue;
             hstring uid = account.GetNamedString(L"uid", L"");
-            scope_combo.Items().Append(box_value(Tr(L"Compte : ", L"Account: ") + account.GetNamedString(L"name", uid)));
+            scope_combo.Items().Append(box_value(Fmt(Tr(L"Compte : {0}", L"Account: {0}"), { account.GetNamedString(L"name", uid) })));
             if (definition.GetNamedString(L"scope", L"all") == L"account" && definition.GetNamedString(L"account", L"") == uid)
                 selected = static_cast<int>(scope_accounts.size());
             scope_accounts.push_back(uid);

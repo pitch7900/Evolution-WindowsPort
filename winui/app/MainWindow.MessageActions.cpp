@@ -165,7 +165,7 @@ namespace winrt::EvolutionWin::implementation
 
             {
 
-                ShowStatus(L"Indicateur : " + error, InfoBarSeverity::Error);
+                ShowStatus(Tr(L"Indicateur : ") + error, InfoBarSeverity::Error);
 
                 return;
 
@@ -373,7 +373,7 @@ namespace winrt::EvolutionWin::implementation
 
             {
 
-                ShowStatus(L"Suppression : " + error, InfoBarSeverity::Error);
+                ShowStatus(Tr(L"Suppression : ") + error, InfoBarSeverity::Error);
 
                 LoadMessages(false);
 
@@ -457,7 +457,7 @@ namespace winrt::EvolutionWin::implementation
 
             {
 
-                ShowStatus(L"Déplacement : " + error, InfoBarSeverity::Error);
+                ShowStatus(Tr(L"Déplacement : ") + error, InfoBarSeverity::Error);
 
                 LoadMessages(false);
 
@@ -467,7 +467,7 @@ namespace winrt::EvolutionWin::implementation
 
 
 
-            ShowStatus(L"Message déplacé vers « " + dest_folder + L" ».", InfoBarSeverity::Informational);
+            ShowStatus(Fmt(Tr(L"Message déplacé vers « {0} »."), { dest_folder }), InfoBarSeverity::Informational);
 
         });
 
@@ -535,15 +535,15 @@ namespace winrt::EvolutionWin::implementation
 
                 if (!error.empty())
 
-                    ShowStatus(L"Copie : " + error, InfoBarSeverity::Error);
+                    ShowStatus(Tr(L"Copie : ") + error, InfoBarSeverity::Error);
 
                 else if (--*remaining == 0)
 
                     ShowStatus(count > 1
 
-                        ? hstring{ std::to_wstring(count) + L" messages copiés vers « " } + dest_folder + L" »."
+                        ? Fmt(Tr(L"{0} messages copiés vers « {1} »."), { to_hstring(count), dest_folder })
 
-                        : L"Message copié vers « " + dest_folder + L" ».", InfoBarSeverity::Informational);
+                        : Fmt(Tr(L"Message copié vers « {0} »."), { dest_folder }), InfoBarSeverity::Informational);
 
             });
 
@@ -625,7 +625,7 @@ namespace winrt::EvolutionWin::implementation
 
         {
 
-            ShowStatus(L"Ces messages sont déjà dans le dossier Archive.", InfoBarSeverity::Informational);
+            ShowStatus(Tr(L"Ces messages sont déjà dans le dossier Archive."), InfoBarSeverity::Informational);
 
             return;
 
@@ -655,7 +655,7 @@ namespace winrt::EvolutionWin::implementation
 
             {
 
-                ShowStatus(L"Création du dossier Archive : " + error, InfoBarSeverity::Error);
+                ShowStatus(Tr(L"Création du dossier Archive : ") + error, InfoBarSeverity::Error);
 
                 return;
 
@@ -710,7 +710,7 @@ namespace winrt::EvolutionWin::implementation
 
         if (junk.empty())
         {
-            ShowStatus(L"Ce compte n'a pas de dossier Courrier indésirable (voir Propriétés du compte › Dossiers spéciaux).", InfoBarSeverity::Warning);
+            ShowStatus(Tr(L"Ce compte n'a pas de dossier Courrier indésirable (voir Propriétés du compte › Dossiers spéciaux)."), InfoBarSeverity::Warning);
             return;
         }
 
@@ -719,7 +719,7 @@ namespace winrt::EvolutionWin::implementation
             /* Non indésirable : retour vers la Boîte de réception */
             if (inbox.empty())
             {
-                ShowStatus(L"Boîte de réception introuvable pour ce compte.", InfoBarSeverity::Warning);
+                ShowStatus(Tr(L"Boîte de réception introuvable pour ce compte."), InfoBarSeverity::Warning);
                 return;
             }
             MoveMessagesByUids(uids, account, inbox);
@@ -960,9 +960,9 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(copy ? L"Copier vers le dossier" : L"Déplacer vers le dossier"));
-        dialog.PrimaryButtonText(copy ? L"Copier" : L"Déplacer");
-        dialog.CloseButtonText(L"Annuler");
+        dialog.Title(box_value(copy ? Tr(L"Copier vers le dossier") : Tr(L"Déplacer vers le dossier")));
+        dialog.PrimaryButtonText(copy ? Tr(L"Copier") : Tr(L"Déplacer"));
+        dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Primary);
         dialog.IsPrimaryButtonEnabled(false);
 
@@ -971,7 +971,7 @@ namespace winrt::EvolutionWin::implementation
         panel.Width(440);
 
         AutoSuggestBox search_box;
-        search_box.PlaceholderText(L"Rechercher un dossier...");
+        search_box.PlaceholderText(Tr(L"Rechercher un dossier..."));
         search_box.QueryIcon(FontIcon{});
         search_box.QueryIcon().as<FontIcon>().Glyph(L"\xE721");
 
@@ -1093,7 +1093,7 @@ namespace winrt::EvolutionWin::implementation
 
         /* Option de sélection par boîte de dialogue avancée (Ctrl+Maj+V) */
         MenuFlyoutItem dialog_item;
-        dialog_item.Text(copy ? L"Autre dossier... (Ctrl+Maj+V)" : L"Autre dossier... (Ctrl+Maj+V)");
+        dialog_item.Text(Tr(L"Autre dossier... (Ctrl+Maj+V)"));
         dialog_item.Icon(FontIcon{});
         dialog_item.Icon().as<FontIcon>().Glyph(L"\xE8DE");
         dialog_item.Click([this, uids, copy](IInspectable const&, RoutedEventArgs const&)
@@ -1219,7 +1219,7 @@ namespace winrt::EvolutionWin::implementation
 
             MenuFlyoutItem empty_item;
 
-            empty_item.Text(L"Aucun autre dossier disponible");
+            empty_item.Text(Tr(L"Aucun autre dossier disponible"));
 
             empty_item.IsEnabled(false);
 
@@ -1307,7 +1307,7 @@ namespace winrt::EvolutionWin::implementation
 
         MenuFlyoutSubItem copy_sub;
 
-        copy_sub.Text(L"Copier vers");
+        copy_sub.Text(Tr(L"Copier vers"));
 
         copy_sub.Icon(FontIcon{});
 
@@ -1345,7 +1345,7 @@ namespace winrt::EvolutionWin::implementation
 
         {
 
-            ShowStatus(L"Sélectionnez d'abord un message à afficher.", InfoBarSeverity::Informational);
+            ShowStatus(Tr(L"Sélectionnez d'abord un message à afficher."), InfoBarSeverity::Informational);
 
             return;
 
@@ -1359,7 +1359,7 @@ namespace winrt::EvolutionWin::implementation
 
         {
 
-            ShowStatus(L"Impossible d'ouvrir le navigateur web par défaut.", InfoBarSeverity::Error);
+            ShowStatus(Tr(L"Impossible d'ouvrir le navigateur web par défaut."), InfoBarSeverity::Error);
 
         }
 
@@ -1411,7 +1411,7 @@ namespace winrt::EvolutionWin::implementation
 
                 ReadAloudIcon().Glyph(L"\xEC92");
 
-                ReadAloudButton().Label(L"Lire à voix haute");
+                ReadAloudButton().Label(Tr(L"Lire à voix haute"));
 
             }
 
@@ -1451,7 +1451,7 @@ namespace winrt::EvolutionWin::implementation
 
             StopSpeech();
 
-            ShowStatus(L"Lecture vocale interrompue.", InfoBarSeverity::Informational);
+            ShowStatus(Tr(L"Lecture vocale interrompue."), InfoBarSeverity::Informational);
 
             co_return;
 
@@ -1463,7 +1463,7 @@ namespace winrt::EvolutionWin::implementation
 
         {
 
-            ShowStatus(L"Sélectionnez d'abord un message à lire.", InfoBarSeverity::Informational);
+            ShowStatus(Tr(L"Sélectionnez d'abord un message à lire."), InfoBarSeverity::Informational);
 
             co_return;
 
@@ -1477,7 +1477,7 @@ namespace winrt::EvolutionWin::implementation
 
         {
 
-            ShowStatus(L"Le message ne contient aucun texte à lire.", InfoBarSeverity::Warning);
+            ShowStatus(Tr(L"Le message ne contient aucun texte à lire."), InfoBarSeverity::Warning);
 
             co_return;
 
@@ -1535,9 +1535,9 @@ namespace winrt::EvolutionWin::implementation
 
             ReadAloudIcon().Glyph(L"\xE71A");
 
-            ReadAloudButton().Label(L"Arrêter la lecture");
+            ReadAloudButton().Label(Tr(L"Arrêter la lecture"));
 
-            ShowStatus(L"Lecture à voix haute en cours...", InfoBarSeverity::Informational);
+            ShowStatus(Tr(L"Lecture à voix haute en cours..."), InfoBarSeverity::Informational);
 
         }
 
@@ -1547,7 +1547,7 @@ namespace winrt::EvolutionWin::implementation
 
             StopSpeech();
 
-            ShowStatus(L"Erreur lors de la synthèse vocale : " + ex.message(), InfoBarSeverity::Error);
+            ShowStatus(Tr(L"Erreur lors de la synthèse vocale : ") + ex.message(), InfoBarSeverity::Error);
 
         }
 
@@ -1557,7 +1557,7 @@ namespace winrt::EvolutionWin::implementation
 
             StopSpeech();
 
-            ShowStatus(L"Erreur inattendue lors de la lecture vocale.", InfoBarSeverity::Error);
+            ShowStatus(Tr(L"Erreur inattendue lors de la lecture vocale."), InfoBarSeverity::Error);
 
         }
 
@@ -1578,7 +1578,7 @@ namespace winrt::EvolutionWin::implementation
         if (uids.empty())
         {
             MenuFlyoutItem empty_item;
-            empty_item.Text(L"Aucun message sélectionné");
+            empty_item.Text(Tr(L"Aucun message sélectionné"));
             empty_item.IsEnabled(false);
             items.Append(empty_item);
             return;
@@ -1641,7 +1641,7 @@ namespace winrt::EvolutionWin::implementation
         items.Append(MenuFlyoutSeparator{});
 
         MenuFlyoutItem clear_item;
-        clear_item.Text(L"Effacer toutes les catégories");
+        clear_item.Text(Tr(L"Effacer toutes les catégories"));
         FontIcon clear_icon;
         clear_icon.Glyph(L"\xE74D");
         clear_item.Icon(clear_icon);
@@ -1727,10 +1727,10 @@ namespace winrt::EvolutionWin::implementation
             ShowMessages(m_all_messages);
         }
 
-        std::wstring action_msg = apply
-            ? L"Catégorie « " + category_name + L" » attribuée."
-            : L"Catégorie « " + category_name + L" » retirée.";
-        ShowStatus(hstring{ action_msg }, InfoBarSeverity::Informational);
+        hstring action_msg = apply
+            ? Fmt(Tr(L"Catégorie « {0} » attribuée."), { hstring{ category_name } })
+            : Fmt(Tr(L"Catégorie « {0} » retirée."), { hstring{ category_name } });
+        ShowStatus(action_msg, InfoBarSeverity::Informational);
     }
 
     /**
@@ -1777,7 +1777,7 @@ namespace winrt::EvolutionWin::implementation
             ShowMessages(m_all_messages);
         }
 
-        ShowStatus(L"Toutes les catégories ont été retirées des messages sélectionnés.", InfoBarSeverity::Informational);
+        ShowStatus(Tr(L"Toutes les catégories ont été retirées des messages sélectionnés."), InfoBarSeverity::Informational);
     }
 
     /**

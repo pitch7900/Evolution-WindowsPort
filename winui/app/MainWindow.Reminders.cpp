@@ -15,6 +15,7 @@
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Windows::Data::Json;
+using namespace ::EvolutionWin::Helpers;
 
 namespace winrt::EvolutionWin::implementation
 {
@@ -35,14 +36,14 @@ namespace winrt::EvolutionWin::implementation
         {
             long long minutes = (seconds + 59) / 60;
             if (minutes <= 0)
-                return L"Maintenant";
+                return std::wstring{ Tr(L"Maintenant") };
             if (minutes == 1)
-                return L"Dans 1 minute";
+                return std::wstring{ Tr(L"Dans 1 minute") };
             if (minutes < 60)
-                return L"Dans " + std::to_wstring(minutes) + L" minutes";
-            wchar_t buffer[32];
-            swprintf_s(buffer, L"Dans %lld h %02lld", minutes / 60, minutes % 60);
-            return buffer;
+                return std::wstring{ Fmt(Tr(L"Dans {0} minutes"), { to_hstring(minutes) }) };
+            wchar_t buffer[16];
+            swprintf_s(buffer, L"%02lld", minutes % 60);
+            return std::wstring{ Fmt(Tr(L"Dans {0} h {1}"), { to_hstring(minutes / 60), hstring{ buffer } }) };
         }
 
         /**
@@ -141,12 +142,12 @@ namespace winrt::EvolutionWin::implementation
     void MainWindow::ShowEventReminder(JsonObject const& event, long long seconds_left, long long start)
     {
         auto& settings = ::EvolutionWin::Settings::Instance();
-        hstring summary = event.GetNamedString(L"summary", L"(Sans titre)");
+        hstring summary = event.GetNamedString(L"summary", Tr(L"(Sans titre)"));
         hstring location = event.GetNamedString(L"location", L"");
         bool all_day = event.GetNamedBoolean(L"all_day", false);
 
-        std::wstring title = L"Rappel : " + std::wstring{ summary };
-        std::wstring body = all_day ? std::wstring{ L"Aujourd'hui, toute la journée" }
+        std::wstring title{ Fmt(Tr(L"Rappel : {0}"), { summary }) };
+        std::wstring body = all_day ? std::wstring{ Tr(L"Aujourd'hui, toute la journée") }
                                     : DelayText(seconds_left) + L" (" + ClockText(start) + L")";
         if (!location.empty())
             body += L" — " + std::wstring{ location };
@@ -172,8 +173,8 @@ namespace winrt::EvolutionWin::implementation
             if (duration == 0)
             {
                 builder.SetScenario(Builder::AppNotificationScenario::Reminder);
-                builder.AddButton(Builder::AppNotificationButton(L"Ouvrir").AddArgument(L"action", L"event"));
-                builder.AddButton(Builder::AppNotificationButton(L"Fermer")
+                builder.AddButton(Builder::AppNotificationButton(Tr(L"Ouvrir")).AddArgument(L"action", L"event"));
+                builder.AddButton(Builder::AppNotificationButton(Tr(L"Fermer"))
                     .AddArgument(L"action", L"dismiss"));
             }
             else if (duration >= 30)

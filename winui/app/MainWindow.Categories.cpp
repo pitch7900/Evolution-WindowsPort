@@ -408,7 +408,7 @@ namespace winrt::EvolutionWin::implementation
         m_core->ModifyTask(request.Stringify(), [this](hstring const&, hstring const& error)
         {
             if (!error.empty())
-                ShowStatus(Tr(L"Catégories de la tâche : ", L"Task categories: ") + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Catégories de la tâche : {0}", L"Task categories: {0}"), { error }), InfoBarSeverity::Error);
             LoadTasks();
         });
     }
@@ -428,7 +428,7 @@ namespace winrt::EvolutionWin::implementation
         m_core->ModifyEvent(request.Stringify(), [this](hstring const&, hstring const& error)
         {
             if (!error.empty())
-                ShowStatus(Tr(L"Catégories de l'événement : ", L"Event categories: ") + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Catégories de l'événement : {0}", L"Event categories: {0}"), { error }), InfoBarSeverity::Error);
             LoadEvents();
         });
     }
@@ -447,7 +447,7 @@ namespace winrt::EvolutionWin::implementation
         m_core->ModifyEvent(request.Stringify(), [this](hstring const&, hstring const& error)
         {
             if (!error.empty())
-                ShowStatus(Tr(L"Modification de l'événement : ", L"Event update: ") + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Modification de l'événement : {0}", L"Event update: {0}"), { error }), InfoBarSeverity::Error);
             LoadEvents();
         });
     }
@@ -573,7 +573,7 @@ namespace winrt::EvolutionWin::implementation
             [this](hstring const&, hstring const& error)
         {
             if (!error.empty())
-                ShowStatus(Tr(L"Catégories du contact : ", L"Contact categories: ") + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Catégories du contact : {0}", L"Contact categories: {0}"), { error }), InfoBarSeverity::Error);
             LoadContacts(m_contact_query);
         });
     }
@@ -656,16 +656,16 @@ namespace winrt::EvolutionWin::implementation
             if (!filter.IsEmpty())
                 icon.Foreground(Application::Current().Resources().Lookup(box_value(L"AccentTextFillColorPrimaryBrush")).as<Brush>());
 
-            std::wstring tip{ Tr(L"Filtrer par catégorie", L"Filter by category") };
+            hstring tip = Tr(L"Filtrer par catégorie", L"Filter by category");
             if (!filter.IsEmpty())
             {
                 std::vector<std::wstring> shown = filter.selected;
                 if (filter.include_uncategorized)
                     shown.push_back(std::wstring{ Tr(L"Sans catégorie", L"No category") });
-                tip += L" : " + Cat::JoinCategories(shown);
+                tip = Fmt(Tr(L"Filtrer par catégorie : {0}", L"Filter by category: {0}"), { hstring{ Cat::JoinCategories(shown) } });
             }
             button.Content(icon);
-            Controls::ToolTipService::SetToolTip(button, box_value(hstring{ tip }));
+            Controls::ToolTipService::SetToolTip(button, box_value(tip));
         };
 
         update(MailCategoryFilterButton(), m_mail_category_filter);

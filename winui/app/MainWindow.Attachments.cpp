@@ -78,7 +78,7 @@ namespace winrt::EvolutionWin::implementation
             content.Children().Append(label);
 
             button.Content(content);
-            ToolTipService::SetToolTip(button, box_value(L"Aperçu de « " + filename + L" » (clic pour afficher, clic droit pour enregistrer)"));
+            ToolTipService::SetToolTip(button, box_value(Fmt(Tr(L"Aperçu de « {0} » (clic pour afficher, clic droit pour enregistrer)"), { filename })));
 
             // Clic principal : aperçu sécurisé direct
             button.Click([this, index, filename](IInspectable const&, RoutedEventArgs const&)
@@ -89,7 +89,7 @@ namespace winrt::EvolutionWin::implementation
             // Menu contextuel au clic droit
             MenuFlyout flyout;
             MenuFlyoutItem preview_item;
-            preview_item.Text(L"Aperçu");
+            preview_item.Text(Tr(L"Aperçu"));
             preview_item.Icon(FontIcon{});
             preview_item.Icon().as<FontIcon>().Glyph(L"\xE890");
             preview_item.Click([this, index, filename](IInspectable const&, RoutedEventArgs const&)
@@ -99,7 +99,7 @@ namespace winrt::EvolutionWin::implementation
             flyout.Items().Append(preview_item);
 
             MenuFlyoutItem save_item;
-            save_item.Text(L"Enregistrer sous...");
+            save_item.Text(Tr(L"Enregistrer sous..."));
             save_item.Icon(FontIcon{});
             save_item.Icon().as<FontIcon>().Glyph(L"\xE74E");
             save_item.Click([this, index, filename](IInspectable const&, RoutedEventArgs const&)
@@ -182,7 +182,7 @@ namespace winrt::EvolutionWin::implementation
                         }
                         else
                         {
-                            ShowStatus(L"Impossible de glisser la pièce jointe : " + error, InfoBarSeverity::Error);
+                            ShowStatus(Fmt(Tr(L"Impossible de glisser la pièce jointe : {0}"), { error }), InfoBarSeverity::Error);
                         }
                         deferral.Complete();
                     }));
@@ -203,10 +203,10 @@ namespace winrt::EvolutionWin::implementation
             icon.FontSize(12);
             content.Children().Append(icon);
             TextBlock label;
-            label.Text(L"Tout enregistrer");
+            label.Text(Tr(L"Tout enregistrer"));
             content.Children().Append(label);
             save_all.Content(content);
-            ToolTipService::SetToolTip(save_all, box_value(L"Enregistrer toutes les pièces jointes dans un dossier"));
+            ToolTipService::SetToolTip(save_all, box_value(Tr(L"Enregistrer toutes les pièces jointes dans un dossier")));
             save_all.Click([this, attachments](IInspectable const&, RoutedEventArgs const&)
             {
                 SaveAllAttachmentsAsync(attachments);
@@ -267,13 +267,13 @@ namespace winrt::EvolutionWin::implementation
             hstring dest_dir = folder_dest.Path();
             JsonObject request = BuildMessagesRequest(sel_uids);
 
-            ShowStatus(L"Exportation de " + hstring{ std::to_wstring(sel_uids.size()) } + L" messages en cours…", InfoBarSeverity::Informational);
+            ShowStatus(Fmt(Tr(L"Exportation de {0} messages en cours…"), { to_hstring(sel_uids.size()) }), InfoBarSeverity::Informational);
             m_core->ExportMessagesEml(request.Stringify(), [this, dest_dir](hstring const& json, hstring const& error)
             {
                 JsonArray paths;
                 if (!error.empty() || !JsonArray::TryParse(json, paths) || paths.Size() == 0)
                 {
-                    ShowStatus(L"Enregistrement des messages : " + error, InfoBarSeverity::Error);
+                    ShowStatus(Fmt(Tr(L"Enregistrement des messages : {0}"), { error }), InfoBarSeverity::Error);
                     return;
                 }
                 uint32_t saved = 0;
@@ -288,7 +288,7 @@ namespace winrt::EvolutionWin::implementation
                         DeleteFileW(src_fs.c_str());
                     }
                 }
-                ShowStatus(hstring{ std::to_wstring(saved) + L" messages enregistrés dans « " + std::wstring{ dest_dir } + L" »." }, InfoBarSeverity::Success);
+                ShowStatus(Fmt(Tr(L"Terminé : {0} messages enregistrés dans « {1} »."), { to_hstring(saved), dest_dir }), InfoBarSeverity::Success);
             });
             co_return;
         }
@@ -300,7 +300,7 @@ namespace winrt::EvolutionWin::implementation
         Windows::Storage::Pickers::FileSavePicker picker;
         InitializePicker(picker);
         picker.SuggestedFileName(sanitized);
-        picker.FileTypeChoices().Insert(L"Message électronique", single_threaded_vector<hstring>({ L".eml" }));
+        picker.FileTypeChoices().Insert(Tr(L"Message électronique"), single_threaded_vector<hstring>({ L".eml" }));
 
         auto file = co_await picker.PickSaveFileAsync();
         if (!file)
@@ -314,18 +314,18 @@ namespace winrt::EvolutionWin::implementation
             JsonArray paths;
             if (!error.empty() || !JsonArray::TryParse(json, paths) || paths.Size() == 0)
             {
-                ShowStatus(L"Enregistrement du message : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Enregistrement du message : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
 
             hstring exported = paths.GetStringAt(0);
             if (!CopyFileW(exported.c_str(), dest.c_str(), FALSE))
             {
-                ShowStatus(L"Enregistrement du message : impossible d'écrire « " + dest + L" ».", InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Enregistrement du message : impossible d'écrire « {0} »."), { dest }), InfoBarSeverity::Error);
                 return;
             }
             DeleteFileW(exported.c_str());
-            ShowStatus(L"Message enregistré : « " + dest + L" ».", InfoBarSeverity::Success);
+            ShowStatus(Fmt(Tr(L"Message enregistré : « {0} »."), { dest }), InfoBarSeverity::Success);
         });
     }
 
@@ -353,7 +353,7 @@ namespace winrt::EvolutionWin::implementation
             co_return;
 
         hstring dest_dir = folder_dest.Path();
-        ShowStatus(L"Récupération de la liste des messages de « " + folder_name + L" »…", InfoBarSeverity::Informational);
+        ShowStatus(Fmt(Tr(L"Récupération de la liste des messages de « {0} »…"), { folder_name }), InfoBarSeverity::Informational);
 
         m_core->ListMessages(account, folder, 0, [this, account, folder, folder_name, dest_dir](hstring const& json, hstring const& error)
         {
@@ -362,7 +362,7 @@ namespace winrt::EvolutionWin::implementation
                 JsonArray msgs;
                 if (!error.empty() || !JsonArray::TryParse(json, msgs) || msgs.Size() == 0)
                 {
-                    ShowStatus(L"Aucun message à exporter dans « " + folder_name + L" ».", InfoBarSeverity::Warning);
+                    ShowStatus(Fmt(Tr(L"Aucun message à exporter dans « {0} »."), { folder_name }), InfoBarSeverity::Warning);
                     co_return;
                 }
 
@@ -379,7 +379,7 @@ namespace winrt::EvolutionWin::implementation
 
                 if (uids.Size() == 0)
                 {
-                    ShowStatus(L"Aucun identifiant de message trouvé pour l'export.", InfoBarSeverity::Warning);
+                    ShowStatus(Tr(L"Aucun identifiant de message trouvé pour l'export."), InfoBarSeverity::Warning);
                     co_return;
                 }
 
@@ -388,13 +388,13 @@ namespace winrt::EvolutionWin::implementation
                 req.SetNamedValue(L"folder", JsonValue::CreateStringValue(folder));
                 req.SetNamedValue(L"uids", uids);
 
-                ShowStatus(L"Exportation de " + hstring{ std::to_wstring(uids.Size()) } + L" messages de « " + folder_name + L" »…", InfoBarSeverity::Informational);
+                ShowStatus(Fmt(Tr(L"Exportation de {0} messages de « {1} »…"), { to_hstring(uids.Size()), folder_name }), InfoBarSeverity::Informational);
                 m_core->ExportMessagesEml(req.Stringify(), [this, dest_dir, folder_name](hstring const& res_json, hstring const& res_err)
                 {
                     JsonArray paths;
                     if (!res_err.empty() || !JsonArray::TryParse(res_json, paths) || paths.Size() == 0)
                     {
-                        ShowStatus(L"Erreur lors de l'exportation : " + res_err, InfoBarSeverity::Error);
+                        ShowStatus(Fmt(Tr(L"Erreur lors de l'exportation : {0}"), { res_err }), InfoBarSeverity::Error);
                         return;
                     }
 
@@ -410,7 +410,7 @@ namespace winrt::EvolutionWin::implementation
                         if (!ec)
                             count++;
                     }
-                    ShowStatus(L"Exportation réussie : " + hstring{ std::to_wstring(count) } + L" messages de « " + folder_name + L" » enregistrés sous format .eml.", InfoBarSeverity::Success);
+                    ShowStatus(Fmt(Tr(L"Exportation réussie : {0} messages de « {1} » enregistrés sous format .eml."), { to_hstring(count), folder_name }), InfoBarSeverity::Success);
                 });
             }));
         });
@@ -471,10 +471,10 @@ namespace winrt::EvolutionWin::implementation
                 if (--*remaining > 0)
                     return;
                 if (*failures)
-                    ShowStatus(hstring{ std::to_wstring(*failures) + L" pièce(s) jointe(s) non enregistrée(s) dans « " + dir + L" »." },
+                    ShowStatus(Fmt(Tr(L"Échec : {0} pièce(s) jointe(s) non enregistrée(s) dans « {1} »."), { to_hstring(*failures), hstring{ dir } }),
                         InfoBarSeverity::Error);
                 else
-                    ShowStatus(hstring{ L"Pièces jointes enregistrées dans « " + dir + L" »." }, InfoBarSeverity::Success);
+                    ShowStatus(Fmt(Tr(L"Pièces jointes enregistrées dans « {0} »."), { hstring{ dir } }), InfoBarSeverity::Success);
             });
         }
     }
@@ -509,7 +509,7 @@ namespace winrt::EvolutionWin::implementation
         hstring ext = (dot != std::wstring_view::npos && dot + 1 < view.size())
             ? hstring{ view.substr(dot) }
             : L".bin";
-        picker.FileTypeChoices().Insert(L"Fichier", single_threaded_vector<hstring>({ ext }));
+        picker.FileTypeChoices().Insert(Tr(L"Fichier"), single_threaded_vector<hstring>({ ext }));
 
         auto file = co_await picker.PickSaveFileAsync();
         if (!file)
@@ -521,10 +521,10 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus(L"Enregistrement de la pièce jointe : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Enregistrement de la pièce jointe : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
-            ShowStatus(L"Pièce jointe « " + filename + L" » enregistrée.", InfoBarSeverity::Success);
+            ShowStatus(Fmt(Tr(L"Pièce jointe « {0} » enregistrée."), { filename }), InfoBarSeverity::Success);
         });
     }
     /**
@@ -620,7 +620,7 @@ namespace winrt::EvolutionWin::implementation
 
                 if (!error.empty())
                 {
-                    ShowStatus(L"Impossible de charger l'aperçu : " + error, InfoBarSeverity::Error);
+                    ShowStatus(Fmt(Tr(L"Impossible de charger l'aperçu : {0}"), { error }), InfoBarSeverity::Error);
                     CloseAttachmentPreview();
                     co_return;
                 }
@@ -811,7 +811,7 @@ namespace winrt::EvolutionWin::implementation
                 JsonArray paths;
                 if (!error.empty() || !JsonArray::TryParse(json, paths) || paths.Size() == 0)
                 {
-                    ShowStatus(L"Impossible d'extraire la source brute : " + error, InfoBarSeverity::Error);
+                    ShowStatus(Fmt(Tr(L"Impossible d'extraire la source brute : {0}"), { error }), InfoBarSeverity::Error);
                     co_return;
                 }
 
@@ -843,14 +843,14 @@ namespace winrt::EvolutionWin::implementation
 
                 if (raw_content.empty())
                 {
-                    ShowStatus(L"Flux brut du message vide.", InfoBarSeverity::Warning);
+                    ShowStatus(Tr(L"Flux brut du message vide."), InfoBarSeverity::Warning);
                     co_return;
                 }
 
                 ContentDialog dialog;
                 dialog.XamlRoot(Content().XamlRoot());
-                dialog.Title(box_value(L"Source brute MIME du message (RFC 822)"));
-                dialog.CloseButtonText(L"Fermer");
+                dialog.Title(box_value(Tr(L"Source brute MIME du message (RFC 822)")));
+                dialog.CloseButtonText(Tr(L"Fermer"));
                 dialog.DefaultButton(ContentDialogButton::Close);
 
                 Grid root;
@@ -867,14 +867,14 @@ namespace winrt::EvolutionWin::implementation
                 toolbar.Margin(ThicknessHelper::FromLengths(0, 0, 0, 8));
 
                 TextBox search_box;
-                search_box.PlaceholderText(L"Rechercher dans la source (Ctrl+F)...");
+                search_box.PlaceholderText(Tr(L"Rechercher dans la source (Ctrl+F)..."));
                 search_box.Width(280);
 
                 Button copy_btn;
-                copy_btn.Content(box_value(L"Copier tout"));
+                copy_btn.Content(box_value(Tr(L"Copier tout")));
 
                 Button save_btn;
-                save_btn.Content(box_value(L"Enregistrer sous (.eml)..."));
+                save_btn.Content(box_value(Tr(L"Enregistrer sous (.eml)...")));
 
                 toolbar.Children().Append(search_box);
                 toolbar.Children().Append(copy_btn);

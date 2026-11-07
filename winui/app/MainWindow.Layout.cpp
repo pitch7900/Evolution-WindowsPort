@@ -528,11 +528,11 @@ namespace winrt::EvolutionWin::implementation
 
         for (auto const& [key, label] : {
 
-            std::pair{ L"normal", L"Normal" },
+            std::pair{ L"normal", Tr(L"Normal") },
 
-            std::pair{ L"minimized", L"Réduit" },
+            std::pair{ L"minimized", Tr(L"Réduit") },
 
-            std::pair{ L"off", L"Désactivé" } })
+            std::pair{ L"off", Tr(L"Désactivé") } })
 
         {
 
@@ -849,7 +849,7 @@ namespace winrt::EvolutionWin::implementation
 
         hstring current = ::EvolutionWin::Settings::Instance().GetString(L"layout.reading-pane", L"right");
 
-        for (auto const& [key, label] : { std::pair{ L"right", L"À droite" }, std::pair{ L"bottom", L"En bas" }, std::pair{ L"off", L"Désactivé" } })
+        for (auto const& [key, label] : { std::pair{ L"right", Tr(L"À droite") }, std::pair{ L"bottom", Tr(L"En bas") }, std::pair{ L"off", Tr(L"Désactivé") } })
 
         {
 

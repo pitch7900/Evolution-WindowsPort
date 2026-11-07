@@ -89,9 +89,9 @@ namespace winrt::EvolutionWin::implementation
     {
         ContentDialog dialog;
         dialog.XamlRoot(this->Content().XamlRoot());
-        dialog.Title(box_value(L"Atteindre une date"));
-        dialog.PrimaryButtonText(L"Atteindre");
-        dialog.CloseButtonText(L"Annuler");
+        dialog.Title(box_value(Tr(L"Atteindre une date")));
+        dialog.PrimaryButtonText(Tr(L"Atteindre"));
+        dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Primary);
 
         StackPanel panel;
@@ -99,7 +99,7 @@ namespace winrt::EvolutionWin::implementation
         panel.MinWidth(320);
 
         TextBlock desc;
-        desc.Text(L"Sélectionnez une date pour naviguer directement dans le calendrier :");
+        desc.Text(Tr(L"Sélectionnez une date pour naviguer directement dans le calendrier :"));
         desc.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
         panel.Children().Append(desc);
 
@@ -115,7 +115,7 @@ namespace winrt::EvolutionWin::implementation
         shortcuts.Spacing(8);
 
         Button today_btn;
-        today_btn.Content(box_value(L"Aujourd'hui"));
+        today_btn.Content(box_value(Tr(L"Aujourd'hui")));
         today_btn.Click([date_picker](IInspectable const&, RoutedEventArgs const&)
         {
             date_picker.Date(winrt::clock::now());
@@ -123,7 +123,7 @@ namespace winrt::EvolutionWin::implementation
         shortcuts.Children().Append(today_btn);
 
         Button next_week_btn;
-        next_week_btn.Content(box_value(L"+7 jours"));
+        next_week_btn.Content(box_value(Tr(L"+7 jours")));
         next_week_btn.Click([date_picker](IInspectable const&, RoutedEventArgs const&)
         {
             if (date_picker.Date())
@@ -315,7 +315,7 @@ namespace winrt::EvolutionWin::implementation
         {
             EventList().Items().Clear();
             TextBlock none;
-            none.Text(L"Aucun calendrier affiché : cochez un calendrier dans la liste de gauche.");
+            none.Text(Tr(L"Aucun calendrier affiché : cochez un calendrier dans la liste de gauche."));
             none.Padding(ThicknessHelper::FromLengths(12, 12, 12, 12));
             EventList().Items().Append(none);
             return;
@@ -382,8 +382,8 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus(L"Calendrier : " + error, InfoBarSeverity::Error);
-                UpdateConnectionStatus(m_account.empty() ? L"global" : m_account, L"error", L"Anomalie de synchronisation du calendrier : " + error);
+                ShowStatus(Fmt(Tr(L"Calendrier : {0}"), { error }), InfoBarSeverity::Error);
+                UpdateConnectionStatus(m_account.empty() ? L"global" : m_account, L"error", Fmt(Tr(L"Anomalie de synchronisation du calendrier : {0}"), { error }));
                 person_done();
                 return;
             }
@@ -392,9 +392,15 @@ namespace winrt::EvolutionWin::implementation
             if (!m_is_offline)
             {
                 auto it = m_account_states.find(std::wstring{ m_account.empty() ? L"global" : m_account });
-                if (it != m_account_states.end() && it->second.status == L"error" && std::wstring_view(it->second.message).find(L"calendrier") != std::wstring_view::npos)
+                /* le message d'anomalie est traduit : reconnaître son préfixe traduit (ou l'ancien texte français) */
+                std::wstring fault_pattern{ Tr(L"Anomalie de synchronisation du calendrier : {0}") };
+                std::wstring fault_prefix = fault_pattern.substr(0, fault_pattern.find(L"{0}"));
+                bool calendar_fault = it != m_account_states.end() && it->second.status == L"error" &&
+                    (std::wstring_view(it->second.message).find(L"calendrier") != std::wstring_view::npos ||
+                     std::wstring_view(it->second.message).substr(0, fault_prefix.size()) == fault_prefix);
+                if (calendar_fault)
                 {
-                    UpdateConnectionStatus(m_account.empty() ? L"global" : m_account, L"connected", L"Synchronisé");
+                    UpdateConnectionStatus(m_account.empty() ? L"global" : m_account, L"connected", Tr(L"Synchronisé"));
                 }
             }
 
@@ -492,7 +498,7 @@ namespace winrt::EvolutionWin::implementation
 
             hstring time_str = FormatDate(start_t) + (end_t > start_t ? L" → " + FormatDate(end_t) : hstring{});
             if (!location.empty())
-                time_str = time_str + L"  •  Lieu : " + location;
+                time_str = time_str + L"  •  " + Fmt(Tr(L"Lieu : {0}", L"Where: {0}"), { location });
 
             TextBlock sub;
             sub.Text(time_str);
@@ -522,14 +528,14 @@ namespace winrt::EvolutionWin::implementation
             del_btn.Content(del_icon);
             del_btn.VerticalAlignment(VerticalAlignment::Center);
             Grid::SetColumn(del_btn, 2);
-            ToolTipService::SetToolTip(del_btn, box_value(L"Supprimer l'événement"));
+            ToolTipService::SetToolTip(del_btn, box_value(Tr(L"Supprimer l'événement")));
             del_btn.Click([this, calendar_uid, uid](IInspectable const&, RoutedEventArgs const&)
             {
                 m_core->DeleteEvent(calendar_uid, uid, [this](hstring const&, hstring const& err)
                 {
                     if (!err.empty())
                     {
-                        ShowStatus(L"Suppression de l'événement : " + err, InfoBarSeverity::Error);
+                        ShowStatus(Fmt(Tr(L"Suppression de l'événement : {0}"), { err }), InfoBarSeverity::Error);
                         return;
                     }
                     LoadEvents();
@@ -546,9 +552,9 @@ namespace winrt::EvolutionWin::implementation
         {
             TextBlock empty;
             if (!query.empty())
-                empty.Text(L"Aucun événement ne correspond à « " + hstring{ query } + L" ».");
+                empty.Text(Fmt(Tr(L"Aucun événement ne correspond à « {0} »."), { hstring{ query } }));
             else
-                empty.Text(L"Aucun événement sur cette période.");
+                empty.Text(Tr(L"Aucun événement sur cette période."));
             empty.Padding(ThicknessHelper::FromLengths(12, 12, 12, 12));
             items.Append(empty);
         }
@@ -612,11 +618,11 @@ namespace winrt::EvolutionWin::implementation
         LoadEvents();
         if (!m_core)
             return;
-        ShowStatus(L"Actualisation des agendas distants…", InfoBarSeverity::Informational);
+        ShowStatus(Tr(L"Actualisation des agendas distants…"), InfoBarSeverity::Informational);
         m_core->RefreshCalendars([this](hstring const&, hstring const&)
         {
             LoadEvents();
-            ShowStatus(L"Agendas actualisés.", InfoBarSeverity::Success);
+            ShowStatus(Tr(L"Agendas actualisés."), InfoBarSeverity::Success);
         });
     }
 
@@ -659,7 +665,7 @@ namespace winrt::EvolutionWin::implementation
      *        mémorisé en lecture seule et le message explique comment choisir un autre calendrier.
      * @param sources Calendriers connus (m_calendar_sources).
      * @param calendar_uid Calendrier visé.
-     * @param action Début du message (« Création de l'événement : »).
+     * @param action Modèle du message avec marqueur {0} pour l'erreur (« Création de l'événement : {0} »), déjà traduit.
      * @param error Erreur renvoyée par le moteur.
      * @return Texte à afficher.
      */
@@ -669,7 +675,7 @@ namespace winrt::EvolutionWin::implementation
         bool denied = text.find(L"AccessDenied") != std::wstring::npos || text.find(L"Access is denied") != std::wstring::npos ||
             text.find(L"ErrorAccessDenied") != std::wstring::npos;
         if (!denied)
-            return action + error;
+            return Fmt(action, { error });
 
         MarkReadOnlyCalendar(calendar_uid);
         hstring name = calendar_uid;
@@ -679,9 +685,9 @@ namespace winrt::EvolutionWin::implementation
             if (source.GetNamedString(L"uid", L"") == calendar_uid)
                 name = source.GetNamedString(L"name", calendar_uid);
         }
-        return Tr(L"Le calendrier « ", L"The calendar \"") + name +
-            Tr(L" » est en lecture seule pour vous (accès refusé par le serveur). Choisissez un autre calendrier dans la liste « Calendrier » de la fenêtre d'événement.",
-               L"\" is read-only for you (access denied by the server). Pick another calendar in the \"Calendar\" list of the event window.");
+        return Fmt(Tr(L"Le calendrier « {0} » est en lecture seule pour vous (accès refusé par le serveur). Choisissez un autre calendrier dans la liste « Calendrier » de la fenêtre d'événement.",
+                      L"The calendar \"{0}\" is read-only for you (access denied by the server). Pick another calendar in the \"Calendar\" list of the event window."),
+                   { name });
     }
 
     /**
@@ -799,7 +805,7 @@ namespace winrt::EvolutionWin::implementation
 
     fire_and_forget MainWindow::ShowNewFocusEventDialogAsync()
     {
-        ShowEventDialogAsync(nullptr, L"Temps de concentration", true);
+        ShowEventDialogAsync(nullptr, Tr(L"Temps de concentration"), true);
         co_return;
     }
 
@@ -828,11 +834,11 @@ namespace winrt::EvolutionWin::implementation
     /* Réponse d'un participant en clair. */
     static hstring AttendeeStatusLabel(hstring const& status)
     {
-        if (status == L"accepted") return L"accepté";
-        if (status == L"declined") return L"refusé";
-        if (status == L"tentative") return L"provisoire";
-        if (status == L"delegated") return L"délégué";
-        return L"sans réponse";
+        if (status == L"accepted") return Tr(L"accepté");
+        if (status == L"declined") return Tr(L"refusé");
+        if (status == L"tentative") return Tr(L"provisoire");
+        if (status == L"delegated") return Tr(L"délégué");
+        return Tr(L"sans réponse");
     }
 
     /* Fenêtre d'un événement : nouveau (event nul, calendrier actif) ou
@@ -850,7 +856,7 @@ namespace winrt::EvolutionWin::implementation
         bool all_day = existing && event.GetNamedBoolean(L"all_day", false);
 
         Window window;
-        hstring window_title = existing ? (readonly ? L"Événement (lecture seule)" : L"Événement") : (is_focus ? L"Temps individuel (Focus)" : L"Nouvel événement");
+        hstring window_title = existing ? (readonly ? Tr(L"Événement (lecture seule)") : Tr(L"Événement")) : (is_focus ? Tr(L"Temps individuel (Focus)") : Tr(L"Nouvel événement"));
         window.Title(window_title);
         window.AppWindow().Resize({ 1200, 860 });
         ::EvolutionWin::SetWindowIcon(window.AppWindow());
@@ -873,15 +879,15 @@ namespace winrt::EvolutionWin::implementation
 
         if (existing)
         {
-            panel.Children().Append(caption(L"Calendrier : " + event.GetNamedString(L"calendar_name", L"")));
+            panel.Children().Append(caption(Fmt(Tr(L"Calendrier : {0}"), { event.GetNamedString(L"calendar_name", L"") })));
             if (event.GetNamedBoolean(L"recurring", false))
-                panel.Children().Append(caption(L"Événement périodique : la modification s'applique à toute la série."));
+                panel.Children().Append(caption(Tr(L"Événement périodique : la modification s'applique à toute la série.")));
 
         }
 
         TextBox summary_box;
-        summary_box.Header(box_value(L"Titre"));
-        summary_box.PlaceholderText(L"Réunion, Rendez-vous…");
+        summary_box.Header(box_value(Tr(L"Titre")));
+        summary_box.PlaceholderText(Tr(L"Réunion, Rendez-vous…"));
         summary_box.IsReadOnly(readonly);
         if (existing)
             summary_box.Text(event.GetNamedString(L"summary", L""));
@@ -890,7 +896,7 @@ namespace winrt::EvolutionWin::implementation
         panel.Children().Append(summary_box);
 
         TextBox location_box;
-        location_box.Header(box_value(L"Lieu"));
+        location_box.Header(box_value(Tr(L"Lieu")));
         location_box.IsReadOnly(readonly);
         if (existing)
             location_box.Text(event.GetNamedString(L"location", L""));
@@ -1017,7 +1023,7 @@ namespace winrt::EvolutionWin::implementation
         };
 
         CheckBox all_day_box;
-        all_day_box.Content(box_value(L"Journée entière"));
+        all_day_box.Content(box_value(Tr(L"Journée entière")));
         all_day_box.IsChecked(all_day);
         all_day_box.IsEnabled(!readonly);
         panel.Children().Append(all_day_box);
@@ -1027,7 +1033,7 @@ namespace winrt::EvolutionWin::implementation
         start_row.ColumnDefinitions().Append(ColumnDefinition{});
         start_row.ColumnDefinitions().Append(ColumnDefinition{});
         CalendarDatePicker start_date;
-        start_date.Header(box_value(L"Début"));
+        start_date.Header(box_value(Tr(L"Début")));
         start_date.Date(winrt::clock::from_time_t(start_t));
         start_date.IsEnabled(!readonly);
         TimePicker start_time;
@@ -1044,7 +1050,7 @@ namespace winrt::EvolutionWin::implementation
         end_row.ColumnDefinitions().Append(ColumnDefinition{});
         end_row.ColumnDefinitions().Append(ColumnDefinition{});
         CalendarDatePicker end_date;
-        end_date.Header(box_value(L"Fin"));
+        end_date.Header(box_value(Tr(L"Fin")));
         end_date.Date(winrt::clock::from_time_t(end_t));
         end_date.IsEnabled(!readonly);
         TimePicker end_time;
@@ -1059,11 +1065,11 @@ namespace winrt::EvolutionWin::implementation
         /* rappel (VALARM) : délai avant le début */
         static constexpr int reminder_values[] = { -1, 0, 5, 15, 30, 60, 120, 1440 };
         ComboBox reminder_combo;
-        reminder_combo.Header(box_value(L"Rappel"));
+        reminder_combo.Header(box_value(Tr(L"Rappel")));
         reminder_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
         reminder_combo.IsEnabled(!readonly);
-        for (hstring label : { L"Aucun", L"À l'heure de l'événement", L"5 minutes avant", L"15 minutes avant",
-                               L"30 minutes avant", L"1 heure avant", L"2 heures avant", L"1 jour avant" })
+        for (auto const& label : { Tr(L"Aucun"), Tr(L"À l'heure de l'événement"), Tr(L"5 minutes avant"), Tr(L"15 minutes avant"),
+                                   Tr(L"30 minutes avant"), Tr(L"1 heure avant"), Tr(L"2 heures avant"), Tr(L"1 jour avant") })
             reminder_combo.Items().Append(box_value(label));
         {
             int current = existing ? static_cast<int>(event.GetNamedNumber(L"reminder_minutes", -1)) : 15;
@@ -1083,11 +1089,11 @@ namespace winrt::EvolutionWin::implementation
         if (!event_tz.empty() && std::find(zone_ids.begin(), zone_ids.end(), event_tz) == zone_ids.end())
             zone_ids.push_back(event_tz);
         ComboBox zone_combo;
-        zone_combo.Header(box_value(L"Fuseau horaire"));
+        zone_combo.Header(box_value(Tr(L"Fuseau horaire")));
         zone_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
         zone_combo.IsEnabled(!readonly);
         for (auto const& zone : zone_ids)
-            zone_combo.Items().Append(box_value(zone.empty() ? hstring{ L"Heure de cet ordinateur" } : zone));
+            zone_combo.Items().Append(box_value(zone.empty() ? Tr(L"Heure de cet ordinateur") : zone));
         {
             auto found = std::find(zone_ids.begin(), zone_ids.end(), event_tz);
             zone_combo.SelectedIndex(static_cast<int>(found - zone_ids.begin()));
@@ -1108,9 +1114,9 @@ namespace winrt::EvolutionWin::implementation
 
         /* participants modifiables : adresses séparées par des points-virgules */
         TextBox attendees_box;
-        attendees_box.Header(box_value(L"Participants (adresses séparées par « ; »)"));
+        attendees_box.Header(box_value(Tr(L"Participants (adresses séparées par « ; »)")));
         attendees_box.IsReadOnly(readonly);
-        attendees_box.PlaceholderText(L"alice@exemple.ch; bob@exemple.ch");
+        attendees_box.PlaceholderText(Tr(L"alice@exemple.ch; bob@exemple.ch"));
         if (existing)
         {
             std::wstring joined;
@@ -1211,12 +1217,12 @@ namespace winrt::EvolutionWin::implementation
 
             auto organizer = event.GetNamedObject(L"organizer", JsonObject{});
             if (!person(organizer).empty())
-                panel.Children().Append(caption(L"Organisateur : " + person(organizer)));
+                panel.Children().Append(caption(Fmt(Tr(L"Organisateur : {0}", L"Organizer: {0}"), { person(organizer) })));
 
             auto attendees = event.GetNamedArray(L"attendees", JsonArray{});
             if (attendees.Size() > 0)
             {
-                std::wstring list = L"Participants :";
+                std::wstring list{ Tr(L"Participants :") };
                 for (auto const& value : attendees)
                 {
                     auto who = value.GetObject();
@@ -1228,7 +1234,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         TextBox desc_box;
-        desc_box.Header(box_value(L"Description"));
+        desc_box.Header(box_value(Tr(L"Description")));
         desc_box.AcceptsReturn(true);
         desc_box.TextWrapping(TextWrapping::Wrap);
         desc_box.Height(120);
@@ -1296,7 +1302,7 @@ namespace winrt::EvolutionWin::implementation
         show_as_button.IsEnabled(!readonly);
         auto update_show_as = [show_as_button, show_as_combo]()
         {
-            show_as_button.Label(Tr(L"Afficher comme : ", L"Show as: ") + unbox_value<hstring>(show_as_combo.SelectedItem()));
+            show_as_button.Label(Fmt(Tr(L"Afficher comme : {0}", L"Show as: {0}"), { unbox_value<hstring>(show_as_combo.SelectedItem()) }));
         };
         update_show_as();
         {
@@ -1323,7 +1329,7 @@ namespace winrt::EvolutionWin::implementation
         reminder_button.IsEnabled(!readonly);
         auto update_reminder = [reminder_button, reminder_combo]()
         {
-            reminder_button.Label(Tr(L"Rappel : ", L"Reminder: ") + unbox_value<hstring>(reminder_combo.SelectedItem()));
+            reminder_button.Label(Fmt(Tr(L"Rappel : {0}", L"Reminder: {0}"), { unbox_value<hstring>(reminder_combo.SelectedItem()) }));
         };
         update_reminder();
         {
@@ -1835,10 +1841,10 @@ namespace winrt::EvolutionWin::implementation
             {
                 if (!error.empty())
                 {
-                    ShowStatus(EventSaveErrorText(m_calendar_sources, edit_calendar, L"Modification de l'événement : ", error), InfoBarSeverity::Error);
+                    ShowStatus(EventSaveErrorText(m_calendar_sources, edit_calendar, Tr(L"Modification de l'événement : {0}"), error), InfoBarSeverity::Error);
                     return;
                 }
-                ShowStatus(L"Événement modifié.", InfoBarSeverity::Success);
+                ShowStatus(Tr(L"Événement modifié."), InfoBarSeverity::Success);
                 LoadEvents();
                 SendEventInvitations(sender_uid, edit_calendar, edit_uid);
             });
@@ -1889,10 +1895,10 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus(EventSaveErrorText(m_calendar_sources, create_calendar, L"Création de l'événement : ", error), InfoBarSeverity::Error);
+                ShowStatus(EventSaveErrorText(m_calendar_sources, create_calendar, Tr(L"Création de l'événement : {0}"), error), InfoBarSeverity::Error);
                 return;
             }
-            ShowStatus(L"Événement enregistré.", InfoBarSeverity::Success);
+            ShowStatus(Tr(L"Événement enregistré."), InfoBarSeverity::Success);
             LoadEvents();
             JsonObject created;
             if (JsonObject::TryParse(json, created))
@@ -1901,18 +1907,18 @@ namespace winrt::EvolutionWin::implementation
                 SendEventInvitations(sender_uid, create_calendar, created_uid);
                 if (want_meet)
                 {
-                    ShowStatus(L"Ajout de la réunion Google Meet…", InfoBarSeverity::Informational);
+                    ShowStatus(Tr(L"Ajout de la réunion Google Meet…"), InfoBarSeverity::Informational);
                     m_core->AddGoogleMeet(create_calendar, created_uid, [this](hstring const& meet_json, hstring const& meet_error)
                     {
                         if (!meet_error.empty())
                         {
-                            ShowStatus(L"Réunion Google Meet : " + meet_error, InfoBarSeverity::Error);
+                            ShowStatus(Fmt(Tr(L"Réunion Google Meet : {0}"), { meet_error }), InfoBarSeverity::Error);
                             return;
                         }
                         JsonObject meet;
                         hstring link = JsonObject::TryParse(meet_json, meet) ? meet.GetNamedString(L"link", L"") : hstring{};
-                        ShowStatus(link.empty() ? hstring{ L"Réunion Google Meet ajoutée (le lien apparaîtra après la synchronisation)." }
-                                                : L"Réunion Google Meet ajoutée : " + link, InfoBarSeverity::Success);
+                        ShowStatus(link.empty() ? Tr(L"Réunion Google Meet ajoutée (le lien apparaîtra après la synchronisation).")
+                                                : Fmt(Tr(L"Réunion Google Meet ajoutée : {0}"), { link }), InfoBarSeverity::Success);
                         LoadEvents();
                     });
                 }
@@ -1933,10 +1939,10 @@ namespace winrt::EvolutionWin::implementation
             {
                 if (!error.empty())
                 {
-                    ShowStatus(L"Suppression de l'événement : " + error, InfoBarSeverity::Error);
+                    ShowStatus(Fmt(Tr(L"Suppression de l'événement : {0}"), { error }), InfoBarSeverity::Error);
                     return;
                 }
-                ShowStatus(L"Événement supprimé.", InfoBarSeverity::Success);
+                ShowStatus(Tr(L"Événement supprimé."), InfoBarSeverity::Success);
                 LoadEvents();
             });
             window.Close();
@@ -1976,12 +1982,12 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus(Tr(L"Invitations non envoyées : ", L"Invitations not sent: ") + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Invitations non envoyées : {0}", L"Invitations not sent: {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
             JsonObject result;
             if (JsonObject::TryParse(json, result) && result.GetNamedNumber(L"sent", 0) > 0)
-                ShowStatus(Tr(L"Invitations envoyées à : ", L"Invitations sent to: ") + result.GetNamedString(L"to", L""),
+                ShowStatus(Fmt(Tr(L"Invitations envoyées à : {0}", L"Invitations sent to: {0}"), { result.GetNamedString(L"to", L"") }),
                     InfoBarSeverity::Success);
         });
     }
@@ -1995,12 +2001,12 @@ namespace winrt::EvolutionWin::implementation
             JsonArray sources;
             if (!error.empty() || !JsonArray::TryParse(json, sources))
             {
-                ShowStatus(L"Exportation : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Exportation : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
             if (sources.Size() == 0)
             {
-                ShowStatus(L"Aucun agenda ni liste de tâches à exporter.", InfoBarSeverity::Warning);
+                ShowStatus(Tr(L"Aucun agenda ni liste de tâches à exporter."), InfoBarSeverity::Warning);
                 return;
             }
             ExportCalendarAsync(sources);
@@ -2021,9 +2027,9 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Exporter au format iCalendar"));
-        dialog.PrimaryButtonText(L"Exporter");
-        dialog.CloseButtonText(L"Annuler");
+        dialog.Title(box_value(Tr(L"Exporter au format iCalendar")));
+        dialog.PrimaryButtonText(Tr(L"Exporter"));
+        dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Primary);
 
         StackPanel panel;
@@ -2031,19 +2037,19 @@ namespace winrt::EvolutionWin::implementation
         panel.MinWidth(380);
 
         ComboBox source_box;
-        source_box.Header(box_value(L"Agenda ou liste de tâches"));
+        source_box.Header(box_value(Tr(L"Agenda ou liste de tâches")));
         source_box.HorizontalAlignment(HorizontalAlignment::Stretch);
         for (auto const& value : sources)
         {
             auto source = value.GetObject();
-            hstring label = source.GetNamedString(L"kind", L"") == L"tasks" ? L"Tâches" : L"Agenda";
+            hstring label = source.GetNamedString(L"kind", L"") == L"tasks" ? Tr(L"Tâches") : Tr(L"Agenda");
             source_box.Items().Append(box_value(label + L" : " + source.GetNamedString(L"name", L"")));
         }
         source_box.SelectedIndex(0);
         panel.Children().Append(source_box);
 
         TextBlock hint;
-        hint.Text(L"Tous les événements ou toutes les tâches sont enregistrés dans un fichier .ics, avec leurs fuseaux horaires.");
+        hint.Text(Tr(L"Tous les événements ou toutes les tâches sont enregistrés dans un fichier .ics, avec leurs fuseaux horaires."));
         hint.TextWrapping(TextWrapping::Wrap);
         hint.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
         panel.Children().Append(hint);
@@ -2065,7 +2071,7 @@ namespace winrt::EvolutionWin::implementation
         Windows::Storage::Pickers::FileSavePicker picker;
         InitializePicker(picker);
         picker.SuggestedFileName(SanitizeFileName(name, tasks ? L"taches" : L"agenda"));
-        picker.FileTypeChoices().Insert(L"Calendrier iCalendar", single_threaded_vector<hstring>({ L".ics" }));
+        picker.FileTypeChoices().Insert(Tr(L"Calendrier iCalendar"), single_threaded_vector<hstring>({ L".ics" }));
 
         auto file = co_await picker.PickSaveFileAsync();
         if (!file)
@@ -2076,18 +2082,19 @@ namespace winrt::EvolutionWin::implementation
         request.SetNamedValue(L"source_uid", JsonValue::CreateStringValue(uid));
         request.SetNamedValue(L"path", JsonValue::CreateStringValue(dest));
 
-        ShowStatus(L"Exportation de « " + name + L" »…", InfoBarSeverity::Informational);
+        ShowStatus(Fmt(Tr(L"Exportation de « {0} »…"), { name }), InfoBarSeverity::Informational);
         m_core->ExportCalendar(request.Stringify(), [this, dest, tasks](hstring const& json, hstring const& error)
         {
             JsonObject answer;
             if (!error.empty() || !JsonObject::TryParse(json, answer))
             {
-                ShowStatus(L"Exportation : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Exportation : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
             auto count = static_cast<uint32_t>(answer.GetNamedNumber(L"count", 0));
-            ShowStatus(hstring{ std::to_wstring(count) + (tasks ? L" tâche(s) exportée(s)" : L" événement(s) exporté(s)") +
-                L" dans « " + std::wstring{ dest } + L" »." }, InfoBarSeverity::Success);
+            ShowStatus(Fmt(tasks ? Tr(L"Exportation terminée : {0} tâche(s) exportée(s) dans « {1} ».")
+                                 : Tr(L"Exportation terminée : {0} événement(s) exporté(s) dans « {1} »."),
+                           { to_hstring(count), dest }), InfoBarSeverity::Success);
         });
     }
 

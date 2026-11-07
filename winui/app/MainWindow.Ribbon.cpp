@@ -106,7 +106,7 @@ namespace winrt::EvolutionWin::implementation
             RibbonRenameFolder().IsEnabled(item && !special);
             RibbonFolderMore().IsEnabled(item != nullptr);
             RibbonEmptyFolder().IsEnabled(item != nullptr);
-            RibbonEmptyFolder().Label(type == L"trash" ? L"Vider la Corbeille" : type == L"junk" ? L"Vider les Indésirables" : L"Vider le dossier");
+            RibbonEmptyFolder().Label(type == L"trash" ? Tr(L"Vider la Corbeille") : type == L"junk" ? Tr(L"Vider les Indésirables") : Tr(L"Vider le dossier"));
             RibbonDeleteFolder().IsEnabled(item && !special && !has_children);
         }
 
@@ -154,22 +154,22 @@ namespace winrt::EvolutionWin::implementation
     struct QuickAccessCommand
     {
         wchar_t const* id;
-        wchar_t const* label;
+        hstring (*label)();
         wchar_t const* glyph;
         void (MainWindow::*handler)(IInspectable const&, RoutedEventArgs const&);
     };
 
     static QuickAccessCommand const QuickAccessCommands[] = {
-        { L"sendreceive", L"Envoyer/Recevoir (F5)", L"\xE72C", &MainWindow::OnRefreshClick },
-        { L"sendreceive-all", L"Envoyer/Recevoir tous les dossiers (F9)", L"\xE895", &MainWindow::OnRefreshAllClick },
-        { L"new-message", L"Nouveau message", L"\xE710", &MainWindow::OnNewMessageClick },
-        { L"reply", L"Répondre", L"\xE97A", &MainWindow::OnReplyClick },
-        { L"delete", L"Supprimer", L"\xE74D", &MainWindow::OnDeleteClick },
-        { L"archive", L"Archiver", L"\xE7B8", &MainWindow::OnArchiveClick },
-        { L"print", L"Imprimer", L"\xE749", &MainWindow::OnPrintClick },
-        { L"confidential", L"Notifications confidentielles (activer / désactiver)", L"\xE72E", &MainWindow::OnConfidentialToggled },
-        { L"new-event", L"Nouvel événement", L"\xE787", &MainWindow::OnNewEventClick },
-        { L"new-task", L"Nouvelle tâche", L"\xE9D5", &MainWindow::OnNewTaskClick },
+        { L"sendreceive", []{ return Tr(L"Envoyer/Recevoir (F5)"); }, L"\xE72C", &MainWindow::OnRefreshClick },
+        { L"sendreceive-all", []{ return Tr(L"Envoyer/Recevoir tous les dossiers (F9)"); }, L"\xE895", &MainWindow::OnRefreshAllClick },
+        { L"new-message", []{ return Tr(L"Nouveau message"); }, L"\xE710", &MainWindow::OnNewMessageClick },
+        { L"reply", []{ return Tr(L"Répondre"); }, L"\xE97A", &MainWindow::OnReplyClick },
+        { L"delete", []{ return Tr(L"Supprimer"); }, L"\xE74D", &MainWindow::OnDeleteClick },
+        { L"archive", []{ return Tr(L"Archiver"); }, L"\xE7B8", &MainWindow::OnArchiveClick },
+        { L"print", []{ return Tr(L"Imprimer"); }, L"\xE749", &MainWindow::OnPrintClick },
+        { L"confidential", []{ return Tr(L"Notifications confidentielles (activer / désactiver)"); }, L"\xE72E", &MainWindow::OnConfidentialToggled },
+        { L"new-event", []{ return Tr(L"Nouvel événement"); }, L"\xE787", &MainWindow::OnNewEventClick },
+        { L"new-task", []{ return Tr(L"Nouvelle tâche"); }, L"\xE9D5", &MainWindow::OnNewTaskClick },
     };
 
     /* Commande présente dans la barre d'accès rapide (préférence
@@ -215,7 +215,7 @@ namespace winrt::EvolutionWin::implementation
             if (!is_chosen(command.id))
                 continue;
             Button button;
-            small_button(button, command.glyph, command.label);
+            small_button(button, command.glyph, command.label());
             auto handler = command.handler;
             button.Click([this, handler](IInspectable const&, RoutedEventArgs const&) { (this->*handler)(nullptr, nullptr); });
             panel.Append(button);
@@ -223,7 +223,7 @@ namespace winrt::EvolutionWin::implementation
 
         /* personnalisation : commandes à cocher */
         DropDownButton customize;
-        small_button(customize, L"\xE70D", L"Personnaliser la barre d'accès rapide");
+        small_button(customize, L"\xE70D", Tr(L"Personnaliser la barre d'accès rapide"));
         /* le DropDownButton dessine déjà son chevron */
         customize.Content(nullptr);
         customize.Width(28);
@@ -231,7 +231,7 @@ namespace winrt::EvolutionWin::implementation
         for (auto const& command : QuickAccessCommands)
         {
             ToggleMenuFlyoutItem entry;
-            entry.Text(command.label);
+            entry.Text(command.label());
             entry.IsChecked(is_chosen(command.id));
             hstring id = command.id;
             entry.Click([this, id](IInspectable const& sender, RoutedEventArgs const&)
@@ -281,8 +281,8 @@ namespace winrt::EvolutionWin::implementation
         settings.SetBoolean(L"notifications.confidential", enabled);
         SyncConfidentialControls();
         ShowStatus(enabled
-            ? L"Notifications confidentielles : ni expéditeur ni objet dans les notifications."
-            : L"Notifications confidentielles désactivées.", InfoBarSeverity::Informational);
+            ? Tr(L"Notifications confidentielles : ni expéditeur ni objet dans les notifications.")
+            : Tr(L"Notifications confidentielles désactivées."), InfoBarSeverity::Informational);
     }
 
     void MainWindow::SyncConfidentialControls()

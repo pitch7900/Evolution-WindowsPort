@@ -43,11 +43,13 @@ def key_for(fr):
     return 'T_%08X' % h
 
 
-def translatable(text):
+def translatable(text, cpp=False):
     """Vrai si le texte est un libellé à traduire (et non un symbole, une liaison, un identifiant)."""
-    if not text or text.startswith('{') or text.startswith('ms-'):
+    if not text or text.startswith('ms-'):
         return False
-    if not re.search('[A-Za-zÀ-ÿ]{2}', text):
+    if text.startswith('{') and not re.match(r'\{\d+\}', text):
+        return False
+    if not re.search('[A-Za-zÀ-ÿ]{1}' if cpp else '[A-Za-zÀ-ÿ]{2}', text):
         return False
     # glyphe d'icône (zone d'usage privé) ou identifiant technique
     if re.search('[-]', text) and not re.search('[A-Za-z]{3}', text):
@@ -104,7 +106,7 @@ def extract_cpp(path):
         res = join_literals(m.group(3))
         if res:
             continue
-        if translatable(fr):
+        if translatable(fr, True):
             found.setdefault(fr, en)
     return found
 

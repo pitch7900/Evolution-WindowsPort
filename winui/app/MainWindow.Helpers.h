@@ -612,52 +612,18 @@ namespace EvolutionWin::Helpers
         data.account = account_uid;
         data.reply = true;
 
-        std::wstring lang{ ::EvolutionWin::Settings::Instance().GetString(L"general.language", L"system") };
-        if (lang.empty() || lang == L"system")
-            lang = L"fr";
 
         if (kind == ::EvolutionWin::ReplyKind::Forward)
         {
             std::wstring fwd_p{ ::EvolutionWin::Settings::Instance().GetString(L"mail.forward-prefix", L"TR: ") };
             data.subject = hstring{ FormatForwardSubject(subject, fwd_p) };
 
-            std::wstring header_title = L"-------- Message transféré --------";
-            std::wstring lbl_from = L"De : ";
-            std::wstring lbl_date = L"Date : ";
-            std::wstring lbl_subj = L"Objet : ";
-            std::wstring lbl_to = L"À : ";
-            std::wstring lbl_cc = L"Cc : ";
-
-            if (lang == L"en" || lang.find(L"en-") == 0)
-            {
-                header_title = L"-------- Forwarded Message --------";
-                lbl_from = L"From: "; lbl_date = L"Date: "; lbl_subj = L"Subject: "; lbl_to = L"To: "; lbl_cc = L"Cc: ";
-            }
-            else if (lang == L"de" || lang.find(L"de-") == 0)
-            {
-                header_title = L"-------- Weitergeleitete Nachricht --------";
-                lbl_from = L"Von: "; lbl_date = L"Datum: "; lbl_subj = L"Betreff: "; lbl_to = L"An: "; lbl_cc = L"Cc: ";
-            }
-            else if (lang == L"it" || lang.find(L"it-") == 0)
-            {
-                header_title = L"-------- Messaggio Inoltrato --------";
-                lbl_from = L"Da: "; lbl_date = L"Data: "; lbl_subj = L"Oggetto: "; lbl_to = L"A: "; lbl_cc = L"Cc: ";
-            }
-            else if (lang == L"es" || lang.find(L"es-") == 0)
-            {
-                header_title = L"-------- Mensaje reenviado --------";
-                lbl_from = L"De: "; lbl_date = L"Fecha: "; lbl_subj = L"Asunto: "; lbl_to = L"Para: "; lbl_cc = L"Cc: ";
-            }
-            else if (lang == L"pt" || lang.find(L"pt-") == 0)
-            {
-                header_title = L"-------- Mensagem encaminhada --------";
-                lbl_from = L"De: "; lbl_date = L"Data: "; lbl_subj = L"Assunto: "; lbl_to = L"Para: "; lbl_cc = L"Cc: ";
-            }
-            else if (lang == L"nl" || lang.find(L"nl-") == 0)
-            {
-                header_title = L"-------- Doorgestuurd bericht --------";
-                lbl_from = L"Van: "; lbl_date = L"Datum: "; lbl_subj = L"Onderwerp: "; lbl_to = L"Aan: "; lbl_cc = L"Cc: ";
-            }
+            std::wstring header_title{ Tr(L"-------- Message transféré --------") };
+            std::wstring lbl_from{ Tr(L"De : ") };
+            std::wstring lbl_date{ Tr(L"Date : ") };
+            std::wstring lbl_subj{ Tr(L"Objet : ") };
+            std::wstring lbl_to{ Tr(L"À : ") };
+            std::wstring lbl_cc{ Tr(L"Cc : ") };
 
             data.body = L"\r\r" + hstring{ header_title } + L"\r" + hstring{ lbl_from } + from + L"\r" + hstring{ lbl_date } + date +
                 L"\r" + hstring{ lbl_subj } + subject + L"\r" + hstring{ lbl_to } + to + (cc.empty() ? hstring{} : L"\r" + hstring{ lbl_cc } + cc) +
@@ -708,39 +674,8 @@ namespace EvolutionWin::Helpers
                 if (ch == L'\n')
                     ch = L'\r';
 
-            std::wstring quote_lead = L"Le " + std::wstring{ date } + L", " + std::wstring{ from } + L" a écrit :";
-            std::wstring html_quote_lead = L"Le " + EscapeHtml(date) + L", " + EscapeHtml(from) + L" a écrit :";
-
-            if (lang == L"en" || lang.find(L"en-") == 0)
-            {
-                quote_lead = L"On " + std::wstring{ date } + L", " + std::wstring{ from } + L" wrote:";
-                html_quote_lead = L"On " + EscapeHtml(date) + L", " + EscapeHtml(from) + L" wrote:";
-            }
-            else if (lang == L"de" || lang.find(L"de-") == 0)
-            {
-                quote_lead = L"Am " + std::wstring{ date } + L" schrieb " + std::wstring{ from } + L":";
-                html_quote_lead = L"Am " + EscapeHtml(date) + L" schrieb " + EscapeHtml(from) + L":";
-            }
-            else if (lang == L"it" || lang.find(L"it-") == 0)
-            {
-                quote_lead = L"Il " + std::wstring{ date } + L", " + std::wstring{ from } + L" ha scritto:";
-                html_quote_lead = L"Il " + EscapeHtml(date) + L", " + EscapeHtml(from) + L" ha scritto:";
-            }
-            else if (lang == L"es" || lang.find(L"es-") == 0)
-            {
-                quote_lead = L"El " + std::wstring{ date } + L", " + std::wstring{ from } + L" escribió:";
-                html_quote_lead = L"El " + EscapeHtml(date) + L", " + EscapeHtml(from) + L" escribió:";
-            }
-            else if (lang == L"pt" || lang.find(L"pt-") == 0)
-            {
-                quote_lead = L"Em " + std::wstring{ date } + L", " + std::wstring{ from } + L" escreveu:";
-                html_quote_lead = L"Em " + EscapeHtml(date) + L", " + EscapeHtml(from) + L" escreveu:";
-            }
-            else if (lang == L"nl" || lang.find(L"nl-") == 0)
-            {
-                quote_lead = L"Op " + std::wstring{ date } + L" schreef " + std::wstring{ from } + L":";
-                html_quote_lead = L"Op " + EscapeHtml(date) + L" schreef " + EscapeHtml(from) + L":";
-            }
+            std::wstring quote_lead{ Fmt(Tr(L"Le {0}, {1} a écrit :"), { date, from }) };
+            std::wstring html_quote_lead{ Fmt(Tr(L"Le {0}, {1} a écrit :"), { hstring{ EscapeHtml(date) }, hstring{ EscapeHtml(from) } }) };
 
             data.body = L"\r\r" + hstring{ quote_lead } + L"\r" + hstring{ quoted };
             data.html_body = hstring{
@@ -820,7 +755,7 @@ namespace EvolutionWin::Helpers
         out += L"<meta charset=\"utf-8\">\n";
         out += L"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n";
         out += L"<title>";
-        out += subject.empty() ? L"(Sans objet)" : EscapeHtml(subject);
+        out += subject.empty() ? std::wstring{ Tr(L"(Sans objet)") } : EscapeHtml(subject);
         out += L"</title>\n";
         out += L"<style>\n";
         out += L"body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; margin: 0; padding: 24px; color: #202020; background: #fafafa; }\n";
@@ -831,13 +766,13 @@ namespace EvolutionWin::Helpers
         out += L".email-body { background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 24px; min-height: 300px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }\n";
         out += L"</style>\n</head>\n<body>\n";
         out += L"<div class=\"email-header\">\n";
-        out += L"  <h1 class=\"email-title\">" + (subject.empty() ? std::wstring{ L"(Sans objet)" } : EscapeHtml(subject)) + L"</h1>\n";
+        out += L"  <h1 class=\"email-title\">" + (subject.empty() ? std::wstring{ Tr(L"(Sans objet)") } : EscapeHtml(subject)) + L"</h1>\n";
         out += L"  <div class=\"email-meta\">\n";
-        out += L"    <div><strong>De :</strong> " + EscapeHtml(from) + L"</div>\n";
+        out += L"    <div><strong>" + std::wstring{ Tr(L"De :") } + L"</strong> " + EscapeHtml(from) + L"</div>\n";
         if (!to.empty())
-            out += L"    <div><strong>Ã :</strong> " + EscapeHtml(to) + L"</div>\n";
+            out += L"    <div><strong>" + std::wstring{ Tr(L"À :") } + L"</strong> " + EscapeHtml(to) + L"</div>\n";
         if (!date.empty())
-            out += L"    <div><strong>Date :</strong> " + EscapeHtml(date) + L"</div>\n";
+            out += L"    <div><strong>" + std::wstring{ Tr(L"Date :") } + L"</strong> " + EscapeHtml(date) + L"</div>\n";
         out += L"  </div>\n</div>\n";
         out += L"<div class=\"email-body\">\n";
         if (!html_body.empty())
@@ -923,11 +858,11 @@ namespace EvolutionWin::Helpers
         std::wstring speech;
         if (!from.empty())
         {
-            speech += L"Message de " + std::wstring{ SenderName(hstring{ from }) } + L".\n";
+            speech += std::wstring{ Fmt(Tr(L"Message de {0}."), { SenderName(hstring{ from }) }) } + L"\n";
         }
         if (!subject.empty())
         {
-            speech += L"Objet : " + subject + L".\n\n";
+            speech += std::wstring{ Fmt(Tr(L"Objet : {0}."), { hstring{ subject } }) } + L"\n\n";
         }
 
         std::wstring body_clean;
@@ -1063,7 +998,7 @@ namespace EvolutionWin::Helpers
     inline std::wstring FormatContactSuggestion(std::wstring_view full_name, std::wstring_view email)
     {
         if (full_name.empty() && email.empty())
-            return L"(Sans nom)";
+            return std::wstring{ Tr(L"(Sans nom)") };
         if (email.empty())
             return std::wstring{ full_name };
         if (full_name.empty())
@@ -1364,43 +1299,43 @@ namespace EvolutionWin::Helpers
     {
         return {
             /* Navigation globale */
-            { L"Navigation", L"Aller au module Courrier", L"Ctrl+Alt+1", L"Ctrl+1" },
-            { L"Navigation", L"Aller au module Calendrier", L"Ctrl+Alt+2", L"Ctrl+2" },
-            { L"Navigation", L"Aller au module Contacts", L"Ctrl+Alt+3", L"Ctrl+3" },
-            { L"Navigation", L"Aller au module Tâches", L"Ctrl+Alt+4", L"Ctrl+4" },
-            { L"Navigation", L"Rechercher dans les éléments", L"Ctrl+E", L"Ctrl+F" },
-            { L"Navigation", L"Afficher les raccourcis clavier", L"F1", L"F1" },
+            { std::wstring{ Tr(L"Navigation") }, std::wstring{ Tr(L"Aller au module Courrier") }, L"Ctrl+Alt+1", L"Ctrl+1" },
+            { std::wstring{ Tr(L"Navigation") }, std::wstring{ Tr(L"Aller au module Calendrier") }, L"Ctrl+Alt+2", L"Ctrl+2" },
+            { std::wstring{ Tr(L"Navigation") }, std::wstring{ Tr(L"Aller au module Contacts") }, L"Ctrl+Alt+3", L"Ctrl+3" },
+            { std::wstring{ Tr(L"Navigation") }, std::wstring{ Tr(L"Aller au module Tâches") }, L"Ctrl+Alt+4", L"Ctrl+4" },
+            { std::wstring{ Tr(L"Navigation") }, std::wstring{ Tr(L"Rechercher dans les éléments") }, L"Ctrl+E", L"Ctrl+F" },
+            { std::wstring{ Tr(L"Navigation") }, std::wstring{ Tr(L"Afficher les raccourcis clavier") }, L"F1", L"F1" },
 
             /* Courrier & Rédaction */
-            { L"Courrier", L"Nouveau message", L"Ctrl+N", L"Ctrl+N" },
-            { L"Courrier", L"Répondre à l'expéditeur", L"Ctrl+R", L"Ctrl+R" },
-            { L"Courrier", L"Répondre à tous les destinataires", L"Ctrl+Maj+R", L"Ctrl+Maj+R" },
-            { L"Courrier", L"Transférer le message", L"Ctrl+F", L"Ctrl+J" },
-            { L"Courrier", L"Transférer en pièce jointe (.eml)", L"Ctrl+Maj+F", L"Ctrl+Alt+F" },
-            { L"Courrier", L"Enregistrer sous le format .eml", L"Ctrl+S", L"Ctrl+S" },
-            { L"Courrier", L"Afficher la source brute MIME (RFC 822)", L"Ctrl+Maj+U", L"Ctrl+U" },
-            { L"Courrier", L"Attribuer rapidement une catégorie", L"Ctrl+F2", L"Ctrl+F2" },
-            { L"Courrier", L"Marquer comme lu", L"Ctrl+Q", L"Ctrl+K" },
-            { L"Courrier", L"Marquer comme non lu", L"Ctrl+U", L"Ctrl+Maj+K" },
-            { L"Courrier", L"Envoyer et recevoir (synchronisation)", L"F9", L"F9" },
-            { L"Courrier", L"Déplacer vers la Corbeille", L"Suppr", L"Suppr" },
-            { L"Courrier", L"Supprimer définitivement", L"Maj+Suppr", L"Maj+Suppr" },
-            { L"Courrier", L"Archiver le message sélectionné", L"Retour arrière", L"Ctrl+Alt+A" },
-            { L"Courrier", L"Imprimer le message", L"Ctrl+P", L"Ctrl+P" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Nouveau message") }, L"Ctrl+N", L"Ctrl+N" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Répondre à l'expéditeur") }, L"Ctrl+R", L"Ctrl+R" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Répondre à tous les destinataires") }, L"Ctrl+Maj+R", L"Ctrl+Maj+R" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Transférer le message") }, L"Ctrl+F", L"Ctrl+J" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Transférer en pièce jointe (.eml)") }, L"Ctrl+Maj+F", L"Ctrl+Alt+F" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Enregistrer sous le format .eml") }, L"Ctrl+S", L"Ctrl+S" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Afficher la source brute MIME (RFC 822)") }, L"Ctrl+Maj+U", L"Ctrl+U" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Attribuer rapidement une catégorie") }, L"Ctrl+F2", L"Ctrl+F2" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Marquer comme lu") }, L"Ctrl+Q", L"Ctrl+K" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Marquer comme non lu") }, L"Ctrl+U", L"Ctrl+Maj+K" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Envoyer et recevoir (synchronisation)") }, L"F9", L"F9" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Déplacer vers la Corbeille") }, L"Suppr", L"Suppr" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Supprimer définitivement") }, L"Maj+Suppr", L"Maj+Suppr" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Archiver le message sélectionné") }, L"Retour arrière", L"Ctrl+Alt+A" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Imprimer le message") }, L"Ctrl+P", L"Ctrl+P" },
 
             /* Calendrier & Rendez-vous */
-            { L"Calendrier", L"Nouveau rendez-vous / événement", L"Ctrl+N", L"Ctrl+Maj+E" },
-            { L"Calendrier", L"Atteindre une date précise", L"Ctrl+G", L"Ctrl+T" },
-            { L"Calendrier", L"Revenir à la date du jour", L"Ctrl+T", L"Ctrl+J" },
-            { L"Calendrier", L"Actualiser le calendrier", L"F5", L"F5" },
+            { std::wstring{ Tr(L"Calendrier") }, std::wstring{ Tr(L"Nouveau rendez-vous / événement") }, L"Ctrl+N", L"Ctrl+Maj+E" },
+            { std::wstring{ Tr(L"Calendrier") }, std::wstring{ Tr(L"Atteindre une date précise") }, L"Ctrl+G", L"Ctrl+T" },
+            { std::wstring{ Tr(L"Calendrier") }, std::wstring{ Tr(L"Revenir à la date du jour") }, L"Ctrl+T", L"Ctrl+J" },
+            { std::wstring{ Tr(L"Calendrier") }, std::wstring{ Tr(L"Actualiser le calendrier") }, L"F5", L"F5" },
 
             /* Contacts */
-            { L"Contacts", L"Nouveau contact", L"Ctrl+N", L"Ctrl+Maj+C" },
-            { L"Contacts", L"Écrire au contact sélectionné", L"Ctrl+Maj+C", L"Ctrl+N" },
+            { std::wstring{ Tr(L"Contacts") }, std::wstring{ Tr(L"Nouveau contact") }, L"Ctrl+N", L"Ctrl+Maj+C" },
+            { std::wstring{ Tr(L"Contacts") }, std::wstring{ Tr(L"Écrire au contact sélectionné") }, L"Ctrl+Maj+C", L"Ctrl+N" },
 
             /* Tâches & To-Do */
-            { L"Tâches", L"Nouvelle tâche", L"Ctrl+Maj+K", L"Ctrl+Maj+T" },
-            { L"Tâches", L"Afficher / masquer le volet des tâches", L"Alt+F2", L"F7" }
+            { std::wstring{ Tr(L"Tâches") }, std::wstring{ Tr(L"Nouvelle tâche") }, L"Ctrl+Maj+K", L"Ctrl+Maj+T" },
+            { std::wstring{ Tr(L"Tâches") }, std::wstring{ Tr(L"Afficher / masquer le volet des tâches") }, L"Alt+F2", L"F7" }
         };
     }
 

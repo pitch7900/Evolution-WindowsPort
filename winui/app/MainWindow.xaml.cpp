@@ -322,11 +322,11 @@ namespace winrt::EvolutionWin::implementation
         }
         else if (event == L"sending")
         {
-            ShowStatus(L"Envoi de « " + object.GetNamedString(L"subject", L"") + L" »…", InfoBarSeverity::Informational);
+            ShowStatus(Fmt(Tr(L"Envoi de « {0} »…"), { object.GetNamedString(L"subject", L"") }), InfoBarSeverity::Informational);
         }
         else if (event == L"sent")
         {
-            ShowStatus(L"Message envoyé : « " + object.GetNamedString(L"subject", L"") + L" »", InfoBarSeverity::Success);
+            ShowStatus(Fmt(Tr(L"Message envoyé : « {0} »"), { object.GetNamedString(L"subject", L"") }), InfoBarSeverity::Success);
         }
         else if (event == L"error")
         {
@@ -341,13 +341,13 @@ namespace winrt::EvolutionWin::implementation
                 }
             }
             UpdateTaskbarProgress(false, 0, true);
-            ShowStatus(L"Le moteur de messagerie n'a pas pu démarrer : " + message, InfoBarSeverity::Error);
+            ShowStatus(Fmt(Tr(L"Le moteur de messagerie n'a pas pu démarrer : {0}"), { message }), InfoBarSeverity::Error);
         }
         else if (event == L"status")
         {
             hstring display_status = message;
             if (message == L"Connecting to evolution-data-server")
-                display_status = L"Connexion à evolution-data-server…";
+                display_status = Tr(L"Connexion à evolution-data-server…");
             if (m_splash)
             {
                 m_splash.SetStatus(display_status);
@@ -382,7 +382,7 @@ namespace winrt::EvolutionWin::implementation
                     Initialize();
                 }
             }
-            UpdateConnectionStatus(object.GetNamedString(L"source_uid", L""), L"auth-required", L"Authentification requise");
+            UpdateConnectionStatus(object.GetNamedString(L"source_uid", L""), L"auth-required", Tr(L"Authentification requise"));
             PromptPasswordAsync(
                 object.GetNamedString(L"source_uid", L""),
                 object.GetNamedString(L"name", L""),
@@ -415,7 +415,7 @@ namespace winrt::EvolutionWin::implementation
                     Initialize();
                 }
             }
-            UpdateConnectionStatus(object.GetNamedString(L"source_uid", L""), L"auth-required", L"Connexion requise");
+            UpdateConnectionStatus(object.GetNamedString(L"source_uid", L""), L"auth-required", Tr(L"Connexion requise"));
             SignInOAuth2Async(object.GetNamedString(L"source_uid", L""), object.GetNamedString(L"name", L""));
         }
     }
@@ -521,8 +521,9 @@ namespace winrt::EvolutionWin::implementation
         InfoBadge badge;
         badge.Value(unread);
         MailItem().InfoBadge(badge);
-        ToolTipService::SetToolTip(MailItem(), box_value(Tr(L"Courrier (", L"Mail (") + to_hstring(unread) +
-            (unread > 1 ? Tr(L" non lus)", L" unread)") : Tr(L" non lu)", L" unread)"))));
+        ToolTipService::SetToolTip(MailItem(), box_value(unread > 1
+            ? Fmt(Tr(L"Courrier ({0} non lus)", L"Mail ({0} unread)"), { to_hstring(unread) })
+            : Fmt(Tr(L"Courrier ({0} non lu)", L"Mail ({0} unread)"), { to_hstring(unread) })));
         UpdateTaskbarBadge(unread);
     }
 

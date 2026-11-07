@@ -61,7 +61,7 @@ namespace winrt::EvolutionWin::implementation
     {
         if (!m_accounts)
         {
-            ShowStatus(L"Les comptes ne sont pas encore chargés.", InfoBarSeverity::Warning);
+            ShowStatus(Tr(L"Les comptes ne sont pas encore chargés."), InfoBarSeverity::Warning);
             return;
         }
 
@@ -153,14 +153,14 @@ namespace winrt::EvolutionWin::implementation
         JsonObject req = BuildMessagesRequest(uids);
 
         hstring account = req.GetNamedString(L"account", m_account);
-        ShowStatus(L"Préparation des courriels en pièces jointes…", InfoBarSeverity::Informational);
+        ShowStatus(Tr(L"Préparation des courriels en pièces jointes…"), InfoBarSeverity::Informational);
 
         m_core->ExportMessagesEml(req.Stringify(),
             [this, account, first_subject](hstring const& json, hstring const& error)
         {
             if (!error.empty())
             {
-                ShowStatus(L"Transfert : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Transfert : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
 
@@ -178,7 +178,7 @@ namespace winrt::EvolutionWin::implementation
             }
             else
             {
-                data.subject = hstring{ FormatForwardSubject(L"Messages transférés", fwd_p) };
+                data.subject = hstring{ FormatForwardSubject(std::wstring{ Tr(L"Messages transférés") }, fwd_p) };
             }
 
             for (auto const& val : paths)
@@ -224,14 +224,14 @@ namespace winrt::EvolutionWin::implementation
 
             JsonObject req = BuildMessagesRequest(extra_uids);
 
-            ShowStatus(L"Ajout des autres courriels sélectionnés en pièces jointes…", InfoBarSeverity::Informational);
+            ShowStatus(Tr(L"Ajout des autres courriels sélectionnés en pièces jointes…"), InfoBarSeverity::Informational);
 
             m_core->ExportMessagesEml(req.Stringify(),
                 [this, data](hstring const& json, hstring const& error) mutable
             {
                 if (!error.empty())
                 {
-                    ShowStatus(L"Pièces jointes : " + error, InfoBarSeverity::Error);
+                    ShowStatus(Fmt(Tr(L"Pièces jointes : {0}"), { error }), InfoBarSeverity::Error);
                     return;
                 }
 
@@ -262,7 +262,7 @@ namespace winrt::EvolutionWin::implementation
             {
                 if (!error.empty())
                 {
-                    ShowStatus(L"Message : " + error, InfoBarSeverity::Error);
+                    ShowStatus(Fmt(Tr(L"Message : {0}"), { error }), InfoBarSeverity::Error);
                     return;
                 }
 

@@ -400,7 +400,7 @@ namespace winrt::EvolutionWin::implementation
 
             {
 
-                strong->ShowStatus(L"Erreur de chargement : " + error, InfoBarSeverity::Error);
+                strong->ShowStatus(Fmt(Tr(L"Erreur de chargement : {0}"), { error }), InfoBarSeverity::Error);
 
                 return;
 
@@ -444,7 +444,7 @@ namespace winrt::EvolutionWin::implementation
 
             /* Mise à jour du bouton Lu / Non lu */
 
-            strong->ToggleReadButton().Label(strong->m_seen ? L"Non lu" : L"Lu");
+            strong->ToggleReadButton().Label(strong->m_seen ? Tr(L"Non lu") : Tr(L"Lu"));
 
             strong->ToggleReadIcon().Glyph(strong->m_seen ? L"\xE715" : L"\xE8C3");
 
@@ -466,13 +466,13 @@ namespace winrt::EvolutionWin::implementation
 
             hstring cc = msg.GetNamedString(L"cc", L"");
 
-            strong->ToText().Text(L"À : " + to);
+            strong->ToText().Text(Fmt(Tr(L"À : {0}"), { to }));
 
             if (!cc.empty())
 
             {
 
-                strong->CcText().Text(L"Cc : " + cc);
+                strong->CcText().Text(Fmt(Tr(L"Cc : {0}"), { cc }));
 
                 strong->CcText().Visibility(Visibility::Visible);
 
@@ -680,7 +680,7 @@ namespace winrt::EvolutionWin::implementation
 
         hstring account = m_account;
 
-        ShowStatus(L"Préparation du courriel en pièce jointe…", InfoBarSeverity::Informational);
+        ShowStatus(Tr(L"Préparation du courriel en pièce jointe…"), InfoBarSeverity::Informational);
 
         core->ExportMessagesEml(req.Stringify(),
 
@@ -692,7 +692,7 @@ namespace winrt::EvolutionWin::implementation
 
             {
 
-                ShowStatus(L"Transfert : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Transfert : {0}"), { error }), InfoBarSeverity::Error);
 
                 return;
 
@@ -717,7 +717,7 @@ namespace winrt::EvolutionWin::implementation
             }
             else
             {
-                data.subject = hstring{ FormatForwardSubject(L"Message transféré", fwd_p) };
+                data.subject = hstring{ FormatForwardSubject(std::wstring{ Tr(L"Message transféré") }, fwd_p) };
 
             }
 
@@ -749,7 +749,7 @@ namespace winrt::EvolutionWin::implementation
 
         m_seen = !m_seen;
 
-        ToggleReadButton().Label(m_seen ? L"Non lu" : L"Lu");
+        ToggleReadButton().Label(m_seen ? Tr(L"Non lu") : Tr(L"Lu"));
 
         ToggleReadIcon().Glyph(m_seen ? L"\xE715" : L"\xE8C3");
 
@@ -761,7 +761,7 @@ namespace winrt::EvolutionWin::implementation
 
             if (!error.empty())
 
-                strong->ShowStatus(L"Erreur lors de la mise à jour : " + error, InfoBarSeverity::Error);
+                strong->ShowStatus(Fmt(Tr(L"Erreur lors de la mise à jour : {0}"), { error }), InfoBarSeverity::Error);
 
         });
 
@@ -863,7 +863,7 @@ namespace winrt::EvolutionWin::implementation
 
                             {
 
-                                strong->ShowStatus(L"Erreur de déplacement : " + error, InfoBarSeverity::Error);
+                                strong->ShowStatus(Fmt(Tr(L"Erreur de déplacement : {0}"), { error }), InfoBarSeverity::Error);
 
                                 return;
 
@@ -933,7 +933,7 @@ namespace winrt::EvolutionWin::implementation
 
             {
 
-                strong->ShowStatus(L"Erreur de suppression : " + error, InfoBarSeverity::Error);
+                strong->ShowStatus(Fmt(Tr(L"Erreur de suppression : {0}"), { error }), InfoBarSeverity::Error);
 
                 return;
 
@@ -983,7 +983,7 @@ namespace winrt::EvolutionWin::implementation
 
         {
 
-            ShowStatus(L"Impression impossible : " + e.message(), InfoBarSeverity::Warning);
+            ShowStatus(Fmt(Tr(L"Impression impossible : {0}"), { e.message() }), InfoBarSeverity::Warning);
 
         }
 
@@ -1185,7 +1185,7 @@ namespace winrt::EvolutionWin::implementation
 
         {
 
-            ShowStatus(L"Impossible d'afficher le message : " + e.message(), InfoBarSeverity::Warning);
+            ShowStatus(Fmt(Tr(L"Impossible d'afficher le message : {0}"), { e.message() }), InfoBarSeverity::Warning);
 
         }
 
@@ -1451,31 +1451,31 @@ namespace winrt::EvolutionWin::implementation
         bool trusted = sec.GetNamedBoolean(L"trusted", false);
         hstring desc = sec.GetNamedString(L"description", L"");
 
-        std::wstring title;
+        hstring title;
         InfoBarSeverity severity = InfoBarSeverity::Warning;
         if (encrypted && signed_msg)
         {
-            title = valid ? L"Message chiffré et signé" : L"Message chiffré, mais la signature pose problème";
+            title = valid ? Tr(L"Message chiffré et signé") : Tr(L"Message chiffré, mais la signature pose problème");
             severity = valid ? (trusted ? InfoBarSeverity::Success : InfoBarSeverity::Informational) : InfoBarSeverity::Warning;
         }
         else if (encrypted)
         {
-            title = valid ? L"Message chiffré : lisible par vous seul" : L"Ce message chiffré n'a pas pu être lu";
+            title = valid ? Tr(L"Message chiffré : lisible par vous seul") : Tr(L"Ce message chiffré n'a pas pu être lu");
             severity = valid ? InfoBarSeverity::Success : InfoBarSeverity::Warning;
         }
         else if (valid)
         {
-            title = trusted ? L"Message signé et vérifié" : L"Message signé : contenu intact, expéditeur non certifié";
+            title = trusted ? Tr(L"Message signé et vérifié") : Tr(L"Message signé : contenu intact, expéditeur non certifié");
             severity = trusted ? InfoBarSeverity::Success : InfoBarSeverity::Informational;
         }
         else
         {
-            title = L"Attention : la signature de ce message n'est pas fiable";
+            title = Tr(L"Attention : la signature de ce message n'est pas fiable");
         }
 
         std::wstring msg;
         if (!signer.empty())
-            msg = L"Signataire : " + std::wstring{ signer };
+            msg = std::wstring{ Fmt(Tr(L"Signataire : {0}"), { signer }) };
         if (!desc.empty())
         {
             if (!msg.empty())
@@ -1484,7 +1484,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         SecurityBanner().Severity(severity);
-        SecurityBanner().Title(hstring{ title });
+        SecurityBanner().Title(title);
         SecurityBanner().Message(hstring{ msg });
 
         SecurityBanner().IsOpen(true);
@@ -1546,7 +1546,7 @@ namespace winrt::EvolutionWin::implementation
 
             button.Content(content);
 
-            ToolTipService::SetToolTip(button, box_value(L"Aperçu de « " + filename + L" » (clic pour afficher, clic droit pour enregistrer)"));
+            ToolTipService::SetToolTip(button, box_value(Fmt(Tr(L"Aperçu de « {0} » (clic pour afficher, clic droit pour enregistrer)"), { hstring{ filename } })));
 
 
 
@@ -1568,7 +1568,7 @@ namespace winrt::EvolutionWin::implementation
 
             MenuFlyoutItem preview_item;
 
-            preview_item.Text(L"Aperçu");
+            preview_item.Text(Tr(L"Aperçu"));
 
             preview_item.Icon(FontIcon{});
 
@@ -1588,7 +1588,7 @@ namespace winrt::EvolutionWin::implementation
 
             MenuFlyoutItem save_item;
 
-            save_item.Text(L"Enregistrer sous...");
+            save_item.Text(Tr(L"Enregistrer sous..."));
 
             save_item.Icon(FontIcon{});
 
@@ -1632,7 +1632,7 @@ namespace winrt::EvolutionWin::implementation
 
                     : L".bin";
 
-                picker.FileTypeChoices().Insert(L"Fichier", single_threaded_vector<hstring>({ ext }));
+                picker.FileTypeChoices().Insert(Tr(L"Fichier"), single_threaded_vector<hstring>({ ext }));
 
 
 
@@ -1664,13 +1664,13 @@ namespace winrt::EvolutionWin::implementation
 
                             {
 
-                                strong->ShowStatus(L"Erreur lors de l'enregistrement : " + error, InfoBarSeverity::Error);
+                                strong->ShowStatus(Fmt(Tr(L"Erreur lors de l'enregistrement : {0}"), { error }), InfoBarSeverity::Error);
 
                                 return;
 
                             }
 
-                            strong->ShowStatus(L"Pièce jointe « " + filename + L" » enregistrée.", InfoBarSeverity::Success);
+                            strong->ShowStatus(Fmt(Tr(L"Pièce jointe « {0} » enregistrée."), { hstring{ filename } }), InfoBarSeverity::Success);
 
                         });
 
@@ -1754,13 +1754,13 @@ namespace winrt::EvolutionWin::implementation
 
                 if (!error.empty())
 
-                    strong->ShowStatus(L"Erreur pour « " + target_path + L" » : " + error, InfoBarSeverity::Warning);
+                    strong->ShowStatus(Fmt(Tr(L"Erreur pour « {0} » : {1}"), { hstring{ target_path }, error }), InfoBarSeverity::Warning);
 
             });
 
         }
 
-        ShowStatus(L"Pièces jointes enregistrées dans « " + dir + L" ».", InfoBarSeverity::Success);
+        ShowStatus(Fmt(Tr(L"Pièces jointes enregistrées dans « {0} »."), { hstring{ dir } }), InfoBarSeverity::Success);
 
     }
 
@@ -1854,7 +1854,7 @@ namespace winrt::EvolutionWin::implementation
 
         if (!ok)
 
-            ShowStatus(L"Impossible d'ouvrir le navigateur web par défaut.", InfoBarSeverity::Error);
+            ShowStatus(Tr(L"Impossible d'ouvrir le navigateur web par défaut."), InfoBarSeverity::Error);
 
     }
 
@@ -1898,7 +1898,7 @@ namespace winrt::EvolutionWin::implementation
 
             ReadAloudIcon().Glyph(L"\xEC92");
 
-            ReadAloudButton().Label(L"Lire à voix haute");
+            ReadAloudButton().Label(Tr(L"Lire à voix haute"));
 
         }
 
@@ -1934,7 +1934,7 @@ namespace winrt::EvolutionWin::implementation
 
             StopSpeech();
 
-            ShowStatus(L"Lecture vocale interrompue.", InfoBarSeverity::Informational);
+            ShowStatus(Tr(L"Lecture vocale interrompue."), InfoBarSeverity::Informational);
 
             co_return;
 
@@ -1944,7 +1944,7 @@ namespace winrt::EvolutionWin::implementation
 
         {
 
-            ShowStatus(L"Aucun message chargé à lire.", InfoBarSeverity::Informational);
+            ShowStatus(Tr(L"Aucun message chargé à lire."), InfoBarSeverity::Informational);
 
             co_return;
 
@@ -1956,7 +1956,7 @@ namespace winrt::EvolutionWin::implementation
 
         {
 
-            ShowStatus(L"Le message ne contient aucun texte à lire.", InfoBarSeverity::Warning);
+            ShowStatus(Tr(L"Le message ne contient aucun texte à lire."), InfoBarSeverity::Warning);
 
             co_return;
 
@@ -2008,9 +2008,9 @@ namespace winrt::EvolutionWin::implementation
 
             ReadAloudIcon().Glyph(L"\xE71A");
 
-            ReadAloudButton().Label(L"Arrêter la lecture");
+            ReadAloudButton().Label(Tr(L"Arrêter la lecture"));
 
-            ShowStatus(L"Lecture à voix haute en cours...", InfoBarSeverity::Informational);
+            ShowStatus(Tr(L"Lecture à voix haute en cours..."), InfoBarSeverity::Informational);
 
         }
 
@@ -2020,7 +2020,7 @@ namespace winrt::EvolutionWin::implementation
 
             StopSpeech();
 
-            ShowStatus(L"Erreur lors de la synthèse vocale : " + ex.message(), InfoBarSeverity::Error);
+            ShowStatus(Fmt(Tr(L"Erreur lors de la synthèse vocale : {0}"), { ex.message() }), InfoBarSeverity::Error);
 
         }
 
@@ -2030,7 +2030,7 @@ namespace winrt::EvolutionWin::implementation
 
             StopSpeech();
 
-            ShowStatus(L"Erreur inattendue lors de la lecture vocale.", InfoBarSeverity::Error);
+            ShowStatus(Tr(L"Erreur inattendue lors de la lecture vocale."), InfoBarSeverity::Error);
 
         }
 
@@ -2192,7 +2192,7 @@ namespace winrt::EvolutionWin::implementation
 
                 {
 
-                    ShowStatus(L"Impossible de charger l'aperçu : " + error, InfoBarSeverity::Error);
+                    ShowStatus(Fmt(Tr(L"Impossible de charger l'aperçu : {0}"), { error }), InfoBarSeverity::Error);
 
                     CloseAttachmentPreview();
 
@@ -2364,7 +2364,7 @@ namespace winrt::EvolutionWin::implementation
 
             : L".bin";
 
-        picker.FileTypeChoices().Insert(L"Fichier", single_threaded_vector<hstring>({ ext }));
+        picker.FileTypeChoices().Insert(Tr(L"Fichier"), single_threaded_vector<hstring>({ ext }));
 
 
 
@@ -2396,13 +2396,13 @@ namespace winrt::EvolutionWin::implementation
 
                     {
 
-                        strong->ShowStatus(L"Erreur lors de l'enregistrement : " + error, InfoBarSeverity::Error);
+                        strong->ShowStatus(Fmt(Tr(L"Erreur lors de l'enregistrement : {0}"), { error }), InfoBarSeverity::Error);
 
                         return;
 
                     }
 
-                    strong->ShowStatus(L"Pièce jointe enregistrée avec succès.", InfoBarSeverity::Success);
+                    strong->ShowStatus(Tr(L"Pièce jointe enregistrée avec succès."), InfoBarSeverity::Success);
 
                 });
 
@@ -2475,7 +2475,7 @@ namespace winrt::EvolutionWin::implementation
             picker.as<::IInitializeWithWindow>()->Initialize(hwnd);
 
         picker.SuggestedFileName(sanitized);
-        picker.FileTypeChoices().Insert(L"Message électronique", single_threaded_vector<hstring>({ L".eml" }));
+        picker.FileTypeChoices().Insert(Tr(L"Message électronique"), single_threaded_vector<hstring>({ L".eml" }));
 
         auto file = co_await picker.PickSaveFileAsync();
         if (!file)
@@ -2542,7 +2542,7 @@ namespace winrt::EvolutionWin::implementation
                 JsonArray paths;
                 if (!error.empty() || !JsonArray::TryParse(json, paths) || paths.Size() == 0)
                 {
-                    ShowStatus(L"Impossible d'extraire la source brute : " + error, InfoBarSeverity::Error);
+                    ShowStatus(Fmt(Tr(L"Impossible d'extraire la source brute : {0}"), { error }), InfoBarSeverity::Error);
                     co_return;
                 }
 
@@ -2574,14 +2574,14 @@ namespace winrt::EvolutionWin::implementation
 
                 if (raw_content.empty())
                 {
-                    ShowStatus(L"Flux brut du message vide.", InfoBarSeverity::Warning);
+                    ShowStatus(Tr(L"Flux brut du message vide."), InfoBarSeverity::Warning);
                     co_return;
                 }
 
                 ContentDialog dialog;
                 dialog.XamlRoot(Content().XamlRoot());
-                dialog.Title(box_value(L"Source brute MIME du message (RFC 822)"));
-                dialog.CloseButtonText(L"Fermer");
+                dialog.Title(box_value(Tr(L"Source brute MIME du message (RFC 822)")));
+                dialog.CloseButtonText(Tr(L"Fermer"));
                 dialog.DefaultButton(ContentDialogButton::Close);
 
                 Grid root;
@@ -2598,14 +2598,14 @@ namespace winrt::EvolutionWin::implementation
                 toolbar.Margin(ThicknessHelper::FromLengths(0, 0, 0, 8));
 
                 TextBox search_box;
-                search_box.PlaceholderText(L"Rechercher dans la source (Ctrl+F)...");
+                search_box.PlaceholderText(Tr(L"Rechercher dans la source (Ctrl+F)..."));
                 search_box.Width(280);
 
                 Button copy_btn;
-                copy_btn.Content(box_value(L"Copier tout"));
+                copy_btn.Content(box_value(Tr(L"Copier tout")));
 
                 Button save_btn;
-                save_btn.Content(box_value(L"Enregistrer sous (.eml)..."));
+                save_btn.Content(box_value(Tr(L"Enregistrer sous (.eml)...")));
 
                 toolbar.Children().Append(search_box);
                 toolbar.Children().Append(copy_btn);
@@ -2675,19 +2675,19 @@ namespace winrt::EvolutionWin::implementation
     void MessageWindow::OnZoomInClick(IInspectable const&, RoutedEventArgs const&)
     {
         ApplyReaderZoom(::EvolutionWin::Helpers::StepZoomIn(m_reader_zoom));
-        ShowStatus(L"Niveau de zoom : " + hstring{ ::EvolutionWin::Helpers::FormatZoomPercentage(m_reader_zoom) }, Microsoft::UI::Xaml::Controls::InfoBarSeverity::Informational);
+        ShowStatus(Fmt(Tr(L"Niveau de zoom : {0}"), { hstring{ ::EvolutionWin::Helpers::FormatZoomPercentage(m_reader_zoom) } }), Microsoft::UI::Xaml::Controls::InfoBarSeverity::Informational);
     }
 
     void MessageWindow::OnZoomOutClick(IInspectable const&, RoutedEventArgs const&)
     {
         ApplyReaderZoom(::EvolutionWin::Helpers::StepZoomOut(m_reader_zoom));
-        ShowStatus(L"Niveau de zoom : " + hstring{ ::EvolutionWin::Helpers::FormatZoomPercentage(m_reader_zoom) }, Microsoft::UI::Xaml::Controls::InfoBarSeverity::Informational);
+        ShowStatus(Fmt(Tr(L"Niveau de zoom : {0}"), { hstring{ ::EvolutionWin::Helpers::FormatZoomPercentage(m_reader_zoom) } }), Microsoft::UI::Xaml::Controls::InfoBarSeverity::Informational);
     }
 
     void MessageWindow::OnZoomResetClick(IInspectable const&, RoutedEventArgs const&)
     {
         ApplyReaderZoom(1.0);
-        ShowStatus(L"Zoom reinitialise a 100 %", Microsoft::UI::Xaml::Controls::InfoBarSeverity::Informational);
+        ShowStatus(Tr(L"Zoom réinitialisé à 100 %"), Microsoft::UI::Xaml::Controls::InfoBarSeverity::Informational);
     }
 
     void MessageWindow::OnTogglePlainTextClick(IInspectable const&, RoutedEventArgs const&)
@@ -2698,7 +2698,7 @@ namespace winrt::EvolutionWin::implementation
         if (m_current_message)
         {
             ShowCurrentMessageInReader(false);
-            ShowStatus(m_view_plain_text ? L"Affichage en texte brut active" : L"Affichage HTML active", Microsoft::UI::Xaml::Controls::InfoBarSeverity::Informational);
+            ShowStatus(m_view_plain_text ? Tr(L"Affichage en texte brut activé") : Tr(L"Affichage HTML activé"), Microsoft::UI::Xaml::Controls::InfoBarSeverity::Informational);
         }
     }
 }

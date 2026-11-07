@@ -15,6 +15,8 @@ using namespace Microsoft::UI::Xaml::Controls;
 using namespace Windows::Data::Json;
 using namespace Windows::Foundation;
 
+using namespace ::EvolutionWin::Helpers;
+
 namespace winrt::EvolutionWin::implementation
 {
     namespace
@@ -22,15 +24,45 @@ namespace winrt::EvolutionWin::implementation
         namespace AR = ::EvolutionWin::AutoReply;
 
         /**
-         * @brief Indique si l'interface doit s'afficher en anglais (réglage de langue ou langue du système).
-         * @return true pour l'anglais.
+         * @brief Texte localisé d'un libellé de la boîte « Réponses automatiques ».
+         *
+         * Les libellés français servent de clés de traduction (catalogues de ressources) ;
+         * l'anglais n'est qu'un repli. Les modèles contiennent des marqueurs {0}.
+         * @param id Identifiant du libellé.
+         * @return Texte dans la langue de l'interface.
          */
-        bool AutoReplyEnglish()
+        hstring ARText(AR::Str id)
         {
-            wchar_t locale[LOCALE_NAME_MAX_LENGTH]{};
-            ::GetUserDefaultLocaleName(locale, LOCALE_NAME_MAX_LENGTH);
-            std::wstring setting{ ::EvolutionWin::Settings::Instance().GetString(L"general.language", L"system") };
-            return AR::UseEnglish(setting, locale);
+            switch (id)
+            {
+            case AR::Str::Loading: return Tr(L"Lecture des réglages sur le serveur…", L"Reading the settings from the server…");
+            case AR::Str::Save: return Tr(L"Enregistrer", L"Save");
+            case AR::Str::Cancel: return Tr(L"Annuler", L"Cancel");
+            case AR::Str::Enable: return Tr(L"Envoyer des réponses automatiques", L"Send automatic replies");
+            case AR::Str::LimitPeriod: return Tr(L"Limiter à une période", L"Only send during a time period");
+            case AR::Str::Start: return Tr(L"Début", L"Start");
+            case AR::Str::End: return Tr(L"Fin", L"End");
+            case AR::Str::Audience: return Tr(L"Expéditeurs externes", L"External senders");
+            case AR::Str::AudienceNone: return Tr(L"Personne (organisation uniquement)", L"None (my organization only)");
+            case AR::Str::AudienceKnown: return Tr(L"Mes contacts seulement", L"My contacts only");
+            case AR::Str::AudienceAll: return Tr(L"Tous les expéditeurs externes", L"All external senders");
+            case AR::Str::InternalMessage: return Tr(L"Message pour mon organisation", L"Message for my organization");
+            case AR::Str::ExternalMessage: return Tr(L"Message pour les expéditeurs externes", L"Message for external senders");
+            case AR::Str::SingleMessage: return Tr(L"Message de réponse", L"Reply message");
+            case AR::Str::Subject: return Tr(L"Objet de la réponse", L"Reply subject");
+            case AR::Str::Saving: return Tr(L"Enregistrement…", L"Saving…");
+            case AR::Str::Saved: return Tr(L"Réponses automatiques activées pour « {0} »", L"Automatic replies turned on for \"{0}\"");
+            case AR::Str::SavedDisabled: return Tr(L"Réponses automatiques désactivées pour « {0} »", L"Automatic replies turned off for \"{0}\"");
+            case AR::Str::LoadError: return Tr(L"Impossible de lire les réponses automatiques.", L"Unable to read the automatic replies.");
+            case AR::Str::SaveError: return Tr(L"Échec de l'enregistrement : {0}", L"Saving failed: {0}");
+            case AR::Str::ErrEndBeforeStart: return Tr(L"La fin de la période doit être postérieure à son début.", L"The end of the period must be after its start.");
+            case AR::Str::ErrIncompleteRange: return Tr(L"Microsoft 365 exige une date de début et une date de fin.", L"Microsoft 365 requires both a start and an end date.");
+            case AR::Str::ErrEmptyMessage: return Tr(L"Saisissez au moins un message de réponse.", L"Enter at least one reply message.");
+            case AR::Str::GmailNote: return Tr(L"Gmail utilise un seul message pour toutes les audiences ; « Personne » limite la réponse à votre domaine.", L"Gmail uses a single message for every audience; \"None\" restricts the reply to your domain.");
+            case AR::Str::M365Note: return Tr(L"Les mises en forme HTML saisies dans Outlook sont converties en texte brut à l'enregistrement.", L"HTML formatting entered in Outlook is converted to plain text when saved.");
+            case AR::Str::NoAccount: return Tr(L"Sélectionnez d'abord un compte de messagerie.", L"Select a mail account first.");
+            default: return {};
+            }
         }
 
         /**
@@ -46,20 +78,6 @@ namespace winrt::EvolutionWin::implementation
             std::wstring w(static_cast<size_t>(n), L'\0');
             ::MultiByteToWideChar(CP_UTF8, 0, utf8.data(), static_cast<int>(utf8.size()), w.data(), n);
             return hstring{ w };
-        }
-
-        /**
-         * @brief Remplace le premier « %s » d'un modèle localisé.
-         * @param model Modèle (ex. « Activées pour « %s » »).
-         * @param value Valeur à insérer.
-         * @return Texte final.
-         */
-        std::wstring Format1(std::wstring model, std::wstring const& value)
-        {
-            auto pos = model.find(L"%s");
-            if (pos != std::wstring::npos)
-                model.replace(pos, 2, value);
-            return model;
         }
 
         /**
@@ -159,7 +177,7 @@ namespace winrt::EvolutionWin::implementation
     {
         if (m_account.empty() || m_account == L"local" || IsUnifiedView())
         {
-            ShowStatus(AR::Tr(AR::Str::NoAccount, AutoReplyEnglish()), InfoBarSeverity::Warning);
+            ShowStatus(ARText(AR::Str::NoAccount), InfoBarSeverity::Warning);
             return;
         }
         ShowOutOfOfficeDialogAsync(m_account);
@@ -171,14 +189,13 @@ namespace winrt::EvolutionWin::implementation
      */
     void MainWindow::DisableAutoReply(hstring const& account)
     {
-        bool english = AutoReplyEnglish();
         hstring name = AccountDisplayName(m_accounts, account);
 
-        m_core->GetAutoReply(account, [this, account, name, english](hstring const& json, hstring const& error)
+        m_core->GetAutoReply(account, [this, account, name](hstring const& json, hstring const& error)
         {
             if (!error.empty() || json.empty())
             {
-                ShowStatus(hstring{ AR::Tr(AR::Str::SaveError, english) } + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(ARText(AR::Str::SaveError), { error }), InfoBarSeverity::Error);
                 return;
             }
 
@@ -189,16 +206,16 @@ namespace winrt::EvolutionWin::implementation
             s.enabled = false;
 
             m_core->SetAutoReply(account, Wide(AR::BuildSettingsJson(s)),
-                [this, account, name, english, s](hstring const&, hstring const& save_error)
+                [this, account, name, s](hstring const&, hstring const& save_error)
             {
                 if (!save_error.empty())
                 {
-                    ShowStatus(hstring{ AR::Tr(AR::Str::SaveError, english) } + save_error, InfoBarSeverity::Error);
+                    ShowStatus(Fmt(ARText(AR::Str::SaveError), { save_error }), InfoBarSeverity::Error);
                     return;
                 }
                 CacheAutoReplyState(account, s);
                 UpdateOutOfOfficeBanner();
-                ShowStatus(hstring{ Format1(AR::Tr(AR::Str::SavedDisabled, english), std::wstring{ name }) }, InfoBarSeverity::Success);
+                ShowStatus(Fmt(ARText(AR::Str::SavedDisabled), { name }), InfoBarSeverity::Success);
             });
         });
     }
@@ -220,14 +237,13 @@ namespace winrt::EvolutionWin::implementation
 
         m_dialog_open = true;
 
-        bool english = AutoReplyEnglish();
         hstring acc_name = AccountDisplayName(m_accounts, account);
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(hstring{ AR::Tr(AR::Str::Title, english) } + L" - " + acc_name));
-        dialog.PrimaryButtonText(AR::Tr(AR::Str::Save, english));
-        dialog.CloseButtonText(AR::Tr(AR::Str::Cancel, english));
+        dialog.Title(box_value(Fmt(Tr(L"Réponses automatiques (absence) - {0}", L"Automatic replies (out of office) - {0}"), { acc_name })));
+        dialog.PrimaryButtonText(ARText(AR::Str::Save));
+        dialog.CloseButtonText(ARText(AR::Str::Cancel));
         dialog.DefaultButton(ContentDialogButton::Primary);
         dialog.IsPrimaryButtonEnabled(false);
         /* fenêtre plus large que par défaut (une boîte de dialogue n'est pas redimensionnable) */
@@ -249,7 +265,7 @@ namespace winrt::EvolutionWin::implementation
         ring.Height(18);
         ring.IsActive(true);
         TextBlock status_text;
-        status_text.Text(AR::Tr(AR::Str::Loading, english));
+        status_text.Text(ARText(AR::Str::Loading));
         status_text.TextWrapping(TextWrapping::Wrap);
         status_text.VerticalAlignment(VerticalAlignment::Center);
         status_row.Children().Append(ring);
@@ -265,11 +281,11 @@ namespace winrt::EvolutionWin::implementation
         form.IsEnabled(false);
 
         ToggleSwitch enabled_switch;
-        enabled_switch.Header(box_value(AR::Tr(AR::Str::Enable, english)));
+        enabled_switch.Header(box_value(ARText(AR::Str::Enable)));
         form_panel.Children().Append(enabled_switch);
 
         CheckBox period_box;
-        period_box.Content(box_value(AR::Tr(AR::Str::LimitPeriod, english)));
+        period_box.Content(box_value(ARText(AR::Str::LimitPeriod)));
         form_panel.Children().Append(period_box);
 
         auto make_row = [](CalendarDatePicker const& date, TimePicker const& time)
@@ -284,11 +300,11 @@ namespace winrt::EvolutionWin::implementation
             return row;
         };
         CalendarDatePicker start_date;
-        start_date.Header(box_value(AR::Tr(AR::Str::Start, english)));
+        start_date.Header(box_value(ARText(AR::Str::Start)));
         TimePicker start_time;
         start_time.Header(box_value(L" "));
         CalendarDatePicker end_date;
-        end_date.Header(box_value(AR::Tr(AR::Str::End, english)));
+        end_date.Header(box_value(ARText(AR::Str::End)));
         TimePicker end_time;
         end_time.Header(box_value(L" "));
         Grid start_row = make_row(start_date, start_time);
@@ -309,15 +325,15 @@ namespace winrt::EvolutionWin::implementation
         });
 
         ComboBox audience_combo;
-        audience_combo.Header(box_value(AR::Tr(AR::Str::Audience, english)));
+        audience_combo.Header(box_value(ARText(AR::Str::Audience)));
         audience_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
-        audience_combo.Items().Append(box_value(AR::Tr(AR::Str::AudienceNone, english)));
-        audience_combo.Items().Append(box_value(AR::Tr(AR::Str::AudienceKnown, english)));
-        audience_combo.Items().Append(box_value(AR::Tr(AR::Str::AudienceAll, english)));
+        audience_combo.Items().Append(box_value(ARText(AR::Str::AudienceNone)));
+        audience_combo.Items().Append(box_value(ARText(AR::Str::AudienceKnown)));
+        audience_combo.Items().Append(box_value(ARText(AR::Str::AudienceAll)));
         audience_combo.SelectedIndex(2);
 
         TextBox subject_box;
-        subject_box.Header(box_value(AR::Tr(AR::Str::Subject, english)));
+        subject_box.Header(box_value(ARText(AR::Str::Subject)));
         subject_box.Visibility(Visibility::Collapsed);
         form_panel.Children().Append(subject_box);
 
@@ -339,8 +355,8 @@ namespace winrt::EvolutionWin::implementation
             box.Background(resources.Lookup(box_value(L"ControlFillColorDefaultBrush")).as<Media::Brush>());
             return box;
         };
-        TextBox internal_box = make_message_box(AR::Tr(AR::Str::InternalMessage, english));
-        TextBox external_box = make_message_box(AR::Tr(AR::Str::ExternalMessage, english));
+        TextBox internal_box = make_message_box(ARText(AR::Str::InternalMessage));
+        TextBox external_box = make_message_box(ARText(AR::Str::ExternalMessage));
 
         /* deux onglets comme Outlook : au sein de l'organisation / en dehors de l'organisation */
         internal_box.Height(260);
@@ -348,9 +364,9 @@ namespace winrt::EvolutionWin::implementation
 
         SelectorBar message_tabs;
         SelectorBarItem tab_internal;
-        tab_internal.Text(::EvolutionWin::Helpers::Tr(L"Au sein de mon organisation", L"Inside my organization"));
+        tab_internal.Text(Tr(L"Au sein de mon organisation", L"Inside my organization"));
         SelectorBarItem tab_external;
-        tab_external.Text(::EvolutionWin::Helpers::Tr(L"En dehors de mon organisation", L"Outside my organization"));
+        tab_external.Text(Tr(L"En dehors de mon organisation", L"Outside my organization"));
         message_tabs.Items().Append(tab_internal);
         message_tabs.Items().Append(tab_external);
         message_tabs.SelectedItem(tab_internal);
@@ -407,7 +423,7 @@ namespace winrt::EvolutionWin::implementation
             JsonObject obj;
             if (!error.empty() || json.empty() || !JsonObject::TryParse(json, obj))
             {
-                show_error(error.empty() ? hstring{ AR::Tr(AR::Str::LoadError, english) } : error);
+                show_error(error.empty() ? ARText(AR::Str::LoadError) : error);
                 return;
             }
 
@@ -432,13 +448,13 @@ namespace winrt::EvolutionWin::implementation
                 message_tabs.Visibility(Visibility::Collapsed);
                 internal_panel.Visibility(Visibility::Collapsed);
                 external_panel.Visibility(Visibility::Visible);
-                external_box.Header(box_value(AR::Tr(AR::Str::SingleMessage, english)));
+                external_box.Header(box_value(ARText(AR::Str::SingleMessage)));
                 subject_box.Visibility(Visibility::Visible);
-                note.Text(AR::Tr(AR::Str::GmailNote, english));
+                note.Text(ARText(AR::Str::GmailNote));
             }
             else
             {
-                note.Text(AR::Tr(AR::Str::M365Note, english));
+                note.Text(ARText(AR::Str::M365Note));
             }
 
             CacheAutoReplyState(account, s);
@@ -479,9 +495,9 @@ namespace winrt::EvolutionWin::implementation
             {
                 ring.Visibility(Visibility::Collapsed);
                 status_row.Visibility(Visibility::Visible);
-                show_error(AR::Tr(invalid == AR::FormError::EndBeforeStart ? AR::Str::ErrEndBeforeStart
+                show_error(ARText(invalid == AR::FormError::EndBeforeStart ? AR::Str::ErrEndBeforeStart
                     : invalid == AR::FormError::IncompleteRange ? AR::Str::ErrIncompleteRange
-                    : AR::Str::ErrEmptyMessage, english));
+                    : AR::Str::ErrEmptyMessage));
                 return;
             }
 
@@ -489,7 +505,7 @@ namespace winrt::EvolutionWin::implementation
             form.IsEnabled(false);
             sender.IsPrimaryButtonEnabled(false);
             status_text.Foreground(secondary_brush);
-            status_text.Text(AR::Tr(AR::Str::Saving, english));
+            status_text.Text(ARText(AR::Str::Saving));
             ring.Visibility(Visibility::Visible);
             ring.IsActive(true);
             status_row.Visibility(Visibility::Visible);
@@ -502,14 +518,14 @@ namespace winrt::EvolutionWin::implementation
                 {
                     form.IsEnabled(true);
                     dialog.IsPrimaryButtonEnabled(true);
-                    show_error(hstring{ AR::Tr(AR::Str::SaveError, english) } + error);
+                    show_error(Fmt(ARText(AR::Str::SaveError), { error }));
                     return;
                 }
 
                 CacheAutoReplyState(account, s);
                 UpdateOutOfOfficeBanner();
                 dialog.Hide();
-                ShowStatus(hstring{ Format1(AR::Tr(s.enabled ? AR::Str::Saved : AR::Str::SavedDisabled, english), std::wstring{ acc_name }) },
+                ShowStatus(Fmt(ARText(s.enabled ? AR::Str::Saved : AR::Str::SavedDisabled), { acc_name }),
                     InfoBarSeverity::Success);
             });
         });
