@@ -760,6 +760,10 @@ namespace winrt::EvolutionWin::implementation
         bool m_conversations_enabled{ false };
         /* fils développés (clé : objet normalisé) et derniers messages affichés */
         std::set<std::wstring> m_expanded_threads;
+        /* fils repliés par l'utilisateur : jamais redéveloppés automatiquement pour le message affiché */
+        std::set<std::wstring> m_collapsed_threads;
+        /* en-tête d'un fil replié -> (uid du message le plus récent, clé du fil) */
+        std::map<std::wstring, std::pair<std::wstring, std::wstring>> m_thread_latest;
         Windows::Data::Json::JsonArray m_last_shown_messages{ nullptr };
         void LoadFolderConversations();
         void SaveFolderConversations(bool enabled);

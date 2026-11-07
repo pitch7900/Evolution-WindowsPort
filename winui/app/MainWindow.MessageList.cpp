@@ -263,6 +263,7 @@ namespace winrt::EvolutionWin::implementation
          * chaque fil sert d'en-tête ; les autres sont masqués tant que le fil
          * n'est pas développé */
         struct ThreadRow { bool header{ true }; bool hidden{ false }; size_t count{ 1 }; size_t unread{ 0 }; std::wstring key; };
+        m_thread_latest.clear();
         std::vector<ThreadRow> rows(shown.size());
         m_last_shown_messages = messages;
         if (m_conversations_enabled)
@@ -319,13 +320,24 @@ namespace winrt::EvolutionWin::implementation
                 if (key.empty())
                     key = shown[i].GetNamedString(L"uid").c_str();
                 bool expanded = m_expanded_threads.count(key) != 0;
-                /* le message sélectionné ne doit pas disparaître dans un fil replié */
-                for (size_t k = i; k < end && !expanded; ++k)
+                /* le message sélectionné ne doit pas disparaître dans un fil replié, sauf si
+                 * l'utilisateur l'a replié lui-même */
+                for (size_t k = i; k < end && !expanded && m_collapsed_threads.count(key) == 0; ++k)
                     if (!selected.empty() && shown[k].GetNamedString(L"uid") == selected)
                     {
                         expanded = true;
                         m_expanded_threads.insert(key);
                     }
+                /* fil replié : un clic sur l'en-tête affiche le message le plus récent du fil */
+                if (!expanded && end - i > 1)
+                {
+                    size_t latest = i;
+                    for (size_t k = i + 1; k < end; ++k)
+                        if (shown[k].GetNamedNumber(L"date", 0) > shown[latest].GetNamedNumber(L"date", 0))
+                            latest = k;
+                    m_thread_latest[std::wstring{ shown[i].GetNamedString(L"uid") }] =
+                        { std::wstring{ shown[latest].GetNamedString(L"uid") }, key };
+                }
                 for (size_t k = i; k < end; ++k)
                 {
                     rows[k].key = key;
@@ -590,8 +602,15 @@ namespace winrt::EvolutionWin::implementation
                 std::wstring key = thread_row.key;
                 toggle.Click([this, key](IInspectable const&, RoutedEventArgs const&)
                 {
-                    if (!m_expanded_threads.erase(key))
+                    if (m_expanded_threads.erase(key))
+                    {
+                        m_collapsed_threads.insert(key);
+                    }
+                    else
+                    {
                         m_expanded_threads.insert(key);
+                        m_collapsed_threads.erase(key);
+                    }
                     if (m_last_shown_messages)
                         ShowMessages(m_last_shown_messages);
                 });
@@ -1172,6 +1191,12 @@ namespace winrt::EvolutionWin::implementation
         }
 
         hstring uid = unbox_value<hstring>(item.Tag());
+        /* en-tête d'un fil replié : on lit le message le plus récent du fil, sans développer le fil */
+        if (auto latest = m_thread_latest.find(std::wstring{ uid }); latest != m_thread_latest.end())
+        {
+            m_collapsed_threads.insert(latest->second.second);
+            uid = hstring{ latest->second.first };
+        }
         if (uid == m_current_message_uid && m_current_message)
         {
             UpdateActionButtons(uid);
