@@ -211,9 +211,17 @@ Les règles suivantes ont été définies par Pierre et doivent être respectée
 - Pour ajouter une section : créer `xaml/<Nom>.xamlpart`, y mettre l'élément, ajouter la ligne d'inclusion au bon endroit du gabarit. Pas de modification du code C++ : tous les éléments nommés (`x:Name`) restent des membres de `MainWindow` (c'est la raison de ce découpage plutôt que des `UserControl`).
 - Les erreurs du compilateur XAML citent `MainWindow.xaml` (généré) : ouvrir ce fichier à la ligne indiquée pour repérer l'élément fautif, puis le corriger dans le fragment correspondant.
 
-### 6.3. Localisation et Unicode sous Windows MSVC
+### 6.3. Localisation, Traductions et Unicode sous Windows MSVC
 - **Attention au pliage de casse Unicode (accents)** : `std::towlower` en C++ sous Windows n'applique pas la casse française par défaut. Toujours utiliser `::CharLowerBuffW(str.data(), len)` (provenant de `user32.lib`) pour les recherches insensibles à la casse et aux accents.
 - **Formatage des tailles de fichiers** : Utiliser l'API système `::StrFormatByteSizeW` (via `shlwapi.lib`) pour respecter les unités localisées par Windows (ex: "1,42 Mo" en français, "1.42 MB" en anglais).
+- **Mise à jour obligatoire des traductions de l'interface** :
+  L'application dispose d'une infrastructure de traduction externe (`.resw` / MRT Core) documentée dans [`TRANSLATIONS.md`](TRANSLATIONS.md).
+  > [!IMPORTANT]
+  > **Règle impérative pour l'interface graphique** :
+  > Dès qu'un texte, libellé, bouton, titre de dialogue, menu ou infobulle est **créé ou modifié** dans l'interface (XAML ou C++), l'agent **doit impérativement** :
+  > 1. Définir la clé correspondante dans `winui/app/Strings/fr-FR/Resources.resw`.
+  > 2. Reporter cette clé dans tous les autres catalogues de langues supportées (`en-US`, `de-DE`, `it-IT`, `es-ES`, `pt-PT`, `nl-NL`), en s'appuyant sur la terminologie officielle d'Evolution (`evolution/po/*.po`).
+  > 3. Utiliser le helper `Tr(L"Texte FR", L"Texte EN", L"Cle_Ressource")` dans le code C++ ou `x:Uid="Cle_Ressource"` en XAML.
 
 ---
 
