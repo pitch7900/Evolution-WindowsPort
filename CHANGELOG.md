@@ -44,6 +44,11 @@ pour qu'un utilisateur non technique n'ait rien à configurer :
 
 ### Ajouté
 
+- **Localisation et choix de langue dans le MSI (`UILANGUAGE`)** :
+  - Support de la propriété publique WiX `UILANGUAGE` lors de l'installation ou du déploiement silencieux (`msiexec /i Evolution-<version>-x64.msi /qn UILANGUAGE=de-DE`, GPO / Microsoft Intune).
+  - Écriture de la langue machine choisie dans la base de registre `HKLM\Software\Evolution-WindowsPort\UILanguage`.
+  - Prise en compte transparente au lancement de l'application (`App.xaml.cpp` / `MainWindow.Helpers.h`) comme langue par défaut tant qu'aucune surcharge n'a été sélectionnée dans les Paramètres utilisateur.
+  - Ajout des langues portugais (`pt-PT`) et néerlandais (`nl-NL`) dans la sélection des Paramètres ainsi que dans le formatage multilingue des en-têtes de citation et préfixes de réponse/transfert.
 - **Événement privé** : case « Privé » dans la fenêtre d'événement (création et modification), enregistrée dans la propriété `CLASS:PRIVATE` ; Exchange Online la traduit en sensibilité « privé » (détails masqués aux personnes avec qui le calendrier est partagé). Lecture du réglage à l'ouverture d'un événement existant (champ `private` de `evo_core_get_event`).
 - **Réunion Google Meet** : case « Réunion en ligne Google Meet » (icône Google Meet) dans la fenêtre d'un nouvel événement d'un calendrier Gmail, exclusive avec Teams ; après la création, `evo_core_add_google_meet` ajoute le lien par l'API Google Agenda (`conferenceData.createRequest`, jeton OAuth2 du compte) et les participants reçoivent la mise à jour. À valider sur un compte Gmail.
 - **Rappels d'événements** : le rappel d'un événement (« x minutes avant », défini dans la fenêtre d'événement) déclenche une notification Windows (titre, délai restant, heure, lieu) ; contrôle toutes les 30 secondes des événements des 25 prochaines heures (occurrences d'événements périodiques comprises), rappels déjà émis mémorisés (pas de répétition, même après redémarrage) ; respecte les réglages « Activer les rappels », son et durée d'affichage (persistante : bouton « Ouvrir » / « Fermer »). Le champ `reminder_minutes` est maintenant fourni par `evo_core_list_events`.

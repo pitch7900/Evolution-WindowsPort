@@ -48,6 +48,8 @@
                                             <ComboBoxItem Content="Deutsch (Deutschland)" Tag="de-DE" />
                                             <ComboBoxItem Content="Español (España)" Tag="es-ES" />
                                             <ComboBoxItem Content="Italiano (Italia)" Tag="it-IT" />
+                                            <ComboBoxItem Content="Português (Brasil / Portugal)" Tag="pt-PT" />
+                                            <ComboBoxItem Content="Nederlands (Nederland)" Tag="nl-NL" />
                                         </ComboBox>
                                     </Grid>
                                 </Border>

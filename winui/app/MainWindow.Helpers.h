@@ -561,6 +561,16 @@ namespace EvolutionWin::Helpers
                 header_title = L"-------- Mensaje reenviado --------";
                 lbl_from = L"De: "; lbl_date = L"Fecha: "; lbl_subj = L"Asunto: "; lbl_to = L"Para: "; lbl_cc = L"Cc: ";
             }
+            else if (lang == L"pt" || lang.find(L"pt-") == 0)
+            {
+                header_title = L"-------- Mensagem encaminhada --------";
+                lbl_from = L"De: "; lbl_date = L"Data: "; lbl_subj = L"Assunto: "; lbl_to = L"Para: "; lbl_cc = L"Cc: ";
+            }
+            else if (lang == L"nl" || lang.find(L"nl-") == 0)
+            {
+                header_title = L"-------- Doorgestuurd bericht --------";
+                lbl_from = L"Van: "; lbl_date = L"Datum: "; lbl_subj = L"Onderwerp: "; lbl_to = L"Aan: "; lbl_cc = L"Cc: ";
+            }
 
             data.body = L"\r\r" + hstring{ header_title } + L"\r" + hstring{ lbl_from } + from + L"\r" + hstring{ lbl_date } + date +
                 L"\r" + hstring{ lbl_subj } + subject + L"\r" + hstring{ lbl_to } + to + (cc.empty() ? hstring{} : L"\r" + hstring{ lbl_cc } + cc) +
@@ -633,6 +643,16 @@ namespace EvolutionWin::Helpers
             {
                 quote_lead = L"El " + std::wstring{ date } + L", " + std::wstring{ from } + L" escribió:";
                 html_quote_lead = L"El " + EscapeHtml(date) + L", " + EscapeHtml(from) + L" escribió:";
+            }
+            else if (lang == L"pt" || lang.find(L"pt-") == 0)
+            {
+                quote_lead = L"Em " + std::wstring{ date } + L", " + std::wstring{ from } + L" escreveu:";
+                html_quote_lead = L"Em " + EscapeHtml(date) + L", " + EscapeHtml(from) + L" escreveu:";
+            }
+            else if (lang == L"nl" || lang.find(L"nl-") == 0)
+            {
+                quote_lead = L"Op " + std::wstring{ date } + L" schreef " + std::wstring{ from } + L":";
+                html_quote_lead = L"Op " + EscapeHtml(date) + L" schreef " + EscapeHtml(from) + L":";
             }
 
             data.body = L"\r\r" + hstring{ quote_lead } + L"\r" + hstring{ quoted };
@@ -1141,6 +1161,29 @@ namespace EvolutionWin::Helpers
         }
         RegCloseKey(hKey);
         return (res == ERROR_SUCCESS);
+    }
+
+    /**
+     * @brief Récupère la langue configurée par défaut au niveau machine (HKLM) via l'installeur MSI.
+     * @return Identifiant de langue (ex: "fr-FR", "en-US", "de-DE") ou chaîne vide si non spécifié.
+     */
+    inline std::wstring GetMsiMachineLanguage()
+    {
+        HKEY hKey = nullptr;
+        // Lecture de HKLM\Software\Evolution-WindowsPort (avec KEY_WOW64_64KEY pour compatibilité 64-bit)
+        if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\Evolution-WindowsPort", 0, KEY_READ | KEY_WOW64_64KEY, &hKey) == ERROR_SUCCESS)
+        {
+            wchar_t buffer[64] = { 0 };
+            DWORD size = sizeof(buffer);
+            DWORD type = 0;
+            LONG res = RegQueryValueExW(hKey, L"UILanguage", nullptr, &type, reinterpret_cast<LPBYTE>(buffer), &size);
+            RegCloseKey(hKey);
+            if (res == ERROR_SUCCESS && (type == REG_SZ || type == REG_EXPAND_SZ))
+            {
+                return std::wstring(buffer);
+            }
+        }
+        return L"";
     }
 
     inline bool MatchesMessageSearch(

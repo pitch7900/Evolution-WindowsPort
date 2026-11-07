@@ -81,6 +81,10 @@
       <Custom Action="LaunchApplication" After="InstallFinalize" Condition='LAUNCHAPP = "1" AND NOT Installed' />
     </InstallExecuteSequence>
 
+    <!-- Choix de la langue par défaut : propriété publique UILANGUAGE pour déploiement silencieux (GPO/Intune)
+         ou préremplie par défaut. Écrite dans HKLM\Software\Evolution-WindowsPort\UILanguage -->
+    <Property Id="UILANGUAGE" Value="fr-FR" />
+
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="Evolution">
         <Directory Id="BINFOLDER" Name="bin" />
@@ -91,8 +95,20 @@
     <Feature Id="Main" Title="Evolution" Level="1">
       <ComponentGroupRef Id="ApplicationFiles" />
       <ComponentRef Id="EvolutionWinExe" />
+      <ComponentRef Id="RegistryUILanguage" />
     </Feature>
   </Package>
+
+  <Fragment>
+    <!-- Configuration de la langue par défaut dans la base de registre machine (HKLM) -->
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="RegistryUILanguage" Guid="D2A6B347-49F1-4F98-8DE2-482EEB96A889">
+        <RegistryKey Root="HKLM" Key="Software\Evolution-WindowsPort">
+          <RegistryValue Type="string" Name="UILanguage" Value="[UILANGUAGE]" KeyPath="yes" />
+        </RegistryKey>
+      </Component>
+    </DirectoryRef>
+  </Fragment>
 
   <Fragment>
     <!-- tout le contenu de l'arborescence préparée, sous-dossiers compris,

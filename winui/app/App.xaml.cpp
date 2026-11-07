@@ -21,7 +21,18 @@ namespace winrt::EvolutionWin::implementation
         {
             auto saved_lang = ::EvolutionWin::Settings::Instance().GetString(L"general.language", L"system");
             if (saved_lang == L"system")
-                saved_lang = L"";
+            {
+                // Si l'utilisateur n'a pas défini de langue dans les Paramètres, vérifier si le MSI a défini UILanguage dans HKLM
+                std::wstring msi_lang = ::EvolutionWin::Helpers::GetMsiMachineLanguage();
+                if (!msi_lang.empty())
+                {
+                    saved_lang = winrt::hstring{ msi_lang };
+                }
+                else
+                {
+                    saved_lang = L"";
+                }
+            }
             try
             {
                 Windows::Globalization::ApplicationLanguages::PrimaryLanguageOverride(saved_lang);
