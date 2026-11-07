@@ -324,10 +324,19 @@ namespace winrt::EvolutionWin::implementation
             item.RowDefinitions().Append(RowDefinition{});
             item.RowDefinitions().Append(RowDefinition{});
 
+            /* ligne expéditeur : bouton replier / développer (si fil) puis nom */
+            Grid from_row;
+            ColumnDefinition from_toggle_column;
+            from_toggle_column.Width(GridLengthHelper::Auto());
+            from_row.ColumnDefinitions().Append(from_toggle_column);
+            from_row.ColumnDefinitions().Append(ColumnDefinition{});
             TextBlock from;
             from.Text(SenderName(message.GetNamedString(L"from", L"")));
             from.TextTrimming(TextTrimming::CharacterEllipsis);
-            item.Children().Append(from);
+            from.VerticalAlignment(VerticalAlignment::Center);
+            Grid::SetColumn(from, 1);
+            from_row.Children().Append(from);
+            item.Children().Append(from_row);
 
             StackPanel meta;
             meta.Orientation(Orientation::Horizontal);
@@ -436,12 +445,18 @@ namespace winrt::EvolutionWin::implementation
                 Button toggle;
                 FontIcon chevron;
                 chevron.Glyph(expanded ? L"\xE70D" : L"\xE76C");
-                chevron.FontSize(10);
+                chevron.FontSize(16);
+                chevron.FontWeight(Microsoft::UI::Text::FontWeights::Bold());
                 toggle.Content(chevron);
                 toggle.Padding(ThicknessHelper::FromLengths(4, 2, 4, 2));
+                toggle.Width(32);
+                toggle.Height(32);
                 toggle.MinWidth(0);
                 toggle.MinHeight(0);
-                toggle.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+                toggle.Margin(ThicknessHelper::FromLengths(0, 0, 4, 0));
+                toggle.VerticalAlignment(VerticalAlignment::Center);
+                toggle.Background(SolidColorBrush{ Windows::UI::Color{ 40, 128, 128, 128 } });
+                toggle.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));
                 toggle.BorderThickness(ThicknessHelper::FromUniformLength(0));
                 ToolTipService::SetToolTip(toggle, box_value(expanded ? L"Replier la conversation" : L"Développer la conversation"));
                 std::wstring key = thread_row.key;
@@ -452,7 +467,7 @@ namespace winrt::EvolutionWin::implementation
                     if (m_last_shown_messages)
                         ShowMessages(m_last_shown_messages);
                 });
-                meta.Children().Append(toggle);
+                from_row.Children().Append(toggle);
 
                 Border count_badge;
                 count_badge.CornerRadius(CornerRadiusHelper::FromUniformRadius(8));
@@ -852,6 +867,8 @@ namespace winrt::EvolutionWin::implementation
             else
                 ShowStatus(L"Ce dossier est vide.", InfoBarSeverity::Informational);
         }
+
+        UpdateFocusedBarCounts();
     }
 
     /* Renvoie le compte et le dossier associés à un UID de message,

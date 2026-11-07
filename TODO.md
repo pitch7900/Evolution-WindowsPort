@@ -442,7 +442,8 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
 - [x] 🟠 **Onglets _Prioritaire_ / _Autres_** (classement Exchange Online `inferenceClassification` via Graph ; sans objet pour les autres comptes) _(fait en 1.0.2 : onglets dans la Boîte de réception des comptes Microsoft 365, à valider sur un tenant réel)_
   - [x] Déplacer un message vers _Autres_ / _Prioritaire_ (clic droit), avec règle _Toujours déplacer_ pour l'expéditeur
   - [x] Activer / désactiver par compte (clic droit sur le compte)
-  - [ ] Compteurs de non lus par onglet ; classement des messages au-delà des 1000 plus récents
+  - [x] Compteurs de non lus par onglet (d'après les 500 messages chargés du dossier)
+  - [ ] Classement des messages au-delà des 1000 plus récents
 
 ## 6. Mail – Lecture des messages — 🟢
 

@@ -197,6 +197,33 @@ namespace winrt::EvolutionWin::implementation
         });
     }
 
+    /* Compteurs de messages non lus des onglets « Prioritaire (n) » et « Autres (n) », d'après la liste
+     * complète du dossier (m_all_messages) et le classement connu. */
+    void MainWindow::UpdateFocusedBarCounts()
+    {
+        if (!m_focused_inbox_active)
+            return;
+
+        int focused = 0, other = 0;
+        for (auto const& value : m_all_messages ? m_all_messages : JsonArray{})
+        {
+            auto message = value.GetObject();
+            if (message.GetNamedBoolean(L"seen", true))
+                continue;
+            if (m_inbox_other_ids.count(std::wstring{ message.GetNamedString(L"uid", L"") }))
+                ++other;
+            else
+                ++focused;
+        }
+
+        auto items = FocusedBar().Items();
+        if (items.Size() >= 2)
+        {
+            items.GetAt(0).Text(focused > 0 ? Tr(L"Prioritaire", L"Focused") + L" (" + hstring{ std::to_wstring(focused) } + L")" : Tr(L"Prioritaire", L"Focused"));
+            items.GetAt(1).Text(other > 0 ? Tr(L"Autres", L"Other") + L" (" + hstring{ std::to_wstring(other) } + L")" : Tr(L"Autres", L"Other"));
+        }
+    }
+
     /* Classe un message dans « Prioritaire » ou « Autres » (menu contextuel), avec ou sans règle pour l'expéditeur.
      * Paramètres :
      *   uid             : identifiant du message

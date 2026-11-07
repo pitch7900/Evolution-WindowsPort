@@ -143,6 +143,8 @@ namespace winrt::EvolutionWin::implementation
 
             }
 
+            UpdateFocusedBarCounts();
+
         }
 
 

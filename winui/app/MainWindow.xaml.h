@@ -107,6 +107,7 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::SelectorBar const& sender,
             Microsoft::UI::Xaml::Controls::SelectorBarSelectionChangedEventArgs const& args);
         void UpdateFocusedInbox();
+        void UpdateFocusedBarCounts();
         void ClassifyMessage(hstring const& uid, hstring const& classification, bool remember_sender);
         std::set<std::wstring> m_inbox_other_ids;
         bool m_focused_inbox_active{ false };
