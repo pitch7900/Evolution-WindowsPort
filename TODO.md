@@ -245,13 +245,13 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 En entreprise (Exchange Online / Microsoft 365, Exchange on-premise), les utilisateurs accèdent fréquemment à des boîtes aux lettres partagées (ex. support, info, boîtes de service) et disposent d'accès délégués sur la boîte ou le calendrier d'autres collaborateurs (délégation avec droits de lecture, d'édition ou de gestion).
  _(fait : clic droit sur un compte Microsoft 365 › « Ouvrir la boîte d'un autre utilisateur… »)_
 - [ ] 🟠 **Ouverture et ajout d'une boîte aux lettres ou d'un calendrier délégué (clic droit sur le compte Exchange)** : _(partiel : saisie directe de l'adresse ; la recherche dans l'annuaire reste à faire)_
-  - [ ] 🟡 **Menu contextuel du compte** : action _« Ouvrir le dossier / la boîte déléguée d'un autre utilisateur… »_ (accessible par clic droit sur le compte Exchange dans l'arborescence Mail, Calendrier et Contacts).
+  - [x] 🟡 **Menu contextuel du compte** : action _« Ouvrir le dossier / la boîte déléguée d'un autre utilisateur… »_ (accessible par clic droit sur le compte Exchange dans l'arborescence Mail, Calendrier et Contacts).
   - [x] 🟡 **Boîte de dialogue de sélection** : recherche de l'utilisateur ou de la boîte partagée par nom ou adresse email dans l'annuaire (GAL) ou saisie directe de l'adresse (ex. `equipe@entreprise.com` ou `collegue@entreprise.com`). _(fait : un compte courrier par boîte partagée, emprunt d'identité Exchange Online, droit Full Access ; validé)_
   - [x] 🟠 **Rattachement dynamique sous le compte Exchange principal** : _(fait : case « Ouvrir aussi son agenda » à l'ouverture de la boîte)_
     - [x] **Courrier (Mail)** : arborescence complète de la boîte partagée / déléguée montée sous le compte principal (accès aux dossiers Boîte de réception, Éléments envoyés, dossiers personnalisés selon les autorisations Exchange `FullAccess` / délégation EWS ou Microsoft Graph `/users/{id}/mailFolders`). _(fait : case « Ouvrir aussi ses contacts »)_
     - [x] **Calendrier** : ajout du calendrier partagé / délégué sous le groupe _Calendriers partagés_ ou _Autres calendriers_, avec synchronisation et affichage superposé ou côte à côte. _(fait : comptes mémorisés comme tout compte ; « Fermer la boîte partagée » au clic droit)_
-    - [ ] **Contacts** : ajout du carnet d'adresses partagé de l'utilisateur sélectionné.
-  - [ ] 🟢 **Mémorisation et retrait** : persistance des comptes et calendriers délégués ouverts entre les sessions ; option _« Masquer / Fermer la boîte partagée »_ par clic droit.
+    - [x] **Contacts** : ajout du carnet d'adresses partagé de l'utilisateur sélectionné.
+  - [x] 🟢 **Mémorisation et retrait** : persistance des comptes et calendriers délégués ouverts entre les sessions ; option _« Masquer / Fermer la boîte partagée »_ par clic droit.
   - Récupération des éléments supprimés du compte Exchange Online (Recoverable Items en self-service) : cf. §9
 - [ ] 🟠 **Interactions avec la boîte et le calendrier selon les permissions accordées** :
   - [ ] 🟡 **Droits sur les messages et dossiers** : adaptation dynamique des actions possibles selon le niveau de délégation effectif (lecture seule / relecture, auteur, éditeur, accès complet `FullAccess`) : lecture, déplacement, création / suppression de sous-dossiers, marquage lu/non lu.
@@ -332,17 +332,17 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
 - [x] 🟠 **Gmail / Google Workspace** : à l'ajout d'un compte Gmail, créer aussi une collection Google (backend `google` d'EDS : calendriers CalDAV, contacts CardDAV / Google People) avec le même jeton OAuth2 <a id="demo-cal-contacts-gmail"></a>
   - [x] Portées OAuth2 Calendar et Contacts ajoutées à la connexion Google (en plus de la messagerie)
   - [x] Comptes Gmail déjà configurés : bouton _Activer le calendrier et les contacts_ dans la page du compte (nouvelle connexion pour accorder les portées)
-- [ ] 🟡 **Gestion simple du calendrier du compte** : <a id="demo-gestion-calendrier"></a>
+- [x] 🟡 **Gestion simple du calendrier du compte** : <a id="demo-gestion-calendrier"></a>
   - [x] Événements du calendrier principal (et des autres calendriers du compte) affichés avec la couleur du calendrier
   - [x] Créer un événement dans le calendrier choisi (calendrier principal du compte par défaut) : titre, lieu, date, heures ou journée entière, description
   - [x] **Modifier** un événement existant (manquant aujourd'hui) et le supprimer, avec envoi au serveur — _clic sur l'événement : fenêtre modifiable (lecture seule si l'agenda l'est), organisateur et participants_
   - [x] Modifications faites ailleurs (Outlook Web, Google Agenda, téléphone) visibles à la synchronisation suivante ; bouton _Actualiser_
   - [x] Événements périodiques existants affichés correctement (occurrences développées), en lecture seule tant que l'éditeur complet (§13) n'existe pas
-- [ ] 🟡 **Gestion simple des contacts du compte** : <a id="demo-gestion-contacts"></a>
+- [x] 🟡 **Gestion simple des contacts du compte** : <a id="demo-gestion-contacts"></a>
   - [x] Contacts du compte (et sous-dossiers / groupes de contacts) listés avec le nom du carnet d'origine — _volet « Carnets d'adresses » par compte, cases à cocher mémorisées, carnet actif_
   - [x] Créer un contact dans le carnet choisi (carnet du compte par défaut) : nom, prénom, adresses email, téléphones, société, fonction, notes
   - [x] **Modifier** un contact existant et le supprimer, avec envoi au serveur (fonction evo_core_modify_contact et bouton Modifier)
-  - [ ] Contacts utilisables dans l'autocomplétion des destinataires (§15)
+  - [x] Contacts utilisables dans l'autocomplétion des destinataires (§15)
 - [x] 🟢 Erreurs de synchronisation du calendrier / des contacts remontées dans l'indicateur d'état des connexions (§4)
 
 ## 4. Synchronisation et mode hors connexion — 🟠
@@ -353,7 +353,7 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
   - [x] Texte de l'opération en cours (« Compte X – Boîte de réception : chargement des en-têtes 120 / 850 »)
   - [x] Pourcentage quand le total est connu, indéterminée sinon
   - [x] Progression globale pour plusieurs comptes / dossiers en parallèle
-  - [ ] 🟡 Bouton _Annuler_ / _Annuler tout_ (`GCancellable`)
+  - [x] 🟡 Bouton _Annuler_ / _Annuler tout_ (`GCancellable`)
   - [x] Masquage automatique à la fin, message bref en cas d'erreur
 - [x] 🟢 **Progression sur l'icône de la barre des tâches Windows** (`ITaskbarList3`, rouge en cas d'erreur)
 
@@ -408,7 +408,7 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
   - [ ] Importance (absente des résumés Camel), Compte et Type (sans vue unifiée), date de début / d'échéance de l'indicateur
   - [x] 🟢 Inverser l'ordre du tri pour chaque critère
   - [x] 🟢 Mémoriser le tri par dossier
-- [ ] 🟡 **Regroupement** par critère de tri (Aujourd'hui, Hier, La semaine dernière…), avec Développer / Réduire les groupes
+- [x] 🟡 **Regroupement** par critère de tri (Aujourd'hui, Hier, La semaine dernière…), avec Développer / Réduire les groupes
 - [ ] 🟡 **Ajouter / retirer des colonnes**
 - [ ] 🟡 **Changer l'affichage** : Compact, Unique, Aperçu ; 🟢 Rétablir l'affichage par défaut
 - [ ] 🟡 **Paramètres d'affichage avancés** : polices, tailles (mise en forme conditionnelle : cf. §17)
@@ -593,7 +593,7 @@ Sécurisation de bout en bout des courriels par signature et chiffrement avec un
 - [ ] 🟠 **Nettoyer le dossier** (et sous-dossiers) des messages redondants — même logique que §7
 - [ ] **Récupérer les éléments supprimés** :
   - [ ] 🟡 IMAP : messages marqués supprimés non purgés
-  - [ ] 🟠 **Exchange Online / Microsoft 365 : Récupération des éléments supprimés (« Recoverable Items » en self-service)** :
+  - [x] 🟠 **Exchange Online / Microsoft 365 : Récupération des éléments supprimés (« Recoverable Items » en self-service)** :
     - [x] **Menu contextuel du compte** : option _« Récupérer les éléments supprimés du serveur… »_ ouverte par clic droit sur le compte Exchange (et sur le dossier _Éléments supprimés_ / _Corbeille_ de ce compte) _(fait : clic droit sur un compte Microsoft 365 ; pas encore sur le dossier Éléments supprimés)_
     - [x] **Consultation du dossier des éléments récupérables** : fenêtre ou vue dédiée affichant la liste des messages présents dans le dossier de rétention serveur (`Recoverable Items` / `Deletions`, accessible via Microsoft Graph `/mailFolders/recoverableitemsdeletions/messages` ou EWS `recoverableitemsdeletions`) avec colonnes objet, expéditeur, date de suppression/réception, taille _(fait via Graph : colonnes Objet, Supprimé le, De, Reçu, Envoyé à ; 100 plus récents)_
     - [x] **Restauration en self-service** : sélection unitaire ou multiple d'éléments avec bouton _Restaurer les éléments sélectionnés_ (rétablissement direct dans la Boîte de réception ou le dossier d'origine) et bouton _Supprimer définitivement_ (purge manuelle si autorisée par la stratégie de rétention) _(fait : fenêtre redimensionnable, restauration dans la Boîte de réception ou suppression définitive ; pas de restauration vers le dossier d'origine)_
@@ -631,7 +631,7 @@ La recherche dans le dossier courant existe déjà (filtrage instantané + reche
 - [x] 🟢 Bouton pour effacer la recherche ; raccourci Ctrl+E — _et Échap_
 - [x] 🟢 **Portée** : dossier courant / sous-dossiers / compte courant / tous les comptes <a id="demo-recherche-portee"></a> — _sélecteur ComboBox dans la barre de titre, placeholder dynamique, parcours récursif Camel et étiquette d'origine_
 - [x] 🟢 **Recherche rapide de contacts** (champ dédié dans le ruban, comme Outlook) et accès au Carnet d'adresses
-- [ ] 🟡 **Recherche dans le calendrier** (titre, lieu, description, participants)
+- [x] 🟡 **Recherche dans le calendrier** (titre, lieu, description, participants)
 
 ### Recherche avancée
 
@@ -642,7 +642,7 @@ La recherche dans le dossier courant existe déjà (filtrage instantané + reche
 ## 11. Vues unifiées multi-comptes — 🟠
 
 - [x] 🟠 **Mails** : Boîte de réception unifiée (et Envoyés, Brouillons, Corbeille), compte d'origine indiqué (colonne ou pastille de couleur) — dossiers virtuels Camel — _fait par agrégation côté moteur (`evo_core_list_unified`) plutôt que `CamelVeeFolder` ; compte d'origine en libellé sur chaque ligne (pas de pastille de couleur)_
-- [ ] 🟡 **Calendriers** : événements de tous les calendriers de tous les comptes, une couleur par calendrier, chacun masquable — _fait dans la vue Calendrier : volet « Calendriers » par compte, cases à cocher mémorisées, couleur par calendrier_
+- [x] 🟡 **Calendriers** : événements de tous les calendriers de tous les comptes, une couleur par calendrier, chacun masquable — _fait dans la vue Calendrier : volet « Calendriers » par compte, cases à cocher mémorisées, couleur par calendrier_
 - [ ] 🟡 **Contacts** : carnet d'adresses unifié, détection et regroupement des doublons (même email)
 - [ ] 🟠 **Recherche dans les vues unifiées** (simple et avancée) pour mails, événements et contacts, compte d'origine visible dans les résultats
 - [ ] 🟢 **Choix des comptes inclus** dans les vues unifiées (préférences)
@@ -675,7 +675,7 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
 - [x] 🟠 **Superposé (vue globale)** : calendriers sélectionnés fusionnés dans une même grille — _déjà fonctionnel : événements des calendriers cochés regroupés et synchronisés dans la même vue_
 - [ ] 🟠 **Côte à côte** : une colonne par calendrier, même période, défilement commun
 - [x] 🟢 Bascule superposé / côte à côte ; mémorisation du mode (`calendar.layout-mode`) et des calendriers affichés — _bouton à bascule dans le ruban Affichage_
-- [ ] 🟡 **Groupes de calendriers** nommés (« Équipe », « Salles 2e étage ») pour en ouvrir plusieurs d'un coup
+- [x] 🟡 **Groupes de calendriers** nommés (« Équipe », « Salles 2e étage ») pour en ouvrir plusieurs d'un coup
 
 ### Autres affichages
 
@@ -707,14 +707,14 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
     - [x] Sélecteur déroulant **« Afficher comme : »** avec icône et motifs visuels : *Libre / Disponible*, *Provisoire*, *Occupé(e)*, *Absent(e) / Congé (Out of Office)*, *Travaille ailleurs (Working Elsewhere)*. _(fait : les cinq états d'Outlook, transmis à Exchange Online par le module Microsoft 365 ; pas encore les motifs visuels dans la liste)_
     - [ ] Report visuel du statut sur la grille du calendrier (bandeau latéral coloré ou hachuré selon le statut : blanc pour libre, rayures bleues pour provisoire, plein pour occupé, rayures violettes pour absent, pointillés pour travaille ailleurs).
     - [x] Sélecteur de **Rappel** (aucun, 0 min, 5 min, 10 min, 15 min, 30 min, 1 h, etc.) et bouton de **Périodicité** (règles RRULE iCalendar : récurrence quotidienne, hebdomadaire, mensuelle, annuelle avec gestion des exceptions). _(fait : rappels du bandeau ; périodicité simple (jour, semaine, mois, an, intervalle, nombre d'occurrences), sans gestion des exceptions)_
-  - [ ] 🟡 **Indicateurs, confidentialité et classement par couleur** :
+  - [x] 🟡 **Indicateurs, confidentialité et classement par couleur** :
     - [x] Bouton bascule **« Privé »** (icône cadenas) : marque l'événement avec `CLASS:PRIVATE` (ou `sensitivity: private` Exchange) pour masquer les détails (titre, lieu, participants) aux autres utilisateurs lors du partage de calendrier ou de l'accès délégué. _(fait : case « Privé » à la création et à la modification, `CLASS:PRIVATE` ; à vérifier dans Outlook Online)_
     - [x] Menu déroulant **« Classer »** (icône 4 carrés de couleur) : attribution de catégories avec codes couleur (synchronisées avec la liste principale Exchange Online). _(fait : bandeau de la fenêtre d'événement et clic droit sur l'événement)_
     - [x] Boutons d'importance : **! Importance haute** et **↓ Importance faible** (propriété `PRIORITY`). _(fait : bandeau de la fenêtre d'événement et clic droit)_
 - [x] 🟢 **Ajouter du temps de travail individuel** (bloc « focus » sans participants, bouton ruban dédié et durée 2h préremplie)
 - [x] 🟡 **Répondre aux invitations reçues** depuis le volet de lecture du Mail (Accepter / Provisoire / Refuser) <a id="demo-invitations"></a>
   - [ ] _Proposer un nouvel horaire_ (iTIP `COUNTER`) : non traité pour l'instant
-  - [ ] Création d'invitation : choix du compte / de l'adresse expéditrice dans la fenêtre d'édition d'événement et envoi réel des invitations aux participants (retour de test : l'invitation créée n'est jamais reçue)
+  - [x] Création d'invitation : choix du compte / de l'adresse expéditrice dans la fenêtre d'édition d'événement et envoi réel des invitations aux participants (retour de test : l'invitation créée n'est jamais reçue)
 - [ ] 🔴 **Affichage Planification** (Scheduling Assistant) : une ligne par personne / ressource, heures en abscisse, créneaux libres / occupés / provisoires / absent (EWS `GetUserAvailability`, Graph `getSchedule`, CalDAV free-busy), suggestion de créneau commun
 - [ ] 🟡 **Glisser-déposer d'un email vers le calendrier** pour créer un rendez-vous
 - [ ] 🟠 **Emplacement de travail** par jour / créneau (bureau, télétravail, hors ligne), synchronisé avec Exchange Online si disponible, visible en vue Planification
@@ -752,8 +752,8 @@ Constat : sur un compte Exchange Online / Microsoft 365 (ex. EVAM), EvolutionWin
 - [ ] 🟡 **Carnet d'adresses global** (GAL) Exchange / M365 : recherche et sélection des destinataires (backend evolution-ews) <a id="demo-gal"></a>
   - [x] Moteur : `evo_core_search_gal` (Microsoft Graph `GET /users?$search=` pour Microsoft 365 / Exchange Online, API People `searchDirectoryPeople` pour Google Workspace) avec le jeton OAuth2 du compte ; _reste à valider sur un tenant réel_ (Microsoft 365 et Google Workspace)
   - [x] Consultation : bouton « Annuaire de l'organisation » dans la vue Contacts (recherche dès 2 caractères, fiche en lecture seule : fonction, service, société, téléphones, bureau, bouton _Écrire un message_)
-  - [ ] Bouton « Annuaire de l'organisation » placé sous chaque compte concerné (et non en bas de la liste des carnets)
-  - [ ] Fiche annuaire : adresse postale (rue, ville, code postal, pays), numéros manquants et photo du profil (Graph `/users/{id}/photo/$value`)
+  - [x] Bouton « Annuaire de l'organisation » placé sous chaque compte concerné (et non en bas de la liste des carnets)
+  - [x] Fiche annuaire : adresse postale (rue, ville, code postal, pays), numéros manquants et photo du profil (Graph `/users/{id}/photo/$value`)
   - [ ] Exchange sur site (EWS `ResolveNames`) : non pris en charge (les carnets GAL EDS d'EWS restent visibles dans les carnets habituels)
 - Contacts unifiés et doublons : cf. §11 ; recherche rapide de contacts : cf. §10 ; export par glisser-déposer vers l'extérieur : cf. §18
 - [ ] 🟡 **Fenêtre de sélection de destinataires** (carnet d'adresses, comme le bouton _À…_ d'Outlook) :
@@ -847,7 +847,7 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
   - [ ] 🟡 **Événements de calendrier (format `.ics`)** : glisser un événement depuis la vue calendrier vers l'extérieur pour générer un fichier iCalendar (`.ics`) ; réutilisation de l'export iCalendar existant
   - [ ] 🟡 **Contacts (format `.vcf`)** : glisser un contact depuis la vue des contacts vers l'extérieur pour générer un fichier vCard (`.vcf`) ; réutilisation de l'export vCard existant
   - [x] 🟢 **Sélection multiple** : prise en charge du glisser-déposer de plusieurs éléments sélectionnés simultanément (génération par lot)
-  - [ ] 🟢 **Gestion des fichiers temporaires** : nettoyage automatique des fichiers temporaires créés après confirmation du dépôt ou annulation
+  - [x] 🟢 **Gestion des fichiers temporaires** : nettoyage automatique des fichiers temporaires créés après confirmation du dépôt ou annulation
 
 ### Assistant et formats d'export
 
@@ -917,7 +917,7 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 - [x] 🟢 Format de rédaction par défaut (HTML / texte brut), police et taille par défaut, correcteur orthographique (langue)
 - [x] 🟢 Confirmations : avant suppression définitive, avant d'envoyer sans objet, pièce jointe mentionnée mais absente
 - [x] 🟢 Vider la Corbeille à la fermeture
-- [ ] 🟢 Contenu externe : cf. §6 ; signatures : cf. §3
+- Contenu externe : cf. §6 ; signatures : cf. §3
 
 ### Calendrier
 
