@@ -265,6 +265,9 @@
     <ClCompile Include="MainWindow.AutoReply.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="MainWindow.OfflineSync.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
     <ClCompile Include="MainWindow.Invitations.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>

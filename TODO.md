@@ -381,7 +381,7 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
   - [ ] Démarrage des services EDS (`evolution-source-registry`, fabriques) en parallèle de la création de la fenêtre ; fenêtre affichée sans attendre la fin du démarrage du moteur (`core_wait_started`) (cf. écran de démarrage, §1)
   - [ ] Objectif mesurable : fenêtre et contenu du dernier dossier visibles en moins de 2 s avec un cache existant, quel que soit l'état du réseau
 - [ ] 🟠 **Cache local complet pour le mode hors connexion** : messages (en-têtes, corps et pièces jointes), contacts, calendriers et tâches disponibles sans réseau
-  - [ ] Synchronisation hors connexion des dossiers (réglage IMAP `stay-synchronized` / `sync-offline` de Camel), par compte et par dossier, avec limite d'ancienneté (ex. 3 derniers mois) et de taille
+  - [ ] Synchronisation hors connexion des dossiers (réglage IMAP `stay-synchronized` / `sync-offline` de Camel), par compte et par dossier, avec limite d'ancienneté (ex. 3 derniers mois) et de taille _(codé : réglages par compte et par dossier, limite d'ancienneté ; reste la limite de taille et la validation du téléchargement sur un compte réel)_
   - [ ] Caches EDS des carnets d'adresses et calendriers (backends en cache local : EWS, CalDAV, CardDAV) consultables hors ligne
   - [ ] Recherche, lecture, aperçu des pièces jointes et rédaction fonctionnels hors ligne
   - [ ] Actions faites hors ligne (lu / non lu, drapeau, déplacement, suppression, événements, contacts) journalisées et rejouées au retour du réseau ; résolution des conflits

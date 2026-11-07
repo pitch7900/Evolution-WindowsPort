@@ -187,6 +187,8 @@ namespace winrt::EvolutionWin::implementation
         Windows::Foundation::IAsyncAction ShowOutOfOfficeDialogAsync(winrt::hstring account);
         void OnRibbonAutoReplyClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void DisableAutoReply(winrt::hstring const& account);
+        void OpenOfflineSyncDialog(winrt::hstring account, winrt::hstring folder, winrt::hstring name);
+        fire_and_forget ShowOfflineSyncDialogAsync(winrt::hstring account, winrt::hstring folder, winrt::hstring name, Windows::Data::Json::JsonObject data);
 
         /* Écran de démarrage (Splash screen) */
         void SetSplashWindow(winrt::EvolutionWin::SplashWindow const& splash);

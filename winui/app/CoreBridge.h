@@ -224,6 +224,28 @@ namespace EvolutionWin
                 winrt::to_string(settings_json).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Lit les réglages de synchronisation hors connexion d'un compte (et d'un dossier).
+         * Paramètres :
+         *   account : identifiant du compte
+         *   folder  : chemin complet du dossier, vide pour le compte seul
+         *   handler : rappel recevant {"supported", "stay_synchronized", "limit_by_age",
+         *             "limit_unit", "limit_value", "folder_offline_sync"...} */
+        void GetOfflineSync(winrt::hstring const& account, winrt::hstring const& folder, CoreHandler handler)
+        {
+            evo_core_get_offline_sync(m_core, winrt::to_string(account).c_str(),
+                winrt::to_string(folder).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Enregistre les réglages de synchronisation hors connexion.
+         * Paramètres :
+         *   settings_json : champs à modifier (voir evo_core_set_offline_sync)
+         *   handler       : rappel recevant {} */
+        void SetOfflineSync(winrt::hstring const& settings_json, CoreHandler handler)
+        {
+            evo_core_set_offline_sync(m_core, winrt::to_string(settings_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Supprime un message (vers la corbeille du compte ou définitivement).
          * Paramètres :
          *   account : identifiant du compte

@@ -6639,5 +6639,93 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Cc: {0}</value>
     <comment>Cc : {0}</comment>
   </data>
+  <data name="T_E1F57C43" xml:space="preserve">
+    <value>Offline-Synchronisierung…</value>
+    <comment>Synchronisation hors connexion…</comment>
+  </data>
+  <data name="T_8AB4F3C9" xml:space="preserve">
+    <value>begrenzt auf Nachrichten der letzten {0} Tage</value>
+    <comment>limitée aux messages des {0} derniers jours</comment>
+  </data>
+  <data name="T_407E79CF" xml:space="preserve">
+    <value>begrenzt auf Nachrichten der letzten {0} Wochen</value>
+    <comment>limitée aux messages des {0} dernières semaines</comment>
+  </data>
+  <data name="T_E7675A90" xml:space="preserve">
+    <value>begrenzt auf Nachrichten der letzten {0} Monate</value>
+    <comment>limitée aux messages des {0} derniers mois</comment>
+  </data>
+  <data name="T_B8002718" xml:space="preserve">
+    <value>begrenzt auf Nachrichten der letzten {0} Jahre</value>
+    <comment>limitée aux messages des {0} dernières années</comment>
+  </data>
+  <data name="T_4AD83A23" xml:space="preserve">
+    <value>Offline-Synchronisierung: {0}</value>
+    <comment>Synchronisation hors connexion : {0}</comment>
+  </data>
+  <data name="T_813327A2" xml:space="preserve">
+    <value>Offline-Synchronisierung - {0}</value>
+    <comment>Synchronisation hors connexion - {0}</comment>
+  </data>
+  <data name="T_E209327E" xml:space="preserve">
+    <value>Dieser Konto- oder Ordnertyp unterstützt keine Offline-Synchronisierung.</value>
+    <comment>Ce type de compte ou de dossier ne propose pas la synchronisation hors connexion.</comment>
+  </data>
+  <data name="T_0AF2A1D5" xml:space="preserve">
+    <value>Nachrichten in synchronisierten Ordnern werden beim Abrufen heruntergeladen und sind ohne Netzwerk lesbar. Jeder Ordner kann eine eigene Einstellung haben (Rechtsklick auf den Ordner › Offline-Synchronisierung).</value>
+    <comment>Les messages des dossiers synchronisés sont téléchargés lors de la relève et restent lisibles sans réseau. Chaque dossier peut avoir son propre réglage (clic droit sur le dossier › Synchronisation hors connexion).</comment>
+  </data>
+  <data name="T_B3446B2C" xml:space="preserve">
+    <value>Ordner des Kontos für den Offline-Modus synchron halten</value>
+    <comment>Garder les dossiers du compte synchronisés pour le mode hors connexion</comment>
+  </data>
+  <data name="T_0587AAF3" xml:space="preserve">
+    <value>Auf neuere Nachrichten beschränken</value>
+    <comment>Limiter aux messages récents</comment>
+  </data>
+  <data name="T_B3071826" xml:space="preserve">
+    <value>Tage</value>
+    <comment>jours</comment>
+  </data>
+  <data name="T_0CC1D8CC" xml:space="preserve">
+    <value>Wochen</value>
+    <comment>semaines</comment>
+  </data>
+  <data name="T_FE893FE5" xml:space="preserve">
+    <value>Monate</value>
+    <comment>mois</comment>
+  </data>
+  <data name="T_AC2A6393" xml:space="preserve">
+    <value>Jahre</value>
+    <comment>années</comment>
+  </data>
+  <data name="T_02A7DA1D" xml:space="preserve">
+    <value>Ordnersynchronisierung aktiviert</value>
+    <comment>synchronisation des dossiers activée</comment>
+  </data>
+  <data name="T_6A7EE051" xml:space="preserve">
+    <value>Ordnersynchronisierung deaktiviert</value>
+    <comment>synchronisation des dossiers désactivée</comment>
+  </data>
+  <data name="T_A0862386" xml:space="preserve">
+    <value>Kontoeinstellung: {0}{1}. Legen Sie fest, ob dieser Ordner dem Konto folgt.</value>
+    <comment>Réglage du compte : {0}{1}. Choisissez si ce dossier suit le compte ou non.</comment>
+  </data>
+  <data name="T_52EFC755" xml:space="preserve">
+    <value>Wie das Konto</value>
+    <comment>Comme le compte</comment>
+  </data>
+  <data name="T_7E72E09B" xml:space="preserve">
+    <value>Immer für den Offline-Modus herunterladen</value>
+    <comment>Toujours télécharger pour le mode hors connexion</comment>
+  </data>
+  <data name="T_5B77511D" xml:space="preserve">
+    <value>Nie herunterladen</value>
+    <comment>Ne jamais télécharger</comment>
+  </data>
+  <data name="T_7AE7184C" xml:space="preserve">
+    <value>Synchronisierungseinstellungen für „{0}“ gespeichert.</value>
+    <comment>Réglages de synchronisation enregistrés pour « {0} ».</comment>
+  </data>
 </root>
 

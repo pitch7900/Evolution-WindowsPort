@@ -1365,6 +1365,37 @@ void		evo_core_set_auto_reply		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Lit les réglages de synchronisation hors connexion d'un compte (CamelOfflineSettings)
+ * et, si folder_name n'est pas vide, l'état de synchronisation de ce dossier.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   folder_name : nom complet du dossier, "" pour le compte seul
+ *   func        : rappel recevant {"account", "supported", "stay_synchronized", "limit_by_age",
+ *                 "limit_unit": "days"|"weeks"|"months"|"years", "limit_value", et pour un
+ *                 dossier : "folder", "folder_supported", "folder_offline_sync":
+ *                 "inherit"|"on"|"off"}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_get_offline_sync	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_name,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Enregistre les réglages de synchronisation hors connexion (seuls les champs présents
+ * sont modifiés).
+ * Paramètres :
+ *   core          : instance du moteur evo-core
+ *   settings_json : {"account": "<uid>", "stay_synchronized": bool, "limit_by_age": bool,
+ *                    "limit_unit": "days"|"weeks"|"months"|"years", "limit_value": n,
+ *                    "folder": "<nom complet>", "folder_offline_sync": "inherit"|"on"|"off"}
+ *   func          : rappel recevant {}
+ *   user_data     : données utilisateur transmises au rappel */
+void		evo_core_set_offline_sync	(EvoCore *core,
+						 const char *settings_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Versions des composants du moteur, pour la boîte « À propos » et les
  * rapports de bug (sans instance du moteur, appel synchrone) :
  * {"evolution_data_server": "3.63.1", "evolution_ews": "3.63.1" (vide si

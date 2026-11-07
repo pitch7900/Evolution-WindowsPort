@@ -664,6 +664,12 @@ namespace winrt::EvolutionWin::implementation
                 CreateFolderAsync(account, full_name, name);
             });
 
+        add_item(Tr(L"Synchronisation hors connexion…"), L"\xE895", selectable,
+            [this, account, full_name, name, is_account](IInspectable const&, RoutedEventArgs const&)
+            {
+                OpenOfflineSyncDialog(account, is_account ? hstring{} : full_name, name);
+            });
+
         if (is_account)
         {
             // Sous-menu de tri des dossiers pour ce compte

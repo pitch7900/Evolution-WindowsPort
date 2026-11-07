@@ -68,9 +68,9 @@ flowchart LR
 ### 1. Boîtes partagées & Délégations (§3)
 - [x] **Ouverture dynamique de boîtes déléguées** : ajout d'une boîte ou d'un calendrier partagé via clic droit sur un compte Exchange / M365. _(fait en 1.1.0 : courrier, agenda et contacts partagés ; « Fermer la boîte partagée » ; validé sur un tenant réel pour le courrier)_
 - [ ] **Envoi délégué** : prise en charge des modes « En tant que » (*Send As*) et « De la part de » (*Send on Behalf*). _(« En tant que » fait et validé ; « De la part de » codé (From = boîte partagée, Sender = utilisateur, par le compte d'origine), reste à valider sur un tenant réel)_
-- [ ] **Boîte d'archivage en ligne (*In-Place Archive*)** : détection et affichage d'un nœud d'archives distant séparé.
+- [ ] **Boîte d'archivage en ligne (*In-Place Archive*)** : détection et affichage d'un nœud d'archives distant séparé. _(bloqué : Microsoft Graph n'expose pas l'archive en ligne, aucun backend EWS/Graph d'evolution-ews ne la gère)_
 - [x] **Éléments récupérables (*Recoverable Items*)** : restauration en libre-service des éléments supprimés sur Exchange Online. _(fait en 1.1.0 : fenêtre redimensionnable, restauration ou suppression définitive ; validé)_
-- [ ] **Gestion des autorisations déléguées** : consultation et révocation des droits accordés depuis l'interface d'EvolutionWin.
+- [ ] **Gestion des autorisations déléguées** : consultation et révocation des droits accordés depuis l'interface d'EvolutionWin. _(Exchange Online : pas d'API Graph pour FullAccess / SendAs / SendOnBehalf ; Gmail : réalisable mais exige un compte Google Workspace pour la validation)_
 
 - [x] **Boîte de réception prioritaire (*Focused Inbox*)** : onglets Prioritaire / Autres avec compteurs, déplacement par clic droit et règle par expéditeur, réglage par compte. _(fait en 1.1.0 ; à valider sur un tenant réel)_
 - [x] **Favoris du courrier** : section Favoris en tête du volet des dossiers, réordonnable. _(fait en 1.1.0)_
@@ -95,7 +95,7 @@ flowchart LR
 - [ ] **Filtrage anti-spam** : intégration locale de moteurs de classification (Bogofilter, SpamAssassin ou analyse bayésienne).
 
 ### 2. Mode hors-connexion et synchronisation fine (§4)
-- [ ] **Plages de synchronisation par dossier** : réglage de la rétention locale (ex. 1 mois, 6 mois, 1 an, tout l'historique).
+- [ ] **Plages de synchronisation par dossier** : réglage de la rétention locale (ex. 1 mois, 6 mois, 1 an, tout l'historique). _(codé : clic droit sur un compte ou un dossier › « Synchronisation hors connexion… » ; reste à valider sur un compte IMAP réel)_
 - [ ] **File d'attente d'actions hors-ligne** : exécution différée des suppressions, déplacements et envois avec réconciliation automatique à la reconnexion.
 - [ ] **Résolution des conflits** : détection et arbitrage des modifications concurrentes sur les calendriers et contacts.
 
