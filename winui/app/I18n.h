@@ -42,10 +42,55 @@ namespace EvolutionWin::I18n
      * @brief Récupère une chaîne localisée par son identifiant de ressource.
      * @param resourceId Clé de la ressource dans les fichiers .resw (ex: L"SpecialFolder_Inbox").
      * @param fallback Chaîne de repli si la ressource est introuvable ou si le loader échoue.
+     * @param languageOverride Code langue BCP-47 facultatif pour forcer le contexte (ex: L"en-US").
      * @return La chaîne localisée ou le texte de repli.
      */
-    inline winrt::hstring GetString(std::wstring_view resourceId, std::wstring_view fallback = L"")
+    inline winrt::hstring GetString(std::wstring_view resourceId, std::wstring_view fallback = L"", std::wstring_view languageOverride = L"")
     {
+        // 1. Si une langue est demandée, tenter de résoudre via ResourceManager + ResourceContext configuré
+        if (!languageOverride.empty())
+        {
+            try
+            {
+                static winrt::Microsoft::Windows::ApplicationModel::Resources::ResourceManager s_manager{ nullptr };
+                static bool s_mgr_init = false;
+                if (!s_mgr_init)
+                {
+                    s_manager = winrt::Microsoft::Windows::ApplicationModel::Resources::ResourceManager();
+                    s_mgr_init = true;
+                }
+
+                if (s_manager)
+                {
+                    auto context = s_manager.CreateResourceContext();
+                    context.QualifierValues().Insert(L"Language", winrt::hstring{ languageOverride });
+                    auto map = s_manager.MainResourceMap();
+                    if (map)
+                    {
+                        // Les ressources resw sont stockées sous 'Resources/<resourceId>' ou directement '<resourceId>'
+                        auto candidate = map.TryGetValue(winrt::hstring{ resourceId }, context);
+                        if (!candidate)
+                        {
+                            candidate = map.TryGetValue(winrt::hstring{ L"Resources/" } + winrt::hstring{ resourceId }, context);
+                        }
+                        if (candidate)
+                        {
+                            winrt::hstring val = candidate.ValueAsString();
+                            if (!val.empty())
+                            {
+                                return val;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (...)
+            {
+                // Repli sur le ResourceLoader standard
+            }
+        }
+
+        // 2. Repli sur le ResourceLoader MRT Core standard
         auto& loader = GetResourceLoader();
         if (loader)
         {

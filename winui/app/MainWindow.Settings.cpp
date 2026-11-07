@@ -1,5 +1,6 @@
 #include "pch.h"
 #include <winrt/Windows.Globalization.h>
+#include <winrt/Microsoft.Windows.Globalization.h>
 
 #include "MainWindow.xaml.h"
 
@@ -1991,9 +1992,14 @@ namespace winrt::EvolutionWin::implementation
 
                         else if (key == L"general.language")
                         {
+                            hstring override_lang = val == L"system" ? L"" : val;
                             try
                             {
-                                hstring override_lang = val == L"system" ? L"" : val;
+                                Microsoft::Windows::Globalization::ApplicationLanguages::PrimaryLanguageOverride(override_lang);
+                            }
+                            catch (...) {}
+                            try
+                            {
                                 Windows::Globalization::ApplicationLanguages::PrimaryLanguageOverride(override_lang);
                             }
                             catch (...) {}

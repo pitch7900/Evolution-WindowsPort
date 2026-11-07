@@ -125,24 +125,49 @@ namespace EvolutionWin::Helpers
         return to_hstring(bytes) + L" o";
     }
 
+    inline std::wstring GetMsiMachineLanguage();
+
+    /**
+     * @brief Récupère la langue d'affichage effective de l'interface utilisateur.
+     * Priorité : 1) Paramètre utilisateur 'general.language'
+     *            2) Clé registre machine du MSI (HKLM\Software\Evolution-WindowsPort\UILanguage)
+     *            3) Langue du système d'exploitation Windows
+     * @return Identifiant de langue normalisé (ex: L"en-US", L"fr-FR", L"de-DE").
+     */
+    inline std::wstring GetEffectiveUiLanguage()
+    {
+        try
+        {
+            std::wstring setting{ ::EvolutionWin::Settings::Instance().GetString(L"general.language", L"system") };
+            if (!setting.empty() && setting != L"system")
+            {
+                return setting;
+            }
+
+            std::wstring msi = GetMsiMachineLanguage();
+            if (!msi.empty())
+            {
+                return msi;
+            }
+
+            auto languages = Windows::Globalization::ApplicationLanguages::Languages();
+            if (languages.Size() > 0)
+            {
+                return std::wstring{ languages.GetAt(0) };
+            }
+        }
+        catch (...) {}
+        return L"fr-FR";
+    }
+
     /**
      * @brief Indique si la langue d'affichage de l'application est l'anglais.
      * @return true pour une langue « en* », false sinon (français par défaut).
      */
     inline bool UiIsEnglish()
     {
-        try
-        {
-            auto languages = Windows::Globalization::ApplicationLanguages::Languages();
-            if (languages.Size() > 0)
-            {
-                hstring tag_text = languages.GetAt(0);
-                std::wstring_view tag{ tag_text };
-                return tag.size() >= 2 && (tag[0] == L'e' || tag[0] == L'E') && (tag[1] == L'n' || tag[1] == L'N');
-            }
-        }
-        catch (...) {}
-        return false;
+        std::wstring lang = GetEffectiveUiLanguage();
+        return lang.size() >= 2 && (lang[0] == L'e' || lang[0] == L'E') && (lang[1] == L'n' || lang[1] == L'N');
     }
 
     /**
@@ -156,7 +181,7 @@ namespace EvolutionWin::Helpers
     {
         if (resourceId != nullptr && *resourceId != L'\0')
         {
-            auto res = ::EvolutionWin::I18n::GetString(resourceId, UiIsEnglish() ? en : fr);
+            auto res = ::EvolutionWin::I18n::GetString(resourceId, UiIsEnglish() ? en : fr, GetEffectiveUiLanguage());
             if (!res.empty())
             {
                 return res;

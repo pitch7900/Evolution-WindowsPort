@@ -6,6 +6,7 @@
 #include "ErrorLog.h"
 
 #include <winrt/Windows.Globalization.h>
+#include <winrt/Microsoft.Windows.Globalization.h>
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
@@ -35,6 +36,13 @@ namespace winrt::EvolutionWin::implementation
             }
             try
             {
+                // WinAppSDK PrimaryLanguageOverride (fonctionne en unpackaged)
+                Microsoft::Windows::Globalization::ApplicationLanguages::PrimaryLanguageOverride(saved_lang);
+            }
+            catch (...) {}
+            try
+            {
+                // UWP PrimaryLanguageOverride (au cas où packaged)
                 Windows::Globalization::ApplicationLanguages::PrimaryLanguageOverride(saved_lang);
             }
             catch (...) {}

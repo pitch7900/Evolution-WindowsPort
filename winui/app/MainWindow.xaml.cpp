@@ -133,6 +133,7 @@ namespace winrt::EvolutionWin::implementation
         SetTitleBar(AppTitleBar());
         AppWindow().Resize({ 1500, 950 });
         ::EvolutionWin::SetWindowIcon(AppWindow());
+        LocalizeInterface();
         UpdateSearchPlaceholder();
         RebuildQuickAccess();
         SyncConfidentialControls();
@@ -518,6 +519,81 @@ namespace winrt::EvolutionWin::implementation
         ToolTipService::SetToolTip(MailItem(), box_value(Tr(L"Courrier (", L"Mail (") + to_hstring(unread) +
             (unread > 1 ? Tr(L" non lus)", L" unread)") : Tr(L" non lu)", L" unread)"))));
         UpdateTaskbarBadge(unread);
+    }
+
+    /**
+     * @brief Traduit dynamiquement les contrôles statiques principaux (navigation, onglets du ruban).
+     */
+    void MainWindow::LocalizeInterface()
+    {
+        // 1. Éléments de la barre de navigation
+        if (auto nav = Navigation())
+        {
+            for (auto const& item_obj : nav.MenuItems())
+            {
+                if (auto nav_item = item_obj.try_as<NavigationViewItem>())
+                {
+                    hstring tag = unbox_value_or<hstring>(nav_item.Tag(), L"");
+                    if (tag == L"mail")
+                    {
+                        nav_item.Content(box_value(Tr(L"Courrier", L"Mail", L"Nav_Mail")));
+                        ToolTipService::SetToolTip(nav_item, box_value(Tr(L"Courrier (Ctrl+1)", L"Mail (Ctrl+1)")));
+                    }
+                    else if (tag == L"calendar")
+                    {
+                        nav_item.Content(box_value(Tr(L"Calendrier", L"Calendar", L"Nav_Calendar")));
+                        ToolTipService::SetToolTip(nav_item, box_value(Tr(L"Calendrier (Ctrl+2)", L"Calendar (Ctrl+2)")));
+                    }
+                    else if (tag == L"contacts")
+                    {
+                        nav_item.Content(box_value(Tr(L"Contacts", L"Contacts", L"Nav_Contacts")));
+                        ToolTipService::SetToolTip(nav_item, box_value(Tr(L"Contacts (Ctrl+3)", L"Contacts (Ctrl+3)")));
+                    }
+                    else if (tag == L"tasks")
+                    {
+                        nav_item.Content(box_value(Tr(L"Tâches", L"Tasks", L"Nav_Tasks")));
+                        ToolTipService::SetToolTip(nav_item, box_value(Tr(L"Tâches (Ctrl+4)", L"Tasks (Ctrl+4)")));
+                    }
+                }
+            }
+
+            if (auto settings_item = nav.SettingsItem().try_as<NavigationViewItem>())
+            {
+                settings_item.Content(box_value(Tr(L"Paramètres", L"Settings", L"Nav_Settings")));
+            }
+        }
+
+        // 2. Onglets du ruban (SelectorBar)
+        if (auto ribbon_tabs = RibbonTabs())
+        {
+            for (auto const& item_obj : ribbon_tabs.Items())
+            {
+                if (auto item = item_obj.try_as<SelectorBarItem>())
+                {
+                    hstring tag = unbox_value_or<hstring>(item.Tag(), L"");
+                    if (tag == L"file")
+                    {
+                        item.Text(Tr(L"Fichier", L"File"));
+                    }
+                    else if (tag == L"home")
+                    {
+                        item.Text(Tr(L"Accueil", L"Home"));
+                    }
+                    else if (tag == L"sendreceive")
+                    {
+                        item.Text(Tr(L"Envoi/réception", L"Send/Receive"));
+                    }
+                    else if (tag == L"folder")
+                    {
+                        item.Text(Tr(L"Dossier", L"Folder"));
+                    }
+                    else if (tag == L"view")
+                    {
+                        item.Text(Tr(L"Affichage", L"View"));
+                    }
+                }
+            }
+        }
     }
 
     /**

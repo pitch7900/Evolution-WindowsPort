@@ -519,6 +519,7 @@ namespace winrt::EvolutionWin::implementation
         void PatchEvent(Windows::Data::Json::JsonObject const& event, Windows::Data::Json::JsonObject const& changes);
         void SetContactCategories(Windows::Data::Json::JsonObject const& contact, std::vector<std::wstring> const& names);
         void ShowContacts();
+        void LocalizeInterface();
         void ShowCategoryFilterMenu(
             Microsoft::UI::Xaml::FrameworkElement const& anchor,
             ::EvolutionWin::Categories::CategoryFilter& filter,
