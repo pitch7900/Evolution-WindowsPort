@@ -6727,5 +6727,73 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Synchronization settings saved for “{0}”.</value>
     <comment>Réglages de synchronisation enregistrés pour « {0} ».</comment>
   </data>
+  <data name="T_4379B859" xml:space="preserve">
+    <value>Waiting for confirmation</value>
+    <comment>En attente de confirmation</comment>
+  </data>
+  <data name="T_1FCBAA01" xml:space="preserve">
+    <value>Declined</value>
+    <comment>Refusé</comment>
+  </data>
+  <data name="T_3AB28CA4" xml:space="preserve">
+    <value>Invitation expired</value>
+    <comment>Invitation expirée</comment>
+  </data>
+  <data name="T_A8CFAEE0" xml:space="preserve">
+    <value>Accepted</value>
+    <comment>Accepté</comment>
+  </data>
+  <data name="T_05CB89A5" xml:space="preserve">
+    <value>Delegation and permissions - {0}</value>
+    <comment>Délégations et autorisations - {0}</comment>
+  </data>
+  <data name="T_3AEB79CC" xml:space="preserve">
+    <value>Delegates can read and send messages from your Gmail mailbox (Google Workspace). A new delegate must confirm the invitation received by email.</value>
+    <comment>Les délégués peuvent lire et envoyer des messages depuis votre boîte Gmail (Google Workspace). Un nouveau délégué doit confirmer l'invitation reçue par courriel.</comment>
+  </data>
+  <data name="T_76C5E77E" xml:space="preserve">
+    <value>Reading delegates from the server…</value>
+    <comment>Lecture des délégués sur le serveur…</comment>
+  </data>
+  <data name="T_C7BD6D04" xml:space="preserve">
+    <value>Delegate's email address</value>
+    <comment>Adresse électronique du délégué</comment>
+  </data>
+  <data name="T_563625AF" xml:space="preserve">
+    <value>Add a delegate</value>
+    <comment>Ajouter un délégué</comment>
+  </data>
+  <data name="T_37DB0F9D" xml:space="preserve">
+    <value>No delegate has access to this mailbox.</value>
+    <comment>Aucun délégué n'a accès à cette boîte.</comment>
+  </data>
+  <data name="T_8B926D30" xml:space="preserve">
+    <value>{0} delegate(s) have access to this mailbox.</value>
+    <comment>{0} délégué(s) ont accès à cette boîte.</comment>
+  </data>
+  <data name="T_D1A54B1A" xml:space="preserve">
+    <value>Revoke</value>
+    <comment>Révoquer</comment>
+  </data>
+  <data name="T_132566BD" xml:space="preserve">
+    <value>Remove {0}'s access to your mailbox?</value>
+    <comment>Retirer l'accès de {0} à votre boîte ?</comment>
+  </data>
+  <data name="T_A22A0261" xml:space="preserve">
+    <value>Confirm revocation</value>
+    <comment>Confirmer la révocation</comment>
+  </data>
+  <data name="T_A997936C" xml:space="preserve">
+    <value>Revoking…</value>
+    <comment>Révocation en cours…</comment>
+  </data>
+  <data name="T_393D36BF" xml:space="preserve">
+    <value>Adding the delegate…</value>
+    <comment>Ajout du délégué en cours…</comment>
+  </data>
+  <data name="T_3BB89EEE" xml:space="preserve">
+    <value>Delegation and permissions…</value>
+    <comment>Délégations et autorisations…</comment>
+  </data>
 </root>
 

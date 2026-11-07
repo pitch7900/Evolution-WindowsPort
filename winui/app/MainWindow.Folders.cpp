@@ -671,6 +671,13 @@ namespace winrt::EvolutionWin::implementation
             });
 
         if (is_account)
+            add_item(Tr(L"Délégations et autorisations…"), L"\xE716", true,
+                [this, account, name](IInspectable const&, RoutedEventArgs const&)
+                {
+                    ShowDelegatesDialogAsync(account, name);
+                });
+
+        if (is_account)
         {
             // Sous-menu de tri des dossiers pour ce compte
             MenuFlyoutSubItem sort_sub;

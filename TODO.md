@@ -270,9 +270,9 @@ En entreprise (Exchange Online / Microsoft 365, Exchange on-premise), les utilis
     - [ ] Modification des autorisations d'un délégué existant (ajustement des droits de lecture, modification, suppression).
     - [ ] Révocation et suppression d'un délégué en un clic.
   - [ ] **Gestion pour Gmail / Google Workspace** :
-    - [ ] Consultation de la liste des délégués de la boîte via l'API Gmail (`GET /gmail/v1/users/me/settings/delegates`).
-    - [ ] Ajout d'un délégué (`POST .../delegates`) avec affichage du statut (en attente de confirmation / accepté).
-    - [ ] Suppression / révocation d'un délégué existant (`DELETE .../delegates/{delegateEmail}`).
+    - [x] Consultation de la liste des délégués de la boîte via l'API Gmail (`GET /gmail/v1/users/me/settings/delegates`). _(codé ; à valider sur un compte Google Workspace)_
+    - [x] Ajout d'un délégué (`POST .../delegates`) avec affichage du statut (en attente de confirmation / accepté). _(codé ; à valider sur un compte Google Workspace)_
+    - [x] Suppression / révocation d'un délégué existant (`DELETE .../delegates/{delegateEmail}`). _(codé ; à valider sur un compte Google Workspace)_
   - [ ] 🟢 **Interface de gestion intuitive** : liste structurée récapitulant nom, adresse email, niveau de permissions et statut, avec boutons d'édition des droits et de suppression (icône de corbeille / révocation avec confirmation).
 
 ### Boîte d'archivage en ligne (Exchange Online Archiving / In-Place Archive) — 🟠

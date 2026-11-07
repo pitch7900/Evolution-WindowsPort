@@ -6727,5 +6727,73 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Synchronisierungseinstellungen für „{0}“ gespeichert.</value>
     <comment>Réglages de synchronisation enregistrés pour « {0} ».</comment>
   </data>
+  <data name="T_4379B859" xml:space="preserve">
+    <value>Warten auf Bestätigung</value>
+    <comment>En attente de confirmation</comment>
+  </data>
+  <data name="T_1FCBAA01" xml:space="preserve">
+    <value>Abgelehnt</value>
+    <comment>Refusé</comment>
+  </data>
+  <data name="T_3AB28CA4" xml:space="preserve">
+    <value>Einladung abgelaufen</value>
+    <comment>Invitation expirée</comment>
+  </data>
+  <data name="T_A8CFAEE0" xml:space="preserve">
+    <value>Angenommen</value>
+    <comment>Accepté</comment>
+  </data>
+  <data name="T_05CB89A5" xml:space="preserve">
+    <value>Stellvertretung und Berechtigungen - {0}</value>
+    <comment>Délégations et autorisations - {0}</comment>
+  </data>
+  <data name="T_3AEB79CC" xml:space="preserve">
+    <value>Stellvertreter können Nachrichten aus Ihrem Gmail-Postfach lesen und senden (Google Workspace). Ein neuer Stellvertreter muss die per E-Mail erhaltene Einladung bestätigen.</value>
+    <comment>Les délégués peuvent lire et envoyer des messages depuis votre boîte Gmail (Google Workspace). Un nouveau délégué doit confirmer l'invitation reçue par courriel.</comment>
+  </data>
+  <data name="T_76C5E77E" xml:space="preserve">
+    <value>Stellvertreter werden vom Server gelesen…</value>
+    <comment>Lecture des délégués sur le serveur…</comment>
+  </data>
+  <data name="T_C7BD6D04" xml:space="preserve">
+    <value>E-Mail-Adresse des Stellvertreters</value>
+    <comment>Adresse électronique du délégué</comment>
+  </data>
+  <data name="T_563625AF" xml:space="preserve">
+    <value>Stellvertreter hinzufügen</value>
+    <comment>Ajouter un délégué</comment>
+  </data>
+  <data name="T_37DB0F9D" xml:space="preserve">
+    <value>Kein Stellvertreter hat Zugriff auf dieses Postfach.</value>
+    <comment>Aucun délégué n'a accès à cette boîte.</comment>
+  </data>
+  <data name="T_8B926D30" xml:space="preserve">
+    <value>{0} Stellvertreter haben Zugriff auf dieses Postfach.</value>
+    <comment>{0} délégué(s) ont accès à cette boîte.</comment>
+  </data>
+  <data name="T_D1A54B1A" xml:space="preserve">
+    <value>Widerrufen</value>
+    <comment>Révoquer</comment>
+  </data>
+  <data name="T_132566BD" xml:space="preserve">
+    <value>Zugriff von {0} auf Ihr Postfach entziehen?</value>
+    <comment>Retirer l'accès de {0} à votre boîte ?</comment>
+  </data>
+  <data name="T_A22A0261" xml:space="preserve">
+    <value>Widerruf bestätigen</value>
+    <comment>Confirmer la révocation</comment>
+  </data>
+  <data name="T_A997936C" xml:space="preserve">
+    <value>Widerruf läuft…</value>
+    <comment>Révocation en cours…</comment>
+  </data>
+  <data name="T_393D36BF" xml:space="preserve">
+    <value>Stellvertreter wird hinzugefügt…</value>
+    <comment>Ajout du délégué en cours…</comment>
+  </data>
+  <data name="T_3BB89EEE" xml:space="preserve">
+    <value>Stellvertretung und Berechtigungen…</value>
+    <comment>Délégations et autorisations…</comment>
+  </data>
 </root>
 

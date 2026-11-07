@@ -16,7 +16,8 @@
 
 typedef enum {
 	AUTOREPLY_PROVIDER_MICROSOFT365,
-	AUTOREPLY_PROVIDER_GMAIL
+	AUTOREPLY_PROVIDER_GMAIL,
+	AUTOREPLY_PROVIDER_GMAIL_SHARING	/* seulement pour les messages d'erreur de l'API des délégués */
 } AutoReplyProvider;
 
 /* Réglages d'absence, indépendants du fournisseur. */
@@ -196,7 +197,9 @@ autoreply_http (EvoCore *core,
 				"Authentification refusée : reconnectez le compte dans ses propriétés.");
 		else if (status == 403)
 			g_set_error (error, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED,
-				provider == AUTOREPLY_PROVIDER_GMAIL
+				provider == AUTOREPLY_PROVIDER_GMAIL_SHARING
+				? "Gmail : gestion des délégués refusée. Elle est réservée aux comptes Google Workspace et exige la portée « gmail.settings.sharing » : supprimez puis ajoutez de nouveau le compte Google (%s)."
+				: provider == AUTOREPLY_PROVIDER_GMAIL
 				? "Gmail : autorisation manquante. Supprimez puis ajoutez de nouveau le compte Google pour accorder la gestion des réponses automatiques (%s)."
 				: "Autorisation insuffisante : la permission « MailboxSettings.ReadWrite » est requise (consentement de l'administrateur possible) ; reconnectez le compte (%s).",
 				detail ? detail : "accès refusé");
@@ -710,4 +713,227 @@ evo_core_set_auto_reply (EvoCore *core,
 	g_return_if_fail (settings_json != NULL);
 
 	core_submit (core, core_set_auto_reply_run, g_strdupv (args), func, user_data);
+}
+
+/* ---- Délégués de la boîte Gmail (API users.settings.delegates) ---- */
+
+#define DELEGATES_GMAIL_URI "https://gmail.googleapis.com/gmail/v1/users/me/settings/delegates"
+
+/* Jeton d'un compte Gmail pour la gestion des délégués ; erreur explicative pour
+ * les autres fournisseurs (Exchange Online : droits FullAccess / SendAs /
+ * SendOnBehalf gérés par l'administration Exchange, sans API Microsoft Graph). */
+static gboolean
+delegates_get_gmail_token (EvoCore *core,
+			   const gchar *account_uid,
+			   gchar **out_token,
+			   GError **error)
+{
+	AutoReplyProvider provider;
+
+	if (!autoreply_get_token (core, account_uid, &provider, out_token, error))
+		return FALSE;
+
+	if (provider != AUTOREPLY_PROVIDER_GMAIL) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			"La gestion des délégués est disponible pour Gmail / Google Workspace. Pour Microsoft 365, les droits (accès complet, Envoyer en tant que, Envoyer de la part de) se gèrent dans le centre d'administration Exchange.");
+		e_util_safe_free_string (*out_token);
+		*out_token = NULL;
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+/* Objet JSON {"email", "status"} d'un délégué Gmail. */
+static void
+delegates_add_json (JsonBuilder *builder,
+		    JsonObject *delegate)
+{
+	json_builder_begin_object (builder);
+	builder_add_string (builder, "email", json_object_get_string_member_with_default (delegate, "delegateEmail", ""));
+	builder_add_string (builder, "status", json_object_get_string_member_with_default (delegate, "verificationStatus", "accepted"));
+	json_builder_end_object (builder);
+}
+
+/* Liste les délégués.   args : [0] = uid du compte */
+static gchar *
+core_list_delegates_run (EvoCore *core,
+			 gchar **args,
+			 GError **error)
+{
+	gchar *token = NULL, *json = NULL;
+	GBytes *bytes;
+	JsonNode *root;
+	JsonBuilder *builder;
+
+	if (!delegates_get_gmail_token (core, args[0], &token, error))
+		return NULL;
+
+	bytes = autoreply_http (core, AUTOREPLY_PROVIDER_GMAIL_SHARING, "GET", DELEGATES_GMAIL_URI, token, NULL, error);
+	e_util_safe_free_string (token);
+	if (!bytes)
+		return NULL;
+
+	root = autoreply_parse_response (bytes, error);
+	g_bytes_unref (bytes);
+	if (!root)
+		return NULL;
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	builder_add_string (builder, "provider", "gmail");
+	json_builder_set_member_name (builder, "delegates");
+	json_builder_begin_array (builder);
+	if (json_object_has_member (json_node_get_object (root), "delegates")) {
+		JsonArray *array = json_object_get_array_member (json_node_get_object (root), "delegates");
+		guint ii;
+
+		for (ii = 0; array && ii < json_array_get_length (array); ii++)
+			delegates_add_json (builder, json_array_get_object_element (array, ii));
+	}
+	json_builder_end_array (builder);
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+
+	g_object_unref (builder);
+	json_node_unref (root);
+	return json;
+}
+
+/* Ajoute un délégué.   args : [0] = uid du compte, [1] = adresse du délégué */
+static gchar *
+core_add_delegate_run (EvoCore *core,
+		       gchar **args,
+		       GError **error)
+{
+	gchar *token = NULL, *json = NULL, *body;
+	GBytes *bytes;
+	JsonNode *root;
+	JsonBuilder *builder;
+
+	if (!args[1] || !strchr (args[1], '@')) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Adresse électronique du délégué invalide");
+		return NULL;
+	}
+	if (!delegates_get_gmail_token (core, args[0], &token, error))
+		return NULL;
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	builder_add_string (builder, "delegateEmail", args[1]);
+	json_builder_end_object (builder);
+	body = json_from_builder (builder);
+	g_object_unref (builder);
+
+	bytes = autoreply_http (core, AUTOREPLY_PROVIDER_GMAIL_SHARING, "POST", DELEGATES_GMAIL_URI, token, body, error);
+	g_free (body);
+	e_util_safe_free_string (token);
+	if (!bytes)
+		return NULL;
+
+	root = autoreply_parse_response (bytes, error);
+	g_bytes_unref (bytes);
+	if (!root)
+		return NULL;
+
+	builder = json_builder_new ();
+	delegates_add_json (builder, json_node_get_object (root));
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+	json_node_unref (root);
+	return json;
+}
+
+/* Supprime un délégué.   args : [0] = uid du compte, [1] = adresse du délégué */
+static gchar *
+core_remove_delegate_run (EvoCore *core,
+			  gchar **args,
+			  GError **error)
+{
+	gchar *token = NULL, *uri, *escaped;
+	GBytes *bytes;
+
+	if (!args[1] || !*args[1]) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Adresse électronique du délégué manquante");
+		return NULL;
+	}
+	if (!delegates_get_gmail_token (core, args[0], &token, error))
+		return NULL;
+
+	escaped = g_uri_escape_string (args[1], NULL, FALSE);
+	uri = g_strconcat (DELEGATES_GMAIL_URI, "/", escaped, NULL);
+	bytes = autoreply_http (core, AUTOREPLY_PROVIDER_GMAIL_SHARING, "DELETE", uri, token, NULL, error);
+	g_free (uri);
+	g_free (escaped);
+	e_util_safe_free_string (token);
+	if (!bytes)
+		return NULL;
+
+	g_bytes_unref (bytes);
+	return g_strdup ("{}");
+}
+
+/* Liste les délégués de la boîte Gmail d'un compte (API Gmail settings.delegates,
+ * portée gmail.settings.sharing, comptes Google Workspace).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   func        : rappel recevant {"provider": "gmail", "delegates": [{"email", "status":
+ *                 "accepted"|"pending"|"rejected"|"expired"}]}
+ *   user_data   : données utilisateur transmises au rappel */
+void
+evo_core_list_delegates (EvoCore *core,
+			 const char *account_uid,
+			 EvoCoreResultFunc func,
+			 void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, NULL };
+
+	g_return_if_fail (account_uid != NULL);
+
+	core_submit (core, core_list_delegates_run, g_strdupv (args), func, user_data);
+}
+
+/* Ajoute un délégué à la boîte Gmail d'un compte.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   email       : adresse du délégué
+ *   func        : rappel recevant {"email", "status"} (« pending » : confirmation attendue)
+ *   user_data   : données utilisateur transmises au rappel */
+void
+evo_core_add_delegate (EvoCore *core,
+		       const char *account_uid,
+		       const char *email,
+		       EvoCoreResultFunc func,
+		       void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, (gchar *) email, NULL };
+
+	g_return_if_fail (account_uid != NULL);
+	g_return_if_fail (email != NULL);
+
+	core_submit (core, core_add_delegate_run, g_strdupv (args), func, user_data);
+}
+
+/* Révoque un délégué de la boîte Gmail d'un compte.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   email       : adresse du délégué
+ *   func        : rappel recevant {}
+ *   user_data   : données utilisateur transmises au rappel */
+void
+evo_core_remove_delegate (EvoCore *core,
+			  const char *account_uid,
+			  const char *email,
+			  EvoCoreResultFunc func,
+			  void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, (gchar *) email, NULL };
+
+	g_return_if_fail (account_uid != NULL);
+	g_return_if_fail (email != NULL);
+
+	core_submit (core, core_remove_delegate_run, g_strdupv (args), func, user_data);
 }

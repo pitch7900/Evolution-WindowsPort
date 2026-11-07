@@ -6727,5 +6727,73 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Definições de sincronização guardadas para «{0}».</value>
     <comment>Réglages de synchronisation enregistrés pour « {0} ».</comment>
   </data>
+  <data name="T_4379B859" xml:space="preserve">
+    <value>A aguardar confirmação</value>
+    <comment>En attente de confirmation</comment>
+  </data>
+  <data name="T_1FCBAA01" xml:space="preserve">
+    <value>Recusado</value>
+    <comment>Refusé</comment>
+  </data>
+  <data name="T_3AB28CA4" xml:space="preserve">
+    <value>Convite expirado</value>
+    <comment>Invitation expirée</comment>
+  </data>
+  <data name="T_A8CFAEE0" xml:space="preserve">
+    <value>Aceite</value>
+    <comment>Accepté</comment>
+  </data>
+  <data name="T_05CB89A5" xml:space="preserve">
+    <value>Delegações e permissões - {0}</value>
+    <comment>Délégations et autorisations - {0}</comment>
+  </data>
+  <data name="T_3AEB79CC" xml:space="preserve">
+    <value>Os delegados podem ler e enviar mensagens a partir da sua caixa Gmail (Google Workspace). Um novo delegado tem de confirmar o convite recebido por correio eletrónico.</value>
+    <comment>Les délégués peuvent lire et envoyer des messages depuis votre boîte Gmail (Google Workspace). Un nouveau délégué doit confirmer l'invitation reçue par courriel.</comment>
+  </data>
+  <data name="T_76C5E77E" xml:space="preserve">
+    <value>A ler os delegados no servidor…</value>
+    <comment>Lecture des délégués sur le serveur…</comment>
+  </data>
+  <data name="T_C7BD6D04" xml:space="preserve">
+    <value>Endereço de correio eletrónico do delegado</value>
+    <comment>Adresse électronique du délégué</comment>
+  </data>
+  <data name="T_563625AF" xml:space="preserve">
+    <value>Adicionar um delegado</value>
+    <comment>Ajouter un délégué</comment>
+  </data>
+  <data name="T_37DB0F9D" xml:space="preserve">
+    <value>Nenhum delegado tem acesso a esta caixa.</value>
+    <comment>Aucun délégué n'a accès à cette boîte.</comment>
+  </data>
+  <data name="T_8B926D30" xml:space="preserve">
+    <value>{0} delegado(s) têm acesso a esta caixa.</value>
+    <comment>{0} délégué(s) ont accès à cette boîte.</comment>
+  </data>
+  <data name="T_D1A54B1A" xml:space="preserve">
+    <value>Revogar</value>
+    <comment>Révoquer</comment>
+  </data>
+  <data name="T_132566BD" xml:space="preserve">
+    <value>Remover o acesso de {0} à sua caixa?</value>
+    <comment>Retirer l'accès de {0} à votre boîte ?</comment>
+  </data>
+  <data name="T_A22A0261" xml:space="preserve">
+    <value>Confirmar a revogação</value>
+    <comment>Confirmer la révocation</comment>
+  </data>
+  <data name="T_A997936C" xml:space="preserve">
+    <value>A revogar…</value>
+    <comment>Révocation en cours…</comment>
+  </data>
+  <data name="T_393D36BF" xml:space="preserve">
+    <value>A adicionar o delegado…</value>
+    <comment>Ajout du délégué en cours…</comment>
+  </data>
+  <data name="T_3BB89EEE" xml:space="preserve">
+    <value>Delegações e permissões…</value>
+    <comment>Délégations et autorisations…</comment>
+  </data>
 </root>
 

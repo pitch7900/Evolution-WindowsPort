@@ -89,6 +89,12 @@ core_oauth2_begin_run (EvoCore *core,
 			g_hash_table_insert (query_form, g_strdup ("scope"),
 				g_strconcat (scope, " https://www.googleapis.com/auth/gmail.settings.basic", NULL));
 
+		/* Délégués de la boîte (API Gmail settings.delegates, Google Workspace) */
+		scope = g_hash_table_lookup (query_form, "scope");
+		if (scope && !strstr (scope, "gmail.settings.sharing"))
+			g_hash_table_insert (query_form, g_strdup ("scope"),
+				g_strconcat (scope, " https://www.googleapis.com/auth/gmail.settings.sharing", NULL));
+
 		/* Annuaire de l'organisation (API People searchDirectoryPeople) */
 		scope = g_hash_table_lookup (query_form, "scope");
 		if (scope && !strstr (scope, "directory.readonly"))

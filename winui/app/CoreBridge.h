@@ -246,6 +246,38 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Délégués de la boîte Gmail : liste.
+         * Paramètres :
+         *   account : identifiant du compte
+         *   handler : rappel recevant {"provider", "delegates": [{"email", "status"}]} */
+        void ListDelegates(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_list_delegates(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Ajoute un délégué à la boîte Gmail.
+         * Paramètres :
+         *   account : identifiant du compte
+         *   email   : adresse du délégué
+         *   handler : rappel recevant {"email", "status"} */
+        void AddDelegate(winrt::hstring const& account, winrt::hstring const& email, CoreHandler handler)
+        {
+            evo_core_add_delegate(m_core, winrt::to_string(account).c_str(),
+                winrt::to_string(email).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Révoque un délégué de la boîte Gmail.
+         * Paramètres :
+         *   account : identifiant du compte
+         *   email   : adresse du délégué
+         *   handler : rappel recevant {} */
+        void RemoveDelegate(winrt::hstring const& account, winrt::hstring const& email, CoreHandler handler)
+        {
+            evo_core_remove_delegate(m_core, winrt::to_string(account).c_str(),
+                winrt::to_string(email).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Supprime un message (vers la corbeille du compte ou définitivement).
          * Paramètres :
          *   account : identifiant du compte

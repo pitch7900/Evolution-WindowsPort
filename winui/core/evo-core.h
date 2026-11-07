@@ -1396,6 +1396,46 @@ void		evo_core_set_offline_sync	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Liste les délégués de la boîte Gmail d'un compte (API Gmail settings.delegates, portée
+ * gmail.settings.sharing, comptes Google Workspace). Erreur explicative pour les autres
+ * comptes (Microsoft 365 : droits gérés dans le centre d'administration Exchange).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   func        : rappel recevant {"provider": "gmail", "delegates": [{"email", "status":
+ *                 "accepted"|"pending"|"rejected"|"expired"}]}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_list_delegates		(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Ajoute un délégué à la boîte Gmail d'un compte.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   email       : adresse du délégué
+ *   func        : rappel recevant {"email", "status"} (« pending » : confirmation attendue)
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_add_delegate		(EvoCore *core,
+						 const char *account_uid,
+						 const char *email,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Révoque un délégué de la boîte Gmail d'un compte.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   email       : adresse du délégué
+ *   func        : rappel recevant {}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_remove_delegate	(EvoCore *core,
+						 const char *account_uid,
+						 const char *email,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Versions des composants du moteur, pour la boîte « À propos » et les
  * rapports de bug (sans instance du moteur, appel synchrone) :
  * {"evolution_data_server": "3.63.1", "evolution_ews": "3.63.1" (vide si
