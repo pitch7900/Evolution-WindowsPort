@@ -296,13 +296,13 @@ namespace winrt::EvolutionWin::implementation
 
         hstring scope = CurrentSearchScope();
         if (scope == L"subfolders")
-            box.PlaceholderText(Tr(L"Rechercher dans le dossier et sous-dossiers (Ctrl+E)", L"Search folder and subfolders (Ctrl+E)"));
+            box.PlaceholderText(Tr(L"Rechercher dans le dossier et sous-dossiers (Ctrl+E)", L"Search folder and subfolders (Ctrl+E)", L"SearchScope_Subfolders"));
         else if (scope == L"account")
-            box.PlaceholderText(Tr(L"Rechercher dans tout le compte (Ctrl+E)", L"Search entire account (Ctrl+E)"));
+            box.PlaceholderText(Tr(L"Rechercher dans tout le compte (Ctrl+E)", L"Search entire account (Ctrl+E)", L"SearchScope_Account"));
         else if (scope == L"all")
-            box.PlaceholderText(Tr(L"Rechercher dans tous les comptes (Ctrl+E)", L"Search all accounts (Ctrl+E)"));
+            box.PlaceholderText(Tr(L"Rechercher dans tous les comptes (Ctrl+E)", L"Search all accounts (Ctrl+E)", L"SearchScope_AllAccounts"));
         else
-            box.PlaceholderText(Tr(L"Rechercher dans le dossier (Ctrl+E)", L"Search folder (Ctrl+E)"));
+            box.PlaceholderText(Tr(L"Rechercher dans le dossier (Ctrl+E)", L"Search folder (Ctrl+E)", L"SearchScope_Folder"));
     }
 
     /* Changement de portée de la recherche : adapte le texte d'aide et relance

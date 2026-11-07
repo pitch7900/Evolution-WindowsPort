@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Navigation générale -->
+  <data name="Nav_Mail" xml:space="preserve">
+    <value>Mail</value>
+  </data>
+  <data name="Nav_Calendar" xml:space="preserve">
+    <value>Calendar</value>
+  </data>
+  <data name="Nav_Contacts" xml:space="preserve">
+    <value>Contacts</value>
+  </data>
+  <data name="Nav_Tasks" xml:space="preserve">
+    <value>Tasks</value>
+  </data>
+  <data name="Nav_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+
+  <!-- Dossiers spéciaux de messagerie -->
+  <data name="Folder_Inbox" xml:space="preserve">
+    <value>Inbox</value>
+  </data>
+  <data name="Folder_Drafts" xml:space="preserve">
+    <value>Drafts</value>
+  </data>
+  <data name="Folder_Sent" xml:space="preserve">
+    <value>Sent Items</value>
+  </data>
+  <data name="Folder_Trash" xml:space="preserve">
+    <value>Deleted Items</value>
+  </data>
+  <data name="Folder_Archive" xml:space="preserve">
+    <value>Archive</value>
+  </data>
+  <data name="Folder_Junk" xml:space="preserve">
+    <value>Junk Email</value>
+  </data>
+  <data name="Folder_Outbox" xml:space="preserve">
+    <value>Outbox</value>
+  </data>
+  <data name="Folder_Favorites" xml:space="preserve">
+    <value>Favorites</value>
+  </data>
+  <data name="Folder_AllAccounts" xml:space="preserve">
+    <value>All accounts</value>
+  </data>
+  <data name="Folder_SearchFolders" xml:space="preserve">
+    <value>Search folders</value>
+  </data>
+
+  <!-- Actions sur les dossiers -->
+  <data name="FolderAction_MarkAllRead" xml:space="preserve">
+    <value>Mark all as read</value>
+  </data>
+  <data name="FolderAction_EmptyTrash" xml:space="preserve">
+    <value>Empty Deleted Items</value>
+  </data>
+  <data name="FolderAction_EmptyJunk" xml:space="preserve">
+    <value>Empty Junk Email</value>
+  </data>
+  <data name="FolderAction_EmptyFolder" xml:space="preserve">
+    <value>Empty folder</value>
+  </data>
+  <data name="FolderAction_NewFolder" xml:space="preserve">
+    <value>New folder…</value>
+  </data>
+  <data name="FolderAction_Rename" xml:space="preserve">
+    <value>Rename…</value>
+  </data>
+  <data name="FolderAction_MoveTo" xml:space="preserve">
+    <value>Move to</value>
+  </data>
+  <data name="FolderAction_CopyTo" xml:space="preserve">
+    <value>Copy to</value>
+  </data>
+  <data name="FolderAction_Delete" xml:space="preserve">
+    <value>Delete folder…</value>
+  </data>
+  <data name="FolderAction_ExportEml" xml:space="preserve">
+    <value>Export all messages (.eml)…</value>
+  </data>
+
+  <!-- Boîtes de dialogue courantes -->
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Common_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Common_Empty" xml:space="preserve">
+    <value>Empty</value>
+  </data>
+  <data name="Common_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Common_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+</root>

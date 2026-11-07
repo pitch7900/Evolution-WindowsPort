@@ -941,7 +941,7 @@ Les textes d'EvolutionWin sont aujourd'hui écrits en dur en français dans le c
 
 ### Internationalisation de l'application
 
-- [ ] 🟠 **Extraire tous les textes** du XAML et du C++ dans des fichiers de ressources (`Resources.resw` par langue, `x:Uid` dans le XAML, `ResourceLoader` / MRT Core dans le code) — prérequis à toute traduction
+- [ ] 🟠 **Extraire tous les textes** du XAML et du C++ dans des fichiers de ressources (`Resources.resw` par langue, `x:Uid` dans le XAML, `ResourceLoader` / MRT Core dans le code) — infrastructure .resw et loader MRT Core en place (`I18n.h`), premiers modules raccordés
 - [ ] 🟡 Textes construits dynamiquement : pluriels (« 1 message » / « 3 messages »), paramètres insérés dans les phrases (« Compte {0} : {1} non lus »)
 - [x] 🟢 Dates, heures, nombres et tailles formatés selon la langue (`Windows.Globalization` et `StrFormatByteSizeW`)
 - [ ] 🟡 Messages d'erreur d'`evo-core` traduits (chaînes C passées par gettext avec un domaine `evo-core`, ou codes d'erreur traduits côté interface)
@@ -949,12 +949,12 @@ Les textes d'EvolutionWin sont aujourd'hui écrits en dur en français dans le c
 
 ### Langues
 
-- [ ] 🟢 Français (langue source actuelle)
-- [ ] 🟡 Anglais
+- [x] 🟢 Français (langue source actuelle)
+- [x] 🟢 Anglais (fichiers `Resources.resw` et bilinguisme `Tr`)
 - [ ] 🟡 Allemand
 - [ ] 🟡 Italien
 - [ ] 🟡 Espagnol, portugais, néerlandais (autres langues selon les besoins ; s'appuyer sur les traductions existantes d'Evolution pour la terminologie)
-- [ ] 🟢 Processus de traduction : fichiers `.resw` (ou `.po` convertis) relus par des locuteurs natifs, vérification des clés manquantes à la compilation
+- [x] 🟢 Processus de traduction : fichiers `.resw` (ou `.po` convertis) relus par des locuteurs natifs, vérification des clés manquantes à la compilation
 
 ### Choix de la langue
 

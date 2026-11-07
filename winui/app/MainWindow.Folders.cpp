@@ -154,13 +154,13 @@ namespace winrt::EvolutionWin::implementation
      * (« INBOX », « Sent Items »…) ; vide pour un dossier ordinaire. */
     static hstring SpecialFolderName(hstring const& type)
     {
-        if (type == L"inbox") return Tr(L"Boîte de réception", L"Inbox");
-        if (type == L"drafts") return Tr(L"Brouillons", L"Drafts");
-        if (type == L"sent") return Tr(L"Éléments envoyés", L"Sent Items");
-        if (type == L"trash") return Tr(L"Éléments supprimés", L"Deleted Items");
-        if (type == L"archive") return Tr(L"Archive", L"Archive");
-        if (type == L"junk") return Tr(L"Courrier indésirable", L"Junk Email");
-        if (type == L"outbox") return Tr(L"Boîte d'envoi", L"Outbox");
+        if (type == L"inbox") return Tr(L"Boîte de réception", L"Inbox", L"SpecialFolder_Inbox");
+        if (type == L"drafts") return Tr(L"Brouillons", L"Drafts", L"SpecialFolder_Drafts");
+        if (type == L"sent") return Tr(L"Éléments envoyés", L"Sent Items", L"SpecialFolder_Sent");
+        if (type == L"trash") return Tr(L"Éléments supprimés", L"Deleted Items", L"SpecialFolder_Trash");
+        if (type == L"archive") return Tr(L"Archive", L"Archive", L"SpecialFolder_Archive");
+        if (type == L"junk") return Tr(L"Courrier indésirable", L"Junk Email", L"SpecialFolder_Junk");
+        if (type == L"outbox") return Tr(L"Boîte d'envoi", L"Outbox", L"SpecialFolder_Outbox");
         return {};
     }
 
@@ -418,7 +418,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         MenuFlyoutItem mark_read;
-        mark_read.Text(Tr(L"Marquer tout comme lu", L"Mark all as read"));
+        mark_read.Text(Tr(L"Marquer tout comme lu", L"Mark all as read", L"FolderAction_MarkAllAsRead"));
         mark_read.Icon(FontIcon{});
         mark_read.Icon().as<FontIcon>().Glyph(L"\xE8C3");
         mark_read.Click([this, item](IInspectable const&, RoutedEventArgs const&)
@@ -429,9 +429,9 @@ namespace winrt::EvolutionWin::implementation
         menu.Items().Append(MenuFlyoutSeparator{});
 
         MenuFlyoutItem empty;
-        empty.Text(trash ? Tr(L"Vider la Corbeille", L"Empty Deleted Items")
-                         : junk ? Tr(L"Vider les Indésirables", L"Empty Junk Email")
-                                : Tr(L"Vider le dossier", L"Empty folder"));
+        empty.Text(trash ? Tr(L"Vider la Corbeille", L"Empty Deleted Items", L"FolderAction_EmptyTrash")
+                         : junk ? Tr(L"Vider les Indésirables", L"Empty Junk Email", L"FolderAction_EmptyJunk")
+                                : Tr(L"Vider le dossier", L"Empty folder", L"FolderAction_EmptyFolder"));
         empty.Icon(FontIcon{});
         empty.Icon().as<FontIcon>().Glyph(L"\xE74D");
         empty.Click([this, item](IInspectable const&, RoutedEventArgs const&)
@@ -490,8 +490,8 @@ namespace winrt::EvolutionWin::implementation
                 : (Tr(L"Tous les messages de « ", L"All messages in \"") + item.Name() +
                    Tr(L" » seront déplacés vers la Corbeille.", L"\" will be moved to Deleted Items.")));
             confirm.Content(text);
-            confirm.PrimaryButtonText(permanent ? Tr(L"Supprimer", L"Delete") : Tr(L"Vider", L"Empty"));
-            confirm.CloseButtonText(Tr(L"Annuler", L"Cancel"));
+            confirm.PrimaryButtonText(permanent ? Tr(L"Supprimer", L"Delete", L"Common_Delete") : Tr(L"Vider", L"Empty", L"Common_Empty"));
+            confirm.CloseButtonText(Tr(L"Annuler", L"Cancel", L"Common_Cancel"));
             confirm.DefaultButton(ContentDialogButton::Close);
 
             m_dialog_open = true;
@@ -658,7 +658,7 @@ namespace winrt::EvolutionWin::implementation
             menu.Items().Append(entry);
         };
 
-        add_item(Tr(L"Nouveau dossier…", L"New folder…"), L"\xE8F4", selectable,
+        add_item(Tr(L"Nouveau dossier…", L"New folder…", L"FolderAction_NewFolder"), L"\xE8F4", selectable,
             [this, account, full_name, name](IInspectable const&, RoutedEventArgs const&)
             {
                 CreateFolderAsync(account, full_name, name);
@@ -729,7 +729,7 @@ namespace winrt::EvolutionWin::implementation
             return;
         }
 
-        add_item(Tr(L"Renommer…", L"Rename…"), L"\xE8AC", !special,
+        add_item(Tr(L"Renommer…", L"Rename…", L"FolderAction_Rename"), L"\xE8AC", !special,
             [this, account, full_name, name](IInspectable const&, RoutedEventArgs const&)
             {
                 RenameFolderAsync(account, full_name, name);
@@ -745,7 +745,7 @@ namespace winrt::EvolutionWin::implementation
         for (bool copy : { false, true })
         {
             MenuFlyoutSubItem sub;
-            sub.Text(copy ? Tr(L"Copier vers", L"Copy to") : Tr(L"Déplacer vers", L"Move to"));
+            sub.Text(copy ? Tr(L"Copier vers", L"Copy to", L"FolderAction_CopyTo") : Tr(L"Déplacer vers", L"Move to", L"FolderAction_MoveTo"));
             sub.Icon(FontIcon{});
             sub.Icon().as<FontIcon>().Glyph(copy ? L"\xE8C8" : L"\xE8DE");
             sub.IsEnabled(copy ? selectable : !special);
@@ -777,14 +777,14 @@ namespace winrt::EvolutionWin::implementation
             menu.Items().Append(sub);
         }
 
-        add_item(Tr(L"Supprimer le dossier…", L"Delete folder…"), L"\xE74D", !special && !has_children,
+        add_item(Tr(L"Supprimer le dossier…", L"Delete folder…", L"FolderAction_Delete"), L"\xE74D", !special && !has_children,
             [this, account, full_name, name, folder](IInspectable const&, RoutedEventArgs const&)
             {
                 DeleteFolderAsync(account, full_name, name, static_cast<int32_t>(folder.GetNamedNumber(L"total", 0)));
             });
 
         menu.Items().Append(MenuFlyoutSeparator{});
-        add_item(Tr(L"Exporter tous les messages (.eml)…", L"Export all messages (.eml)…"), L"\xEDE1", true,
+        add_item(Tr(L"Exporter tous les messages (.eml)…", L"Export all messages (.eml)…", L"FolderAction_ExportEml"), L"\xEDE1", true,
             [this, account, full_name, name](IInspectable const&, RoutedEventArgs const&)
             {
                 ExportFolderEmlAsync(account, full_name, name);

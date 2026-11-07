@@ -44,6 +44,10 @@ pour qu'un utilisateur non technique n'ait rien à configurer :
 
 ### Ajouté
 
+- **Infrastructure de ressources localisées (.resw / MRT Core)** :
+  - Création des catalogues de ressources `winui/app/Strings/fr-FR/Resources.resw` et `winui/app/Strings/en-US/Resources.resw` compilés dans `resources.pri` via `<PRIResource>` dans le projet WinUI.
+  - Ajout du module de chargement de chaînes `winui/app/I18n.h` (`I18n::GetString`) encapsulant `Microsoft::Windows::ApplicationModel::Resources::ResourceLoader` avec repli gracieux en mémoire.
+  - Extension du helper `Tr(fr, en, resourceId = nullptr)` pour raccorder en continu les libellés de l'interface aux identifiants de ressources externes (dossiers spéciaux, actions de menu, boîtes de dialogue, portées de recherche).
 - **Localisation et choix de langue dans le MSI (`UILANGUAGE`)** :
   - Support de la propriété publique WiX `UILANGUAGE` lors de l'installation ou du déploiement silencieux (`msiexec /i Evolution-<version>-x64.msi /qn UILANGUAGE=de-DE`, GPO / Microsoft Intune).
   - Écriture de la langue machine choisie dans la base de registre `HKLM\Software\Evolution-WindowsPort\UILanguage`.

@@ -6,6 +6,7 @@
 #include "ComposeWindow.xaml.h"
 #include "Settings.h"
 #include "CategoryStore.h"
+#include "I18n.h"
 #include <cwctype>
 #include <string>
 #include <shellapi.h>
@@ -145,13 +146,22 @@ namespace EvolutionWin::Helpers
     }
 
     /**
-     * @brief Choisit le texte de la langue d'affichage (il n'y a pas de fichier de ressources).
-     * @param fr Texte français.
-     * @param en Texte anglais.
+     * @brief Choisit le texte de la langue d'affichage, avec priorité aux ressources .resw si fournies.
+     * @param fr Texte français (utilisé par défaut ou si la clé de ressource n'est pas trouvée).
+     * @param en Texte anglais (utilisé en mode anglais si la clé de ressource n'est pas trouvée).
+     * @param resourceId Clé facultative dans les fichiers de ressources .resw.
      * @return Le texte dans la langue courante.
      */
-    inline hstring Tr(wchar_t const* fr, wchar_t const* en)
+    inline hstring Tr(wchar_t const* fr, wchar_t const* en, wchar_t const* resourceId = nullptr)
     {
+        if (resourceId != nullptr && *resourceId != L'\0')
+        {
+            auto res = ::EvolutionWin::I18n::GetString(resourceId, UiIsEnglish() ? en : fr);
+            if (!res.empty())
+            {
+                return res;
+            }
+        }
         return hstring{ UiIsEnglish() ? en : fr };
     }
 
