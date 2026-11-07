@@ -8,6 +8,8 @@
  * via les fichiers Strings/{locale}/Resources.resw compilés dans resources.pri.
  */
 
+#include <cstdint>
+#include <cstdio>
 #include <string>
 #include <string_view>
 #include <winrt/base.h>
@@ -15,6 +17,28 @@
 
 namespace EvolutionWin::I18n
 {
+    /**
+     * @brief Calcule la clé de ressource associée à un texte source français.
+     *
+     * Les textes de l'interface sont identifiés par leur libellé français : la clé est
+     * « T_ » suivie du hachage FNV-1a 32 bits (sur les unités UTF-16) en hexadécimal
+     * majuscule. Le même calcul est fait par tools\i18n-sync.py, qui génère les catalogues.
+     * @param fr Texte source français (tel qu'il figure dans le code ou le XAML).
+     * @return Clé de ressource (ex. L"T_1A2B3C4D").
+     */
+    inline std::wstring KeyFor(std::wstring_view fr)
+    {
+        std::uint32_t h = 2166136261u;
+        for (wchar_t c : fr)
+        {
+            h ^= static_cast<std::uint32_t>(c) & 0xFFFFu;
+            h *= 16777619u;
+        }
+        wchar_t buf[16];
+        swprintf_s(buf, L"T_%08X", h);
+        return std::wstring{ buf };
+    }
+
     /**
      * @brief Obtient l'instance unique du ResourceLoader MRT Core.
      * @return Référence vers le ResourceLoader (ou instance nulle si non initialisé).

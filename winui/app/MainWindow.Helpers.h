@@ -9,6 +9,9 @@
 #include "I18n.h"
 #include <cwctype>
 #include <string>
+#include <mutex>
+#include <unordered_map>
+#include <initializer_list>
 #include <shellapi.h>
 #include <shlwapi.h>
 #include <mmsystem.h>
@@ -177,17 +180,66 @@ namespace EvolutionWin::Helpers
      * @param resourceId Clé facultative dans les fichiers de ressources .resw.
      * @return Le texte dans la langue courante.
      */
-    inline hstring Tr(wchar_t const* fr, wchar_t const* en, wchar_t const* resourceId = nullptr)
+    inline hstring Tr(wchar_t const* fr, wchar_t const* en = nullptr, wchar_t const* resourceId = nullptr)
     {
+        std::wstring lang = GetEffectiveUiLanguage();
+        bool is_french = lang.size() >= 2 && (lang[0] == L'f' || lang[0] == L'F') && (lang[1] == L'r' || lang[1] == L'R');
+
         if (resourceId != nullptr && *resourceId != L'\0')
         {
-            auto res = ::EvolutionWin::I18n::GetString(resourceId, UiIsEnglish() ? en : fr, GetEffectiveUiLanguage());
+            auto res = ::EvolutionWin::I18n::GetString(resourceId, UiIsEnglish() ? (en ? en : fr) : fr, lang);
             if (!res.empty())
             {
                 return res;
             }
         }
-        return hstring{ UiIsEnglish() ? en : fr };
+        else if (!is_french && fr != nullptr && *fr != L'\0')
+        {
+            // Clé déduite du libellé français (cf. I18n::KeyFor), avec cache par langue
+            static std::mutex s_lock;
+            static std::unordered_map<std::wstring, hstring> s_cache;
+            std::wstring cache_key = lang + L"|" + fr;
+            {
+                std::lock_guard<std::mutex> guard(s_lock);
+                auto it = s_cache.find(cache_key);
+                if (it != s_cache.end())
+                    return it->second;
+            }
+            hstring found = ::EvolutionWin::I18n::GetString(::EvolutionWin::I18n::KeyFor(fr), L"", lang);
+            {
+                std::lock_guard<std::mutex> guard(s_lock);
+                s_cache[cache_key] = found;
+            }
+            if (!found.empty())
+                return found;
+        }
+        return hstring{ (!is_french && en != nullptr) ? en : fr };
+    }
+
+    /**
+     * @brief Remplace les marqueurs {0}, {1}… d'un modèle de texte par des valeurs.
+     * Permet de traduire des phrases contenant des valeurs (nombres, noms) sans
+     * concaténer des fragments, dont l'ordre varie d'une langue à l'autre.
+     * @param pattern Modèle (ex. « {0} message(s) supprimé(s) de {1} »).
+     * @param args Valeurs à insérer, dans l'ordre des marqueurs.
+     * @return Texte final.
+     */
+    inline hstring Fmt(hstring const& pattern, std::initializer_list<hstring> args)
+    {
+        std::wstring out{ pattern };
+        size_t index = 0;
+        for (auto const& arg : args)
+        {
+            std::wstring marker = L"{" + std::to_wstring(index++) + L"}";
+            std::wstring value{ arg };
+            size_t pos = 0;
+            while ((pos = out.find(marker, pos)) != std::wstring::npos)
+            {
+                out.replace(pos, marker.size(), value);
+                pos += value.size();
+            }
+        }
+        return hstring{ out };
     }
 
     /**

@@ -4,6 +4,7 @@
 #include "Signatures.h"
 #include "Settings.h"
 #include "MainWindow.Helpers.h"
+#include "UiTranslate.h"
 #include "Gal.h"
 #if __has_include("ComposeWindow.g.cpp")
 #include "ComposeWindow.g.cpp"
@@ -74,6 +75,8 @@ namespace winrt::EvolutionWin::implementation
         m_core = core;
         m_data = data;
         m_accounts = accounts;
+
+        ::EvolutionWin::UiTranslate::ApplyToWindow(*this);
 
         ExtendsContentIntoTitleBar(true);
         SetTitleBar(AppTitleBar());

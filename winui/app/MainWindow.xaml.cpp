@@ -3,6 +3,7 @@
 #include "WindowIcon.h"
 #include "Settings.h"
 #include "MainWindow.Helpers.h"
+#include "UiTranslate.h"
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
 #endif
@@ -134,6 +135,10 @@ namespace winrt::EvolutionWin::implementation
         AppWindow().Resize({ 1500, 950 });
         ::EvolutionWin::SetWindowIcon(AppWindow());
         LocalizeInterface();
+        /* textes statiques du XAML : traduits à l'exécution (arbre logique, puis visuel au chargement) */
+        ::EvolutionWin::UiTranslate::ApplyToWindow(*this);
+        if (auto root = Content().try_as<FrameworkElement>())
+            root.Loaded([this](IInspectable const&, RoutedEventArgs const&) { ::EvolutionWin::UiTranslate::ApplyToWindow(*this, true); });
         UpdateSearchPlaceholder();
         RebuildQuickAccess();
         SyncConfidentialControls();

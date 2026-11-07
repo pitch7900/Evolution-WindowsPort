@@ -5,6 +5,7 @@
 #include "ComposeWindow.xaml.h"
 
 #include "MainWindow.Helpers.h"
+#include "UiTranslate.h"
 
 #include "WindowIcon.h"
 
@@ -235,6 +236,7 @@ namespace winrt::EvolutionWin::implementation
     {
 
         InitializeComponent();
+        ::EvolutionWin::UiTranslate::ApplyToWindow(*this);
 
         ExtendsContentIntoTitleBar(true);
 
