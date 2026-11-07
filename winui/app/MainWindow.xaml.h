@@ -694,6 +694,14 @@ namespace winrt::EvolutionWin::implementation
         Windows::Data::Json::JsonObject m_selected_contact{ nullptr };
         /* folder tree nodes by NodeKey() */
         std::map<std::wstring, Microsoft::UI::Xaml::Controls::TreeViewNode> m_nodes;
+        /* Favoris : nœud « Favoris » en tête de l'arborescence et ses copies de dossiers (hors m_nodes : pas de double compte) */
+        Microsoft::UI::Xaml::Controls::TreeViewNode m_favorites_root{ nullptr };
+        std::multimap<std::wstring, Microsoft::UI::Xaml::Controls::TreeViewNode> m_favorite_nodes;
+        void RefreshFavoritesNode();
+        bool IsFavoriteFolder(hstring const& account, hstring const& folder);
+        void SetFavoriteFolder(hstring const& account, hstring const& folder, bool favorite);
+        void MoveFavoriteFolder(hstring const& account, hstring const& folder, int delta);
+        void SetFolderUnread(hstring const& account, hstring const& folder, int32_t unread);
         /* arborescence JSON des dossiers par identifiant de compte */
         std::map<std::wstring, Windows::Data::Json::JsonArray> m_account_folders;
         /* état courant (lu, suivi, pièces jointes) des messages affichés par UID */

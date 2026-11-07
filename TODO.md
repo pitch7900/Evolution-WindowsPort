@@ -598,7 +598,7 @@ Sécurisation de bout en bout des courriels par signature et chiffrement avec un
     - [x] **Consultation du dossier des éléments récupérables** : fenêtre ou vue dédiée affichant la liste des messages présents dans le dossier de rétention serveur (`Recoverable Items` / `Deletions`, accessible via Microsoft Graph `/mailFolders/recoverableitemsdeletions/messages` ou EWS `recoverableitemsdeletions`) avec colonnes objet, expéditeur, date de suppression/réception, taille _(fait via Graph : colonnes Objet, Supprimé le, De, Reçu, Envoyé à ; 100 plus récents)_
     - [x] **Restauration en self-service** : sélection unitaire ou multiple d'éléments avec bouton _Restaurer les éléments sélectionnés_ (rétablissement direct dans la Boîte de réception ou le dossier d'origine) et bouton _Supprimer définitivement_ (purge manuelle si autorisée par la stratégie de rétention) _(fait : fenêtre redimensionnable, restauration dans la Boîte de réception ou suppression définitive ; pas de restauration vers le dossier d'origine)_
     - [x] **Recherche et tri** : filtrage par expéditeur, objet ou date de suppression pour localiser rapidement les courriels purgés par erreur _(fait : filtre texte et tri par colonne)_
-- [ ] 🟡 **Favoris** : section _Favoris_ en haut du volet des dossiers, réordonnable
+- [x] 🟡 **Favoris** : section _Favoris_ en haut du volet des dossiers, réordonnable _(fait en 1.0.2 : ajout / retrait par clic droit, Monter / Descendre ; pas de glisser-déposer)_
 - [x] 🟢 **Afficher dans le navigateur** (OWA / webmail du fournisseur)
 - [ ] 🟠 **Dossiers de recherche** (dossiers virtuels `CamelVeeFolder`, aujourd'hui ignorés par `evo-core`), avec modèles prédéfinis : non lus, marqués, de personnes spécifiques, gros messages…
 - [ ] **Propriétés du dossier** :

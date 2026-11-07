@@ -55,6 +55,8 @@ namespace winrt::EvolutionWin::implementation
 
             FolderTree().RootNodes().Clear();
             m_nodes.clear();
+            m_favorite_nodes.clear();
+            m_favorites_root = nullptr;
             m_account_folders.clear();
             m_accounts = JsonArray::Parse(json);
             RefreshAccountsView();
@@ -118,6 +120,7 @@ namespace winrt::EvolutionWin::implementation
                     auto parsed = JsonArray::Parse(folders);
                     m_account_folders[std::wstring{ uid }] = parsed;
                     AddFolders(node, parsed, uid);
+                    RefreshFavoritesNode();
                     UpdateMailBadge();
                     RestoreSessionFolder();
                 });
@@ -221,11 +224,7 @@ namespace winrt::EvolutionWin::implementation
             auto folder = value.GetObject();
             hstring full_name = folder.GetNamedString(L"full_name");
 
-            if (auto node = m_nodes.find(NodeKey(account, full_name)); node != m_nodes.end())
-            {
-                if (auto item = node->second.Content().try_as<EvolutionWin::FolderItem>())
-                    item.Unread(static_cast<int32_t>(folder.GetNamedNumber(L"unread", 0)));
-            }
+            SetFolderUnread(account, full_name, static_cast<int32_t>(folder.GetNamedNumber(L"unread", 0)));
 
             UpdateFolderCounts(account, folder.GetNamedArray(L"children", JsonArray{}));
         }
@@ -249,8 +248,9 @@ namespace winrt::EvolutionWin::implementation
             return;
         args.Handled(true);
 
-        /* vues unifiées : pas de gestion de dossier (ce ne sont pas de vrais dossiers) */
-        if (::EvolutionWin::UnifiedViews::IsUnifiedAccount(std::wstring_view{ item.Account() }))
+        /* vues unifiées : pas de gestion de dossier (ce ne sont pas de vrais dossiers) ; idem pour le groupe « Favoris » */
+        if (::EvolutionWin::UnifiedViews::IsUnifiedAccount(std::wstring_view{ item.Account() }) ||
+            (item.IsAccount() && item.Account() == L"favorites"))
             return;
 
         bool trash = item.Glyph() == FolderGlyph(L"trash");
@@ -360,6 +360,43 @@ namespace winrt::EvolutionWin::implementation
             if (menu.Items().Size() > 0)
                 menu.ShowAt(container, options);
             return;
+        }
+
+        /* Favoris : ajout / retrait, et ordre dans la section « Favoris » */
+        {
+            hstring fav_account = item.Account();
+            hstring fav_folder = item.Folder();
+            bool favorite = IsFavoriteFolder(fav_account, fav_folder);
+            MenuFlyoutItem favorite_item;
+            favorite_item.Text(favorite ? Tr(L"Retirer des favoris", L"Remove from Favorites") : Tr(L"Ajouter aux favoris", L"Add to Favorites"));
+            FontIcon favorite_icon;
+            favorite_icon.Glyph(favorite ? L"\xE735" : L"\xE734");
+            favorite_item.Icon(favorite_icon);
+            favorite_item.Click([this, fav_account, fav_folder, favorite](IInspectable const&, RoutedEventArgs const&)
+            {
+                SetFavoriteFolder(fav_account, fav_folder, !favorite);
+            });
+            menu.Items().Append(favorite_item);
+
+            /* copie du dossier dans la section « Favoris » : Monter / Descendre */
+            if (favorite && node.Parent() && m_favorites_root && node.Parent() == m_favorites_root)
+            {
+                MenuFlyoutItem up_item;
+                up_item.Text(Tr(L"Monter dans les favoris", L"Move up in Favorites"));
+                FontIcon up_icon;
+                up_icon.Glyph(L"\xE74A");
+                up_item.Icon(up_icon);
+                up_item.Click([this, fav_account, fav_folder](IInspectable const&, RoutedEventArgs const&) { MoveFavoriteFolder(fav_account, fav_folder, -1); });
+                menu.Items().Append(up_item);
+                MenuFlyoutItem down_item;
+                down_item.Text(Tr(L"Descendre dans les favoris", L"Move down in Favorites"));
+                FontIcon down_icon;
+                down_icon.Glyph(L"\xE74B");
+                down_item.Icon(down_icon);
+                down_item.Click([this, fav_account, fav_folder](IInspectable const&, RoutedEventArgs const&) { MoveFavoriteFolder(fav_account, fav_folder, 1); });
+                menu.Items().Append(down_item);
+            }
+            menu.Items().Append(MenuFlyoutSeparator{});
         }
 
         MenuFlyoutItem mark_read;
@@ -1008,6 +1045,7 @@ namespace winrt::EvolutionWin::implementation
             bool root_expanded = root.IsExpanded();
             root.Children().Clear();
             AddFolders(root, parsed, account);
+            RefreshFavoritesNode();
             UpdateMailBadge();
             root.IsExpanded(root_expanded);
 
@@ -1037,6 +1075,149 @@ namespace winrt::EvolutionWin::implementation
 
     /* Indique si le dossier affiché est une vue unifiée multi-comptes
      * (Boîte de réception unifiée, Envoyés, Brouillons ou Corbeille de tous les comptes). */
+    /* Favoris : dossiers (de n'importe quel compte) listés dans le réglage « mail.favorites »
+     * ([{"account", "folder"}, ...]) et affichés dans une section « Favoris » en tête de l'arborescence. */
+    static JsonArray LoadFavorites()
+    {
+        return ::EvolutionWin::Settings::Instance().GetArray(L"mail.favorites");
+    }
+
+    bool MainWindow::IsFavoriteFolder(hstring const& account, hstring const& folder)
+    {
+        for (auto const& value : LoadFavorites())
+        {
+            if (value.ValueType() != JsonValueType::Object)
+                continue;
+            auto entry = value.GetObject();
+            if (entry.GetNamedString(L"account", L"") == account && entry.GetNamedString(L"folder", L"") == folder)
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Ajoute ou retire un dossier des favoris, puis reconstruit la section « Favoris ».
+     * @param account Compte du dossier.
+     * @param folder Chemin complet du dossier.
+     * @param favorite true pour l'ajouter, false pour le retirer.
+     */
+    void MainWindow::SetFavoriteFolder(hstring const& account, hstring const& folder, bool favorite)
+    {
+        JsonArray updated;
+        for (auto const& value : LoadFavorites())
+        {
+            if (value.ValueType() != JsonValueType::Object)
+                continue;
+            auto entry = value.GetObject();
+            if (entry.GetNamedString(L"account", L"") == account && entry.GetNamedString(L"folder", L"") == folder)
+                continue;
+            updated.Append(value);
+        }
+        if (favorite)
+        {
+            JsonObject entry;
+            entry.SetNamedValue(L"account", JsonValue::CreateStringValue(account));
+            entry.SetNamedValue(L"folder", JsonValue::CreateStringValue(folder));
+            updated.Append(entry);
+        }
+        ::EvolutionWin::Settings::Instance().Set(L"mail.favorites", updated);
+        RefreshFavoritesNode();
+    }
+
+    /**
+     * @brief Déplace un favori d'un rang vers le haut (delta < 0) ou le bas (delta > 0).
+     */
+    void MainWindow::MoveFavoriteFolder(hstring const& account, hstring const& folder, int delta)
+    {
+        std::vector<IJsonValue> entries;
+        for (auto const& value : LoadFavorites())
+            entries.push_back(value);
+
+        for (size_t i = 0; i < entries.size(); ++i)
+        {
+            if (entries[i].ValueType() != JsonValueType::Object)
+                continue;
+            auto entry = entries[i].GetObject();
+            if (entry.GetNamedString(L"account", L"") != account || entry.GetNamedString(L"folder", L"") != folder)
+                continue;
+            long long target = static_cast<long long>(i) + delta;
+            if (target < 0 || target >= static_cast<long long>(entries.size()))
+                return;
+            std::swap(entries[i], entries[static_cast<size_t>(target)]);
+            break;
+        }
+
+        JsonArray updated;
+        for (auto const& value : entries)
+            updated.Append(value);
+        ::EvolutionWin::Settings::Instance().Set(L"mail.favorites", updated);
+        RefreshFavoritesNode();
+    }
+
+    /**
+     * @brief Reconstruit la section « Favoris » (en tête de l'arborescence) d'après les réglages : un nœud par
+     *        dossier connu, qui se comporte comme le dossier réel (même compte et même dossier).
+     *        Rien n'est affiché sans favori.
+     */
+    void MainWindow::RefreshFavoritesNode()
+    {
+        auto roots = FolderTree().RootNodes();
+        if (m_favorites_root)
+        {
+            uint32_t index = 0;
+            if (roots.IndexOf(m_favorites_root, index))
+                roots.RemoveAt(index);
+            m_favorites_root = nullptr;
+        }
+        m_favorite_nodes.clear();
+
+        std::vector<TreeViewNode> children;
+        for (auto const& value : LoadFavorites())
+        {
+            if (value.ValueType() != JsonValueType::Object)
+                continue;
+            auto entry = value.GetObject();
+            hstring account = entry.GetNamedString(L"account", L"");
+            hstring folder = entry.GetNamedString(L"folder", L"");
+            auto real = m_nodes.find(NodeKey(account, folder));
+            if (real == m_nodes.end())
+                continue;
+            auto real_item = real->second.Content().try_as<EvolutionWin::FolderItem>();
+            if (!real_item)
+                continue;
+
+            TreeViewNode node;
+            node.Content(EvolutionWin::FolderItem(real_item.Name(), real_item.Glyph(), real_item.Unread(), account, folder, false));
+            children.push_back(node);
+            m_favorite_nodes.emplace(NodeKey(account, folder), node);
+        }
+        if (children.empty())
+            return;
+
+        TreeViewNode root;
+        root.Content(EvolutionWin::FolderItem(Tr(L"Favoris", L"Favorites"), L"\xE734", 0, L"favorites", L"", true));
+        for (auto const& child : children)
+            root.Children().Append(child);
+        root.IsExpanded(true);
+        roots.InsertAt(0, root);
+        m_favorites_root = root;
+    }
+
+    /**
+     * @brief Met à jour le nombre de messages non lus d'un dossier, dans l'arborescence et dans ses copies « Favoris ».
+     */
+    void MainWindow::SetFolderUnread(hstring const& account, hstring const& folder, int32_t unread)
+    {
+        std::wstring key = NodeKey(account, folder);
+        if (auto node = m_nodes.find(key); node != m_nodes.end())
+            if (auto item = node->second.Content().try_as<EvolutionWin::FolderItem>())
+                item.Unread(unread);
+        auto range = m_favorite_nodes.equal_range(key);
+        for (auto it = range.first; it != range.second; ++it)
+            if (auto item = it->second.Content().try_as<EvolutionWin::FolderItem>())
+                item.Unread(unread);
+    }
+
     bool MainWindow::IsUnifiedView() const
     {
         return ::EvolutionWin::UnifiedViews::IsUnifiedAccount(std::wstring_view{ m_account });

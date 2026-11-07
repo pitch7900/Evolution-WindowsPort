@@ -291,11 +291,7 @@ namespace winrt::EvolutionWin::implementation
             hstring account = object.GetNamedString(L"account", L"");
             hstring folder = object.GetNamedString(L"folder", L"");
 
-            if (auto node = m_nodes.find(NodeKey(account, folder)); node != m_nodes.end())
-            {
-                if (auto item = node->second.Content().try_as<EvolutionWin::FolderItem>())
-                    item.Unread(static_cast<int32_t>(object.GetNamedNumber(L"unread", 0)));
-            }
+            SetFolderUnread(account, folder, static_cast<int32_t>(object.GetNamedNumber(L"unread", 0)));
             UpdateMailBadge();
 
             /* new or removed messages in the folder on screen */
