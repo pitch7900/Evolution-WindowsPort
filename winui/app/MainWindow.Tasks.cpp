@@ -51,17 +51,30 @@ namespace winrt::EvolutionWin::implementation
     struct TaskStatusInfo
     {
         wchar_t const* id;
-        wchar_t const* label;
     };
 
     static constexpr TaskStatusInfo TaskStatuses[] = {
-        { L"needs-action", L"Non commencée" },
-        { L"in-process", L"En cours" },
-        { L"completed", L"Terminée" },
-        { L"waiting", L"En attente" },
-        { L"deferred", L"Différée" },
-        { L"cancelled", L"Annulée" },
+        { L"needs-action" },
+        { L"in-process" },
+        { L"completed" },
+        { L"waiting" },
+        { L"deferred" },
+        { L"cancelled" },
     };
+
+    /* Libellé traduit de l'état d'indice index dans TaskStatuses. */
+    static hstring TaskStatusLabel(int index)
+    {
+        switch (index)
+        {
+        case 1: return Tr(L"En cours");
+        case 2: return Tr(L"Terminée");
+        case 3: return Tr(L"En attente");
+        case 4: return Tr(L"Différée");
+        case 5: return Tr(L"Annulée");
+        default: return Tr(L"Non commencée");
+        }
+    }
 
     static constexpr int TaskStatusNotStarted = 0;
 
@@ -72,7 +85,19 @@ namespace winrt::EvolutionWin::implementation
     /* priorités proposées (0 non définie, 1 haute, 5 normale, 9 basse) */
     static constexpr int TaskPriorityValues[] = { 0, 1, 5, 9 };
 
-    static constexpr wchar_t const* TaskPriorityLabels[] = { L"Non définie", L"Haute", L"Normale", L"Basse" };
+    static constexpr int TaskPriorityCount = 4;
+
+    /* Libellé traduit de la priorité d'indice index dans TaskPriorityValues. */
+    static hstring TaskPriorityLabel(int index)
+    {
+        switch (index)
+        {
+        case 1: return Tr(L"Haute");
+        case 2: return Tr(L"Normale");
+        case 3: return Tr(L"Basse");
+        default: return Tr(L"Non définie");
+        }
+    }
 
     /* Indice de TaskStatuses pour une valeur "status" (Non commencée sinon). */
     static int TaskStatusIndex(hstring const& id)
@@ -149,7 +174,7 @@ namespace winrt::EvolutionWin::implementation
 
             auto items = TaskListChoice().Items();
             items.Clear();
-            items.Append(box_value(L"Toutes les listes"));
+            items.Append(box_value(Tr(L"Toutes les listes")));
             int selected = 0;
             for (uint32_t i = 0; i < lists.Size(); i++)
             {
@@ -177,7 +202,7 @@ namespace winrt::EvolutionWin::implementation
             JsonArray tasks;
             if (!error.empty() || !JsonArray::TryParse(json, tasks))
             {
-                ShowStatus(L"Tâches : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Tâches : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
 
@@ -378,11 +403,11 @@ namespace winrt::EvolutionWin::implementation
         {
             TextBlock empty;
             if (!m_task_search_query.empty())
-                empty.Text(L"Aucune tâche ne correspond à la recherche « " + m_task_search_query + L" ».");
+                empty.Text(Fmt(Tr(L"Aucune tâche ne correspond à la recherche « {0} »."), { hstring{ m_task_search_query } }));
             else if (m_all_tasks.Size() == 0)
-                empty.Text(L"Aucune tâche. Créez-en une avec « Nouvelle tâche » (Ctrl+Maj+K).");
+                empty.Text(Tr(L"Aucune tâche. Créez-en une avec « Nouvelle tâche » (Ctrl+Maj+K)."));
             else
-                empty.Text(L"Aucune tâche ne correspond à ce filtre.");
+                empty.Text(Tr(L"Aucune tâche ne correspond à ce filtre."));
             empty.Padding(ThicknessHelper::FromLengths(12, 12, 12, 12));
             empty.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
             items.Append(empty);
@@ -452,7 +477,7 @@ namespace winrt::EvolutionWin::implementation
 
         if (out_name.empty())
         {
-            out_name = task.GetNamedString(L"list_name", L"Compte local");
+            out_name = task.GetNamedString(L"list_name", Tr(L"Compte local"));
         }
     }
 
@@ -483,7 +508,7 @@ namespace winrt::EvolutionWin::implementation
         done.MinWidth(0);
         done.Padding(ThicknessHelper::FromUniformLength(0));
         done.VerticalAlignment(VerticalAlignment::Center);
-        ToolTipService::SetToolTip(done, box_value(completed ? L"Marquer comme non terminée" : L"Marquer comme terminée"));
+        ToolTipService::SetToolTip(done, box_value(completed ? Tr(L"Marquer comme non terminée") : Tr(L"Marquer comme terminée")));
         done.Click([this, task](IInspectable const& sender, RoutedEventArgs const&)
         {
             SetTaskCompleted(task, unbox_value_or<bool>(sender.as<CheckBox>().IsChecked(), false));
@@ -496,7 +521,7 @@ namespace winrt::EvolutionWin::implementation
         Grid::SetColumn(details, 1);
 
         TextBlock title;
-        title.Text(task.GetNamedString(L"summary", L"(Sans titre)"));
+        title.Text(task.GetNamedString(L"summary", Tr(L"(Sans titre)")));
         title.Style(resources.Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>());
         title.TextTrimming(TextTrimming::CharacterEllipsis);
         if (completed || status == L"cancelled")
@@ -548,8 +573,8 @@ namespace winrt::EvolutionWin::implementation
             bool overdue = IsTaskOverdue(task, static_cast<int64_t>(std::time(nullptr)));
             TextBlock due_text;
             due_text.Style(caption_style);
-            due_text.Text((overdue ? L"En retard, échéance : " : L"Échéance : ") +
-                FormatTaskDate(due, task.GetNamedBoolean(L"due_date_only", true)));
+            due_text.Text(Fmt(overdue ? Tr(L"En retard, échéance : {0}") : Tr(L"Échéance : {0}"),
+                { FormatTaskDate(due, task.GetNamedBoolean(L"due_date_only", true)) }));
             if (overdue)
                 due_text.Foreground(resources.Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Brush>());
             line.Children().Append(due_text);
@@ -565,20 +590,20 @@ namespace winrt::EvolutionWin::implementation
 
         double start = task.GetNamedNumber(L"start", 0);
         if (start > 0)
-            append(L"Début : " + std::wstring{ FormatTaskDate(start, task.GetNamedBoolean(L"start_date_only", true)) });
+            append(std::wstring{ Fmt(Tr(L"Début : {0}"), { FormatTaskDate(start, task.GetNamedBoolean(L"start_date_only", true)) }) });
 
         int priority_index = TaskPriorityIndex(static_cast<int>(task.GetNamedNumber(L"priority", 0)));
         if (priority_index > 0)
-            append(L"Priorité " + ToLower(TaskPriorityLabels[priority_index]));
+            append(std::wstring{ Fmt(Tr(L"Priorité {0}"), { hstring{ ToLower(TaskPriorityLabel(priority_index)) } }) });
 
         int percent = static_cast<int>(task.GetNamedNumber(L"percent", 0));
-        std::wstring state{ TaskStatuses[TaskStatusIndex(status)].label };
+        std::wstring state{ TaskStatusLabel(TaskStatusIndex(status)) };
         if (percent > 0 && percent < 100)
-            state += L" (" + std::to_wstring(percent) + L" %)";
+            state = std::wstring{ Fmt(hstring{ L"{0} ({1} %)" }, { hstring{ state }, to_hstring(percent) }) };
         append(state);
 
         if (show_list)
-            append(L"Liste : " + std::wstring{ task.GetNamedString(L"list_name", L"") });
+            append(std::wstring{ Fmt(Tr(L"Liste : {0}"), { task.GetNamedString(L"list_name", L"") }) });
 
         TextBlock info_text;
         info_text.Style(caption_style);
@@ -614,7 +639,7 @@ namespace winrt::EvolutionWin::implementation
         delete_button.VerticalAlignment(VerticalAlignment::Center);
         delete_button.IsEnabled(!readonly);
         Grid::SetColumn(delete_button, 2);
-        ToolTipService::SetToolTip(delete_button, box_value(L"Supprimer la tâche"));
+        ToolTipService::SetToolTip(delete_button, box_value(Tr(L"Supprimer la tâche")));
         delete_button.Click([this, task](IInspectable const&, RoutedEventArgs const&)
         {
             DeleteTaskItem(task);
@@ -647,7 +672,7 @@ namespace winrt::EvolutionWin::implementation
         m_core->ModifyTask(request.Stringify(), [this](hstring const&, hstring const& error)
         {
             if (!error.empty())
-                ShowStatus(L"Modification de la tâche : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Modification de la tâche : {0}"), { error }), InfoBarSeverity::Error);
             LoadTasks();
         });
     }
@@ -664,10 +689,10 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus(L"Suppression de la tâche : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Suppression de la tâche : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
-            ShowStatus(L"Tâche « " + summary + L" » supprimée.", InfoBarSeverity::Informational);
+            ShowStatus(Fmt(Tr(L"Tâche « {0} » supprimée."), { summary }), InfoBarSeverity::Informational);
             if (TasksViewPane().Visibility() == Visibility::Visible)
                 LoadTasks();
         });
@@ -769,13 +794,13 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(is_new ? L"Nouvelle tâche" : L"Modifier la tâche"));
-        dialog.PrimaryButtonText(L"Enregistrer");
-        dialog.CloseButtonText(L"Annuler");
+        dialog.Title(box_value(is_new ? Tr(L"Nouvelle tâche") : Tr(L"Modifier la tâche")));
+        dialog.PrimaryButtonText(Tr(L"Enregistrer"));
+        dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Primary);
         dialog.IsPrimaryButtonEnabled(!readonly);
         if (!is_new && !readonly)
-            dialog.SecondaryButtonText(L"Supprimer");
+            dialog.SecondaryButtonText(Tr(L"Supprimer"));
 
         StackPanel panel;
         panel.Spacing(10);
@@ -786,9 +811,9 @@ namespace winrt::EvolutionWin::implementation
         std::vector<hstring> list_uids{ hstring{} };
         if (is_new)
         {
-            list_box.Header(box_value(L"Liste de tâches"));
+            list_box.Header(box_value(Tr(L"Liste de tâches")));
             list_box.HorizontalAlignment(HorizontalAlignment::Stretch);
-            list_box.Items().Append(box_value(L"Liste par défaut"));
+            list_box.Items().Append(box_value(Tr(L"Liste par défaut")));
             int selected = 0;
             if (m_task_lists)
             {
@@ -809,8 +834,8 @@ namespace winrt::EvolutionWin::implementation
         else
         {
             TextBlock list_text;
-            list_text.Text(L"Liste de tâches : " + task.GetNamedString(L"list_name", L"") +
-                (readonly ? L" (lecture seule)" : L""));
+            list_text.Text(Fmt(readonly ? Tr(L"Liste de tâches : {0} (lecture seule)") : Tr(L"Liste de tâches : {0}"),
+                { task.GetNamedString(L"list_name", L"") }));
             list_text.Style(caption_style);
             panel.Children().Append(list_text);
         }
@@ -821,24 +846,23 @@ namespace winrt::EvolutionWin::implementation
         if (!ed_acc_name.empty())
         {
             TextBlock acc_info_block;
-            std::wstring acc_txt = L"Compte : " + std::wstring{ ed_acc_name };
-            if (!ed_acc_email.empty())
-                acc_txt += L" (" + std::wstring{ ed_acc_email } + L")";
-            acc_info_block.Text(hstring{ acc_txt });
+            acc_info_block.Text(ed_acc_email.empty()
+                ? Fmt(Tr(L"Compte : {0}"), { ed_acc_name })
+                : Fmt(Tr(L"Compte : {0} ({1})"), { ed_acc_name, ed_acc_email }));
             acc_info_block.Style(caption_style);
             acc_info_block.Foreground(secondary_brush);
             panel.Children().Append(acc_info_block);
         }
 
         TextBox summary_box;
-        summary_box.Header(box_value(L"Objet"));
-        summary_box.PlaceholderText(L"Que faut-il faire ?");
+        summary_box.Header(box_value(Tr(L"Objet")));
+        summary_box.PlaceholderText(Tr(L"Que faut-il faire ?"));
         if (task)
             summary_box.Text(task.GetNamedString(L"summary", L""));
         panel.Children().Append(summary_box);
 
         TextBox desc_box;
-        desc_box.Header(box_value(L"Description"));
+        desc_box.Header(box_value(Tr(L"Description")));
         desc_box.AcceptsReturn(true);
         desc_box.TextWrapping(TextWrapping::Wrap);
         desc_box.Height(90);
@@ -851,11 +875,11 @@ namespace winrt::EvolutionWin::implementation
         dates.ColumnSpacing(16);
         dates.ColumnDefinitions().Append(ColumnDefinition{});
         dates.ColumnDefinitions().Append(ColumnDefinition{});
-        auto add_date = [&dates, &task, is_new](wchar_t const* header, wchar_t const* key, int column)
+        auto add_date = [&dates, &task, is_new](hstring const& header, wchar_t const* key, int column)
         {
             CalendarDatePicker picker;
             picker.Header(box_value(header));
-            picker.PlaceholderText(L"Aucune");
+            picker.PlaceholderText(Tr(L"Aucune"));
             picker.HorizontalAlignment(HorizontalAlignment::Stretch);
             double value = (!task) ? 0 : task.GetNamedNumber(key, 0);
             if (value > 0)
@@ -867,7 +891,7 @@ namespace winrt::EvolutionWin::implementation
             clear_icon.FontSize(12);
             clear.Content(clear_icon);
             clear.VerticalAlignment(VerticalAlignment::Bottom);
-            ToolTipService::SetToolTip(clear, box_value(L"Aucune date"));
+            ToolTipService::SetToolTip(clear, box_value(Tr(L"Aucune date")));
             clear.Click([weak = make_weak(picker)](IInspectable const&, RoutedEventArgs const&)
             {
                 if (auto picker = weak.get())
@@ -887,8 +911,8 @@ namespace winrt::EvolutionWin::implementation
             dates.Children().Append(cell);
             return picker;
         };
-        auto start_picker = add_date(L"Date de début", L"start", 0);
-        auto due_picker = add_date(L"Échéance", L"due", 1);
+        auto start_picker = add_date(Tr(L"Date de début"), L"start", 0);
+        auto due_picker = add_date(Tr(L"Échéance"), L"due", 1);
         panel.Children().Append(dates);
 
         Grid state;
@@ -897,25 +921,25 @@ namespace winrt::EvolutionWin::implementation
             state.ColumnDefinitions().Append(ColumnDefinition{});
 
         ComboBox priority_box;
-        priority_box.Header(box_value(L"Priorité"));
+        priority_box.Header(box_value(Tr(L"Priorité")));
         priority_box.HorizontalAlignment(HorizontalAlignment::Stretch);
-        for (auto label : TaskPriorityLabels)
-            priority_box.Items().Append(box_value(label));
+        for (int i = 0; i < TaskPriorityCount; i++)
+            priority_box.Items().Append(box_value(TaskPriorityLabel(i)));
         int priority_index = (!task) ? 0 : TaskPriorityIndex(static_cast<int>(task.GetNamedNumber(L"priority", 0)));
         priority_box.SelectedIndex(priority_index);
         state.Children().Append(priority_box);
 
         ComboBox status_box;
-        status_box.Header(box_value(L"État"));
+        status_box.Header(box_value(Tr(L"État")));
         status_box.HorizontalAlignment(HorizontalAlignment::Stretch);
-        for (auto const& info : TaskStatuses)
-            status_box.Items().Append(box_value(info.label));
+        for (int i = 0; i < static_cast<int>(std::size(TaskStatuses)); i++)
+            status_box.Items().Append(box_value(TaskStatusLabel(i)));
         status_box.SelectedIndex(is_new ? TaskStatusNotStarted : TaskStatusIndex(task.GetNamedString(L"status", L"")));
         Grid::SetColumn(status_box, 1);
         state.Children().Append(status_box);
 
         NumberBox percent_box;
-        percent_box.Header(box_value(L"Achèvement (%)"));
+        percent_box.Header(box_value(Tr(L"Achèvement (%)")));
         percent_box.Minimum(0);
         percent_box.Maximum(100);
         percent_box.SmallChange(10);
@@ -971,8 +995,8 @@ namespace winrt::EvolutionWin::implementation
             }
         }
         TextBox categories_box;
-        categories_box.Header(box_value(L"Catégories"));
-        categories_box.PlaceholderText(L"Travail, Personnel");
+        categories_box.Header(box_value(Tr(L"Catégories")));
+        categories_box.PlaceholderText(Tr(L"Travail, Personnel"));
         categories_box.Text(categories);
         panel.Children().Append(categories_box);
 
@@ -1045,10 +1069,10 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus((is_new ? L"Création de la tâche : " : L"Modification de la tâche : ") + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(is_new ? Tr(L"Création de la tâche : {0}") : Tr(L"Modification de la tâche : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
-            ShowStatus(is_new ? L"Tâche enregistrée." : L"Tâche modifiée.", InfoBarSeverity::Success);
+            ShowStatus(is_new ? Tr(L"Tâche enregistrée.") : Tr(L"Tâche modifiée."), InfoBarSeverity::Success);
             if (TasksViewPane().Visibility() == Visibility::Visible)
                 LoadTasks();
         };
@@ -1072,7 +1096,7 @@ namespace winrt::EvolutionWin::implementation
         hstring uid = SelectedMessageUid();
         if (uid.empty())
         {
-            ShowStatus(L"Veuillez d'abord sélectionner un message.", InfoBarSeverity::Warning);
+            ShowStatus(Tr(L"Veuillez d'abord sélectionner un message."), InfoBarSeverity::Warning);
             return;
         }
         CreateTaskFromMessage(uid);
@@ -1106,7 +1130,8 @@ namespace winrt::EvolutionWin::implementation
             }
         }
 
-        hstring subject = msg ? msg.GetNamedString(L"subject", L"(Sans objet)") : L"(Sans objet)";
+        hstring const no_subject = Tr(L"(Sans objet)");
+        hstring subject = msg ? msg.GetNamedString(L"subject", no_subject) : no_subject;
         hstring from = msg ? msg.GetNamedString(L"from", L"") : L"";
         hstring date_str = msg ? msg.GetNamedString(L"date", L"") : L"";
         hstring preview = msg ? msg.GetNamedString(L"preview", L"") : L"";
@@ -1114,7 +1139,7 @@ namespace winrt::EvolutionWin::implementation
         /* Si le message affiché est celui-ci, utiliser son sujet et texte détaillé */
         if (m_current_message && m_current_message.GetNamedString(L"uid", L"") == message_uid)
         {
-            if (subject.empty() || subject == L"(Sans objet)")
+            if (subject.empty() || subject == no_subject || subject == L"(Sans objet)")
                 subject = m_current_message.GetNamedString(L"subject", subject);
             if (from.empty())
                 from = m_current_message.GetNamedString(L"from", from);
@@ -1125,12 +1150,12 @@ namespace winrt::EvolutionWin::implementation
 
         std::wstring desc;
         if (!from.empty())
-            desc += L"De : " + std::wstring{ from } + L"\n";
+            desc += std::wstring{ Fmt(Tr(L"De : {0}"), { from }) } + L"\n";
         if (!date_str.empty())
-            desc += L"Date : " + std::wstring{ date_str } + L"\n";
+            desc += std::wstring{ Fmt(Tr(L"Date : {0}"), { date_str }) } + L"\n";
         if (!subject.empty())
-            desc += L"Objet : " + std::wstring{ subject } + L"\n";
-        desc += L"\n--- Contenu du message ---\n";
+            desc += std::wstring{ Fmt(Tr(L"Objet : {0}"), { subject }) } + L"\n";
+        desc += L"\n" + std::wstring{ Tr(L"--- Contenu du message ---") } + L"\n";
         if (!preview.empty())
             desc += std::wstring{ preview };
 
@@ -1187,16 +1212,16 @@ namespace winrt::EvolutionWin::implementation
         if (!event_data)
             return;
 
-        hstring summary = event_data.GetNamedString(L"summary", L"(Sans titre)");
+        hstring summary = event_data.GetNamedString(L"summary", Tr(L"(Sans titre)"));
         hstring location = event_data.GetNamedString(L"location", L"");
         hstring event_desc = event_data.GetNamedString(L"description", L"");
         double start = event_data.GetNamedNumber(L"start", 0);
 
         std::wstring desc;
         if (!location.empty())
-            desc += L"Lieu : " + std::wstring{ location } + L"\n";
+            desc += std::wstring{ Fmt(Tr(L"Lieu : {0}"), { location }) } + L"\n";
         if (start > 0)
-            desc += L"Date de l'événement : " + std::wstring{ FormatTaskDate(start, false) } + L"\n";
+            desc += std::wstring{ Fmt(Tr(L"Date de l'événement : {0}"), { FormatTaskDate(start, false) }) } + L"\n";
         if (!event_desc.empty())
         {
             if (!desc.empty())
@@ -1237,7 +1262,7 @@ namespace winrt::EvolutionWin::implementation
         if (unix_time <= 0)
         {
             is_overdue = false;
-            return L"Pas d'échéance";
+            return Tr(L"Pas d'échéance");
         }
 
         int64_t now = static_cast<int64_t>(std::time(nullptr));
@@ -1251,15 +1276,15 @@ namespace winrt::EvolutionWin::implementation
             is_overdue = true;
             int days_late = static_cast<int>((today_start - due) / 86400) + 1;
             if (days_late <= 1)
-                return L"Hier (En retard)";
-            return L"En retard (" + to_hstring(days_late) + L" j)";
+                return Tr(L"Hier (En retard)");
+            return Fmt(Tr(L"En retard ({0} j)"), { to_hstring(days_late) });
         }
 
         is_overdue = false;
         if (due >= today_start && due < today_end)
-            return L"Aujourd'hui";
+            return Tr(L"Aujourd'hui");
         if (due >= today_end && due < tomorrow_end)
-            return L"Demain";
+            return Tr(L"Demain");
 
         Windows::Globalization::DateTimeFormatting::DateTimeFormatter formatter{ L"shortdate" };
         return formatter.Format(winrt::clock::from_time_t(static_cast<time_t>(due)));
@@ -1399,15 +1424,15 @@ namespace winrt::EvolutionWin::implementation
         size_t total_open = open_tasks.size();
         if (total_open == 0)
         {
-            TodoBarCountText().Text(L"Aucune tâche en attente");
+            TodoBarCountText().Text(Tr(L"Aucune tâche en attente"));
         }
         else if (total_open == 1)
         {
-            TodoBarCountText().Text(L"1 tâche en cours");
+            TodoBarCountText().Text(Tr(L"1 tâche en cours"));
         }
         else
         {
-            TodoBarCountText().Text(to_hstring(total_open) + L" tâches en cours");
+            TodoBarCountText().Text(Fmt(Tr(L"{0} tâches en cours"), { to_hstring(total_open) }));
         }
     }
 
@@ -1440,7 +1465,7 @@ namespace winrt::EvolutionWin::implementation
         done.MinWidth(0);
         done.Padding(ThicknessHelper::FromUniformLength(0));
         done.VerticalAlignment(VerticalAlignment::Center);
-        ToolTipService::SetToolTip(done, box_value(L"Marquer comme terminée"));
+        ToolTipService::SetToolTip(done, box_value(Tr(L"Marquer comme terminée")));
         done.Click([this, task](IInspectable const&, RoutedEventArgs const&)
         {
             SetTaskCompleted(task, true);
@@ -1453,7 +1478,7 @@ namespace winrt::EvolutionWin::implementation
         Grid::SetColumn(details, 1);
 
         TextBlock title;
-        title.Text(task.GetNamedString(L"summary", L"(Sans titre)"));
+        title.Text(task.GetNamedString(L"summary", Tr(L"(Sans titre)")));
         title.Style(resources.Lookup(box_value(L"BodyTextBlockStyle")).as<Style>());
         title.TextTrimming(TextTrimming::CharacterEllipsis);
         title.MaxLines(1);
@@ -1560,7 +1585,7 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus(L"Ajout de la tâche : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Ajout de la tâche : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
             LoadTasks();

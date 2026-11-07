@@ -6,6 +6,7 @@
  * n'existent pas dans le registre EDS, d'où des sources « virtuelles » dont l'uid
  * commence par « person: ». */
 
+#include "MainWindow.Helpers.h"
 #include "Settings.h"
 
 #include <winrt/Windows.Data.Json.h>
@@ -18,9 +19,6 @@ namespace EvolutionWin::People
 {
     /** @brief Préfixe des identifiants de calendriers de personnes (« person:adresse »). */
     inline constexpr std::wstring_view kUidPrefix = L"person:";
-
-    /** @brief Nom du groupe sous lequel les calendriers de personnes sont listés. */
-    inline constexpr wchar_t const* kGroupName = L"Personnes et équipes (annuaire)";
 
     /**
      * @brief Indique si un identifiant de calendrier désigne une personne de l'annuaire.
@@ -142,9 +140,9 @@ namespace EvolutionWin::People
         if (class_id.rfind(L"0006f0b7", 0) == 0)
             return winrt::hstring{};
         if (class_id.rfind(L"0006f0b8", 0) == 0)
-            return L"Autres calendriers";
+            return ::EvolutionWin::Helpers::Tr(L"Autres calendriers");
         if (class_id.rfind(L"0006f0b9", 0) == 0)
-            return L"Calendriers des contacts";
+            return ::EvolutionWin::Helpers::Tr(L"Calendriers des contacts");
         return group.GetNamedString(L"name", L"");
     }
 
@@ -201,12 +199,27 @@ namespace EvolutionWin::People
         }
 
         /* groupes Outlook (même vides) : repères affichés comme sous-groupes du compte */
+        /* seuls les groupes qui contiennent au moins un calendrier de l'annuaire ou d'Exchange restent affichés ;
+         * un groupe vide (« Autres calendriers », « Tous les calendriers de groupe »…) n'apporte rien */
+        auto group_has_content = [&](winrt::hstring const& display)
+        {
+            for (auto const& value : merged)
+            {
+                auto item = value.GetObject();
+                if (item.GetNamedString(L"group_name", L"") == display && !item.GetNamedBoolean(L"placeholder", false))
+                    return true;
+            }
+            for (auto const& value : LoadAll())
+                if (value.ValueType() == JsonValueType::Object && value.GetObject().GetNamedString(L"group", L"") == display)
+                    return true;
+            return false;
+        };
         if (groups && !m365_account_uid.empty())
         {
             for (auto const& group_value : groups)
             {
                 winrt::hstring display = GroupDisplayName(group_value.GetObject());
-                if (display.empty())
+                if (display.empty() || !group_has_content(display))
                     continue;
                 JsonObject marker;
                 marker.SetNamedValue(L"uid", JsonValue::CreateStringValue(L"group:" + m365_account_uid + L":" + display));
@@ -231,7 +244,7 @@ namespace EvolutionWin::People
                 if (!account_uid.empty() && source.GetNamedString(L"account_uid", L"") == account_uid)
                     return source.GetNamedString(L"account", L"");
             }
-            return winrt::hstring{ kGroupName };
+            return ::EvolutionWin::Helpers::Tr(L"Personnes et équipes (annuaire)");
         };
 
         /* calendriers déjà fournis par EDS (même nom, même compte) : non répétés */

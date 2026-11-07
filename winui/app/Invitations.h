@@ -10,6 +10,24 @@
 
 namespace EvolutionWin::Invitations
 {
+    /** @brief Traducteur d'un libellé français (nullptr : le français est conservé) ; fourni par l'application. */
+    using Translator = std::wstring (*)(wchar_t const* fr);
+
+    /**
+     * @brief Choisit le libellé selon la langue : anglais, traduction du français, ou français.
+     * @param english true pour l'anglais.
+     * @param translate Traducteur du français (peut être nullptr).
+     * @param fr Libellé français (clé de traduction).
+     * @param en Libellé anglais.
+     * @return Le libellé dans la langue demandée.
+     */
+    inline std::wstring PickText(bool english, Translator translate, wchar_t const* fr, wchar_t const* en)
+    {
+        if (english)
+            return en;
+        return translate ? translate(fr) : std::wstring{ fr };
+    }
+
     /** @brief Nature de l'invitation, d'après la méthode iTIP du message. */
     enum class Kind
     {
@@ -148,33 +166,36 @@ namespace EvolutionWin::Invitations
      * @param mine Réponse actuelle de l'utilisateur.
      * @param in_calendar true si la réunion figure dans un agenda.
      * @param is_organizer true si l'utilisateur est l'organisateur.
-     * @param english true pour l'anglais, false pour le français.
+     * @param english true pour l'anglais, false pour le français (ou la langue du traducteur).
+     * @param translate Traducteur du français vers la langue de l'interface (nullptr : français).
      * @return Phrase localisée, vide s'il n'y a rien à dire.
      */
-    inline std::wstring DescribeState(Kind kind, Answer mine, bool in_calendar, bool is_organizer, bool english)
+    inline std::wstring DescribeState(Kind kind, Answer mine, bool in_calendar, bool is_organizer, bool english,
+        Translator translate = nullptr)
     {
+        auto Tr = [&](wchar_t const* fr, wchar_t const* en) { return PickText(english, translate, fr, en); };
+
         if (kind == Kind::Cancel)
-            return english ? (in_calendar ? L"This meeting was cancelled. It is still in your calendar."
-                                          : L"This meeting was cancelled.")
-                           : (in_calendar ? L"Cette réunion a été annulée. Elle figure encore dans votre agenda."
-                                          : L"Cette réunion a été annulée.");
+            return in_calendar ? Tr(L"Cette réunion a été annulée. Elle figure encore dans votre agenda.",
+                                    L"This meeting was cancelled. It is still in your calendar.")
+                               : Tr(L"Cette réunion a été annulée.", L"This meeting was cancelled.");
         if (kind != Kind::Request)
             return {};
         if (is_organizer)
-            return english ? L"You are the organizer of this meeting." : L"Vous êtes l'organisateur de cette réunion.";
+            return Tr(L"Vous êtes l'organisateur de cette réunion.", L"You are the organizer of this meeting.");
 
         switch (mine)
         {
         case Answer::Accepted:
-            return english ? L"You accepted this invitation." : L"Vous avez accepté cette invitation.";
+            return Tr(L"Vous avez accepté cette invitation.", L"You accepted this invitation.");
         case Answer::Tentative:
-            return english ? L"You tentatively accepted this invitation." : L"Vous avez répondu « Provisoire » à cette invitation.";
+            return Tr(L"Vous avez répondu « Provisoire » à cette invitation.", L"You tentatively accepted this invitation.");
         case Answer::Declined:
-            return english ? L"You declined this invitation." : L"Vous avez refusé cette invitation.";
+            return Tr(L"Vous avez refusé cette invitation.", L"You declined this invitation.");
         default:
-            return in_calendar ? (english ? L"This meeting is already in your calendar. Please respond."
-                                          : L"Cette réunion figure déjà dans votre agenda. Merci de répondre.")
-                               : (english ? L"Please respond to this invitation." : L"Merci de répondre à cette invitation.");
+            return in_calendar ? Tr(L"Cette réunion figure déjà dans votre agenda. Merci de répondre.",
+                                    L"This meeting is already in your calendar. Please respond.")
+                               : Tr(L"Merci de répondre à cette invitation.", L"Please respond to this invitation.");
         }
     }
 
@@ -182,20 +203,27 @@ namespace EvolutionWin::Invitations
      * @brief Phrase d'une réponse de participant reçue (« Marie a accepté la réunion »).
      * @param who Nom ou adresse du participant ; vide si inconnu.
      * @param answer Réponse donnée.
-     * @param english true pour l'anglais, false pour le français.
+     * @param english true pour l'anglais, false pour le français (ou la langue du traducteur).
+     * @param translate Traducteur du français vers la langue de l'interface (nullptr : français).
      * @return Phrase localisée.
      */
-    inline std::wstring DescribeReply(std::wstring_view who, Answer answer, bool english)
+    inline std::wstring DescribeReply(std::wstring_view who, Answer answer, bool english, Translator translate = nullptr)
     {
-        std::wstring name = who.empty() ? std::wstring{ english ? L"A participant" : L"Un participant" } : std::wstring{ who };
+        auto Tr = [&](wchar_t const* fr, wchar_t const* en) { return PickText(english, translate, fr, en); };
+        std::wstring name = who.empty() ? Tr(L"Un participant", L"A participant") : std::wstring{ who };
+        std::wstring text;
 
         switch (answer)
         {
-        case Answer::Accepted: return name + (english ? L" accepted the meeting." : L" a accepté la réunion.");
-        case Answer::Tentative: return name + (english ? L" tentatively accepted the meeting." : L" a répondu « Provisoire » à la réunion.");
-        case Answer::Declined: return name + (english ? L" declined the meeting." : L" a refusé la réunion.");
-        default: return name + (english ? L" replied to the meeting." : L" a répondu à la réunion.");
+        case Answer::Accepted: text = Tr(L"{0} a accepté la réunion.", L"{0} accepted the meeting."); break;
+        case Answer::Tentative: text = Tr(L"{0} a répondu « Provisoire » à la réunion.", L"{0} tentatively accepted the meeting."); break;
+        case Answer::Declined: text = Tr(L"{0} a refusé la réunion.", L"{0} declined the meeting."); break;
+        default: text = Tr(L"{0} a répondu à la réunion.", L"{0} replied to the meeting."); break;
         }
+        size_t marker = text.find(L"{0}");
+        if (marker != std::wstring::npos)
+            text.replace(marker, 3, name);
+        return text;
     }
 
     /**
@@ -203,34 +231,37 @@ namespace EvolutionWin::Invitations
      * @param response Réponse envoyée au moteur : "accepted", "tentative", "declined" ou "remove".
      * @param calendar Action effectuée sur l'agenda : "added", "updated", "kept", "removed", "unchanged" ou "skipped".
      * @param sent true si une réponse a été envoyée à l'organisateur.
-     * @param english true pour l'anglais, false pour le français.
+     * @param english true pour l'anglais, false pour le français (ou la langue du traducteur).
+     * @param translate Traducteur du français vers la langue de l'interface (nullptr : français).
      * @return Phrase localisée.
      */
-    inline std::wstring DescribeResult(std::wstring_view response, std::wstring_view calendar, bool sent, bool english)
+    inline std::wstring DescribeResult(std::wstring_view response, std::wstring_view calendar, bool sent, bool english,
+        Translator translate = nullptr)
     {
+        auto Tr = [&](wchar_t const* fr, wchar_t const* en) { return PickText(english, translate, fr, en); };
         std::wstring text;
 
         if (response == L"remove")
-            text = english ? L"Meeting removed from your calendar." : L"Réunion retirée de votre agenda.";
+            text = Tr(L"Réunion retirée de votre agenda.", L"Meeting removed from your calendar.");
         else if (response == L"declined")
-            text = english ? L"Invitation declined." : L"Invitation refusée.";
+            text = Tr(L"Invitation refusée.", L"Invitation declined.");
         else if (response == L"tentative")
-            text = english ? L"Invitation tentatively accepted." : L"Invitation acceptée provisoirement.";
+            text = Tr(L"Invitation acceptée provisoirement.", L"Invitation tentatively accepted.");
         else
-            text = english ? L"Invitation accepted." : L"Invitation acceptée.";
+            text = Tr(L"Invitation acceptée.", L"Invitation accepted.");
 
         if (calendar == L"added")
-            text += english ? L" Added to your calendar." : L" Ajoutée à votre agenda.";
+            text += L" " + Tr(L"Ajoutée à votre agenda.", L"Added to your calendar.");
         else if (calendar == L"updated" || calendar == L"kept")
-            text += english ? L" Calendar updated." : L" Agenda mis à jour.";
+            text += L" " + Tr(L"Agenda mis à jour.", L"Calendar updated.");
         else if (calendar == L"removed" && response != L"remove")
-            text += english ? L" Removed from your calendar." : L" Retirée de votre agenda.";
+            text += L" " + Tr(L"Retirée de votre agenda.", L"Removed from your calendar.");
         else if (calendar == L"skipped")
-            text += english ? L" (A single occurrence of a series is not added to the calendar.)"
-                            : L" (Une occurrence isolée d'une série n'est pas ajoutée à l'agenda.)";
+            text += L" " + Tr(L"(Une occurrence isolée d'une série n'est pas ajoutée à l'agenda.)",
+                              L"(A single occurrence of a series is not added to the calendar.)");
 
         if (sent)
-            text += english ? L" Reply sent to the organizer." : L" Réponse envoyée à l'organisateur.";
+            text += L" " + Tr(L"Réponse envoyée à l'organisateur.", L"Reply sent to the organizer.");
         return text;
     }
 

@@ -157,7 +157,7 @@ namespace winrt::EvolutionWin::implementation
             JsonObject details;
             if (!error.empty() || !JsonObject::TryParse(json, details))
             {
-                ShowStatus(L"Ouverture de l'événement : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Ouverture de l'événement : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
             ShowEventDialogAsync(details);
@@ -207,13 +207,14 @@ namespace winrt::EvolutionWin::implementation
         {
             hstring calendar_uid = ev.GetNamedString(L"calendar_uid", L"");
             hstring uid = ev.GetNamedString(L"uid", L"");
-            element.Tapped([this, calendar_uid, uid](IInspectable const&, Input::TappedRoutedEventArgs const& args)
+            /* simple clic : sans effet (le clic ne crée pas de sélection) ; double clic : ouvre la fenêtre de l'événement */
+            element.Tapped([](IInspectable const&, Input::TappedRoutedEventArgs const& args) { args.Handled(true); });
+            element.DoubleTapped([this, calendar_uid, uid](IInspectable const&, Input::DoubleTappedRoutedEventArgs const& args)
             {
                 args.Handled(true);
                 OpenCalendarEvent(calendar_uid, uid);
             });
-            AttachCategoryContextMenu(element, ::EvolutionWin::CategoryStore::CategoriesOf(ev),
-                [this, ev](std::vector<std::wstring> const& names) { SetEventCategories(ev, names); });
+            AttachEventContextMenu(element, ev);
         };
 
         /* en-têtes des jours (« lun. 26 », aujourd'hui en couleur d'accent) */
@@ -239,7 +240,7 @@ namespace winrt::EvolutionWin::implementation
             tz_headers.Children().Append(tz2_title);
 
             TextBlock tz1_title;
-            tz1_title.Text(L"Local");
+            tz1_title.Text(Tr(L"Local"));
             tz1_title.Style(ThemeStyle(L"CaptionTextBlockStyle"));
             tz1_title.Foreground(ThemeBrush(L"TextFillColorSecondaryBrush"));
             tz1_title.FontSize(10);
@@ -526,7 +527,7 @@ namespace winrt::EvolutionWin::implementation
                     drag->active = false;
                     selection.Visibility(Visibility::Collapsed);
                 });
-                ToolTipService::SetToolTip(slot_layer, box_value(L"Cliquer ou glisser pour créer un événement"));
+                ToolTipService::SetToolTip(slot_layer, box_value(Tr(L"Cliquer ou glisser pour créer un événement")));
                 body.Children().Append(slot_layer);
             }
 
@@ -707,7 +708,7 @@ namespace winrt::EvolutionWin::implementation
                 number.Foreground(ThemeBrush(L"AccentTextFillColorPrimaryBrush"));
             else if (local.tm_mon != month)
                 number.Foreground(ThemeBrush(L"TextFillColorTertiaryBrush"));
-            ToolTipService::SetToolTip(number, box_value(L"Afficher ce jour"));
+            ToolTipService::SetToolTip(number, box_value(Tr(L"Afficher ce jour")));
             number.Tapped([this, from](IInspectable const&, Input::TappedRoutedEventArgs const& args)
             {
                 args.Handled(true);
@@ -766,20 +767,20 @@ namespace winrt::EvolutionWin::implementation
                     ev.GetNamedString(L"calendar_name", L"")));
                 hstring calendar_uid = ev.GetNamedString(L"calendar_uid", L"");
                 hstring uid = ev.GetNamedString(L"uid", L"");
-                chip.Tapped([this, calendar_uid, uid](IInspectable const&, Input::TappedRoutedEventArgs const& args)
+                chip.Tapped([](IInspectable const&, Input::TappedRoutedEventArgs const& args) { args.Handled(true); });
+                chip.DoubleTapped([this, calendar_uid, uid](IInspectable const&, Input::DoubleTappedRoutedEventArgs const& args)
                 {
                     args.Handled(true);
                     OpenCalendarEvent(calendar_uid, uid);
                 });
-                AttachCategoryContextMenu(chip, ::EvolutionWin::CategoryStore::CategoriesOf(ev),
-                    [this, ev](std::vector<std::wstring> const& names) { SetEventCategories(ev, names); });
+                AttachEventContextMenu(chip, ev);
                 content.Children().Append(chip);
             }
 
             if (hidden > 0)
             {
                 TextBlock more;
-                more.Text(L"+" + to_hstring(hidden) + (hidden > 1 ? L" autres" : L" autre"));
+                more.Text(Fmt(hidden > 1 ? Tr(L"+{0} autres") : Tr(L"+{0} autre"), { to_hstring(hidden) }));
                 more.Style(ThemeStyle(L"CaptionTextBlockStyle"));
                 more.Foreground(ThemeBrush(L"AccentTextFillColorPrimaryBrush"));
                 more.Tapped([this, from](IInspectable const&, Input::TappedRoutedEventArgs const& args)
@@ -927,7 +928,7 @@ namespace winrt::EvolutionWin::implementation
             hstring scale = unbox_value_or<hstring>(item.Tag(), L"30");
             ::EvolutionWin::Settings::Instance().SetString(L"calendar.time-scale", scale);
             ApplyCalendarPreferences();
-            ShowStatus(L"Échelle de temps modifiée : " + scale + L" minutes.", InfoBarSeverity::Informational);
+            ShowStatus(Fmt(Tr(L"Échelle de temps modifiée : {0} minutes."), { scale }), InfoBarSeverity::Informational);
         }
     }
 
@@ -946,7 +947,7 @@ namespace winrt::EvolutionWin::implementation
             ::EvolutionWin::Settings::Instance().SetString(
                 L"calendar.layout-mode", is_side_by_side ? L"side-by-side" : L"overlay");
             ApplyCalendarPreferences();
-            ShowStatus(is_side_by_side ? L"Affichage des calendriers côte à côte." : L"Affichage des calendriers superposés.", InfoBarSeverity::Informational);
+            ShowStatus(is_side_by_side ? Tr(L"Affichage des calendriers côte à côte.") : Tr(L"Affichage des calendriers superposés."), InfoBarSeverity::Informational);
         }
     }
 }

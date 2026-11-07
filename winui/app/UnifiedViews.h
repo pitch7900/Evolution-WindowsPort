@@ -15,6 +15,9 @@ namespace EvolutionWin::UnifiedViews
     /** Identifiant de compte factice des nœuds de l'arborescence des vues unifiées. */
     constexpr wchar_t kAccountId[] = L"*unified";
 
+    /** Identifiant de compte factice des dossiers de recherche enregistrés (vue multi-comptes comme les vues unifiées). */
+    constexpr wchar_t kSearchAccountId[] = L"*search";
+
     /** Séparateur des éléments d'un identifiant composite (code ASCII 31). */
     constexpr wchar_t kUidSeparator = L'\x1F';
 
@@ -31,7 +34,7 @@ namespace EvolutionWin::UnifiedViews
      */
     inline bool IsUnifiedAccount(std::wstring_view account)
     {
-        return account == kAccountId;
+        return account == kAccountId || account == kSearchAccountId;
     }
 
     /**

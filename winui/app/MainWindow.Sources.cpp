@@ -159,7 +159,7 @@ namespace winrt::EvolutionWin::implementation
                 else
                     group_check.IsChecked(Windows::Foundation::IReference<bool>(nullptr));
                 bool all_shown = shown_count == group_uids.size() && !group_uids.empty();
-                ToolTipService::SetToolTip(group_check, box_value(L"Afficher / masquer tout le groupe"));
+                ToolTipService::SetToolTip(group_check, box_value(Tr(L"Afficher / masquer tout le groupe")));
                 group_check.Tapped([](IInspectable const&, Input::TappedRoutedEventArgs const& args) { args.Handled(true); });
                 group_check.Click([group_uids, all_shown, on_toggle_group](IInspectable const&, RoutedEventArgs const&)
                 {
@@ -170,13 +170,13 @@ namespace winrt::EvolutionWin::implementation
             }
 
             TextBlock header;
-            header.Text(is_sub ? sub_name : (account.empty() ? hstring{ L"Autres" } : account));
+            header.Text(is_sub ? sub_name : (account.empty() ? Tr(L"Autres") : account));
             header.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
             header.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
             header.VerticalAlignment(VerticalAlignment::Center);
             Grid::SetColumn(header, 2);
             header_row.Children().Append(header);
-            ToolTipService::SetToolTip(header_row, box_value(L"Plier / déplier"));
+            ToolTipService::SetToolTip(header_row, box_value(Tr(L"Plier / déplier")));
             target_children.Append(header_row);
 
             StackPanel group_items;
@@ -207,7 +207,7 @@ namespace winrt::EvolutionWin::implementation
             if (group_uids.empty())
             {
                 TextBlock empty_hint;
-                empty_hint.Text(L"Aucun calendrier dans ce groupe. Ajoutez des personnes avec « Personnes et équipes… ».");
+                empty_hint.Text(Tr(L"Aucun calendrier dans ce groupe. Ajoutez des personnes avec « Personnes et équipes… »."));
                 empty_hint.TextWrapping(TextWrapping::Wrap);
                 empty_hint.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
                 empty_hint.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorTertiaryBrush")).as<Brush>());
@@ -241,7 +241,7 @@ namespace winrt::EvolutionWin::implementation
                 CheckBox shown;
                 shown.MinWidth(0);
                 shown.IsChecked(std::find(visible.begin(), visible.end(), uid) != visible.end());
-                ToolTipService::SetToolTip(shown, box_value(L"Afficher"));
+                ToolTipService::SetToolTip(shown, box_value(Tr(L"Afficher")));
                 shown.Click([uid, on_toggle](IInspectable const& sender, RoutedEventArgs const&)
                 {
                     auto box = sender.as<CheckBox>();
@@ -274,8 +274,8 @@ namespace winrt::EvolutionWin::implementation
                     text.FontWeight(Microsoft::UI::Text::FontWeights::SemiBold());
                 label.Children().Append(text);
                 ToolTipService::SetToolTip(label, box_value(is_active
-                    ? hstring{ L"Actif : les nouveaux éléments y sont créés" }
-                    : hstring{ L"Choisir pour les nouveaux éléments" }));
+                    ? Tr(L"Actif : les nouveaux éléments y sont créés")
+                    : Tr(L"Choisir pour les nouveaux éléments")));
                 label.Tapped([uid, on_activate](IInspectable const&, Input::TappedRoutedEventArgs const&)
                 {
                     on_activate(uid);
@@ -401,7 +401,7 @@ namespace winrt::EvolutionWin::implementation
             JsonArray sources;
             if (!error.empty() || !JsonArray::TryParse(json, sources))
             {
-                ShowStatus(L"Calendriers : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Calendriers : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
 
@@ -541,7 +541,7 @@ namespace winrt::EvolutionWin::implementation
             });
 
         ActiveCalendarText().Text(active_name.empty() ? hstring{}
-            : L"Nouveaux événements dans : " + active_name);
+            : Fmt(Tr(L"Nouveaux événements dans : {0}"), { active_name }));
     }
 
     /* Carnets d'adresses (comptes, carnet par défaut), puis contacts des
@@ -554,7 +554,7 @@ namespace winrt::EvolutionWin::implementation
             JsonArray books;
             if (!error.empty() || !JsonArray::TryParse(json, books))
             {
-                ShowStatus(L"Carnets d'adresses : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Carnets d'adresses : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
 
@@ -636,7 +636,7 @@ namespace winrt::EvolutionWin::implementation
         GalDirectoryButton().Visibility(directory_accounts > 0 ? Visibility::Collapsed : Visibility::Visible);
 
         ActiveBookText().Text(active_name.empty() ? hstring{}
-            : L"Nouveaux contacts dans : " + active_name);
+            : Fmt(Tr(L"Nouveaux contacts dans : {0}"), { active_name }));
     }
 
     /* Ajoute un calendrier : calendrier local vide, ou abonnement à une URL
@@ -658,23 +658,23 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Ajouter un calendrier"));
+        dialog.Title(box_value(Tr(L"Ajouter un calendrier")));
 
         StackPanel panel;
         panel.Spacing(12);
         TextBox name_box;
-        name_box.Header(box_value(L"Nom du calendrier"));
+        name_box.Header(box_value(Tr(L"Nom du calendrier")));
         name_box.MinWidth(360);
         panel.Children().Append(name_box);
         TextBox url_box;
-        url_box.Header(box_value(L"Adresse Internet (ICS / webcal) — laisser vide pour un calendrier local vide"));
+        url_box.Header(box_value(Tr(L"Adresse Internet (ICS / webcal) — laisser vide pour un calendrier local vide")));
         url_box.PlaceholderText(L"https://exemple.fr/agenda.ics");
         panel.Children().Append(url_box);
         dialog.Content(panel);
 
-        dialog.PrimaryButtonText(L"Ajouter");
-        dialog.SecondaryButtonText(L"Depuis Exchange Online…");
-        dialog.CloseButtonText(L"Annuler");
+        dialog.PrimaryButtonText(Tr(L"Ajouter"));
+        dialog.SecondaryButtonText(Tr(L"Depuis Exchange Online…"));
+        dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Primary);
         dialog.IsPrimaryButtonEnabled(false);
         name_box.TextChanged([dialog, trimmed](IInspectable const& sender, TextChangedEventArgs const&)
@@ -697,12 +697,12 @@ namespace winrt::EvolutionWin::implementation
         request.SetNamedValue(L"name", JsonValue::CreateStringValue(trimmed(name_box.Text())));
         request.SetNamedValue(L"url", JsonValue::CreateStringValue(trimmed(url_box.Text())));
 
-        ShowStatus(L"Création du calendrier…", InfoBarSeverity::Informational);
+        ShowStatus(Tr(L"Création du calendrier…"), InfoBarSeverity::Informational);
         m_core->CreateCalendar(request.Stringify(), [this](hstring const& json, hstring const& error)
         {
             if (!error.empty())
             {
-                ShowStatus(L"Ajout du calendrier : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Ajout du calendrier : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
 
@@ -715,7 +715,7 @@ namespace winrt::EvolutionWin::implementation
                 visible.Append(JsonValue::CreateStringValue(created.GetNamedString(L"uid", L"")));
                 settings.Set(L"calendar.visible", visible);
             }
-            ShowStatus(L"Calendrier ajouté.", InfoBarSeverity::Success);
+            ShowStatus(Tr(L"Calendrier ajouté."), InfoBarSeverity::Success);
             LoadCalendarSources();
         });
     }
@@ -745,10 +745,10 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Calendriers Exchange Online"));
-        dialog.PrimaryButtonText(L"Afficher la sélection");
-        dialog.SecondaryButtonText(L"Personnes et équipes…");
-        dialog.CloseButtonText(L"Annuler");
+        dialog.Title(box_value(Tr(L"Calendriers Exchange Online")));
+        dialog.PrimaryButtonText(Tr(L"Afficher la sélection"));
+        dialog.SecondaryButtonText(Tr(L"Personnes et équipes…"));
+        dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Primary);
 
         StackPanel panel;
@@ -757,15 +757,14 @@ namespace winrt::EvolutionWin::implementation
 
         TextBlock intro;
         intro.TextWrapping(TextWrapping::Wrap);
-        intro.Text(L"Cochez les calendriers Exchange Online à afficher, y compris ceux des groupes de calendriers "
-                   L"(équipes) et les calendriers partagés avec vous.");
+        intro.Text(Tr(L"Cochez les calendriers Exchange Online à afficher, y compris ceux des groupes de calendriers (équipes) et les calendriers partagés avec vous."));
         panel.Children().Append(intro);
 
         StackPanel sync_row;
         sync_row.Orientation(Orientation::Horizontal);
         sync_row.Spacing(8);
         Button sync_btn;
-        sync_btn.Content(box_value(L"Synchroniser avec Exchange Online"));
+        sync_btn.Content(box_value(Tr(L"Synchroniser avec Exchange Online")));
         sync_row.Children().Append(sync_btn);
         ProgressRing ring;
         ring.Width(18);
@@ -811,7 +810,7 @@ namespace winrt::EvolutionWin::implementation
             {
                 TextBlock none;
                 none.TextWrapping(TextWrapping::Wrap);
-                none.Text(L"Aucun calendrier Exchange Online trouvé. Utilisez le bouton de synchronisation ci-dessus.");
+                none.Text(Tr(L"Aucun calendrier Exchange Online trouvé. Utilisez le bouton de synchronisation ci-dessus."));
                 list_panel.Children().Append(none);
                 return;
             }
@@ -885,7 +884,7 @@ namespace winrt::EvolutionWin::implementation
         {
             for (auto const& [uid, box] : *choices)
                 SetUidVisible(m_calendar_sources, L"calendar.visible", uid, box.IsChecked() && box.IsChecked().GetBoolean());
-            ShowStatus(L"Calendriers Exchange Online mis à jour.", InfoBarSeverity::Success);
+            ShowStatus(Tr(L"Calendriers Exchange Online mis à jour."), InfoBarSeverity::Success);
         }
         RebuildCalendarSourcesPanel();
         LoadEvents();

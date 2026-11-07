@@ -5388,6 +5388,24 @@ static bool SetAutoStartupEnabled(bool enable)
     return (res == ERROR_SUCCESS);
 }
 
+static std::wstring GetMsiMachineLanguage()
+{
+    HKEY hKey = nullptr;
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\Evolution-WindowsPort", 0, KEY_READ | KEY_WOW64_64KEY, &hKey) == ERROR_SUCCESS)
+    {
+        wchar_t buffer[64] = { 0 };
+        DWORD size = sizeof(buffer);
+        DWORD type = 0;
+        LONG res = RegQueryValueExW(hKey, L"UILanguage", nullptr, &type, reinterpret_cast<LPBYTE>(buffer), &size);
+        RegCloseKey(hKey);
+        if (res == ERROR_SUCCESS && (type == REG_SZ || type == REG_EXPAND_SZ))
+        {
+            return std::wstring(buffer);
+        }
+    }
+    return L"";
+}
+
 
 static bool HasReplyPrefix(std::wstring_view subject)
 {
@@ -5495,6 +5513,19 @@ static void test_auto_startup_registry(void)
         /* Restauration de l'etat d'origine */
         SetAutoStartupEnabled(initial_state);
         ASSERT_EQ_INT(initial_state ? 1 : 0, IsAutoStartupEnabled() ? 1 : 0);
+    }
+    TEST_CASE_END();
+}
+
+static void test_msi_machine_language_registry(void)
+{
+    TEST_CASE("MSI UILanguage: Lecture de la langue par défaut HKLM");
+    {
+        /* Vérifie que GetMsiMachineLanguage() ne plante pas même si la clé n'existe pas */
+        std::wstring lang = GetMsiMachineLanguage();
+        /* Si la clé n'existe pas en environnement de dev, elle doit renvoyer une chaîne vide */
+        /* Si elle existe (par exemple après installation MSI), elle contient la locale (ex: "fr-FR") */
+        ASSERT_TRUE(lang.empty() || lang == L"fr-FR" || lang == L"en-US" || lang == L"de-DE");
     }
     TEST_CASE_END();
 }
@@ -6374,7 +6405,7 @@ static void test_conversation_threads(void)
         ASSERT_TRUE(o[0] == o[1]);
         ASSERT_TRUE(o[2] != o[0]);
 
-        /* repli sur l'objet : seule une réponse rejoint le message d'origine */
+        /* repli sur l'objet (sujet de conversation) : messages de même objet normalisé */
         std::vector<ThreadMessage> bysubject = {
             { L"0", {}, L"Rendez-vous" },
             { L"0", {}, L"RE: Rendez-vous" },
@@ -6383,8 +6414,8 @@ static void test_conversation_threads(void)
         auto b = BuildThreads(bysubject);
         ASSERT_TRUE(b[1] == b[0]);
         ASSERT_TRUE(b[2] == b[0]);
-        std::vector<ThreadMessage> same = { { L"", {}, L"Newsletter" }, { L"", {}, L"Newsletter" } };
-        auto n = BuildThreads(same);
+        std::vector<ThreadMessage> different = { { L"", {}, L"Newsletter A" }, { L"", {}, L"Newsletter B" } };
+        auto n = BuildThreads(different);
         ASSERT_TRUE(n[0] != n[1]);
     }
     TEST_CASE_END();
@@ -6676,6 +6707,7 @@ int main(void)
 
     test_purge_directory_files();
     test_auto_startup_registry();
+    test_msi_machine_language_registry();
     test_multilingual_subject_prefixes();
     test_second_timezone_helpers();
     test_message_category_search();

@@ -131,10 +131,23 @@ void		evo_core_reconnect_account	(EvoCore *core,
  *  "subject": "...", "text": "corps en texte brut",
  *  "html": "<html>...</html>" (optionnel, génère un multipart/alternative),
  *  "attachments": ["C:\\chemin\\fichier", ...] (optionnel),
- *  "in_reply_to": "<message id>", "references": "<...>" (optionnel)}
+ *  "in_reply_to": "<message id>", "references": "<...>" (optionnel),
+ *  "on_behalf_of": "<adresse du titulaire>" (optionnel : envoi « De la part de »,
+ *   From = titulaire, en-tête Sender = identité du compte)}
  * Le résultat est {"saved": true|false} (copie enregistrée dans Envoyés). */
 void		evo_core_send_message		(EvoCore *core,
 						 const char *message_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Prépare la signature et le chiffrement S/MIME d'un message en cours de
+ * rédaction (certificats du magasin Windows). Format de check_json :
+ * {"account": "<account uid>", "to": "...", "cc": "...", "bcc": "..."}
+ * Le résultat est {"sender": "adresse", "has_certificate": bool,
+ * "will_create": bool (un certificat personnel sera créé à l'envoi),
+ * "recipients_ready": [adresses], "recipients_missing": [adresses sans certificat]}. */
+void		evo_core_crypto_check		(EvoCore *core,
+						 const char *check_json,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
@@ -449,7 +462,10 @@ void		evo_core_search_messages	(EvoCore *core,
  *   account_uid      : identifiant du compte (pour portée folder/subfolders/account)
  *   folder_full_name : chemin complet du dossier de base (pour portée folder/subfolders)
  *   scope            : portée ("folder", "subfolders", "account", "all")
- *   query            : texte recherché (mots séparés par des espaces)
+ *   query            : texte recherché (mots séparés par des espaces) ; opérateurs combinables (ET) :
+ *                      is:unread, is:read, is:flagged, has:attachment, larger:<octets>, from:<texte>
+ *                      (avec un opérateur, la corbeille et les indésirables sont ignorés ; une requête
+ *                      d'opérateurs seuls renvoie tous les messages qui les respectent)
  *   max_count        : nombre maximal de messages renvoyés (0 pour tous)
  *   func             : rappel recevant le tableau JSON des messages
  *   user_data        : données utilisateur transmises au rappel */
@@ -605,7 +621,11 @@ void		evo_core_set_default_account	(EvoCore *core,
  * Format attendu pour account_json :
  * {"email": "...", "display_name": "...", "full_name": "...",
  *  "client_id": "..." (facultatif : application Entra ID propre),
- *  "tenant": "..." (facultatif : "common" par défaut)}
+ *  "tenant": "..." (facultatif : "common" par défaut),
+ *  "impersonate_user": "..." (facultatif : boîte aux lettres partagée ou d'un autre
+ *  utilisateur ; "email" reste l'identité de connexion, l'adresse d'expédition
+ *  devient celle de la boîte partagée ; agenda et contacts seulement si
+ *  "shared_calendar" / "shared_contacts" valent true)}
  * Avec "backend": "ews", compte Exchange de l'entreprise : "hosturl" (URL
  * EWS), "user" (facultatif : l'adresse) et "password" (NTLM). Pas de
  * connexion OAuth2 ensuite.
@@ -774,7 +794,12 @@ void		evo_core_list_events		(EvoCore *core,
 /* Crée un nouvel événement dans l'agenda par défaut (ou celui indiqué par
  * "calendar_uid"). Format attendu pour event_json :
  * {"calendar_uid": "..." (optionnel), "summary": "...", "location": "...",
- *  "description": "...", "start": 1730000000, "end": 1730003600}
+ *  "description": "...", "start": 1730000000, "end": 1730003600,
+ *  "show_as": "free"|"working"|"tentative"|"busy"|"oof" (optionnel : « Afficher comme »
+ *  d'Outlook : disponible, travaille ailleurs, provisoire, occupé, absent ; TRANSP et
+ *  X-MICROSOFT-CDO-BUSYSTATUS),
+ *  "private": true|false (optionnel : événement privé, propriété CLASS:PRIVATE,
+ *  détails masqués aux personnes avec qui l'agenda est partagé)}
  * Paramètres :
  *   core       : instance du moteur evo-core
  *   event_json : description de l'événement au format JSON UTF-8
@@ -1029,6 +1054,90 @@ void		evo_core_get_ews_consent_url	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Ajoute une réunion Google Meet à un événement d'un calendrier Gmail (API Google Agenda,
+ * conferenceData.createRequest, avec le jeton OAuth2 du compte). Les participants reçoivent
+ * la mise à jour avec le lien. À appeler après la création de l'événement.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   calendar_uid : calendrier Gmail de l'événement
+ *   event_uid    : identifiant de l'événement créé
+ *   func         : rappel recevant {"link": "https://meet.google.com/..."}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_add_google_meet	(EvoCore *core,
+						 const char *calendar_uid,
+						 const char *event_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Éléments récupérables d'un compte Microsoft 365 (suppressions conservées par le serveur,
+ * dossier « Recoverable Items » de Microsoft Graph) : liste des 100 plus récents.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte courrier Microsoft 365
+ *   func        : rappel recevant [{"id", "subject", "from", "to" (destinataires), "received",
+ *                 "deleted" (secondes Unix)}]
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_list_recoverable_items	(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Supprime définitivement des éléments récupérables (irréversible, si la stratégie de
+ * rétention le permet). Mêmes paramètres et résultat que evo_core_restore_recoverable_items (). */
+void		evo_core_purge_recoverable_items
+						(EvoCore *core,
+						 const char *account_uid,
+						 const char *message_ids,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Restaure des éléments récupérables dans la Boîte de réception.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte courrier Microsoft 365
+ *   message_ids : "id" des éléments (evo_core_list_recoverable_items) séparés par des espaces
+ *   func        : rappel recevant {"restored": n, "failed": n, "error": "premier échec"}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_restore_recoverable_items
+						(EvoCore *core,
+						 const char *account_uid,
+						 const char *message_ids,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Boîte de réception prioritaire (Focused Inbox, Microsoft 365) : identifiants des messages de la
+ * Boîte de réception classés « Autres » (au plus 1000 plus récents ; les autres sont « Prioritaire »).
+ * Ces identifiants sont les "uid" des messages renvoyés par evo_core_list_messages ().
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte courrier Microsoft 365
+ *   func        : rappel recevant {"other": ["uid", ...], "complete": true|false}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_list_inbox_classification
+						(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Classe un message de la Boîte de réception dans « Prioritaire » ou « Autres » (Microsoft 365) ;
+ * avec sender_address, mémorise aussi la règle pour l'expéditeur (« toujours classer dans… »).
+ * Paramètres :
+ *   core           : instance du moteur evo-core
+ *   account_uid    : compte courrier Microsoft 365
+ *   message_id     : "uid" du message
+ *   classification : "focused" ou "other"
+ *   sender_address : adresse de l'expéditeur pour la règle, "" : aucune règle
+ *   func           : rappel recevant {"override_error": "..."} (vide si tout a réussi)
+ *   user_data      : données utilisateur transmises au rappel */
+void		evo_core_set_message_classification
+						(EvoCore *core,
+						 const char *account_uid,
+						 const char *message_id,
+						 const char *classification,
+						 const char *sender_address,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Comme evo_core_list_contacts (), limité aux carnets book_uids (uids
  * séparés par des virgules ; NULL ou "" : tous les carnets activés). */
 void		evo_core_list_book_contacts	(EvoCore *core,
@@ -1253,6 +1362,94 @@ void		evo_core_get_auto_reply		(EvoCore *core,
 void		evo_core_set_auto_reply		(EvoCore *core,
 						 const char *account_uid,
 						 const char *settings_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Lit les réglages de synchronisation hors connexion d'un compte (CamelOfflineSettings)
+ * et, si folder_name n'est pas vide, l'état de synchronisation de ce dossier.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   folder_name : nom complet du dossier, "" pour le compte seul
+ *   func        : rappel recevant {"account", "supported", "stay_synchronized", "limit_by_age",
+ *                 "limit_unit": "days"|"weeks"|"months"|"years", "limit_value", et pour un
+ *                 dossier : "folder", "folder_supported", "folder_offline_sync":
+ *                 "inherit"|"on"|"off"}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_get_offline_sync	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_name,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Enregistre les réglages de synchronisation hors connexion (seuls les champs présents
+ * sont modifiés).
+ * Paramètres :
+ *   core          : instance du moteur evo-core
+ *   settings_json : {"account": "<uid>", "stay_synchronized": bool, "limit_by_age": bool,
+ *                    "limit_unit": "days"|"weeks"|"months"|"years", "limit_value": n,
+ *                    "folder": "<nom complet>", "folder_offline_sync": "inherit"|"on"|"off"}
+ *   func          : rappel recevant {}
+ *   user_data     : données utilisateur transmises au rappel */
+void		evo_core_set_offline_sync	(EvoCore *core,
+						 const char *settings_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Lance le téléchargement hors connexion d'un compte ou d'un dossier, sans attendre la relève
+ * périodique (dossiers « jamais » ignorés, « comme le compte » selon le réglage du compte).
+ * Progression : événements « progress » avec "kind": "offline", "folder", "folder_index",
+ * "folder_count", "done", "total", "percent", "active".
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   folder_name : nom complet du dossier, "" pour tous les dossiers du compte
+ *   func        : rappel recevant {"folders", "messages" (à télécharger), "downloaded",
+ *                 "failed", "cancelled"}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_offline_sync_now	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_name,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Liste les délégués de la boîte Gmail d'un compte (API Gmail settings.delegates, portée
+ * gmail.settings.sharing, comptes Google Workspace). Erreur explicative pour les autres
+ * comptes (Microsoft 365 : droits gérés dans le centre d'administration Exchange).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   func        : rappel recevant {"provider": "gmail", "delegates": [{"email", "status":
+ *                 "accepted"|"pending"|"rejected"|"expired"}]}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_list_delegates		(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Ajoute un délégué à la boîte Gmail d'un compte.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   email       : adresse du délégué
+ *   func        : rappel recevant {"email", "status"} (« pending » : confirmation attendue)
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_add_delegate		(EvoCore *core,
+						 const char *account_uid,
+						 const char *email,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Révoque un délégué de la boîte Gmail d'un compte.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   email       : adresse du délégué
+ *   func        : rappel recevant {}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_remove_delegate	(EvoCore *core,
+						 const char *account_uid,
+						 const char *email,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 

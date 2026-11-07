@@ -255,7 +255,7 @@ core_send_message_run (EvoCore *core,
 	CamelInternetAddress *from = NULL, *to = NULL, *cc = NULL, *bcc = NULL, *recipients = NULL;
 	CamelMimeMessage *message = NULL;
 	CamelService *transport = NULL;
-	const gchar *account_uid, *subject, *text, *html, *header;
+	const gchar *account_uid, *subject, *text, *html, *header, *on_behalf = NULL;
 	gboolean saved = FALSE, sent_message_saved = FALSE;
 	gchar *json = NULL;
 
@@ -283,9 +283,16 @@ core_send_message_run (EvoCore *core,
 	}
 
 	from = camel_internet_address_new ();
-	camel_internet_address_add (from,
-		e_source_mail_identity_get_name (identity_extension),
-		e_source_mail_identity_get_address (identity_extension));
+	on_behalf = json_object_get_string_member_with_default (object, "on_behalf_of", "");
+	if (on_behalf && *on_behalf) {
+		/* « De la part de » (Send on Behalf) : From = titulaire de la boîte, Sender = utilisateur */
+		camel_internet_address_add (from, NULL, on_behalf);
+	} else {
+		on_behalf = NULL;
+		camel_internet_address_add (from,
+			e_source_mail_identity_get_name (identity_extension),
+			e_source_mail_identity_get_address (identity_extension));
+	}
 
 	to = parse_addresses (object, "to");
 	cc = parse_addresses (object, "cc");
@@ -308,6 +315,19 @@ core_send_message_run (EvoCore *core,
 	message = camel_mime_message_new ();
 	camel_mime_message_set_subject (message, subject);
 	camel_mime_message_set_from (message, from);
+	if (on_behalf) {
+		CamelInternetAddress *sender = camel_internet_address_new ();
+		gchar *formatted;
+
+		camel_internet_address_add (sender,
+			e_source_mail_identity_get_name (identity_extension),
+			e_source_mail_identity_get_address (identity_extension));
+		formatted = camel_address_encode (CAMEL_ADDRESS (sender));
+		if (formatted && *formatted)
+			camel_medium_set_header (CAMEL_MEDIUM (message), "Sender", formatted);
+		g_free (formatted);
+		g_object_unref (sender);
+	}
 	camel_mime_message_set_recipients (message, CAMEL_RECIPIENT_TYPE_TO, to);
 	if (camel_address_length (CAMEL_ADDRESS (cc)) > 0)
 		camel_mime_message_set_recipients (message, CAMEL_RECIPIENT_TYPE_CC, cc);
@@ -405,152 +425,17 @@ core_send_message_run (EvoCore *core,
 		set_message_or_part_body (CAMEL_MEDIUM (message), text, html);
 	}
 
-	/* Signature et/ou chiffrement cryptographique OpenPGP (Gpg4win) ou S/MIME (NSS) */
+	/* Signature et/ou chiffrement S/MIME natif (certificats du magasin Windows) */
 	{
-		gboolean pgp_sign = json_object_get_boolean_member_with_default (object, "pgp_sign", FALSE);
-		gboolean pgp_encrypt = json_object_get_boolean_member_with_default (object, "pgp_encrypt", FALSE);
-		gboolean smime_sign = json_object_get_boolean_member_with_default (object, "smime_sign", FALSE);
-		gboolean smime_encrypt = json_object_get_boolean_member_with_default (object, "smime_encrypt", FALSE);
-		const gchar *sender_addr = e_source_mail_identity_get_address (identity_extension);
-		const gchar *pgp_key_id = json_object_get_string_member_with_default (object, "pgp_key_id", NULL);
-		const gchar *smime_key_id = json_object_get_string_member_with_default (object, "smime_key_id", NULL);
+		gboolean do_sign = json_object_get_boolean_member_with_default (object, "sign", FALSE);
+		gboolean do_encrypt = json_object_get_boolean_member_with_default (object, "encrypt", FALSE);
 
-		if (pgp_sign || pgp_encrypt || smime_sign || smime_encrypt) {
-			CamelMimePart *work_part = camel_mime_part_new ();
-			CamelDataWrapper *orig_dw = camel_medium_get_content (CAMEL_MEDIUM (message));
-			CamelContentType *orig_ct = camel_mime_part_get_content_type (CAMEL_MIME_PART (message));
-			const gchar *userid_pgp = (pgp_key_id && *pgp_key_id) ? pgp_key_id : sender_addr;
-			const gchar *userid_smime = (smime_key_id && *smime_key_id) ? smime_key_id : sender_addr;
-
-			if (orig_ct) {
-				gchar *ct_str = camel_content_type_format (orig_ct);
-				camel_mime_part_set_content_type (work_part, ct_str);
-				g_free (ct_str);
-			}
-			camel_mime_part_set_encoding (work_part,
-				camel_mime_part_get_encoding (CAMEL_MIME_PART (message)));
-			if (orig_dw)
-				camel_medium_set_content (CAMEL_MEDIUM (work_part), orig_dw);
-
-			/* 1. Signature OpenPGP */
-			if (pgp_sign) {
-				CamelCipherContext *ctx = camel_gpg_context_new (core->session);
-				CamelMimePart *signed_part = camel_mime_part_new ();
-
-				camel_gpg_context_set_always_trust (CAMEL_GPG_CONTEXT (ctx), TRUE);
-				if (!camel_cipher_context_sign_sync (
-					ctx, userid_pgp, CAMEL_CIPHER_HASH_SHA256,
-					work_part, signed_part, core->cancellable, error)) {
-					g_object_unref (signed_part);
-					g_object_unref (ctx);
-					g_object_unref (work_part);
-					goto exit;
-				}
-				g_object_unref (work_part);
-				work_part = signed_part;
-				g_object_unref (ctx);
-			}
-
-			/* 2. Chiffrement OpenPGP */
-			if (pgp_encrypt) {
-				CamelCipherContext *ctx = camel_gpg_context_new (core->session);
-				CamelMimePart *encrypted_part = camel_mime_part_new ();
-				GPtrArray *rcpt_keys = g_ptr_array_new_with_free_func (g_free);
-				gint n_rcpt = camel_address_length (CAMEL_ADDRESS (recipients));
-				gint r_idx;
-
-				camel_gpg_context_set_always_trust (CAMEL_GPG_CONTEXT (ctx), TRUE);
-				for (r_idx = 0; r_idx < n_rcpt; r_idx++) {
-					const gchar *r_addr = NULL;
-					if (camel_internet_address_get (recipients, r_idx, NULL, &r_addr) && r_addr && *r_addr)
-						g_ptr_array_add (rcpt_keys, g_strdup (r_addr));
-				}
-				if (userid_pgp && *userid_pgp)
-					g_ptr_array_add (rcpt_keys, g_strdup (userid_pgp));
-
-				if (!camel_cipher_context_encrypt_sync (
-					ctx, userid_pgp, rcpt_keys,
-					work_part, encrypted_part, core->cancellable, error)) {
-					g_ptr_array_unref (rcpt_keys);
-					g_object_unref (encrypted_part);
-					g_object_unref (ctx);
-					g_object_unref (work_part);
-					goto exit;
-				}
-				g_ptr_array_unref (rcpt_keys);
-				g_object_unref (work_part);
-				work_part = encrypted_part;
-				g_object_unref (ctx);
-			}
-
-			/* 3. Signature S/MIME */
-			if (smime_sign) {
-				CamelCipherContext *ctx = camel_smime_context_new (core->session);
-				CamelMimePart *signed_part = camel_mime_part_new ();
-
-				camel_smime_context_set_sign_mode (CAMEL_SMIME_CONTEXT (ctx), CAMEL_SMIME_SIGN_CLEARSIGN);
-				if (!camel_cipher_context_sign_sync (
-					ctx, userid_smime, CAMEL_CIPHER_HASH_SHA256,
-					work_part, signed_part, core->cancellable, error)) {
-					g_object_unref (signed_part);
-					g_object_unref (ctx);
-					g_object_unref (work_part);
-					goto exit;
-				}
-				g_object_unref (work_part);
-				work_part = signed_part;
-				g_object_unref (ctx);
-			}
-
-			/* 4. Chiffrement S/MIME */
-			if (smime_encrypt) {
-				CamelCipherContext *ctx = camel_smime_context_new (core->session);
-				CamelMimePart *encrypted_part = camel_mime_part_new ();
-				GPtrArray *rcpt_keys = g_ptr_array_new_with_free_func (g_free);
-				gint n_rcpt = camel_address_length (CAMEL_ADDRESS (recipients));
-				gint r_idx;
-
-				for (r_idx = 0; r_idx < n_rcpt; r_idx++) {
-					const gchar *r_addr = NULL;
-					if (camel_internet_address_get (recipients, r_idx, NULL, &r_addr) && r_addr && *r_addr)
-						g_ptr_array_add (rcpt_keys, g_strdup (r_addr));
-				}
-				if (userid_smime && *userid_smime)
-					g_ptr_array_add (rcpt_keys, g_strdup (userid_smime));
-
-				if (!camel_cipher_context_encrypt_sync (
-					ctx, userid_smime, rcpt_keys,
-					work_part, encrypted_part, core->cancellable, error)) {
-					g_ptr_array_unref (rcpt_keys);
-					g_object_unref (encrypted_part);
-					g_object_unref (ctx);
-					g_object_unref (work_part);
-					goto exit;
-				}
-				g_ptr_array_unref (rcpt_keys);
-				g_object_unref (work_part);
-				work_part = encrypted_part;
-				g_object_unref (ctx);
-			}
-
-			/* Transfère le contenu signé/chiffré sur le CamelMimeMessage */
-			{
-				CamelDataWrapper *final_dw = camel_medium_get_content (CAMEL_MEDIUM (work_part));
-				CamelContentType *final_ct = camel_mime_part_get_content_type (work_part);
-
-				if (final_dw)
-					camel_medium_set_content (CAMEL_MEDIUM (message), final_dw);
-				if (final_ct) {
-					gchar *ct_str = camel_content_type_format (final_ct);
-					camel_mime_part_set_content_type (CAMEL_MIME_PART (message), ct_str);
-					g_free (ct_str);
-				}
-				camel_mime_part_set_encoding (CAMEL_MIME_PART (message),
-					camel_mime_part_get_encoding (work_part));
-			}
-
-			g_object_unref (work_part);
-		}
+		if ((do_sign || do_encrypt) &&
+		    !core_crypto_protect_message (message,
+			e_source_mail_identity_get_address (identity_extension),
+			e_source_mail_identity_get_name (identity_extension),
+			do_sign, do_encrypt, recipients, error))
+			goto exit;
 	}
 
 	/* Si l'application est en mode hors connexion, enregistre le message

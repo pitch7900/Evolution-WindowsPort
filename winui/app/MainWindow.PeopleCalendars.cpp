@@ -220,7 +220,7 @@ namespace winrt::EvolutionWin::implementation
                 for (auto const& value : members)
                     if (value.GetObject().GetNamedString(L"relation", L"") == L"manager")
                         manager_name = std::wstring{ value.GetObject().GetNamedString(L"name", L"") };
-                std::wstring manager_group = std::wstring{ Tr(L"Équipe : ", L"Team: ") } + manager_name;
+                std::wstring manager_group = std::wstring{ Fmt(Tr(L"Équipe : {0}", L"Team: {0}"), { hstring{ manager_name } }) };
                 std::wstring reports_group{ Tr(L"Mon équipe", L"My team") };
 
                 for (auto const& value : members)
@@ -386,11 +386,11 @@ namespace winrt::EvolutionWin::implementation
             hstring group_name = group.GetNamedString(L"name", L"");
             /* noms standard (boîte non francisée) : mêmes libellés que dans Outlook en français */
             if (group_name == L"My Calendars")
-                group_name = L"Mes calendriers";
+                group_name = Tr(L"Mes calendriers");
             else if (group_name == L"Other Calendars")
-                group_name = L"Autres calendriers";
+                group_name = Tr(L"Autres calendriers");
             else if (group_name == L"People's Calendars")
-                group_name = L"Calendriers des contacts";
+                group_name = Tr(L"Calendriers des contacts");
             bool counted = false;
             for (auto const& calendar_value : group.GetNamedArray(L"calendars", JsonArray{}))
             {
@@ -417,8 +417,8 @@ namespace winrt::EvolutionWin::implementation
         RebuildCalendarSourcesPanel();
 
         if (announce)
-            ShowStatus(Tr(L"Groupes Outlook importés : ", L"Outlook groups imported: ") + to_hstring(nav.Size()) +
-                Tr(L" calendriers dans ", L" calendars in ") + to_hstring(groups_count) + Tr(L" groupes.", L" groups."),
+            ShowStatus(Fmt(Tr(L"Groupes Outlook importés : {0} calendriers dans {1} groupes.",
+                    L"Outlook groups imported: {0} calendars in {1} groups."), { to_hstring(nav.Size()), to_hstring(groups_count) }),
                 InfoBarSeverity::Success);
     }
 
@@ -442,7 +442,7 @@ namespace winrt::EvolutionWin::implementation
                 if (text.find(L"AADSTS65001") != std::wstring::npos || text.find(L"consent") != std::wstring::npos)
                     ShowEwsConsentDialogAsync();
                 else
-                    ShowStatus(Tr(L"Groupes Outlook : ", L"Outlook groups: ") + error, InfoBarSeverity::Error);
+                    ShowStatus(Fmt(Tr(L"Groupes Outlook : {0}", L"Outlook groups: {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
             JsonArray groups;

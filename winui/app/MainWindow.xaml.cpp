@@ -3,6 +3,7 @@
 #include "WindowIcon.h"
 #include "Settings.h"
 #include "MainWindow.Helpers.h"
+#include "UiTranslate.h"
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
 #endif
@@ -133,6 +134,11 @@ namespace winrt::EvolutionWin::implementation
         SetTitleBar(AppTitleBar());
         AppWindow().Resize({ 1500, 950 });
         ::EvolutionWin::SetWindowIcon(AppWindow());
+        LocalizeInterface();
+        /* textes statiques du XAML : traduits à l'exécution (arbre logique, puis visuel au chargement) */
+        ::EvolutionWin::UiTranslate::ApplyToWindow(*this);
+        if (auto root = Content().try_as<FrameworkElement>())
+            root.Loaded([this](IInspectable const&, RoutedEventArgs const&) { ::EvolutionWin::UiTranslate::ApplyToWindow(*this, true); });
         UpdateSearchPlaceholder();
         RebuildQuickAccess();
         SyncConfidentialControls();
@@ -218,6 +224,7 @@ namespace winrt::EvolutionWin::implementation
 
         InitializeReaderAsync();
         CheckForUpdateOnStartup();
+        StartEventReminders();
 
         /* Module affiché au démarrage configuré dans les préférences (Courrier par défaut) */
         hstring startup_view = ::EvolutionWin::Settings::Instance().GetString(L"appearance.startup-view", L"mail");
@@ -290,11 +297,7 @@ namespace winrt::EvolutionWin::implementation
             hstring account = object.GetNamedString(L"account", L"");
             hstring folder = object.GetNamedString(L"folder", L"");
 
-            if (auto node = m_nodes.find(NodeKey(account, folder)); node != m_nodes.end())
-            {
-                if (auto item = node->second.Content().try_as<EvolutionWin::FolderItem>())
-                    item.Unread(static_cast<int32_t>(object.GetNamedNumber(L"unread", 0)));
-            }
+            SetFolderUnread(account, folder, static_cast<int32_t>(object.GetNamedNumber(L"unread", 0)));
             UpdateMailBadge();
 
             /* new or removed messages in the folder on screen */
@@ -319,11 +322,11 @@ namespace winrt::EvolutionWin::implementation
         }
         else if (event == L"sending")
         {
-            ShowStatus(L"Envoi de « " + object.GetNamedString(L"subject", L"") + L" »…", InfoBarSeverity::Informational);
+            ShowStatus(Fmt(Tr(L"Envoi de « {0} »…"), { object.GetNamedString(L"subject", L"") }), InfoBarSeverity::Informational);
         }
         else if (event == L"sent")
         {
-            ShowStatus(L"Message envoyé : « " + object.GetNamedString(L"subject", L"") + L" »", InfoBarSeverity::Success);
+            ShowStatus(Fmt(Tr(L"Message envoyé : « {0} »"), { object.GetNamedString(L"subject", L"") }), InfoBarSeverity::Success);
         }
         else if (event == L"error")
         {
@@ -338,13 +341,13 @@ namespace winrt::EvolutionWin::implementation
                 }
             }
             UpdateTaskbarProgress(false, 0, true);
-            ShowStatus(L"Le moteur de messagerie n'a pas pu démarrer : " + message, InfoBarSeverity::Error);
+            ShowStatus(Fmt(Tr(L"Le moteur de messagerie n'a pas pu démarrer : {0}"), { message }), InfoBarSeverity::Error);
         }
         else if (event == L"status")
         {
             hstring display_status = message;
             if (message == L"Connecting to evolution-data-server")
-                display_status = L"Connexion à evolution-data-server…";
+                display_status = Tr(L"Connexion à evolution-data-server…");
             if (m_splash)
             {
                 m_splash.SetStatus(display_status);
@@ -359,7 +362,19 @@ namespace winrt::EvolutionWin::implementation
         {
             bool active = object.GetNamedBoolean(L"active", true);
             int32_t percent = static_cast<int32_t>(object.GetNamedNumber(L"percent", -1));
-            UpdateStatusBarProgress(active, message, percent);
+            hstring progress_text = message;
+            if (object.GetNamedString(L"kind", L"") == L"offline")
+            {
+                /* téléchargement hors connexion : texte composé ici, dans la langue de l'interface */
+                hstring folder_name = object.GetNamedString(L"folder", L"");
+                int32_t total = static_cast<int32_t>(object.GetNamedNumber(L"total", 0));
+                progress_text = !active ? Tr(L"Synchronisation hors connexion terminée")
+                    : total > 0
+                        ? Fmt(Tr(L"Téléchargement hors connexion : {0} ({1}/{2})"),
+                            { folder_name, to_hstring(static_cast<int32_t>(object.GetNamedNumber(L"done", 0))), to_hstring(total) })
+                        : Fmt(Tr(L"Préparation du téléchargement hors connexion : {0}"), { folder_name });
+            }
+            UpdateStatusBarProgress(active, progress_text, percent);
         }
         else if (event == L"connection-status")
         {
@@ -379,7 +394,7 @@ namespace winrt::EvolutionWin::implementation
                     Initialize();
                 }
             }
-            UpdateConnectionStatus(object.GetNamedString(L"source_uid", L""), L"auth-required", L"Authentification requise");
+            UpdateConnectionStatus(object.GetNamedString(L"source_uid", L""), L"auth-required", Tr(L"Authentification requise"));
             PromptPasswordAsync(
                 object.GetNamedString(L"source_uid", L""),
                 object.GetNamedString(L"name", L""),
@@ -412,7 +427,7 @@ namespace winrt::EvolutionWin::implementation
                     Initialize();
                 }
             }
-            UpdateConnectionStatus(object.GetNamedString(L"source_uid", L""), L"auth-required", L"Connexion requise");
+            UpdateConnectionStatus(object.GetNamedString(L"source_uid", L""), L"auth-required", Tr(L"Connexion requise"));
             SignInOAuth2Async(object.GetNamedString(L"source_uid", L""), object.GetNamedString(L"name", L""));
         }
     }
@@ -510,7 +525,7 @@ namespace winrt::EvolutionWin::implementation
         if (unread <= 0)
         {
             MailItem().InfoBadge(nullptr);
-            ToolTipService::SetToolTip(MailItem(), box_value(L"Courrier"));
+            ToolTipService::SetToolTip(MailItem(), box_value(Tr(L"Courrier", L"Mail")));
             UpdateTaskbarBadge(0);
             return;
         }
@@ -518,8 +533,161 @@ namespace winrt::EvolutionWin::implementation
         InfoBadge badge;
         badge.Value(unread);
         MailItem().InfoBadge(badge);
-        ToolTipService::SetToolTip(MailItem(), box_value(L"Courrier (" + to_hstring(unread) + L" non lus)"));
+        ToolTipService::SetToolTip(MailItem(), box_value(unread > 1
+            ? Fmt(Tr(L"Courrier ({0} non lus)", L"Mail ({0} unread)"), { to_hstring(unread) })
+            : Fmt(Tr(L"Courrier ({0} non lu)", L"Mail ({0} unread)"), { to_hstring(unread) })));
         UpdateTaskbarBadge(unread);
+    }
+
+    /**
+     * @brief Traduit dynamiquement les contrôles statiques principaux (navigation, onglets du ruban).
+     */
+    void MainWindow::LocalizeInterface()
+    {
+        // 1. Éléments de la barre de navigation
+        if (auto nav = Navigation())
+        {
+            for (auto const& item_obj : nav.MenuItems())
+            {
+                if (auto nav_item = item_obj.try_as<NavigationViewItem>())
+                {
+                    hstring tag = unbox_value_or<hstring>(nav_item.Tag(), L"");
+                    if (tag == L"mail")
+                    {
+                        nav_item.Content(box_value(Tr(L"Courrier", L"Mail", L"Nav_Mail")));
+                        ToolTipService::SetToolTip(nav_item, box_value(Tr(L"Courrier (Ctrl+1)", L"Mail (Ctrl+1)")));
+                    }
+                    else if (tag == L"calendar")
+                    {
+                        nav_item.Content(box_value(Tr(L"Calendrier", L"Calendar", L"Nav_Calendar")));
+                        ToolTipService::SetToolTip(nav_item, box_value(Tr(L"Calendrier (Ctrl+2)", L"Calendar (Ctrl+2)")));
+                    }
+                    else if (tag == L"contacts")
+                    {
+                        nav_item.Content(box_value(Tr(L"Contacts", L"Contacts", L"Nav_Contacts")));
+                        ToolTipService::SetToolTip(nav_item, box_value(Tr(L"Contacts (Ctrl+3)", L"Contacts (Ctrl+3)")));
+                    }
+                    else if (tag == L"tasks")
+                    {
+                        nav_item.Content(box_value(Tr(L"Tâches", L"Tasks", L"Nav_Tasks")));
+                        ToolTipService::SetToolTip(nav_item, box_value(Tr(L"Tâches (Ctrl+4)", L"Tasks (Ctrl+4)")));
+                    }
+                }
+            }
+
+            if (auto settings_item = nav.SettingsItem().try_as<NavigationViewItem>())
+            {
+                settings_item.Content(box_value(Tr(L"Paramètres", L"Settings", L"Nav_Settings")));
+            }
+        }
+
+        // 2. Onglets du ruban (SelectorBar)
+        if (auto ribbon_tabs = RibbonTabs())
+        {
+            for (auto const& item_obj : ribbon_tabs.Items())
+            {
+                if (auto item = item_obj.try_as<SelectorBarItem>())
+                {
+                    hstring tag = unbox_value_or<hstring>(item.Tag(), L"");
+                    if (tag == L"file")
+                    {
+                        item.Text(Tr(L"Fichier", L"File"));
+                    }
+                    else if (tag == L"home")
+                    {
+                        item.Text(Tr(L"Accueil", L"Home"));
+                    }
+                    else if (tag == L"sendreceive")
+                    {
+                        item.Text(Tr(L"Envoi/réception", L"Send/Receive"));
+                    }
+                    else if (tag == L"folder")
+                    {
+                        item.Text(Tr(L"Dossier", L"Folder"));
+                    }
+                    else if (tag == L"view")
+                    {
+                        item.Text(Tr(L"Affichage", L"View"));
+                    }
+                }
+            }
+        }
+
+        // 3. Portée de la recherche dans la barre de titre
+        if (auto t = SearchScopeFolderText()) t.Text(Tr(L"Dossier courant", L"Current folder"));
+        if (auto t = SearchScopeSubfoldersText()) t.Text(Tr(L"Sous-dossiers", L"Subfolders"));
+        if (auto t = SearchScopeAccountText()) t.Text(Tr(L"Compte courant", L"Current account"));
+        if (auto t = SearchScopeAllText()) t.Text(Tr(L"Tous les comptes", L"All accounts"));
+
+        // 4. Filtres de la liste de messages (Prioritaire / Autres, Tous / Non lus / Lus)
+        if (auto t = FocusedBarItemFocused()) t.Text(Tr(L"Prioritaire", L"Focused"));
+        if (auto t = FocusedBarItemOther()) t.Text(Tr(L"Autres", L"Other"));
+        if (auto t = ReadFilterAll()) t.Text(Tr(L"Tous", L"All"));
+        if (auto t = ReadFilterUnread()) t.Text(Tr(L"Non lus", L"Unread"));
+        if (auto t = ReadFilterRead()) t.Text(Tr(L"Lus", L"Read"));
+
+        // 5. Boutons principaux du ruban Accueil (Mail)
+        if (auto b = RibbonNewMessageBtn()) b.Label(Tr(L"Nouveau message", L"New message"));
+        if (auto b = RibbonNewItemBtn()) b.Label(Tr(L"Nouvel élément", L"New item"));
+        if (auto b = RibbonDeleteBtn()) b.Label(Tr(L"Supprimer", L"Delete"));
+        if (auto b = RibbonJunkBtn()) b.Label(Tr(L"Indésirable", L"Junk"));
+        if (auto b = RibbonArchiveBtn()) b.Label(Tr(L"Archiver", L"Archive"));
+        if (auto b = RibbonMoveButton()) b.Label(Tr(L"Déplacer", L"Move"));
+        if (auto b = RibbonReplyBtn()) b.Label(Tr(L"Répondre", L"Reply"));
+        if (auto b = RibbonReplyAllBtn()) b.Label(Tr(L"Répondre à tous", L"Reply all"));
+        if (auto b = RibbonForwardBtn()) b.Label(Tr(L"Transférer", L"Forward"));
+        if (auto b = RibbonForwardAttachmentBtn()) b.Label(Tr(L"Transférer en PJ", L"Forward as attachment"));
+
+        // Sous-éléments de 'Nouvel élément'
+        if (auto m = RibbonNewItemMessage()) m.Text(Tr(L"Message", L"Message"));
+        if (auto m = RibbonNewItemEvent()) m.Text(Tr(L"Rendez-vous", L"Appointment"));
+        if (auto m = RibbonNewItemMeeting()) m.Text(Tr(L"Réunion (bientôt)", L"Meeting (soon)"));
+        if (auto m = RibbonNewItemTask()) m.Text(Tr(L"Tâche", L"Task"));
+        if (auto m = RibbonNewItemContact()) m.Text(Tr(L"Contact", L"Contact"));
+
+        // 6. Navigation des Paramètres (titres, recherche, éléments de liste, fil d'Ariane)
+        if (auto t = SettingsNavTitle()) t.Text(Tr(L"Paramètres", L"Settings"));
+        if (auto s = SettingsSearchBox()) s.PlaceholderText(Tr(L"Rechercher un paramètre", L"Search setting"));
+        if (auto h = SettingsBreadcrumbRoot()) h.Content(box_value(Tr(L"Paramètres", L"Settings")));
+
+        if (auto nav_list = SettingsNavList())
+        {
+            for (auto const& item_obj : nav_list.Items())
+            {
+                if (auto item = item_obj.try_as<ListViewItem>())
+                {
+                    hstring tag = unbox_value_or<hstring>(item.Tag(), L"");
+                    if (auto sp = item.Content().try_as<StackPanel>())
+                    {
+                        for (auto const& child : sp.Children())
+                        {
+                            if (auto tb = child.try_as<TextBlock>())
+                            {
+                                if (tag == L"accounts") tb.Text(Tr(L"Comptes", L"Accounts"));
+                                else if (tag == L"mail") tb.Text(Tr(L"Courrier", L"Mail"));
+                                else if (tag == L"calendar") tb.Text(Tr(L"Calendrier", L"Calendar"));
+                                else if (tag == L"contacts") tb.Text(Tr(L"Contacts", L"Contacts"));
+                                else if (tag == L"tasks") tb.Text(Tr(L"Tâches", L"Tasks"));
+                                else if (tag == L"categories") tb.Text(Tr(L"Catégories", L"Categories"));
+                                else if (tag == L"notifications") tb.Text(Tr(L"Notifications", L"Notifications"));
+                                else if (tag == L"appearance") tb.Text(Tr(L"Apparence", L"Appearance"));
+                                else if (tag == L"privacy") tb.Text(Tr(L"Confidentialité et sécurité", L"Privacy & Security"));
+                                else if (tag == L"update") tb.Text(Tr(L"Mise à jour", L"Update"));
+                                else if (tag == L"advanced") tb.Text(Tr(L"Avancé", L"Advanced"));
+                                else if (tag == L"about") tb.Text(Tr(L"À propos", L"About"));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 7. En-têtes fixes de la vue Paramètres > Comptes
+        if (auto t = AddAccountCardTitle()) t.Text(Tr(L"Ajouter un compte de messagerie", L"Add a mail account"));
+        if (auto t = AddAccountCardDesc()) t.Text(Tr(L"Configurez une nouvelle boîte aux lettres Exchange Online, Gmail, Outlook ou IMAP / SMTP.",
+                                                     L"Set up a new Exchange Online, Gmail, Outlook or IMAP / SMTP mailbox."));
+        if (auto t = AddAccountButtonText()) t.Text(Tr(L"Ajouter un compte", L"Add account"));
+        if (auto t = ConfiguredAccountsHeader()) t.Text(Tr(L"Comptes configurés", L"Configured accounts"));
     }
 
     /**
@@ -575,18 +743,18 @@ namespace winrt::EvolutionWin::implementation
         if (auto box = SearchBox())
         {
             if (tag == L"contacts")
-                box.PlaceholderText(L"Rechercher un contact (Ctrl+E)");
+                box.PlaceholderText(Tr(L"Rechercher un contact (Ctrl+E)", L"Search contact (Ctrl+E)"));
             else if (tag == L"mail")
                 UpdateSearchPlaceholder();
             else if (tag == L"tasks")
-                box.PlaceholderText(L"Rechercher dans les tâches (Ctrl+E)");
+                box.PlaceholderText(Tr(L"Rechercher dans les tâches (Ctrl+E)", L"Search in tasks (Ctrl+E)"));
             else if (tag == L"calendar")
             {
-                box.PlaceholderText(L"Rechercher un événement (Ctrl+E)");
+                box.PlaceholderText(Tr(L"Rechercher un événement (Ctrl+E)", L"Search event (Ctrl+E)"));
                 box.Text(m_calendar_search_query);
             }
             else
-                box.PlaceholderText(L"Rechercher (Ctrl+E)");
+                box.PlaceholderText(Tr(L"Rechercher (Ctrl+E)", L"Search (Ctrl+E)"));
         }
 
         SearchScopeBox().Visibility(tag == L"mail" ? Visibility::Visible : Visibility::Collapsed);

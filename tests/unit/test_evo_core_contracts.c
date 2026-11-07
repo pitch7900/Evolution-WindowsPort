@@ -819,6 +819,102 @@ static void test_gal_helpers(void)
     TEST_CASE_END();
 }
 
+#include "../../winui/core/evo-core-crypto-util.h"
+
+/**
+ * @brief Teste les primitives S/MIME natives Windows (evo-core-crypto-util.h) sur un
+ * magasin de certificats en memoire : canonicalisation, creation d'un certificat
+ * personnel, recherche par adresse, signature detachee, verification (y compris
+ * message altere), chiffrement et dechiffrement (y compris mauvais destinataire).
+ */
+static void test_smime_primitives(void)
+{
+    HCERTSTORE store = CertOpenStore(CERT_STORE_PROV_MEMORY, 0, 0, 0, NULL);
+    HCERTSTORE other = CertOpenStore(CERT_STORE_PROV_MEMORY, 0, 0, 0, NULL);
+    PCCERT_CONTEXT alice = crypto_create_self_signed(store, "alice@exemple.fr", "Alice Martin");
+    PCCERT_CONTEXT bob = crypto_create_self_signed(other, "bob@exemple.fr", "Bob");
+    const char *text = "Content-Type: text/plain; charset=utf-8\r\n\r\nBonjour Bob\r\n";
+    BYTE *sig = NULL, *enc = NULL, *dec = NULL;
+    DWORD sig_len = 0, enc_len = 0, dec_len = 0;
+
+    TEST_CASE("S/MIME: canonicalisation des fins de ligne");
+    {
+        size_t n = 0;
+        char *a = crypto_canonicalize("a\nb\r\nc\n", 7, 1, 1, &n);
+        ASSERT_EQ_STR("a\r\nb\r\nc\r\n", a);
+        free(a);
+        a = crypto_canonicalize("a\nb\n", 4, 1, 0, &n);   /* sans le saut de ligne final */
+        ASSERT_EQ_STR("a\r\nb", a);
+        ASSERT_EQ_INT(4, (int) n);
+        free(a);
+        a = crypto_canonicalize("a\r\nb\r\n", 6, 0, 1, &n);
+        ASSERT_EQ_STR("a\nb\n", a);
+        free(a);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("S/MIME: creation et recherche du certificat personnel par adresse");
+    {
+        PCCERT_CONTEXT found;
+        char label[200];
+        ASSERT_TRUE(alice != NULL);
+        found = crypto_find_cert(store, "ALICE@exemple.FR", 1, 1);   /* casse ignoree */
+        ASSERT_TRUE(found != NULL);
+        crypto_cert_label(found, label, sizeof (label));
+        ASSERT_TRUE(strstr(label, "Alice Martin") != NULL);
+        ASSERT_TRUE(strstr(label, "alice@exemple.fr") != NULL);
+        if (found) CertFreeCertificateContext(found);
+        found = crypto_find_cert(store, "autre@exemple.fr", 1, 1);
+        ASSERT_TRUE(found == NULL);
+        found = crypto_find_cert(other, "alice@exemple.fr", 1, 0);
+        ASSERT_TRUE(found == NULL);
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("S/MIME: signature detachee, verification et detection d'alteration");
+    {
+        CryptoVerifyResult res;
+        ASSERT_TRUE(alice && crypto_sign_detached(alice, (const BYTE *) text, (DWORD) strlen(text), &sig, &sig_len));
+        ASSERT_TRUE(sig_len > 100);
+        crypto_verify_detached(sig, sig_len, (const BYTE *) text, (DWORD) strlen(text), &res);
+        ASSERT_TRUE(res.signature_ok);
+        ASSERT_TRUE(res.signer != NULL && crypto_cert_has_email(res.signer, "alice@exemple.fr"));
+        ASSERT_FALSE(res.trusted);   /* auto-signe : non reconnu par Windows */
+        if (res.signer) CertFreeCertificateContext(res.signer);
+        {
+            char altered[128];
+            strcpy_s(altered, sizeof (altered), text);
+            altered[strlen(altered) - 4] = 'X';
+            crypto_verify_detached(sig, sig_len, (const BYTE *) altered, (DWORD) strlen(altered), &res);
+            ASSERT_FALSE(res.signature_ok);
+            if (res.signer) CertFreeCertificateContext(res.signer);
+        }
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("S/MIME: chiffrement pour un destinataire, dechiffrement, mauvais destinataire");
+    {
+        PCCERT_CONTEXT recipients[1];
+        recipients[0] = bob;
+        ASSERT_TRUE(bob && crypto_encrypt(recipients, 1, (const BYTE *) text, (DWORD) strlen(text), &enc, &enc_len));
+        ASSERT_TRUE(enc_len > 100);
+        ASSERT_TRUE(crypto_decrypt(other, enc, enc_len, &dec, &dec_len));   /* Bob a la cle privee */
+        ASSERT_EQ_INT((int) strlen(text), (int) dec_len);
+        ASSERT_TRUE(dec != NULL && memcmp(dec, text, dec_len) == 0);
+        free(dec);
+        dec = NULL;
+        ASSERT_FALSE(crypto_decrypt(store, enc, enc_len, &dec, &dec_len));   /* Alice ne peut pas lire */
+    }
+    TEST_CASE_END();
+
+    free(sig);
+    free(enc);
+    if (alice) { crypto_delete_key_of_cert(alice); CertFreeCertificateContext(alice); }
+    if (bob) { crypto_delete_key_of_cert(bob); CertFreeCertificateContext(bob); }
+    CertCloseStore(store, 0);
+    CertCloseStore(other, 0);
+}
+
 /**
  * @brief Point d'entree de la suite de tests des contrats evo-core.
  * @return 0 si succes, 1 en cas d'echec.
@@ -839,6 +935,7 @@ int main(void)
     test_itip_decide();
     test_itip_reply();
     test_gal_helpers();
+    test_smime_primitives();
 
     return test_suite_summary();
 }

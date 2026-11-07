@@ -72,7 +72,7 @@ namespace EvolutionWin::Conversations
      * Deux messages sont de la même discussion s'ils sont reliés par un
      * Message-ID cité dans In-Reply-To / References, s'ils citent le même
      * message absent de la liste, ou (repli) si une réponse / un transfert a
-     * le même objet normalisé qu'un autre message.
+     * le même objet normalisé (sans préfixe Re:/TR:...) qu'un autre message.
      * @param messages Messages à regrouper.
      * @return Pour chaque message, l'indice du premier message de sa discussion.
      */
@@ -130,21 +130,17 @@ namespace EvolutionWin::Conversations
             }
         }
 
-        /* repli sur l'objet : les messages de même objet normalisé sont
-         * rassemblés dès que l'un d'eux est une réponse ou un transfert */
+        /* repli sur l'objet (comme le « sujet de conversation » d'Outlook) :
+         * les messages de même objet normalisé sont rassemblés, qu'ils
+         * portent ou non un préfixe de réponse, ce qui couvre aussi les
+         * serveurs qui ne fournissent ni Message-ID ni References */
         std::vector<std::wstring> bases(messages.size());
-        std::map<std::wstring, bool> has_reply;
         for (size_t i = 0; i < messages.size(); ++i)
-        {
-            bool had_prefix = false;
-            bases[i] = NormalizeThreadSubject(messages[i].subject, &had_prefix);
-            if (!bases[i].empty() && had_prefix)
-                has_reply[bases[i]] = true;
-        }
+            bases[i] = NormalizeThreadSubject(messages[i].subject);
         std::map<std::wstring, size_t> by_subject;
         for (size_t i = 0; i < messages.size(); ++i)
         {
-            if (bases[i].empty() || !has_reply.count(bases[i]))
+            if (bases[i].empty())
                 continue;
             auto inserted = by_subject.emplace(bases[i], i);
             if (!inserted.second)

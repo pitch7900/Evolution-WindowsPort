@@ -6,6 +6,7 @@
 
 #include "WindowIcon.h"
 #include "evo-version.h"
+#include "UiTranslate.h"
 
 #include <winrt/Microsoft.UI.Windowing.h>
 #include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
@@ -24,7 +25,9 @@ namespace winrt::EvolutionWin::implementation
     {
         InitializeComponent();
 
-        VersionText().Text(to_hstring(L"Version " EVO_VERSION_STR));
+        ::EvolutionWin::UiTranslate::ApplyToWindow(*this);
+
+        VersionText().Text(::EvolutionWin::Helpers::Fmt(::EvolutionWin::Helpers::Tr(L"Version {0}"), { to_hstring(EVO_VERSION_STR) }));
 
         try
         {

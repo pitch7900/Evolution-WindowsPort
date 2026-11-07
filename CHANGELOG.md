@@ -10,11 +10,95 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
-## [1.0.2] — en cours
+## [1.1.0] — 2026-11-07
+
+- **Corrections issues de la validation** : les boutons du bandeau « Contenu externe bloqué » sont empilés (plus de bouton tronqué) ; une conversation dépliée peut de nouveau être repliée, et un clic sur une conversation repliée affiche son message le plus récent ; un cache de traduction mémorisait à tort les textes introuvables (libellés vides).
+- **Reporté à la 1.2.0** : boîte d'archivage en ligne (*In-Place Archive*, non exposée par Microsoft Graph) et gestion des autorisations déléguées Exchange Online (pas d'API Graph pour FullAccess / SendAs / SendOnBehalf) ; la gestion des délégués Gmail est codée et reste à valider sur un compte Google Workspace.
+
+- **Téléchargement hors connexion avec progression** : le bouton « Synchroniser maintenant » de la boîte « Synchronisation hors connexion… » enregistre les réglages puis télécharge les messages manquants du compte (ou du dossier) selon l'état de chaque dossier et la limite d'ancienneté (`evo_core_offline_sync_now`). La barre d'état affiche « Téléchargement hors connexion : dossier (n/m) » avec sa barre de progression, puis « Synchronisation hors connexion terminée » ; la boîte mémorise et affiche le dernier résultat (date, messages téléchargés, échecs).
+
+- **Délégations et autorisations (Gmail / Google Workspace)** : clic droit sur un compte › « Délégations et autorisations… » : liste des délégués avec leur état (accepté, en attente, refusé, expiré), ajout par adresse, révocation avec confirmation. Moteur : `evo_core_list_delegates`, `evo_core_add_delegate`, `evo_core_remove_delegate` (API Gmail `settings.delegates`, portée `gmail.settings.sharing` ajoutée à la connexion Google ; comptes déjà connectés à reconnecter) ; interface : `MainWindow.Delegates.cpp`. Pour Microsoft 365, un message explique que les droits (accès complet, Envoyer en tant que, Envoyer de la part de) se gèrent dans le centre d'administration Exchange (aucune API Graph). À valider sur un compte Google Workspace.
+
+- **Synchronisation hors connexion par compte et par dossier** : nouvelle entrée « Synchronisation hors connexion… » au clic droit d'un compte (téléchargement des dossiers pour le mode hors connexion, limite d'ancienneté en jours, semaines, mois ou années : `CamelOfflineSettings`) et d'un dossier (comme le compte / toujours / jamais : `CamelOfflineFolder`). Moteur : `evo_core_get_offline_sync` et `evo_core_set_offline_sync` (`evo-core-offline-sync.c`) ; interface : `MainWindow.OfflineSync.cpp`. Le téléchargement effectif dépend du protocole (IMAP) ; à valider sur un compte réel.
+
+- **Traduction complète de l'interface** : tous les textes affichés (C++ et XAML, environ 1 600 libellés) sont désormais traduits en anglais, allemand, italien, espagnol, portugais et néerlandais. Les textes sont identifiés par leur libellé français (clé `T_<hachage>` calculée automatiquement, `I18n::KeyFor`), `Tr(L"…")` et le nouveau `Fmt(Tr(L"… {0} …"), {…})` (phrases à valeurs, sans fragments concaténés) ; les textes statiques du XAML sont traduits à l'ouverture des fenêtres par `UiTranslate.h`. L'outil `tools\i18n-sync.py` (`check`, `merge`, `extract`, `missing`) contrôle que chaque texte existe dans les 7 catalogues ; `check` est exécuté par `tools\run-tests.bat`. Documentation : `TRANSLATIONS.md` et `llm.md`.
+
+- **Envoi « De la part de » (Send on Behalf)** : pour chaque boîte partagée Microsoft 365 ouverte, la liste « De : » de la rédaction propose une entrée supplémentaire « … — de la part de (Send on Behalf) » : le message part par le compte d'origine avec `From:` = adresse de la boîte partagée et `Sender:` = identité de l'utilisateur (clé JSON `on_behalf_of` de `evo_core_send_message`, champ `shared_owner` de `evo_core_list_accounts`). Libellé traduit dans les 7 langues (`Compose_FromSendOnBehalf`). À valider sur un tenant réel (droit « Send on Behalf » accordé).
+
+> Version mineure : les fonctionnalités ajoutées depuis la 1.0.1 (boîtes partagées, Boîte de réception prioritaire, favoris, dossiers de recherche, fenêtre d'événement, rappels, Google Meet, chiffrement S/MIME…) dépassent le cadre d'un correctif ; la 1.0.2 n'a jamais été publiée.
+
+### Signature et chiffrement des courriels (S/MIME natif Windows)
+
+Les boutons de signature et de chiffrement ne fonctionnaient pas du tout : ils
+s'appuyaient sur GnuPG et sur NSS, absents du portage Windows. Ils sont remplacés
+par un module S/MIME natif (`evo-core-crypto.c`, CryptoAPI / CNG de Windows), conçu
+pour qu'un utilisateur non technique n'ait rien à configurer :
+
+- **Deux boutons seulement dans la rédaction : « Signer » et « Chiffrer »** (au lieu de
+  quatre boutons PGP / S/MIME). Un message en langage clair explique la situation :
+  création automatique du certificat personnel, destinataires dont le certificat est inconnu.
+- **Certificat personnel automatique** : il est pris dans le magasin Windows « Personnel »
+  d'après l'adresse du compte (certificat d'entreprise, carte à puce ou fichier `.pfx` déjà
+  installé inclus) ; à défaut, un certificat auto-signé (RSA 2048, SHA-256, 5 ans) est créé
+  à la première signature, sa clé privée restant dans le fournisseur de clés de Windows.
+- **Signature** : `multipart/signed` avec signature CMS détachée (lisible par Outlook,
+  Thunderbird, Apple Mail, etc.). **Chiffrement** : `application/pkcs7-mime` (AES-256) pour
+  tous les destinataires **et** pour l'expéditeur, afin que la copie dans Envoyés reste lisible.
+- **Certificats des destinataires appris automatiquement** : chaque message signé valide reçu
+  mémorise le certificat de son expéditeur (magasin « Autres personnes ») ; on peut ensuite lui
+  écrire chiffré sans aucune importation manuelle.
+- **Lecture transparente** : déchiffrement automatique et vérification de la signature (détachée
+  ou opaque), avec contrôle que l'adresse du certificat correspond à l'expéditeur et détection
+  de toute altération. Bandeau de sécurité en langage clair (vert : vérifié ; bleu : contenu
+  intact mais certificat auto-signé ou d'une autorité inconnue ; orange : problème), dans le
+  volet de lecture et dans la fenêtre de message.
+- Nouvel export `evo_core_crypto_check` (prévérification à la rédaction) ; tests unitaires des
+  primitives (signature, altération, chiffrement, mauvais destinataire) sur magasin en mémoire.
+- Limites actuelles : OpenPGP / GnuPG, chiffrement natif Exchange Online (OME / IRM), Gmail CSE,
+  récupération des certificats depuis l'annuaire GAL et recherche WKD restent à faire (cf. TODO §7).
+
+### Ajouté
+
+- **Documentation et standardisation des traductions (`TRANSLATIONS.md`, `LLM.md`)** :
+  - Création du guide de référence [`TRANSLATIONS.md`](TRANSLATIONS.md) décrivant l'architecture MRT Core, l'arborescence des fichiers `.resw`, les conventions de nommage des clés et l'utilisation de `Tr(fr, en, resourceId)` / `x:Uid`.
+  - Ajout d'une consigne impérative dans [`LLM.md`](LLM.md) (§6.3) imposant la mise à jour systématique de l'ensemble des catalogues de ressources (`fr-FR`, `en-US`, `de-DE`, `it-IT`, `es-ES`, `pt-PT`, `nl-NL`) lors de tout ajout ou modification d'interface.
+- **Infrastructure de ressources localisées (.resw / MRT Core) et support multilingue complet** :
+  - Création des catalogues de ressources `.resw` pour l'ensemble des langues cibles (`fr-FR`, `en-US`, `de-DE`, `it-IT`, `es-ES`, `pt-PT`, `nl-NL`), alignés sur la terminologie officielle des fichiers `.po` d'Evolution (GNOME).
+  - Intégration de toutes les ressources dans `winui/app/EvolutionWin.vcxproj` (`<PRIResource>`) pour compilation automatique dans `resources.pri` via `makepri.exe`.
+  - Ajout du module de chargement de chaînes `winui/app/I18n.h` (`I18n::GetString`) encapsulant `Microsoft::Windows::ApplicationModel::Resources::ResourceLoader` avec repli gracieux en mémoire.
+  - Extension du helper `Tr(fr, en, resourceId = nullptr)` pour raccorder en continu les libellés de l'interface aux identifiants de ressources externes (dossiers spéciaux, actions de menu, boîtes de dialogue, portées de recherche).
+- **Localisation et choix de langue dans le MSI (`UILANGUAGE`)** :
+  - Support de la propriété publique WiX `UILANGUAGE` lors de l'installation ou du déploiement silencieux (`msiexec /i Evolution-<version>-x64.msi /qn UILANGUAGE=de-DE`, GPO / Microsoft Intune).
+  - Écriture de la langue machine choisie dans la base de registre `HKLM\Software\Evolution-WindowsPort\UILanguage`.
+  - Prise en compte transparente au lancement de l'application (`App.xaml.cpp` / `MainWindow.Helpers.h`) comme langue par défaut tant qu'aucune surcharge n'a été sélectionnée dans les Paramètres utilisateur.
+  - Ajout des langues portugais (`pt-PT`) et néerlandais (`nl-NL`) dans la sélection des Paramètres ainsi que dans le formatage multilingue des en-têtes de citation et préfixes de réponse/transfert.
+- **Traductions dynamiques de l'interface (bilingue français / anglais)** :
+  - Traduction des dossiers spéciaux de l'arborescence (`SpecialFolderName` : Boîte de réception / Inbox, Brouillons / Drafts, Éléments envoyés / Sent Items, Éléments supprimés / Deleted Items, Archive, Courrier indésirable / Junk Email, Boîte d'envoi / Outbox).
+  - Traduction des menus contextuels de dossiers et de comptes (Marquer tout comme lu, Vider la Corbeille, Nouveau dossier, Renommer, Déplacer vers, Copier vers, Supprimer le dossier, Exporter, Notifications de dossier, Ordre des dossiers).
+  - Traduction des boîtes de dialogue de confirmation (Vider le dossier / Supprimer définitivement).
+  - Traduction des textes d'aide contextuels du champ de recherche (`UpdateSearchPlaceholder` selon la portée et le module actif) et des info-bulles de navigation / badges de non-lus.
+- **Événement privé** : case « Privé » dans la fenêtre d'événement (création et modification), enregistrée dans la propriété `CLASS:PRIVATE` ; Exchange Online la traduit en sensibilité « privé » (détails masqués aux personnes avec qui le calendrier est partagé). Lecture du réglage à l'ouverture d'un événement existant (champ `private` de `evo_core_get_event`).
+- **Réunion Google Meet** : case « Réunion en ligne Google Meet » (icône Google Meet) dans la fenêtre d'un nouvel événement d'un calendrier Gmail, exclusive avec Teams ; après la création, `evo_core_add_google_meet` ajoute le lien par l'API Google Agenda (`conferenceData.createRequest`, jeton OAuth2 du compte) et les participants reçoivent la mise à jour. À valider sur un compte Gmail.
+- **Rappels d'événements** : le rappel d'un événement (« x minutes avant », défini dans la fenêtre d'événement) déclenche une notification Windows (titre, délai restant, heure, lieu) ; contrôle toutes les 30 secondes des événements des 25 prochaines heures (occurrences d'événements périodiques comprises), rappels déjà émis mémorisés (pas de répétition, même après redémarrage) ; respecte les réglages « Activer les rappels », son et durée d'affichage (persistante : bouton « Ouvrir » / « Fermer »). Le champ `reminder_minutes` est maintenant fourni par `evo_core_list_events`.
+- **Boîte aux lettres partagée Microsoft 365** : clic droit sur un compte Microsoft 365 › « Ouvrir la boîte d'un autre utilisateur… » ; un compte courrier est créé avec les identifiants du compte d'origine et l'emprunt d'identité Exchange Online (`use-impersonation`), l'adresse d'expédition est celle de la boîte partagée (`evo_core_add_microsoft365_account`, clé JSON `impersonate_user`) ; une connexion Microsoft est demandée une fois. La fenêtre propose d'ouvrir aussi l'agenda et les contacts de la boîte (`shared_calendar`, `shared_contacts` ; droits d'accès à part) ; « Fermer la boîte partagée » (clic droit) retire le compte après confirmation ; dans la fenêtre de rédaction, la boîte partagée est proposée dans « De : » (mention « Send As » : envoi avec son adresse, copie dans ses éléments envoyés). `evo_core_list_accounts` fournit le champ `shared`. « De la part de » (Send on Behalf) n'est pas géré. À valider sur un tenant réel avec une boîte partagée (droit « FullAccess »).
+- **Récupération des éléments supprimés (Exchange Online)** : clic droit sur un compte Microsoft 365 › « Récupérer les éléments supprimés du serveur… » ; fenêtre redimensionnable listant le dossier des éléments récupérables (Microsoft Graph, 100 plus récents) avec les colonnes Objet, Supprimé le, De, Reçu et Envoyé à (tri par colonne, filtre, sélection multiple, « Sélectionner tout »), puis restauration dans la Boîte de réception ou suppression définitive des éléments sélectionnés (`evo_core_list_recoverable_items`, `evo_core_restore_recoverable_items`, `evo_core_purge_recoverable_items`) ; fonctionne aussi pour une boîte partagée. À valider sur un tenant réel.
+- **Rejoindre une réunion en ligne** : dans la fenêtre d'un événement existant, bouton « Rejoindre la réunion Teams / Google Meet / en ligne » (icône du service) quand un lien Teams, Google Meet ou Zoom figure dans la description, le lieu ou l'URL de l'événement (champs `online_meeting_url` et `online_meeting_kind` de `evo_core_get_event`).
+- **Afficher comme (états d'Outlook)** : liste « Afficher comme » de la fenêtre d'événement avec les cinq états d'Outlook (Disponible, Travaille ailleurs, Provisoire, Occupé(e), Absent(e)), enregistrés dans `TRANSP` et `X-MICROSOFT-CDO-BUSYSTATUS` (champ `show_as` de `evo_core_create_event`, `evo_core_modify_event` et `evo_core_get_event`) ; le module Microsoft 365 (evolution-ews) transmet maintenant ces cinq états à Exchange Online (`showAs`) et les relit.
+- **Fenêtre d'événement façon Outlook** : la création et la modification d'un événement ouvrent une fenêtre redimensionnable (fond Mica et barre de titre aux couleurs de l'application) avec une barre de commandes : Enregistrer (Ctrl+S), Supprimer, Créer une tâche liée à l'événement, Fermer ; Afficher comme, Rappel, Périodicité (aucune, quotidienne, hebdomadaire, mensuelle, annuelle, intervalle, nombre d'occurrences ; champ `rrule`) ; Classer (catégories, aussi affichées dans le formulaire), Privé, Importance haute / faible (champ `importance`, propriété `PRIORITY`). Le formulaire occupe toute la largeur : titre, participants, heure de début et de fin avec « Rendre périodique », emplacement, réunion en ligne et invitations, grande zone de description. Une règle de périodicité personnalisée existante est conservée tant qu'on ne la modifie pas.
+- **Menu contextuel des événements** : clic droit sur un événement de la grille ou de la liste › Ouvrir, Classer (catégories), Afficher comme, Privé, Importance (`evo_core_list_events` fournit `private`, `show_as` et `importance`).
+- **Liens cliquables** : les adresses web (http://, https://) des messages en texte brut (et du mode « texte brut » du lecteur) deviennent des liens qui s'ouvrent dans le navigateur par défaut du système ; dans la fenêtre d'un événement, les adresses de la description sont listées sous la zone de description comme liens cliquables.
+- **Boîte de réception prioritaire (Focused Inbox)** : dans la Boîte de réception d'un compte Microsoft 365, onglets « Prioritaire » / « Autres » d'après le classement d'Exchange Online (`evo_core_list_inbox_classification`, 1000 messages « Autres » les plus récents) ; clic droit sur un message › « Déplacer vers Autres / Prioritaire » et « Toujours déplacer vers… » (règle mémorisée pour l'expéditeur, `evo_core_set_message_classification`) ; réglage par compte (clic droit sur le compte › « Boîte de réception prioritaire », activé par défaut). Les onglets affichent le nombre de messages non lus (« Prioritaire (3) », « Autres (12) »), mis à jour à la lecture d'un message. Sans effet pendant une recherche. À valider sur un tenant réel.
+- **Liste des messages façon Outlook** : le nom du dossier n'est plus répété au-dessus de la liste (il figure dans le volet des dossiers) ; les messages triés par date sont regroupés sous des en-têtes repliables / dépliables d'un clic (Aujourd'hui, Hier, jours de la semaine en cours, Semaine dernière, Il y a deux semaines, Il y a trois semaines, Mois dernier, Avant le mois dernier ; nombre de messages entre parenthèses ; option « Regrouper par date » du menu « Grouper par ») ; trait fin entre deux messages et espacement plus aéré ; le bouton « Envoyer/Recevoir » de la liste est supprimé (il reste dans le ruban) et les raccourcis F5, F9 et Maj+F9 restent actifs.
+- **Calendrier : double clic pour ouvrir un événement** : la fenêtre d'un événement (grille Jour / Semaine / Mois et vue Liste) s'ouvre au double clic, plus au simple clic ; auparavant le second clic d'un double clic passait la fenêtre au second plan. Les fenêtres d'événement et d'éléments récupérables sont maintenant rattachées à la fenêtre principale (propriétaire) : elles restent au premier plan, au-dessus d'elle.
+- **Favoris du courrier** : section « Favoris » en tête du volet des dossiers (dossiers de n'importe quel compte, avec leur nombre de non lus) ; clic droit sur un dossier › « Ajouter aux favoris » / « Retirer des favoris », et « Monter / Descendre dans les favoris » pour réordonner ; liste mémorisée dans les réglages (`mail.favorites`) ; la section n'apparaît que s'il y a au moins un favori.
+- **Dossiers de recherche enregistrés** : groupe « Dossiers de recherche » en bas du volet des dossiers ; clic droit › « Nouveau dossier de recherche » avec des modèles (Messages non lus, Messages marqués, Avec pièces jointes, Gros messages de plus de 5 Mo, Messages d'une personne) ou « Personnalisé… » (nom, critères, portée : tous les comptes ou un compte), puis « Modifier » / « Supprimer » ; un dossier s'ouvre comme une vue multi-comptes (chaque message garde son compte et son dossier). La recherche de messages accepte les opérateurs `is:unread`, `is:read`, `is:flagged`, `has:attachment`, `larger:<octets>` et `from:<texte>`, combinables avec des mots libres ; avec un opérateur, la corbeille et les indésirables sont ignorés et l'index des dossiers est utilisé (rapide sur de gros dossiers).
+- **Icône Teams** sur la case « Réunion en ligne Microsoft Teams ».
 
 ### Corrigé
 
-- _(à compléter au fil des corrections issues de `VALIDATION.md`)_
+- **Création d'événement : « Accès refusé » (RemoteCalendarAccessDenied)** : un nouvel événement était créé dans le calendrier « actif », qui pouvait être un calendrier partagé en lecture seule. La fenêtre d'événement propose maintenant la liste « Calendrier » (calendriers du compte, hors calendriers de personnes), pré-sélectionne le calendrier actif ou par défaut, et un calendrier qui refuse l'écriture est mémorisé en lecture seule, écarté des propositions, avec un message qui explique comment en choisir un autre.
+- **Groupes de calendriers vides** : « Autres calendriers », « Tous les calendriers de groupe » et les autres groupes Outlook sans calendrier ne sont plus affichés (ils venaient du compte Outlook, pas du code).
+- **Bandeau des réponses automatiques** plus visible : gravité « Avertissement » (fond ambre) au lieu d'« Information ».
 
 ## [1.0.1] — 2026-11-05
 

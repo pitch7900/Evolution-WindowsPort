@@ -180,7 +180,7 @@ namespace winrt::EvolutionWin::implementation
             bmp.GetHICON(&overlay_icon);
         }
 
-        std::wstring desc = std::to_wstring(count) + L" messages non lus";
+        std::wstring desc{ Fmt(Tr(L"{0} messages non lus"), { to_hstring(count) }) };
         m_taskbar_list->SetOverlayIcon(hwnd, overlay_icon, desc.c_str());
 
         if (overlay_icon)
@@ -243,7 +243,7 @@ namespace winrt::EvolutionWin::implementation
         if (m_core)
         {
             m_core->CancelOperations();
-            ShowStatus(L"Annulation de l'opération en cours demandée…", InfoBarSeverity::Informational);
+            ShowStatus(Tr(L"Annulation de l'opération en cours demandée…"), InfoBarSeverity::Informational);
         }
         if (StatusBarProgressPanel())
             StatusBarProgressPanel().Visibility(Visibility::Collapsed);
@@ -297,27 +297,27 @@ namespace winrt::EvolutionWin::implementation
         if (m_is_offline)
         {
             ConnectionStatusDot().Fill(SolidColorBrush(Windows::UI::Color{ 255, 121, 119, 117 })); // Gris
-            ConnectionStatusLabel().Text(L"Hors connexion");
-            ToggleOfflineButton().Content(box_value(L"Se connecter"));
-            FolderStatusText().Text(L"Mode hors connexion");
+            ConnectionStatusLabel().Text(Tr(L"Hors connexion"));
+            ToggleOfflineButton().Content(box_value(Tr(L"Se connecter")));
+            FolderStatusText().Text(Tr(L"Mode hors connexion"));
         }
         else if (has_error)
         {
             ConnectionStatusDot().Fill(SolidColorBrush(Windows::UI::Color{ 255, 232, 17, 35 })); // Rouge
-            ConnectionStatusLabel().Text(L"Erreur de connexion");
-            ToggleOfflineButton().Content(box_value(L"Travailler hors connexion"));
+            ConnectionStatusLabel().Text(Tr(L"Erreur de connexion"));
+            ToggleOfflineButton().Content(box_value(Tr(L"Travailler hors connexion")));
         }
         else if (has_connecting)
         {
             ConnectionStatusDot().Fill(SolidColorBrush(Windows::UI::Color{ 255, 216, 59, 1 })); // Orange
-            ConnectionStatusLabel().Text(L"Connexion en cours…");
-            ToggleOfflineButton().Content(box_value(L"Travailler hors connexion"));
+            ConnectionStatusLabel().Text(Tr(L"Connexion en cours…"));
+            ToggleOfflineButton().Content(box_value(Tr(L"Travailler hors connexion")));
         }
         else
         {
             ConnectionStatusDot().Fill(SolidColorBrush(Windows::UI::Color{ 255, 16, 124, 65 })); // Vert
-            ConnectionStatusLabel().Text(L"Connecté");
-            ToggleOfflineButton().Content(box_value(L"Travailler hors connexion"));
+            ConnectionStatusLabel().Text(Tr(L"Connecté"));
+            ToggleOfflineButton().Content(box_value(Tr(L"Travailler hors connexion")));
             UpdateFolderStatusText();
         }
 
@@ -335,7 +335,7 @@ namespace winrt::EvolutionWin::implementation
         if (!m_accounts || m_accounts.Size() == 0)
         {
             TextBlock empty_text;
-            empty_text.Text(L"Aucun compte configuré.");
+            empty_text.Text(Tr(L"Aucun compte configuré."));
             empty_text.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
             ConnectionAccountsPanel().Children().Append(empty_text);
             return;
@@ -353,7 +353,7 @@ namespace winrt::EvolutionWin::implementation
 
             auto it = m_account_states.find(std::wstring{ uid });
             hstring state_status = (it != m_account_states.end()) ? it->second.status : L"connected";
-            hstring state_msg = (it != m_account_states.end() && !it->second.message.empty()) ? it->second.message : L"Connecté";
+            hstring state_msg = (it != m_account_states.end() && !it->second.message.empty()) ? it->second.message : Tr(L"Connecté");
 
             Grid row;
             ColumnDefinition c0, c1, c2;
@@ -391,7 +391,7 @@ namespace winrt::EvolutionWin::implementation
             text_col.Children().Append(name_block);
 
             TextBlock msg_block;
-            msg_block.Text(m_is_offline ? L"Hors connexion" : state_msg);
+            msg_block.Text(m_is_offline ? Tr(L"Hors connexion") : state_msg);
             msg_block.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
             msg_block.Opacity(0.8);
             text_col.Children().Append(msg_block);
@@ -402,7 +402,7 @@ namespace winrt::EvolutionWin::implementation
             if (!m_is_offline && (state_status == L"error" || state_status == L"auth-required"))
             {
                 Button reconnect_btn;
-                reconnect_btn.Content(box_value(L"Se reconnecter"));
+                reconnect_btn.Content(box_value(Tr(L"Se reconnecter")));
                 reconnect_btn.Padding(Thickness{ 8, 2, 8, 2 });
                 reconnect_btn.Click([this, uid](IInspectable const&, RoutedEventArgs const&)
                 {
@@ -449,7 +449,7 @@ namespace winrt::EvolutionWin::implementation
         if (m_core)
             m_core->SetOffline(m_is_offline);
         UpdateConnectionStatus(L"global", m_is_offline ? L"offline" : L"online",
-            m_is_offline ? L"Mode hors connexion" : L"Connecté");
+            m_is_offline ? Tr(L"Mode hors connexion") : Tr(L"Connecté"));
     }
 
     /* Met à jour le libellé d'état du dossier à gauche dans la barre d'état. */
@@ -460,28 +460,28 @@ namespace winrt::EvolutionWin::implementation
 
         if (m_is_offline)
         {
-            FolderStatusText().Text(L"Mode hors connexion");
+            FolderStatusText().Text(Tr(L"Mode hors connexion"));
             return;
         }
 
         if (m_account.empty() || m_folder.empty())
         {
-            FolderStatusText().Text(L"Tous les dossiers sont à jour");
+            FolderStatusText().Text(Tr(L"Tous les dossiers sont à jour"));
             return;
         }
 
         uint32_t count = m_all_messages ? m_all_messages.Size() : 0;
         if (count == 0)
         {
-            FolderStatusText().Text(L"Aucun message");
+            FolderStatusText().Text(Tr(L"Aucun message"));
         }
         else if (count == 1)
         {
-            FolderStatusText().Text(L"1 message");
+            FolderStatusText().Text(Tr(L"1 message"));
         }
         else
         {
-            FolderStatusText().Text(to_hstring(count) + L" messages");
+            FolderStatusText().Text(Fmt(Tr(L"{0} messages"), { to_hstring(count) }));
         }
     }
 
@@ -640,7 +640,7 @@ namespace winrt::EvolutionWin::implementation
             close_btn.Padding(Thickness{ 4, 4, 4, 4 });
             close_btn.Margin(Thickness{ 4, 0, 0, 0 });
             close_btn.VerticalAlignment(VerticalAlignment::Top);
-            ToolTipService::SetToolTip(close_btn, box_value(L"Supprimer cette notification"));
+            ToolTipService::SetToolTip(close_btn, box_value(Tr(L"Supprimer cette notification")));
 
             FontIcon close_icon;
             close_icon.Glyph(L"\xE711");

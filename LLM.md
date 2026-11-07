@@ -211,9 +211,17 @@ Les règles suivantes ont été définies par Pierre et doivent être respectée
 - Pour ajouter une section : créer `xaml/<Nom>.xamlpart`, y mettre l'élément, ajouter la ligne d'inclusion au bon endroit du gabarit. Pas de modification du code C++ : tous les éléments nommés (`x:Name`) restent des membres de `MainWindow` (c'est la raison de ce découpage plutôt que des `UserControl`).
 - Les erreurs du compilateur XAML citent `MainWindow.xaml` (généré) : ouvrir ce fichier à la ligne indiquée pour repérer l'élément fautif, puis le corriger dans le fragment correspondant.
 
-### 6.3. Localisation et Unicode sous Windows MSVC
+### 6.3. Localisation, Traductions et Unicode sous Windows MSVC
 - **Attention au pliage de casse Unicode (accents)** : `std::towlower` en C++ sous Windows n'applique pas la casse française par défaut. Toujours utiliser `::CharLowerBuffW(str.data(), len)` (provenant de `user32.lib`) pour les recherches insensibles à la casse et aux accents.
 - **Formatage des tailles de fichiers** : Utiliser l'API système `::StrFormatByteSizeW` (via `shlwapi.lib`) pour respecter les unités localisées par Windows (ex: "1,42 Mo" en français, "1.42 MB" en anglais).
+- **Mise à jour obligatoire des traductions de l'interface** :
+  L'application dispose d'une infrastructure de traduction externe (`.resw` / MRT Core) documentée dans [`TRANSLATIONS.md`](TRANSLATIONS.md).
+  > [!IMPORTANT]
+  > **Règle impérative pour l'interface graphique** :
+  > Dès qu'un texte, libellé, bouton, titre de dialogue, menu ou infobulle est **créé ou modifié** dans l'interface (XAML ou C++), l'agent **doit impérativement** :
+  > 1. Écrire le texte en français : `Tr(L"Texte FR")` ou `Fmt(Tr(L"… {0} …"), { valeur })` en C++ (jamais de fragments concaténés autour d'une valeur), texte brut dans le XAML (traduit au chargement par `UiTranslate.h`). **Aucun texte français en dur** dans un setter d'interface (`box_value(L"…")`, `Text(L"…")`, `Content`, `Title`, `ShowStatus`…).
+  > 2. Fournir les traductions `en`, `de`, `it`, `es`, `pt`, `nl` dans un JSON et les fusionner : `python tools\i18n-sync.py merge fichier.json` (la clé `T_<hash>` est déduite du libellé français ; terminologie officielle d'Evolution : `evolution/po/*.po`).
+  > 3. Vérifier avec `python tools\i18n-sync.py check` (exécuté aussi par `tools\run-tests.bat`).
 
 ---
 

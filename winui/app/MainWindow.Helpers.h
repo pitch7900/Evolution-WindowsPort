@@ -6,8 +6,12 @@
 #include "ComposeWindow.xaml.h"
 #include "Settings.h"
 #include "CategoryStore.h"
+#include "I18n.h"
 #include <cwctype>
 #include <string>
+#include <mutex>
+#include <unordered_map>
+#include <initializer_list>
 #include <shellapi.h>
 #include <shlwapi.h>
 #include <mmsystem.h>
@@ -124,35 +128,118 @@ namespace EvolutionWin::Helpers
         return to_hstring(bytes) + L" o";
     }
 
+    inline std::wstring GetMsiMachineLanguage();
+
+    /**
+     * @brief Récupère la langue d'affichage effective de l'interface utilisateur.
+     * Priorité : 1) Paramètre utilisateur 'general.language'
+     *            2) Clé registre machine du MSI (HKLM\Software\Evolution-WindowsPort\UILanguage)
+     *            3) Langue du système d'exploitation Windows
+     * @return Identifiant de langue normalisé (ex: L"en-US", L"fr-FR", L"de-DE").
+     */
+    inline std::wstring GetEffectiveUiLanguage()
+    {
+        try
+        {
+            std::wstring setting{ ::EvolutionWin::Settings::Instance().GetString(L"general.language", L"system") };
+            if (!setting.empty() && setting != L"system")
+            {
+                return setting;
+            }
+
+            std::wstring msi = GetMsiMachineLanguage();
+            if (!msi.empty())
+            {
+                return msi;
+            }
+
+            auto languages = Windows::Globalization::ApplicationLanguages::Languages();
+            if (languages.Size() > 0)
+            {
+                return std::wstring{ languages.GetAt(0) };
+            }
+        }
+        catch (...) {}
+        return L"fr-FR";
+    }
+
     /**
      * @brief Indique si la langue d'affichage de l'application est l'anglais.
      * @return true pour une langue « en* », false sinon (français par défaut).
      */
     inline bool UiIsEnglish()
     {
-        try
-        {
-            auto languages = Windows::Globalization::ApplicationLanguages::Languages();
-            if (languages.Size() > 0)
-            {
-                hstring tag_text = languages.GetAt(0);
-                std::wstring_view tag{ tag_text };
-                return tag.size() >= 2 && (tag[0] == L'e' || tag[0] == L'E') && (tag[1] == L'n' || tag[1] == L'N');
-            }
-        }
-        catch (...) {}
-        return false;
+        std::wstring lang = GetEffectiveUiLanguage();
+        return lang.size() >= 2 && (lang[0] == L'e' || lang[0] == L'E') && (lang[1] == L'n' || lang[1] == L'N');
     }
 
     /**
-     * @brief Choisit le texte de la langue d'affichage (il n'y a pas de fichier de ressources).
-     * @param fr Texte français.
-     * @param en Texte anglais.
+     * @brief Choisit le texte de la langue d'affichage, avec priorité aux ressources .resw si fournies.
+     * @param fr Texte français (utilisé par défaut ou si la clé de ressource n'est pas trouvée).
+     * @param en Texte anglais (utilisé en mode anglais si la clé de ressource n'est pas trouvée).
+     * @param resourceId Clé facultative dans les fichiers de ressources .resw.
      * @return Le texte dans la langue courante.
      */
-    inline hstring Tr(wchar_t const* fr, wchar_t const* en)
+    inline hstring Tr(wchar_t const* fr, wchar_t const* en = nullptr, wchar_t const* resourceId = nullptr)
     {
-        return hstring{ UiIsEnglish() ? en : fr };
+        std::wstring lang = GetEffectiveUiLanguage();
+        bool is_french = lang.size() >= 2 && (lang[0] == L'f' || lang[0] == L'F') && (lang[1] == L'r' || lang[1] == L'R');
+
+        if (resourceId != nullptr && *resourceId != L'\0')
+        {
+            auto res = ::EvolutionWin::I18n::GetString(resourceId, UiIsEnglish() ? (en ? en : fr) : fr, lang);
+            if (!res.empty())
+            {
+                return res;
+            }
+        }
+        else if (!is_french && fr != nullptr && *fr != L'\0')
+        {
+            // Clé déduite du libellé français (cf. I18n::KeyFor), avec cache par langue
+            static std::mutex s_lock;
+            static std::unordered_map<std::wstring, hstring> s_cache;
+            std::wstring cache_key = lang + L"|" + fr;
+            {
+                std::lock_guard<std::mutex> guard(s_lock);
+                auto it = s_cache.find(cache_key);
+                if (it != s_cache.end() && !it->second.empty())
+                    return it->second;
+            }
+            hstring found = ::EvolutionWin::I18n::GetString(::EvolutionWin::I18n::KeyFor(fr), L"", lang);
+            {
+                std::lock_guard<std::mutex> guard(s_lock);
+                s_cache[cache_key] = found;
+            }
+            if (!found.empty())
+                return found;
+        }
+        return hstring{ (!is_french && en != nullptr) ? en : fr };
+    }
+
+    /**
+     * @brief Remplace les marqueurs {0}, {1}… d'un modèle de texte par des valeurs.
+     * Permet de traduire des phrases contenant des valeurs (nombres, noms) sans
+     * concaténer des fragments, dont l'ordre varie d'une langue à l'autre.
+     * @param pattern Modèle (ex. « {0} message(s) supprimé(s) de {1} »).
+     * @param args Valeurs à insérer, dans l'ordre des marqueurs.
+     * @return Texte final.
+     */
+    inline hstring Fmt(hstring const& pattern, std::initializer_list<hstring> args)
+    {
+        std::wstring out{ pattern };
+        size_t index = 0;
+        for (auto const& arg : args)
+        {
+            std::wstring marker = L"{" + std::to_wstring(index++) + L"}";
+            std::wstring value{ arg };
+            size_t pos = 0;
+            while ((pos = out.find(marker, pos)) != std::wstring::npos)
+            {
+                out.replace(pos, marker.size(), value);
+                pos += value.size();
+            }
+        }
+        return hstring{ out };
     }
 
     /**
@@ -278,6 +365,81 @@ namespace EvolutionWin::Helpers
         return text.size() >= prefix.size() &&
             CompareStringOrdinal(text.data(), static_cast<int>(prefix.size()),
                 prefix.data(), static_cast<int>(prefix.size()), TRUE) == CSTR_EQUAL;
+    }
+
+    /* Affiche une fenêtre secondaire (événement, éléments récupérables…) au premier plan : elle est « possédée »
+     * par la fenêtre principale (elle reste donc au-dessus d'elle, comme une fenêtre fille) puis activée.
+     * Paramètres :
+     *   window : fenêtre à afficher
+     *   owner  : fenêtre principale (propriétaire) */
+    inline void ShowOwnedWindow(winrt::Microsoft::UI::Xaml::Window const& window, HWND owner)
+    {
+        HWND handle = nullptr;
+        if (auto native = window.try_as<::IWindowNative>())
+            native->get_WindowHandle(&handle);
+        if (handle && owner)
+            SetWindowLongPtrW(handle, GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(owner));
+        window.Activate();
+        if (handle)
+            SetForegroundWindow(handle);
+    }
+
+    /* Plages (début, longueur) des adresses web (http://, https://) d'un texte.
+     * Une adresse s'arrête à un espace, « < », « > », une guillemet ou, dans un texte déjà échappé en HTML
+     * (escaped = true), à « &lt; », « &gt; » ou « &quot; » ; la ponctuation finale (.,;:!?)]) est écartée. */
+    inline std::vector<std::pair<size_t, size_t>> FindUrlRanges(std::wstring_view text, bool escaped = false)
+    {
+        std::vector<std::pair<size_t, size_t>> ranges;
+        size_t pos = 0;
+        while (pos < text.size())
+        {
+            size_t http = text.find(L"http", pos);
+            if (http == std::wstring_view::npos)
+                break;
+            std::wstring_view rest = text.substr(http);
+            size_t prefix = rest.rfind(L"https://", 0) == 0 ? 8 : (rest.rfind(L"http://", 0) == 0 ? 7 : 0);
+            if (prefix == 0 || (http > 0 && iswalnum(text[http - 1])))
+            {
+                pos = http + 4;
+                continue;
+            }
+            size_t end = http + prefix;
+            while (end < text.size())
+            {
+                wchar_t c = text[end];
+                if (iswspace(c) || c == L'<' || c == L'>' || c == L'"')
+                    break;
+                if (escaped && c == L'&')
+                {
+                    std::wstring_view tail = text.substr(end);
+                    if (tail.rfind(L"&lt;", 0) == 0 || tail.rfind(L"&gt;", 0) == 0 || tail.rfind(L"&quot;", 0) == 0)
+                        break;
+                }
+                ++end;
+            }
+            while (end > http + prefix && wcschr(L".,;:!?)]'", text[end - 1]))
+                --end;
+            if (end > http + prefix)
+                ranges.emplace_back(http, end - http);
+            pos = end > http ? end : http + 4;
+        }
+        return ranges;
+    }
+
+    /* Texte HTML déjà échappé dont les adresses web deviennent des liens (ouverts par le navigateur du système). */
+    inline std::wstring LinkifyEscapedHtml(std::wstring_view escaped)
+    {
+        std::wstring out;
+        size_t last = 0;
+        for (auto const& range : FindUrlRanges(escaped, true))
+        {
+            out.append(escaped.substr(last, range.first - last));
+            std::wstring url{ escaped.substr(range.first, range.second) };
+            out += L"<a href=\"" + url + L"\">" + url + L"</a>";
+            last = range.first + range.second;
+        }
+        out.append(escaped.substr(last));
+        return out;
     }
 
     /* Échappe les caractères spéciaux HTML d'une chaîne brute. */
@@ -450,42 +612,18 @@ namespace EvolutionWin::Helpers
         data.account = account_uid;
         data.reply = true;
 
-        std::wstring lang{ ::EvolutionWin::Settings::Instance().GetString(L"general.language", L"system") };
-        if (lang.empty() || lang == L"system")
-            lang = L"fr";
 
         if (kind == ::EvolutionWin::ReplyKind::Forward)
         {
             std::wstring fwd_p{ ::EvolutionWin::Settings::Instance().GetString(L"mail.forward-prefix", L"TR: ") };
             data.subject = hstring{ FormatForwardSubject(subject, fwd_p) };
 
-            std::wstring header_title = L"-------- Message transféré --------";
-            std::wstring lbl_from = L"De : ";
-            std::wstring lbl_date = L"Date : ";
-            std::wstring lbl_subj = L"Objet : ";
-            std::wstring lbl_to = L"À : ";
-            std::wstring lbl_cc = L"Cc : ";
-
-            if (lang == L"en" || lang.find(L"en-") == 0)
-            {
-                header_title = L"-------- Forwarded Message --------";
-                lbl_from = L"From: "; lbl_date = L"Date: "; lbl_subj = L"Subject: "; lbl_to = L"To: "; lbl_cc = L"Cc: ";
-            }
-            else if (lang == L"de" || lang.find(L"de-") == 0)
-            {
-                header_title = L"-------- Weitergeleitete Nachricht --------";
-                lbl_from = L"Von: "; lbl_date = L"Datum: "; lbl_subj = L"Betreff: "; lbl_to = L"An: "; lbl_cc = L"Cc: ";
-            }
-            else if (lang == L"it" || lang.find(L"it-") == 0)
-            {
-                header_title = L"-------- Messaggio Inoltrato --------";
-                lbl_from = L"Da: "; lbl_date = L"Data: "; lbl_subj = L"Oggetto: "; lbl_to = L"A: "; lbl_cc = L"Cc: ";
-            }
-            else if (lang == L"es" || lang.find(L"es-") == 0)
-            {
-                header_title = L"-------- Mensaje reenviado --------";
-                lbl_from = L"De: "; lbl_date = L"Fecha: "; lbl_subj = L"Asunto: "; lbl_to = L"Para: "; lbl_cc = L"Cc: ";
-            }
+            std::wstring header_title{ Tr(L"-------- Message transféré --------") };
+            std::wstring lbl_from{ Tr(L"De : ") };
+            std::wstring lbl_date{ Tr(L"Date : ") };
+            std::wstring lbl_subj{ Tr(L"Objet : ") };
+            std::wstring lbl_to{ Tr(L"À : ") };
+            std::wstring lbl_cc{ Tr(L"Cc : ") };
 
             data.body = L"\r\r" + hstring{ header_title } + L"\r" + hstring{ lbl_from } + from + L"\r" + hstring{ lbl_date } + date +
                 L"\r" + hstring{ lbl_subj } + subject + L"\r" + hstring{ lbl_to } + to + (cc.empty() ? hstring{} : L"\r" + hstring{ lbl_cc } + cc) +
@@ -536,29 +674,8 @@ namespace EvolutionWin::Helpers
                 if (ch == L'\n')
                     ch = L'\r';
 
-            std::wstring quote_lead = L"Le " + std::wstring{ date } + L", " + std::wstring{ from } + L" a écrit :";
-            std::wstring html_quote_lead = L"Le " + EscapeHtml(date) + L", " + EscapeHtml(from) + L" a écrit :";
-
-            if (lang == L"en" || lang.find(L"en-") == 0)
-            {
-                quote_lead = L"On " + std::wstring{ date } + L", " + std::wstring{ from } + L" wrote:";
-                html_quote_lead = L"On " + EscapeHtml(date) + L", " + EscapeHtml(from) + L" wrote:";
-            }
-            else if (lang == L"de" || lang.find(L"de-") == 0)
-            {
-                quote_lead = L"Am " + std::wstring{ date } + L" schrieb " + std::wstring{ from } + L":";
-                html_quote_lead = L"Am " + EscapeHtml(date) + L" schrieb " + EscapeHtml(from) + L":";
-            }
-            else if (lang == L"it" || lang.find(L"it-") == 0)
-            {
-                quote_lead = L"Il " + std::wstring{ date } + L", " + std::wstring{ from } + L" ha scritto:";
-                html_quote_lead = L"Il " + EscapeHtml(date) + L", " + EscapeHtml(from) + L" ha scritto:";
-            }
-            else if (lang == L"es" || lang.find(L"es-") == 0)
-            {
-                quote_lead = L"El " + std::wstring{ date } + L", " + std::wstring{ from } + L" escribió:";
-                html_quote_lead = L"El " + EscapeHtml(date) + L", " + EscapeHtml(from) + L" escribió:";
-            }
+            std::wstring quote_lead{ Fmt(Tr(L"Le {0}, {1} a écrit :"), { date, from }) };
+            std::wstring html_quote_lead{ Fmt(Tr(L"Le {0}, {1} a écrit :"), { hstring{ EscapeHtml(date) }, hstring{ EscapeHtml(from) } }) };
 
             data.body = L"\r\r" + hstring{ quote_lead } + L"\r" + hstring{ quoted };
             data.html_body = hstring{
@@ -638,7 +755,7 @@ namespace EvolutionWin::Helpers
         out += L"<meta charset=\"utf-8\">\n";
         out += L"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n";
         out += L"<title>";
-        out += subject.empty() ? L"(Sans objet)" : EscapeHtml(subject);
+        out += subject.empty() ? std::wstring{ Tr(L"(Sans objet)") } : EscapeHtml(subject);
         out += L"</title>\n";
         out += L"<style>\n";
         out += L"body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; margin: 0; padding: 24px; color: #202020; background: #fafafa; }\n";
@@ -649,13 +766,13 @@ namespace EvolutionWin::Helpers
         out += L".email-body { background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 24px; min-height: 300px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }\n";
         out += L"</style>\n</head>\n<body>\n";
         out += L"<div class=\"email-header\">\n";
-        out += L"  <h1 class=\"email-title\">" + (subject.empty() ? std::wstring{ L"(Sans objet)" } : EscapeHtml(subject)) + L"</h1>\n";
+        out += L"  <h1 class=\"email-title\">" + (subject.empty() ? std::wstring{ Tr(L"(Sans objet)") } : EscapeHtml(subject)) + L"</h1>\n";
         out += L"  <div class=\"email-meta\">\n";
-        out += L"    <div><strong>De :</strong> " + EscapeHtml(from) + L"</div>\n";
+        out += L"    <div><strong>" + std::wstring{ Tr(L"De :") } + L"</strong> " + EscapeHtml(from) + L"</div>\n";
         if (!to.empty())
-            out += L"    <div><strong>Ã :</strong> " + EscapeHtml(to) + L"</div>\n";
+            out += L"    <div><strong>" + std::wstring{ Tr(L"À :") } + L"</strong> " + EscapeHtml(to) + L"</div>\n";
         if (!date.empty())
-            out += L"    <div><strong>Date :</strong> " + EscapeHtml(date) + L"</div>\n";
+            out += L"    <div><strong>" + std::wstring{ Tr(L"Date :") } + L"</strong> " + EscapeHtml(date) + L"</div>\n";
         out += L"  </div>\n</div>\n";
         out += L"<div class=\"email-body\">\n";
         if (!html_body.empty())
@@ -741,11 +858,11 @@ namespace EvolutionWin::Helpers
         std::wstring speech;
         if (!from.empty())
         {
-            speech += L"Message de " + std::wstring{ SenderName(hstring{ from }) } + L".\n";
+            speech += std::wstring{ Fmt(Tr(L"Message de {0}."), { SenderName(hstring{ from }) }) } + L"\n";
         }
         if (!subject.empty())
         {
-            speech += L"Objet : " + subject + L".\n\n";
+            speech += std::wstring{ Fmt(Tr(L"Objet : {0}."), { hstring{ subject } }) } + L"\n\n";
         }
 
         std::wstring body_clean;
@@ -881,7 +998,7 @@ namespace EvolutionWin::Helpers
     inline std::wstring FormatContactSuggestion(std::wstring_view full_name, std::wstring_view email)
     {
         if (full_name.empty() && email.empty())
-            return L"(Sans nom)";
+            return std::wstring{ Tr(L"(Sans nom)") };
         if (email.empty())
             return std::wstring{ full_name };
         if (full_name.empty())
@@ -1068,6 +1185,29 @@ namespace EvolutionWin::Helpers
         return (res == ERROR_SUCCESS);
     }
 
+    /**
+     * @brief Récupère la langue configurée par défaut au niveau machine (HKLM) via l'installeur MSI.
+     * @return Identifiant de langue (ex: "fr-FR", "en-US", "de-DE") ou chaîne vide si non spécifié.
+     */
+    inline std::wstring GetMsiMachineLanguage()
+    {
+        HKEY hKey = nullptr;
+        // Lecture de HKLM\Software\Evolution-WindowsPort (avec KEY_WOW64_64KEY pour compatibilité 64-bit)
+        if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\Evolution-WindowsPort", 0, KEY_READ | KEY_WOW64_64KEY, &hKey) == ERROR_SUCCESS)
+        {
+            wchar_t buffer[64] = { 0 };
+            DWORD size = sizeof(buffer);
+            DWORD type = 0;
+            LONG res = RegQueryValueExW(hKey, L"UILanguage", nullptr, &type, reinterpret_cast<LPBYTE>(buffer), &size);
+            RegCloseKey(hKey);
+            if (res == ERROR_SUCCESS && (type == REG_SZ || type == REG_EXPAND_SZ))
+            {
+                return std::wstring(buffer);
+            }
+        }
+        return L"";
+    }
+
     inline bool MatchesMessageSearch(
         std::wstring_view query,
         std::wstring_view subject,
@@ -1159,43 +1299,43 @@ namespace EvolutionWin::Helpers
     {
         return {
             /* Navigation globale */
-            { L"Navigation", L"Aller au module Courrier", L"Ctrl+Alt+1", L"Ctrl+1" },
-            { L"Navigation", L"Aller au module Calendrier", L"Ctrl+Alt+2", L"Ctrl+2" },
-            { L"Navigation", L"Aller au module Contacts", L"Ctrl+Alt+3", L"Ctrl+3" },
-            { L"Navigation", L"Aller au module Tâches", L"Ctrl+Alt+4", L"Ctrl+4" },
-            { L"Navigation", L"Rechercher dans les éléments", L"Ctrl+E", L"Ctrl+F" },
-            { L"Navigation", L"Afficher les raccourcis clavier", L"F1", L"F1" },
+            { std::wstring{ Tr(L"Navigation") }, std::wstring{ Tr(L"Aller au module Courrier") }, L"Ctrl+Alt+1", L"Ctrl+1" },
+            { std::wstring{ Tr(L"Navigation") }, std::wstring{ Tr(L"Aller au module Calendrier") }, L"Ctrl+Alt+2", L"Ctrl+2" },
+            { std::wstring{ Tr(L"Navigation") }, std::wstring{ Tr(L"Aller au module Contacts") }, L"Ctrl+Alt+3", L"Ctrl+3" },
+            { std::wstring{ Tr(L"Navigation") }, std::wstring{ Tr(L"Aller au module Tâches") }, L"Ctrl+Alt+4", L"Ctrl+4" },
+            { std::wstring{ Tr(L"Navigation") }, std::wstring{ Tr(L"Rechercher dans les éléments") }, L"Ctrl+E", L"Ctrl+F" },
+            { std::wstring{ Tr(L"Navigation") }, std::wstring{ Tr(L"Afficher les raccourcis clavier") }, L"F1", L"F1" },
 
             /* Courrier & Rédaction */
-            { L"Courrier", L"Nouveau message", L"Ctrl+N", L"Ctrl+N" },
-            { L"Courrier", L"Répondre à l'expéditeur", L"Ctrl+R", L"Ctrl+R" },
-            { L"Courrier", L"Répondre à tous les destinataires", L"Ctrl+Maj+R", L"Ctrl+Maj+R" },
-            { L"Courrier", L"Transférer le message", L"Ctrl+F", L"Ctrl+J" },
-            { L"Courrier", L"Transférer en pièce jointe (.eml)", L"Ctrl+Maj+F", L"Ctrl+Alt+F" },
-            { L"Courrier", L"Enregistrer sous le format .eml", L"Ctrl+S", L"Ctrl+S" },
-            { L"Courrier", L"Afficher la source brute MIME (RFC 822)", L"Ctrl+Maj+U", L"Ctrl+U" },
-            { L"Courrier", L"Attribuer rapidement une catégorie", L"Ctrl+F2", L"Ctrl+F2" },
-            { L"Courrier", L"Marquer comme lu", L"Ctrl+Q", L"Ctrl+K" },
-            { L"Courrier", L"Marquer comme non lu", L"Ctrl+U", L"Ctrl+Maj+K" },
-            { L"Courrier", L"Envoyer et recevoir (synchronisation)", L"F9", L"F9" },
-            { L"Courrier", L"Déplacer vers la Corbeille", L"Suppr", L"Suppr" },
-            { L"Courrier", L"Supprimer définitivement", L"Maj+Suppr", L"Maj+Suppr" },
-            { L"Courrier", L"Archiver le message sélectionné", L"Retour arrière", L"Ctrl+Alt+A" },
-            { L"Courrier", L"Imprimer le message", L"Ctrl+P", L"Ctrl+P" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Nouveau message") }, L"Ctrl+N", L"Ctrl+N" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Répondre à l'expéditeur") }, L"Ctrl+R", L"Ctrl+R" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Répondre à tous les destinataires") }, L"Ctrl+Maj+R", L"Ctrl+Maj+R" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Transférer le message") }, L"Ctrl+F", L"Ctrl+J" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Transférer en pièce jointe (.eml)") }, L"Ctrl+Maj+F", L"Ctrl+Alt+F" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Enregistrer sous le format .eml") }, L"Ctrl+S", L"Ctrl+S" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Afficher la source brute MIME (RFC 822)") }, L"Ctrl+Maj+U", L"Ctrl+U" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Attribuer rapidement une catégorie") }, L"Ctrl+F2", L"Ctrl+F2" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Marquer comme lu") }, L"Ctrl+Q", L"Ctrl+K" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Marquer comme non lu") }, L"Ctrl+U", L"Ctrl+Maj+K" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Envoyer et recevoir (synchronisation)") }, L"F9", L"F9" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Déplacer vers la Corbeille") }, L"Suppr", L"Suppr" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Supprimer définitivement") }, L"Maj+Suppr", L"Maj+Suppr" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Archiver le message sélectionné") }, L"Retour arrière", L"Ctrl+Alt+A" },
+            { std::wstring{ Tr(L"Courrier") }, std::wstring{ Tr(L"Imprimer le message") }, L"Ctrl+P", L"Ctrl+P" },
 
             /* Calendrier & Rendez-vous */
-            { L"Calendrier", L"Nouveau rendez-vous / événement", L"Ctrl+N", L"Ctrl+Maj+E" },
-            { L"Calendrier", L"Atteindre une date précise", L"Ctrl+G", L"Ctrl+T" },
-            { L"Calendrier", L"Revenir à la date du jour", L"Ctrl+T", L"Ctrl+J" },
-            { L"Calendrier", L"Actualiser le calendrier", L"F5", L"F5" },
+            { std::wstring{ Tr(L"Calendrier") }, std::wstring{ Tr(L"Nouveau rendez-vous / événement") }, L"Ctrl+N", L"Ctrl+Maj+E" },
+            { std::wstring{ Tr(L"Calendrier") }, std::wstring{ Tr(L"Atteindre une date précise") }, L"Ctrl+G", L"Ctrl+T" },
+            { std::wstring{ Tr(L"Calendrier") }, std::wstring{ Tr(L"Revenir à la date du jour") }, L"Ctrl+T", L"Ctrl+J" },
+            { std::wstring{ Tr(L"Calendrier") }, std::wstring{ Tr(L"Actualiser le calendrier") }, L"F5", L"F5" },
 
             /* Contacts */
-            { L"Contacts", L"Nouveau contact", L"Ctrl+N", L"Ctrl+Maj+C" },
-            { L"Contacts", L"Écrire au contact sélectionné", L"Ctrl+Maj+C", L"Ctrl+N" },
+            { std::wstring{ Tr(L"Contacts") }, std::wstring{ Tr(L"Nouveau contact") }, L"Ctrl+N", L"Ctrl+Maj+C" },
+            { std::wstring{ Tr(L"Contacts") }, std::wstring{ Tr(L"Écrire au contact sélectionné") }, L"Ctrl+Maj+C", L"Ctrl+N" },
 
             /* Tâches & To-Do */
-            { L"Tâches", L"Nouvelle tâche", L"Ctrl+Maj+K", L"Ctrl+Maj+T" },
-            { L"Tâches", L"Afficher / masquer le volet des tâches", L"Alt+F2", L"F7" }
+            { std::wstring{ Tr(L"Tâches") }, std::wstring{ Tr(L"Nouvelle tâche") }, L"Ctrl+Maj+K", L"Ctrl+Maj+T" },
+            { std::wstring{ Tr(L"Tâches") }, std::wstring{ Tr(L"Afficher / masquer le volet des tâches") }, L"Alt+F2", L"F7" }
         };
     }
 

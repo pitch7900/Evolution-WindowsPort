@@ -59,7 +59,7 @@ namespace winrt::EvolutionWin::implementation
         {
             ContactList().Items().Clear();
             TextBlock none;
-            none.Text(L"Aucun carnet affiché : cochez un carnet d'adresses à gauche.");
+            none.Text(Tr(L"Aucun carnet affiché : cochez un carnet d'adresses à gauche."));
             none.TextWrapping(TextWrapping::Wrap);
             none.Padding(ThicknessHelper::FromLengths(8, 8, 8, 8));
             ContactList().Items().Append(none);
@@ -70,8 +70,8 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus(L"Contacts : " + error, InfoBarSeverity::Error);
-                UpdateConnectionStatus(m_account.empty() ? L"global" : m_account, L"error", L"Anomalie de synchronisation des contacts : " + error);
+                ShowStatus(Fmt(Tr(L"Contacts : {0}"), { error }), InfoBarSeverity::Error);
+                UpdateConnectionStatus(m_account.empty() ? L"global" : m_account, L"error", Fmt(Tr(L"Anomalie de synchronisation des contacts : {0}"), { error }));
                 return;
             }
 
@@ -79,9 +79,15 @@ namespace winrt::EvolutionWin::implementation
             if (!m_is_offline)
             {
                 auto it = m_account_states.find(std::wstring{ m_account.empty() ? L"global" : m_account });
-                if (it != m_account_states.end() && it->second.status == L"error" && std::wstring_view(it->second.message).find(L"contacts") != std::wstring_view::npos)
+                /* le message d'anomalie est traduit : reconnaître son préfixe traduit (ou l'ancien texte français) */
+                std::wstring fault_pattern{ Tr(L"Anomalie de synchronisation des contacts : {0}") };
+                std::wstring fault_prefix = fault_pattern.substr(0, fault_pattern.find(L"{0}"));
+                bool contacts_fault = it != m_account_states.end() && it->second.status == L"error" &&
+                    (std::wstring_view(it->second.message).find(L"contacts") != std::wstring_view::npos ||
+                     std::wstring_view(it->second.message).substr(0, fault_prefix.size()) == fault_prefix);
+                if (contacts_fault)
                 {
-                    UpdateConnectionStatus(m_account.empty() ? L"global" : m_account, L"connected", L"Synchronisé");
+                    UpdateConnectionStatus(m_account.empty() ? L"global" : m_account, L"connected", Tr(L"Synchronisé"));
                 }
             }
 
@@ -146,7 +152,7 @@ namespace winrt::EvolutionWin::implementation
         if (items.Size() == 0 && m_all_contacts.Size() > 0)
         {
             TextBlock none;
-            none.Text(L"Aucun contact ne correspond au filtre par catégorie.");
+            none.Text(Tr(L"Aucun contact ne correspond au filtre par catégorie."));
             none.TextWrapping(TextWrapping::Wrap);
             none.Padding(ThicknessHelper::FromLengths(8, 8, 8, 8));
             items.Append(none);
@@ -225,9 +231,9 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Nouveau contact"));
-        dialog.PrimaryButtonText(L"Enregistrer");
-        dialog.CloseButtonText(L"Annuler");
+        dialog.Title(box_value(Tr(L"Nouveau contact")));
+        dialog.PrimaryButtonText(Tr(L"Enregistrer"));
+        dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Primary);
 
         StackPanel panel;
@@ -235,25 +241,25 @@ namespace winrt::EvolutionWin::implementation
         panel.MinWidth(380);
 
         TextBox name_box;
-        name_box.Header(box_value(L"Nom complet"));
+        name_box.Header(box_value(Tr(L"Nom complet")));
         name_box.PlaceholderText(L"Jean Martin");
         panel.Children().Append(name_box);
 
         TextBox email_box;
-        email_box.Header(box_value(L"Adresse électronique"));
+        email_box.Header(box_value(Tr(L"Adresse électronique")));
         email_box.PlaceholderText(L"jean.martin@exemple.fr");
         panel.Children().Append(email_box);
 
         TextBox phone_box;
-        phone_box.Header(box_value(L"Téléphone"));
+        phone_box.Header(box_value(Tr(L"Téléphone")));
         panel.Children().Append(phone_box);
 
         TextBox org_box;
-        org_box.Header(box_value(L"Organisation"));
+        org_box.Header(box_value(Tr(L"Organisation")));
         panel.Children().Append(org_box);
 
         TextBox note_box;
-        note_box.Header(box_value(L"Notes"));
+        note_box.Header(box_value(Tr(L"Notes")));
         note_box.AcceptsReturn(true);
         note_box.Height(72);
         panel.Children().Append(note_box);
@@ -279,10 +285,10 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus(L"Création du contact : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Création du contact : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
-            ShowStatus(L"Contact enregistré.", InfoBarSeverity::Success);
+            ShowStatus(Tr(L"Contact enregistré."), InfoBarSeverity::Success);
             LoadContacts(ContactSearchBox().Text());
         });
     }
@@ -328,9 +334,9 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Modifier le contact"));
-        dialog.PrimaryButtonText(L"Enregistrer");
-        dialog.CloseButtonText(L"Annuler");
+        dialog.Title(box_value(Tr(L"Modifier le contact")));
+        dialog.PrimaryButtonText(Tr(L"Enregistrer"));
+        dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Primary);
 
         StackPanel panel;
@@ -338,27 +344,27 @@ namespace winrt::EvolutionWin::implementation
         panel.MinWidth(380);
 
         TextBox name_box;
-        name_box.Header(box_value(L"Nom complet"));
+        name_box.Header(box_value(Tr(L"Nom complet")));
         name_box.Text(current_name);
         panel.Children().Append(name_box);
 
         TextBox email_box;
-        email_box.Header(box_value(L"Adresse électronique"));
+        email_box.Header(box_value(Tr(L"Adresse électronique")));
         email_box.Text(current_email);
         panel.Children().Append(email_box);
 
         TextBox phone_box;
-        phone_box.Header(box_value(L"Téléphone"));
+        phone_box.Header(box_value(Tr(L"Téléphone")));
         phone_box.Text(current_phone);
         panel.Children().Append(phone_box);
 
         TextBox org_box;
-        org_box.Header(box_value(L"Organisation"));
+        org_box.Header(box_value(Tr(L"Organisation")));
         org_box.Text(current_org);
         panel.Children().Append(org_box);
 
         TextBox note_box;
-        note_box.Header(box_value(L"Notes"));
+        note_box.Header(box_value(Tr(L"Notes")));
         note_box.AcceptsReturn(true);
         note_box.Height(72);
         note_box.Text(current_notes);
@@ -385,10 +391,10 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus(L"Modification du contact : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Modification du contact : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
-            ShowStatus(L"Contact modifié avec succès.", InfoBarSeverity::Success);
+            ShowStatus(Tr(L"Contact modifié avec succès."), InfoBarSeverity::Success);
             LoadContacts(ContactSearchBox().Text());
         });
     }
@@ -402,12 +408,12 @@ namespace winrt::EvolutionWin::implementation
             JsonArray books;
             if (!error.empty() || !JsonArray::TryParse(json, books))
             {
-                ShowStatus(L"Exportation : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Exportation : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
             if (books.Size() == 0)
             {
-                ShowStatus(L"Aucun carnet d'adresses à exporter.", InfoBarSeverity::Warning);
+                ShowStatus(Tr(L"Aucun carnet d'adresses à exporter."), InfoBarSeverity::Warning);
                 return;
             }
             ExportContactsAsync(books);
@@ -428,9 +434,9 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Exporter les contacts"));
-        dialog.PrimaryButtonText(L"Exporter");
-        dialog.CloseButtonText(L"Annuler");
+        dialog.Title(box_value(Tr(L"Exporter les contacts")));
+        dialog.PrimaryButtonText(Tr(L"Exporter"));
+        dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Primary);
 
         StackPanel panel;
@@ -438,18 +444,18 @@ namespace winrt::EvolutionWin::implementation
         panel.MinWidth(380);
 
         ComboBox book_box;
-        book_box.Header(box_value(L"Carnet d'adresses"));
+        book_box.Header(box_value(Tr(L"Carnet d'adresses")));
         book_box.HorizontalAlignment(HorizontalAlignment::Stretch);
-        book_box.Items().Append(box_value(L"Tous les carnets d'adresses"));
+        book_box.Items().Append(box_value(Tr(L"Tous les carnets d'adresses")));
         for (auto const& value : books)
             book_box.Items().Append(box_value(value.GetObject().GetNamedString(L"name", L"")));
         book_box.SelectedIndex(0);
         panel.Children().Append(book_box);
 
         RadioButtons format;
-        format.Header(box_value(L"Format vCard"));
-        format.Items().Append(box_value(L"Un seul fichier .vcf"));
-        format.Items().Append(box_value(L"Un fichier .vcf par contact, dans un dossier"));
+        format.Header(box_value(Tr(L"Format vCard")));
+        format.Items().Append(box_value(Tr(L"Un seul fichier .vcf")));
+        format.Items().Append(box_value(Tr(L"Un fichier .vcf par contact, dans un dossier")));
         format.SelectedIndex(0);
         panel.Children().Append(format);
 
@@ -463,12 +469,12 @@ namespace winrt::EvolutionWin::implementation
 
         int index = book_box.SelectedIndex();
         hstring book_uid;
-        hstring name = L"Contacts";
+        hstring name = Tr(L"Contacts");
         if (index > 0)
         {
             auto book = books.GetObjectAt(static_cast<uint32_t>(index - 1));
             book_uid = book.GetNamedString(L"uid", L"");
-            name = book.GetNamedString(L"name", L"Contacts");
+            name = book.GetNamedString(L"name", Tr(L"Contacts"));
         }
         bool per_contact = format.SelectedIndex() == 1;
 
@@ -488,8 +494,8 @@ namespace winrt::EvolutionWin::implementation
         {
             Windows::Storage::Pickers::FileSavePicker picker;
             InitializePicker(picker);
-            picker.SuggestedFileName(SanitizeFileName(name, L"Contacts"));
-            picker.FileTypeChoices().Insert(L"Carte de visite vCard", single_threaded_vector<hstring>({ L".vcf" }));
+            picker.SuggestedFileName(SanitizeFileName(name, Tr(L"Contacts")));
+            picker.FileTypeChoices().Insert(Tr(L"Carte de visite vCard"), single_threaded_vector<hstring>({ L".vcf" }));
 
             auto file = co_await picker.PickSaveFileAsync();
             if (!file)
@@ -502,17 +508,17 @@ namespace winrt::EvolutionWin::implementation
         request.SetNamedValue(L"path", JsonValue::CreateStringValue(dest));
         request.SetNamedValue(L"per_contact", JsonValue::CreateBooleanValue(per_contact));
 
-        ShowStatus(L"Exportation des contacts…", InfoBarSeverity::Informational);
+        ShowStatus(Tr(L"Exportation des contacts…"), InfoBarSeverity::Informational);
         m_core->ExportContacts(request.Stringify(), [this, dest](hstring const& json, hstring const& error)
         {
             JsonObject answer;
             if (!error.empty() || !JsonObject::TryParse(json, answer))
             {
-                ShowStatus(L"Exportation des contacts : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Exportation des contacts : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
             auto count = static_cast<uint32_t>(answer.GetNamedNumber(L"count", 0));
-            ShowStatus(hstring{ std::to_wstring(count) + L" contact(s) exporté(s) dans « " + std::wstring{ dest } + L" »." },
+            ShowStatus(Fmt(Tr(L"{0} contact(s) exporté(s) dans « {1} »."), { to_hstring(count), dest }),
                 InfoBarSeverity::Success);
         });
     }
@@ -528,7 +534,7 @@ namespace winrt::EvolutionWin::implementation
         hstring name = m_selected_contact.GetNamedString(L"full_name", L"");
         if (email.empty())
         {
-            ShowStatus(L"Ce contact n'a pas d'adresse électronique.", InfoBarSeverity::Warning);
+            ShowStatus(Tr(L"Ce contact n'a pas d'adresse électronique."), InfoBarSeverity::Warning);
             return;
         }
 
@@ -553,10 +559,10 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus(L"Suppression du contact : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Suppression du contact : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
-            ShowStatus(L"Contact supprimé.", InfoBarSeverity::Informational);
+            ShowStatus(Tr(L"Contact supprimé."), InfoBarSeverity::Informational);
             LoadContacts(ContactSearchBox().Text());
         });
     }

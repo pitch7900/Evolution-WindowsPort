@@ -2058,3 +2058,784 @@ evo_core_get_ews_consent_url (EvoCore *core,
 
 	core_submit (core, core_ews_consent_url_run, g_strdupv (args), func, user_data);
 }
+
+/* Requête JSON authentifiée (Bearer) avec une méthode HTTP quelconque (PATCH...).
+ * Paramètres :
+ *   core       : instance du moteur evo-core
+ *   method     : méthode HTTP
+ *   uri        : adresse du service
+ *   token      : jeton d'accès
+ *   body       : corps JSON
+ *   out_status : reçoit le code HTTP (0 si injoignable)
+ *   error      : emplacement pour une erreur réseau
+ * Retourne : le corps de la réponse (même en erreur HTTP), NULL si injoignable. */
+static GBytes *
+gal_http_send_json (EvoCore *core,
+		    const gchar *method,
+		    const gchar *uri,
+		    const gchar *token,
+		    const gchar *body,
+		    guint *out_status,
+		    GError **error)
+{
+	SoupSession *soup;
+	SoupMessage *msg;
+	GBytes *request_body, *bytes;
+	GError *local_error = NULL;
+	gchar *authorization;
+
+	soup = soup_session_new_with_options ("timeout", 30, "user-agent", "Evolution (Windows)", NULL);
+	msg = soup_message_new (method, uri);
+	authorization = g_strdup_printf ("Bearer %s", token);
+	soup_message_headers_replace (soup_message_get_request_headers (msg), "Authorization", authorization);
+	g_free (authorization);
+	request_body = g_bytes_new (body, strlen (body));
+	soup_message_set_request_body_from_bytes (msg, "application/json", request_body);
+	g_bytes_unref (request_body);
+
+	bytes = soup_session_send_and_read (soup, msg, core->cancellable, &local_error);
+	*out_status = bytes ? soup_message_get_status (msg) : 0;
+	if (!bytes)
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_HOST_NOT_FOUND,
+			"Google Agenda est injoignable : %s", local_error ? local_error->message : "erreur réseau");
+
+	g_clear_error (&local_error);
+	g_object_unref (msg);
+	g_object_unref (soup);
+
+	return bytes;
+}
+
+/* Identifiant Google Agenda d'un calendrier EDS : segment suivant « /v2/ » dans l'adresse CalDAV
+ * (https://apidata.googleusercontent.com/caldav/v2/<id>/events), « primary » à défaut.
+ * Paramètres :
+ *   source : source du calendrier
+ * Retourne : identifiant (g_free). */
+static gchar *
+google_calendar_id (ESource *source)
+{
+	gchar *id = NULL;
+
+	if (e_source_has_extension (source, E_SOURCE_EXTENSION_WEBDAV_BACKEND)) {
+		ESourceWebdav *webdav = e_source_get_extension (source, E_SOURCE_EXTENSION_WEBDAV_BACKEND);
+		GUri *uri = e_source_webdav_dup_uri (webdav);
+
+		if (uri) {
+			const gchar *path = g_uri_get_path (uri);
+			const gchar *v2 = path ? strstr (path, "/v2/") : NULL;
+
+			if (v2) {
+				gchar **parts = g_strsplit (v2 + 4, "/", 2);
+
+				if (parts[0] && *parts[0])
+					id = g_uri_unescape_string (parts[0], NULL);
+				g_strfreev (parts);
+			}
+			g_uri_unref (uri);
+		}
+	}
+
+	return id ? id : g_strdup ("primary");
+}
+
+/* Texte JSON d'une réponse HTTP -> noeud racine (json_node_unref), NULL si illisible. */
+static JsonNode *
+gal_bytes_to_json (GBytes *bytes)
+{
+	gsize size = 0;
+	const gchar *data = g_bytes_get_data (bytes, &size);
+	gchar *text = g_strndup (data ? data : "", size);
+	JsonNode *root = json_from_string (text, NULL);
+
+	g_free (text);
+	return root;
+}
+
+/* Identifiant Google d'un événement d'après son UID iCalendar ; NULL s'il n'est pas (encore) publié.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   token       : jeton d'accès
+ *   calendar_id : identifiant de calendrier déjà encodé pour une adresse
+ *   ical_uid    : UID de l'événement
+ *   error       : emplacement pour une erreur (autre que « introuvable ») */
+static gchar *
+google_find_event_id (EvoCore *core,
+		      const gchar *token,
+		      const gchar *calendar_id,
+		      const gchar *ical_uid,
+		      GError **error)
+{
+	gchar *uid_enc = g_uri_escape_string (ical_uid, NULL, FALSE);
+	gchar *uri = g_strdup_printf ("https://www.googleapis.com/calendar/v3/calendars/%s/events?iCalUID=%s&maxResults=1",
+		calendar_id, uid_enc);
+	gchar *event_id = NULL;
+	guint status = 0;
+	GBytes *bytes = gal_http_get (core, GAL_PROVIDER_GOOGLE, uri, token, &status, error);
+
+	if (bytes) {
+		if (status == 200) {
+			JsonNode *root = gal_bytes_to_json (bytes);
+
+			if (root && JSON_NODE_HOLDS_OBJECT (root)) {
+				JsonArray *items = json_object_get_array_member (json_node_get_object (root), "items");
+
+				if (items && json_array_get_length (items) > 0)
+					event_id = g_strdup (json_object_get_string_member_with_default (
+						json_array_get_object_element (items, 0), "id", ""));
+			}
+			if (root)
+				json_node_unref (root);
+			if (event_id && !*event_id)
+				g_clear_pointer (&event_id, g_free);
+		} else if (error && !*error) {
+			gchar *message = gal_response_error_message (bytes);
+
+			g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Google Agenda (HTTP %u) : %s", status,
+				message ? message : "erreur");
+			g_free (message);
+		}
+		g_bytes_unref (bytes);
+	}
+
+	g_free (uid_enc);
+	g_free (uri);
+	return event_id;
+}
+
+/* Ajoute une réunion Google Meet à un événement d'un calendrier Gmail (API Google Agenda,
+ * conferenceData.createRequest), puis actualise le calendrier.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = calendar_uid, [1] = event_uid
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : {"link": "..."} (vide si Google n'a pas encore fourni le lien), NULL en cas d'erreur. */
+static gchar *
+core_add_google_meet_run (EvoCore *core,
+			  gchar **args,
+			  GError **error)
+{
+	ESource *source, *parent = NULL;
+	GalProvider provider;
+	gchar *token = NULL, *calendar_id, *calendar_enc, *event_id = NULL, *link = NULL, *json = NULL;
+	guint attempt;
+
+	source = e_source_registry_ref_source (core->registry, args[0]);
+	if (source && e_source_get_parent (source))
+		parent = e_source_registry_ref_source (core->registry, e_source_get_parent (source));
+	if (!parent || !gal_collection_provider (parent, &provider) || provider != GAL_PROVIDER_GOOGLE) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			"Google Meet n'est disponible que pour les calendriers d'un compte Gmail.");
+		g_clear_object (&source);
+		g_clear_object (&parent);
+		return NULL;
+	}
+
+	if (!gal_get_token (core, parent, &token, error)) {
+		g_object_unref (source);
+		g_object_unref (parent);
+		return NULL;
+	}
+
+	calendar_id = google_calendar_id (source);
+	calendar_enc = g_uri_escape_string (calendar_id, NULL, FALSE);
+
+	/* l'événement vient d'être créé : quelques essais le temps que Google le publie */
+	for (attempt = 0; attempt < 5 && !event_id && !(error && *error); attempt++) {
+		if (attempt)
+			g_usleep (2 * G_USEC_PER_SEC);
+		event_id = google_find_event_id (core, token, calendar_enc, args[1], error);
+	}
+
+	if (event_id) {
+		gchar *request_id = g_uuid_string_random ();
+		gchar *body = g_strdup_printf ("{\"conferenceData\":{\"createRequest\":{\"requestId\":\"%s\","
+			"\"conferenceSolutionKey\":{\"type\":\"hangoutsMeet\"}}}}", request_id);
+		gchar *uri = g_strdup_printf ("https://www.googleapis.com/calendar/v3/calendars/%s/events/%s"
+			"?conferenceDataVersion=1&sendUpdates=all", calendar_enc, event_id);
+		guint status = 0;
+		GBytes *bytes = gal_http_send_json (core, "PATCH", uri, token, body, &status, error);
+
+		if (bytes) {
+			if (status == 200) {
+				JsonNode *root = gal_bytes_to_json (bytes);
+
+				link = g_strdup ("");
+				if (root && JSON_NODE_HOLDS_OBJECT (root)) {
+					g_free (link);
+					link = g_strdup (json_object_get_string_member_with_default (
+						json_node_get_object (root), "hangoutLink", ""));
+				}
+				if (root)
+					json_node_unref (root);
+			} else {
+				gchar *message = gal_response_error_message (bytes);
+
+				g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Google Meet (HTTP %u) : %s", status,
+					message ? message : "erreur");
+				g_free (message);
+			}
+			g_bytes_unref (bytes);
+		}
+		g_free (uri);
+		g_free (body);
+		g_free (request_id);
+	} else if (error && !*error) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+			"L'événement n'est pas encore visible chez Google : réessayez dans un instant.");
+	}
+
+	if (link) {
+		/* le calendrier récupère l'événement mis à jour (lien dans la fiche) */
+		EClient *client = e_cal_client_connect_sync (source, E_CAL_CLIENT_SOURCE_TYPE_EVENTS, 5,
+			core->cancellable, NULL);
+		JsonBuilder *builder = json_builder_new ();
+
+		if (client) {
+			e_client_refresh_sync (client, core->cancellable, NULL);
+			g_object_unref (client);
+		}
+
+		json_builder_begin_object (builder);
+		builder_add_string (builder, "link", link);
+		json_builder_end_object (builder);
+		json = json_from_builder (builder);
+		g_object_unref (builder);
+	}
+
+	e_util_safe_free_string (token);
+	g_free (calendar_id);
+	g_free (calendar_enc);
+	g_free (event_id);
+	g_free (link);
+	g_object_unref (source);
+	g_object_unref (parent);
+
+	return json;
+}
+
+/* Soumet l'ajout d'une réunion Google Meet (voir evo_core_add_google_meet dans evo-core.h).
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   calendar_uid : calendrier Gmail de l'événement
+ *   event_uid    : identifiant de l'événement
+ *   func         : rappel recevant {"link": "..."}
+ *   user_data    : données utilisateur transmises au rappel */
+void
+evo_core_add_google_meet (EvoCore *core,
+			  const char *calendar_uid,
+			  const char *event_uid,
+			  EvoCoreResultFunc func,
+			  void *user_data)
+{
+	gchar *args[] = { (gchar *) calendar_uid, (gchar *) event_uid, NULL };
+
+	g_return_if_fail (core != NULL);
+	g_return_if_fail (calendar_uid != NULL && event_uid != NULL);
+
+	core_submit (core, core_add_google_meet_run, g_strdupv (args), func, user_data);
+}
+
+/* Racine Graph de la boîte d'un compte Microsoft 365 : « me » ou « users/<boîte partagée> ».
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte courrier
+ * Retourne : adresse (g_free). */
+static gchar *
+recoverable_mailbox_base (EvoCore *core,
+			  const gchar *account_uid)
+{
+	ESource *account = e_source_registry_ref_source (core->registry, account_uid);
+	gchar *shared = NULL, *base;
+
+	if (account && e_source_has_extension (account, e_source_camel_get_extension_name ("microsoft365"))) {
+		CamelSettings *settings = e_source_camel_get_settings (
+			e_source_get_extension (account, e_source_camel_get_extension_name ("microsoft365")));
+		gboolean use = FALSE;
+
+		g_object_get (settings, "use-impersonation", &use, "impersonate-user", &shared, NULL);
+		if (!use)
+			g_clear_pointer (&shared, g_free);
+	}
+	g_clear_object (&account);
+
+	if (shared && *shared) {
+		gchar *encoded = g_uri_escape_string (shared, NULL, FALSE);
+
+		base = g_strdup_printf ("https://graph.microsoft.com/v1.0/users/%s", encoded);
+		g_free (encoded);
+	} else {
+		base = g_strdup ("https://graph.microsoft.com/v1.0/me");
+	}
+	g_free (shared);
+
+	return base;
+}
+
+/* Jeton Graph du compte Microsoft 365 (collection du compte courrier). */
+static gboolean
+recoverable_get_token (EvoCore *core,
+		       const gchar *account_uid,
+		       gchar **token,
+		       GError **error)
+{
+	ESource *credentials = core_ref_credentials_source (core, account_uid, error);
+	GalProvider provider;
+	gboolean ok;
+
+	if (!credentials)
+		return FALSE;
+	if (!gal_collection_provider (credentials, &provider) || provider != GAL_PROVIDER_MICROSOFT365) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			"La récupération des éléments supprimés n'est disponible que pour les comptes Microsoft 365.");
+		g_object_unref (credentials);
+		return FALSE;
+	}
+	ok = gal_get_token (core, credentials, token, error);
+	g_object_unref (credentials);
+	return ok;
+}
+
+/* Éléments du dossier « Éléments récupérables » (suppressions) d'un compte Microsoft 365 : Microsoft Graph,
+ * /mailFolders/recoverableitemsdeletions/messages.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = uid du compte courrier
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : [{"id", "subject", "from", "to", "received", "deleted"}] (100 plus récents), NULL sinon. */
+static gchar *
+core_list_recoverable_run (EvoCore *core,
+			   gchar **args,
+			   GError **error)
+{
+	gchar *token = NULL, *base, *uri, *json = NULL;
+	GBytes *bytes;
+	guint status = 0;
+	JsonBuilder *builder;
+
+	if (!recoverable_get_token (core, args[0], &token, error))
+		return NULL;
+
+	base = recoverable_mailbox_base (core, args[0]);
+	uri = g_strdup_printf ("%s/mailFolders/recoverableitemsdeletions/messages?$top=100"
+		"&$select=id,subject,from,toRecipients,receivedDateTime,lastModifiedDateTime&$orderby=lastModifiedDateTime%%20desc", base);
+	bytes = gal_http_get (core, GAL_PROVIDER_MICROSOFT365, uri, token, &status, error);
+	g_free (uri);
+	g_free (base);
+
+	if (bytes) {
+		if (status == 200) {
+			JsonNode *root = gal_bytes_to_json (bytes);
+			JsonArray *items = root && JSON_NODE_HOLDS_OBJECT (root)
+				? json_object_get_array_member (json_node_get_object (root), "value") : NULL;
+			guint ii;
+
+			builder = json_builder_new ();
+			json_builder_begin_array (builder);
+			for (ii = 0; items && ii < json_array_get_length (items); ii++) {
+				JsonObject *item = json_array_get_object_element (items, ii);
+				JsonObject *from = json_object_has_member (item, "from") &&
+					JSON_NODE_HOLDS_OBJECT (json_object_get_member (item, "from"))
+					? json_object_get_object_member (item, "from") : NULL;
+				JsonObject *address = from && json_object_has_member (from, "emailAddress") &&
+					JSON_NODE_HOLDS_OBJECT (json_object_get_member (from, "emailAddress"))
+					? json_object_get_object_member (from, "emailAddress") : NULL;
+				const gchar *name = address ? json_object_get_string_member_with_default (address, "name", "") : "";
+				const gchar *mail = address ? json_object_get_string_member_with_default (address, "address", "") : "";
+				const gchar *received = json_object_get_string_member_with_default (item, "receivedDateTime", "");
+				const gchar *modified = json_object_get_string_member_with_default (item, "lastModifiedDateTime", "");
+				GDateTime *date = *received ? g_date_time_new_from_iso8601 (received, NULL) : NULL;
+				GDateTime *deleted = *modified ? g_date_time_new_from_iso8601 (modified, NULL) : NULL;
+				JsonArray *recipients = json_object_has_member (item, "toRecipients") &&
+					JSON_NODE_HOLDS_ARRAY (json_object_get_member (item, "toRecipients"))
+					? json_object_get_array_member (item, "toRecipients") : NULL;
+				GString *to = g_string_new (NULL);
+				guint rr;
+
+				for (rr = 0; recipients && rr < json_array_get_length (recipients); rr++) {
+					JsonObject *recipient = json_array_get_object_element (recipients, rr);
+					JsonObject *to_address = recipient && json_object_has_member (recipient, "emailAddress") &&
+						JSON_NODE_HOLDS_OBJECT (json_object_get_member (recipient, "emailAddress"))
+						? json_object_get_object_member (recipient, "emailAddress") : NULL;
+					const gchar *to_name = to_address ? json_object_get_string_member_with_default (to_address, "name", "") : "";
+					const gchar *to_mail = to_address ? json_object_get_string_member_with_default (to_address, "address", "") : "";
+
+					if (!*to_name && !*to_mail)
+						continue;
+					if (to->len)
+						g_string_append (to, "; ");
+					g_string_append (to, *to_name ? to_name : to_mail);
+				}
+
+				json_builder_begin_object (builder);
+				builder_add_string (builder, "id", json_object_get_string_member_with_default (item, "id", ""));
+				builder_add_string (builder, "subject", json_object_get_string_member_with_default (item, "subject", ""));
+				builder_add_string (builder, "from", *name ? name : mail);
+				json_builder_set_member_name (builder, "received");
+				json_builder_add_int_value (builder, date ? g_date_time_to_unix (date) : 0);
+				json_builder_set_member_name (builder, "deleted");
+				json_builder_add_int_value (builder, deleted ? g_date_time_to_unix (deleted) : 0);
+				builder_add_string (builder, "to", to->str);
+				json_builder_end_object (builder);
+				g_string_free (to, TRUE);
+				if (date)
+					g_date_time_unref (date);
+				if (deleted)
+					g_date_time_unref (deleted);
+			}
+			json_builder_end_array (builder);
+			json = json_from_builder (builder);
+			g_object_unref (builder);
+			if (root)
+				json_node_unref (root);
+		} else {
+			gchar *message = gal_response_error_message (bytes);
+
+			g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Microsoft Graph (HTTP %u) : %s", status,
+				message ? message : "erreur");
+			g_free (message);
+		}
+		g_bytes_unref (bytes);
+	}
+
+	e_util_safe_free_string (token);
+	return json;
+}
+
+/* Restaure des éléments récupérables dans la Boîte de réception (Graph : déplacement du message).
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = uid du compte, [1] = identifiants Graph des messages séparés par des espaces,
+ *           [2] = "restore" (Boîte de réception) ou "purge" (suppression définitive)
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : {"restored": n, "failed": n, "error": "premier échec"}, NULL en cas d'erreur globale. */
+static gchar *
+core_restore_recoverable_run (EvoCore *core,
+			      gchar **args,
+			      GError **error)
+{
+	gchar *token = NULL, *base, *json;
+	gchar **ids = g_strsplit (args[1] ? args[1] : "", " ", -1);
+	gboolean purge = g_strcmp0 (args[2], "purge") == 0;
+	gchar *first_error = NULL;
+	guint restored = 0, failed = 0, ii;
+	JsonBuilder *builder;
+
+	if (!recoverable_get_token (core, args[0], &token, error)) {
+		g_strfreev (ids);
+		return NULL;
+	}
+
+	base = recoverable_mailbox_base (core, args[0]);
+	for (ii = 0; ids[ii]; ii++) {
+		gchar *encoded, *uri;
+		GBytes *bytes;
+		guint status = 0;
+
+		if (!*ids[ii])
+			continue;
+		encoded = g_uri_escape_string (ids[ii], NULL, FALSE);
+		uri = g_strdup_printf (purge ? "%s/messages/%s/permanentDelete" : "%s/messages/%s/move", base, encoded);
+		bytes = gal_http_send_json (core, "POST", uri, token, purge ? "{}" : "{\"destinationId\":\"inbox\"}", &status, NULL);
+		if (bytes && status >= 200 && status < 300) {
+			restored++;
+		} else {
+			failed++;
+			if (!first_error) {
+				gchar *message = bytes ? gal_response_error_message (bytes) : NULL;
+
+				first_error = g_strdup_printf ("HTTP %u : %s", status, message ? message : "erreur");
+				g_free (message);
+			}
+		}
+		if (bytes)
+			g_bytes_unref (bytes);
+		g_free (uri);
+		g_free (encoded);
+	}
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	json_builder_set_member_name (builder, "restored");
+	json_builder_add_int_value (builder, restored);
+	json_builder_set_member_name (builder, "failed");
+	json_builder_add_int_value (builder, failed);
+	builder_add_string (builder, "error", first_error ? first_error : "");
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+
+	g_free (first_error);
+	g_free (base);
+	g_strfreev (ids);
+	e_util_safe_free_string (token);
+	return json;
+}
+
+/* Soumet la lecture des éléments récupérables (voir evo_core_list_recoverable_items dans evo-core.h). */
+void
+evo_core_list_recoverable_items (EvoCore *core,
+				 const char *account_uid,
+				 EvoCoreResultFunc func,
+				 void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, NULL };
+
+	g_return_if_fail (core != NULL);
+	g_return_if_fail (account_uid != NULL);
+
+	core_submit (core, core_list_recoverable_run, g_strdupv (args), func, user_data);
+}
+
+/* Soumet la restauration d'éléments récupérables (voir evo_core_restore_recoverable_items dans evo-core.h). */
+void
+evo_core_restore_recoverable_items (EvoCore *core,
+				    const char *account_uid,
+				    const char *message_ids,
+				    EvoCoreResultFunc func,
+				    void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, (gchar *) message_ids, (gchar *) "restore", NULL };
+
+	g_return_if_fail (core != NULL);
+	g_return_if_fail (account_uid != NULL && message_ids != NULL);
+
+	core_submit (core, core_restore_recoverable_run, g_strdupv (args), func, user_data);
+}
+
+/* Soumet la suppression définitive d'éléments récupérables (voir evo_core_purge_recoverable_items dans evo-core.h). */
+void
+evo_core_purge_recoverable_items (EvoCore *core,
+				  const char *account_uid,
+				  const char *message_ids,
+				  EvoCoreResultFunc func,
+				  void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, (gchar *) message_ids, (gchar *) "purge", NULL };
+
+	g_return_if_fail (core != NULL);
+	g_return_if_fail (account_uid != NULL && message_ids != NULL);
+
+	core_submit (core, core_restore_recoverable_run, g_strdupv (args), func, user_data);
+}
+
+/* Boîte de réception prioritaire (Focused Inbox) d'un compte Microsoft 365 : identifiants des messages
+ * de la Boîte de réception classés « Autres » (propriété Graph inferenceClassification = other).
+ * Les identifiants Graph sont aussi les identifiants (UID) des messages du moteur.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = uid du compte courrier
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : {"other": ["id", ...], "complete": true|false}, NULL en cas d'erreur. */
+static gchar *
+core_inbox_classification_run (EvoCore *core,
+			       gchar **args,
+			       GError **error)
+{
+	gchar *token = NULL, *base, *uri, *json = NULL;
+	JsonBuilder *builder;
+	guint page;
+	gboolean complete = FALSE;
+
+	if (!recoverable_get_token (core, args[0], &token, error))
+		return NULL;
+
+	base = recoverable_mailbox_base (core, args[0]);
+	uri = g_strdup_printf ("%s/mailFolders/inbox/messages?$filter=inferenceClassification%%20eq%%20'other'&$select=id&$top=250", base);
+	g_free (base);
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	json_builder_set_member_name (builder, "other");
+	json_builder_begin_array (builder);
+
+	for (page = 0; page < 4 && uri; page++) {
+		GBytes *bytes;
+		guint status = 0;
+		gchar *next = NULL;
+
+		bytes = gal_http_get (core, GAL_PROVIDER_MICROSOFT365, uri, token, &status, error);
+		g_clear_pointer (&uri, g_free);
+		if (!bytes) {
+			g_object_unref (builder);
+			e_util_safe_free_string (token);
+			return NULL;
+		}
+		if (status == 200) {
+			JsonNode *root = gal_bytes_to_json (bytes);
+
+			if (root && JSON_NODE_HOLDS_OBJECT (root)) {
+				JsonObject *object = json_node_get_object (root);
+				JsonArray *items = json_object_get_array_member (object, "value");
+				guint ii;
+
+				for (ii = 0; items && ii < json_array_get_length (items); ii++)
+					json_builder_add_string_value (builder, json_object_get_string_member_with_default (
+						json_array_get_object_element (items, ii), "id", ""));
+				if (json_object_has_member (object, "@odata.nextLink"))
+					next = g_strdup (json_object_get_string_member_with_default (object, "@odata.nextLink", ""));
+			}
+			if (root)
+				json_node_unref (root);
+		} else {
+			gchar *message = gal_response_error_message (bytes);
+
+			g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Microsoft Graph (HTTP %u) : %s", status,
+				message ? message : "erreur");
+			g_free (message);
+			g_bytes_unref (bytes);
+			g_object_unref (builder);
+			e_util_safe_free_string (token);
+			return NULL;
+		}
+		g_bytes_unref (bytes);
+		if (next && *next)
+			uri = next;
+		else {
+			g_free (next);
+			complete = TRUE;
+		}
+	}
+	g_free (uri);
+
+	json_builder_end_array (builder);
+	json_builder_set_member_name (builder, "complete");
+	json_builder_add_boolean_value (builder, complete);
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+	e_util_safe_free_string (token);
+
+	return json;
+}
+
+/* Classe un message dans « Prioritaire » ou « Autres » et, si demandé, mémorise la règle pour
+ * l'expéditeur (Graph : inferenceClassification des messages et /inferenceClassification/overrides).
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = uid du compte, [1] = identifiant du message, [2] = « focused » ou « other »,
+ *           [3] = adresse de l'expéditeur pour mémoriser la règle ("" : aucune règle)
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : {"override_error": "..."} (vide si tout a réussi), NULL en cas d'erreur. */
+static gchar *
+core_set_classification_run (EvoCore *core,
+			     gchar **args,
+			     GError **error)
+{
+	gchar *token = NULL, *base, *uri, *body, *encoded, *json, *override_error = NULL;
+	const gchar *classification = g_strcmp0 (args[2], "other") == 0 ? "other" : "focused";
+	GBytes *bytes;
+	guint status = 0;
+	JsonBuilder *builder;
+
+	if (!recoverable_get_token (core, args[0], &token, error))
+		return NULL;
+
+	base = recoverable_mailbox_base (core, args[0]);
+	encoded = g_uri_escape_string (args[1], NULL, FALSE);
+	uri = g_strdup_printf ("%s/messages/%s", base, encoded);
+	body = g_strdup_printf ("{\"inferenceClassification\":\"%s\"}", classification);
+	bytes = gal_http_send_json (core, "PATCH", uri, token, body, &status, error);
+	g_free (body);
+	g_free (uri);
+	g_free (encoded);
+
+	if (!bytes) {
+		g_free (base);
+		e_util_safe_free_string (token);
+		return NULL;
+	}
+	if (status < 200 || status >= 300) {
+		gchar *message = gal_response_error_message (bytes);
+
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Microsoft Graph (HTTP %u) : %s", status,
+			message ? message : "erreur");
+		g_free (message);
+		g_bytes_unref (bytes);
+		g_free (base);
+		e_util_safe_free_string (token);
+		return NULL;
+	}
+	g_bytes_unref (bytes);
+
+	if (args[3] && *args[3]) {
+		JsonBuilder *override = json_builder_new ();
+		JsonGenerator *generator;
+		JsonNode *node;
+
+		json_builder_begin_object (override);
+		json_builder_set_member_name (override, "classifyAs");
+		json_builder_add_string_value (override, classification);
+		json_builder_set_member_name (override, "senderEmailAddress");
+		json_builder_begin_object (override);
+		json_builder_set_member_name (override, "address");
+		json_builder_add_string_value (override, args[3]);
+		json_builder_end_object (override);
+		json_builder_end_object (override);
+		node = json_builder_get_root (override);
+		generator = json_generator_new ();
+		json_generator_set_root (generator, node);
+		body = json_generator_to_data (generator, NULL);
+		json_node_unref (node);
+		g_object_unref (generator);
+		g_object_unref (override);
+
+		uri = g_strdup_printf ("%s/inferenceClassification/overrides", base);
+		bytes = gal_http_send_json (core, "POST", uri, token, body, &status, NULL);
+		if (!bytes || status < 200 || status >= 300) {
+			gchar *message = bytes ? gal_response_error_message (bytes) : NULL;
+
+			override_error = g_strdup_printf ("HTTP %u : %s", status, message ? message : "erreur");
+			g_free (message);
+		}
+		if (bytes)
+			g_bytes_unref (bytes);
+		g_free (uri);
+		g_free (body);
+	}
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	builder_add_string (builder, "override_error", override_error ? override_error : "");
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+
+	g_free (override_error);
+	g_free (base);
+	e_util_safe_free_string (token);
+	return json;
+}
+
+/* Soumet la lecture des messages « Autres » (voir evo_core_list_inbox_classification dans evo-core.h). */
+void
+evo_core_list_inbox_classification (EvoCore *core,
+				    const char *account_uid,
+				    EvoCoreResultFunc func,
+				    void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, NULL };
+
+	g_return_if_fail (core != NULL);
+	g_return_if_fail (account_uid != NULL);
+
+	core_submit (core, core_inbox_classification_run, g_strdupv (args), func, user_data);
+}
+
+/* Soumet le classement d'un message (voir evo_core_set_message_classification dans evo-core.h). */
+void
+evo_core_set_message_classification (EvoCore *core,
+				     const char *account_uid,
+				     const char *message_id,
+				     const char *classification,
+				     const char *sender_address,
+				     EvoCoreResultFunc func,
+				     void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, (gchar *) message_id, (gchar *) (classification ? classification : "focused"),
+		(gchar *) (sender_address ? sender_address : ""), NULL };
+
+	g_return_if_fail (core != NULL);
+	g_return_if_fail (account_uid != NULL && message_id != NULL);
+
+	core_submit (core, core_set_classification_run, g_strdupv (args), func, user_data);
+}

@@ -327,11 +327,8 @@
                     <StackPanel Grid.Row="0" Padding="36,24,36,12" Spacing="4">
 
                         <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
-
-                            <HyperlinkButton Content="Paramètres" Click="OnSettingsBreadcrumbRootClick"
-
+                            <HyperlinkButton x:Name="SettingsBreadcrumbRoot" Content="Paramètres" Click="OnSettingsBreadcrumbRootClick"
                                              Padding="0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-
                             <FontIcon Glyph="&#xE76C;" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
 
                             <TextBlock x:Name="SettingsBreadcrumbCategory" Text="Comptes"

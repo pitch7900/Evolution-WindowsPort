@@ -306,7 +306,7 @@ namespace winrt::EvolutionWin::implementation
         }
         catch (hresult_error const& e)
         {
-            ShowStatus(L"Impossible d'afficher le message : " + e.message(), InfoBarSeverity::Warning);
+            ShowStatus(Fmt(Tr(L"Impossible d'afficher le message : {0}"), { e.message() }), InfoBarSeverity::Warning);
         }
     }
 
@@ -330,7 +330,7 @@ namespace winrt::EvolutionWin::implementation
 
             std::wstring plain_html = L"<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>"
                 L"body { margin:0; padding:16px; background:#fff; color:#1a1a1a; font-family:'Segoe UI Variable Text','Segoe UI',sans-serif; font-size:14px; line-height:1.6; word-break:break-word; white-space:pre-wrap; }"
-                L"</style></head><body>" + std::wstring{ ::EvolutionWin::Helpers::EscapeHtml(body_text) } + L"</body></html>";
+                L"</style></head><body>" + ::EvolutionWin::Helpers::LinkifyEscapedHtml(::EvolutionWin::Helpers::EscapeHtml(body_text)) + L"</body></html>";
 
             ShowInReader(hstring{ plain_html }, false);
             return;
@@ -407,7 +407,7 @@ namespace winrt::EvolutionWin::implementation
         }
         catch (hresult_error const& e)
         {
-            ShowStatus(L"Impossible d'afficher le message : " + e.message(), InfoBarSeverity::Warning);
+            ShowStatus(Fmt(Tr(L"Impossible d'afficher le message : {0}"), { e.message() }), InfoBarSeverity::Warning);
         }
 
         deferral.Complete();
@@ -427,21 +427,21 @@ namespace winrt::EvolutionWin::implementation
         auto address = SenderAddress(m_current_message.GetNamedString(L"from", L""));
         bool never = RemoteContentMode() == L"never";
 
-        std::wstring msg = m_reader_blocked_count == 1
-            ? L"1 élément distant (image, style, pixel de suivi…) n'a pas été chargé pour protéger votre vie privée."
-            : std::to_wstring(m_reader_blocked_count) +
-              L" éléments distants (images, styles, pixels de suivi…) n'ont pas été chargés pour protéger votre vie privée.";
+        hstring msg = m_reader_blocked_count == 1
+            ? Tr(L"Pour protéger votre vie privée, 1 élément distant (image, style, pixel de suivi…) n'a pas été chargé.")
+            : Fmt(Tr(L"Pour protéger votre vie privée, {0} éléments distants (images, styles, pixels de suivi…) n'ont pas été chargés."),
+                  { to_hstring(m_reader_blocked_count) });
         if (never)
-            msg += L" Le chargement est désactivé pour tous les messages (Paramètres › Confidentialité).";
-        RemoteContentBar().Message(hstring{ msg });
+            msg = msg + L" " + Tr(L"Le chargement est désactivé pour tous les messages (Paramètres › Confidentialité).");
+        RemoteContentBar().Message(msg);
 
         bool can_trust = !never && !address.empty();
         TrustSenderButton().Visibility(can_trust ? Visibility::Visible : Visibility::Collapsed);
         TrustDomainButton().Visibility(can_trust ? Visibility::Visible : Visibility::Collapsed);
         if (can_trust)
         {
-            TrustSenderButton().Content(box_value(hstring{ L"Toujours faire confiance à " + address }));
-            TrustDomainButton().Content(box_value(hstring{ L"Toujours faire confiance au domaine @" + AddressDomain(address) }));
+            TrustSenderButton().Content(box_value(Fmt(Tr(L"Toujours faire confiance à {0}"), { hstring{ address } })));
+            TrustDomainButton().Content(box_value(Fmt(Tr(L"Toujours faire confiance au domaine @{0}"), { hstring{ AddressDomain(address) } })));
         }
 
         /* ouvert au premier blocage seulement : une image chargée plus tard
@@ -491,7 +491,7 @@ namespace winrt::EvolutionWin::implementation
             WriteTrustList(key.c_str(), list);
         }
 
-        ShowStatus(L"Le contenu externe des messages de « " + label + L" » sera chargé.", InfoBarSeverity::Success);
+        ShowStatus(Fmt(Tr(L"Le contenu externe des messages de « {0} » sera chargé."), { label }), InfoBarSeverity::Success);
         ShowCurrentMessageInReader(false);
     }
 
@@ -521,7 +521,7 @@ namespace winrt::EvolutionWin::implementation
     {
         if (!m_current_message || !m_reader_ready || !Reader().CoreWebView2())
         {
-            ShowStatus(L"Sélectionnez d'abord un message à imprimer.", InfoBarSeverity::Informational);
+            ShowStatus(Tr(L"Sélectionnez d'abord un message à imprimer."), InfoBarSeverity::Informational);
             return;
         }
 
@@ -531,7 +531,7 @@ namespace winrt::EvolutionWin::implementation
         }
         catch (hresult_error const& e)
         {
-            ShowStatus(L"Impossible d'ouvrir l'impression : " + e.message(), InfoBarSeverity::Error);
+            ShowStatus(Fmt(Tr(L"Impossible d'ouvrir l'impression : {0}"), { e.message() }), InfoBarSeverity::Error);
         }
     }
 
@@ -551,21 +551,38 @@ namespace winrt::EvolutionWin::implementation
         }
 
         bool valid = security.GetNamedBoolean(L"valid", false);
+        bool trusted = security.GetNamedBoolean(L"trusted", false);
         hstring protocol = security.GetNamedString(L"protocol", L"");
         hstring signer = security.GetNamedString(L"signer", L"");
         hstring desc = security.GetNamedString(L"description", L"");
 
-        std::wstring title = protocol.empty() ? L"Sécurité" : std::wstring{ protocol } + L" : ";
+        /* Titres en langage clair : vert si tout est sûr, bleu si le contenu est intact
+         * mais le certificat inconnu de Windows, orange en cas de problème. */
+        hstring title;
+        InfoBarSeverity severity = InfoBarSeverity::Warning;
         if (encrypted && signed_msg)
-            title += valid ? L"Message déchiffré et signature vérifiée" : L"Message chiffré / signé (vérification incomplète)";
+        {
+            title = valid ? Tr(L"Message chiffré et signé") : Tr(L"Message chiffré, mais la signature pose problème");
+            severity = valid ? (trusted ? InfoBarSeverity::Success : InfoBarSeverity::Informational) : InfoBarSeverity::Warning;
+        }
         else if (encrypted)
-            title += valid ? L"Message déchiffré" : L"Échec du déchiffrement";
+        {
+            title = valid ? Tr(L"Message chiffré : lisible par vous seul") : Tr(L"Ce message chiffré n'a pas pu être lu");
+            severity = valid ? InfoBarSeverity::Success : InfoBarSeverity::Warning;
+        }
+        else if (valid)
+        {
+            title = trusted ? Tr(L"Message signé et vérifié") : Tr(L"Message signé : contenu intact, expéditeur non certifié");
+            severity = trusted ? InfoBarSeverity::Success : InfoBarSeverity::Informational;
+        }
         else
-            title += valid ? L"Signature numérique valide" : L"Signature numérique non vérifiée ou invalide";
+        {
+            title = Tr(L"Attention : la signature de ce message n'est pas fiable");
+        }
 
         std::wstring msg;
         if (!signer.empty())
-            msg = L"Signataire : " + std::wstring{ signer };
+            msg = std::wstring{ Fmt(Tr(L"Signataire : {0}"), { signer }) };
         if (!desc.empty())
         {
             if (!msg.empty())
@@ -573,9 +590,9 @@ namespace winrt::EvolutionWin::implementation
             msg += desc;
         }
 
-        SecurityBar().Title(hstring{ title });
+        SecurityBar().Title(title);
         SecurityBar().Message(hstring{ msg });
-        SecurityBar().Severity(valid ? InfoBarSeverity::Success : InfoBarSeverity::Warning);
+        SecurityBar().Severity(severity);
         SecurityBar().IsOpen(true);
     }
 
@@ -611,13 +628,13 @@ namespace winrt::EvolutionWin::implementation
                 title.IsTextSelectionEnabled(true);
                 info.Children().Append(title);
                 TextBlock kind;
-                kind.Text(domains ? L"Domaine" : L"Expéditeur");
+                kind.Text(domains ? Tr(L"Domaine") : Tr(L"Expéditeur"));
                 kind.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
                 info.Children().Append(kind);
                 row.Children().Append(info);
 
                 Button remove_btn;
-                remove_btn.Content(box_value(L"Retirer"));
+                remove_btn.Content(box_value(Tr(L"Retirer")));
                 remove_btn.VerticalAlignment(VerticalAlignment::Center);
                 Grid::SetColumn(remove_btn, 1);
                 remove_btn.Click([this, key, entry](IInspectable const&, RoutedEventArgs const&)
@@ -677,19 +694,19 @@ namespace winrt::EvolutionWin::implementation
     void MainWindow::OnZoomInClick(IInspectable const&, RoutedEventArgs const&)
     {
         ApplyReaderZoom(::EvolutionWin::Helpers::StepZoomIn(m_reader_zoom));
-        ShowStatus(L"Niveau de zoom : " + hstring{ ::EvolutionWin::Helpers::FormatZoomPercentage(m_reader_zoom) }, InfoBarSeverity::Informational);
+        ShowStatus(Fmt(Tr(L"Niveau de zoom : {0}"), { hstring{ ::EvolutionWin::Helpers::FormatZoomPercentage(m_reader_zoom) } }), InfoBarSeverity::Informational);
     }
 
     void MainWindow::OnZoomOutClick(IInspectable const&, RoutedEventArgs const&)
     {
         ApplyReaderZoom(::EvolutionWin::Helpers::StepZoomOut(m_reader_zoom));
-        ShowStatus(L"Niveau de zoom : " + hstring{ ::EvolutionWin::Helpers::FormatZoomPercentage(m_reader_zoom) }, InfoBarSeverity::Informational);
+        ShowStatus(Fmt(Tr(L"Niveau de zoom : {0}"), { hstring{ ::EvolutionWin::Helpers::FormatZoomPercentage(m_reader_zoom) } }), InfoBarSeverity::Informational);
     }
 
     void MainWindow::OnZoomResetClick(IInspectable const&, RoutedEventArgs const&)
     {
         ApplyReaderZoom(1.0);
-        ShowStatus(L"Zoom reinitialise a 100 %", InfoBarSeverity::Informational);
+        ShowStatus(Tr(L"Zoom réinitialisé à 100 %"), InfoBarSeverity::Informational);
     }
 
     /**
@@ -703,7 +720,7 @@ namespace winrt::EvolutionWin::implementation
         if (m_current_message)
         {
             ShowCurrentMessageInReader(false);
-            ShowStatus(m_view_plain_text ? L"Affichage en texte brut active" : L"Affichage HTML active", InfoBarSeverity::Informational);
+            ShowStatus(m_view_plain_text ? Tr(L"Affichage en texte brut activé") : Tr(L"Affichage HTML activé"), InfoBarSeverity::Informational);
         }
     }
 }

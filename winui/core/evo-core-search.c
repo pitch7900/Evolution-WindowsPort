@@ -71,9 +71,15 @@ static void
 collect_folder_targets_recursive (CamelFolderInfo *fi,
 				  const gchar *account_uid,
 				  const gchar *account_name,
-				  GPtrArray *targets)
+				  GPtrArray *targets,
+				  gboolean skip_trash_junk)
 {
 	for (; fi; fi = fi->next) {
+		guint32 type = fi->flags & CAMEL_FOLDER_TYPE_MASK;
+
+		/* recherche par critères : ni corbeille ni indésirables, comme les dossiers de recherche d'Outlook */
+		if (skip_trash_junk && (type == CAMEL_FOLDER_TYPE_TRASH || type == CAMEL_FOLDER_TYPE_JUNK))
+			continue;
 		if (!(fi->flags & CAMEL_FOLDER_NOSELECT) && fi->full_name && *fi->full_name) {
 			SearchTargetFolder *t = g_slice_new0 (SearchTargetFolder);
 			t->account_uid = g_strdup (account_uid);
@@ -83,7 +89,7 @@ collect_folder_targets_recursive (CamelFolderInfo *fi,
 			g_ptr_array_add (targets, t);
 		}
 		if (fi->child)
-			collect_folder_targets_recursive (fi->child, account_uid, account_name, targets);
+			collect_folder_targets_recursive (fi->child, account_uid, account_name, targets, skip_trash_junk);
 	}
 }
 
@@ -242,6 +248,129 @@ scoped_matches_to_json (GPtrArray *matches,
 	return json;
 }
 
+/* Critères d'une recherche enregistrée : opérateurs de la requête, combinés (ET) avec les mots libres. */
+typedef struct _SearchFilters {
+	gboolean any;
+	gboolean unread;
+	gboolean read;
+	gboolean flagged;
+	gboolean attachments;
+	gint64 larger;		/* taille minimale en octets (0 : aucune) */
+	gchar *from;		/* texte à trouver dans l'expéditeur (casefold), NULL : aucun */
+} SearchFilters;
+
+/* Sépare les opérateurs (is:unread, is:read, is:flagged, has:attachment, larger:<octets>, from:<texte>)
+ * des mots libres d'une requête.
+ * Paramètres :
+ *   query      : requête saisie ou enregistrée
+ *   free_query : reçoit les mots libres, séparés par des espaces
+ *   filters    : reçoit les critères (à libérer avec search_filters_clear) */
+static void
+search_parse_operators (const gchar *query,
+			GString *free_query,
+			SearchFilters *filters)
+{
+	gchar **tokens = g_strsplit_set (query ? query : "", " \t\r\n", -1);
+	guint ii;
+
+	for (ii = 0; tokens && tokens[ii]; ii++) {
+		const gchar *token = tokens[ii];
+
+		if (!*token)
+			continue;
+		if (g_ascii_strcasecmp (token, "is:unread") == 0) {
+			filters->unread = TRUE;
+		} else if (g_ascii_strcasecmp (token, "is:read") == 0) {
+			filters->read = TRUE;
+		} else if (g_ascii_strcasecmp (token, "is:flagged") == 0) {
+			filters->flagged = TRUE;
+		} else if (g_ascii_strcasecmp (token, "has:attachment") == 0) {
+			filters->attachments = TRUE;
+		} else if (g_ascii_strncasecmp (token, "larger:", 7) == 0 && token[7]) {
+			filters->larger = g_ascii_strtoll (token + 7, NULL, 10);
+		} else if (g_ascii_strncasecmp (token, "from:", 5) == 0 && token[5]) {
+			g_free (filters->from);
+			filters->from = g_utf8_casefold (token + 5, -1);
+		} else {
+			if (free_query->len)
+				g_string_append_c (free_query, ' ');
+			g_string_append (free_query, token);
+			continue;
+		}
+		filters->any = TRUE;
+	}
+	g_strfreev (tokens);
+}
+
+/* Expression Camel équivalente aux critères, évaluée par l'index du dossier (rapide sur de gros dossiers) ;
+ * search_filters_match () reste appelé ensuite pour les critères exacts (taille en octets, expéditeur).
+ * Retourne : expression (g_free), NULL sans critère. */
+static gchar *
+search_filters_sexp (const SearchFilters *filters)
+{
+	GString *sexp;
+
+	if (!filters->any)
+		return NULL;
+
+	sexp = g_string_new ("(match-all (and (not (system-flag \"deleted\"))");
+	if (filters->unread)
+		g_string_append (sexp, " (not (system-flag \"seen\"))");
+	if (filters->read)
+		g_string_append (sexp, " (system-flag \"seen\")");
+	if (filters->flagged)
+		g_string_append (sexp, " (system-flag \"flagged\")");
+	if (filters->attachments)
+		g_string_append (sexp, " (system-flag \"attachments\")");
+	if (filters->larger > 1024)
+		g_string_append_printf (sexp, " (> (get-size) %" G_GINT64_FORMAT ")", filters->larger / 1024 - 1);
+	if (filters->from) {
+		g_string_append (sexp, " (header-contains \"from\" ");
+		camel_sexp_encode_string (sexp, filters->from);
+		g_string_append_c (sexp, ')');
+	}
+	g_string_append (sexp, "))");
+
+	return g_string_free (sexp, FALSE);
+}
+
+static void
+search_filters_clear (SearchFilters *filters)
+{
+	g_free (filters->from);
+	filters->from = NULL;
+}
+
+/* Un message respecte-t-il les critères ? */
+static gboolean
+search_filters_match (const SearchFilters *filters,
+		      CamelMessageInfo *info)
+{
+	guint32 flags = camel_message_info_get_flags (info);
+
+	if (filters->unread && (flags & CAMEL_MESSAGE_SEEN))
+		return FALSE;
+	if (filters->read && !(flags & CAMEL_MESSAGE_SEEN))
+		return FALSE;
+	if (filters->flagged && !(flags & CAMEL_MESSAGE_FLAGGED))
+		return FALSE;
+	if (filters->attachments && !(flags & CAMEL_MESSAGE_ATTACHMENTS))
+		return FALSE;
+	if (filters->larger > 0 && (gint64) camel_message_info_get_size (info) < filters->larger)
+		return FALSE;
+	if (filters->from) {
+		const gchar *from = camel_message_info_get_from (info);
+		gchar *folded = g_utf8_casefold (from ? from : "", -1);
+		gboolean found = strstr (folded, filters->from) != NULL;
+
+		g_free (folded);
+		if (!found)
+			return FALSE;
+	}
+
+	return TRUE;
+}
+
 /* Exécute une recherche de messages selon une portée définie :
  *   - "folder"     : dossier courant uniquement
  *   - "subfolders" : dossier courant et tous ses sous-dossiers récursivement
@@ -264,15 +393,30 @@ core_search_messages_run (EvoCore *core,
 	guint max_count = (guint) g_ascii_strtoull (args[3], NULL, 10);
 	GPtrArray *targets, *matches;
 	gchar **raw_words = NULL, **words = NULL;
-	GString *sexp = NULL;
+	GString *sexp = NULL, *free_query = g_string_new (NULL);
+	SearchFilters filters = { 0 };
+	gboolean skip_trash_junk;
+	gchar *filter_sexp;
 	guint ii, n_words = 0;
 	gchar *json;
 
-	if (!query || !*query) {
+	/* opérateurs (is:unread, from:…) : retirés de la requête, appliqués comme critères */
+	search_parse_operators (query, free_query, &filters);
+	skip_trash_junk = filters.any;
+	if (filters.any)
+		query = free_query->str;
+	filter_sexp = search_filters_sexp (&filters);
+
+	if (!filters.any && (!query || !*query)) {
 		if (g_strcmp0 (scope, "folder") == 0) {
 			gchar *list_args[] = { args[0], args[1], args[3], NULL };
+
+			g_string_free (free_query, TRUE);
+			g_free (filter_sexp);
 			return core_list_messages_run (core, list_args, error);
 		}
+		g_string_free (free_query, TRUE);
+		g_free (filter_sexp);
 		return g_strdup ("[]");
 	}
 
@@ -292,7 +436,7 @@ core_search_messages_run (EvoCore *core,
 					CamelFolderInfo *fi = camel_store_get_folder_info_sync (st, NULL,
 						CAMEL_STORE_FOLDER_INFO_RECURSIVE, core->cancellable, NULL);
 					if (fi) {
-						collect_folder_targets_recursive (fi, s_uid, s_name, targets);
+						collect_folder_targets_recursive (fi, s_uid, s_name, targets, skip_trash_junk);
 						camel_folder_info_free (fi);
 					}
 				}
@@ -310,7 +454,7 @@ core_search_messages_run (EvoCore *core,
 				CamelFolderInfo *fi = camel_store_get_folder_info_sync (store, NULL,
 					CAMEL_STORE_FOLDER_INFO_RECURSIVE, core->cancellable, NULL);
 				if (fi) {
-					collect_folder_targets_recursive (fi, account_uid, s_name, targets);
+					collect_folder_targets_recursive (fi, account_uid, s_name, targets, skip_trash_junk);
 					camel_folder_info_free (fi);
 				}
 			}
@@ -338,7 +482,7 @@ core_search_messages_run (EvoCore *core,
 							g_ptr_array_add (targets, t);
 						}
 						if (found->child)
-							collect_folder_targets_recursive (found->child, account_uid, s_name, targets);
+							collect_folder_targets_recursive (found->child, account_uid, s_name, targets, skip_trash_junk);
 					}
 					camel_folder_info_free (root_fi);
 				}
@@ -399,13 +543,21 @@ core_search_messages_run (EvoCore *core,
 				g_hash_table_add (body_set, body_uids->pdata[ii]);
 		}
 
-		uids = camel_folder_dup_uids (folder);
+		if (filter_sexp) {
+			/* seuls les messages respectant les critères sont lus */
+			if (!camel_folder_search_sync (folder, filter_sexp, &uids, core->cancellable, NULL))
+				uids = NULL;
+		} else {
+			uids = camel_folder_dup_uids (folder);
+		}
 		for (ii = 0; uids && ii < uids->len; ii++) {
 			const gchar *uid = uids->pdata[ii];
 			CamelMessageInfo *info = camel_folder_get_message_info (folder, uid);
 
 			if (info && !(camel_message_info_get_flags (info) & CAMEL_MESSAGE_DELETED) &&
-			    ((body_set && g_hash_table_contains (body_set, uid)) ||
+			    search_filters_match (&filters, info) &&
+			    (n_words == 0 ||
+			     (body_set && g_hash_table_contains (body_set, uid)) ||
 			     message_info_matches_query (info, query, words))) {
 				ScopedSearchMatch *m = g_slice_new0 (ScopedSearchMatch);
 				m->info = info;
@@ -438,6 +590,9 @@ core_search_messages_run (EvoCore *core,
 		g_string_free (sexp, TRUE);
 	g_strfreev (words);
 	g_strfreev (raw_words);
+	search_filters_clear (&filters);
+	g_string_free (free_query, TRUE);
+	g_free (filter_sexp);
 
 	return json;
 }

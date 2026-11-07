@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
 #include "MainWindow.xaml.h"
 #include "MainWindow.Helpers.h"
 #include "WindowIcon.h"
@@ -30,6 +31,7 @@ using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
 using namespace Microsoft::UI::Xaml::Media;
+using namespace Microsoft::UI::Xaml::Controls::Primitives;
 using namespace Windows::Data::Json;
 using namespace Windows::Foundation;
 
@@ -87,9 +89,9 @@ namespace winrt::EvolutionWin::implementation
     {
         ContentDialog dialog;
         dialog.XamlRoot(this->Content().XamlRoot());
-        dialog.Title(box_value(L"Atteindre une date"));
-        dialog.PrimaryButtonText(L"Atteindre");
-        dialog.CloseButtonText(L"Annuler");
+        dialog.Title(box_value(Tr(L"Atteindre une date")));
+        dialog.PrimaryButtonText(Tr(L"Atteindre"));
+        dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Primary);
 
         StackPanel panel;
@@ -97,7 +99,7 @@ namespace winrt::EvolutionWin::implementation
         panel.MinWidth(320);
 
         TextBlock desc;
-        desc.Text(L"Sélectionnez une date pour naviguer directement dans le calendrier :");
+        desc.Text(Tr(L"Sélectionnez une date pour naviguer directement dans le calendrier :"));
         desc.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
         panel.Children().Append(desc);
 
@@ -113,7 +115,7 @@ namespace winrt::EvolutionWin::implementation
         shortcuts.Spacing(8);
 
         Button today_btn;
-        today_btn.Content(box_value(L"Aujourd'hui"));
+        today_btn.Content(box_value(Tr(L"Aujourd'hui")));
         today_btn.Click([date_picker](IInspectable const&, RoutedEventArgs const&)
         {
             date_picker.Date(winrt::clock::now());
@@ -121,7 +123,7 @@ namespace winrt::EvolutionWin::implementation
         shortcuts.Children().Append(today_btn);
 
         Button next_week_btn;
-        next_week_btn.Content(box_value(L"+7 jours"));
+        next_week_btn.Content(box_value(Tr(L"+7 jours")));
         next_week_btn.Click([date_picker](IInspectable const&, RoutedEventArgs const&)
         {
             if (date_picker.Date())
@@ -313,7 +315,7 @@ namespace winrt::EvolutionWin::implementation
         {
             EventList().Items().Clear();
             TextBlock none;
-            none.Text(L"Aucun calendrier affiché : cochez un calendrier dans la liste de gauche.");
+            none.Text(Tr(L"Aucun calendrier affiché : cochez un calendrier dans la liste de gauche."));
             none.Padding(ThicknessHelper::FromLengths(12, 12, 12, 12));
             EventList().Items().Append(none);
             return;
@@ -380,8 +382,8 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus(L"Calendrier : " + error, InfoBarSeverity::Error);
-                UpdateConnectionStatus(m_account.empty() ? L"global" : m_account, L"error", L"Anomalie de synchronisation du calendrier : " + error);
+                ShowStatus(Fmt(Tr(L"Calendrier : {0}"), { error }), InfoBarSeverity::Error);
+                UpdateConnectionStatus(m_account.empty() ? L"global" : m_account, L"error", Fmt(Tr(L"Anomalie de synchronisation du calendrier : {0}"), { error }));
                 person_done();
                 return;
             }
@@ -390,9 +392,15 @@ namespace winrt::EvolutionWin::implementation
             if (!m_is_offline)
             {
                 auto it = m_account_states.find(std::wstring{ m_account.empty() ? L"global" : m_account });
-                if (it != m_account_states.end() && it->second.status == L"error" && std::wstring_view(it->second.message).find(L"calendrier") != std::wstring_view::npos)
+                /* le message d'anomalie est traduit : reconnaître son préfixe traduit (ou l'ancien texte français) */
+                std::wstring fault_pattern{ Tr(L"Anomalie de synchronisation du calendrier : {0}") };
+                std::wstring fault_prefix = fault_pattern.substr(0, fault_pattern.find(L"{0}"));
+                bool calendar_fault = it != m_account_states.end() && it->second.status == L"error" &&
+                    (std::wstring_view(it->second.message).find(L"calendrier") != std::wstring_view::npos ||
+                     std::wstring_view(it->second.message).substr(0, fault_prefix.size()) == fault_prefix);
+                if (calendar_fault)
                 {
-                    UpdateConnectionStatus(m_account.empty() ? L"global" : m_account, L"connected", L"Synchronisé");
+                    UpdateConnectionStatus(m_account.empty() ? L"global" : m_account, L"connected", Tr(L"Synchronisé"));
                 }
             }
 
@@ -490,7 +498,7 @@ namespace winrt::EvolutionWin::implementation
 
             hstring time_str = FormatDate(start_t) + (end_t > start_t ? L" → " + FormatDate(end_t) : hstring{});
             if (!location.empty())
-                time_str = time_str + L"  •  Lieu : " + location;
+                time_str = time_str + L"  •  " + Fmt(Tr(L"Lieu : {0}", L"Where: {0}"), { location });
 
             TextBlock sub;
             sub.Text(time_str);
@@ -511,10 +519,7 @@ namespace winrt::EvolutionWin::implementation
             Grid::SetColumn(details, 1);
             row.Children().Append(details);
 
-            AttachCategoryContextMenu(row, event_categories, [this, ev](std::vector<std::wstring> const& names)
-            {
-                SetEventCategories(ev, names);
-            });
+            AttachEventContextMenu(row, ev);
 
             Button del_btn;
             FontIcon del_icon;
@@ -523,14 +528,14 @@ namespace winrt::EvolutionWin::implementation
             del_btn.Content(del_icon);
             del_btn.VerticalAlignment(VerticalAlignment::Center);
             Grid::SetColumn(del_btn, 2);
-            ToolTipService::SetToolTip(del_btn, box_value(L"Supprimer l'événement"));
+            ToolTipService::SetToolTip(del_btn, box_value(Tr(L"Supprimer l'événement")));
             del_btn.Click([this, calendar_uid, uid](IInspectable const&, RoutedEventArgs const&)
             {
                 m_core->DeleteEvent(calendar_uid, uid, [this](hstring const&, hstring const& err)
                 {
                     if (!err.empty())
                     {
-                        ShowStatus(L"Suppression de l'événement : " + err, InfoBarSeverity::Error);
+                        ShowStatus(Fmt(Tr(L"Suppression de l'événement : {0}"), { err }), InfoBarSeverity::Error);
                         return;
                     }
                     LoadEvents();
@@ -538,7 +543,7 @@ namespace winrt::EvolutionWin::implementation
             });
             row.Children().Append(del_btn);
 
-            /* ouverture au clic (OnEventItemClick) : "<agenda>\x1F<événement>" */
+            /* ouverture au double clic (OnEventListDoubleTapped) : "<agenda>\x1F<événement>" */
             row.Tag(box_value(calendar_uid + L"\x1F" + uid));
             items.Append(row);
         }
@@ -547,9 +552,9 @@ namespace winrt::EvolutionWin::implementation
         {
             TextBlock empty;
             if (!query.empty())
-                empty.Text(L"Aucun événement ne correspond à « " + hstring{ query } + L" ».");
+                empty.Text(Fmt(Tr(L"Aucun événement ne correspond à « {0} »."), { hstring{ query } }));
             else
-                empty.Text(L"Aucun événement sur cette période.");
+                empty.Text(Tr(L"Aucun événement sur cette période."));
             empty.Padding(ThicknessHelper::FromLengths(12, 12, 12, 12));
             items.Append(empty);
         }
@@ -613,11 +618,11 @@ namespace winrt::EvolutionWin::implementation
         LoadEvents();
         if (!m_core)
             return;
-        ShowStatus(L"Actualisation des agendas distants…", InfoBarSeverity::Informational);
+        ShowStatus(Tr(L"Actualisation des agendas distants…"), InfoBarSeverity::Informational);
         m_core->RefreshCalendars([this](hstring const&, hstring const&)
         {
             LoadEvents();
-            ShowStatus(L"Agendas actualisés.", InfoBarSeverity::Success);
+            ShowStatus(Tr(L"Agendas actualisés."), InfoBarSeverity::Success);
         });
     }
 
@@ -625,6 +630,64 @@ namespace winrt::EvolutionWin::implementation
     void MainWindow::OnNewEventClick(IInspectable const&, RoutedEventArgs const&)
     {
         ShowNewEventDialogAsync();
+    }
+
+    /**
+     * @brief Indique si un calendrier a déjà refusé une écriture (accès refusé par le serveur) : il est alors
+     *        écarté de la liste des calendriers proposés pour un nouvel événement.
+     * @param uid Identifiant du calendrier.
+     * @return true si le calendrier est mémorisé en lecture seule.
+     */
+    static bool IsKnownReadOnlyCalendar(hstring const& uid)
+    {
+        for (auto const& entry : ::EvolutionWin::Settings::Instance().GetArray(L"calendar.readonly"))
+            if (entry.ValueType() == JsonValueType::String && entry.GetString() == uid)
+                return true;
+        return false;
+    }
+
+    /**
+     * @brief Mémorise qu'un calendrier refuse les écritures.
+     * @param uid Identifiant du calendrier.
+     */
+    static void MarkReadOnlyCalendar(hstring const& uid)
+    {
+        if (uid.empty() || IsKnownReadOnlyCalendar(uid))
+            return;
+        auto& settings = ::EvolutionWin::Settings::Instance();
+        JsonArray list = settings.GetArray(L"calendar.readonly");
+        list.Append(JsonValue::CreateStringValue(uid));
+        settings.Set(L"calendar.readonly", list);
+    }
+
+    /**
+     * @brief Message d'erreur d'enregistrement d'un événement : si le serveur refuse l'accès, le calendrier est
+     *        mémorisé en lecture seule et le message explique comment choisir un autre calendrier.
+     * @param sources Calendriers connus (m_calendar_sources).
+     * @param calendar_uid Calendrier visé.
+     * @param action Modèle du message avec marqueur {0} pour l'erreur (« Création de l'événement : {0} »), déjà traduit.
+     * @param error Erreur renvoyée par le moteur.
+     * @return Texte à afficher.
+     */
+    static hstring EventSaveErrorText(JsonArray const& sources, hstring const& calendar_uid, hstring const& action, hstring const& error)
+    {
+        std::wstring text{ error };
+        bool denied = text.find(L"AccessDenied") != std::wstring::npos || text.find(L"Access is denied") != std::wstring::npos ||
+            text.find(L"ErrorAccessDenied") != std::wstring::npos;
+        if (!denied)
+            return Fmt(action, { error });
+
+        MarkReadOnlyCalendar(calendar_uid);
+        hstring name = calendar_uid;
+        for (auto const& value : sources ? sources : JsonArray{})
+        {
+            auto source = value.GetObject();
+            if (source.GetNamedString(L"uid", L"") == calendar_uid)
+                name = source.GetNamedString(L"name", calendar_uid);
+        }
+        return Fmt(Tr(L"Le calendrier « {0} » est en lecture seule pour vous (accès refusé par le serveur). Choisissez un autre calendrier dans la liste « Calendrier » de la fenêtre d'événement.",
+                      L"The calendar \"{0}\" is read-only for you (access denied by the server). Pick another calendar in the \"Calendar\" list of the event window."),
+                   { name });
     }
 
     /**
@@ -642,12 +705,73 @@ namespace winrt::EvolutionWin::implementation
             if (source.GetNamedString(L"backend", L"") != L"microsoft365")
                 continue;
             hstring uid = source.GetNamedString(L"uid", L"");
+            if (IsKnownReadOnlyCalendar(uid))
+                continue;
             if (uid == active)
                 return uid;
             if (fallback.empty() || source.GetNamedBoolean(L"default", false) || source.GetNamedString(L"name", L"") == L"Calendrier")
                 fallback = uid;
         }
         return fallback;
+    }
+
+    /**
+     * @brief Calendrier Gmail qui recevra une réunion Google Meet : le calendrier actif s'il est
+     *        Gmail, sinon le calendrier par défaut (ou le premier) d'un compte Gmail.
+     * @return Identifiant du calendrier ("" si aucun compte Gmail n'a de calendrier).
+     */
+    hstring MainWindow::GoogleCalendarUid()
+    {
+        hstring active = ActiveCalendarUid();
+        hstring fallback;
+        for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
+        {
+            auto source = value.GetObject();
+            if (source.GetNamedString(L"backend", L"") != L"google")
+                continue;
+            hstring uid = source.GetNamedString(L"uid", L"");
+            if (IsKnownReadOnlyCalendar(uid))
+                continue;
+            if (uid == active)
+                return uid;
+            if (fallback.empty() || source.GetNamedBoolean(L"default", false))
+                fallback = uid;
+        }
+        return fallback;
+    }
+
+    /**
+     * @brief Contenu d'une case à cocher : icône SVG (dossier Assets à côté de l'exécutable) puis libellé.
+     * @param check Case à cocher.
+     * @param svg_name Nom du fichier SVG dans Assets.
+     * @param label Libellé.
+     */
+    static void SetIconContent(ContentControl const& check, std::wstring const& svg_name, hstring const& label)
+    {
+        StackPanel content;
+        content.Orientation(Orientation::Horizontal);
+        content.Spacing(8);
+        wchar_t exe_path[MAX_PATH]{};
+        if (!svg_name.empty() && GetModuleFileNameW(nullptr, exe_path, MAX_PATH))
+        {
+            std::wstring svg_path{ exe_path };
+            svg_path = svg_path.substr(0, svg_path.find_last_of(L"\\/")) + L"\\Assets\\" + svg_name;
+            if (GetFileAttributesW(svg_path.c_str()) != INVALID_FILE_ATTRIBUTES)
+            {
+                Microsoft::UI::Xaml::Media::Imaging::SvgImageSource svg{ Windows::Foundation::Uri{ L"file:///" + hstring{ svg_path } } };
+                Image icon;
+                icon.Source(svg);
+                icon.Width(20);
+                icon.Height(20);
+                icon.VerticalAlignment(VerticalAlignment::Center);
+                content.Children().Append(icon);
+            }
+        }
+        TextBlock text;
+        text.Text(label);
+        text.VerticalAlignment(VerticalAlignment::Center);
+        content.Children().Append(text);
+        check.Content(content);
     }
 
     /**
@@ -681,35 +805,40 @@ namespace winrt::EvolutionWin::implementation
 
     fire_and_forget MainWindow::ShowNewFocusEventDialogAsync()
     {
-        ShowEventDialogAsync(nullptr, L"Temps de concentration", true);
+        ShowEventDialogAsync(nullptr, Tr(L"Temps de concentration"), true);
         co_return;
     }
 
-    /* Clic sur un événement de la liste : détail lu par evo-core, puis
-     * fenêtre de l'événement. */
-    void MainWindow::OnEventItemClick(IInspectable const&, ItemClickEventArgs const& args)
+    /* Double clic sur un événement de la liste : détail lu par evo-core, puis fenêtre de l'événement
+     * (un simple clic n'ouvre rien : la fenêtre passerait au second plan au second clic). */
+    void MainWindow::OnEventListDoubleTapped(IInspectable const&, Input::DoubleTappedRoutedEventArgs const& args)
     {
-        auto row = args.ClickedItem().try_as<FrameworkElement>();
-        hstring key = row ? unbox_value_or<hstring>(row.Tag(), L"") : hstring{};
-        std::wstring text{ key };
-        auto sep = text.find(L'\x1F');
-        if (sep == std::wstring::npos)
-            return;
-
-        hstring calendar_uid{ text.substr(0, sep) };
-        hstring uid{ text.substr(sep + 1) };
-
-        OpenCalendarEvent(calendar_uid, uid);
+        DependencyObject element = args.OriginalSource().try_as<DependencyObject>();
+        while (element)
+        {
+            if (auto framework = element.try_as<FrameworkElement>())
+            {
+                std::wstring text{ unbox_value_or<hstring>(framework.Tag(), L"") };
+                auto sep = text.find(L'');
+                if (sep != std::wstring::npos)
+                {
+                    args.Handled(true);
+                    OpenCalendarEvent(hstring{ text.substr(0, sep) }, hstring{ text.substr(sep + 1) });
+                    return;
+                }
+            }
+            element = VisualTreeHelper::GetParent(element);
+        }
     }
 
     /* Réponse d'un participant en clair. */
     static hstring AttendeeStatusLabel(hstring const& status)
     {
-        if (status == L"accepted") return L"accepté";
-        if (status == L"declined") return L"refusé";
-        if (status == L"tentative") return L"provisoire";
-        if (status == L"delegated") return L"délégué";
-        return L"sans réponse";
+        if (status == L"accepted") return Tr(L"accepté");
+        if (status == L"declined") return Tr(L"refusé");
+        if (status == L"tentative") return Tr(L"provisoire");
+        if (status == L"delegated") return Tr(L"délégué");
+        return Tr(L"sans réponse");
     }
 
     /* Fenêtre d'un événement : nouveau (event nul, calendrier actif) ou
@@ -717,27 +846,22 @@ namespace winrt::EvolutionWin::implementation
      * organisateur et participants, suppression).
      * Paramètres :
      *   event : détail renvoyé par evo_core_get_event (), ou nullptr */
-    fire_and_forget MainWindow::ShowEventDialogAsync(JsonObject event, hstring const& summary_preset, bool is_focus, bool teams)
+    void MainWindow::ShowEventDialogAsync(JsonObject event, hstring const& summary_preset, bool is_focus, bool teams)
     {
-        auto strong = get_strong();
-        if (m_dialog_open || !Content() || !Content().XamlRoot())
-            co_return;
-
-        m_dialog_open = true;
+        if (!Content())
+            return;
 
         bool existing = static_cast<bool>(event);
         bool readonly = existing && event.GetNamedBoolean(L"readonly", false);
         bool all_day = existing && event.GetNamedBoolean(L"all_day", false);
 
-        ContentDialog dialog;
-        dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(existing ? (readonly ? L"Événement (lecture seule)" : L"Événement") : (is_focus ? L"Temps individuel (Focus)" : L"Nouvel événement")));
-        if (!readonly)
-            dialog.PrimaryButtonText(L"Enregistrer");
-        if (existing && !readonly)
-            dialog.SecondaryButtonText(L"Supprimer");
-        dialog.CloseButtonText(existing ? L"Fermer" : L"Annuler");
-        dialog.DefaultButton(readonly ? ContentDialogButton::Close : ContentDialogButton::Primary);
+        Window window;
+        hstring window_title = existing ? (readonly ? Tr(L"Événement (lecture seule)") : Tr(L"Événement")) : (is_focus ? Tr(L"Temps individuel (Focus)") : Tr(L"Nouvel événement"));
+        window.Title(window_title);
+        window.AppWindow().Resize({ 1200, 860 });
+        ::EvolutionWin::SetWindowIcon(window.AppWindow());
+        window.SystemBackdrop(Microsoft::UI::Xaml::Media::MicaBackdrop{});
+        window.ExtendsContentIntoTitleBar(true);
 
         StackPanel panel;
         panel.Spacing(10);
@@ -755,35 +879,15 @@ namespace winrt::EvolutionWin::implementation
 
         if (existing)
         {
-            panel.Children().Append(caption(L"Calendrier : " + event.GetNamedString(L"calendar_name", L"")));
+            panel.Children().Append(caption(Fmt(Tr(L"Calendrier : {0}"), { event.GetNamedString(L"calendar_name", L"") })));
             if (event.GetNamedBoolean(L"recurring", false))
-                panel.Children().Append(caption(L"Événement périodique : la modification s'applique à toute la série."));
+                panel.Children().Append(caption(Tr(L"Événement périodique : la modification s'applique à toute la série.")));
 
-            Button create_task_btn;
-            StackPanel btn_content;
-            btn_content.Orientation(Orientation::Horizontal);
-            btn_content.Spacing(6);
-            FontIcon task_btn_icon;
-            task_btn_icon.Glyph(L"\xE9D5");
-            task_btn_icon.FontSize(13);
-            btn_content.Children().Append(task_btn_icon);
-            TextBlock btn_label;
-            btn_label.Text(L"Créer une tâche liée à cet événement");
-            btn_content.Children().Append(btn_label);
-            create_task_btn.Content(btn_content);
-            create_task_btn.HorizontalAlignment(HorizontalAlignment::Left);
-            create_task_btn.Margin(ThicknessHelper::FromLengths(0, 2, 0, 4));
-            create_task_btn.Click([this, event, &dialog](IInspectable const&, RoutedEventArgs const&)
-            {
-                dialog.Hide();
-                CreateTaskFromEvent(event);
-            });
-            panel.Children().Append(create_task_btn);
         }
 
         TextBox summary_box;
-        summary_box.Header(box_value(L"Titre"));
-        summary_box.PlaceholderText(L"Réunion, Rendez-vous…");
+        summary_box.Header(box_value(Tr(L"Titre")));
+        summary_box.PlaceholderText(Tr(L"Réunion, Rendez-vous…"));
         summary_box.IsReadOnly(readonly);
         if (existing)
             summary_box.Text(event.GetNamedString(L"summary", L""));
@@ -792,11 +896,74 @@ namespace winrt::EvolutionWin::implementation
         panel.Children().Append(summary_box);
 
         TextBox location_box;
-        location_box.Header(box_value(L"Lieu"));
+        location_box.Header(box_value(Tr(L"Lieu")));
         location_box.IsReadOnly(readonly);
         if (existing)
             location_box.Text(event.GetNamedString(L"location", L""));
         panel.Children().Append(location_box);
+
+        /* calendrier de destination d'un nouvel événement (les calendriers refusant l'écriture sont écartés) */
+        ComboBox calendar_combo;
+        calendar_combo.Header(box_value(Tr(L"Calendrier", L"Calendar")));
+        calendar_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
+        std::vector<hstring> calendar_uids;
+        if (!existing && !readonly)
+        {
+            hstring active_uid = ActiveCalendarUid();
+            int selected = -1, default_index = -1;
+            for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
+            {
+                auto source = value.GetObject();
+                hstring backend = source.GetNamedString(L"backend", L"");
+                hstring uid = source.GetNamedString(L"uid", L"");
+                if (backend == L"person" || backend == L"group" || source.GetNamedBoolean(L"placeholder", false) ||
+                    uid.empty() || IsKnownReadOnlyCalendar(uid))
+                    continue;
+                hstring account = source.GetNamedString(L"account", L"");
+                hstring group = source.GetNamedString(L"group_name", L"");
+                std::wstring label{ source.GetNamedString(L"name", uid) };
+                if (!account.empty())
+                    label = std::wstring{ account } + L" \u203A " + (group.empty() ? L"" : std::wstring{ group } + L" \u203A ") + label;
+                calendar_combo.Items().Append(box_value(hstring{ label }));
+                if (uid == active_uid)
+                    selected = static_cast<int>(calendar_uids.size());
+                if (source.GetNamedBoolean(L"default", false))
+                    default_index = static_cast<int>(calendar_uids.size());
+                calendar_uids.push_back(uid);
+            }
+            if (!calendar_uids.empty())
+            {
+                calendar_combo.SelectedIndex(selected >= 0 ? selected : (default_index >= 0 ? default_index : 0));
+                panel.Children().Append(calendar_combo);
+            }
+        }
+
+        /* événement privé : détails masqués aux personnes avec qui le calendrier est partagé */
+        ComboBox show_as_combo;
+        show_as_combo.Header(box_value(Tr(L"Afficher comme", L"Show as")));
+        show_as_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
+        /* mêmes états qu'Outlook (dans l'ordre de la liste d'Outlook) */
+        static const wchar_t* const show_as_values[] = { L"free", L"working", L"tentative", L"busy", L"oof" };
+        show_as_combo.Items().Append(box_value(Tr(L"Disponible", L"Free")));
+        show_as_combo.Items().Append(box_value(Tr(L"Travaille ailleurs", L"Working elsewhere")));
+        show_as_combo.Items().Append(box_value(Tr(L"Provisoire", L"Tentative")));
+        show_as_combo.Items().Append(box_value(Tr(L"Occupé(e)", L"Busy")));
+        show_as_combo.Items().Append(box_value(Tr(L"Absent(e)", L"Out of office")));
+        {
+            int show_as_index = 3;
+            if (existing)
+                for (int i = 0; i < 5; ++i)
+                    if (event.GetNamedString(L"show_as", L"busy") == show_as_values[i])
+                        show_as_index = i;
+            show_as_combo.SelectedIndex(show_as_index);
+        }
+        show_as_combo.IsEnabled(!readonly);
+
+        CheckBox private_check;
+        private_check.Content(box_value(Tr(L"Privé (détails masqués aux personnes avec qui le calendrier est partagé)",
+                                           L"Private (details hidden from people the calendar is shared with)")));
+        private_check.IsChecked(existing && event.GetNamedBoolean(L"private", false));
+        private_check.IsEnabled(!readonly);
 
         /* début / fin : date et heure */
         /* créneau sélectionné dans la grille du calendrier : utilisé une seule fois */
@@ -856,7 +1023,7 @@ namespace winrt::EvolutionWin::implementation
         };
 
         CheckBox all_day_box;
-        all_day_box.Content(box_value(L"Journée entière"));
+        all_day_box.Content(box_value(Tr(L"Journée entière")));
         all_day_box.IsChecked(all_day);
         all_day_box.IsEnabled(!readonly);
         panel.Children().Append(all_day_box);
@@ -866,7 +1033,7 @@ namespace winrt::EvolutionWin::implementation
         start_row.ColumnDefinitions().Append(ColumnDefinition{});
         start_row.ColumnDefinitions().Append(ColumnDefinition{});
         CalendarDatePicker start_date;
-        start_date.Header(box_value(L"Début"));
+        start_date.Header(box_value(Tr(L"Début")));
         start_date.Date(winrt::clock::from_time_t(start_t));
         start_date.IsEnabled(!readonly);
         TimePicker start_time;
@@ -883,7 +1050,7 @@ namespace winrt::EvolutionWin::implementation
         end_row.ColumnDefinitions().Append(ColumnDefinition{});
         end_row.ColumnDefinitions().Append(ColumnDefinition{});
         CalendarDatePicker end_date;
-        end_date.Header(box_value(L"Fin"));
+        end_date.Header(box_value(Tr(L"Fin")));
         end_date.Date(winrt::clock::from_time_t(end_t));
         end_date.IsEnabled(!readonly);
         TimePicker end_time;
@@ -898,11 +1065,11 @@ namespace winrt::EvolutionWin::implementation
         /* rappel (VALARM) : délai avant le début */
         static constexpr int reminder_values[] = { -1, 0, 5, 15, 30, 60, 120, 1440 };
         ComboBox reminder_combo;
-        reminder_combo.Header(box_value(L"Rappel"));
+        reminder_combo.Header(box_value(Tr(L"Rappel")));
         reminder_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
         reminder_combo.IsEnabled(!readonly);
-        for (hstring label : { L"Aucun", L"À l'heure de l'événement", L"5 minutes avant", L"15 minutes avant",
-                               L"30 minutes avant", L"1 heure avant", L"2 heures avant", L"1 jour avant" })
+        for (auto const& label : { Tr(L"Aucun"), Tr(L"À l'heure de l'événement"), Tr(L"5 minutes avant"), Tr(L"15 minutes avant"),
+                                   Tr(L"30 minutes avant"), Tr(L"1 heure avant"), Tr(L"2 heures avant"), Tr(L"1 jour avant") })
             reminder_combo.Items().Append(box_value(label));
         {
             int current = existing ? static_cast<int>(event.GetNamedNumber(L"reminder_minutes", -1)) : 15;
@@ -912,7 +1079,6 @@ namespace winrt::EvolutionWin::implementation
                     selected = i;
             reminder_combo.SelectedIndex(selected);
         }
-        panel.Children().Append(reminder_combo);
 
         /* fuseau horaire (noms IANA) : le premier choix conserve l'heure
          * de cet ordinateur, enregistrée en UTC */
@@ -923,11 +1089,11 @@ namespace winrt::EvolutionWin::implementation
         if (!event_tz.empty() && std::find(zone_ids.begin(), zone_ids.end(), event_tz) == zone_ids.end())
             zone_ids.push_back(event_tz);
         ComboBox zone_combo;
-        zone_combo.Header(box_value(L"Fuseau horaire"));
+        zone_combo.Header(box_value(Tr(L"Fuseau horaire")));
         zone_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
         zone_combo.IsEnabled(!readonly);
         for (auto const& zone : zone_ids)
-            zone_combo.Items().Append(box_value(zone.empty() ? hstring{ L"Heure de cet ordinateur" } : zone));
+            zone_combo.Items().Append(box_value(zone.empty() ? Tr(L"Heure de cet ordinateur") : zone));
         {
             auto found = std::find(zone_ids.begin(), zone_ids.end(), event_tz);
             zone_combo.SelectedIndex(static_cast<int>(found - zone_ids.begin()));
@@ -948,9 +1114,9 @@ namespace winrt::EvolutionWin::implementation
 
         /* participants modifiables : adresses séparées par des points-virgules */
         TextBox attendees_box;
-        attendees_box.Header(box_value(L"Participants (adresses séparées par « ; »)"));
+        attendees_box.Header(box_value(Tr(L"Participants (adresses séparées par « ; »)")));
         attendees_box.IsReadOnly(readonly);
-        attendees_box.PlaceholderText(L"alice@exemple.ch; bob@exemple.ch");
+        attendees_box.PlaceholderText(Tr(L"alice@exemple.ch; bob@exemple.ch"));
         if (existing)
         {
             std::wstring joined;
@@ -968,11 +1134,44 @@ namespace winrt::EvolutionWin::implementation
 
         /* réunion en ligne Microsoft Teams (nouvel événement d'un calendrier Exchange Online) */
         CheckBox teams_check;
-        teams_check.Content(box_value(Tr(L"Réunion en ligne Microsoft Teams (lien de visio ajouté à l'invitation)",
-                                         L"Microsoft Teams online meeting (join link added to the invitation)")));
+        SetIconContent(teams_check, L"Microsoft_Office_Teams.svg",
+            Tr(L"Réunion en ligne Microsoft Teams (lien de visio ajouté à l'invitation)",
+               L"Microsoft Teams online meeting (join link added to the invitation)"));
         teams_check.IsChecked(teams);
         if (!existing && !readonly && !TeamsCalendarUid().empty())
             panel.Children().Append(teams_check);
+
+        /* réunion Google Meet (nouvel événement d'un calendrier Gmail) ; exclusive avec Teams */
+        CheckBox meet_check;
+        SetIconContent(meet_check, L"Google_meet.svg",
+            Tr(L"Réunion en ligne Google Meet (lien de visio ajouté à l'invitation)",
+               L"Google Meet online meeting (join link added to the invitation)"));
+        if (!existing && !readonly && !GoogleCalendarUid().empty())
+            panel.Children().Append(meet_check);
+        /* événement existant avec une réunion en ligne (Teams, Google Meet, Zoom) : bouton « Rejoindre » */
+        if (existing)
+        {
+            hstring meeting_url = event.GetNamedString(L"online_meeting_url", L"");
+            hstring meeting_kind = event.GetNamedString(L"online_meeting_kind", L"");
+            if (!meeting_url.empty())
+            {
+                Button join_button;
+                join_button.Style(Application::Current().Resources().Lookup(box_value(L"AccentButtonStyle")).as<Style>());
+                if (meeting_kind == L"teams")
+                    SetIconContent(join_button, L"Microsoft_Office_Teams.svg", Tr(L"Rejoindre la réunion Teams", L"Join the Teams meeting"));
+                else if (meeting_kind == L"meet")
+                    SetIconContent(join_button, L"Google_meet.svg", Tr(L"Rejoindre la réunion Google Meet", L"Join the Google Meet meeting"));
+                else
+                    SetIconContent(join_button, L"", Tr(L"Rejoindre la réunion en ligne", L"Join the online meeting"));
+                join_button.Click([meeting_url](IInspectable const&, RoutedEventArgs const&)
+                {
+                    Windows::System::Launcher::LaunchUriAsync(Windows::Foundation::Uri{ meeting_url });
+                });
+                panel.Children().Append(join_button);
+            }
+        }
+        teams_check.Checked([meet_check](IInspectable const&, RoutedEventArgs const&) { meet_check.IsChecked(false); });
+        meet_check.Checked([teams_check](IInspectable const&, RoutedEventArgs const&) { teams_check.IsChecked(false); });
 
         /* invitations : compte de messagerie expéditeur (adresse de l'organisateur) */
         ComboBox sender_combo;
@@ -1018,12 +1217,12 @@ namespace winrt::EvolutionWin::implementation
 
             auto organizer = event.GetNamedObject(L"organizer", JsonObject{});
             if (!person(organizer).empty())
-                panel.Children().Append(caption(L"Organisateur : " + person(organizer)));
+                panel.Children().Append(caption(Fmt(Tr(L"Organisateur : {0}", L"Organizer: {0}"), { person(organizer) })));
 
             auto attendees = event.GetNamedArray(L"attendees", JsonArray{});
             if (attendees.Size() > 0)
             {
-                std::wstring list = L"Participants :";
+                std::wstring list{ Tr(L"Participants :") };
                 for (auto const& value : attendees)
                 {
                     auto who = value.GetObject();
@@ -1035,7 +1234,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         TextBox desc_box;
-        desc_box.Header(box_value(L"Description"));
+        desc_box.Header(box_value(Tr(L"Description")));
         desc_box.AcceptsReturn(true);
         desc_box.TextWrapping(TextWrapping::Wrap);
         desc_box.Height(120);
@@ -1044,32 +1243,500 @@ namespace winrt::EvolutionWin::implementation
             desc_box.Text(event.GetNamedString(L"description", L""));
         panel.Children().Append(desc_box);
 
-        ScrollViewer scroll;
-        scroll.Content(panel);
-        scroll.MaxHeight(600);
-        dialog.Content(scroll);
 
-        auto result = co_await dialog.ShowAsync();
-        m_dialog_open = false;
+        /* ------------------------------------------------------------------ */
+        /* Fenêtre de l'événement : barre de commandes (Enregistrer, Supprimer, tâche liée, Afficher */
+        /* comme, Rappel, Périodicité, Classer, Privé, Importance) puis formulaire façon Outlook    */
+        /* ------------------------------------------------------------------ */
 
-        if (existing && result == ContentDialogResult::Secondary)
+        /* catégories de l'événement (modifiables par « Classer ») */
+        auto categories = std::make_shared<std::vector<std::wstring>>(
+            existing ? ::EvolutionWin::CategoryStore::CategoriesOf(event) : std::vector<std::wstring>{});
+        StackPanel category_chips;
+        auto refresh_chips = [this, category_chips, categories]()
         {
-            m_core->DeleteEvent(event.GetNamedString(L"calendar_uid", L""), event.GetNamedString(L"uid", L""),
-                [this](hstring const&, hstring const& error)
+            category_chips.Children().Clear();
+            category_chips.Children().Append(BuildCategoryChips(*categories));
+        };
+        refresh_chips();
+
+        /* périodicité : règle RRULE, renvoyée seulement si l'utilisateur l'a modifiée */
+        auto rrule = std::make_shared<std::wstring>(existing ? std::wstring{ event.GetNamedString(L"rrule", L"") } : std::wstring{});
+        auto rrule_touched = std::make_shared<bool>(false);
+
+        auto set_icon = [](auto const& button, hstring const& glyph, hstring const& label)
+        {
+            button.Label(label);
+            FontIcon icon;
+            icon.Glyph(glyph);
+            button.Icon(icon);
+        };
+
+        AppBarButton save_button;
+        set_icon(save_button, L"\xE74E", Tr(L"Enregistrer", L"Save"));
+        save_button.IsEnabled(!readonly);
+        {
+            Microsoft::UI::Xaml::Input::KeyboardAccelerator accelerator;
+            accelerator.Modifiers(Windows::System::VirtualKeyModifiers::Control);
+            accelerator.Key(Windows::System::VirtualKey::S);
+            save_button.KeyboardAccelerators().Append(accelerator);
+        }
+        AppBarButton delete_button;
+        set_icon(delete_button, L"\xE74D", Tr(L"Supprimer", L"Delete"));
+        delete_button.IsEnabled(existing && !readonly);
+        AppBarButton task_button;
+        set_icon(task_button, L"\xE9D5", Tr(L"Créer une tâche", L"Create a task"));
+        ToolTipService::SetToolTip(task_button, box_value(Tr(L"Créer une tâche liée à cet événement", L"Create a task linked to this event")));
+        task_button.IsEnabled(existing);
+        task_button.Click([this, event, window](IInspectable const&, RoutedEventArgs const&)
+        {
+            window.Close();
+            CreateTaskFromEvent(event);
+        });
+        AppBarButton close_button;
+        set_icon(close_button, L"\xE711", Tr(L"Fermer", L"Close"));
+
+        /* Afficher comme : états d'Outlook (la liste déroulante cachée garde la valeur enregistrée) */
+        AppBarButton show_as_button;
+        set_icon(show_as_button, L"\xE787", Tr(L"Afficher comme", L"Show as"));
+        show_as_button.IsEnabled(!readonly);
+        auto update_show_as = [show_as_button, show_as_combo]()
+        {
+            show_as_button.Label(Fmt(Tr(L"Afficher comme : {0}", L"Show as: {0}"), { unbox_value<hstring>(show_as_combo.SelectedItem()) }));
+        };
+        update_show_as();
+        {
+            MenuFlyout menu;
+            for (uint32_t i = 0; i < show_as_combo.Items().Size(); ++i)
             {
-                if (!error.empty())
+                RadioMenuFlyoutItem item;
+                item.Text(unbox_value<hstring>(show_as_combo.Items().GetAt(i)));
+                item.GroupName(L"event_show_as");
+                item.IsChecked(static_cast<int>(i) == show_as_combo.SelectedIndex());
+                item.Click([show_as_combo, update_show_as, i](IInspectable const&, RoutedEventArgs const&)
                 {
-                    ShowStatus(L"Suppression de l'événement : " + error, InfoBarSeverity::Error);
-                    return;
-                }
-                ShowStatus(L"Événement supprimé.", InfoBarSeverity::Success);
-                LoadEvents();
-            });
-            co_return;
+                    show_as_combo.SelectedIndex(static_cast<int>(i));
+                    update_show_as();
+                });
+                menu.Items().Append(item);
+            }
+            show_as_button.Flyout(menu);
         }
 
-        if (readonly || result != ContentDialogResult::Primary || summary_box.Text().empty())
-            co_return;
+        /* Rappel */
+        AppBarButton reminder_button;
+        set_icon(reminder_button, L"\xEA8F", Tr(L"Rappel", L"Reminder"));
+        reminder_button.IsEnabled(!readonly);
+        auto update_reminder = [reminder_button, reminder_combo]()
+        {
+            reminder_button.Label(Fmt(Tr(L"Rappel : {0}", L"Reminder: {0}"), { unbox_value<hstring>(reminder_combo.SelectedItem()) }));
+        };
+        update_reminder();
+        {
+            MenuFlyout menu;
+            for (uint32_t i = 0; i < reminder_combo.Items().Size(); ++i)
+            {
+                RadioMenuFlyoutItem item;
+                item.Text(unbox_value<hstring>(reminder_combo.Items().GetAt(i)));
+                item.GroupName(L"event_reminder");
+                item.IsChecked(static_cast<int>(i) == reminder_combo.SelectedIndex());
+                item.Click([reminder_combo, update_reminder, i](IInspectable const&, RoutedEventArgs const&)
+                {
+                    reminder_combo.SelectedIndex(static_cast<int>(i));
+                    update_reminder();
+                });
+                menu.Items().Append(item);
+            }
+            reminder_button.Flyout(menu);
+        }
+
+        /* Périodicité */
+        AppBarButton recurrence_button;
+        set_icon(recurrence_button, L"\xE72C", Tr(L"Périodicité", L"Recurrence"));
+        recurrence_button.IsEnabled(!readonly);
+        Flyout recurrence_flyout;
+        {
+            ComboBox freq_combo;
+            freq_combo.Header(box_value(Tr(L"Répétition", L"Repeat")));
+            freq_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
+            for (auto const& label : { Tr(L"Aucune", L"None"), Tr(L"Tous les jours", L"Daily"), Tr(L"Toutes les semaines", L"Weekly"),
+                                       Tr(L"Tous les mois", L"Monthly"), Tr(L"Tous les ans", L"Yearly") })
+                freq_combo.Items().Append(box_value(label));
+            NumberBox interval_box;
+            interval_box.Header(box_value(Tr(L"Tous les (intervalle)", L"Every (interval)")));
+            interval_box.Minimum(1);
+            interval_box.Maximum(99);
+            interval_box.Value(1);
+            interval_box.SpinButtonPlacementMode(NumberBoxSpinButtonPlacementMode::Inline);
+            ComboBox end_combo;
+            end_combo.Header(box_value(Tr(L"Fin", L"End")));
+            end_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
+            end_combo.Items().Append(box_value(Tr(L"Jamais", L"Never")));
+            end_combo.Items().Append(box_value(Tr(L"Après un nombre d'occurrences", L"After a number of occurrences")));
+            NumberBox count_box;
+            count_box.Header(box_value(Tr(L"Nombre d'occurrences", L"Number of occurrences")));
+            count_box.Minimum(1);
+            count_box.Maximum(999);
+            count_box.Value(10);
+            count_box.SpinButtonPlacementMode(NumberBoxSpinButtonPlacementMode::Inline);
+            TextBlock note;
+            note.TextWrapping(TextWrapping::Wrap);
+            note.MaxWidth(280);
+            Windows::UI::Color grey{ 255, 128, 128, 128 };
+            note.Foreground(SolidColorBrush(grey));
+
+            /* état initial d'après la règle existante */
+            {
+                std::wstring rule = *rrule;
+                auto value_of = [&rule](std::wstring const& key) -> std::wstring
+                {
+                    size_t at = rule.find(key + L"=");
+                    if (at == std::wstring::npos)
+                        return L"";
+                    size_t from = at + key.size() + 1;
+                    size_t to = rule.find(L';', from);
+                    return rule.substr(from, to == std::wstring::npos ? std::wstring::npos : to - from);
+                };
+                std::wstring freq = value_of(L"FREQ");
+                freq_combo.SelectedIndex(freq == L"DAILY" ? 1 : freq == L"WEEKLY" ? 2 : freq == L"MONTHLY" ? 3 : freq == L"YEARLY" ? 4 : 0);
+                if (!value_of(L"INTERVAL").empty())
+                    interval_box.Value(_wtof(value_of(L"INTERVAL").c_str()));
+                if (!value_of(L"COUNT").empty())
+                {
+                    end_combo.SelectedIndex(1);
+                    count_box.Value(_wtof(value_of(L"COUNT").c_str()));
+                }
+                else
+                    end_combo.SelectedIndex(0);
+                if (!rule.empty() && (rule.find(L"BYDAY") != std::wstring::npos || rule.find(L"UNTIL") != std::wstring::npos ||
+                                      rule.find(L"BYMONTH") != std::wstring::npos || rule.find(L"BYSETPOS") != std::wstring::npos))
+                    note.Text(Tr(L"Règle personnalisée : elle est conservée tant que vous ne modifiez pas ces réglages.",
+                                 L"Custom rule: it is kept as long as you do not change these settings."));
+            }
+            count_box.IsEnabled(end_combo.SelectedIndex() == 1);
+
+            /* recompose la règle à chaque changement */
+            auto rebuild = [rrule, rrule_touched, freq_combo, interval_box, end_combo, count_box, note]()
+            {
+                *rrule_touched = true;
+                note.Text(L"");
+                count_box.IsEnabled(end_combo.SelectedIndex() == 1);
+                static const wchar_t* const freqs[] = { L"", L"DAILY", L"WEEKLY", L"MONTHLY", L"YEARLY" };
+                int index = freq_combo.SelectedIndex();
+                if (index <= 0 || index > 4)
+                {
+                    rrule->clear();
+                    return;
+                }
+                std::wstring rule = std::wstring{ L"FREQ=" } + freqs[index];
+                int interval = static_cast<int>(interval_box.Value() >= 1 ? interval_box.Value() : 1);
+                if (interval > 1)
+                    rule += L";INTERVAL=" + std::to_wstring(interval);
+                if (end_combo.SelectedIndex() == 1)
+                    rule += L";COUNT=" + std::to_wstring(static_cast<int>(count_box.Value() >= 1 ? count_box.Value() : 1));
+                *rrule = rule;
+            };
+            freq_combo.SelectionChanged([rebuild](auto&&, auto&&) { rebuild(); });
+            end_combo.SelectionChanged([rebuild](auto&&, auto&&) { rebuild(); });
+            interval_box.ValueChanged([rebuild](auto&&, auto&&) { rebuild(); });
+            count_box.ValueChanged([rebuild](auto&&, auto&&) { rebuild(); });
+
+            StackPanel flyout_panel;
+            flyout_panel.Spacing(8);
+            flyout_panel.Width(300);
+            flyout_panel.Children().Append(freq_combo);
+            flyout_panel.Children().Append(interval_box);
+            flyout_panel.Children().Append(end_combo);
+            flyout_panel.Children().Append(count_box);
+            flyout_panel.Children().Append(note);
+            recurrence_flyout.Content(flyout_panel);
+            recurrence_button.Flyout(recurrence_flyout);
+        }
+
+        /* Classer : catégories */
+        AppBarButton classify_button;
+        set_icon(classify_button, L"\xE8EC", Tr(L"Classer", L"Categorise"));
+        classify_button.IsEnabled(!readonly);
+        MenuFlyout classify_flyout;
+        classify_button.Flyout(classify_flyout);
+        auto repopulate = std::make_shared<std::function<void()>>();
+        *repopulate = [this, classify_flyout, categories, refresh_chips, repopulate]()
+        {
+            PopulateItemCategoryMenu(classify_flyout.Items(), *categories,
+                [categories, refresh_chips, repopulate](std::vector<std::wstring> const& names)
+                {
+                    *categories = names;
+                    refresh_chips();
+                    (*repopulate)();
+                });
+        };
+        (*repopulate)();
+
+        AppBarToggleButton private_toggle;
+        set_icon(private_toggle, L"\xE72E", Tr(L"Privé", L"Private"));
+        private_toggle.IsChecked(existing && event.GetNamedBoolean(L"private", false));
+        private_toggle.IsEnabled(!readonly);
+        /* « private_check » reste la source de la valeur enregistrée */
+        private_check.IsChecked(private_toggle.IsChecked());
+        private_toggle.Click([private_toggle, private_check](auto&&, auto&&) { private_check.IsChecked(private_toggle.IsChecked()); });
+
+        Windows::UI::Color red{ 255, 232, 17, 35 };
+        Windows::UI::Color blue{ 255, 0, 120, 212 };
+        AppBarToggleButton importance_high;
+        set_icon(importance_high, L"\xE783", Tr(L"Importance haute", L"High importance"));
+        importance_high.Icon().as<FontIcon>().Foreground(SolidColorBrush(red));
+        AppBarToggleButton importance_low;
+        set_icon(importance_low, L"\xE74B", Tr(L"Importance faible", L"Low importance"));
+        importance_low.Icon().as<FontIcon>().Foreground(SolidColorBrush(blue));
+        {
+            hstring importance = existing ? event.GetNamedString(L"importance", L"normal") : hstring{ L"normal" };
+            importance_high.IsChecked(importance == L"high");
+            importance_low.IsChecked(importance == L"low");
+        }
+        importance_high.IsEnabled(!readonly);
+        importance_low.IsEnabled(!readonly);
+        importance_high.Click([importance_high, importance_low](auto&&, auto&&) { if (importance_high.IsChecked().Value()) importance_low.IsChecked(false); });
+        importance_low.Click([importance_high, importance_low](auto&&, auto&&) { if (importance_low.IsChecked().Value()) importance_high.IsChecked(false); });
+
+        CommandBar command_bar;
+        command_bar.DefaultLabelPosition(CommandBarDefaultLabelPosition::Right);
+        command_bar.HorizontalAlignment(HorizontalAlignment::Stretch);
+        command_bar.IsOpen(false);
+        {
+            auto commands = command_bar.PrimaryCommands();
+            commands.Append(save_button);
+            if (existing)
+            {
+                commands.Append(delete_button);
+                commands.Append(task_button);
+            }
+            commands.Append(close_button);
+            commands.Append(AppBarSeparator{});
+            commands.Append(show_as_button);
+            commands.Append(reminder_button);
+            commands.Append(recurrence_button);
+            commands.Append(AppBarSeparator{});
+            commands.Append(classify_button);
+            commands.Append(private_toggle);
+            commands.Append(importance_high);
+            commands.Append(importance_low);
+        }
+
+        /* ---- formulaire pleine largeur, sur le modèle d'un événement Outlook ---- */
+        std::vector<UIElement> others;
+        for (auto const& child : panel.Children())
+            others.push_back(child);
+        panel.Children().Clear();
+        auto is_named = [&](UIElement const& child)
+        {
+            for (UIElement const& named : std::initializer_list<UIElement>{
+                     summary_box, location_box, calendar_combo, all_day_box, start_row, end_row, zone_combo, attendees_box,
+                     teams_check, meet_check, sender_combo, invite_check, desc_box })
+                if (named == child)
+                    return true;
+            return false;
+        };
+
+        summary_box.Header(nullptr);
+        summary_box.PlaceholderText(Tr(L"Ajouter un titre", L"Add a title"));
+        summary_box.FontSize(22);
+        location_box.Header(nullptr);
+        attendees_box.Header(nullptr);
+        attendees_box.PlaceholderText(Tr(L"Ajouter des participants (adresses séparées par « ; »)", L"Add attendees (addresses separated by \";\")"));
+        calendar_combo.Header(nullptr);
+        sender_combo.Header(nullptr);
+        zone_combo.Header(nullptr);
+        start_date.Header(nullptr);
+        end_date.Header(nullptr);
+        start_time.Header(nullptr);
+        end_time.Header(nullptr);
+        desc_box.Header(nullptr);
+        desc_box.Height(NAN);
+        desc_box.MinHeight(160);
+        desc_box.VerticalAlignment(VerticalAlignment::Stretch);
+        desc_box.PlaceholderText(Tr(L"Description", L"Description"));
+
+        /* date, heure et options sur une ligne : les sélecteurs sortent de leurs grilles de départ */
+        start_row.Children().Clear();
+        end_row.Children().Clear();
+        StackPanel start_line;
+        start_line.Orientation(Orientation::Horizontal);
+        start_line.Spacing(10);
+        start_line.Children().Append(start_date);
+        start_line.Children().Append(start_time);
+        start_line.Children().Append(zone_combo);
+        start_line.Children().Append(all_day_box);
+        StackPanel end_line;
+        end_line.Orientation(Orientation::Horizontal);
+        end_line.Spacing(10);
+        end_line.Children().Append(end_date);
+        end_line.Children().Append(end_time);
+        HyperlinkButton make_recurring;
+        make_recurring.Content(box_value(Tr(L"Rendre périodique", L"Make recurring")));
+        make_recurring.IsEnabled(!readonly);
+        make_recurring.Click([recurrence_flyout, make_recurring](auto&&, auto&&) { recurrence_flyout.ShowAt(make_recurring); });
+        end_line.Children().Append(make_recurring);
+
+        Grid form;
+        form.Margin(ThicknessHelper::FromLengths(24, 12, 24, 16));
+        form.RowSpacing(10);
+        form.ColumnSpacing(12);
+        {
+            ColumnDefinition label_column, field_column;
+            label_column.Width(GridLengthHelper::FromPixels(120));
+            field_column.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+            form.ColumnDefinitions().Append(label_column);
+            form.ColumnDefinitions().Append(field_column);
+        }
+        int form_row = 0;
+        auto add_row = [&](hstring const& label, UIElement const& field, bool stretch_height)
+        {
+            RowDefinition row;
+            row.Height(stretch_height ? GridLengthHelper::FromValueAndType(1, GridUnitType::Star) : GridLengthHelper::Auto());
+            form.RowDefinitions().Append(row);
+            if (!label.empty())
+            {
+                TextBlock text;
+                text.Text(label);
+                text.VerticalAlignment(stretch_height ? VerticalAlignment::Top : VerticalAlignment::Center);
+                text.Margin(ThicknessHelper::FromLengths(0, stretch_height ? 8 : 0, 0, 0));
+                text.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+                Grid::SetRow(text, form_row);
+                form.Children().Append(text);
+            }
+            Grid::SetRow(field.as<FrameworkElement>(), form_row);
+            Grid::SetColumn(field.as<FrameworkElement>(), 1);
+            form.Children().Append(field);
+            ++form_row;
+        };
+
+        /* informations (calendrier, organisateur, participants, catégories, bouton Rejoindre…) */
+        StackPanel info_stack;
+        info_stack.Spacing(6);
+        info_stack.Children().Append(category_chips);
+        for (auto const& child : others)
+            if (!is_named(child))
+                info_stack.Children().Append(child);
+        {
+            RowDefinition row;
+            row.Height(GridLengthHelper::Auto());
+            form.RowDefinitions().Append(row);
+            Grid::SetRow(info_stack, form_row);
+            Grid::SetColumnSpan(info_stack, 2);
+            form.Children().Append(info_stack);
+            ++form_row;
+        }
+
+        add_row(Tr(L"Titre", L"Title"), summary_box, false);
+        if (std::find_if(others.begin(), others.end(), [&](UIElement const& c) { return c == calendar_combo; }) != others.end())
+            add_row(Tr(L"Calendrier", L"Calendar"), calendar_combo, false);
+        add_row(Tr(L"Participants", L"Attendees"), attendees_box, false);
+        add_row(Tr(L"Heure de début", L"Start"), start_line, false);
+        add_row(Tr(L"Heure de fin", L"End"), end_line, false);
+        add_row(Tr(L"Emplacement", L"Location"), location_box, false);
+
+        /* réunion en ligne et invitations */
+        {
+            StackPanel extras;
+            extras.Spacing(8);
+            bool any_extra = false;
+            for (UIElement const& candidate : std::initializer_list<UIElement>{ teams_check, meet_check, sender_combo, invite_check })
+                if (std::find_if(others.begin(), others.end(), [&](UIElement const& c) { return c == candidate; }) != others.end())
+                {
+                    if (candidate == sender_combo)
+                    {
+                        TextBlock sender_label;
+                        sender_label.Text(Tr(L"Envoyer les invitations depuis", L"Send invitations from"));
+                        sender_label.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+                        extras.Children().Append(sender_label);
+                    }
+                    extras.Children().Append(candidate);
+                    any_extra = true;
+                }
+            if (any_extra)
+                add_row(Tr(L"Réunion en ligne", L"Online meeting"), extras, false);
+        }
+        /* adresses web de la description : liens cliquables (ouverts par le navigateur du système) */
+        StackPanel links_panel;
+        links_panel.Spacing(2);
+        {
+            auto refresh_links = [links_panel, desc_box]()
+            {
+                links_panel.Children().Clear();
+                std::wstring text{ desc_box.Text() };
+                for (auto const& range : ::EvolutionWin::Helpers::FindUrlRanges(text))
+                {
+                    std::wstring url = text.substr(range.first, range.second);
+                    HyperlinkButton link;
+                    link.Content(box_value(hstring{ url }));
+                    link.Padding(ThicknessHelper::FromLengths(0, 2, 0, 2));
+                    link.Click([url](IInspectable const&, RoutedEventArgs const&)
+                    {
+                        Windows::System::Launcher::LaunchUriAsync(Windows::Foundation::Uri{ hstring{ url } });
+                    });
+                    links_panel.Children().Append(link);
+                }
+                links_panel.Visibility(links_panel.Children().Size() > 0 ? Visibility::Visible : Visibility::Collapsed);
+            };
+            refresh_links();
+            desc_box.TextChanged([refresh_links](auto&&, auto&&) { refresh_links(); });
+        }
+        add_row(Tr(L"Description", L"Description"), desc_box, true);
+        add_row(hstring{}, links_panel, false);
+
+        Grid window_root;
+        {
+            RowDefinition title_row_def, bar_row_def, content_row_def;
+            title_row_def.Height(GridLengthHelper::Auto());
+            bar_row_def.Height(GridLengthHelper::Auto());
+            content_row_def.Height(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+            window_root.RowDefinitions().Append(title_row_def);
+            window_root.RowDefinitions().Append(bar_row_def);
+            window_root.RowDefinitions().Append(content_row_def);
+        }
+        /* barre de titre personnalisée : icône et titre, comme les autres fenêtres de l'application */
+        Grid title_bar;
+        title_bar.Height(40);
+        title_bar.Padding(ThicknessHelper::FromLengths(12, 0, 0, 0));
+        {
+            StackPanel title_content;
+            title_content.Orientation(Orientation::Horizontal);
+            title_content.VerticalAlignment(VerticalAlignment::Center);
+            title_content.Spacing(8);
+            FontIcon title_icon;
+            title_icon.Glyph(L"\xE787");
+            title_icon.FontSize(14);
+            TextBlock title_text;
+            title_text.Text(window_title);
+            title_text.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+            title_text.VerticalAlignment(VerticalAlignment::Center);
+            title_content.Children().Append(title_icon);
+            title_content.Children().Append(title_text);
+            title_bar.Children().Append(title_content);
+        }
+        window.SetTitleBar(title_bar);
+        Grid::SetRow(title_bar, 0);
+        Grid::SetRow(command_bar, 1);
+        ScrollViewer scroll;
+        scroll.Content(form);
+        scroll.VerticalScrollBarVisibility(ScrollBarVisibility::Auto);
+        Grid::SetRow(scroll, 2);
+        window_root.Children().Append(title_bar);
+        window_root.Children().Append(command_bar);
+        window_root.Children().Append(scroll);
+        window.Content(window_root);
+
+        /* enregistrement : retourne true si la fenêtre peut se fermer */
+        auto commit = [=]() -> bool
+        {
+        if (readonly)
+            return true;
+        if (summary_box.Text().empty())
+        {
+            ShowStatus(Tr(L"Saisissez un titre pour l'événement.", L"Enter a title for the event."), InfoBarSeverity::Warning);
+            summary_box.Focus(FocusState::Programmatic);
+            return false;
+        }
 
         /* date du sélecteur + heure du sélecteur (minuit en journée entière) */
         bool day = all_day_box.IsChecked() && all_day_box.IsChecked().GetBoolean();
@@ -1096,7 +1763,17 @@ namespace winrt::EvolutionWin::implementation
         JsonObject payload;
         payload.SetNamedValue(L"summary", JsonValue::CreateStringValue(summary_box.Text()));
         payload.SetNamedValue(L"location", JsonValue::CreateStringValue(location_box.Text()));
+        if (!readonly)
+            payload.SetNamedValue(L"show_as", JsonValue::CreateStringValue(
+                show_as_values[show_as_combo.SelectedIndex() >= 0 && show_as_combo.SelectedIndex() < 5 ? show_as_combo.SelectedIndex() : 3]));
+        if (!readonly)
+            payload.SetNamedValue(L"private", JsonValue::CreateBooleanValue(private_check.IsChecked() && private_check.IsChecked().GetBoolean()));
         payload.SetNamedValue(L"description", JsonValue::CreateStringValue(desc_box.Text()));
+        payload.SetNamedValue(L"categories", ::EvolutionWin::CategoryStore::ToJsonArray(*categories));
+        payload.SetNamedValue(L"importance", JsonValue::CreateStringValue(
+            importance_high.IsChecked().Value() ? L"high" : (importance_low.IsChecked().Value() ? L"low" : L"normal")));
+        if (*rrule_touched)
+            payload.SetNamedValue(L"rrule", JsonValue::CreateStringValue(hstring{ *rrule }));
         payload.SetNamedValue(L"start", JsonValue::CreateNumberValue(static_cast<double>(start_unix)));
         payload.SetNamedValue(L"end", JsonValue::CreateNumberValue(static_cast<double>(end_unix)));
         payload.SetNamedValue(L"all_day", JsonValue::CreateBooleanValue(day));
@@ -1164,41 +1841,118 @@ namespace winrt::EvolutionWin::implementation
             {
                 if (!error.empty())
                 {
-                    ShowStatus(L"Modification de l'événement : " + error, InfoBarSeverity::Error);
+                    ShowStatus(EventSaveErrorText(m_calendar_sources, edit_calendar, Tr(L"Modification de l'événement : {0}"), error), InfoBarSeverity::Error);
                     return;
                 }
-                ShowStatus(L"Événement modifié.", InfoBarSeverity::Success);
+                ShowStatus(Tr(L"Événement modifié."), InfoBarSeverity::Success);
                 LoadEvents();
                 SendEventInvitations(sender_uid, edit_calendar, edit_uid);
             });
-            co_return;
+            return true;
         }
 
-        if (hstring active = ActiveCalendarUid(); !active.empty())
-            payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(active));
+        hstring chosen_calendar = ActiveCalendarUid();
+        if (calendar_combo.SelectedIndex() >= 0 && static_cast<size_t>(calendar_combo.SelectedIndex()) < calendar_uids.size())
+            chosen_calendar = calendar_uids[calendar_combo.SelectedIndex()];
+        if (!chosen_calendar.empty())
+            payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(chosen_calendar));
 
-        /* réunion Teams : l'événement est créé dans un calendrier Microsoft 365 */
+        /* réunion Teams : l'événement doit être dans un calendrier Microsoft 365 (celui choisi s'il l'est, sinon un autre) */
         if (teams_check.IsChecked() && teams_check.IsChecked().GetBoolean())
         {
-            if (hstring teams_calendar = TeamsCalendarUid(); !teams_calendar.empty())
-                payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(teams_calendar));
+            bool chosen_is_m365 = false;
+            for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
+            {
+                auto source = value.GetObject();
+                if (source.GetNamedString(L"uid", L"") == chosen_calendar && source.GetNamedString(L"backend", L"") == L"microsoft365")
+                    chosen_is_m365 = true;
+            }
+            if (!chosen_is_m365)
+                if (hstring teams_calendar = TeamsCalendarUid(); !teams_calendar.empty())
+                    payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(teams_calendar));
             payload.SetNamedValue(L"online_meeting", JsonValue::CreateBooleanValue(true));
         }
 
+        /* réunion Google Meet : l'événement doit être dans un calendrier Gmail (celui choisi s'il l'est, sinon un autre) ;
+         * le lien est ajouté par l'API Google Agenda une fois l'événement créé */
+        bool want_meet = meet_check.IsChecked() && meet_check.IsChecked().GetBoolean();
+        if (want_meet)
+        {
+            bool chosen_is_google = false;
+            for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
+            {
+                auto source = value.GetObject();
+                if (source.GetNamedString(L"uid", L"") == chosen_calendar && source.GetNamedString(L"backend", L"") == L"google")
+                    chosen_is_google = true;
+            }
+            if (!chosen_is_google)
+                if (hstring google_calendar = GoogleCalendarUid(); !google_calendar.empty())
+                    payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(google_calendar));
+        }
+
         hstring create_calendar = payload.GetNamedString(L"calendar_uid", L"");
-        m_core->CreateEvent(payload.Stringify(), [this, sender_uid, create_calendar](hstring const& json, hstring const& error)
+        m_core->CreateEvent(payload.Stringify(), [this, sender_uid, create_calendar, want_meet](hstring const& json, hstring const& error)
         {
             if (!error.empty())
             {
-                ShowStatus(L"Création de l'événement : " + error, InfoBarSeverity::Error);
+                ShowStatus(EventSaveErrorText(m_calendar_sources, create_calendar, Tr(L"Création de l'événement : {0}"), error), InfoBarSeverity::Error);
                 return;
             }
-            ShowStatus(L"Événement enregistré.", InfoBarSeverity::Success);
+            ShowStatus(Tr(L"Événement enregistré."), InfoBarSeverity::Success);
             LoadEvents();
             JsonObject created;
             if (JsonObject::TryParse(json, created))
-                SendEventInvitations(sender_uid, create_calendar, created.GetNamedString(L"uid", L""));
+            {
+                hstring created_uid = created.GetNamedString(L"uid", L"");
+                SendEventInvitations(sender_uid, create_calendar, created_uid);
+                if (want_meet)
+                {
+                    ShowStatus(Tr(L"Ajout de la réunion Google Meet…"), InfoBarSeverity::Informational);
+                    m_core->AddGoogleMeet(create_calendar, created_uid, [this](hstring const& meet_json, hstring const& meet_error)
+                    {
+                        if (!meet_error.empty())
+                        {
+                            ShowStatus(Fmt(Tr(L"Réunion Google Meet : {0}"), { meet_error }), InfoBarSeverity::Error);
+                            return;
+                        }
+                        JsonObject meet;
+                        hstring link = JsonObject::TryParse(meet_json, meet) ? meet.GetNamedString(L"link", L"") : hstring{};
+                        ShowStatus(link.empty() ? Tr(L"Réunion Google Meet ajoutée (le lien apparaîtra après la synchronisation).")
+                                                : Fmt(Tr(L"Réunion Google Meet ajoutée : {0}"), { link }), InfoBarSeverity::Success);
+                        LoadEvents();
+                    });
+                }
+            }
         });
+        return true;
+        };
+
+        save_button.Click([commit, window](auto&&, auto&&)
+        {
+            if (commit())
+                window.Close();
+        });
+        delete_button.Click([this, event, window](auto&&, auto&&)
+        {
+            m_core->DeleteEvent(event.GetNamedString(L"calendar_uid", L""), event.GetNamedString(L"uid", L""),
+                [this](hstring const&, hstring const& error)
+            {
+                if (!error.empty())
+                {
+                    ShowStatus(Fmt(Tr(L"Suppression de l'événement : {0}"), { error }), InfoBarSeverity::Error);
+                    return;
+                }
+                ShowStatus(Tr(L"Événement supprimé."), InfoBarSeverity::Success);
+                LoadEvents();
+            });
+            window.Close();
+        });
+        close_button.Click([window](auto&&, auto&&) { window.Close(); });
+
+        HWND owner_handle = nullptr;
+        if (auto native = try_as<::IWindowNative>())
+            native->get_WindowHandle(&owner_handle);
+        ::EvolutionWin::Helpers::ShowOwnedWindow(window, owner_handle);
     }
 
     /**
@@ -1228,12 +1982,12 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus(Tr(L"Invitations non envoyées : ", L"Invitations not sent: ") + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Invitations non envoyées : {0}", L"Invitations not sent: {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
             JsonObject result;
             if (JsonObject::TryParse(json, result) && result.GetNamedNumber(L"sent", 0) > 0)
-                ShowStatus(Tr(L"Invitations envoyées à : ", L"Invitations sent to: ") + result.GetNamedString(L"to", L""),
+                ShowStatus(Fmt(Tr(L"Invitations envoyées à : {0}", L"Invitations sent to: {0}"), { result.GetNamedString(L"to", L"") }),
                     InfoBarSeverity::Success);
         });
     }
@@ -1247,12 +2001,12 @@ namespace winrt::EvolutionWin::implementation
             JsonArray sources;
             if (!error.empty() || !JsonArray::TryParse(json, sources))
             {
-                ShowStatus(L"Exportation : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Exportation : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
             if (sources.Size() == 0)
             {
-                ShowStatus(L"Aucun agenda ni liste de tâches à exporter.", InfoBarSeverity::Warning);
+                ShowStatus(Tr(L"Aucun agenda ni liste de tâches à exporter."), InfoBarSeverity::Warning);
                 return;
             }
             ExportCalendarAsync(sources);
@@ -1273,9 +2027,9 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Exporter au format iCalendar"));
-        dialog.PrimaryButtonText(L"Exporter");
-        dialog.CloseButtonText(L"Annuler");
+        dialog.Title(box_value(Tr(L"Exporter au format iCalendar")));
+        dialog.PrimaryButtonText(Tr(L"Exporter"));
+        dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Primary);
 
         StackPanel panel;
@@ -1283,19 +2037,19 @@ namespace winrt::EvolutionWin::implementation
         panel.MinWidth(380);
 
         ComboBox source_box;
-        source_box.Header(box_value(L"Agenda ou liste de tâches"));
+        source_box.Header(box_value(Tr(L"Agenda ou liste de tâches")));
         source_box.HorizontalAlignment(HorizontalAlignment::Stretch);
         for (auto const& value : sources)
         {
             auto source = value.GetObject();
-            hstring label = source.GetNamedString(L"kind", L"") == L"tasks" ? L"Tâches" : L"Agenda";
+            hstring label = source.GetNamedString(L"kind", L"") == L"tasks" ? Tr(L"Tâches") : Tr(L"Agenda");
             source_box.Items().Append(box_value(label + L" : " + source.GetNamedString(L"name", L"")));
         }
         source_box.SelectedIndex(0);
         panel.Children().Append(source_box);
 
         TextBlock hint;
-        hint.Text(L"Tous les événements ou toutes les tâches sont enregistrés dans un fichier .ics, avec leurs fuseaux horaires.");
+        hint.Text(Tr(L"Tous les événements ou toutes les tâches sont enregistrés dans un fichier .ics, avec leurs fuseaux horaires."));
         hint.TextWrapping(TextWrapping::Wrap);
         hint.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
         panel.Children().Append(hint);
@@ -1317,7 +2071,7 @@ namespace winrt::EvolutionWin::implementation
         Windows::Storage::Pickers::FileSavePicker picker;
         InitializePicker(picker);
         picker.SuggestedFileName(SanitizeFileName(name, tasks ? L"taches" : L"agenda"));
-        picker.FileTypeChoices().Insert(L"Calendrier iCalendar", single_threaded_vector<hstring>({ L".ics" }));
+        picker.FileTypeChoices().Insert(Tr(L"Calendrier iCalendar"), single_threaded_vector<hstring>({ L".ics" }));
 
         auto file = co_await picker.PickSaveFileAsync();
         if (!file)
@@ -1328,18 +2082,19 @@ namespace winrt::EvolutionWin::implementation
         request.SetNamedValue(L"source_uid", JsonValue::CreateStringValue(uid));
         request.SetNamedValue(L"path", JsonValue::CreateStringValue(dest));
 
-        ShowStatus(L"Exportation de « " + name + L" »…", InfoBarSeverity::Informational);
+        ShowStatus(Fmt(Tr(L"Exportation de « {0} »…"), { name }), InfoBarSeverity::Informational);
         m_core->ExportCalendar(request.Stringify(), [this, dest, tasks](hstring const& json, hstring const& error)
         {
             JsonObject answer;
             if (!error.empty() || !JsonObject::TryParse(json, answer))
             {
-                ShowStatus(L"Exportation : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Exportation : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
             auto count = static_cast<uint32_t>(answer.GetNamedNumber(L"count", 0));
-            ShowStatus(hstring{ std::to_wstring(count) + (tasks ? L" tâche(s) exportée(s)" : L" événement(s) exporté(s)") +
-                L" dans « " + std::wstring{ dest } + L" »." }, InfoBarSeverity::Success);
+            ShowStatus(Fmt(tasks ? Tr(L"Exportation terminée : {0} tâche(s) exportée(s) dans « {1} ».")
+                                 : Tr(L"Exportation terminée : {0} événement(s) exporté(s) dans « {1} »."),
+                           { to_hstring(count), dest }), InfoBarSeverity::Success);
         });
     }
 

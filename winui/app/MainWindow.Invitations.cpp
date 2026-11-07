@@ -16,11 +16,22 @@ using namespace Windows::Foundation;
 
 namespace winrt::EvolutionWin::implementation
 {
+    using ::EvolutionWin::Helpers::Fmt;
     using ::EvolutionWin::Helpers::Tr;
     using ::EvolutionWin::Helpers::UiIsEnglish;
 
     namespace
     {
+        /**
+         * @brief Traduit un libellé français des phrases de Invitations.h vers la langue de l'interface.
+         * @param fr Libellé français (clé de traduction).
+         * @return Libellé traduit (le français si aucune traduction n'existe).
+         */
+        std::wstring TranslateInvitationText(wchar_t const* fr)
+        {
+            return std::wstring{ Tr(fr) };
+        }
+
         /**
          * @brief Indique si deux instants tombent le même jour local.
          * @param a Premier horodatage Unix (secondes).
@@ -130,16 +141,17 @@ namespace winrt::EvolutionWin::implementation
         std::wstring when = FormatWhen(inv.GetNamedNumber(L"start", 0), inv.GetNamedNumber(L"end", 0),
             inv.GetNamedBoolean(L"all_day", false));
         if (!when.empty())
-            details += std::wstring{ Tr(L"Quand : ", L"When: ") } + when
-                + (inv.GetNamedBoolean(L"recurring", false) ? std::wstring{ Tr(L" (périodique)", L" (recurring)") } : L"") + L"\n";
+            details += std::wstring{ inv.GetNamedBoolean(L"recurring", false)
+                ? Fmt(Tr(L"Quand : {0} (périodique)", L"When: {0} (recurring)"), { hstring{ when } })
+                : Fmt(Tr(L"Quand : {0}", L"When: {0}"), { hstring{ when } }) } + L"\n";
         hstring location = inv.GetNamedString(L"location", L"");
         if (!location.empty())
-            details += std::wstring{ Tr(L"Lieu : ", L"Where: ") } + std::wstring{ location } + L"\n";
+            details += std::wstring{ Fmt(Tr(L"Lieu : {0}", L"Where: {0}"), { location }) } + L"\n";
         if (!organizer_name.empty())
-            details += std::wstring{ Tr(L"Organisateur : ", L"Organizer: ") } + organizer_name + L"\n";
+            details += std::wstring{ Fmt(Tr(L"Organisateur : {0}", L"Organizer: {0}"), { hstring{ organizer_name } }) } + L"\n";
         uint32_t attendee_count = inv.GetNamedArray(L"attendees", JsonArray{}).Size();
         if (kind == Kind::Request && attendee_count > 0)
-            details += std::wstring{ Tr(L"Participants : ", L"Attendees: ") } + std::to_wstring(attendee_count) + L"\n";
+            details += std::wstring{ Fmt(Tr(L"Participants : {0}", L"Attendees: {0}"), { to_hstring(attendee_count) }) } + L"\n";
         if (!details.empty())
             details.pop_back();
         InviteDetails().Text(hstring{ details });
@@ -154,7 +166,7 @@ namespace winrt::EvolutionWin::implementation
                 JsonObject who = value.GetObject();
                 Answer answer = ParseAnswer(std::wstring_view{ who.GetNamedString(L"partstat", L"") });
                 status_text = DescribeReply(DisplayName(std::wstring_view{ who.GetNamedString(L"name", L"") },
-                    std::wstring_view{ who.GetNamedString(L"email", L"") }), answer, UiIsEnglish());
+                    std::wstring_view{ who.GetNamedString(L"email", L"") }), answer, UiIsEnglish(), &TranslateInvitationText);
                 state.tone = answer == Answer::Declined ? Tone::Warning
                     : answer == Answer::NeedsAction ? Tone::Informational : Tone::Success;
                 break;
@@ -162,7 +174,7 @@ namespace winrt::EvolutionWin::implementation
         }
         else
         {
-            status_text = DescribeState(kind, mine, in_calendar, is_organizer, UiIsEnglish());
+            status_text = DescribeState(kind, mine, in_calendar, is_organizer, UiIsEnglish(), &TranslateInvitationText);
             if (kind == Kind::Request && mine == Answer::Declined)
                 state.tone = Tone::Warning;
             else if (kind == Kind::Request && (mine == Answer::Accepted || mine == Answer::Tentative))
@@ -227,7 +239,7 @@ namespace winrt::EvolutionWin::implementation
                 /* rien n'est mémorisé : le bandeau est rétabli pour une nouvelle tentative */
                 if (same_message)
                     UpdateInvitationBar(m_current_message);
-                ShowStatus(Tr(L"Réponse à l'invitation impossible : ", L"Could not respond to the invitation: ") + error,
+                ShowStatus(Fmt(Tr(L"Réponse à l'invitation impossible : {0}", L"Could not respond to the invitation: {0}"), { error }),
                     InfoBarSeverity::Warning);
                 return;
             }
@@ -249,10 +261,10 @@ namespace winrt::EvolutionWin::implementation
                 UpdateInvitationBar(m_current_message);
             }
 
-            ShowStatus(hstring{ DescribeResult(std::wstring_view{ response }, std::wstring_view{ calendar }, sent, UiIsEnglish()) },
+            ShowStatus(hstring{ DescribeResult(std::wstring_view{ response }, std::wstring_view{ calendar }, sent, UiIsEnglish(), &TranslateInvitationText) },
                 InfoBarSeverity::Success);
             if (!calendar_error.empty())
-                ShowStatus(Tr(L"Agenda non mis à jour : ", L"Calendar not updated: ") + calendar_error, InfoBarSeverity::Warning);
+                ShowStatus(Fmt(Tr(L"Agenda non mis à jour : {0}", L"Calendar not updated: {0}"), { calendar_error }), InfoBarSeverity::Warning);
 
             /* rafraîchit la vue Calendrier (nouvel événement, retrait, réponse) */
             if (calendar != L"unchanged")

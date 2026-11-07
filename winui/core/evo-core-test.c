@@ -157,6 +157,41 @@ main (int argc,
 		return 0;
 	}
 
+	/* --folders compte : dossiers d'un compte (erreur de connexion comprise), « ? » liste les comptes */
+	if (argc > 2 && strcmp (argv[1], "--folders") == 0) {
+		done_event = CreateEvent (NULL, FALSE, FALSE, NULL);
+		core = evo_core_new (on_event, NULL);
+		Sleep (10000);
+		if (strcmp (argv[2], "?") == 0) {
+			evo_core_list_accounts (core, on_result, NULL);
+			wait_result ("comptes");
+		} else {
+			evo_core_list_accounts (core, on_result, NULL);
+			wait_result ("comptes");
+			Sleep (3000);
+			printf ("[arg] '%s' (%d)\n", argv[2], (int) strlen (argv[2]));
+			evo_core_list_folders (core, argv[2], on_result, NULL);
+			wait_result ("dossiers");
+		}
+		evo_core_free (core);
+		return 0;
+	}
+
+	/* --search portee requete : recherche multi-dossiers (operateurs is:unread, has:attachment...) ; affiche le nombre de messages */
+	if (argc > 3 && strcmp (argv[1], "--search") == 0) {
+		done_event = CreateEvent (NULL, FALSE, FALSE, NULL);
+		core = evo_core_new (on_event, NULL);
+		Sleep (10000);
+		evo_core_search_messages_scoped (core, "", "", argv[2], argv[3], 500, on_result, NULL);
+		WaitForSingleObject (done_event, INFINITE);
+		if (last_error)
+			printf ("[search] ERREUR : %s\n", last_error);
+		else
+			printf ("[search] %d messages pour « %s » (%s)\n", count_uids (last_json), argv[3], argv[2]);
+		evo_core_free (core);
+		return 0;
+	}
+
 	/* --nav : groupes de calendriers d'Outlook lus par EWS */
 	if (argc > 1 && strcmp (argv[1], "--nav") == 0) {
 		done_event = CreateEvent (NULL, FALSE, FALSE, NULL);
@@ -234,6 +269,9 @@ main (int argc,
 			account = json_first_string (last_json, "uid", obj);
 		}
 	}
+
+	if (getenv ("EVO_TEST_ACCOUNT") && *getenv ("EVO_TEST_ACCOUNT"))
+		account = _strdup (getenv ("EVO_TEST_ACCOUNT"));
 
 	if (account && watch_minutes > 0) {
 		watch_inbox (core, account, watch_minutes);

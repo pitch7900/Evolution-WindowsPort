@@ -1,5 +1,6 @@
 #include "pch.h"
 #include <winrt/Windows.Globalization.h>
+#include <winrt/Microsoft.Windows.Globalization.h>
 
 #include "MainWindow.xaml.h"
 
@@ -27,10 +28,9 @@
 
 
 using namespace winrt;
-
 using namespace Microsoft::UI::Xaml;
-
 using namespace Microsoft::UI::Xaml::Controls;
+using namespace ::EvolutionWin::Helpers;
 
 
 
@@ -68,99 +68,102 @@ namespace winrt::EvolutionWin::implementation
 
          */
 
-        const std::vector<SettingSearchItem> g_search_index = {
+        std::vector<SettingSearchItem> BuildSearchIndex()
+        {
+            return {
 
-            { L"Comptes de messagerie", L"Gérer les comptes Exchange, Microsoft 365, Gmail et IMAP", L"accounts" },
+            { std::wstring{ Tr(L"Comptes de messagerie") }, std::wstring{ Tr(L"Gérer les comptes Exchange, Microsoft 365, Gmail et IMAP") }, L"accounts" },
 
-            { L"Ajouter un compte", L"Configurer une nouvelle boîte aux lettres ou adresse e-mail", L"accounts" },
+            { std::wstring{ Tr(L"Ajouter un compte") }, std::wstring{ Tr(L"Configurer une nouvelle boîte aux lettres ou adresse e-mail") }, L"accounts" },
 
-            { L"Intervalle de relève", L"Fréquence de vérification automatique du courrier", L"mail" },
+            { std::wstring{ Tr(L"Intervalle de relève") }, std::wstring{ Tr(L"Fréquence de vérification automatique du courrier") }, L"mail" },
 
-            { L"Relève au démarrage", L"Synchroniser le courrier dès l'ouverture de l'application", L"mail" },
+            { std::wstring{ Tr(L"Relève au démarrage") }, std::wstring{ Tr(L"Synchroniser le courrier dès l'ouverture de l'application") }, L"mail" },
 
-            { L"Format de rédaction", L"Format HTML ou texte brut par défaut des nouveaux messages", L"mail" },
+            { std::wstring{ Tr(L"Format de rédaction") }, std::wstring{ Tr(L"Format HTML ou texte brut par défaut des nouveaux messages") }, L"mail" },
 
-            { L"Marquer comme lu", L"Délai avant de marquer automatiquement un message comme lu", L"mail" },
+            { std::wstring{ Tr(L"Marquer comme lu") }, std::wstring{ Tr(L"Délai avant de marquer automatiquement un message comme lu") }, L"mail" },
 
-            { L"Vider la corbeille", L"Nettoyer les éléments supprimés en quittant l'application", L"mail" },
+            { std::wstring{ Tr(L"Vider la corbeille") }, std::wstring{ Tr(L"Nettoyer les éléments supprimés en quittant l'application") }, L"mail" },
 
-            { L"Signatures de courrier", L"Créer et modifier des signatures texte ou HTML avec images", L"mail" },
+            { std::wstring{ Tr(L"Signatures de courrier") }, std::wstring{ Tr(L"Créer et modifier des signatures texte ou HTML avec images") }, L"mail" },
 
-            { L"Signature par compte", L"Attribuer une signature par défaut pour chaque compte", L"mail" },
+            { std::wstring{ Tr(L"Signature par compte") }, std::wstring{ Tr(L"Attribuer une signature par défaut pour chaque compte") }, L"mail" },
 
-            { L"Avertir si objet vide", L"Demander confirmation avant d'envoyer un message sans objet", L"mail" },
+            { std::wstring{ Tr(L"Avertir si objet vide") }, std::wstring{ Tr(L"Demander confirmation avant d'envoyer un message sans objet") }, L"mail" },
 
-            { L"Suppression définitive", L"Confirmation avant la suppression irréversible d'un message", L"mail" },
-            { L"Accusé de lecture", L"Demande automatique de confirmation de lecture lors de l'envoi", L"mail" },
-            { L"Copie cachée automatique (Cci / Bcc)", L"Définir une adresse Bcc automatique sur les nouveaux messages", L"mail" },
-            { L"Police de rédaction", L"Police et taille de caractères par défaut des nouveaux courriels", L"mail" },
-            { L"Vérificateur d'orthographe", L"Surligner et corriger les fautes d'orthographe pendant la rédaction", L"mail" },
+            { std::wstring{ Tr(L"Suppression définitive") }, std::wstring{ Tr(L"Confirmation avant la suppression irréversible d'un message") }, L"mail" },
+            { std::wstring{ Tr(L"Accusé de lecture") }, std::wstring{ Tr(L"Demande automatique de confirmation de lecture lors de l'envoi") }, L"mail" },
+            { std::wstring{ Tr(L"Copie cachée automatique (Cci / Bcc)") }, std::wstring{ Tr(L"Définir une adresse Bcc automatique sur les nouveaux messages") }, L"mail" },
+            { std::wstring{ Tr(L"Police de rédaction") }, std::wstring{ Tr(L"Police et taille de caractères par défaut des nouveaux courriels") }, L"mail" },
+            { std::wstring{ Tr(L"Vérificateur d'orthographe") }, std::wstring{ Tr(L"Surligner et corriger les fautes d'orthographe pendant la rédaction") }, L"mail" },
 
-            { L"Premier jour de la semaine", L"Lundi, dimanche ou samedi pour la grille du calendrier", L"calendar" },
+            { std::wstring{ Tr(L"Premier jour de la semaine") }, std::wstring{ Tr(L"Lundi, dimanche ou samedi pour la grille du calendrier") }, L"calendar" },
 
-            { L"Heures de travail", L"Définir les heures habituelles de bureau pour le calendrier", L"calendar" },
+            { std::wstring{ Tr(L"Heures de travail") }, std::wstring{ Tr(L"Définir les heures habituelles de bureau pour le calendrier") }, L"calendar" },
 
-            { L"Numéros de semaine", L"Afficher les numéros de semaine dans le calendrier", L"calendar" },
+            { std::wstring{ Tr(L"Numéros de semaine") }, std::wstring{ Tr(L"Afficher les numéros de semaine dans le calendrier") }, L"calendar" },
 
-            { L"Durée par défaut des réunions", L"Durée préremplie lors de la création d'un événement", L"calendar" },
+            { std::wstring{ Tr(L"Durée par défaut des réunions") }, std::wstring{ Tr(L"Durée préremplie lors de la création d'un événement") }, L"calendar" },
 
-            { L"Rappel par défaut des événements", L"Délai d'alerte pour les nouveaux rendez-vous", L"calendar" },
+            { std::wstring{ Tr(L"Rappel par défaut des événements") }, std::wstring{ Tr(L"Délai d'alerte pour les nouveaux rendez-vous") }, L"calendar" },
 
-            { L"Format des contacts", L"Ordre d'affichage des noms et prénoms dans le carnet d'adresses", L"contacts" },
+            { std::wstring{ Tr(L"Format des contacts") }, std::wstring{ Tr(L"Ordre d'affichage des noms et prénoms dans le carnet d'adresses") }, L"contacts" },
 
-            { L"Tri des contacts", L"Trier le carnet d'adresses par nom de famille ou prénom", L"contacts" },
+            { std::wstring{ Tr(L"Tri des contacts") }, std::wstring{ Tr(L"Trier le carnet d'adresses par nom de famille ou prénom") }, L"contacts" },
 
-            { L"Catégories et codes couleur", L"Créer, renommer, colorer et supprimer les catégories communes aux courriels, contacts, tâches et événements", L"categories" },
+            { std::wstring{ Tr(L"Catégories et codes couleur") }, std::wstring{ Tr(L"Créer, renommer, colorer et supprimer les catégories communes aux courriels, contacts, tâches et événements") }, L"categories" },
 
-            { L"Tâches terminées", L"Afficher ou masquer les tâches achevées par défaut", L"tasks" },
+            { std::wstring{ Tr(L"Tâches terminées") }, std::wstring{ Tr(L"Afficher ou masquer les tâches achevées par défaut") }, L"tasks" },
 
-            { L"Échéance des tâches", L"Date d'échéance par défaut des nouvelles tâches", L"tasks" },
+            { std::wstring{ Tr(L"Échéance des tâches") }, std::wstring{ Tr(L"Date d'échéance par défaut des nouvelles tâches") }, L"tasks" },
 
-            { L"Rappels des tâches", L"Alerte de rappel par défaut des tâches", L"tasks" },
+            { std::wstring{ Tr(L"Rappels des tâches") }, std::wstring{ Tr(L"Alerte de rappel par défaut des tâches") }, L"tasks" },
 
-            { L"Notifications Windows (Toasts)", L"Afficher des bannières toast pour les nouveaux messages", L"notifications" },
+            { std::wstring{ Tr(L"Notifications Windows (Toasts)") }, std::wstring{ Tr(L"Afficher des bannières toast pour les nouveaux messages") }, L"notifications" },
 
-            { L"Signal sonore de notification", L"Émettre un son lors de la réception d'un e-mail", L"notifications" },
+            { std::wstring{ Tr(L"Signal sonore de notification") }, std::wstring{ Tr(L"Émettre un son lors de la réception d'un e-mail") }, L"notifications" },
 
-            { L"Badge de la barre des tâches", L"Compteur de messages non lus sur l'icône de l'application", L"notifications" },
+            { std::wstring{ Tr(L"Badge de la barre des tâches") }, std::wstring{ Tr(L"Compteur de messages non lus sur l'icône de l'application") }, L"notifications" },
 
-            { L"Mode confidentiel des notifications", L"Masquer l'expéditeur et l'objet dans les alertes", L"notifications" },
-            { L"Rappels de calendrier et de tâches", L"Activer ou désactiver les alertes d'échéance et durée d'affichage", L"notifications" },
+            { std::wstring{ Tr(L"Mode confidentiel des notifications") }, std::wstring{ Tr(L"Masquer l'expéditeur et l'objet dans les alertes") }, L"notifications" },
+            { std::wstring{ Tr(L"Rappels de calendrier et de tâches") }, std::wstring{ Tr(L"Activer ou désactiver les alertes d'échéance et durée d'affichage") }, L"notifications" },
 
-            { L"Thème de l'application", L"Mode sombre, mode clair ou thème du système Windows 11", L"appearance" },
+            { std::wstring{ Tr(L"Thème de l'application") }, std::wstring{ Tr(L"Mode sombre, mode clair ou thème du système Windows 11") }, L"appearance" },
 
-            { L"Vue au démarrage", L"Afficher le Courrier, le Calendrier, les Contacts ou les Tâches au lancement", L"appearance" },
+            { std::wstring{ Tr(L"Vue au démarrage") }, std::wstring{ Tr(L"Afficher le Courrier, le Calendrier, les Contacts ou les Tâches au lancement") }, L"appearance" },
 
-            { L"Taille de police", L"Ajuster la taille de texte pour la lecture des courriels", L"appearance" },
+            { std::wstring{ Tr(L"Taille de police") }, std::wstring{ Tr(L"Ajuster la taille de texte pour la lecture des courriels") }, L"appearance" },
 
-            { L"Zone de notification (Systray)", L"Réduire dans la zone de notification Windows à la fermeture", L"appearance" },
-            { L"Démarrer avec Windows", L"Lancement automatique à l'ouverture de session utilisateur (Registre)", L"appearance" },
+            { std::wstring{ Tr(L"Zone de notification (Systray)") }, std::wstring{ Tr(L"Réduire dans la zone de notification Windows à la fermeture") }, L"appearance" },
+            { std::wstring{ Tr(L"Démarrer avec Windows") }, std::wstring{ Tr(L"Lancement automatique à l'ouverture de session utilisateur (Registre)") }, L"appearance" },
 
-            { L"Préfixe de réponse", L"Préfixe d'objet de réponse (Re:, RE:, AW:, R:)", L"mail" },
-            { L"Préfixe de transfert", L"Préfixe d'objet de transfert (TR:, Fwd:, FW:, WG:)", L"mail" },
-            { L"Contenu externe et images distantes", L"Bloquer ou autoriser les images et pixels de suivi", L"privacy" },
+            { std::wstring{ Tr(L"Préfixe de réponse") }, std::wstring{ Tr(L"Préfixe d'objet de réponse (Re:, RE:, AW:, R:)") }, L"mail" },
+            { std::wstring{ Tr(L"Préfixe de transfert") }, std::wstring{ Tr(L"Préfixe d'objet de transfert (TR:, Fwd:, FW:, WG:)") }, L"mail" },
+            { std::wstring{ Tr(L"Contenu externe et images distantes") }, std::wstring{ Tr(L"Bloquer ou autoriser les images et pixels de suivi") }, L"privacy" },
 
-            { L"Expéditeurs de confiance", L"Gérer la liste blanche des expéditeurs autorisés", L"privacy" },
+            { std::wstring{ Tr(L"Expéditeurs de confiance") }, std::wstring{ Tr(L"Gérer la liste blanche des expéditeurs autorisés") }, L"privacy" },
 
-            { L"Masquer l'extrait des messages", L"Ne pas afficher les lignes d'aperçu dans la liste", L"privacy" },
+            { std::wstring{ Tr(L"Masquer l'extrait des messages") }, std::wstring{ Tr(L"Ne pas afficher les lignes d'aperçu dans la liste") }, L"privacy" },
 
-            { L"Mise à jour automatique", L"Vérifier la disponibilité d'une nouvelle version au démarrage", L"update" },
+            { std::wstring{ Tr(L"Mise à jour automatique") }, std::wstring{ Tr(L"Vérifier la disponibilité d'une nouvelle version au démarrage") }, L"update" },
 
-            { L"Canal de mise à jour", L"Choisir entre la version stable et les versions bêta préliminaires", L"update" },
+            { std::wstring{ Tr(L"Canal de mise à jour") }, std::wstring{ Tr(L"Choisir entre la version stable et les versions bêta préliminaires") }, L"update" },
 
-            { L"Vérifier les mises à jour", L"Rechercher immédiatement une nouvelle version sur GitHub", L"update" },
+            { std::wstring{ Tr(L"Vérifier les mises à jour") }, std::wstring{ Tr(L"Rechercher immédiatement une nouvelle version sur GitHub") }, L"update" },
 
-            { L"Dossier des données locales", L"Ouvrir le répertoire des réglages et profils dans l'Explorateur", L"advanced" },
+            { std::wstring{ Tr(L"Dossier des données locales") }, std::wstring{ Tr(L"Ouvrir le répertoire des réglages et profils dans l'Explorateur") }, L"advanced" },
 
-            { L"Cache WebView2", L"Vider les fichiers temporaires et le cache de rendu HTML", L"advanced" },
+            { std::wstring{ Tr(L"Cache WebView2") }, std::wstring{ Tr(L"Vider les fichiers temporaires et le cache de rendu HTML") }, L"advanced" },
 
-            { L"Journalisation détaillée", L"Activer les journaux étendus pour le diagnostic et le support", L"advanced" },
+            { std::wstring{ Tr(L"Journalisation détaillée") }, std::wstring{ Tr(L"Activer les journaux étendus pour le diagnostic et le support") }, L"advanced" },
 
-            { L"Rétablir les paramètres par défaut", L"Réinitialiser l'ensemble des réglages de l'application", L"advanced" },
+            { std::wstring{ Tr(L"Rétablir les paramètres par défaut") }, std::wstring{ Tr(L"Réinitialiser l'ensemble des réglages de l'application") }, L"advanced" },
 
-            { L"À propos d'EvolutionWin", L"Numéro de version, licences open-source et informations légales", L"about" }
+            { std::wstring{ Tr(L"À propos d'EvolutionWin") }, std::wstring{ Tr(L"Numéro de version, licences open-source et informations légales") }, L"about" }
 
         };
+        }
 
 
 
@@ -1207,149 +1210,98 @@ namespace winrt::EvolutionWin::implementation
 
         // Met à jour les libellés et affiche la section demandée
 
-        hstring title = L"Paramètres";
+        hstring title = Tr(L"Paramètres");
 
         hstring desc = L"";
 
 
 
         if (category_tag == L"accounts")
-
         {
-
-            title = L"Comptes";
-
-            desc = L"Gérez vos comptes de messagerie Microsoft 365, Exchange, Gmail et IMAP / SMTP.";
-
+            title = Tr(L"Comptes", L"Accounts");
+            desc = Tr(L"Gérez vos comptes de messagerie Microsoft 365, Exchange, Gmail et IMAP / SMTP.",
+                      L"Manage your Microsoft 365, Exchange, Gmail and IMAP / SMTP mail accounts.");
             if (auto s = SettingsCategoryAccounts()) s.Visibility(Visibility::Visible);
-
             RefreshAccountsView();
-
         }
-
         else if (category_tag == L"mail")
-
         {
-
-            title = L"Courrier";
-
-            desc = L"Paramètres de réception, lecture, rédaction de messages et gestion des signatures.";
-
+            title = Tr(L"Courrier", L"Mail");
+            desc = Tr(L"Paramètres de réception, lecture, rédaction de messages et gestion des signatures.",
+                      L"Settings for receiving, reading, composing messages and managing signatures.");
             if (auto s = SettingsCategoryMail()) s.Visibility(Visibility::Visible);
-
             RefreshSignaturesView();
-
         }
-
         else if (category_tag == L"calendar")
-
         {
-
-            title = L"Calendrier";
-
-            desc = L"Options d'affichage de la semaine, heures de travail, rappels et durées par défaut.";
-
+            title = Tr(L"Calendrier", L"Calendar");
+            desc = Tr(L"Options d'affichage de la semaine, heures de travail, rappels et durées par défaut.",
+                      L"Week display options, work hours, reminders and default event durations.");
             if (auto s = SettingsCategoryCalendar()) s.Visibility(Visibility::Visible);
-
         }
-
         else if (category_tag == L"contacts")
-
         {
-
-            title = L"Contacts";
-
-            desc = L"Format d'affichage des noms et ordre de tri des fiches de contacts.";
-
+            title = Tr(L"Contacts", L"Contacts");
+            desc = Tr(L"Format d'affichage des noms et ordre de tri des fiches de contacts.",
+                      L"Name display format and sorting order for contact cards.");
             if (auto s = SettingsCategoryContacts()) s.Visibility(Visibility::Visible);
-
         }
-
         else if (category_tag == L"tasks")
-
         {
-
-            title = L"Tâches";
-
-            desc = L"Affichage des tâches achevées, échéances et rappels automatiques.";
-
+            title = Tr(L"Tâches", L"Tasks");
+            desc = Tr(L"Affichage des tâches achevées, échéances et rappels automatiques.",
+                      L"Display of completed tasks, due dates and automatic reminders.");
             if (auto s = SettingsCategoryTasks()) s.Visibility(Visibility::Visible);
-
         }
-
         else if (category_tag == L"categories")
         {
-            title = L"Catégories";
-            desc = L"Palette de catégories et codes couleur partagés par les courriels, contacts, tâches et événements.";
+            title = Tr(L"Catégories", L"Categories");
+            desc = Tr(L"Palette de catégories et codes couleur partagés par les courriels, contacts, tâches et événements.",
+                      L"Shared category palette and color codes for emails, contacts, tasks and events.");
             if (auto s = SettingsCategoryCategories()) s.Visibility(Visibility::Visible);
             RefreshCategoriesView();
         }
         else if (category_tag == L"notifications")
-
         {
-
-            title = L"Notifications";
-
-            desc = L"Alertes Windows (toasts), signaux sonores, pastille de la barre des tâches et mode confidentiel.";
-
+            title = Tr(L"Notifications", L"Notifications");
+            desc = Tr(L"Alertes Windows (toasts), signaux sonores, pastille de la barre des tâches et mode confidentiel.",
+                      L"Windows alerts (toasts), sounds, taskbar badge and confidential mode.");
             if (auto s = SettingsCategoryNotifications()) s.Visibility(Visibility::Visible);
-
         }
-
         else if (category_tag == L"appearance")
-
         {
-
-            title = L"Apparence";
-
-            desc = L"Personnalisation du thème visuel, taille des polices de lecture et comportement au démarrage.";
-
+            title = Tr(L"Apparence", L"Appearance");
+            desc = Tr(L"Personnalisation du thème visuel, taille des polices de lecture et comportement au démarrage.",
+                      L"Visual theme customization, reading font sizes and startup behavior.");
             if (auto s = SettingsCategoryAppearance()) s.Visibility(Visibility::Visible);
-
         }
-
         else if (category_tag == L"privacy")
-
         {
-
-            title = L"Confidentialité et sécurité";
-
-            desc = L"Protection contre les pixels espions, blocage du contenu distant et liste de confiance.";
-
+            title = Tr(L"Confidentialité et sécurité", L"Privacy & Security");
+            desc = Tr(L"Protection contre les pixels espions, blocage du contenu distant et liste de confiance.",
+                      L"Web bug protection, remote content blocking and trusted senders list.");
             if (auto s = SettingsCategoryPrivacy()) s.Visibility(Visibility::Visible);
-
             RefreshPrivacyView();
-
         }
-
         else if (category_tag == L"update")
-
         {
-
-            title = L"Mise à jour";
-
-            desc = L"Recherche automatique de nouvelles versions et canal de distribution du logiciel.";
-
+            title = Tr(L"Mise à jour", L"Update");
+            desc = Tr(L"Recherche automatique de nouvelles versions et canal de distribution du logiciel.",
+                      L"Automatic check for updates and software distribution channel.");
             if (auto s = SettingsCategoryUpdate()) s.Visibility(Visibility::Visible);
-
         }
-
         else if (category_tag == L"advanced")
-
         {
-
-            title = L"Avancé";
-
-            desc = L"Gestion des données locales, vidage du cache de rendu et réinitialisation des paramètres.";
-
+            title = Tr(L"Avancé", L"Advanced");
+            desc = Tr(L"Gestion des données locales, vidage du cache de rendu et réinitialisation des paramètres.",
+                      L"Local data management, rendering cache purge and settings reset.");
             if (auto s = SettingsCategoryAdvanced()) s.Visibility(Visibility::Visible);
-
         }
-
         else if (category_tag == L"about")
         {
-            title = L"À propos";
-            desc = L"Informations sur le portage Windows natif d'Evolution, technologies et mentions légales.";
+            title = Tr(L"À propos", L"About");
+            desc = Tr(L"Informations sur le portage Windows natif d'Evolution, technologies et mentions légales.",
+                      L"Information about the native Windows port of Evolution, technologies and legal notices.");
             if (auto s = SettingsCategoryAbout())
             {
                 s.Visibility(Visibility::Visible);
@@ -1535,7 +1487,7 @@ namespace winrt::EvolutionWin::implementation
 
         std::vector<hstring> suggestions;
 
-        for (auto const& item : g_search_index)
+        for (auto const& item : BuildSearchIndex())
 
         {
 
@@ -1593,7 +1545,7 @@ namespace winrt::EvolutionWin::implementation
 
 
 
-        for (auto const& item : g_search_index)
+        for (auto const& item : BuildSearchIndex())
 
         {
 
@@ -1991,9 +1943,14 @@ namespace winrt::EvolutionWin::implementation
 
                         else if (key == L"general.language")
                         {
+                            hstring override_lang = val == L"system" ? L"" : val;
                             try
                             {
-                                hstring override_lang = val == L"system" ? L"" : val;
+                                Microsoft::Windows::Globalization::ApplicationLanguages::PrimaryLanguageOverride(override_lang);
+                            }
+                            catch (...) {}
+                            try
+                            {
                                 Windows::Globalization::ApplicationLanguages::PrimaryLanguageOverride(override_lang);
                             }
                             catch (...) {}
@@ -2141,15 +2098,15 @@ namespace winrt::EvolutionWin::implementation
         if (bytes_freed > 1024 * 1024) {
             double mb = static_cast<double>(bytes_freed) / (1024.0 * 1024.0);
             wchar_t buf[64];
-            swprintf_s(buf, L"Caches et fichiers temporaires vidés (%.1f Mo libérés).", mb);
-            report = hstring{ buf };
+            swprintf_s(buf, L"%.1f", mb);
+            report = Fmt(Tr(L"Caches et fichiers temporaires vidés ({0} Mo libérés)."), { hstring{ buf } });
         } else if (bytes_freed > 0) {
             double kb = static_cast<double>(bytes_freed) / 1024.0;
             wchar_t buf[64];
-            swprintf_s(buf, L"Caches et fichiers temporaires vidés (%.0f Ko libérés).", kb);
-            report = hstring{ buf };
+            swprintf_s(buf, L"%.0f", kb);
+            report = Fmt(Tr(L"Caches et fichiers temporaires vidés ({0} Ko libérés)."), { hstring{ buf } });
         } else {
-            report = L"Caches de rendu et fichiers temporaires vidés avec succès.";
+            report = Tr(L"Caches de rendu et fichiers temporaires vidés avec succès.");
         }
         ShowStatus(report, InfoBarSeverity::Success);
     }
@@ -2190,13 +2147,13 @@ namespace winrt::EvolutionWin::implementation
 
         dialog.XamlRoot(this->Content().XamlRoot());
 
-        dialog.Title(box_value(L"Réinitialiser les paramètres ?"));
+        dialog.Title(box_value(Tr(L"Réinitialiser les paramètres ?")));
 
-        dialog.Content(box_value(L"Tous les réglages personnalisés de l'application (thème, intervalles, options de lecture) seront rétablis à leurs valeurs d'origine.\n\nVos comptes de messagerie et vos courriels ne seront pas supprimés."));
+        dialog.Content(box_value(Tr(L"Tous les réglages personnalisés de l'application (thème, intervalles, options de lecture) seront rétablis à leurs valeurs d'origine.\n\nVos comptes de messagerie et vos courriels ne seront pas supprimés.")));
 
-        dialog.PrimaryButtonText(L"Réinitialiser");
+        dialog.PrimaryButtonText(Tr(L"Réinitialiser"));
 
-        dialog.CloseButtonText(L"Annuler");
+        dialog.CloseButtonText(Tr(L"Annuler"));
 
         dialog.DefaultButton(ContentDialogButton::Close);
 
@@ -2280,7 +2237,7 @@ namespace winrt::EvolutionWin::implementation
 
             InitSettingsView();
 
-            ShowStatus(L"Les paramètres par défaut de l'application ont été rétablis.", InfoBarSeverity::Success);
+            ShowStatus(Tr(L"Les paramètres par défaut de l'application ont été rétablis."), InfoBarSeverity::Success);
 
         });
 

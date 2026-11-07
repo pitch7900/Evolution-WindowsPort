@@ -92,6 +92,10 @@ rem Execution du test d'assemblage du XAML de la fenetre principale
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%EVO_WORKSPACE%\tests\xaml\test_xaml_assembly.ps1"
 if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
+rem Catalogues de traduction : chaque texte source present dans les 7 langues
+python "%EVO_WORKSPACE%\tools\i18n-sync.py" check
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
 rem Execution du test d'export ABI DLL
 if exist "%BUILD_DIR%\evo-core.dll" (
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%EVO_WORKSPACE%\tests\abi\test_abi_exports.ps1"

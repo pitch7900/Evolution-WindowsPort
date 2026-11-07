@@ -131,6 +131,13 @@ namespace EvolutionWin
             evo_core_send_message(m_core, winrt::to_string(message_json).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Prépare la signature / le chiffrement S/MIME d'un message en rédaction : indique si un
+         * certificat personnel existe (sinon il sera créé) et quels destinataires n'ont pas de certificat connu. */
+        void CryptoCheck(winrt::hstring const& request_json, CoreHandler handler)
+        {
+            evo_core_crypto_check(m_core, winrt::to_string(request_json).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Traite et envoie tous les messages en attente dans la Boîte d'envoi. */
         void SendUnsentMessages()
         {
@@ -215,6 +222,72 @@ namespace EvolutionWin
         {
             evo_core_set_auto_reply(m_core, winrt::to_string(account).c_str(),
                 winrt::to_string(settings_json).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Lit les réglages de synchronisation hors connexion d'un compte (et d'un dossier).
+         * Paramètres :
+         *   account : identifiant du compte
+         *   folder  : chemin complet du dossier, vide pour le compte seul
+         *   handler : rappel recevant {"supported", "stay_synchronized", "limit_by_age",
+         *             "limit_unit", "limit_value", "folder_offline_sync"...} */
+        void GetOfflineSync(winrt::hstring const& account, winrt::hstring const& folder, CoreHandler handler)
+        {
+            evo_core_get_offline_sync(m_core, winrt::to_string(account).c_str(),
+                winrt::to_string(folder).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Enregistre les réglages de synchronisation hors connexion.
+         * Paramètres :
+         *   settings_json : champs à modifier (voir evo_core_set_offline_sync)
+         *   handler       : rappel recevant {} */
+        void SetOfflineSync(winrt::hstring const& settings_json, CoreHandler handler)
+        {
+            evo_core_set_offline_sync(m_core, winrt::to_string(settings_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Télécharge pour le mode hors connexion un compte ou un dossier (progression par
+         * l'événement « progress » de type « offline »).
+         * Paramètres :
+         *   account : identifiant du compte
+         *   folder  : chemin complet du dossier, vide pour tout le compte
+         *   handler : rappel recevant {"folders", "messages", "downloaded", "failed", "cancelled"} */
+        void OfflineSyncNow(winrt::hstring const& account, winrt::hstring const& folder, CoreHandler handler)
+        {
+            evo_core_offline_sync_now(m_core, winrt::to_string(account).c_str(),
+                winrt::to_string(folder).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Délégués de la boîte Gmail : liste.
+         * Paramètres :
+         *   account : identifiant du compte
+         *   handler : rappel recevant {"provider", "delegates": [{"email", "status"}]} */
+        void ListDelegates(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_list_delegates(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Ajoute un délégué à la boîte Gmail.
+         * Paramètres :
+         *   account : identifiant du compte
+         *   email   : adresse du délégué
+         *   handler : rappel recevant {"email", "status"} */
+        void AddDelegate(winrt::hstring const& account, winrt::hstring const& email, CoreHandler handler)
+        {
+            evo_core_add_delegate(m_core, winrt::to_string(account).c_str(),
+                winrt::to_string(email).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Révoque un délégué de la boîte Gmail.
+         * Paramètres :
+         *   account : identifiant du compte
+         *   email   : adresse du délégué
+         *   handler : rappel recevant {} */
+        void RemoveDelegate(winrt::hstring const& account, winrt::hstring const& email, CoreHandler handler)
+        {
+            evo_core_remove_delegate(m_core, winrt::to_string(account).c_str(),
+                winrt::to_string(email).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
         /* Supprime un message (vers la corbeille du compte ou définitivement).
@@ -697,6 +770,50 @@ namespace EvolutionWin
         void ListCalendarGroups(winrt::hstring const& account, CoreHandler handler)
         {
             evo_core_list_calendar_groups(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Ajoute une réunion Google Meet à un événement d'un calendrier Gmail : {"link": "..."}. */
+        void AddGoogleMeet(winrt::hstring const& calendar_uid, winrt::hstring const& event_uid, CoreHandler handler)
+        {
+            evo_core_add_google_meet(m_core, winrt::to_string(calendar_uid).c_str(), winrt::to_string(event_uid).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Boîte de réception prioritaire (Microsoft 365) : {"other": ["uid", ...], "complete": bool}. */
+        void ListInboxClassification(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_list_inbox_classification(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Classe un message dans « focused » ou « other » (avec règle pour l'expéditeur si sender non vide). */
+        void SetMessageClassification(winrt::hstring const& account, winrt::hstring const& uid,
+            winrt::hstring const& classification, winrt::hstring const& sender, CoreHandler handler)
+        {
+            evo_core_set_message_classification(m_core, winrt::to_string(account).c_str(), winrt::to_string(uid).c_str(),
+                winrt::to_string(classification).c_str(), winrt::to_string(sender).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Éléments récupérables d'un compte Microsoft 365 : [{"id", "subject", "from", "received"}]. */
+        void ListRecoverableItems(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_list_recoverable_items(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Supprime définitivement des éléments récupérables (identifiants séparés par des espaces). */
+        void PurgeRecoverableItems(winrt::hstring const& account, winrt::hstring const& ids, CoreHandler handler)
+        {
+            evo_core_purge_recoverable_items(m_core, winrt::to_string(account).c_str(), winrt::to_string(ids).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Restaure des éléments récupérables dans la Boîte de réception (identifiants séparés par des espaces). */
+        void RestoreRecoverableItems(winrt::hstring const& account, winrt::hstring const& ids, CoreHandler handler)
+        {
+            evo_core_restore_recoverable_items(m_core, winrt::to_string(account).c_str(), winrt::to_string(ids).c_str(),
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 

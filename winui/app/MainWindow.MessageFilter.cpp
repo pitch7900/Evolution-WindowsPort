@@ -87,6 +87,16 @@ namespace winrt::EvolutionWin::implementation
                 return false;
         }
 
+        /* Boîte de réception prioritaire : onglet « Prioritaire » ou « Autres » (sans effet pendant une recherche) */
+        if (m_focused_inbox_active && SearchBox().Text().empty())
+        {
+            auto tab = FocusedBar().SelectedItem();
+            bool other_tab = tab && unbox_value_or<hstring>(tab.Tag(), L"focused") == L"other";
+            bool is_other = m_inbox_other_ids.count(std::wstring{ message.GetNamedString(L"uid", L"") }) != 0;
+            if (other_tab != is_other)
+                return false;
+        }
+
         if (!::EvolutionWin::Categories::MatchesCategoryFilter(::EvolutionWin::CategoryStore::CategoriesOf(message), m_mail_category_filter))
             return false;
 
@@ -132,6 +142,137 @@ namespace winrt::EvolutionWin::implementation
         ReapplyMessageFilters();
     }
 
+    void MainWindow::OnFocusedBarChanged(SelectorBar const&, SelectorBarSelectionChangedEventArgs const&)
+    {
+        ReapplyMessageFilters();
+    }
+
+    /* Boîte de réception prioritaire (Focused Inbox) : affiche les onglets « Prioritaire » / « Autres » dans la
+     * Boîte de réception d'un compte Microsoft 365 (réglage « account.<uid>.focused-inbox », activé par défaut)
+     * et lit les messages classés « Autres » par Exchange Online. */
+    void MainWindow::UpdateFocusedInbox()
+    {
+        bool active = false;
+        if (!IsUnifiedView() && !m_account.empty() && !m_folder.empty())
+        {
+            bool m365 = false, inbox = false;
+            for (auto const& value : m_accounts ? m_accounts : JsonArray{})
+            {
+                auto account = value.GetObject();
+                if (account.GetNamedString(L"uid", L"") == m_account && account.GetNamedString(L"protocol", L"") == L"microsoft365")
+                    m365 = true;
+            }
+            auto folders = m_account_folders.find(std::wstring{ m_account });
+            if (folders != m_account_folders.end() && folders->second)
+                if (auto folder = FindFolderJson(folders->second, m_folder))
+                    inbox = folder.GetNamedString(L"type", L"") == L"inbox";
+            active = m365 && inbox && ::EvolutionWin::Settings::Instance().GetBoolean(L"account." + m_account + L".focused-inbox", true);
+        }
+
+        FocusedBar().Visibility(active ? Visibility::Visible : Visibility::Collapsed);
+        if (!active)
+        {
+            m_focused_inbox_active = false;
+            m_inbox_other_ids.clear();
+            return;
+        }
+
+        if (!m_focused_inbox_active)
+            m_inbox_other_ids.clear();
+        m_focused_inbox_active = true;
+
+        hstring account = m_account;
+        m_core->ListInboxClassification(account, [this, account](hstring const& json, hstring const& error)
+        {
+            if (account != m_account || !m_focused_inbox_active || !error.empty())
+                return;
+            JsonObject result;
+            if (!JsonObject::TryParse(json, result))
+                return;
+            std::set<std::wstring> others;
+            for (auto const& id : result.GetNamedArray(L"other", JsonArray{}))
+                others.insert(std::wstring{ id.GetString() });
+            m_inbox_other_ids = std::move(others);
+            ReapplyMessageFilters();
+        });
+    }
+
+    /* Compteurs de messages non lus des onglets « Prioritaire (n) » et « Autres (n) », d'après la liste
+     * complète du dossier (m_all_messages) et le classement connu. */
+    void MainWindow::UpdateFocusedBarCounts()
+    {
+        if (!m_focused_inbox_active)
+            return;
+
+        int focused = 0, other = 0;
+        for (auto const& value : m_all_messages ? m_all_messages : JsonArray{})
+        {
+            auto message = value.GetObject();
+            if (message.GetNamedBoolean(L"seen", true))
+                continue;
+            if (m_inbox_other_ids.count(std::wstring{ message.GetNamedString(L"uid", L"") }))
+                ++other;
+            else
+                ++focused;
+        }
+
+        auto items = FocusedBar().Items();
+        if (items.Size() >= 2)
+        {
+            items.GetAt(0).Text(focused > 0 ? Fmt(Tr(L"Prioritaire ({0})", L"Focused ({0})"), { to_hstring(focused) }) : Tr(L"Prioritaire", L"Focused"));
+            items.GetAt(1).Text(other > 0 ? Fmt(Tr(L"Autres ({0})", L"Other ({0})"), { to_hstring(other) }) : Tr(L"Autres", L"Other"));
+        }
+    }
+
+    /* Classe un message dans « Prioritaire » ou « Autres » (menu contextuel), avec ou sans règle pour l'expéditeur.
+     * Paramètres :
+     *   uid             : identifiant du message
+     *   classification  : « focused » ou « other »
+     *   remember_sender : mémoriser la règle pour l'expéditeur (« toujours déplacer… ») */
+    void MainWindow::ClassifyMessage(hstring const& uid, hstring const& classification, bool remember_sender)
+    {
+        hstring sender;
+        if (remember_sender && m_all_messages)
+        {
+            for (auto const& value : m_all_messages)
+            {
+                auto message = value.GetObject();
+                if (message.GetNamedString(L"uid", L"") != uid)
+                    continue;
+                std::wstring from{ message.GetNamedString(L"from", L"") };
+                size_t open = from.find(L'<'), close = from.find(L'>');
+                sender = hstring{ open != std::wstring::npos && close != std::wstring::npos && close > open
+                    ? from.substr(open + 1, close - open - 1) : from };
+            }
+        }
+
+        bool to_other = classification == L"other";
+        m_core->SetMessageClassification(m_account, uid, classification, sender,
+            [this, uid, to_other, remember_sender](hstring const& json, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                ShowStatus(Tr(L"Classement du message : ", L"Message classification: ") + error, InfoBarSeverity::Error);
+                return;
+            }
+            if (to_other)
+                m_inbox_other_ids.insert(std::wstring{ uid });
+            else
+                m_inbox_other_ids.erase(std::wstring{ uid });
+            ReapplyMessageFilters();
+
+            JsonObject outcome;
+            hstring override_error = JsonObject::TryParse(json, outcome) ? outcome.GetNamedString(L"override_error", L"") : hstring{};
+            hstring text = to_other ? Tr(L"Message déplacé vers « Autres ».", L"Message moved to \"Other\".")
+                                    : Tr(L"Message déplacé vers « Prioritaire ».", L"Message moved to \"Focused\".");
+            if (remember_sender && !override_error.empty())
+                ShowStatus(Fmt(Tr(L"{0} La règle pour l'expéditeur n'a pas pu être mémorisée : {1}", L"{0} The sender rule could not be saved: {1}"), { text, override_error }),
+                    InfoBarSeverity::Warning);
+            else
+                ShowStatus(text, InfoBarSeverity::Success);
+        });
+    }
+
     /* Renvoie l'identifiant de la portée actuellement sélectionnée
      * ("folder", "subfolders", "account", "all").
      * Retourne : hstring correspondant au tag de l'option choisie. */
@@ -155,13 +296,13 @@ namespace winrt::EvolutionWin::implementation
 
         hstring scope = CurrentSearchScope();
         if (scope == L"subfolders")
-            box.PlaceholderText(L"Rechercher dans le dossier et sous-dossiers (Ctrl+E)");
+            box.PlaceholderText(Tr(L"Rechercher dans le dossier et sous-dossiers (Ctrl+E)", L"Search folder and subfolders (Ctrl+E)", L"SearchScope_Subfolders"));
         else if (scope == L"account")
-            box.PlaceholderText(L"Rechercher dans tout le compte (Ctrl+E)");
+            box.PlaceholderText(Tr(L"Rechercher dans tout le compte (Ctrl+E)", L"Search entire account (Ctrl+E)", L"SearchScope_Account"));
         else if (scope == L"all")
-            box.PlaceholderText(L"Rechercher dans tous les comptes (Ctrl+E)");
+            box.PlaceholderText(Tr(L"Rechercher dans tous les comptes (Ctrl+E)", L"Search all accounts (Ctrl+E)", L"SearchScope_AllAccounts"));
         else
-            box.PlaceholderText(L"Rechercher dans le dossier (Ctrl+E)");
+            box.PlaceholderText(Tr(L"Rechercher dans le dossier (Ctrl+E)", L"Search folder (Ctrl+E)", L"SearchScope_Folder"));
     }
 
     /* Changement de portée de la recherche : adapte le texte d'aide et relance
@@ -336,7 +477,7 @@ namespace winrt::EvolutionWin::implementation
 
             if (!error.empty())
             {
-                ShowStatus(L"Recherche : " + error, InfoBarSeverity::Error);
+                ShowStatus(Tr(L"Recherche : ") + error, InfoBarSeverity::Error);
                 return;
             }
 
@@ -346,7 +487,7 @@ namespace winrt::EvolutionWin::implementation
                 m_all_messages = results;
                 ShowMessages(results);
                 if (results.Size() == 0)
-                    ShowStatus(L"Aucun message trouvé pour cette recherche.", InfoBarSeverity::Informational);
+                    ShowStatus(Tr(L"Aucun message trouvé pour cette recherche."), InfoBarSeverity::Informational);
             }
         });
     }
@@ -367,20 +508,20 @@ namespace winrt::EvolutionWin::implementation
     struct SortCriterion
     {
         wchar_t const* key;
-        wchar_t const* label;
+        hstring (*label)();
         bool descending;
     };
 
     static SortCriterion const SortCriteria[] = {
-        { L"date", L"Date", true },
-        { L"from", L"Expéditeur", false },
-        { L"to", L"Destinataire", false },
-        { L"subject", L"Objet", false },
-        { L"size", L"Taille", true },
-        { L"attachments", L"Pièces jointes", true },
-        { L"flagged", L"Indicateur", true },
-        { L"seen", L"Lu / non lu", false },
-        { L"categories", L"Catégories", false },
+        { L"date", []() -> hstring { return Tr(L"Date"); }, true },
+        { L"from", []() -> hstring { return Tr(L"Expéditeur"); }, false },
+        { L"to", []() -> hstring { return Tr(L"Destinataire"); }, false },
+        { L"subject", []() -> hstring { return Tr(L"Objet"); }, false },
+        { L"size", []() -> hstring { return Tr(L"Taille"); }, true },
+        { L"attachments", []() -> hstring { return Tr(L"Pièces jointes"); }, true },
+        { L"flagged", []() -> hstring { return Tr(L"Indicateur"); }, true },
+        { L"seen", []() -> hstring { return Tr(L"Lu / non lu"); }, false },
+        { L"categories", []() -> hstring { return Tr(L"Catégories"); }, false },
     };
 
     /* Préférence de tri du dossier affiché ("sort.<compte>/<dossier>" =
@@ -420,8 +561,52 @@ namespace winrt::EvolutionWin::implementation
                 L"conversations." + m_account + L"/" + m_folder, false);
         }
 
+        UpdateGroupHeader();
+    }
+
+    /**
+     * @brief Met à jour le libellé du bouton « Grouper par » et le bouton « Conversations » du ruban.
+     */
+    void MainWindow::UpdateGroupHeader()
+    {
+        GroupButton().Content(box_value(m_conversations_enabled ? Tr(L"Conversation") : Tr(L"Aucun")));
         if (auto toggle = RibbonMailConversationToggle())
             toggle.IsChecked(m_conversations_enabled);
+    }
+
+    /**
+     * @brief Menu « Grouper par » : Aucun ou Conversation (choix unique, mémorisé par dossier).
+     * @param sender Menu contextuel émetteur.
+     */
+    void MainWindow::OnGroupMenuOpening(IInspectable const& sender, IInspectable const&)
+    {
+        auto menu = sender.as<MenuFlyout>();
+        menu.Items().Clear();
+        for (bool conversation : { false, true })
+        {
+            RadioMenuFlyoutItem entry;
+            entry.Text(conversation ? Tr(L"Conversation") : Tr(L"Aucun"));
+            entry.GroupName(L"group-key");
+            entry.IsChecked(m_conversations_enabled == conversation);
+            entry.Click([this, conversation](IInspectable const&, RoutedEventArgs const&)
+            {
+                SaveFolderConversations(conversation);
+            });
+            menu.Items().Append(entry);
+        }
+
+        /* regroupement par date (liste triée par date) : en-têtes Aujourd'hui, Hier, jours, semaines, mois */
+        menu.Items().Append(MenuFlyoutSeparator{});
+        ToggleMenuFlyoutItem by_date;
+        by_date.Text(Tr(L"Regrouper par date", L"Group by date"));
+        by_date.IsChecked(::EvolutionWin::Settings::Instance().GetBoolean(L"mail.group-by-date", true));
+        by_date.Click([this](IInspectable const& sender, RoutedEventArgs const&)
+        {
+            if (auto toggle = sender.try_as<ToggleMenuFlyoutItem>())
+                ::EvolutionWin::Settings::Instance().SetBoolean(L"mail.group-by-date", toggle.IsChecked());
+            ReapplyMessageFilters();
+        });
+        menu.Items().Append(by_date);
     }
 
     /**
@@ -436,6 +621,7 @@ namespace winrt::EvolutionWin::implementation
             ::EvolutionWin::Settings::Instance().SetBoolean(
                 L"conversations." + m_account + L"/" + m_folder, enabled);
         }
+        UpdateGroupHeader();
         ReapplyMessageFilters();
     }
 
@@ -467,11 +653,11 @@ namespace winrt::EvolutionWin::implementation
     {
         for (auto const& criterion : SortCriteria)
             if (m_sort_key == criterion.key)
-                SortButton().Content(box_value(hstring{ criterion.label }));
+                SortButton().Content(box_value(criterion.label()));
         SortDirectionIcon().Glyph(m_sort_descending ? L"\xE74B" : L"\xE74A");
         ToolTipService::SetToolTip(SortDirectionButton(), box_value(m_sort_descending
-            ? L"Ordre décroissant (cliquer pour inverser)"
-            : L"Ordre croissant (cliquer pour inverser)"));
+            ? Tr(L"Ordre décroissant (cliquer pour inverser)")
+            : Tr(L"Ordre croissant (cliquer pour inverser)")));
     }
 
     /* Menu « Trier par » (ligne au-dessus de la liste et ruban Affichage) :
@@ -484,7 +670,7 @@ namespace winrt::EvolutionWin::implementation
         for (auto const& criterion : SortCriteria)
         {
             RadioMenuFlyoutItem entry;
-            entry.Text(criterion.label);
+            entry.Text(criterion.label());
             entry.GroupName(L"sort-key");
             entry.IsChecked(m_sort_key == criterion.key);
             hstring key = criterion.key;
@@ -505,7 +691,7 @@ namespace winrt::EvolutionWin::implementation
         for (bool descending : { false, true })
         {
             RadioMenuFlyoutItem entry;
-            entry.Text(descending ? L"Décroissant" : L"Croissant");
+            entry.Text(descending ? Tr(L"Décroissant") : Tr(L"Croissant"));
             entry.GroupName(L"sort-direction");
             entry.IsChecked(m_sort_descending == descending);
             entry.Click([this, descending](IInspectable const&, RoutedEventArgs const&)

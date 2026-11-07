@@ -5,6 +5,149 @@
 
 #include "evo-core-private.h"
 
+/* Confidentialité d'un événement (propriété CLASS) : applique le membre JSON "private" s'il est
+ * présent (true : PRIVATE, false : PUBLIC) ; sans ce membre, ne touche à rien. Exchange Online
+ * traduit CLASS:PRIVATE en sensibilité « privé » (détails masqués aux personnes avec qui le
+ * calendrier est partagé).
+ * Paramètres :
+ *   icomp  : composant VEVENT à modifier
+ *   object : objet JSON décrivant l'événement */
+/* États « Afficher comme » d'Outlook : valeur JSON, valeur X-MICROSOFT-CDO-BUSYSTATUS, TRANSP associé. */
+static const struct {
+	const gchar *json;
+	const gchar *busy_status;
+	gboolean transparent;
+} event_show_as_states[] = {
+	{ "free", "FREE", TRUE },
+	{ "working", "WORKINGELSEWHERE", TRUE },
+	{ "tentative", "TENTATIVE", FALSE },
+	{ "busy", "BUSY", FALSE },
+	{ "oof", "OOF", FALSE }
+};
+
+/* Disponibilité d'un événement : applique le membre JSON "show_as" (free, working, tentative, busy, oof)
+ * s'il est présent, par TRANSP et X-MICROSOFT-CDO-BUSYSTATUS ; sans ce membre, ne touche à rien.
+ * Paramètres :
+ *   icomp  : composant VEVENT à modifier
+ *   object : objet JSON décrivant l'événement */
+static void
+event_apply_transp (ICalComponent *icomp,
+		    JsonObject *object)
+{
+	const gchar *value;
+	guint ii;
+
+	if (!json_object_has_member (object, "show_as"))
+		return;
+
+	value = json_object_get_string_member_with_default (object, "show_as", "busy");
+	for (ii = 0; ii < G_N_ELEMENTS (event_show_as_states); ii++) {
+		if (g_strcmp0 (value, event_show_as_states[ii].json) != 0)
+			continue;
+
+		e_cal_util_component_remove_property_by_kind (icomp, I_CAL_TRANSP_PROPERTY, TRUE);
+		i_cal_component_take_property (icomp, i_cal_property_new_transp (
+			event_show_as_states[ii].transparent ? I_CAL_TRANSP_TRANSPARENT : I_CAL_TRANSP_OPAQUE));
+		e_cal_util_component_set_x_property (icomp, "X-MICROSOFT-CDO-BUSYSTATUS", event_show_as_states[ii].busy_status);
+		return;
+	}
+}
+
+/* Valeur « Afficher comme » d'un composant : X-MICROSOFT-CDO-BUSYSTATUS, sinon TRANSP.
+ * Retourne : free, working, tentative, busy ou oof (chaîne statique). */
+static const gchar *
+event_show_as_of (ICalComponent *icomp)
+{
+	ICalProperty *transp_prop = i_cal_component_get_first_property (icomp, I_CAL_TRANSP_PROPERTY);
+	gchar *busy_status = e_cal_util_component_dup_x_property (icomp, "X-MICROSOFT-CDO-BUSYSTATUS");
+	const gchar *show_as = transp_prop && i_cal_property_get_transp (transp_prop) == I_CAL_TRANSP_TRANSPARENT ? "free" : "busy";
+	guint ii;
+
+	for (ii = 0; busy_status && ii < G_N_ELEMENTS (event_show_as_states); ii++) {
+		if (g_ascii_strcasecmp (busy_status, event_show_as_states[ii].busy_status) == 0)
+			show_as = event_show_as_states[ii].json;
+	}
+	g_free (busy_status);
+	g_clear_object (&transp_prop);
+
+	return show_as;
+}
+
+/* PRIORITY iCalendar d'un composant (0 : aucune). */
+static gint
+event_priority_of (ICalComponent *icomp)
+{
+	ICalProperty *prop = i_cal_component_get_first_property (icomp, I_CAL_PRIORITY_PROPERTY);
+	gint priority = prop ? i_cal_property_get_priority (prop) : 0;
+
+	g_clear_object (&prop);
+	return priority;
+}
+
+/* Importance d'après PRIORITY : high (1-4), low (6-9), normal sinon (chaîne statique). */
+static const gchar *
+event_importance_name (gint priority)
+{
+	if (priority >= 1 && priority <= 4)
+		return "high";
+	if (priority >= 6 && priority <= 9)
+		return "low";
+	return "normal";
+}
+
+/* Importance (PRIORITY) : applique le membre JSON "importance" (high, normal, low) s'il est présent. */
+static void
+event_apply_priority (ICalComponent *icomp,
+		      JsonObject *object)
+{
+	const gchar *value;
+
+	if (!json_object_has_member (object, "importance"))
+		return;
+
+	value = json_object_get_string_member_with_default (object, "importance", "normal");
+	e_cal_util_component_remove_property_by_kind (icomp, I_CAL_PRIORITY_PROPERTY, TRUE);
+	if (g_strcmp0 (value, "high") == 0)
+		i_cal_component_take_property (icomp, i_cal_property_new_priority (1));
+	else if (g_strcmp0 (value, "low") == 0)
+		i_cal_component_take_property (icomp, i_cal_property_new_priority (9));
+}
+
+/* Périodicité : applique le membre JSON "rrule" (« FREQ=WEEKLY;INTERVAL=2;COUNT=5 », "" : aucune)
+ * s'il est présent ; une règle invalide est ignorée. */
+static void
+event_apply_rrule (ICalComponent *icomp,
+		   JsonObject *object)
+{
+	const gchar *rule;
+
+	if (!json_object_has_member (object, "rrule"))
+		return;
+
+	rule = json_object_get_string_member_with_default (object, "rrule", "");
+	e_cal_util_component_remove_property_by_kind (icomp, I_CAL_RRULE_PROPERTY, TRUE);
+	if (*rule) {
+		ICalRecurrence *recurrence = i_cal_recurrence_new_from_string (rule);
+
+		if (recurrence) {
+			i_cal_component_take_property (icomp, i_cal_property_new_rrule (recurrence));
+			g_object_unref (recurrence);
+		}
+	}
+}
+
+static void
+event_apply_class (ICalComponent *icomp,
+		   JsonObject *object)
+{
+	if (!json_object_has_member (object, "private"))
+		return;
+
+	e_cal_util_component_remove_property_by_kind (icomp, I_CAL_CLASS_PROPERTY, TRUE);
+	if (json_object_get_boolean_member_with_default (object, "private", FALSE))
+		i_cal_component_take_property (icomp, i_cal_property_new_class (I_CAL_CLASS_PRIVATE));
+}
+
 /* --- catégories communes (CATEGORIES iCalendar / vCard) --- */
 
 /* Catégories d'un composant iCalendar (propriétés CATEGORIES, chacune
@@ -148,6 +291,65 @@ builder_add_ical_person (JsonBuilder *builder,
 	g_clear_object (&cn);
 }
 
+/* Lien de réunion en ligne (Teams, Google Meet, Zoom) d'un événement : cherché dans la description,
+ * le lieu et la propriété URL (les serveurs y placent le lien de visio).
+ * Paramètres :
+ *   icomp    : composant VEVENT
+ *   out_kind : reçoit « teams », « meet » ou « zoom » (statique)
+ * Retourne : adresse de la réunion (g_free), NULL s'il n'y en a pas. */
+static gchar *
+event_find_meeting_url (ICalComponent *icomp,
+			const gchar **out_kind)
+{
+	static GRegex *regex = NULL;
+	ICalProperty *prop;
+	GString *text = g_string_new (NULL);
+	GMatchInfo *match = NULL;
+	gchar *url = NULL;
+
+	if (!regex)
+		regex = g_regex_new ("https://(?:[a-z0-9-]+\\.)?teams\\.microsoft\\.com/l/meetup-join/[^\\s\"'<>)\\]]+|"
+			"https://teams\\.live\\.com/meet/[^\\s\"'<>)\\]]+|"
+			"https://meet\\.google\\.com/[a-z0-9-]+|"
+			"https://(?:[a-z0-9-]+\\.)?zoom\\.us/j/[^\\s\"'<>)\\]]+",
+			G_REGEX_CASELESS, 0, NULL);
+
+	prop = i_cal_component_get_first_property (icomp, I_CAL_DESCRIPTION_PROPERTY);
+	if (prop && i_cal_property_get_description (prop))
+		g_string_append (text, i_cal_property_get_description (prop));
+	g_clear_object (&prop);
+	if (i_cal_component_get_location (icomp)) {
+		g_string_append_c (text, ' ');
+		g_string_append (text, i_cal_component_get_location (icomp));
+	}
+	prop = i_cal_component_get_first_property (icomp, I_CAL_URL_PROPERTY);
+	if (prop && i_cal_property_get_url (prop)) {
+		g_string_append_c (text, ' ');
+		g_string_append (text, i_cal_property_get_url (prop));
+	}
+	g_clear_object (&prop);
+
+	if (regex && g_regex_match (regex, text->str, 0, &match)) {
+		url = g_match_info_fetch (match, 0);
+		if (strstr (url, "&amp;")) {
+			gchar *plain = g_strjoinv ("&", g_strsplit (url, "&amp;", -1));
+
+			g_free (url);
+			url = plain;
+		}
+		if (strstr (url, "teams."))
+			*out_kind = "teams";
+		else if (strstr (url, "meet.google"))
+			*out_kind = "meet";
+		else
+			*out_kind = "zoom";
+	}
+	g_match_info_free (match);
+	g_string_free (text, TRUE);
+
+	return url;
+}
+
 /* Détail d'un événement : champs modifiables, organisateur, participants
  * et leur réponse, périodicité, agenda en lecture seule.
  * Paramètres :
@@ -198,6 +400,15 @@ core_get_event_run (EvoCore *core,
 	builder_add_string (builder, "description", prop ? i_cal_property_get_description (prop) : "");
 	g_clear_object (&prop);
 
+	{
+		const gchar *meeting_kind = "";
+		gchar *meeting_url = event_find_meeting_url (icomp, &meeting_kind);
+
+		builder_add_string (builder, "online_meeting_url", meeting_url ? meeting_url : "");
+		builder_add_string (builder, "online_meeting_kind", meeting_kind);
+		g_free (meeting_url);
+	}
+
 	json_builder_set_member_name (builder, "start");
 	json_builder_add_int_value (builder, st);
 	json_builder_set_member_name (builder, "end");
@@ -237,6 +448,28 @@ core_get_event_run (EvoCore *core,
 	json_builder_add_boolean_value (builder, e_client_is_readonly (client));
 
 	ical_add_categories (builder, icomp);
+
+	{
+		ICalProperty *class_prop = i_cal_component_get_first_property (icomp, I_CAL_CLASS_PROPERTY);
+		ICalProperty_Class event_class = class_prop ? i_cal_property_get_class (class_prop) : I_CAL_CLASS_NONE;
+
+		builder_add_string (builder, "show_as", event_show_as_of (icomp));
+	builder_add_string (builder, "importance", event_importance_name (event_priority_of (icomp)));
+	{
+		ICalProperty *rrule_prop = i_cal_component_get_first_property (icomp, I_CAL_RRULE_PROPERTY);
+		ICalRecurrence *recurrence = rrule_prop ? i_cal_property_get_rrule (rrule_prop) : NULL;
+		gchar *rule = recurrence ? i_cal_recurrence_to_string (recurrence) : NULL;
+
+		builder_add_string (builder, "rrule", rule ? rule : "");
+		g_free (rule);
+		g_clear_object (&recurrence);
+		g_clear_object (&rrule_prop);
+	}
+
+	json_builder_set_member_name (builder, "private");
+		json_builder_add_boolean_value (builder, event_class == I_CAL_CLASS_PRIVATE || event_class == I_CAL_CLASS_CONFIDENTIAL);
+		g_clear_object (&class_prop);
+	}
 
 	prop = i_cal_component_get_first_property (icomp, I_CAL_ORGANIZER_PROPERTY);
 	json_builder_set_member_name (builder, "organizer");
@@ -511,6 +744,10 @@ core_modify_event_run (EvoCore *core,
 	}
 
 	ical_apply_categories_json (icomp, object);
+	event_apply_class (icomp, object);
+	event_apply_transp (icomp, object);
+	event_apply_priority (icomp, object);
+	event_apply_rrule (icomp, object);
 	event_apply_times_and_attendees (E_CAL_CLIENT (client), icomp, object);
 
 	if (json_object_has_member (object, "reminder_minutes"))
@@ -607,6 +844,16 @@ cal_event_item_new (ICalComponent *icomp,
 		e_cal_util_component_is_instance (icomp);
 	g_clear_object (&prop);
 
+	item->reminder_minutes = event_get_reminder (icomp);
+	item->show_as = event_show_as_of (icomp);
+	item->priority = (gint) event_priority_of (icomp);
+	{
+		ICalProperty *class_prop = i_cal_component_get_first_property (icomp, I_CAL_CLASS_PROPERTY);
+		ICalProperty_Class class_value = class_prop ? i_cal_property_get_class (class_prop) : I_CAL_CLASS_NONE;
+
+		item->is_private = class_value == I_CAL_CLASS_PRIVATE || class_value == I_CAL_CLASS_CONFIDENTIAL;
+		g_clear_object (&class_prop);
+	}
 	item->categories = ical_dup_categories (icomp);
 
 	item->all_day = start && i_cal_time_is_date (start);
@@ -758,6 +1005,12 @@ core_list_events_run (EvoCore *core,
 		json_builder_add_boolean_value (builder, item->all_day);
 		json_builder_set_member_name (builder, "recurring");
 		json_builder_add_boolean_value (builder, item->recurring);
+		json_builder_set_member_name (builder, "reminder_minutes");
+		json_builder_add_int_value (builder, item->reminder_minutes);
+		json_builder_set_member_name (builder, "private");
+		json_builder_add_boolean_value (builder, item->is_private);
+		builder_add_string (builder, "show_as", item->show_as);
+		builder_add_string (builder, "importance", event_importance_name (item->priority));
 		builder_add_categories (builder, (const gchar * const *) item->categories);
 		json_builder_end_object (builder);
 	}
@@ -845,6 +1098,10 @@ core_create_event_run (EvoCore *core,
 	}
 
 	ical_apply_categories_json (icomp, object);
+	event_apply_class (icomp, object);
+	event_apply_transp (icomp, object);
+	event_apply_priority (icomp, object);
+	event_apply_rrule (icomp, object);
 	event_apply_times_and_attendees (E_CAL_CLIENT (client), icomp, object);
 
 	if (json_object_has_member (object, "reminder_minutes"))

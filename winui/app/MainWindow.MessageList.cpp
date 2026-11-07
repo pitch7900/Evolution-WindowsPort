@@ -48,6 +48,8 @@ namespace winrt::EvolutionWin::implementation
         if (account.empty() || folder.empty())
             return;
 
+        UpdateFocusedInbox();
+
         /* vue unifiée : agrégation des dossiers de même rôle de tous les comptes */
         if (IsUnifiedView())
         {
@@ -78,7 +80,7 @@ namespace winrt::EvolutionWin::implementation
 
             if (!error.empty())
             {
-                ShowStatus(L"Messages : " + error, InfoBarSeverity::Error);
+                ShowStatus(Tr(L"Messages : ") + error, InfoBarSeverity::Error);
                 return;
             }
 
@@ -131,7 +133,7 @@ namespace winrt::EvolutionWin::implementation
             ListProgress().IsActive(true);
         }
 
-        m_core->ListUnified(role, m_unified_accounts, ::EvolutionWin::UnifiedViews::kMaxMessages,
+        RequestUnifiedMessages(role,
             [this, account, role, selected](hstring const& json, hstring const& error)
         {
             /* une autre vue a été choisie entre-temps */
@@ -166,6 +168,69 @@ namespace winrt::EvolutionWin::implementation
             UpdateFolderStatusText();
         });
     }
+    namespace
+    {
+        /* Groupe de dates d'un message (façon Outlook) : clé stable et libellé.
+         * Aujourd'hui, Hier, jours de la semaine en cours, Semaine dernière, Il y a deux / trois semaines, Mois dernier, Avant le mois dernier. */
+        std::pair<std::wstring, std::wstring> DateBucket(double message_time)
+        {
+            using Windows::Globalization::DateTimeFormatting::DateTimeFormatter;
+            std::time_t now = std::time(nullptr);
+            std::tm today{};
+            localtime_s(&today, &now);
+            today.tm_hour = today.tm_min = today.tm_sec = 0;
+            today.tm_isdst = -1;
+            std::time_t today0 = std::mktime(&today);
+
+            std::time_t raw = static_cast<std::time_t>(message_time);
+            std::tm day{};
+            localtime_s(&day, &raw);
+            day.tm_hour = day.tm_min = day.tm_sec = 0;
+            day.tm_isdst = -1;
+            std::time_t day0 = std::mktime(&day);
+
+            long long days = std::llround(std::difftime(today0, day0) / 86400.0);
+            auto capitalised = [](std::wstring text)
+            {
+                /* le formateur peut faire précéder le nom d'un caractère de contrôle (marque de direction) : 1re lettre */
+                std::wstring cleaned;
+                for (wchar_t c : text)
+                    if (c != 0x200E && c != 0x200F && c != 0x202A && c != 0x202C)
+                        cleaned += c;
+                if (!cleaned.empty())
+                    cleaned[0] = static_cast<wchar_t>(std::towupper(cleaned[0]));
+                return cleaned;
+            };
+            if (days <= 0)
+                return { L"d0", std::wstring{ Tr(L"Aujourd'hui", L"Today") } };
+            if (days == 1)
+                return { L"d1", std::wstring{ Tr(L"Hier", L"Yesterday") } };
+
+            /* semaines du lundi au dimanche, comme dans Outlook : jours de la semaine en cours, puis
+             * « Semaine dernière », « Il y a deux semaines », « Il y a trois semaines », puis mois */
+            long long today_offset = (today.tm_wday + 6) % 7;
+            long long day_offset = (day.tm_wday + 6) % 7;
+            if (days <= today_offset)
+                return { L"d" + std::to_wstring(days),
+                    capitalised(std::wstring{ DateTimeFormatter{ L"dayofweek.full" }.Format(winrt::clock::from_time_t(raw)) }) };
+
+            long long weeks = std::llround(std::difftime(today0 - today_offset * 86400, day0 - day_offset * 86400) / (7 * 86400.0));
+            if (weeks == 1)
+                return { L"w1", std::wstring{ Tr(L"Semaine dernière", L"Last week") } };
+            if (weeks == 2)
+                return { L"w2", std::wstring{ Tr(L"Il y a deux semaines", L"Two weeks ago") } };
+            if (weeks == 3)
+                return { L"w3", std::wstring{ Tr(L"Il y a trois semaines", L"Three weeks ago") } };
+
+            int months_ago = (today.tm_year - day.tm_year) * 12 + (today.tm_mon - day.tm_mon);
+            if (months_ago <= 0)
+                return { L"m0", std::wstring{ Tr(L"Plus tôt ce mois-ci", L"Earlier this month") } };
+            if (months_ago == 1)
+                return { L"m1", std::wstring{ Tr(L"Mois dernier", L"Last month") } };
+            return { L"m2", std::wstring{ Tr(L"Avant le mois dernier", L"Before last month") } };
+        }
+    }
+
     /* Construit et affiche les éléments de la liste de messages avec leurs
      * indicateurs (non lu, suivi, pièce jointe) et leur menu contextuel.
      * Paramètres :
@@ -198,6 +263,7 @@ namespace winrt::EvolutionWin::implementation
          * chaque fil sert d'en-tête ; les autres sont masqués tant que le fil
          * n'est pas développé */
         struct ThreadRow { bool header{ true }; bool hidden{ false }; size_t count{ 1 }; size_t unread{ 0 }; std::wstring key; };
+        m_thread_latest.clear();
         std::vector<ThreadRow> rows(shown.size());
         m_last_shown_messages = messages;
         if (m_conversations_enabled)
@@ -254,13 +320,24 @@ namespace winrt::EvolutionWin::implementation
                 if (key.empty())
                     key = shown[i].GetNamedString(L"uid").c_str();
                 bool expanded = m_expanded_threads.count(key) != 0;
-                /* le message sélectionné ne doit pas disparaître dans un fil replié */
-                for (size_t k = i; k < end && !expanded; ++k)
+                /* le message sélectionné ne doit pas disparaître dans un fil replié, sauf si
+                 * l'utilisateur l'a replié lui-même */
+                for (size_t k = i; k < end && !expanded && m_collapsed_threads.count(key) == 0; ++k)
                     if (!selected.empty() && shown[k].GetNamedString(L"uid") == selected)
                     {
                         expanded = true;
                         m_expanded_threads.insert(key);
                     }
+                /* fil replié : un clic sur l'en-tête affiche le message le plus récent du fil */
+                if (!expanded && end - i > 1)
+                {
+                    size_t latest = i;
+                    for (size_t k = i + 1; k < end; ++k)
+                        if (shown[k].GetNamedNumber(L"date", 0) > shown[latest].GetNamedNumber(L"date", 0))
+                            latest = k;
+                    m_thread_latest[std::wstring{ shown[i].GetNamedString(L"uid") }] =
+                        { std::wstring{ shown[latest].GetNamedString(L"uid") }, key };
+                }
                 for (size_t k = i; k < end; ++k)
                 {
                     rows[k].key = key;
@@ -272,6 +349,23 @@ namespace winrt::EvolutionWin::implementation
                 i = end;
             }
         }
+
+        /* groupes de dates (liste triée par date) : un en-tête repliable par groupe */
+        bool date_groups = m_sort_key == L"date" && ::EvolutionWin::Settings::Instance().GetBoolean(L"mail.group-by-date", true);
+        std::vector<std::pair<std::wstring, std::wstring>> buckets(shown.size());
+        std::map<std::wstring, size_t> bucket_counts;
+        if (date_groups)
+        {
+            for (size_t i = 0; i < shown.size(); ++i)
+            {
+                /* un message d'un fil suit le groupe de l'en-tête du fil */
+                buckets[i] = (i > 0 && m_conversations_enabled && !rows[i].header)
+                    ? buckets[i - 1] : DateBucket(shown[i].GetNamedNumber(L"date", 0));
+                if (!rows[i].hidden)
+                    ++bucket_counts[buckets[i].first];
+            }
+        }
+        std::wstring last_bucket;
 
         size_t row_index = static_cast<size_t>(-1);
         for (auto const& message : shown)
@@ -300,11 +394,59 @@ namespace winrt::EvolutionWin::implementation
             if (thread_row.hidden)
                 continue;
 
+            if (date_groups)
+            {
+                auto const& bucket = buckets[row_index];
+                bool collapsed = m_collapsed_date_groups.count(bucket.first) != 0;
+                if (bucket.first != last_bucket)
+                {
+                    last_bucket = bucket.first;
+
+                    Grid header;
+                    header.Padding(ThicknessHelper::FromLengths(12, 5, 12, 5));
+                    header.ColumnSpacing(8);
+                    header.HorizontalAlignment(HorizontalAlignment::Stretch);
+                    header.Background(Application::Current().Resources().Lookup(box_value(L"SubtleFillColorSecondaryBrush")).as<Brush>());
+                    header.Tag(box_value(L""));
+                    ColumnDefinition chevron_column, label_column;
+                    chevron_column.Width(GridLengthHelper::Auto());
+                    label_column.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+                    header.ColumnDefinitions().Append(chevron_column);
+                    header.ColumnDefinitions().Append(label_column);
+                    FontIcon chevron;
+                    chevron.Glyph(collapsed ? L"\xE76C" : L"\xE70D");
+                    chevron.FontSize(11);
+                    chevron.VerticalAlignment(VerticalAlignment::Center);
+                    header.Children().Append(chevron);
+                    TextBlock label;
+                    label.Text(hstring{ bucket.second + L" (" + std::to_wstring(bucket_counts[bucket.first]) + L")" });
+                    label.FontWeight(Microsoft::UI::Text::FontWeights::SemiBold());
+                    label.FontSize(12);
+                    Grid::SetColumn(label, 1);
+                    header.Children().Append(label);
+                    std::wstring bucket_key = bucket.first;
+                    header.Tapped([this, bucket_key](IInspectable const&, Input::TappedRoutedEventArgs const& args)
+                    {
+                        args.Handled(true);
+                        if (!m_collapsed_date_groups.erase(bucket_key))
+                            m_collapsed_date_groups.insert(bucket_key);
+                        ReapplyMessageFilters();
+                    });
+                    items.Append(header);
+                }
+                /* le message affiché reste visible même dans un groupe replié */
+                if (collapsed && !(!selected.empty() && uid == selected))
+                    continue;
+            }
+
             Grid item;
+            /* trait fin entre deux messages et un peu d'espace autour */
+            item.BorderThickness(ThicknessHelper::FromLengths(0, 0, 0, 1));
+            item.BorderBrush(Application::Current().Resources().Lookup(box_value(L"DividerStrokeColorDefaultBrush")).as<Brush>());
             if (m_compact_density)
-                item.Padding(ThicknessHelper::FromLengths(8, 2, 8, 2));
+                item.Padding(ThicknessHelper::FromLengths(8, 5, 8, 5));
             else
-                item.Padding(ThicknessHelper::FromLengths(8, 8, 8, 8));
+                item.Padding(ThicknessHelper::FromLengths(8, 12, 8, 12));
             item.HorizontalAlignment(HorizontalAlignment::Stretch);
             /* Fond transparent explicite pour que le survol (PointerEntered/PointerExited)
              * soit détecté sur toute la surface de la ligne et pas uniquement sur le texte */
@@ -322,10 +464,19 @@ namespace winrt::EvolutionWin::implementation
             item.RowDefinitions().Append(RowDefinition{});
             item.RowDefinitions().Append(RowDefinition{});
 
+            /* ligne expéditeur : bouton replier / développer (si fil) puis nom */
+            Grid from_row;
+            ColumnDefinition from_toggle_column;
+            from_toggle_column.Width(GridLengthHelper::Auto());
+            from_row.ColumnDefinitions().Append(from_toggle_column);
+            from_row.ColumnDefinitions().Append(ColumnDefinition{});
             TextBlock from;
             from.Text(SenderName(message.GetNamedString(L"from", L"")));
             from.TextTrimming(TextTrimming::CharacterEllipsis);
-            item.Children().Append(from);
+            from.VerticalAlignment(VerticalAlignment::Center);
+            Grid::SetColumn(from, 1);
+            from_row.Children().Append(from);
+            item.Children().Append(from_row);
 
             StackPanel meta;
             meta.Orientation(Orientation::Horizontal);
@@ -345,7 +496,7 @@ namespace winrt::EvolutionWin::implementation
                 high_prio_icon.Glyph(L"\xE7BA");
                 high_prio_icon.FontSize(12);
                 high_prio_icon.Foreground(SolidColorBrush{ Windows::UI::Color{ 255, 232, 17, 35 } });
-                ToolTipService::SetToolTip(high_prio_icon, box_value(L"Importance haute"));
+                ToolTipService::SetToolTip(high_prio_icon, box_value(Tr(L"Importance haute")));
                 meta.Children().Append(high_prio_icon);
             }
             else if (importance_level == ::EvolutionWin::Helpers::MessageImportanceLevel::Low)
@@ -354,7 +505,7 @@ namespace winrt::EvolutionWin::implementation
                 low_prio_icon.Glyph(L"\xE74B");
                 low_prio_icon.FontSize(12);
                 low_prio_icon.Foreground(SolidColorBrush{ Windows::UI::Color{ 255, 0, 120, 212 } });
-                ToolTipService::SetToolTip(low_prio_icon, box_value(L"Importance basse"));
+                ToolTipService::SetToolTip(low_prio_icon, box_value(Tr(L"Importance basse")));
                 meta.Children().Append(low_prio_icon);
             }
 
@@ -434,23 +585,36 @@ namespace winrt::EvolutionWin::implementation
                 Button toggle;
                 FontIcon chevron;
                 chevron.Glyph(expanded ? L"\xE70D" : L"\xE76C");
-                chevron.FontSize(10);
+                chevron.FontSize(16);
+                chevron.FontWeight(Microsoft::UI::Text::FontWeights::Bold());
                 toggle.Content(chevron);
                 toggle.Padding(ThicknessHelper::FromLengths(4, 2, 4, 2));
+                toggle.Width(32);
+                toggle.Height(32);
                 toggle.MinWidth(0);
                 toggle.MinHeight(0);
-                toggle.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+                toggle.Margin(ThicknessHelper::FromLengths(0, 0, 4, 0));
+                toggle.VerticalAlignment(VerticalAlignment::Center);
+                toggle.Background(SolidColorBrush{ Windows::UI::Color{ 40, 128, 128, 128 } });
+                toggle.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));
                 toggle.BorderThickness(ThicknessHelper::FromUniformLength(0));
-                ToolTipService::SetToolTip(toggle, box_value(expanded ? L"Replier la conversation" : L"Développer la conversation"));
+                ToolTipService::SetToolTip(toggle, box_value(expanded ? Tr(L"Replier la conversation") : Tr(L"Développer la conversation")));
                 std::wstring key = thread_row.key;
                 toggle.Click([this, key](IInspectable const&, RoutedEventArgs const&)
                 {
-                    if (!m_expanded_threads.erase(key))
+                    if (m_expanded_threads.erase(key))
+                    {
+                        m_collapsed_threads.insert(key);
+                    }
+                    else
+                    {
                         m_expanded_threads.insert(key);
+                        m_collapsed_threads.erase(key);
+                    }
                     if (m_last_shown_messages)
                         ShowMessages(m_last_shown_messages);
                 });
-                meta.Children().Append(toggle);
+                from_row.Children().Append(toggle);
 
                 Border count_badge;
                 count_badge.CornerRadius(CornerRadiusHelper::FromUniformRadius(8));
@@ -461,7 +625,8 @@ namespace winrt::EvolutionWin::implementation
                 TextBlock count_text;
                 std::wstring label = std::to_wstring(thread_row.count);
                 if (thread_row.unread > 0)
-                    label += L" · " + std::to_wstring(thread_row.unread) + L" non lu" + (thread_row.unread > 1 ? L"s" : L"");
+                    label = std::wstring{ Fmt(thread_row.unread > 1 ? Tr(L"{0} · {1} non lus") : Tr(L"{0} · {1} non lu"),
+                        { to_hstring(thread_row.count), to_hstring(thread_row.unread) }) };
                 count_text.Text(hstring{ label });
                 count_text.FontSize(10);
                 count_text.Foreground(SolidColorBrush{ Microsoft::UI::Colors::White() });
@@ -523,7 +688,7 @@ namespace winrt::EvolutionWin::implementation
             delete_button.Margin(ThicknessHelper::FromLengths(6, 0, 0, 0));
             delete_button.VerticalAlignment(VerticalAlignment::Center);
             delete_button.Visibility(Visibility::Collapsed);
-            ToolTipService::SetToolTip(delete_button, box_value(L"Supprimer"));
+            ToolTipService::SetToolTip(delete_button, box_value(Tr(L"Supprimer")));
             Grid::SetColumn(delete_button, 2);
             Grid::SetRow(delete_button, 0);
             Grid::SetRowSpan(delete_button, row_count);
@@ -600,12 +765,16 @@ namespace winrt::EvolutionWin::implementation
 
                 auto target_uids = TargetMessageUids(uid);
                 bool multi = target_uids.size() > 1;
-                std::wstring count_suffix = multi ? L" (" + std::to_wstring(target_uids.size()) + L" messages)" : L"";
+                /* ajoute « (N messages) » au libellé lorsque plusieurs messages sont ciblés */
+                auto with_count = [multi, count = target_uids.size()](hstring const& label)
+                {
+                    return multi ? Fmt(Tr(L"{0} ({1} messages)"), { label, to_hstring(count) }) : label;
+                };
 
                 if (!multi)
                 {
                     MenuFlyoutItem open_item;
-                    open_item.Text(L"Ouvrir");
+                    open_item.Text(Tr(L"Ouvrir"));
                     open_item.FontWeight(Microsoft::UI::Text::FontWeights::SemiBold());
                     open_item.Icon(FontIcon{});
                     open_item.Icon().as<FontIcon>().Glyph(L"\xE8E7");
@@ -619,8 +788,8 @@ namespace winrt::EvolutionWin::implementation
 
                 MenuFlyoutItem reply_item;
                 reply_item.Text(multi
-                    ? hstring{ L"Répondre (1er mail + " + std::to_wstring(target_uids.size() - 1) + L" en PJ)" }
-                    : L"Répondre");
+                    ? Fmt(Tr(L"Répondre (1er mail + {0} en PJ)"), { to_hstring(target_uids.size() - 1) })
+                    : Tr(L"Répondre"));
                 reply_item.Icon(FontIcon{});
                 reply_item.Icon().as<FontIcon>().Glyph(L"\xE97A");
                 reply_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
@@ -631,8 +800,8 @@ namespace winrt::EvolutionWin::implementation
 
                 MenuFlyoutItem reply_all_item;
                 reply_all_item.Text(multi
-                    ? hstring{ L"Répondre à tous (1er mail + " + std::to_wstring(target_uids.size() - 1) + L" en PJ)" }
-                    : L"Répondre à tous");
+                    ? Fmt(Tr(L"Répondre à tous (1er mail + {0} en PJ)"), { to_hstring(target_uids.size() - 1) })
+                    : Tr(L"Répondre à tous"));
                 reply_all_item.Icon(FontIcon{});
                 reply_all_item.Icon().as<FontIcon>().Glyph(L"\xEE35");
                 reply_all_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
@@ -643,8 +812,8 @@ namespace winrt::EvolutionWin::implementation
 
                 MenuFlyoutItem forward_item;
                 forward_item.Text(multi
-                    ? hstring{ L"Transférer (1er mail + " + std::to_wstring(target_uids.size() - 1) + L" en PJ)" }
-                    : L"Transférer");
+                    ? Fmt(Tr(L"Transférer (1er mail + {0} en PJ)"), { to_hstring(target_uids.size() - 1) })
+                    : Tr(L"Transférer"));
                 forward_item.Icon(FontIcon{});
                 forward_item.Icon().as<FontIcon>().Glyph(L"\xE72D");
                 forward_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
@@ -655,8 +824,8 @@ namespace winrt::EvolutionWin::implementation
 
                 MenuFlyoutItem forward_att_item;
                 forward_att_item.Text(multi
-                    ? hstring{ L"Transférer en pièces jointes" + count_suffix }
-                    : L"Transférer en pièce jointe (.eml)");
+                    ? with_count(Tr(L"Transférer en pièces jointes"))
+                    : Tr(L"Transférer en pièce jointe (.eml)"));
                 forward_att_item.Icon(FontIcon{});
                 forward_att_item.Icon().as<FontIcon>().Glyph(L"\xE723");
                 forward_att_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
@@ -666,7 +835,7 @@ namespace winrt::EvolutionWin::implementation
                 menu_items.Append(forward_att_item);
 
                 MenuFlyoutItem browser_item;
-                browser_item.Text(L"Afficher dans le navigateur");
+                browser_item.Text(Tr(L"Afficher dans le navigateur"));
                 browser_item.Icon(FontIcon{});
                 browser_item.Icon().as<FontIcon>().Glyph(L"\xE774");
                 browser_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
@@ -689,7 +858,7 @@ namespace winrt::EvolutionWin::implementation
                 menu_items.Append(browser_item);
 
                 MenuFlyoutItem save_eml_item;
-                save_eml_item.Text(target_uids.size() > 1 ? L"Enregistrer sous (dossier .eml)..." : L"Enregistrer sous (.eml)...");
+                save_eml_item.Text(target_uids.size() > 1 ? Tr(L"Enregistrer sous (dossier .eml)...") : Tr(L"Enregistrer sous (.eml)..."));
                 save_eml_item.Icon(FontIcon{});
                 save_eml_item.Icon().as<FontIcon>().Glyph(L"\xE74E");
                 save_eml_item.Click([this](IInspectable const&, RoutedEventArgs const&)
@@ -699,7 +868,7 @@ namespace winrt::EvolutionWin::implementation
                 menu_items.Append(save_eml_item);
 
                 MenuFlyoutItem raw_source_item;
-                raw_source_item.Text(L"Afficher la source brute (MIME)...");
+                raw_source_item.Text(Tr(L"Afficher la source brute (MIME)..."));
                 raw_source_item.Icon(FontIcon{});
                 raw_source_item.Icon().as<FontIcon>().Glyph(L"\xE943");
                 raw_source_item.KeyboardAcceleratorTextOverride(L"Ctrl+Maj+U");
@@ -713,12 +882,33 @@ namespace winrt::EvolutionWin::implementation
 
                 menu_items.Append(MenuFlyoutSeparator{});
 
+                /* Boîte de réception prioritaire (Microsoft 365) : Prioritaire / Autres, avec règle pour l'expéditeur */
+                if (m_focused_inbox_active && !multi)
+                {
+                    bool is_other = m_inbox_other_ids.count(std::wstring{ uid }) != 0;
+                    hstring target = is_other ? L"focused" : L"other";
+                    MenuFlyoutItem move_item;
+                    move_item.Text(is_other ? Tr(L"Déplacer vers Prioritaire", L"Move to Focused") : Tr(L"Déplacer vers Autres", L"Move to Other"));
+                    FontIcon move_icon;
+                    move_icon.Glyph(L"\xE8DE");
+                    move_item.Icon(move_icon);
+                    move_item.Click([this, uid, target](IInspectable const&, RoutedEventArgs const&) { ClassifyMessage(uid, target, false); });
+                    menu_items.Append(move_item);
+
+                    MenuFlyoutItem always_item;
+                    always_item.Text(is_other ? Tr(L"Toujours déplacer vers Prioritaire", L"Always move to Focused")
+                                              : Tr(L"Toujours déplacer vers Autres", L"Always move to Other"));
+                    always_item.Click([this, uid, target](IInspectable const&, RoutedEventArgs const&) { ClassifyMessage(uid, target, true); });
+                    menu_items.Append(always_item);
+                    menu_items.Append(MenuFlyoutSeparator{});
+                }
+
                 auto state_it = m_message_states.find(std::wstring{ target_uids.front() });
                 bool is_seen = state_it != m_message_states.end() ? state_it->second.seen : true;
                 bool is_flagged = state_it != m_message_states.end() ? state_it->second.flagged : false;
 
                 MenuFlyoutItem read_item;
-                read_item.Text(hstring{ (is_seen ? L"Marquer comme non lu" : L"Marquer comme lu") + count_suffix });
+                read_item.Text(with_count(is_seen ? Tr(L"Marquer comme non lu") : Tr(L"Marquer comme lu")));
                 read_item.Icon(FontIcon{});
                 read_item.Icon().as<FontIcon>().Glyph(is_seen ? L"\xE715" : L"\xE8C3");
                 read_item.Click([this, target_uids, is_seen](IInspectable const&, RoutedEventArgs const&)
@@ -728,7 +918,7 @@ namespace winrt::EvolutionWin::implementation
                 menu_items.Append(read_item);
 
                 MenuFlyoutItem flag_item;
-                flag_item.Text(hstring{ (is_flagged ? L"Retirer le drapeau" : L"Ajouter un drapeau") + count_suffix });
+                flag_item.Text(with_count(is_flagged ? Tr(L"Retirer le drapeau") : Tr(L"Ajouter un drapeau")));
                 flag_item.Icon(FontIcon{});
                 flag_item.Icon().as<FontIcon>().Glyph(L"\xE7C1");
                 flag_item.Click([this, target_uids, is_flagged](IInspectable const&, RoutedEventArgs const&)
@@ -738,21 +928,21 @@ namespace winrt::EvolutionWin::implementation
                 menu_items.Append(flag_item);
 
                 MenuFlyoutSubItem follow_up_sub;
-                follow_up_sub.Text(hstring{ L"Suivi" + count_suffix });
+                follow_up_sub.Text(with_count(Tr(L"Suivi")));
                 follow_up_sub.Icon(FontIcon{});
                 follow_up_sub.Icon().as<FontIcon>().Glyph(L"\xE787");
                 PopulateFollowUpMenuItems(follow_up_sub.Items(), target_uids);
                 menu_items.Append(follow_up_sub);
 
                 MenuFlyoutSubItem cat_sub;
-                cat_sub.Text(hstring{ L"Catégoriser" + count_suffix });
+                cat_sub.Text(with_count(Tr(L"Catégoriser")));
                 cat_sub.Icon(FontIcon{});
                 cat_sub.Icon().as<FontIcon>().Glyph(L"\xE8EC");
                 PopulateCategorizeMenuItems(cat_sub.Items(), target_uids);
                 menu_items.Append(cat_sub);
 
                 MenuFlyoutItem create_task_item;
-                create_task_item.Text(hstring{ L"Créer une tâche à partir du message" + count_suffix });
+                create_task_item.Text(with_count(Tr(L"Créer une tâche à partir du message")));
                 create_task_item.Icon(FontIcon{});
                 create_task_item.Icon().as<FontIcon>().Glyph(L"\xE9D5");
                 create_task_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
@@ -763,21 +953,21 @@ namespace winrt::EvolutionWin::implementation
                 menu_items.Append(create_task_item);
 
                 MenuFlyoutSubItem move_sub;
-                move_sub.Text(hstring{ L"Déplacer vers" + count_suffix });
+                move_sub.Text(with_count(Tr(L"Déplacer vers")));
                 move_sub.Icon(FontIcon{});
                 move_sub.Icon().as<FontIcon>().Glyph(L"\xE8DE");
                 PopulateMoveMenuItems(move_sub.Items(), target_uids);
                 menu_items.Append(move_sub);
 
                 MenuFlyoutSubItem copy_sub;
-                copy_sub.Text(hstring{ L"Copier vers" + count_suffix });
+                copy_sub.Text(with_count(Tr(L"Copier vers")));
                 copy_sub.Icon(FontIcon{});
                 copy_sub.Icon().as<FontIcon>().Glyph(L"\xE8C8");
                 PopulateMoveMenuItems(copy_sub.Items(), target_uids, true);
                 menu_items.Append(copy_sub);
 
                 MenuFlyoutItem archive_item;
-                archive_item.Text(hstring{ L"Archiver" + count_suffix });
+                archive_item.Text(with_count(Tr(L"Archiver")));
                 archive_item.Icon(FontIcon{});
                 archive_item.Icon().as<FontIcon>().Glyph(L"\xE7B8");
                 archive_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
@@ -787,7 +977,7 @@ namespace winrt::EvolutionWin::implementation
                 menu_items.Append(archive_item);
 
                 MenuFlyoutItem junk_item;
-                junk_item.Text(hstring{ L"Indésirable / Non indésirable" + count_suffix });
+                junk_item.Text(with_count(Tr(L"Indésirable / Non indésirable")));
                 junk_item.Icon(FontIcon{});
                 junk_item.Icon().as<FontIcon>().Glyph(L"\xE7BA");
                 junk_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
@@ -799,7 +989,7 @@ namespace winrt::EvolutionWin::implementation
                 menu_items.Append(MenuFlyoutSeparator{});
 
                 MenuFlyoutItem delete_item;
-                delete_item.Text(hstring{ L"Supprimer" + count_suffix });
+                delete_item.Text(with_count(Tr(L"Supprimer")));
                 delete_item.Icon(FontIcon{});
                 delete_item.Icon().as<FontIcon>().Glyph(L"\xE74D");
                 delete_item.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
@@ -825,10 +1015,12 @@ namespace winrt::EvolutionWin::implementation
         if (messages.Size() == 0)
         {
             if (!SearchBox().Text().empty())
-                ShowStatus(L"Aucun message ne correspond à « " + SearchBox().Text() + L" ».", InfoBarSeverity::Informational);
+                ShowStatus(Fmt(Tr(L"Aucun message ne correspond à « {0} »."), { SearchBox().Text() }), InfoBarSeverity::Informational);
             else
-                ShowStatus(L"Ce dossier est vide.", InfoBarSeverity::Informational);
+                ShowStatus(Tr(L"Ce dossier est vide."), InfoBarSeverity::Informational);
         }
+
+        UpdateFocusedBarCounts();
     }
 
     /* Renvoie le compte et le dossier associés à un UID de message,
@@ -974,6 +1166,14 @@ namespace winrt::EvolutionWin::implementation
         hstring mode = ::EvolutionWin::Settings::Instance().GetString(L"mail.mark-as-read", L"immediate");
 
         auto item = MessageList().SelectedItem().try_as<Grid>();
+        if (item && unbox_value_or<hstring>(item.Tag(), L"").empty())
+        {
+            /* en-tête de groupe de dates : le clic le plie / déplie, il n'est pas sélectionnable */
+            m_reselecting = true;
+            MessageList().SelectedItem(nullptr);
+            m_reselecting = false;
+            return;
+        }
         if (!item)
         {
             CancelMarkAsReadTimer();
@@ -991,6 +1191,12 @@ namespace winrt::EvolutionWin::implementation
         }
 
         hstring uid = unbox_value<hstring>(item.Tag());
+        /* en-tête d'un fil replié : on lit le message le plus récent du fil, sans développer le fil */
+        if (auto latest = m_thread_latest.find(std::wstring{ uid }); latest != m_thread_latest.end())
+        {
+            m_collapsed_threads.insert(latest->second.second);
+            uid = hstring{ latest->second.first };
+        }
         if (uid == m_current_message_uid && m_current_message)
         {
             UpdateActionButtons(uid);
@@ -1039,7 +1245,7 @@ namespace winrt::EvolutionWin::implementation
 
             if (!error.empty())
             {
-                ShowStatus(L"Message : " + error, InfoBarSeverity::Error);
+                ShowStatus(Tr(L"Message : ") + error, InfoBarSeverity::Error);
                 return;
             }
 
@@ -1053,7 +1259,7 @@ namespace winrt::EvolutionWin::implementation
 
             MessageSubject().Text(message.GetNamedString(L"subject", L""));
             MessageFrom().Text(message.GetNamedString(L"from", L""));
-            MessageTo().Text(L"À : " + to + (cc.empty() ? hstring{} : L"   Cc : " + cc));
+            MessageTo().Text(Tr(L"À : ") + to + (cc.empty() ? hstring{} : L"   " + Tr(L"Cc : ") + cc));
             MessageDate().Text(FormatDate(message.GetNamedNumber(L"date", 0)));
             UpdateSecurityBanner(message.GetNamedObject(L"security", JsonObject{}));
             UpdateReceiptBars(message);
@@ -1070,8 +1276,8 @@ namespace winrt::EvolutionWin::implementation
 
     void MainWindow::OnRefreshClick(IInspectable const&, RoutedEventArgs const&)
     {
-        UpdateStatusBarProgress(true, L"Relève du courrier…", -1);
-        ShowStatus(L"Relève du courrier…", InfoBarSeverity::Informational);
+        UpdateStatusBarProgress(true, Tr(L"Relève du courrier…"), -1);
+        ShowStatus(Tr(L"Relève du courrier…"), InfoBarSeverity::Informational);
         m_core->Refresh();
     }
 
@@ -1083,8 +1289,8 @@ namespace winrt::EvolutionWin::implementation
     /* F9 : tous les dossiers de tous les comptes (progression dans la barre d'état) */
     void MainWindow::OnRefreshAllClick(IInspectable const&, RoutedEventArgs const&)
     {
-        UpdateStatusBarProgress(true, L"Relève de tous les dossiers…", -1);
-        ShowStatus(L"Relève de tous les dossiers…", InfoBarSeverity::Informational);
+        UpdateStatusBarProgress(true, Tr(L"Relève de tous les dossiers…"), -1);
+        ShowStatus(Tr(L"Relève de tous les dossiers…"), InfoBarSeverity::Informational);
         m_core->RefreshAll();
     }
 
@@ -1093,8 +1299,9 @@ namespace winrt::EvolutionWin::implementation
     {
         if (m_folder.empty())
             return;
-        UpdateStatusBarProgress(true, L"Mise à jour de « " + FolderTitle().Text() + L" »…", -1);
-        ShowStatus(L"Mise à jour de « " + FolderTitle().Text() + L" »…", InfoBarSeverity::Informational);
+        hstring updating = Fmt(Tr(L"Mise à jour de « {0} »…"), { FolderTitle().Text() });
+        UpdateStatusBarProgress(true, updating, -1);
+        ShowStatus(updating, InfoBarSeverity::Informational);
         LoadMessages(true);
     }
 
@@ -1191,7 +1398,7 @@ namespace winrt::EvolutionWin::implementation
                     mark.Background(seen
                         ? Brush{ SolidColorBrush{ Microsoft::UI::Colors::Transparent() } }
                         : Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
-                ToolTipService::SetToolTip(bar, box_value(seen ? L"Marquer comme non lu" : L"Marquer comme lu"));
+                ToolTipService::SetToolTip(bar, box_value(seen ? Tr(L"Marquer comme non lu") : Tr(L"Marquer comme lu")));
             }
             else if (auto text = child.try_as<TextBlock>(); text && Grid::GetColumn(text) == 0 && Grid::GetRow(text) < 2)
             {
@@ -1226,10 +1433,10 @@ namespace winrt::EvolutionWin::implementation
         bool seen = it != m_message_states.end() ? it->second.seen : true;
         bool flagged = it != m_message_states.end() ? it->second.flagged : false;
 
-        ToggleReadButton().Label(seen ? L"Non lu" : L"Lu");
+        ToggleReadButton().Label(seen ? Tr(L"Non lu") : Tr(L"Lu"));
         ToggleReadIcon().Glyph(seen ? L"\xE715" : L"\xE8C3");
 
-        ToggleFlagButton().Label(flagged ? L"Retirer suivi" : L"Suivi");
+        ToggleFlagButton().Label(flagged ? Tr(L"Retirer suivi") : Tr(L"Suivi"));
     }
 
     /* -------------------------------------------------------------------- */
@@ -1262,12 +1469,12 @@ namespace winrt::EvolutionWin::implementation
         }
 
         int32_t count = static_cast<int32_t>(object.GetNamedNumber(L"count", 1));
-        hstring from = SenderName(object.GetNamedString(L"from", L"Nouveau message"));
-        hstring subject = object.GetNamedString(L"subject", L"(Sans objet)");
+        hstring from = SenderName(object.GetNamedString(L"from", Tr(L"Nouveau message")));
+        hstring subject = object.GetNamedString(L"subject", Tr(L"(Sans objet)"));
 
         hstring title = count > 1
-            ? hstring{ std::to_wstring(count) + L" nouveaux messages" }
-            : L"Nouveau message de " + from;
+            ? Fmt(Tr(L"{0} nouveaux messages"), { to_hstring(count) })
+            : Fmt(Tr(L"Nouveau message de {0}"), { from });
         hstring body = count > 1
             ? from + L" — " + subject
             : subject;
@@ -1275,8 +1482,8 @@ namespace winrt::EvolutionWin::implementation
         /* Mode confidentiel : ni expéditeur ni objet (présentation, partage d'écran) */
         if (::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.confidential", false))
         {
-            title = count > 1 ? hstring{ std::to_wstring(count) + L" nouveaux messages" } : hstring{ L"Nouveau message" };
-            body = count > 1 ? L"Ouvrez Evolution pour les lire." : L"Ouvrez Evolution pour le lire.";
+            title = count > 1 ? Fmt(Tr(L"{0} nouveaux messages"), { to_hstring(count) }) : Tr(L"Nouveau message");
+            body = count > 1 ? Tr(L"Ouvrez Evolution pour les lire.") : Tr(L"Ouvrez Evolution pour le lire.");
         }
 
         /* Ajout dans l'historique du menu déroulant de la barre d'état (notifications discrètes) */
@@ -1382,20 +1589,20 @@ namespace winrt::EvolutionWin::implementation
 
             ContentDialog confirm;
             confirm.XamlRoot(Content().XamlRoot());
-            confirm.Title(box_value(L"Supprimer définitivement ?"));
+            confirm.Title(box_value(Tr(L"Supprimer définitivement ?")));
             TextBlock text;
             text.TextWrapping(TextWrapping::Wrap);
             if (uids.size() == 1)
             {
-                text.Text(L"Le message sélectionné sera définitivement supprimé. Cette opération est irréversible.");
+                text.Text(Tr(L"Le message sélectionné sera définitivement supprimé. Cette opération est irréversible."));
             }
             else
             {
-                text.Text(hstring{ std::to_wstring(uids.size()) + L" messages sélectionnés seront définitivement supprimés. Cette opération est irréversible." });
+                text.Text(Fmt(Tr(L"{0} messages sélectionnés seront définitivement supprimés. Cette opération est irréversible."), { to_hstring(uids.size()) }));
             }
             confirm.Content(text);
-            confirm.PrimaryButtonText(L"Supprimer définitivement");
-            confirm.CloseButtonText(L"Annuler");
+            confirm.PrimaryButtonText(Tr(L"Supprimer définitivement"));
+            confirm.CloseButtonText(Tr(L"Annuler"));
             confirm.DefaultButton(ContentDialogButton::Close);
 
             m_dialog_open = true;
@@ -1473,7 +1680,7 @@ namespace winrt::EvolutionWin::implementation
             {
                 if (!error.empty())
                 {
-                    ShowStatus(L"Impossible d'ouvrir le brouillon : " + error, InfoBarSeverity::Error);
+                    ShowStatus(Tr(L"Impossible d'ouvrir le brouillon : ") + error, InfoBarSeverity::Error);
                     return;
                 }
                 JsonObject msg;

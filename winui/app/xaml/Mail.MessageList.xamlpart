@@ -1,5 +1,17 @@
                 <Grid x:Name="MessageListPane" Grid.Column="2" Grid.RowSpan="3" Padding="0,8,0,0">
 
+                    <!-- relève : F5 (courant), F9 (tous les comptes), Maj+F9 (dossier) ; actifs même sans bouton visible -->
+
+                    <Grid.KeyboardAccelerators>
+
+                        <KeyboardAccelerator Key="F5" Invoked="OnRefreshAccelerator" />
+
+                        <KeyboardAccelerator Key="F9" Invoked="OnRefreshAccelerator" />
+
+                        <KeyboardAccelerator Modifiers="Shift" Key="F9" Invoked="OnRefreshAccelerator" />
+
+                    </Grid.KeyboardAccelerators>
+
                     <Grid.RowDefinitions>
 
                         <RowDefinition Height="Auto" />
@@ -10,66 +22,23 @@
 
                     <StackPanel Grid.Row="0" Padding="16,0,16,8" Spacing="4">
 
-                        <Grid>
+                        <!-- titre du dossier masqué (redondant avec le volet des dossiers) ; Envoyer/Recevoir : bouton du ruban -->
 
-                            <TextBlock x:Name="FolderTitle" Text="Courrier" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+                        <TextBlock x:Name="FolderTitle" Text="Courrier" Visibility="Collapsed" Style="{StaticResource SubtitleTextBlockStyle}" />
 
-                            <!-- clic : relève (F5) ; flèche : autres modes (F9, Maj+F9) -->
+                        <!-- Boîte de réception prioritaire (Microsoft 365) : visible seulement dans la Boîte de réception de ces comptes -->
 
-                            <SplitButton HorizontalAlignment="Right" Click="OnRefreshSplitClick"
-
-                                         ToolTipService.ToolTip="Envoyer/Recevoir (F5)">
-
-                                <FontIcon Glyph="&#xE72C;" FontSize="14" />
-
-                                <!-- actifs même menu fermé : portés par le bouton -->
-
-                                <SplitButton.KeyboardAccelerators>
-
-                                    <KeyboardAccelerator Key="F5" Invoked="OnRefreshAccelerator" />
-
-                                    <KeyboardAccelerator Key="F9" Invoked="OnRefreshAccelerator" />
-
-                                    <KeyboardAccelerator Modifiers="Shift" Key="F9" Invoked="OnRefreshAccelerator" />
-
-                                </SplitButton.KeyboardAccelerators>
-
-                                <SplitButton.Flyout>
-
-                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
-
-                                        <MenuFlyoutItem Text="Envoyer/Recevoir" Click="OnRefreshClick"
-
-                                                        KeyboardAcceleratorTextOverride="F5" />
-
-                                        <MenuFlyoutItem Text="Envoyer/Recevoir tous les dossiers" Click="OnRefreshAllClick"
-
-                                                        KeyboardAcceleratorTextOverride="F9" />
-
-                                        <MenuFlyoutItem Text="Mettre à jour le dossier courant" Click="OnRefreshFolderClick"
-
-                                                        KeyboardAcceleratorTextOverride="Maj+F9" />
-
-                                    </MenuFlyout>
-
-                                </SplitButton.Flyout>
-
-                            </SplitButton>
-
-                        </Grid>
+                        <SelectorBar x:Name="FocusedBar" Visibility="Collapsed" SelectionChanged="OnFocusedBarChanged">
+                            <SelectorBarItem x:Name="FocusedBarItemFocused" Text="Prioritaire" Tag="focused" IsSelected="True" />
+                            <SelectorBarItem x:Name="FocusedBarItemOther" Text="Autres" Tag="other" />
+                        </SelectorBar>
 
                         <!-- filtres rapides, combinés avec la recherche (appliqués par ShowMessages) -->
-
                         <Grid>
-
                             <SelectorBar x:Name="ReadFilterBar" SelectionChanged="OnQuickFilterChanged">
-
-                                <SelectorBarItem Text="Tous" Tag="all" IsSelected="True" />
-
-                                <SelectorBarItem Text="Non lus" Tag="unread" />
-
-                                <SelectorBarItem Text="Lus" Tag="read" />
-
+                                <SelectorBarItem x:Name="ReadFilterAll" Text="Tous" Tag="all" IsSelected="True" />
+                                <SelectorBarItem x:Name="ReadFilterUnread" Text="Non lus" Tag="unread" />
+                                <SelectorBarItem x:Name="ReadFilterRead" Text="Lus" Tag="read" />
                             </SelectorBar>
 
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4">
@@ -132,6 +101,18 @@
                                 <FontIcon x:Name="SortDirectionIcon" Glyph="&#xE74B;" FontSize="12" />
 
                             </Button>
+
+                            <!-- regroupement (mémorisé par dossier) : MainWindow::OnGroupMenuOpening -->
+
+                            <TextBlock Text="Grouper par :" VerticalAlignment="Center" Opacity="0.7" Margin="12,0,0,0"
+                                       Style="{StaticResource CaptionTextBlockStyle}" />
+
+                            <DropDownButton x:Name="GroupButton" Content="Aucun" Padding="8,2" FontSize="12"
+                                            ToolTipService.ToolTip="Regrouper les messages (Conversation ou Aucun)">
+                                <DropDownButton.Flyout>
+                                    <MenuFlyout Opening="OnGroupMenuOpening" />
+                                </DropDownButton.Flyout>
+                            </DropDownButton>
 
                         </StackPanel>
 

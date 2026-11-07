@@ -13,6 +13,8 @@
 #include <winrt/Windows.Web.Http.h>
 #include <winrt/Windows.Web.Http.Headers.h>
 #include <winrt/Microsoft.UI.Input.h>
+#include <winrt/Microsoft.UI.Xaml.Media.h>
+#include <winrt/Microsoft.UI.Windowing.h>
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
@@ -20,6 +22,7 @@
 #include <chrono>
 #include <cmath>
 #include <cwctype>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -56,9 +59,9 @@ namespace winrt::EvolutionWin::implementation
         auto remind = [this, banner_id, source_uid, name, user]()
         {
             /* fenêtre fermée ou déjà une autre boîte ouverte : rappel dans le bandeau */
-            ShowBanner(banner_id, L"Connexion requise",
-                L"Le compte « " + name + L" » attend son mot de passe.",
-                InfoBarSeverity::Warning, L"Saisir le mot de passe",
+            ShowBanner(banner_id, Tr(L"Connexion requise"),
+                Fmt(Tr(L"Le compte « {0} » attend son mot de passe."), { name }),
+                InfoBarSeverity::Warning, Tr(L"Saisir le mot de passe"),
                 [this, source_uid, name, user]() { PromptPasswordAsync(source_uid, name, user, false); });
         };
 
@@ -72,9 +75,9 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Authentification requise"));
-        dialog.PrimaryButtonText(L"Valider");
-        dialog.CloseButtonText(L"Annuler");
+        dialog.Title(box_value(Tr(L"Authentification requise")));
+        dialog.PrimaryButtonText(Tr(L"Valider"));
+        dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Primary);
 
         StackPanel panel;
@@ -82,14 +85,18 @@ namespace winrt::EvolutionWin::implementation
 
         TextBlock description;
         description.TextWrapping(TextWrapping::Wrap);
-        description.Text((rejected
-            ? L"Le serveur a refusé le mot de passe pour « "
-            : L"Veuillez saisir le mot de passe pour « ")
-            + name + (user.empty() ? L" » :" : L" » (" + user + L") :"));
+        if (rejected)
+            description.Text(user.empty()
+                ? Fmt(Tr(L"Le serveur a refusé le mot de passe pour « {0} » :"), { name })
+                : Fmt(Tr(L"Le serveur a refusé le mot de passe pour « {0} » ({1}) :"), { name, user }));
+        else
+            description.Text(user.empty()
+                ? Fmt(Tr(L"Veuillez saisir le mot de passe pour « {0} » :"), { name })
+                : Fmt(Tr(L"Veuillez saisir le mot de passe pour « {0} » ({1}) :"), { name, user }));
         panel.Children().Append(description);
 
         PasswordBox password_box;
-        password_box.PlaceholderText(L"Mot de passe");
+        password_box.PlaceholderText(Tr(L"Mot de passe"));
         panel.Children().Append(password_box);
 
         dialog.Content(panel);
@@ -108,11 +115,11 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus(L"Mot de passe : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Mot de passe : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
             ClearBanner(banner_id);
-            ShowStatus(L"Mot de passe enregistré pour « " + name + L" ».", InfoBarSeverity::Success);
+            ShowStatus(Fmt(Tr(L"Mot de passe enregistré pour « {0} »."), { name }), InfoBarSeverity::Success);
             m_core->Refresh();
         });
     }
@@ -155,10 +162,10 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Certificat TLS non vérifié"));
-        dialog.PrimaryButtonText(L"Toujours approuver");
-        dialog.SecondaryButtonText(L"Accepter (session)");
-        dialog.CloseButtonText(L"Refuser");
+        dialog.Title(box_value(Tr(L"Certificat TLS non vérifié")));
+        dialog.PrimaryButtonText(Tr(L"Toujours approuver"));
+        dialog.SecondaryButtonText(Tr(L"Accepter (session)"));
+        dialog.CloseButtonText(Tr(L"Refuser"));
         dialog.DefaultButton(ContentDialogButton::Close);
 
         StackPanel panel;
@@ -167,7 +174,7 @@ namespace winrt::EvolutionWin::implementation
 
         TextBlock intro;
         intro.TextWrapping(TextWrapping::Wrap);
-        intro.Text(L"Le serveur « " + host + L" » (" + name + L") a présenté un certificat TLS qui n'a pas pu être validé automatiquement :");
+        intro.Text(Fmt(Tr(L"Le serveur « {0} » ({1}) a présenté un certificat TLS qui n'a pas pu être validé automatiquement :"), { host, name }));
         panel.Children().Append(intro);
 
         TextBlock err_block;
@@ -179,10 +186,7 @@ namespace winrt::EvolutionWin::implementation
         TextBlock details;
         details.TextWrapping(TextWrapping::Wrap);
         details.IsTextSelectionEnabled(true);
-        details.Text(
-            L"Objet : " + subject + L"\n" +
-            L"Émetteur : " + issuer + L"\n" +
-            L"Empreinte SHA-256 :\n" + fingerprint);
+        details.Text(Fmt(Tr(L"Objet : {0}\nÉmetteur : {1}\nEmpreinte SHA-256 :\n{2}"), { subject, issuer, fingerprint }));
         details.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{ L"Cascadia Mono, Consolas" });
         details.FontSize(12);
         panel.Children().Append(details);
@@ -198,19 +202,19 @@ namespace winrt::EvolutionWin::implementation
         if (result == ContentDialogResult::Primary)
         {
             m_core->RespondTlsTrust(trust_id, 2);
-            ShowStatus(L"Certificat TLS approuvé de façon permanente pour « " + host + L" ».", InfoBarSeverity::Success);
+            ShowStatus(Fmt(Tr(L"Certificat TLS approuvé de façon permanente pour « {0} »."), { host }), InfoBarSeverity::Success);
             m_core->Refresh();
         }
         else if (result == ContentDialogResult::Secondary)
         {
             m_core->RespondTlsTrust(trust_id, 1);
-            ShowStatus(L"Certificat TLS accepté pour cette session (« " + host + L" »).", InfoBarSeverity::Informational);
+            ShowStatus(Fmt(Tr(L"Certificat TLS accepté pour cette session (« {0} »)."), { host }), InfoBarSeverity::Informational);
             m_core->Refresh();
         }
         else
         {
             m_core->RespondTlsTrust(trust_id, 0);
-            ShowStatus(L"Certificat TLS refusé pour « " + host + L" ».", InfoBarSeverity::Warning);
+            ShowStatus(Fmt(Tr(L"Certificat TLS refusé pour « {0} »."), { host }), InfoBarSeverity::Warning);
         }
     }
 
@@ -298,9 +302,9 @@ namespace winrt::EvolutionWin::implementation
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(provider_index == 1
-            ? L"Connexion OAuth2 — Microsoft 365"
-            : L"Connexion OAuth2 — Google / Gmail"));
-        dialog.CloseButtonText(L"Annuler");
+            ? Tr(L"Connexion OAuth2 — Microsoft 365")
+            : Tr(L"Connexion OAuth2 — Google / Gmail")));
+        dialog.CloseButtonText(Tr(L"Annuler"));
 
         WebView2 oauth_web;
         oauth_web.MinWidth(480);
@@ -345,7 +349,7 @@ namespace winrt::EvolutionWin::implementation
         if (captured_code->empty())
         {
             if (!captured_err->empty())
-                ShowStatus(L"Authentification OAuth2 refusée : " + hstring{ *captured_err }, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Authentification OAuth2 refusée : {0}"), { hstring{ *captured_err } }), InfoBarSeverity::Error);
             co_return L"";
         }
 
@@ -381,7 +385,7 @@ namespace winrt::EvolutionWin::implementation
                     co_return tok_obj.Stringify();
                 }
                 hstring err_desc = tok_obj.GetNamedString(L"error_description", tok_obj.GetNamedString(L"error", L"Jeton invalide"));
-                ShowStatus(L"Échange du jeton OAuth2 : " + err_desc, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Échange du jeton OAuth2 : {0}"), { err_desc }), InfoBarSeverity::Error);
             }
         }
         catch (hresult_error const& e)
@@ -392,7 +396,7 @@ namespace winrt::EvolutionWin::implementation
         if (!network_error.empty())
         {
             co_await ui_thread;
-            ShowStatus(L"Erreur réseau OAuth2 : " + network_error, InfoBarSeverity::Error);
+            ShowStatus(Fmt(Tr(L"Erreur réseau OAuth2 : {0}"), { network_error }), InfoBarSeverity::Error);
         }
 
         co_return L"";
@@ -442,7 +446,7 @@ namespace winrt::EvolutionWin::implementation
         if (!begin_error->empty() || !JsonObject::TryParse(*begin_json, begin))
         {
             m_dialog_open = false;
-            ShowStatus(L"Connexion à « " + name + L" » : " + *begin_error, InfoBarSeverity::Error);
+            ShowStatus(Fmt(Tr(L"Connexion à « {0} » : {1}"), { name, *begin_error }), InfoBarSeverity::Error);
             co_return;
         }
 
@@ -459,8 +463,8 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Connexion " + service + L" — " + name));
-        dialog.CloseButtonText(L"Annuler");
+        dialog.Title(box_value(Fmt(Tr(L"Connexion {0} — {1}"), { service, name })));
+        dialog.CloseButtonText(Tr(L"Annuler"));
 
         WebView2 web;
         web.MinWidth(480);
@@ -519,29 +523,29 @@ namespace winrt::EvolutionWin::implementation
         std::wstring banner_id = L"auth:" + std::wstring{ source_uid };
         if (reached->empty())
         {
-            ShowStatus(L"Connexion à « " + name + L" » annulée.", InfoBarSeverity::Warning);
-            ShowBanner(banner_id, L"Connexion requise",
-                L"Le compte « " + name + L" » n'est pas connecté.",
-                InfoBarSeverity::Warning, L"Se connecter",
+            ShowStatus(Fmt(Tr(L"Connexion à « {0} » annulée."), { name }), InfoBarSeverity::Warning);
+            ShowBanner(banner_id, Tr(L"Connexion requise"),
+                Fmt(Tr(L"Le compte « {0} » n'est pas connecté."), { name }),
+                InfoBarSeverity::Warning, Tr(L"Se connecter"),
                 [this, source_uid, name]() { SignInOAuth2Async(source_uid, name); });
             co_return;
         }
 
         /* étape 2 : échange du code et enregistrement des jetons */
-        ShowStatus(L"Connexion à « " + name + L" »…", InfoBarSeverity::Informational);
+        ShowStatus(Fmt(Tr(L"Connexion à « {0} »…"), { name }), InfoBarSeverity::Informational);
         m_core->OAuth2Finish(credentials_uid, *reached, [this, name, banner_id, source_uid](hstring const&, hstring const& error)
         {
             if (!error.empty())
             {
-                ShowStatus(L"Connexion à « " + name + L" » : " + error, InfoBarSeverity::Error);
-                ShowBanner(banner_id, L"Connexion requise",
-                    L"La connexion au compte « " + name + L" » a échoué : " + error,
-                    InfoBarSeverity::Error, L"Réessayer",
+                ShowStatus(Fmt(Tr(L"Connexion à « {0} » : {1}"), { name, error }), InfoBarSeverity::Error);
+                ShowBanner(banner_id, Tr(L"Connexion requise"),
+                    Fmt(Tr(L"La connexion au compte « {0} » a échoué : {1}"), { name, error }),
+                    InfoBarSeverity::Error, Tr(L"Réessayer"),
                     [this, source_uid, name]() { SignInOAuth2Async(source_uid, name); });
                 return;
             }
             ClearBanner(banner_id);
-            ShowStatus(L"Connecté à « " + name + L" ».", InfoBarSeverity::Success);
+            ShowStatus(Fmt(Tr(L"Connecté à « {0} »."), { name }), InfoBarSeverity::Success);
             LoadAccounts();
         });
     }
@@ -602,7 +606,7 @@ namespace winrt::EvolutionWin::implementation
         {
             loopback->Close();
             m_dialog_open = false;
-            ShowStatus(L"Connexion Google à « " + name + L" » : " + *begin_error, InfoBarSeverity::Error);
+            ShowStatus(Fmt(Tr(L"Connexion Google à « {0} » : {1}"), { name, *begin_error }), InfoBarSeverity::Error);
             co_return;
         }
 
@@ -615,9 +619,9 @@ namespace winrt::EvolutionWin::implementation
         /* Boîte de dialogue d'attente conviviale */
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Connexion Google — " + name));
-        dialog.SecondaryButtonText(L"Rouvrir le navigateur");
-        dialog.CloseButtonText(L"Annuler");
+        dialog.Title(box_value(Fmt(Tr(L"Connexion Google — {0}"), { name })));
+        dialog.SecondaryButtonText(Tr(L"Rouvrir le navigateur"));
+        dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Close);
 
         StackPanel panel;
@@ -632,13 +636,13 @@ namespace winrt::EvolutionWin::implementation
 
         TextBlock desc;
         desc.TextWrapping(TextWrapping::Wrap);
-        desc.Text(L"Une page de connexion Google sécurisée s'est ouverte dans votre navigateur par défaut.\n\n"
-                  L"Veuillez vous authentifier et autoriser l'accès pour Evolution. Dès validation, "
-                  L"cette boîte se fermera automatiquement.");
+        desc.Text(Tr(L"Une page de connexion Google sécurisée s'est ouverte dans votre navigateur par défaut.\n\n"
+                     L"Veuillez vous authentifier et autoriser l'accès pour Evolution. Dès validation, "
+                     L"cette boîte se fermera automatiquement."));
         panel.Children().Append(desc);
 
         HyperlinkButton app_pwd_link;
-        app_pwd_link.Content(box_value(L"Aide : créer un mot de passe d'application Google"));
+        app_pwd_link.Content(box_value(Tr(L"Aide : créer un mot de passe d'application Google")));
         app_pwd_link.NavigateUri(Uri{ L"https://myaccount.google.com/apppasswords" });
         panel.Children().Append(app_pwd_link);
 
@@ -670,29 +674,29 @@ namespace winrt::EvolutionWin::implementation
         std::wstring banner_id = L"auth:" + std::wstring{ source_uid };
         if (reached->empty())
         {
-            ShowStatus(L"Connexion Google à « " + name + L" » annulée.", InfoBarSeverity::Warning);
-            ShowBanner(banner_id, L"Connexion requise",
-                L"Le compte « " + name + L" » n'est pas connecté.",
-                InfoBarSeverity::Warning, L"Se connecter",
+            ShowStatus(Fmt(Tr(L"Connexion Google à « {0} » annulée."), { name }), InfoBarSeverity::Warning);
+            ShowBanner(banner_id, Tr(L"Connexion requise"),
+                Fmt(Tr(L"Le compte « {0} » n'est pas connecté."), { name }),
+                InfoBarSeverity::Warning, Tr(L"Se connecter"),
                 [this, source_uid, name]() { SignInGoogleOAuth2BrowserAsync(source_uid, name); });
             co_return;
         }
 
         /* Étape 2 : Échange du code contre les jetons EDS */
-        ShowStatus(L"Finalisation de la connexion à « " + name + L" »…", InfoBarSeverity::Informational);
+        ShowStatus(Fmt(Tr(L"Finalisation de la connexion à « {0} »…"), { name }), InfoBarSeverity::Informational);
         m_core->OAuth2Finish(credentials_uid, *reached, [this, name, banner_id, source_uid](hstring const&, hstring const& error)
         {
             if (!error.empty())
             {
-                ShowStatus(L"Connexion Google à « " + name + L" » : " + error, InfoBarSeverity::Error);
-                ShowBanner(banner_id, L"Connexion requise",
-                    L"La connexion au compte Google « " + name + L" » a échoué : " + error,
-                    InfoBarSeverity::Error, L"Réessayer",
+                ShowStatus(Fmt(Tr(L"Connexion Google à « {0} » : {1}"), { name, error }), InfoBarSeverity::Error);
+                ShowBanner(banner_id, Tr(L"Connexion requise"),
+                    Fmt(Tr(L"La connexion au compte Google « {0} » a échoué : {1}"), { name, error }),
+                    InfoBarSeverity::Error, Tr(L"Réessayer"),
                     [this, source_uid, name]() { SignInGoogleOAuth2BrowserAsync(source_uid, name); });
                 return;
             }
             ClearBanner(banner_id);
-            ShowStatus(L"Connecté avec succès au compte Google « " + name + L" ».", InfoBarSeverity::Success);
+            ShowStatus(Fmt(Tr(L"Connecté avec succès au compte Google « {0} »."), { name }), InfoBarSeverity::Success);
             LoadAccounts();
         });
     }
@@ -742,7 +746,7 @@ namespace winrt::EvolutionWin::implementation
                 badge.VerticalAlignment(VerticalAlignment::Center);
                 badge.Background(Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
                 TextBlock badge_text;
-                badge_text.Text(L"Par défaut");
+                badge_text.Text(Tr(L"Par défaut", L"Default"));
                 badge_text.FontSize(11);
                 badge_text.Foreground(Application::Current().Resources().Lookup(box_value(L"TextOnAccentFillColorPrimaryBrush")).as<Brush>());
                 badge.Child(badge_text);
@@ -751,8 +755,10 @@ namespace winrt::EvolutionWin::implementation
             info.Children().Append(title_line);
 
             TextBlock subtitle;
-            subtitle.Text((address.empty() ? L"Compte local" : address) +
-                (backend.empty() ? hstring{} : L"  •  Protocole : " + backend));
+            hstring subtitle_head = address.empty() ? Tr(L"Compte local", L"Local account") : address;
+            subtitle.Text(backend.empty()
+                ? subtitle_head
+                : Fmt(Tr(L"{0}  •  Protocole : {1}", L"{0}  •  Protocol: {1}"), { subtitle_head, backend }));
             subtitle.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
             info.Children().Append(subtitle);
 
@@ -769,18 +775,18 @@ namespace winrt::EvolutionWin::implementation
                 if (!is_default)
                 {
                     Button default_btn;
-                    default_btn.Content(box_value(L"Définir par défaut"));
-                    ToolTipService::SetToolTip(default_btn, box_value(L"Compte utilisé pour les nouveaux messages"));
+                    default_btn.Content(box_value(Tr(L"Définir par défaut", L"Set as default")));
+                    ToolTipService::SetToolTip(default_btn, box_value(Tr(L"Compte utilisé pour les nouveaux messages", L"Account used for new messages")));
                     default_btn.Click([this, uid, name](IInspectable const&, RoutedEventArgs const&)
                     {
                         m_core->SetDefaultAccount(uid, [this, name](hstring const&, hstring const& error)
                         {
                             if (!error.empty())
                             {
-                                ShowStatus(L"Compte par défaut : " + error, InfoBarSeverity::Error);
+                                ShowStatus(Fmt(Tr(L"Compte par défaut : {0}", L"Default account: {0}"), { error }), InfoBarSeverity::Error);
                                 return;
                             }
-                            ShowStatus(L"« " + name + L" » est le compte par défaut.", InfoBarSeverity::Success);
+                            ShowStatus(Fmt(Tr(L"« {0} » est le compte par défaut.", L"\"{0}\" is the default account."), { name }), InfoBarSeverity::Success);
                             LoadAccounts();
                         });
                     });
@@ -788,8 +794,8 @@ namespace winrt::EvolutionWin::implementation
                 }
 
                 Button edit_btn;
-                edit_btn.Content(box_value(L"Modifier"));
-                ToolTipService::SetToolTip(edit_btn, box_value(L"Modifier les serveurs, le mot de passe et les dossiers spéciaux"));
+                edit_btn.Content(box_value(Tr(L"Modifier", L"Edit")));
+                ToolTipService::SetToolTip(edit_btn, box_value(Tr(L"Modifier les serveurs, le mot de passe et les dossiers spéciaux", L"Edit servers, password and special folders")));
                 edit_btn.Click([this, uid](IInspectable const&, RoutedEventArgs const&)
                 {
                     ShowEditAccountDialogAsync(uid);
@@ -802,8 +808,8 @@ namespace winrt::EvolutionWin::implementation
                 if (domain == L"gmail.com" || domain == L"googlemail.com")
                 {
                     Button google_btn;
-                    google_btn.Content(box_value(L"Activer le calendrier et les contacts"));
-                    ToolTipService::SetToolTip(google_btn, box_value(L"Synchronise Google Agenda et Google Contacts avec ce compte (nouvelle autorisation Google)"));
+                    google_btn.Content(box_value(Tr(L"Activer le calendrier et les contacts", L"Enable calendar and contacts")));
+                    ToolTipService::SetToolTip(google_btn, box_value(Tr(L"Synchronise Google Agenda et Google Contacts avec ce compte (nouvelle autorisation Google)", L"Sync Google Calendar and Contacts with this account (new Google authorization)")));
                     google_btn.Click([this, address, name](IInspectable const&, RoutedEventArgs const&)
                     {
                         m_core->EnableGoogleServices(address, [this, name](hstring const& json, hstring const& error)
@@ -811,15 +817,15 @@ namespace winrt::EvolutionWin::implementation
                             JsonObject result;
                             if (!error.empty() || !JsonObject::TryParse(json, result))
                             {
-                                ShowStatus(L"Activation du calendrier et des contacts : " + error, InfoBarSeverity::Error);
+                                ShowStatus(Fmt(Tr(L"Activation du calendrier et des contacts : {0}", L"Calendar and contacts activation: {0}"), { error }), InfoBarSeverity::Error);
                                 return;
                             }
                             if (result.GetNamedBoolean(L"already_enabled", false))
                             {
-                                ShowStatus(L"Le calendrier et les contacts de « " + name + L" » sont déjà activés.", InfoBarSeverity::Informational);
+                                ShowStatus(Fmt(Tr(L"Le calendrier et les contacts de « {0} » sont déjà activés.", L"Calendar and contacts for \"{0}\" are already enabled."), { name }), InfoBarSeverity::Informational);
                                 return;
                             }
-                            ShowStatus(L"Autorisez l'accès à Google Agenda et Google Contacts dans le navigateur.", InfoBarSeverity::Informational);
+                            ShowStatus(Tr(L"Autorisez l'accès à Google Agenda et Google Contacts dans le navigateur.", L"Authorize access to Google Calendar and Google Contacts in your browser."), InfoBarSeverity::Informational);
                             SignInGoogleOAuth2BrowserAsync(result.GetNamedString(L"collection_uid", L""), name);
                         });
                     });
@@ -827,17 +833,17 @@ namespace winrt::EvolutionWin::implementation
                 }
 
                 Button remove_btn;
-                remove_btn.Content(box_value(L"Supprimer"));
+                remove_btn.Content(box_value(Tr(L"Supprimer", L"Delete")));
                 remove_btn.Click([this, uid, name](IInspectable const&, RoutedEventArgs const&)
                 {
                     m_core->RemoveAccount(uid, [this, name](hstring const&, hstring const& error)
                     {
                         if (!error.empty())
                         {
-                            ShowStatus(L"Suppression du compte : " + error, InfoBarSeverity::Error);
+                            ShowStatus(Fmt(Tr(L"Suppression du compte : {0}", L"Delete account: {0}"), { error }), InfoBarSeverity::Error);
                             return;
                         }
-                        ShowStatus(L"Compte « " + name + L" » supprimé.", InfoBarSeverity::Informational);
+                        ShowStatus(Fmt(Tr(L"Compte « {0} » supprimé.", L"Account \"{0}\" deleted."), { name }), InfoBarSeverity::Informational);
                         LoadAccounts();
                     });
                 });
@@ -869,10 +875,10 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Ajouter un compte"));
-        dialog.PrimaryButtonText(L"Suivant");
-        dialog.SecondaryButtonText(L"Configuration manuelle");
-        dialog.CloseButtonText(L"Annuler");
+        dialog.Title(box_value(Tr(L"Ajouter un compte")));
+        dialog.PrimaryButtonText(Tr(L"Suivant"));
+        dialog.SecondaryButtonText(Tr(L"Configuration manuelle"));
+        dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Primary);
 
         StackPanel panel;
@@ -880,23 +886,23 @@ namespace winrt::EvolutionWin::implementation
         panel.MinWidth(440);
 
         TextBlock intro;
-        intro.Text(L"Le type de compte (Microsoft 365, Exchange, Gmail, IMAP / SMTP) et les serveurs "
-                   L"sont détectés à partir de votre adresse ; vous pourrez les vérifier ensuite.");
+        intro.Text(Tr(L"Le type de compte (Microsoft 365, Exchange, Gmail, IMAP / SMTP) et les serveurs "
+                      L"sont détectés à partir de votre adresse ; vous pourrez les vérifier ensuite."));
         intro.TextWrapping(TextWrapping::Wrap);
         panel.Children().Append(intro);
 
         TextBox email_box;
-        email_box.Header(box_value(L"Adresse électronique"));
+        email_box.Header(box_value(Tr(L"Adresse électronique")));
         email_box.PlaceholderText(L"pierre@exemple.fr");
         panel.Children().Append(email_box);
 
         TextBox full_name_box;
-        full_name_box.Header(box_value(L"Votre nom complet"));
+        full_name_box.Header(box_value(Tr(L"Votre nom complet")));
         full_name_box.PlaceholderText(L"Pierre Dupont");
         panel.Children().Append(full_name_box);
 
         TextBlock invalid;
-        invalid.Text(L"Saisissez une adresse électronique complète (nom@domaine).");
+        invalid.Text(Tr(L"Saisissez une adresse électronique complète (nom@domaine)."));
         invalid.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Microsoft::UI::Xaml::Media::Brush>());
         invalid.Visibility(Visibility::Collapsed);
         panel.Children().Append(invalid);
@@ -911,7 +917,7 @@ namespace winrt::EvolutionWin::implementation
         ring.Height(16);
         progress.Children().Append(ring);
         TextBlock progress_text;
-        progress_text.Text(L"Détection du type de compte…");
+        progress_text.Text(Tr(L"Détection du type de compte…"));
         progress.Children().Append(progress_text);
         panel.Children().Append(progress);
 
@@ -973,19 +979,19 @@ namespace winrt::EvolutionWin::implementation
     static hstring DetectedTypeLabel(hstring const& type)
     {
         if (type == L"m365") return L"Microsoft 365 / Outlook.com";
-        if (type == L"exchange") return L"Exchange (serveur de l'entreprise)";
+        if (type == L"exchange") return Tr(L"Exchange (serveur de l'entreprise)");
         if (type == L"google") return L"Google / Gmail";
         return L"IMAP / SMTP";
     }
 
     static hstring DetectedSourceLabel(hstring const& source)
     {
-        if (source == L"known") return L"base des fournisseurs connus (ISPDB de Thunderbird)";
-        if (source == L"mx") return L"serveurs de messagerie (MX) du domaine";
-        if (source == L"autodiscover") return L"Autodiscover Exchange / Microsoft 365";
-        if (source == L"autoconfig") return L"fichier autoconfig publié par le domaine";
-        if (source == L"ispdb") return L"base ISPDB en ligne de Thunderbird";
-        if (source == L"srv") return L"enregistrements DNS SRV du domaine";
+        if (source == L"known") return Tr(L"base des fournisseurs connus (ISPDB de Thunderbird)");
+        if (source == L"mx") return Tr(L"serveurs de messagerie (MX) du domaine");
+        if (source == L"autodiscover") return Tr(L"Autodiscover Exchange / Microsoft 365");
+        if (source == L"autoconfig") return Tr(L"fichier autoconfig publié par le domaine");
+        if (source == L"ispdb") return Tr(L"base ISPDB en ligne de Thunderbird");
+        if (source == L"srv") return Tr(L"enregistrements DNS SRV du domaine");
         return source;
     }
 
@@ -1040,9 +1046,9 @@ namespace winrt::EvolutionWin::implementation
     {
         ComboBox combo;
         combo.HorizontalAlignment(HorizontalAlignment::Stretch);
-        combo.Items().Append(box_value(L"TLS (chiffré dès la connexion)"));
-        combo.Items().Append(box_value(L"STARTTLS (négociation chiffrée)"));
-        combo.Items().Append(box_value(L"Aucun (non chiffré)"));
+        combo.Items().Append(box_value(Tr(L"TLS (chiffré dès la connexion)")));
+        combo.Items().Append(box_value(Tr(L"STARTTLS (négociation chiffrée)")));
+        combo.Items().Append(box_value(Tr(L"Aucun (non chiffré)")));
         if (default_sec == L"starttls")
             combo.SelectedIndex(1);
         else if (default_sec == L"none")
@@ -1089,7 +1095,7 @@ namespace winrt::EvolutionWin::implementation
         combo.HorizontalAlignment(HorizontalAlignment::Stretch);
 
         ComboBoxItem def_item;
-        def_item.Content(box_value(L"(Dossier par défaut du système)"));
+        def_item.Content(box_value(Tr(L"(Dossier par défaut du système)")));
         def_item.Tag(box_value(L""));
         combo.Items().Append(def_item);
 
@@ -1143,9 +1149,9 @@ namespace winrt::EvolutionWin::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Ajouter un compte"));
-        dialog.PrimaryButtonText(L"Ajouter");
-        dialog.CloseButtonText(L"Annuler");
+        dialog.Title(box_value(Tr(L"Ajouter un compte")));
+        dialog.PrimaryButtonText(Tr(L"Ajouter"));
+        dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Primary);
 
         StackPanel panel;
@@ -1163,51 +1169,53 @@ namespace winrt::EvolutionWin::implementation
             if (source == L"guess")
             {
                 detection.Severity(InfoBarSeverity::Warning);
-                detection.Title(L"Aucune configuration trouvée");
-                detection.Message(L"Ce domaine ne publie pas sa configuration : les serveurs proposés "
-                                  L"sont supposés. Vérifiez-les auprès de votre fournisseur.");
+                detection.Title(Tr(L"Aucune configuration trouvée"));
+                detection.Message(Tr(L"Ce domaine ne publie pas sa configuration : les serveurs proposés "
+                                     L"sont supposés. Vérifiez-les auprès de votre fournisseur."));
             }
             else
             {
                 detection.Severity(InfoBarSeverity::Success);
-                detection.Title(L"Type détecté : " + DetectedTypeLabel(detected_type));
-                detection.Message((provider.empty() ? hstring{} : provider + L" — ") + L"d'après : " +
-                                  DetectedSourceLabel(source) + L". Vérifiez les paramètres proposés ou "
-                                  L"choisissez un autre type de compte.");
+                detection.Title(Fmt(Tr(L"Type détecté : {0}"), { DetectedTypeLabel(detected_type) }));
+                detection.Message(provider.empty()
+                    ? Fmt(Tr(L"D'après : {0}. Vérifiez les paramètres proposés ou choisissez un autre type de compte."),
+                          { DetectedSourceLabel(source) })
+                    : Fmt(Tr(L"Fournisseur : {0} — d'après : {1}. Vérifiez les paramètres proposés ou choisissez un autre type de compte."),
+                          { provider, DetectedSourceLabel(source) }));
             }
             panel.Children().Append(detection);
         }
 
         ComboBox provider_box;
-        provider_box.Header(box_value(L"Type de compte"));
+        provider_box.Header(box_value(Tr(L"Type de compte")));
         provider_box.HorizontalAlignment(HorizontalAlignment::Stretch);
-        provider_box.Items().Append(box_value(L"IMAP / SMTP standard (mot de passe)"));
+        provider_box.Items().Append(box_value(Tr(L"IMAP / SMTP standard (mot de passe)")));
         provider_box.Items().Append(box_value(L"Microsoft 365 / Outlook.com (OAuth2 XOAUTH2)"));
-        provider_box.Items().Append(box_value(L"Google / Gmail (courrier, agenda, contacts)"));
+        provider_box.Items().Append(box_value(Tr(L"Google / Gmail (courrier, agenda, contacts)")));
         provider_box.Items().Append(box_value(L"Microsoft 365 / Exchange Online (Graph)"));
-        provider_box.Items().Append(box_value(L"Exchange de l'entreprise (EWS, mot de passe)"));
+        provider_box.Items().Append(box_value(Tr(L"Exchange de l'entreprise (EWS, mot de passe)")));
         panel.Children().Append(provider_box);
 
         TextBox display_name_box;
-        display_name_box.Header(box_value(L"Nom du compte"));
-        display_name_box.PlaceholderText(L"Personnel, Travail…");
+        display_name_box.Header(box_value(Tr(L"Nom du compte")));
+        display_name_box.PlaceholderText(Tr(L"Personnel, Travail…"));
         panel.Children().Append(display_name_box);
 
         TextBox full_name_box;
-        full_name_box.Header(box_value(L"Votre nom complet"));
+        full_name_box.Header(box_value(Tr(L"Votre nom complet")));
         full_name_box.PlaceholderText(L"Pierre Dupont");
         full_name_box.Text(prefill.GetNamedString(L"full_name", L""));
         panel.Children().Append(full_name_box);
 
         TextBox email_box;
-        email_box.Header(box_value(L"Adresse électronique"));
+        email_box.Header(box_value(Tr(L"Adresse électronique")));
         email_box.PlaceholderText(L"pierre@exemple.fr");
         email_box.Text(prefill.GetNamedString(L"email", L""));
         panel.Children().Append(email_box);
 
         PasswordBox password_box;
-        password_box.Header(box_value(L"Mot de passe"));
-        password_box.PlaceholderText(L"Mot de passe du compte");
+        password_box.Header(box_value(Tr(L"Mot de passe")));
+        password_box.PlaceholderText(Tr(L"Mot de passe du compte"));
         panel.Children().Append(password_box);
 
         /* Panneau spécifique pour la connexion Google / Gmail */
@@ -1217,12 +1225,12 @@ namespace winrt::EvolutionWin::implementation
 
         TextBlock google_info;
         google_info.TextWrapping(TextWrapping::Wrap);
-        google_info.Text(L"Authentification moderne Google : la connexion s'effectuera en toute sécurité "
-                         L"dans votre navigateur par défaut (RFC 8252, compatible avec la validation en deux étapes).");
+        google_info.Text(Tr(L"Authentification moderne Google : la connexion s'effectuera en toute sécurité "
+                            L"dans votre navigateur par défaut (RFC 8252, compatible avec la validation en deux étapes)."));
         google_panel.Children().Append(google_info);
 
         CheckBox google_app_pwd_check;
-        google_app_pwd_check.Content(box_value(L"Utiliser un mot de passe d'application dédié"));
+        google_app_pwd_check.Content(box_value(Tr(L"Utiliser un mot de passe d'application dédié")));
         google_panel.Children().Append(google_app_pwd_check);
 
         StackPanel google_app_pwd_panel;
@@ -1230,12 +1238,12 @@ namespace winrt::EvolutionWin::implementation
         google_app_pwd_panel.Visibility(Visibility::Collapsed);
 
         PasswordBox google_app_pwd_box;
-        google_app_pwd_box.Header(box_value(L"Mot de passe d'application Google (16 caractères)"));
+        google_app_pwd_box.Header(box_value(Tr(L"Mot de passe d'application Google (16 caractères)")));
         google_app_pwd_box.PlaceholderText(L"xxxx xxxx xxxx xxxx");
         google_app_pwd_panel.Children().Append(google_app_pwd_box);
 
         HyperlinkButton google_help_btn;
-        google_help_btn.Content(box_value(L"Comment créer un mot de passe d'application Google ?"));
+        google_help_btn.Content(box_value(Tr(L"Comment créer un mot de passe d'application Google ?")));
         google_help_btn.NavigateUri(Uri{ L"https://myaccount.google.com/apppasswords" });
         google_app_pwd_panel.Children().Append(google_help_btn);
 
@@ -1245,14 +1253,14 @@ namespace winrt::EvolutionWin::implementation
         /* Panneau d'information pour Microsoft 365 */
         TextBlock m365_info;
         m365_info.TextWrapping(TextWrapping::Wrap);
-        m365_info.Text(L"La fenêtre d'authentification sécurisée Microsoft 365 (OAuth2) s'ouvrira "
-                       L"automatiquement après validation.");
+        m365_info.Text(Tr(L"La fenêtre d'authentification sécurisée Microsoft 365 (OAuth2) s'ouvrira "
+                          L"automatiquement après validation."));
         m365_info.Visibility(Visibility::Collapsed);
         panel.Children().Append(m365_info);
 
         /* Expander replié par défaut pour masquer les détails techniques des serveurs */
         Expander server_expander;
-        server_expander.Header(box_value(L"Paramètres du serveur avancés"));
+        server_expander.Header(box_value(Tr(L"Paramètres du serveur avancés")));
         server_expander.IsExpanded(false);
         server_expander.HorizontalAlignment(HorizontalAlignment::Stretch);
 
@@ -1261,13 +1269,13 @@ namespace winrt::EvolutionWin::implementation
         server_panel.Padding(ThicknessHelper::FromLengths(10, 8, 10, 8));
 
         TextBox user_box;
-        user_box.Header(box_value(L"Nom d'utilisateur (si différent de l'adresse)"));
-        user_box.PlaceholderText(L"Adresse électronique par défaut");
+        user_box.Header(box_value(Tr(L"Nom d'utilisateur (si différent de l'adresse)")));
+        user_box.PlaceholderText(Tr(L"Adresse électronique par défaut"));
         user_box.Text(prefill.GetNamedString(L"user", L""));
         server_panel.Children().Append(user_box);
 
         TextBox ews_url_box;
-        ews_url_box.Header(box_value(L"Adresse du serveur EWS"));
+        ews_url_box.Header(box_value(Tr(L"Adresse du serveur EWS")));
         ews_url_box.PlaceholderText(L"https://mail.exemple.fr/EWS/Exchange.asmx");
         ews_url_box.Text(prefill.GetNamedString(L"ews_url", L""));
         ews_url_box.Visibility(Visibility::Collapsed);
@@ -1282,21 +1290,21 @@ namespace winrt::EvolutionWin::implementation
         imap_grid.ColumnDefinitions().Append(col_ip);
 
         TextBox imap_host_box;
-        imap_host_box.Header(box_value(L"Serveur entrant (IMAP)"));
+        imap_host_box.Header(box_value(Tr(L"Serveur entrant (IMAP)")));
         imap_host_box.PlaceholderText(L"imap.exemple.fr");
         imap_host_box.Margin(ThicknessHelper::FromLengths(0, 0, 8, 0));
         Grid::SetColumn(imap_host_box, 0);
         imap_grid.Children().Append(imap_host_box);
 
         TextBox imap_port_box;
-        imap_port_box.Header(box_value(L"Port entrant"));
+        imap_port_box.Header(box_value(Tr(L"Port entrant")));
         imap_port_box.Text(L"993");
         Grid::SetColumn(imap_port_box, 1);
         imap_grid.Children().Append(imap_port_box);
         server_panel.Children().Append(imap_grid);
 
         ComboBox imap_sec_combo = MakeSecurityComboBox(prefill.GetNamedString(L"imap_security", L"tls"));
-        imap_sec_combo.Header(box_value(L"Sécurité IMAP"));
+        imap_sec_combo.Header(box_value(Tr(L"Sécurité IMAP")));
         server_panel.Children().Append(imap_sec_combo);
 
         /* Paramètres SMTP */
@@ -1308,21 +1316,21 @@ namespace winrt::EvolutionWin::implementation
         smtp_grid.ColumnDefinitions().Append(col_sp);
 
         TextBox smtp_host_box;
-        smtp_host_box.Header(box_value(L"Serveur sortant (SMTP)"));
+        smtp_host_box.Header(box_value(Tr(L"Serveur sortant (SMTP)")));
         smtp_host_box.PlaceholderText(L"smtp.exemple.fr");
         smtp_host_box.Margin(ThicknessHelper::FromLengths(0, 0, 8, 0));
         Grid::SetColumn(smtp_host_box, 0);
         smtp_grid.Children().Append(smtp_host_box);
 
         TextBox smtp_port_box;
-        smtp_port_box.Header(box_value(L"Port sortant"));
+        smtp_port_box.Header(box_value(Tr(L"Port sortant")));
         smtp_port_box.Text(L"465");
         Grid::SetColumn(smtp_port_box, 1);
         smtp_grid.Children().Append(smtp_port_box);
         server_panel.Children().Append(smtp_grid);
 
         ComboBox smtp_sec_combo = MakeSecurityComboBox(prefill.GetNamedString(L"smtp_security", L"tls"));
-        smtp_sec_combo.Header(box_value(L"Sécurité SMTP"));
+        smtp_sec_combo.Header(box_value(Tr(L"Sécurité SMTP")));
         server_panel.Children().Append(smtp_sec_combo);
 
         /* Paramètres OAuth pour Microsoft 365 */
@@ -1337,7 +1345,7 @@ namespace winrt::EvolutionWin::implementation
 
         TextBox client_id_box;
         client_id_box.Header(box_value(L"Client ID OAuth2"));
-        client_id_box.PlaceholderText(L"Identifiant d'application Entra ID ou Google Cloud");
+        client_id_box.PlaceholderText(Tr(L"Identifiant d'application Entra ID ou Google Cloud"));
         client_id_box.Text(env_cid);
         oauth_panel.Children().Append(client_id_box);
 
@@ -1357,7 +1365,7 @@ namespace winrt::EvolutionWin::implementation
         test_btn_row.Spacing(8);
 
         Button test_btn;
-        test_btn.Content(box_value(L"Tester la connectivité des serveurs"));
+        test_btn.Content(box_value(Tr(L"Tester la connectivité des serveurs")));
         test_btn_row.Children().Append(test_btn);
 
         ProgressRing test_ring;
@@ -1375,7 +1383,7 @@ namespace winrt::EvolutionWin::implementation
         test_area.Children().Append(test_status);
 
         CheckBox skip_test_check;
-        skip_test_check.Content(box_value(L"Ignorer les erreurs de test et ajouter quand même"));
+        skip_test_check.Content(box_value(Tr(L"Ignorer les erreurs de test et ajouter quand même")));
         test_area.Children().Append(skip_test_check);
 
         server_panel.Children().Append(test_area);
@@ -1392,7 +1400,7 @@ namespace winrt::EvolutionWin::implementation
             hstring target_smtp_host{ Trim(smtp_host_box.Text()) };
             if (target_imap_host.empty() && target_smtp_host.empty())
             {
-                test_status.Text(L"Veuillez renseigner au moins un serveur entrant ou sortant.");
+                test_status.Text(Tr(L"Veuillez renseigner au moins un serveur entrant ou sortant."));
                 test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Brush>());
                 test_status.Visibility(Visibility::Visible);
                 on_done(false);
@@ -1402,7 +1410,7 @@ namespace winrt::EvolutionWin::implementation
             test_btn.IsEnabled(false);
             test_ring.IsActive(true);
             test_ring.Visibility(Visibility::Visible);
-            test_status.Text(L"Vérification de la connectivité réseau et TLS en cours…");
+            test_status.Text(Tr(L"Vérification de la connectivité réseau et TLS en cours…"));
             test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorPrimaryBrush")).as<Brush>());
             test_status.Visibility(Visibility::Visible);
 
@@ -1426,7 +1434,7 @@ namespace winrt::EvolutionWin::implementation
 
                 if (!error.empty())
                 {
-                    test_status.Text(L"Erreur de test : " + error);
+                    test_status.Text(Fmt(Tr(L"Erreur de test : {0}"), { error }));
                     test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Brush>());
                     *connection_tested_ok = false;
                     on_done(false);
@@ -1436,7 +1444,7 @@ namespace winrt::EvolutionWin::implementation
                 JsonObject res;
                 if (!JsonObject::TryParse(res_json, res))
                 {
-                    test_status.Text(L"Réponse de test invalide");
+                    test_status.Text(Tr(L"Réponse de test invalide"));
                     *connection_tested_ok = false;
                     on_done(false);
                     return;
@@ -1449,17 +1457,17 @@ namespace winrt::EvolutionWin::implementation
 
                 if (imap_ok && smtp_ok)
                 {
-                    test_status.Text(L"✓ Connectivité établie avec succès pour IMAP et SMTP.");
+                    test_status.Text(Tr(L"✓ Connectivité établie avec succès pour IMAP et SMTP."));
                     test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorSuccessBrush")).as<Brush>());
                     *connection_tested_ok = true;
                     on_done(true);
                 }
                 else
                 {
-                    std::wstring msg;
-                    if (!imap_ok) msg += L"Échec IMAP : " + std::wstring{ imap_err } + L"  ";
-                    if (!smtp_ok) msg += L"Échec SMTP : " + std::wstring{ smtp_err };
-                    test_status.Text(hstring{ msg });
+                    hstring msg;
+                    if (!imap_ok) msg = Fmt(Tr(L"Échec IMAP : {0}"), { imap_err }) + L"  ";
+                    if (!smtp_ok) msg = msg + Fmt(Tr(L"Échec SMTP : {0}"), { smtp_err });
+                    test_status.Text(msg);
                     test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Brush>());
                     *connection_tested_ok = false;
                     on_done(false);
@@ -1526,7 +1534,7 @@ namespace winrt::EvolutionWin::implementation
             else if (idx == 4) /* Exchange EWS */
             {
                 password_box.Visibility(Visibility::Visible);
-                password_box.PlaceholderText(L"Mot de passe Windows / Exchange");
+                password_box.PlaceholderText(Tr(L"Mot de passe Windows / Exchange"));
                 server_expander.Visibility(Visibility::Visible);
                 ews_url_box.Visibility(Visibility::Visible);
                 oauth_panel.Visibility(Visibility::Collapsed);
@@ -1553,7 +1561,7 @@ namespace winrt::EvolutionWin::implementation
             else /* IMAP / SMTP standard */
             {
                 password_box.Visibility(Visibility::Visible);
-                password_box.PlaceholderText(L"Mot de passe de messagerie");
+                password_box.PlaceholderText(Tr(L"Mot de passe de messagerie"));
                 server_expander.Visibility(Visibility::Visible);
                 ews_url_box.Visibility(Visibility::Collapsed);
                 oauth_panel.Visibility(Visibility::Collapsed);
@@ -1601,7 +1609,7 @@ namespace winrt::EvolutionWin::implementation
             hstring email{ Trim(email_box.Text()) };
             if (email.empty())
             {
-                ShowStatus(L"Veuillez renseigner l'adresse électronique.", InfoBarSeverity::Warning);
+                ShowStatus(Tr(L"Veuillez renseigner l'adresse électronique."), InfoBarSeverity::Warning);
                 args.Cancel(true);
                 return;
             }
@@ -1621,7 +1629,7 @@ namespace winrt::EvolutionWin::implementation
             hstring smtp_host{ Trim(smtp_host_box.Text()) };
             if (imap_host.empty() || smtp_host.empty())
             {
-                ShowStatus(L"Veuillez renseigner les serveurs IMAP et SMTP dans les paramètres avancés.", InfoBarSeverity::Warning);
+                ShowStatus(Tr(L"Veuillez renseigner les serveurs IMAP et SMTP dans les paramètres avancés."), InfoBarSeverity::Warning);
                 server_expander.IsExpanded(true);
                 args.Cancel(true);
                 return;
@@ -1694,7 +1702,7 @@ namespace winrt::EvolutionWin::implementation
                 JsonObject created;
                 if (!error.empty() || !JsonObject::TryParse(json, created))
                 {
-                    ShowStatus(L"Ajout du compte : " + error, InfoBarSeverity::Error);
+                    ShowStatus(Fmt(Tr(L"Ajout du compte : {0}"), { error }), InfoBarSeverity::Error);
                     return;
                 }
                 LoadAccounts();
@@ -1716,7 +1724,7 @@ namespace winrt::EvolutionWin::implementation
                 JsonObject created;
                 if (!error.empty() || !JsonObject::TryParse(json, created))
                 {
-                    ShowStatus(L"Ajout du compte : " + error, InfoBarSeverity::Error);
+                    ShowStatus(Fmt(Tr(L"Ajout du compte : {0}"), { error }), InfoBarSeverity::Error);
                     return;
                 }
                 LoadAccounts();
@@ -1742,10 +1750,10 @@ namespace winrt::EvolutionWin::implementation
             {
                 if (!error.empty())
                 {
-                    ShowStatus(L"Ajout du compte : " + error, InfoBarSeverity::Error);
+                    ShowStatus(Fmt(Tr(L"Ajout du compte : {0}"), { error }), InfoBarSeverity::Error);
                     return;
                 }
-                ShowStatus(L"Compte « " + account_name + L" » ajouté.", InfoBarSeverity::Success);
+                ShowStatus(Fmt(Tr(L"Compte « {0} » ajouté."), { account_name }), InfoBarSeverity::Success);
                 LoadAccounts();
             });
             co_return;
@@ -1760,7 +1768,7 @@ namespace winrt::EvolutionWin::implementation
         {
             if (client_id_box.Text().empty())
             {
-                ShowStatus(L"Veuillez renseigner le Client ID OAuth2.", InfoBarSeverity::Warning);
+                ShowStatus(Tr(L"Veuillez renseigner le Client ID OAuth2."), InfoBarSeverity::Warning);
                 co_return;
             }
             secret = co_await StartOAuth2SignInAsync(provider_idx, client_id_box.Text(), tenant_id_box.Text(), email);
@@ -1792,10 +1800,10 @@ namespace winrt::EvolutionWin::implementation
         {
             if (!error.empty())
             {
-                ShowStatus(L"Ajout du compte : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Ajout du compte : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
-            ShowStatus(L"Compte « " + email + L" » ajouté.", InfoBarSeverity::Success);
+            ShowStatus(Fmt(Tr(L"Compte « {0} » ajouté."), { email }), InfoBarSeverity::Success);
             LoadAccounts();
         });
     }
@@ -1844,7 +1852,7 @@ namespace winrt::EvolutionWin::implementation
         if (!acct_error->empty() || !JsonObject::TryParse(*acct_json, acct))
         {
             m_dialog_open = false;
-            ShowStatus(L"Impossible de charger les paramètres du compte : " + *acct_error, InfoBarSeverity::Error);
+            ShowStatus(Fmt(Tr(L"Impossible de charger les paramètres du compte : {0}"), { *acct_error }), InfoBarSeverity::Error);
             co_return;
         }
 
@@ -1882,9 +1890,9 @@ namespace winrt::EvolutionWin::implementation
         /* Construction de la boîte de dialogue */
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Propriétés du compte — " + display_name));
-        dialog.PrimaryButtonText(L"Enregistrer");
-        dialog.CloseButtonText(L"Annuler");
+        dialog.Title(box_value(Fmt(Tr(L"Propriétés du compte — {0}"), { display_name })));
+        dialog.PrimaryButtonText(Tr(L"Enregistrer"));
+        dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Primary);
 
         StackPanel main_panel;
@@ -1893,38 +1901,38 @@ namespace winrt::EvolutionWin::implementation
 
         /* Section 1 : Identité du compte */
         TextBlock sec1_header;
-        sec1_header.Text(L"Identité du compte");
+        sec1_header.Text(Tr(L"Identité du compte"));
         sec1_header.Style(Application::Current().Resources().Lookup(box_value(L"SubtitleTextBlockStyle")).as<Style>());
         main_panel.Children().Append(sec1_header);
 
         TextBox display_name_box;
-        display_name_box.Header(box_value(L"Nom d'affichage du compte"));
+        display_name_box.Header(box_value(Tr(L"Nom d'affichage du compte")));
         display_name_box.Text(display_name);
         main_panel.Children().Append(display_name_box);
 
         TextBox real_name_box;
-        real_name_box.Header(box_value(L"Votre nom complet (expéditeur)"));
+        real_name_box.Header(box_value(Tr(L"Votre nom complet (expéditeur)")));
         real_name_box.Text(real_name);
         main_panel.Children().Append(real_name_box);
 
         TextBox email_box;
-        email_box.Header(box_value(L"Adresse électronique"));
+        email_box.Header(box_value(Tr(L"Adresse électronique")));
         email_box.Text(email);
         main_panel.Children().Append(email_box);
 
         CheckBox is_enabled_check;
-        is_enabled_check.Content(box_value(L"Activer ce compte (synchronisation et relève des courriels)"));
+        is_enabled_check.Content(box_value(Tr(L"Activer ce compte (synchronisation et relève des courriels)")));
         is_enabled_check.IsChecked(is_enabled_initial);
         main_panel.Children().Append(is_enabled_check);
 
         CheckBox is_default_check;
-        is_default_check.Content(box_value(L"Définir comme compte par défaut pour les nouveaux messages"));
+        is_default_check.Content(box_value(Tr(L"Définir comme compte par défaut pour les nouveaux messages")));
         is_default_check.IsChecked(is_default_initial);
         main_panel.Children().Append(is_default_check);
 
         /* Section 2 : Configuration des serveurs et sécurité */
         Expander server_expander;
-        server_expander.Header(box_value(L"Configuration des serveurs et authentification"));
+        server_expander.Header(box_value(Tr(L"Configuration des serveurs et authentification")));
         server_expander.IsExpanded(!imap_host.empty());
         server_expander.HorizontalAlignment(HorizontalAlignment::Stretch);
 
@@ -1933,7 +1941,7 @@ namespace winrt::EvolutionWin::implementation
         server_panel.Padding(ThicknessHelper::FromLengths(10, 8, 10, 8));
 
         TextBox imap_host_box;
-        imap_host_box.Header(box_value(L"Serveur entrant (IMAP)"));
+        imap_host_box.Header(box_value(Tr(L"Serveur entrant (IMAP)")));
         imap_host_box.Text(imap_host);
         server_panel.Children().Append(imap_host_box);
 
@@ -1945,25 +1953,25 @@ namespace winrt::EvolutionWin::implementation
         imap_port_grid.ColumnDefinitions().Append(col_is);
 
         TextBox imap_port_box;
-        imap_port_box.Header(box_value(L"Port IMAP"));
+        imap_port_box.Header(box_value(Tr(L"Port IMAP")));
         imap_port_box.Text(to_hstring(imap_port));
         imap_port_box.Margin(ThicknessHelper::FromLengths(0, 0, 8, 0));
         Grid::SetColumn(imap_port_box, 0);
         imap_port_grid.Children().Append(imap_port_box);
 
         ComboBox imap_sec_combo = MakeSecurityComboBox(imap_security);
-        imap_sec_combo.Header(box_value(L"Sécurité IMAP"));
+        imap_sec_combo.Header(box_value(Tr(L"Sécurité IMAP")));
         Grid::SetColumn(imap_sec_combo, 1);
         imap_port_grid.Children().Append(imap_sec_combo);
         server_panel.Children().Append(imap_port_grid);
 
         TextBox imap_user_box;
-        imap_user_box.Header(box_value(L"Nom d'utilisateur IMAP"));
+        imap_user_box.Header(box_value(Tr(L"Nom d'utilisateur IMAP")));
         imap_user_box.Text(imap_user);
         server_panel.Children().Append(imap_user_box);
 
         TextBox smtp_host_box;
-        smtp_host_box.Header(box_value(L"Serveur sortant (SMTP)"));
+        smtp_host_box.Header(box_value(Tr(L"Serveur sortant (SMTP)")));
         smtp_host_box.Text(smtp_host);
         server_panel.Children().Append(smtp_host_box);
 
@@ -1975,26 +1983,26 @@ namespace winrt::EvolutionWin::implementation
         smtp_port_grid.ColumnDefinitions().Append(col_ss);
 
         TextBox smtp_port_box;
-        smtp_port_box.Header(box_value(L"Port SMTP"));
+        smtp_port_box.Header(box_value(Tr(L"Port SMTP")));
         smtp_port_box.Text(to_hstring(smtp_port));
         smtp_port_box.Margin(ThicknessHelper::FromLengths(0, 0, 8, 0));
         Grid::SetColumn(smtp_port_box, 0);
         smtp_port_grid.Children().Append(smtp_port_box);
 
         ComboBox smtp_sec_combo = MakeSecurityComboBox(smtp_security);
-        smtp_sec_combo.Header(box_value(L"Sécurité SMTP"));
+        smtp_sec_combo.Header(box_value(Tr(L"Sécurité SMTP")));
         Grid::SetColumn(smtp_sec_combo, 1);
         smtp_port_grid.Children().Append(smtp_sec_combo);
         server_panel.Children().Append(smtp_port_grid);
 
         TextBox smtp_user_box;
-        smtp_user_box.Header(box_value(L"Nom d'utilisateur SMTP"));
+        smtp_user_box.Header(box_value(Tr(L"Nom d'utilisateur SMTP")));
         smtp_user_box.Text(smtp_user);
         server_panel.Children().Append(smtp_user_box);
 
         PasswordBox new_pwd_box;
-        new_pwd_box.Header(box_value(L"Modifier le mot de passe"));
-        new_pwd_box.PlaceholderText(L"Laisser vide pour conserver le mot de passe actuel");
+        new_pwd_box.Header(box_value(Tr(L"Modifier le mot de passe")));
+        new_pwd_box.PlaceholderText(Tr(L"Laisser vide pour conserver le mot de passe actuel"));
         server_panel.Children().Append(new_pwd_box);
 
         /* Bouton de test de connectivité des serveurs modifiés */
@@ -2004,7 +2012,7 @@ namespace winrt::EvolutionWin::implementation
         test_row.Margin(ThicknessHelper::FromLengths(0, 6, 0, 0));
 
         Button test_conn_btn;
-        test_conn_btn.Content(box_value(L"Tester la connexion"));
+        test_conn_btn.Content(box_value(Tr(L"Tester la connexion")));
         test_row.Children().Append(test_conn_btn);
 
         ProgressRing test_ring;
@@ -2028,7 +2036,7 @@ namespace winrt::EvolutionWin::implementation
             test_conn_btn.IsEnabled(false);
             test_ring.IsActive(true);
             test_ring.Visibility(Visibility::Visible);
-            test_status.Text(L"Test de connectivité en cours…");
+            test_status.Text(Tr(L"Test de connectivité en cours…"));
             test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorPrimaryBrush")).as<Brush>());
             test_status.Visibility(Visibility::Visible);
 
@@ -2051,7 +2059,7 @@ namespace winrt::EvolutionWin::implementation
 
                 if (!error.empty())
                 {
-                    test_status.Text(L"Erreur de test : " + error);
+                    test_status.Text(Fmt(Tr(L"Erreur de test : {0}"), { error }));
                     test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Brush>());
                     return;
                 }
@@ -2059,7 +2067,7 @@ namespace winrt::EvolutionWin::implementation
                 JsonObject res;
                 if (!JsonObject::TryParse(res_json, res))
                 {
-                    test_status.Text(L"Réponse de test invalide");
+                    test_status.Text(Tr(L"Réponse de test invalide"));
                     return;
                 }
 
@@ -2070,15 +2078,15 @@ namespace winrt::EvolutionWin::implementation
 
                 if (imap_ok && smtp_ok)
                 {
-                    test_status.Text(L"✓ Serveurs IMAP et SMTP connectés avec succès.");
+                    test_status.Text(Tr(L"✓ Serveurs IMAP et SMTP connectés avec succès."));
                     test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorSuccessBrush")).as<Brush>());
                 }
                 else
                 {
-                    std::wstring msg;
-                    if (!imap_ok) msg += L"Échec IMAP : " + std::wstring{ imap_err } + L"  ";
-                    if (!smtp_ok) msg += L"Échec SMTP : " + std::wstring{ smtp_err };
-                    test_status.Text(hstring{ msg });
+                    hstring msg;
+                    if (!imap_ok) msg = Fmt(Tr(L"Échec IMAP : {0}"), { imap_err }) + L"  ";
+                    if (!smtp_ok) msg = msg + Fmt(Tr(L"Échec SMTP : {0}"), { smtp_err });
+                    test_status.Text(msg);
                     test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Brush>());
                 }
             });
@@ -2089,7 +2097,7 @@ namespace winrt::EvolutionWin::implementation
 
         /* Section 3 : Attribution des rôles de dossiers spéciaux (CAMEL_FOLDER_TYPE_*) */
         Expander sf_expander;
-        sf_expander.Header(box_value(L"Rôles des dossiers spéciaux"));
+        sf_expander.Header(box_value(Tr(L"Rôles des dossiers spéciaux")));
         sf_expander.IsExpanded(true);
         sf_expander.HorizontalAlignment(HorizontalAlignment::Stretch);
 
@@ -2099,15 +2107,15 @@ namespace winrt::EvolutionWin::implementation
 
         TextBlock sf_desc;
         sf_desc.TextWrapping(TextWrapping::Wrap);
-        sf_desc.Text(L"Associez les dossiers de ce compte aux fonctionnalités d'Evolution "
-                     L"(messages envoyés, brouillons, corbeille, courrier indésirable et archives).");
+        sf_desc.Text(Tr(L"Associez les dossiers de ce compte aux fonctionnalités d'Evolution "
+                        L"(messages envoyés, brouillons, corbeille, courrier indésirable et archives)."));
         sf_panel.Children().Append(sf_desc);
 
-        ComboBox sent_combo = MakeSpecialFolderRow(L"Dossier des messages envoyés (Sent)", cur_sent, folder_choices, sf_panel);
-        ComboBox drafts_combo = MakeSpecialFolderRow(L"Dossier des brouillons (Drafts)", cur_drafts, folder_choices, sf_panel);
-        ComboBox trash_combo = MakeSpecialFolderRow(L"Corbeille (Trash)", cur_trash, folder_choices, sf_panel);
-        ComboBox junk_combo = MakeSpecialFolderRow(L"Courrier indésirable (Junk)", cur_junk, folder_choices, sf_panel);
-        ComboBox archive_combo = MakeSpecialFolderRow(L"Archives (Archive)", cur_archive, folder_choices, sf_panel);
+        ComboBox sent_combo = MakeSpecialFolderRow(Tr(L"Dossier des messages envoyés (Sent)"), cur_sent, folder_choices, sf_panel);
+        ComboBox drafts_combo = MakeSpecialFolderRow(Tr(L"Dossier des brouillons (Drafts)"), cur_drafts, folder_choices, sf_panel);
+        ComboBox trash_combo = MakeSpecialFolderRow(Tr(L"Corbeille (Trash)"), cur_trash, folder_choices, sf_panel);
+        ComboBox junk_combo = MakeSpecialFolderRow(Tr(L"Courrier indésirable (Junk)"), cur_junk, folder_choices, sf_panel);
+        ComboBox archive_combo = MakeSpecialFolderRow(Tr(L"Archives (Archive)"), cur_archive, folder_choices, sf_panel);
 
         sf_expander.Content(sf_panel);
         main_panel.Children().Append(sf_expander);
@@ -2157,14 +2165,14 @@ namespace winrt::EvolutionWin::implementation
 
         bool new_default = is_default_check.IsChecked().Value();
 
-        ShowStatus(L"Enregistrement des modifications pour « " + display_name_box.Text() + L" »…", InfoBarSeverity::Informational);
+        ShowStatus(Fmt(Tr(L"Enregistrement des modifications pour « {0} »…"), { display_name_box.Text() }), InfoBarSeverity::Informational);
 
         m_core->ModifyAccount(update.Stringify(), [this, account_uid, display_name = display_name_box.Text(), new_default, is_default_initial](
             hstring const&, hstring const& error)
         {
             if (!error.empty())
             {
-                ShowStatus(L"Modification du compte : " + error, InfoBarSeverity::Error);
+                ShowStatus(Fmt(Tr(L"Modification du compte : {0}"), { error }), InfoBarSeverity::Error);
                 return;
             }
 
@@ -2173,13 +2181,13 @@ namespace winrt::EvolutionWin::implementation
                 m_core->SetDefaultAccount(account_uid, [this, display_name](hstring const&, hstring const&)
                 {
                     LoadAccounts();
-                    ShowStatus(L"Compte « " + display_name + L" » mis à jour et défini par défaut.", InfoBarSeverity::Success);
+                    ShowStatus(Fmt(Tr(L"Compte « {0} » mis à jour et défini par défaut."), { display_name }), InfoBarSeverity::Success);
                 });
             }
             else
             {
                 LoadAccounts();
-                ShowStatus(L"Compte « " + display_name + L" » mis à jour avec succès.", InfoBarSeverity::Success);
+                ShowStatus(Fmt(Tr(L"Compte « {0} » mis à jour avec succès."), { display_name }), InfoBarSeverity::Success);
             }
             m_core->Refresh();
         });
@@ -2196,7 +2204,7 @@ namespace winrt::EvolutionWin::implementation
 
         if (m_account.empty() || !m_core)
         {
-            ShowStatus(L"Aucun compte n'est actuellement sélectionné.", InfoBarSeverity::Warning);
+            ShowStatus(Tr(L"Aucun compte n'est actuellement sélectionné."), InfoBarSeverity::Warning);
             co_return;
         }
 
@@ -2217,7 +2225,7 @@ namespace winrt::EvolutionWin::implementation
             }
         }
 
-        ShowStatus(L"Interrogation du quota pour « " + account_name + L" »…", InfoBarSeverity::Informational);
+        ShowStatus(Fmt(Tr(L"Interrogation du quota pour « {0} »…"), { account_name }), InfoBarSeverity::Informational);
 
         auto quota_json = std::make_shared<hstring>();
         auto quota_err = std::make_shared<hstring>();
@@ -2239,7 +2247,7 @@ namespace winrt::EvolutionWin::implementation
         int64_t used = 0;
         int64_t total = 0;
         int percent = 0;
-        hstring q_name = L"Espace de stockage";
+        hstring q_name = Tr(L"Espace de stockage");
 
         if (quota_err->empty() && JsonObject::TryParse(*quota_json, res))
         {
@@ -2249,14 +2257,14 @@ namespace winrt::EvolutionWin::implementation
                 used = static_cast<int64_t>(res.GetNamedNumber(L"used", 0));
                 total = static_cast<int64_t>(res.GetNamedNumber(L"total", 0));
                 percent = static_cast<int>(res.GetNamedNumber(L"percent", 0));
-                q_name = res.GetNamedString(L"name", L"Stockage");
+                q_name = res.GetNamedString(L"name", Tr(L"Stockage"));
             }
         }
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Espace de stockage — " + account_name));
-        dialog.CloseButtonText(L"Fermer");
+        dialog.Title(box_value(Fmt(Tr(L"Espace de stockage — {0}"), { account_name })));
+        dialog.CloseButtonText(Tr(L"Fermer"));
         dialog.DefaultButton(ContentDialogButton::Close);
 
         StackPanel panel;
@@ -2266,7 +2274,7 @@ namespace winrt::EvolutionWin::implementation
         if (has_quota)
         {
             TextBlock info_txt;
-            info_txt.Text(q_name + L" sur le serveur :");
+            info_txt.Text(Fmt(Tr(L"Sur le serveur : {0}"), { q_name }));
             info_txt.Style(Application::Current().Resources().Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>());
             panel.Children().Append(info_txt);
 
@@ -2280,26 +2288,26 @@ namespace winrt::EvolutionWin::implementation
             TextBlock usage_txt;
             hstring used_str = FormatFileSize(used);
             hstring total_str = FormatFileSize(total);
-            usage_txt.Text(used_str + L" utilisés sur " + total_str + L" (" + to_hstring(percent) + L" %)");
+            usage_txt.Text(Fmt(Tr(L"Utilisé : {0} sur {1} ({2} %)"), { used_str, total_str, to_hstring(percent) }));
             usage_txt.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
             panel.Children().Append(usage_txt);
         }
         else
         {
             TextBlock no_q;
-            no_q.Text(L"Le serveur de messagerie pour « " + account_name + L" » ne publie pas de limite de quota ou n'utilise pas l'extension IMAP QUOTA.");
+            no_q.Text(Fmt(Tr(L"Le serveur de messagerie pour « {0} » ne publie pas de limite de quota ou n'utilise pas l'extension IMAP QUOTA."), { account_name }));
             no_q.TextWrapping(TextWrapping::Wrap);
             panel.Children().Append(no_q);
         }
 
         TextBlock cleanup_hdr;
-        cleanup_hdr.Text(L"Outils de nettoyage rapide :");
+        cleanup_hdr.Text(Tr(L"Outils de nettoyage rapide :"));
         cleanup_hdr.Style(Application::Current().Resources().Lookup(box_value(L"SubtitleTextBlockStyle")).as<Style>());
         cleanup_hdr.Margin(ThicknessHelper::FromLengths(0, 8, 0, 0));
         panel.Children().Append(cleanup_hdr);
 
         Button empty_trash_btn;
-        empty_trash_btn.Content(box_value(L"Vider la Corbeille de ce compte"));
+        empty_trash_btn.Content(box_value(Tr(L"Vider la Corbeille de ce compte")));
         empty_trash_btn.Click([this, account_uid](IInspectable const&, RoutedEventArgs const&)
         {
             if (m_core)
@@ -2307,7 +2315,7 @@ namespace winrt::EvolutionWin::implementation
                 m_core->FolderAction(account_uid, L"Trash", L"empty", [this](hstring const&, hstring const& err)
                 {
                     if (err.empty())
-                        ShowStatus(L"Corbeille vidée avec succès.", InfoBarSeverity::Success);
+                        ShowStatus(Tr(L"Corbeille vidée avec succès."), InfoBarSeverity::Success);
                 });
             }
         });
@@ -2315,5 +2323,482 @@ namespace winrt::EvolutionWin::implementation
 
         dialog.Content(panel);
         co_await dialog.ShowAsync();
+    }
+
+    /**
+     * @brief Boîte de dialogue « Ouvrir la boîte d'un autre utilisateur » : ajoute une boîte aux lettres
+     *        partagée (ou celle d'un collègue qui a donné son accord) d'un compte Microsoft 365. Un
+     *        compte courrier est créé avec les identifiants du compte d'origine (une connexion
+     *        Microsoft est demandée) et l'adresse de la boîte partagée comme adresse d'expédition.
+     * @param account_uid Compte Microsoft 365 d'origine.
+     */
+    fire_and_forget MainWindow::ShowSharedMailboxDialogAsync(hstring account_uid)
+    {
+        auto strong = get_strong();
+        if (m_dialog_open || !Content() || !Content().XamlRoot())
+            co_return;
+
+        hstring owner_email, owner_name;
+        for (auto const& value : m_accounts ? m_accounts : JsonArray{})
+        {
+            auto account = value.GetObject();
+            if (account.GetNamedString(L"uid", L"") == account_uid)
+            {
+                owner_email = account.GetNamedString(L"address", L"");
+                owner_name = account.GetNamedString(L"display_name", L"");
+            }
+        }
+        if (owner_email.empty())
+            co_return;
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(Tr(L"Ouvrir la boîte d'un autre utilisateur", L"Open another user's mailbox")));
+        StackPanel panel;
+        panel.Spacing(10);
+        panel.MinWidth(420);
+        TextBlock hint;
+        hint.TextWrapping(TextWrapping::Wrap);
+        hint.Text(Tr(L"Adresse d'une boîte partagée (support, info…) ou de la boîte d'un collègue sur laquelle vous avez le droit d'accès complet (« FullAccess »). "
+                     L"Une connexion Microsoft sera demandée avec votre compte.",
+                     L"Address of a shared mailbox (support, info…) or of a colleague's mailbox you have full access to (\"FullAccess\"). "
+                     L"A Microsoft sign-in will be requested with your account."));
+        panel.Children().Append(hint);
+        TextBox address_box;
+        address_box.Header(box_value(Tr(L"Adresse de la boîte", L"Mailbox address")));
+        address_box.PlaceholderText(L"equipe@entreprise.com");
+        panel.Children().Append(address_box);
+        TextBox name_box;
+        name_box.Header(box_value(Tr(L"Nom affiché (facultatif)", L"Display name (optional)")));
+        panel.Children().Append(name_box);
+        CheckBox calendar_check;
+        calendar_check.Content(box_value(Tr(L"Ouvrir aussi son agenda (droit d'accès au calendrier requis)", L"Also open its calendar (calendar access right required)")));
+        panel.Children().Append(calendar_check);
+        CheckBox contacts_check;
+        contacts_check.Content(box_value(Tr(L"Ouvrir aussi ses contacts", L"Also open its contacts")));
+        panel.Children().Append(contacts_check);
+        dialog.Content(panel);
+        dialog.PrimaryButtonText(Tr(L"Ouvrir", L"Open"));
+        dialog.CloseButtonText(Tr(L"Annuler", L"Cancel"));
+        dialog.DefaultButton(ContentDialogButton::Primary);
+
+        m_dialog_open = true;
+        auto result = co_await dialog.ShowAsync();
+        m_dialog_open = false;
+        hstring shared{ Trim(address_box.Text()) };
+        if (result != ContentDialogResult::Primary || shared.empty() || std::wstring{ shared }.find(L'@') == std::wstring::npos)
+            co_return;
+
+        hstring name = name_box.Text().empty() ? shared : hstring{ Trim(name_box.Text()) };
+        JsonObject m365;
+        m365.SetNamedValue(L"email", JsonValue::CreateStringValue(owner_email));
+        m365.SetNamedValue(L"impersonate_user", JsonValue::CreateStringValue(shared));
+        m365.SetNamedValue(L"shared_calendar", JsonValue::CreateBooleanValue(calendar_check.IsChecked() && calendar_check.IsChecked().GetBoolean()));
+        m365.SetNamedValue(L"shared_contacts", JsonValue::CreateBooleanValue(contacts_check.IsChecked() && contacts_check.IsChecked().GetBoolean()));
+        m365.SetNamedValue(L"display_name", JsonValue::CreateStringValue(name));
+        m365.SetNamedValue(L"full_name", JsonValue::CreateStringValue(name));
+        m_core->AddMicrosoft365Account(m365.Stringify(), [this, name](hstring const& json, hstring const& error)
+        {
+            JsonObject created;
+            if (!error.empty() || !JsonObject::TryParse(json, created))
+            {
+                ShowStatus(Fmt(Tr(L"Ouverture de la boîte : {0}", L"Opening the mailbox: {0}"), { error }), InfoBarSeverity::Error);
+                return;
+            }
+            LoadAccounts();
+            SignInOAuth2Async(created.GetNamedString(L"collection_uid", L""), name);
+        });
+    }
+
+    /**
+     * @brief « Fermer la boîte partagée » : retire du client le compte de la boîte partagée (la boîte
+     *        elle-même, côté Exchange, n'est pas touchée) après confirmation.
+     * @param account_uid Compte de la boîte partagée.
+     */
+    fire_and_forget MainWindow::CloseSharedMailboxAsync(hstring account_uid)
+    {
+        auto strong = get_strong();
+        if (m_dialog_open || !Content() || !Content().XamlRoot())
+            co_return;
+
+        hstring name = account_uid;
+        for (auto const& value : m_accounts ? m_accounts : JsonArray{})
+        {
+            auto account = value.GetObject();
+            if (account.GetNamedString(L"uid", L"") == account_uid)
+                name = account.GetNamedString(L"name", account_uid);
+        }
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(Tr(L"Fermer la boîte partagée", L"Close the shared mailbox")));
+        TextBlock text;
+        text.TextWrapping(TextWrapping::Wrap);
+        text.Text(Fmt(Tr(L"Retirer « {0} » d'EvolutionWin ? La boîte aux lettres elle-même n'est pas modifiée ; vous pourrez la rouvrir à tout moment.",
+                         L"Remove \"{0}\" from EvolutionWin? The mailbox itself is not modified; you can reopen it at any time."), { name }));
+        dialog.Content(text);
+        dialog.PrimaryButtonText(Tr(L"Fermer la boîte", L"Close mailbox"));
+        dialog.CloseButtonText(Tr(L"Annuler", L"Cancel"));
+        dialog.DefaultButton(ContentDialogButton::Close);
+
+        m_dialog_open = true;
+        auto result = co_await dialog.ShowAsync();
+        m_dialog_open = false;
+        if (result != ContentDialogResult::Primary)
+            co_return;
+
+        m_core->RemoveAccount(account_uid, [this, name](hstring const&, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                ShowStatus(Fmt(Tr(L"Fermeture de la boîte : {0}", L"Closing the mailbox: {0}"), { error }), InfoBarSeverity::Error);
+                return;
+            }
+            ShowStatus(Fmt(Tr(L"Boîte « {0} » fermée.", L"Mailbox \"{0}\" closed."), { name }), InfoBarSeverity::Informational);
+            LoadAccounts();
+        });
+    }
+
+    /**
+     * @brief « Récupérer les éléments supprimés du serveur » : fenêtre redimensionnable listant le dossier
+     *        des éléments récupérables (suppressions conservées par Exchange Online) d'un compte Microsoft 365
+     *        (objet, date de suppression, expéditeur, date de réception, destinataires), avec filtre et tri par
+     *        colonne ; restaure les éléments sélectionnés dans la Boîte de réception ou les supprime définitivement.
+     * @param account_uid Compte courrier Microsoft 365.
+     */
+    void MainWindow::ShowRecoverableItemsDialogAsync(hstring account_uid)
+    {
+        struct Entry { std::wstring id, subject, from, to; int64_t received{ 0 }, deleted{ 0 }; };
+        struct State
+        {
+            std::vector<Entry> entries;
+            std::set<std::wstring> selected;
+            bool filling{ false };
+            int sort_column{ 1 };       /* 0 objet, 1 supprimé le, 2 de, 3 reçu, 4 envoyé à */
+            bool ascending{ false };
+        };
+        auto state = std::make_shared<State>();
+
+        Window window;
+        window.Title(Tr(L"Récupérer les éléments supprimés", L"Recover deleted items"));
+        window.AppWindow().Resize({ 1150, 700 });
+        ::EvolutionWin::SetWindowIcon(window.AppWindow());
+
+        Grid root;
+        root.Padding(ThicknessHelper::FromLengths(16, 12, 16, 12));
+        root.RowSpacing(8);
+        root.Background(Application::Current().Resources().Lookup(box_value(L"ApplicationPageBackgroundThemeBrush")).as<Media::Brush>());
+        for (int i = 0; i < 5; ++i)
+        {
+            RowDefinition row;
+            row.Height(i == 2 ? GridLengthHelper::FromValueAndType(1, GridUnitType::Star) : GridLengthHelper::Auto());
+            root.RowDefinitions().Append(row);
+        }
+
+        StackPanel top;
+        top.Spacing(8);
+        TextBlock info;
+        info.TextWrapping(TextWrapping::Wrap);
+        info.Text(Tr(L"Messages supprimés définitivement mais encore conservés par le serveur (100 plus récents). Sélectionnez ceux à traiter (Ctrl / Maj pour plusieurs).",
+                     L"Messages deleted permanently but still kept by the server (100 most recent). Select the ones to process (Ctrl / Shift for several)."));
+        top.Children().Append(info);
+        TextBox filter_box;
+        filter_box.PlaceholderText(Tr(L"Filtrer par objet, expéditeur, destinataire ou date", L"Filter by subject, sender, recipient or date"));
+        top.Children().Append(filter_box);
+        Grid::SetRow(top, 0);
+        root.Children().Append(top);
+
+        /* colonnes communes à l'en-tête et aux lignes (proportionnelles : le texte suit la taille de la fenêtre) */
+        auto make_columns = [](Grid const& grid)
+        {
+            static constexpr double widths[] = { 3.0, 1.6, 1.8, 1.6, 2.6 };
+            for (double width : widths)
+            {
+                ColumnDefinition column;
+                column.Width(GridLengthHelper::FromValueAndType(width, GridUnitType::Star));
+                column.MinWidth(70);
+                grid.ColumnDefinitions().Append(column);
+            }
+        };
+
+        Grid body;
+        body.RowSpacing(0);
+        {
+            RowDefinition header_row;
+            header_row.Height(GridLengthHelper::Auto());
+            body.RowDefinitions().Append(header_row);
+            RowDefinition list_row;
+            list_row.Height(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+            body.RowDefinitions().Append(list_row);
+        }
+        Grid header;
+        header.Padding(ThicknessHelper::FromLengths(12, 0, 28, 0));
+        make_columns(header);
+        std::vector<Button> header_buttons;
+        hstring const column_titles[] = { Tr(L"Objet", L"Subject"), Tr(L"Supprimé le", L"Deleted on"), Tr(L"De", L"From"),
+                                          Tr(L"Reçu", L"Received"), Tr(L"Envoyé à", L"Sent to") };
+        for (int c = 0; c < 5; ++c)
+        {
+            Button button;
+            button.Content(box_value(column_titles[c]));
+            button.Background(SolidColorBrush(Windows::UI::Colors::Transparent()));
+            button.BorderThickness(ThicknessHelper::FromUniformLength(0));
+            button.HorizontalAlignment(HorizontalAlignment::Stretch);
+            button.HorizontalContentAlignment(HorizontalAlignment::Left);
+            Grid::SetColumn(button, c);
+            header.Children().Append(button);
+            header_buttons.push_back(button);
+        }
+        Grid::SetRow(header, 0);
+        body.Children().Append(header);
+
+        ListView list;
+        list.SelectionMode(ListViewSelectionMode::Extended);
+        Grid::SetRow(list, 1);
+        body.Children().Append(list);
+        ProgressRing ring;
+        ring.IsActive(true);
+        ring.Width(32);
+        ring.Height(32);
+        ring.HorizontalAlignment(HorizontalAlignment::Center);
+        ring.VerticalAlignment(VerticalAlignment::Center);
+        Grid::SetRow(ring, 1);
+        body.Children().Append(ring);
+        Grid::SetRow(body, 2);
+        root.Children().Append(body);
+
+        StackPanel options;
+        options.Spacing(6);
+        RadioButtons action_choice;
+        action_choice.Items().Append(box_value(Tr(L"Restaurer les éléments sélectionnés (dans la Boîte de réception)", L"Restore the selected items (to the Inbox)")));
+        action_choice.Items().Append(box_value(Tr(L"Supprimer définitivement les éléments sélectionnés", L"Permanently delete the selected items")));
+        action_choice.SelectedIndex(0);
+        options.Children().Append(action_choice);
+        TextBlock status;
+        status.TextWrapping(TextWrapping::Wrap);
+        options.Children().Append(status);
+        Grid::SetRow(options, 3);
+        root.Children().Append(options);
+
+        Grid buttons;
+        {
+            ColumnDefinition spacer;
+            spacer.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+            buttons.ColumnDefinitions().Append(spacer);
+            ColumnDefinition auto_a, auto_b;
+            auto_a.Width(GridLengthHelper::Auto());
+            auto_b.Width(GridLengthHelper::Auto());
+            buttons.ColumnDefinitions().Append(auto_a);
+            buttons.ColumnDefinitions().Append(auto_b);
+            buttons.ColumnSpacing(8);
+        }
+        Button select_all;
+        select_all.Content(box_value(Tr(L"Sélectionner tout", L"Select all")));
+        Grid::SetColumn(select_all, 0);
+        select_all.HorizontalAlignment(HorizontalAlignment::Left);
+        Button ok;
+        ok.Content(box_value(L"OK"));
+        ok.Style(Application::Current().Resources().Lookup(box_value(L"AccentButtonStyle")).as<Style>());
+        ok.IsEnabled(false);
+        ok.MinWidth(96);
+        Grid::SetColumn(ok, 1);
+        Button cancel;
+        cancel.Content(box_value(Tr(L"Annuler", L"Cancel")));
+        cancel.MinWidth(96);
+        Grid::SetColumn(cancel, 2);
+        buttons.Children().Append(select_all);
+        buttons.Children().Append(ok);
+        buttons.Children().Append(cancel);
+        Grid::SetRow(buttons, 4);
+        root.Children().Append(buttons);
+        window.Content(root);
+
+        auto fmt = [](int64_t unix_time) -> std::wstring
+        {
+            if (unix_time <= 0)
+                return L"";
+            time_t t = static_cast<time_t>(unix_time);
+            struct tm local{};
+            localtime_s(&local, &t);
+            wchar_t buffer[32];
+            swprintf_s(buffer, L"%02d.%02d.%04d %02d:%02d", local.tm_mday, local.tm_mon + 1, local.tm_year + 1900, local.tm_hour, local.tm_min);
+            return buffer;
+        };
+
+        /* (re)remplit la liste : tri, filtre, sélection conservée */
+        auto fill = [state, list, filter_box, header_buttons, fmt, make_columns]()
+        {
+            std::wstring needle{ filter_box.Text() };
+            std::transform(needle.begin(), needle.end(), needle.begin(), ::towlower);
+            auto key = [&](Entry const& e, int column) -> std::wstring
+            {
+                switch (column)
+                {
+                case 0: return e.subject;
+                case 2: return e.from;
+                case 4: return e.to;
+                default: return L"";
+                }
+            };
+            std::stable_sort(state->entries.begin(), state->entries.end(), [&](Entry const& a, Entry const& b)
+            {
+                int c = state->sort_column;
+                bool less;
+                if (c == 1 || c == 3)
+                {
+                    int64_t x = c == 1 ? a.deleted : a.received, y = c == 1 ? b.deleted : b.received;
+                    less = state->ascending ? x < y : x > y;
+                }
+                else
+                {
+                    std::wstring x = key(a, c), y = key(b, c);
+                    std::transform(x.begin(), x.end(), x.begin(), ::towlower);
+                    std::transform(y.begin(), y.end(), y.begin(), ::towlower);
+                    less = state->ascending ? x < y : x > y;
+                }
+                return less;
+            });
+            for (int c = 0; c < 5; ++c)
+            {
+                std::wstring title{ unbox_value<hstring>(header_buttons[c].Content()) };
+                while (!title.empty() && (title.back() == L'\u25B2' || title.back() == L'\u25BC' || title.back() == L' '))
+                    title.pop_back();
+                if (c == state->sort_column)
+                    title += state->ascending ? L" \u25B2" : L" \u25BC";
+                header_buttons[c].Content(box_value(hstring{ title }));
+            }
+
+            state->filling = true;
+            list.Items().Clear();
+            for (auto const& entry : state->entries)
+            {
+                std::wstring haystack = entry.subject + L" " + entry.from + L" " + entry.to + L" " + fmt(entry.received) + L" " + fmt(entry.deleted);
+                std::transform(haystack.begin(), haystack.end(), haystack.begin(), ::towlower);
+                if (!needle.empty() && haystack.find(needle) == std::wstring::npos)
+                    continue;
+
+                Grid cells;
+                make_columns(cells);
+                std::wstring values[] = { entry.subject.empty() ? std::wstring{ Tr(L"(sans objet)") } : entry.subject, fmt(entry.deleted), entry.from, fmt(entry.received), entry.to };
+                for (int c = 0; c < 5; ++c)
+                {
+                    TextBlock cell;
+                    cell.Text(hstring{ values[c] });
+                    cell.TextTrimming(TextTrimming::CharacterEllipsis);
+                    cell.VerticalAlignment(VerticalAlignment::Center);
+                    cell.Margin(ThicknessHelper::FromLengths(0, 0, 8, 0));
+                    Grid::SetColumn(cell, c);
+                    cells.Children().Append(cell);
+                }
+                ListViewItem row;
+                row.HorizontalContentAlignment(HorizontalAlignment::Stretch);
+                row.Content(cells);
+                row.Tag(box_value(hstring{ entry.id }));
+                ToolTipService::SetToolTip(row, box_value(hstring{ values[0] + L"\n" + values[2] + L" → " + values[4] + L"\n" + values[3] }));
+                list.Items().Append(row);
+                if (state->selected.count(entry.id))
+                    row.IsSelected(true);
+            }
+            state->filling = false;
+        };
+
+        for (int c = 0; c < 5; ++c)
+            header_buttons[c].Click([state, fill, c](IInspectable const&, RoutedEventArgs const&)
+            {
+                if (state->sort_column == c)
+                    state->ascending = !state->ascending;
+                else
+                {
+                    state->sort_column = c;
+                    state->ascending = (c == 0 || c == 2 || c == 4);
+                }
+                fill();
+            });
+        filter_box.TextChanged([fill](auto&&, auto&&) { fill(); });
+        select_all.Click([list](auto&&, auto&&) { list.SelectAll(); });
+        cancel.Click([window](auto&&, auto&&) { window.Close(); });
+        action_choice.SelectionChanged([status, action_choice](auto&&, auto&&)
+        {
+            status.Text(action_choice.SelectedIndex() == 1
+                ? Tr(L"Attention : la suppression définitive est irréversible.", L"Warning: permanent deletion cannot be undone.")
+                : hstring{});
+        });
+        list.SelectionChanged([state, ok](IInspectable const&, SelectionChangedEventArgs const& args)
+        {
+            if (state->filling)
+                return;
+            for (auto const& added : args.AddedItems())
+                if (auto row = added.try_as<ListViewItem>())
+                    state->selected.insert(std::wstring{ unbox_value_or<hstring>(row.Tag(), L"") });
+            for (auto const& removed : args.RemovedItems())
+                if (auto row = removed.try_as<ListViewItem>())
+                    state->selected.erase(std::wstring{ unbox_value_or<hstring>(row.Tag(), L"") });
+            ok.IsEnabled(!state->selected.empty());
+        });
+
+        ok.Click([this, state, window, account_uid, action_choice, ok, cancel](auto&&, auto&&)
+        {
+            if (state->selected.empty())
+                return;
+            std::wstring ids;
+            for (auto const& id : state->selected)
+                ids += (ids.empty() ? L"" : L" ") + id;
+            bool purge = action_choice.SelectedIndex() == 1;
+            ok.IsEnabled(false);
+            cancel.IsEnabled(false);
+            auto done = [this, window, purge](hstring const& json, hstring const& error)
+            {
+                window.Close();
+                JsonObject outcome;
+                if (!error.empty() || !JsonObject::TryParse(json, outcome))
+                {
+                    ShowStatus(Fmt(Tr(L"Éléments supprimés : {0}", L"Deleted items: {0}"), { error }), InfoBarSeverity::Error);
+                    return;
+                }
+                int count = static_cast<int>(outcome.GetNamedNumber(L"restored", 0));
+                int failed = static_cast<int>(outcome.GetNamedNumber(L"failed", 0));
+                if (failed > 0)
+                    ShowStatus(Fmt(purge ? Tr(L"Suppression définitive : {0} élément(s), {1} échec(s) : {2}", L"Permanent deletion: {0} item(s), {1} failure(s): {2}")
+                                         : Tr(L"Restauration : {0} élément(s) dans la Boîte de réception, {1} échec(s) : {2}", L"Restore: {0} item(s) to the Inbox, {1} failure(s): {2}"),
+                                   { to_hstring(count), to_hstring(failed), outcome.GetNamedString(L"error", L"") }),
+                        InfoBarSeverity::Warning);
+                else
+                    ShowStatus(Fmt(purge ? Tr(L"Suppression définitive : {0} élément(s).", L"Permanent deletion: {0} item(s).")
+                                         : Tr(L"Restauration : {0} élément(s) dans la Boîte de réception.", L"Restore: {0} item(s) to the Inbox."),
+                                   { to_hstring(count) }),
+                        InfoBarSeverity::Success);
+            };
+            if (purge)
+                m_core->PurgeRecoverableItems(account_uid, hstring{ ids }, done);
+            else
+                m_core->RestoreRecoverableItems(account_uid, hstring{ ids }, done);
+        });
+
+        m_core->ListRecoverableItems(account_uid, [state, ring, status, fill](hstring const& json, hstring const& error)
+        {
+            ring.IsActive(false);
+            ring.Visibility(Visibility::Collapsed);
+            JsonArray items;
+            if (!error.empty() || !JsonArray::TryParse(json, items))
+            {
+                status.Text(Fmt(Tr(L"Lecture impossible : {0}", L"Unable to read: {0}"), { error }));
+                return;
+            }
+            for (auto const& value : items)
+            {
+                auto item = value.GetObject();
+                state->entries.push_back({ std::wstring{ item.GetNamedString(L"id", L"") }, std::wstring{ item.GetNamedString(L"subject", L"") },
+                    std::wstring{ item.GetNamedString(L"from", L"") }, std::wstring{ item.GetNamedString(L"to", L"") },
+                    static_cast<int64_t>(item.GetNamedNumber(L"received", 0)), static_cast<int64_t>(item.GetNamedNumber(L"deleted", 0)) });
+            }
+            if (state->entries.empty())
+                status.Text(Tr(L"Aucun élément récupérable.", L"No recoverable items."));
+            fill();
+        });
+
+        HWND owner_handle = nullptr;
+        if (auto native = try_as<::IWindowNative>())
+            native->get_WindowHandle(&owner_handle);
+        ::EvolutionWin::Helpers::ShowOwnedWindow(window, owner_handle);
     }
 }

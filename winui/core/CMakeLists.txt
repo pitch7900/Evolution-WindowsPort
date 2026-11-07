@@ -54,10 +54,13 @@ add_library(evo-core SHARED
 	evo-core-account-cloud.c
 	evo-core-account-setup.c
 	evo-core-autoreply.c
+	evo-core-offline-sync.c
 	evo-core-autoreply-util.h
 	evo-core-accounts.c
 	evo-core-calendar.c
 	evo-core-contacts.c
+	evo-core-crypto.c
+	evo-core-crypto-util.h
 	evo-core-detect.c
 	evo-core-drafts.c
 	evo-core-events.c

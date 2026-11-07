@@ -931,6 +931,21 @@ core_set_m365_settings (ESource *source,
 	}
 }
 
+/* Boîte aux lettres partagée Microsoft 365 : le compte s'ouvre sur la boîte d'un autre
+ * utilisateur (« Ouvrir la boîte de l'utilisateur », emprunt d'identité Exchange Online).
+ * Paramètres :
+ *   source : source (collection, compte ou transport) microsoft365
+ *   shared : adresse de la boîte partagée */
+void
+core_set_m365_impersonation (ESource *source,
+			     const gchar *shared)
+{
+	ESourceCamel *extension = e_source_get_extension (source, e_source_camel_get_extension_name ("microsoft365"));
+	CamelSettings *settings = e_source_camel_get_settings (extension);
+
+	g_object_set (settings, "use-impersonation", TRUE, "impersonate-user", shared, NULL);
+}
+
 /* Soumet une requête d'enregistrement du mot de passe d'un compte ou serveur.
  * Paramètres :
  *   core       : instance du moteur evo-core

@@ -19,7 +19,36 @@ namespace winrt::EvolutionWin::implementation
 
     /* UiIsEnglish() et Tr(fr, en) sont partagés dans MainWindow.Helpers.h */
     using ::EvolutionWin::Helpers::Tr;
+    using ::EvolutionWin::Helpers::Fmt;
     using ::EvolutionWin::Helpers::UiIsEnglish;
+
+    /**
+     * @brief Texte de bandeau décrivant un accusé reçu, dans la langue de l'interface.
+     * @param mdn Champs analysés.
+     * @param date_text Date de l'accusé, déjà formatée (peut être vide).
+     * @return Phrase localisée (équivalent traduisible de ::EvolutionWin::Receipts::DescribeMdn).
+     */
+    static hstring DescribeMdnLocalized(::EvolutionWin::Receipts::Mdn const& mdn, hstring const& date_text)
+    {
+        hstring who = mdn.final_recipient.empty() ? Tr(L"le destinataire", L"the recipient") : hstring{ mdn.final_recipient };
+        auto const& t = mdn.disposition_type;
+
+        hstring text;
+        if (t == L"deleted")
+            text = Fmt(Tr(L"Accusé de lecture : supprimé sans être lu par {0}", L"Read receipt: deleted by {0}"), { who });
+        else if (t == L"denied")
+            text = Fmt(Tr(L"Accusé de lecture : refusé par {0}", L"Read receipt: declined by {0}"), { who });
+        else if (t == L"dispatched" || t == L"processed")
+            text = Fmt(Tr(L"Notification de distribution : traité par {0}", L"Delivery notification: processed by {0}"), { who });
+        else if (t == L"failed")
+            text = Fmt(Tr(L"Notification de distribution : échec du traitement pour {0}", L"Delivery notification: processing failed for {0}"), { who });
+        else
+            text = Fmt(Tr(L"Accusé de lecture : lu par {0}", L"Read receipt: read by {0}"), { who });
+
+        if (!date_text.empty())
+            text = Fmt(Tr(L"{0} le {1}", L"{0} on {1}"), { text, date_text });
+        return text;
+    }
 
     /** @brief Réglage enregistré par l'utilisateur pour les accusés de lecture. */
     static ::EvolutionWin::Receipts::Policy CurrentReceiptPolicy()
@@ -57,7 +86,7 @@ namespace winrt::EvolutionWin::implementation
             if (mdn.valid)
             {
                 hstring date = ::EvolutionWin::Helpers::FormatDate(message.GetNamedNumber(L"date", 0));
-                MdnBar().Message(hstring{ DescribeMdn(mdn, std::wstring_view{ date }, UiIsEnglish()) });
+                MdnBar().Message(DescribeMdnLocalized(mdn, date));
                 MdnBar().IsOpen(true);
             }
         }
@@ -78,8 +107,8 @@ namespace winrt::EvolutionWin::implementation
             bool suspicious = IsReceiptAddressSuspicious(std::wstring_view{ receipt_to }, std::wstring_view{ from });
 
             ReceiptBar().Title(Tr(L"Accusé de lecture demandé", L"Read receipt requested"));
-            std::wstring text = std::wstring{ Tr(L"L'expéditeur demande à être prévenu de la lecture de ce message (réponse envoyée à ",
-                L"The sender asks to be notified when this message is read (reply sent to ") } + who + L").";
+            std::wstring text = std::wstring{ Fmt(Tr(L"L'expéditeur demande à être prévenu de la lecture de ce message (réponse envoyée à {0}).",
+                L"The sender asks to be notified when this message is read (reply sent to {0})."), { hstring{ who } }) };
             if (suspicious)
                 text += std::wstring{ Tr(L" Attention : cette adresse n'est pas celle de l'expéditeur.",
                     L" Warning: this address is not the sender's address.") };
