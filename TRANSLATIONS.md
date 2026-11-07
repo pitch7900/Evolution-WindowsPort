@@ -99,3 +99,4 @@ Et dans les fichiers `.resw`, définir :
 > 3. Utiliser les traductions officielles du projet Evolution GNOME comme référence terminologique (disponibles dans `evolution/po/*.po`).
 > 4. Raccorder le code C++ ou XAML en utilisant `Tr(fr, en, resourceId)` ou `x:Uid`.
 > 5. Valider avec `tools\build-winui-app.bat` et `tools\run-tests.bat`.
+

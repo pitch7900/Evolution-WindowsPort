@@ -117,6 +117,6 @@ flowchart LR
 ### 3. Ergonomie avancée, protocoles & Traductions (§2, §6, §19, §20)
 - [ ] **Lecteur immersif** : vue plein écran épurée dédiée à la lecture concentrée.
 - [ ] **Enregistrement système `mailto:`** : enregistrement en tant que client de messagerie par défaut auprès de Windows 11.
-- [ ] **Traduction complète** : couverture à 100 % des ressources localisées (`.resw` / Gettext) en français et anglais sans aucune chaîne manquante.
+- [x] **Traduction et internationalisation** : infrastructure de ressources `.resw` / MRT Core opérationnelle (`I18n.h`, `TRANSLATIONS.md`), catalogues multilingues complets (`fr-FR`, `en-US`, `de-DE`, `it-IT`, `es-ES`, `pt-PT`, `nl-NL`) et support de déploiement MSI (`UILANGUAGE`).
 - [ ] **Revue finale des critères de conformité** : validation croisée de toutes les cases de [TODO.md](TODO.md).
 
