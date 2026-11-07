@@ -78,6 +78,18 @@ namespace winrt::EvolutionWin::implementation
          */
         void OnHighImportanceClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         /**
+         * @brief Bascule « Signer » ou « Chiffrer » : vérifie aussitôt les certificats et explique la situation.
+         * @param sender Bouton émetteur.
+         * @param args Arguments d'événement.
+         */
+        void OnSecurityToggleClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        /**
+         * @brief Un champ de destinataires perd le focus : revérifie les certificats si « Chiffrer » est actif.
+         * @param sender Champ émetteur.
+         * @param args Arguments d'événement.
+         */
+        void OnRecipientLostFocus(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        /**
          * @brief Bascule l'indicateur d'importance basse pour le message en cours de rédaction.
          * @param sender Bouton émetteur de l'action.
          * @param args Arguments associés à l'événement de clic.
@@ -114,6 +126,8 @@ namespace winrt::EvolutionWin::implementation
         fire_and_forget ApplySignatureAsync();
         std::wstring RemovePlainSignature(std::wstring text);
         void ShowStatus(hstring const& message, Microsoft::UI::Xaml::Controls::InfoBarSeverity severity);
+        void RefreshSecurityStatus();
+        bool m_security_notice_shown{ false };
         void RebuildAttachmentPanel();
         fire_and_forget InitializeEditorAsync();
         fire_and_forget ExecuteEditorCommandAsync(hstring command, hstring argument = L"");

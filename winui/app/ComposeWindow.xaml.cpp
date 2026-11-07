@@ -659,6 +659,108 @@ namespace winrt::EvolutionWin::implementation
     }
 
     /**
+     * @brief « Signer » ou « Chiffrer » vient d'être activé ou désactivé.
+     * @param sender Bouton émetteur.
+     * @param args Arguments d'événement.
+     */
+    void ComposeWindow::OnSecurityToggleClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        RefreshSecurityStatus();
+    }
+
+    /**
+     * @brief Un champ de destinataires perd le focus : revérifie les certificats si nécessaire.
+     * @param sender Champ émetteur.
+     * @param args Arguments d'événement.
+     */
+    void ComposeWindow::OnRecipientLostFocus(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (EncryptButton().IsChecked() && EncryptButton().IsChecked().Value())
+            RefreshSecurityStatus();
+    }
+
+    /**
+     * @brief Explique en langage simple l'état de la signature et du chiffrement du message en cours :
+     * création automatique du certificat personnel, destinataires dont le certificat est inconnu.
+     * Le moteur ne modifie rien ici : il se contente d'inspecter les magasins de certificats Windows.
+     */
+    void ComposeWindow::RefreshSecurityStatus()
+    {
+        bool sign = SignButton().IsChecked() && SignButton().IsChecked().Value();
+        bool encrypt = EncryptButton().IsChecked() && EncryptButton().IsChecked().Value();
+
+        if (!sign && !encrypt)
+        {
+            if (m_security_notice_shown)
+            {
+                m_security_notice_shown = false;
+                ShowStatus(L"", InfoBarSeverity::Informational);
+            }
+            return;
+        }
+
+        auto core = m_core.lock();
+        int index = FromBox().SelectedIndex();
+        if (!core || index < 0 || index >= static_cast<int>(m_account_uids.size()))
+            return;
+
+        JsonObject request;
+        request.SetNamedValue(L"account", JsonValue::CreateStringValue(m_account_uids[index]));
+        request.SetNamedValue(L"to", JsonValue::CreateStringValue(ToBox().Text()));
+        request.SetNamedValue(L"cc", JsonValue::CreateStringValue(CcBox().Text()));
+        request.SetNamedValue(L"bcc", JsonValue::CreateStringValue(BccBox().Text()));
+
+        auto weak = get_weak();
+        core->CryptoCheck(request.Stringify(), [weak, sign, encrypt](hstring const& json, hstring const& error)
+        {
+            auto self = weak.get();
+            if (!self || !error.empty())
+                return;
+
+            JsonObject result;
+            if (!JsonObject::TryParse(json, result))
+                return;
+
+            std::wstring sender{ result.GetNamedString(L"sender", L"") };
+            bool will_create = result.GetNamedBoolean(L"will_create", false);
+            std::wstring missing;
+            if (encrypt)
+            {
+                for (auto const& entry : result.GetNamedArray(L"recipients_missing"))
+                {
+                    if (!missing.empty())
+                        missing += L", ";
+                    missing += entry.GetString();
+                }
+            }
+
+            std::wstring message;
+            InfoBarSeverity severity = InfoBarSeverity::Success;
+            if (!missing.empty())
+            {
+                severity = InfoBarSeverity::Warning;
+                message = L"Chiffrement impossible pour le moment : le certificat de " + missing +
+                    L" n'est pas connu. Demandez-lui de vous envoyer un message signé (son certificat sera alors mémorisé automatiquement), "
+                    L"ou désactivez « Chiffrer ».";
+            }
+            else if (will_create)
+            {
+                severity = InfoBarSeverity::Informational;
+                message = L"Un certificat personnel va être créé automatiquement pour " + sender +
+                    L" lors de l'envoi : il n'y a rien à configurer.";
+            }
+            else if (encrypt)
+                message = sign ? L"Le message sera signé et chiffré : seuls ses destinataires pourront le lire."
+                               : L"Le message sera chiffré : seuls ses destinataires pourront le lire.";
+            else
+                message = L"Le message sera signé : le destinataire pourra vérifier qu'il vient bien de vous.";
+
+            self->m_security_notice_shown = true;
+            self->ShowStatus(hstring{ message }, severity);
+        });
+    }
+
+    /**
      * @brief Gestionnaire de bascule d'importance basse.
      * @param sender Bouton émetteur.
      * @param args Arguments d'événement.
@@ -1060,15 +1162,9 @@ namespace winrt::EvolutionWin::implementation
             importance_val = L"low";
         message.SetNamedValue(L"importance", JsonValue::CreateStringValue(importance_val));
 
-        /* Options cryptographiques OpenPGP / S/MIME */
-        bool pgp_sign = PgpSignButton().IsChecked() && PgpSignButton().IsChecked().Value();
-        bool pgp_encrypt = PgpEncryptButton().IsChecked() && PgpEncryptButton().IsChecked().Value();
-        bool smime_sign = SmimeSignButton().IsChecked() && SmimeSignButton().IsChecked().Value();
-        bool smime_encrypt = SmimeEncryptButton().IsChecked() && SmimeEncryptButton().IsChecked().Value();
-        message.SetNamedValue(L"pgp_sign", JsonValue::CreateBooleanValue(pgp_sign));
-        message.SetNamedValue(L"pgp_encrypt", JsonValue::CreateBooleanValue(pgp_encrypt));
-        message.SetNamedValue(L"smime_sign", JsonValue::CreateBooleanValue(smime_sign));
-        message.SetNamedValue(L"smime_encrypt", JsonValue::CreateBooleanValue(smime_encrypt));
+        /* Signature et chiffrement S/MIME (certificats du magasin Windows, gérés par le moteur) */
+        message.SetNamedValue(L"sign", JsonValue::CreateBooleanValue(SignButton().IsChecked() && SignButton().IsChecked().Value()));
+        message.SetNamedValue(L"encrypt", JsonValue::CreateBooleanValue(EncryptButton().IsChecked() && EncryptButton().IsChecked().Value()));
 
         if (!m_attachments.empty())
         {

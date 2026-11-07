@@ -78,22 +78,14 @@
                 </AppBarToggleButton.Icon>
             </AppBarToggleButton>
             <AppBarSeparator />
-            <AppBarToggleButton x:Name="PgpSignButton" Label="Signer (PGP)" ToolTipService.ToolTip="Signer le message avec OpenPGP (GnuPG / Gpg4win)">
+            <AppBarToggleButton x:Name="SignButton" Label="Signer" Click="OnSecurityToggleClick"
+                                ToolTipService.ToolTip="Signer numériquement le message : le destinataire peut vérifier qu'il vient bien de vous et qu'il n'a pas été modifié">
                 <AppBarToggleButton.Icon>
                     <FontIcon Glyph="&#xE8D7;" />
                 </AppBarToggleButton.Icon>
             </AppBarToggleButton>
-            <AppBarToggleButton x:Name="PgpEncryptButton" Label="Chiffrer (PGP)" ToolTipService.ToolTip="Chiffrer le message avec OpenPGP (GnuPG / Gpg4win)">
-                <AppBarToggleButton.Icon>
-                    <FontIcon Glyph="&#xE72E;" />
-                </AppBarToggleButton.Icon>
-            </AppBarToggleButton>
-            <AppBarToggleButton x:Name="SmimeSignButton" Label="Signer (S/MIME)" ToolTipService.ToolTip="Signer le message avec un certificat S/MIME (NSS)">
-                <AppBarToggleButton.Icon>
-                    <FontIcon Glyph="&#xEB95;" />
-                </AppBarToggleButton.Icon>
-            </AppBarToggleButton>
-            <AppBarToggleButton x:Name="SmimeEncryptButton" Label="Chiffrer (S/MIME)" ToolTipService.ToolTip="Chiffrer le message avec un certificat S/MIME (NSS)">
+            <AppBarToggleButton x:Name="EncryptButton" Label="Chiffrer" Click="OnSecurityToggleClick"
+                                ToolTipService.ToolTip="Chiffrer le message : seuls ses destinataires pourront le lire">
                 <AppBarToggleButton.Icon>
                     <FontIcon Glyph="&#xE72E;" />
                 </AppBarToggleButton.Icon>
@@ -154,19 +146,19 @@
             <TextBlock Grid.Row="1" Text="À" VerticalAlignment="Center" />
             <!-- suggestions de destinataires (ComposeWindow::OnRecipientTextChanged) -->
             <AutoSuggestBox x:Name="ToBox" Grid.Row="1" Grid.Column="1" PlaceholderText="Destinataires, séparés par des points-virgules"
-                            UpdateTextOnSelect="False" TextChanged="OnRecipientTextChanged" QuerySubmitted="OnRecipientQuerySubmitted"
+                            UpdateTextOnSelect="False" TextChanged="OnRecipientTextChanged" QuerySubmitted="OnRecipientQuerySubmitted" LostFocus="OnRecipientLostFocus"
                             SuggestionChosen="OnRecipientSuggestionChosen" PreviewKeyDown="OnRecipientPreviewKeyDown"
                             ItemTemplate="{StaticResource RecipientSuggestionTemplate}" />
 
             <TextBlock Grid.Row="2" Text="Cc" VerticalAlignment="Center" />
             <AutoSuggestBox x:Name="CcBox" Grid.Row="2" Grid.Column="1"
-                            UpdateTextOnSelect="False" TextChanged="OnRecipientTextChanged" QuerySubmitted="OnRecipientQuerySubmitted"
+                            UpdateTextOnSelect="False" TextChanged="OnRecipientTextChanged" QuerySubmitted="OnRecipientQuerySubmitted" LostFocus="OnRecipientLostFocus"
                             SuggestionChosen="OnRecipientSuggestionChosen" PreviewKeyDown="OnRecipientPreviewKeyDown"
                             ItemTemplate="{StaticResource RecipientSuggestionTemplate}" />
 
             <TextBlock Grid.Row="3" Text="Cci" VerticalAlignment="Center" />
             <AutoSuggestBox x:Name="BccBox" Grid.Row="3" Grid.Column="1"
-                            UpdateTextOnSelect="False" TextChanged="OnRecipientTextChanged" QuerySubmitted="OnRecipientQuerySubmitted"
+                            UpdateTextOnSelect="False" TextChanged="OnRecipientTextChanged" QuerySubmitted="OnRecipientQuerySubmitted" LostFocus="OnRecipientLostFocus"
                             SuggestionChosen="OnRecipientSuggestionChosen" PreviewKeyDown="OnRecipientPreviewKeyDown"
                             ItemTemplate="{StaticResource RecipientSuggestionTemplate}" />
 

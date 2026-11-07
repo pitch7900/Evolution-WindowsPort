@@ -318,6 +318,35 @@ parse_folder_uri (const gchar *uri,
 		  gchar **out_store_uid,
 		  gchar **out_folder_name);
 
+/* evo-core-crypto.c : S/MIME natif Windows (CryptoAPI) */
+typedef struct {
+	gboolean encrypted;	/* le message était chiffré */
+	gboolean is_signed;	/* le message est signé */
+	gboolean valid;		/* signature intacte (et adresse concordante) / déchiffrement réussi */
+	gboolean trusted;	/* certificat approuvé par Windows */
+	gchar *signer;		/* « Nom <adresse> » du signataire */
+	gchar *description;	/* explication en français */
+} CoreCryptoInfo;
+
+gboolean
+core_crypto_protect_message (CamelMimeMessage *message,
+			     const gchar *sender_email,
+			     const gchar *sender_name,
+			     gboolean sign,
+			     gboolean encrypt,
+			     CamelInternetAddress *recipients,
+			     GError **error);
+CamelMimePart *
+core_crypto_open_pkcs7 (CamelMimePart *part,
+			const gchar *from_email,
+			CoreCryptoInfo *info);
+void
+core_crypto_verify_multipart_signed (CamelMultipart *signed_part,
+				     const gchar *from_email,
+				     CoreCryptoInfo *info);
+void
+core_crypto_info_clear (CoreCryptoInfo *info);
+
 /* evo-core-send.c */
 ESource *
 core_ref_identity (EvoCore *core,

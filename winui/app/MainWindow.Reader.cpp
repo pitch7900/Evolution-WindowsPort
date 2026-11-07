@@ -551,17 +551,34 @@ namespace winrt::EvolutionWin::implementation
         }
 
         bool valid = security.GetNamedBoolean(L"valid", false);
+        bool trusted = security.GetNamedBoolean(L"trusted", false);
         hstring protocol = security.GetNamedString(L"protocol", L"");
         hstring signer = security.GetNamedString(L"signer", L"");
         hstring desc = security.GetNamedString(L"description", L"");
 
-        std::wstring title = protocol.empty() ? L"Sécurité" : std::wstring{ protocol } + L" : ";
+        /* Titres en langage clair : vert si tout est sûr, bleu si le contenu est intact
+         * mais le certificat inconnu de Windows, orange en cas de problème. */
+        std::wstring title;
+        InfoBarSeverity severity = InfoBarSeverity::Warning;
         if (encrypted && signed_msg)
-            title += valid ? L"Message déchiffré et signature vérifiée" : L"Message chiffré / signé (vérification incomplète)";
+        {
+            title = valid ? L"Message chiffré et signé" : L"Message chiffré, mais la signature pose problème";
+            severity = valid ? (trusted ? InfoBarSeverity::Success : InfoBarSeverity::Informational) : InfoBarSeverity::Warning;
+        }
         else if (encrypted)
-            title += valid ? L"Message déchiffré" : L"Échec du déchiffrement";
+        {
+            title = valid ? L"Message chiffré : lisible par vous seul" : L"Ce message chiffré n'a pas pu être lu";
+            severity = valid ? InfoBarSeverity::Success : InfoBarSeverity::Warning;
+        }
+        else if (valid)
+        {
+            title = trusted ? L"Message signé et vérifié" : L"Message signé : contenu intact, expéditeur non certifié";
+            severity = trusted ? InfoBarSeverity::Success : InfoBarSeverity::Informational;
+        }
         else
-            title += valid ? L"Signature numérique valide" : L"Signature numérique non vérifiée ou invalide";
+        {
+            title = L"Attention : la signature de ce message n'est pas fiable";
+        }
 
         std::wstring msg;
         if (!signer.empty())
@@ -575,7 +592,7 @@ namespace winrt::EvolutionWin::implementation
 
         SecurityBar().Title(hstring{ title });
         SecurityBar().Message(hstring{ msg });
-        SecurityBar().Severity(valid ? InfoBarSeverity::Success : InfoBarSeverity::Warning);
+        SecurityBar().Severity(severity);
         SecurityBar().IsOpen(true);
     }
 

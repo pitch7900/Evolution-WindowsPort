@@ -545,20 +545,20 @@ Sécurisation de bout en bout des courriels par signature et chiffrement avec un
   - [ ] **Comptes Gmail / Google Workspace** :
     - [ ] Intégration du chiffrement côté client natif (Client-Side Encryption - CSE) de Google Workspace et gestion S/MIME associée via l'API Gmail.
   - [ ] **Comptes IMAP génériques (outils libres et gratuits, sans complexité)** :
-    - [ ] **S/MIME transparent via le magasin Windows** : reconnaissance automatique des certificats personnels de l'utilisateur installés dans le magasin de certificats natif de Windows (`CertOpenSystemStore("MY")` / CryptoAPI / CNG) ou fichiers PKCS#12 (`.p12` / `.pfx`) sans configuration manuelle laborieuse.
+    - [x] **S/MIME transparent via le magasin Windows** : reconnaissance automatique des certificats personnels de l'utilisateur installés dans le magasin de certificats natif de Windows (`CertOpenSystemStore("MY")` / CryptoAPI / CNG) ou fichiers PKCS#12 (`.p12` / `.pfx`) sans configuration manuelle laborieuse. — _réalisé : `evo-core-crypto.c` / `evo-core-crypto-util.h` (CryptoAPI / CNG, CMS), magasins « Personnel » et « Autres personnes »_
     - [ ] **OpenPGP / GPG libre** : intégration transparente avec GnuPG (Gpg4win / `gpg.exe`) ou bibliothèque libre OpenPGP intégrée.
     - [ ] **Découverte automatique des clés (zéro manipulation)** : interrogation automatique des serveurs de clés publics libres et du protocole WKD (*Web Key Directory*, `keys.openpgp.org`) pour récupérer la clé publique du destinataire dès la saisie de son adresse email.
-    - [ ] **Génération de clé en 1 clic** : proposition automatique d'un assistant minimaliste générant une paire de clés personnelle pour l'adresse du compte si aucune clé n'existe encore.
+    - [x] **Génération de clé en 1 clic** : proposition automatique d'un assistant minimaliste générant une paire de clés personnelle pour l'adresse du compte si aucune clé n'existe encore. — _réalisé pour S/MIME : un certificat personnel auto-signé est créé automatiquement pour l'adresse du compte à la première signature / au premier chiffrement (aucun assistant)_
 - [ ] 🟡 **Expérience utilisateur simplifiée à la rédaction (`ComposeWindow`)** :
-  - [ ] Deux boutons à bascule clairs et accessibles dans le ruban : **« Signer »** (icône sceau / ruban) et **« Chiffrer »** (icône cadenas).
+  - [x] Deux boutons à bascule clairs et accessibles dans le ruban : **« Signer »** (icône sceau / ruban) et **« Chiffrer »** (icône cadenas). — _réalisé : « Signer » et « Chiffrer », avec explication en langage clair sous le ruban_
   - [ ] Détection et bascule automatique : sélection transparente du meilleur protocole (S/MIME, PGP ou OME selon le compte et les clés publiques connues des destinataires).
-  - [ ] Notification préventive discrète si un destinataire ne dispose d'aucune clé/certificat public connu, avec proposition de recherche WKD / annuaire en un clic sans bloquer la saisie.
-- [ ] 🟡 **Lecture, déchiffrement et vérification (`MainWindow.Reader`, `MessageWindow`)** :
-  - [ ] **Déchiffrement automatique** des messages reçus dès leur sélection si la clé privée ou le certificat est accessible, sans boîte de dialogue inutile (mémorisation de la phrase de passe / code PIN pour toute la session).
-  - [ ] **Bandeau de sécurité contextuel** au-dessus du message :
-    - [ ] Signature valide (vert) : *« Message signé numériquement par [Nom / Adresse] (vérifié) »*, avec lien d'inspection du certificat.
-    - [ ] Message chiffré (vert) : *« Message chiffré de bout en bout »*.
-    - [ ] Avertissement clair (orange / rouge) uniquement en cas d'incohérence, d'expiration de certificat ou d'altération du contenu.
+  - [ ] Notification préventive discrète si un destinataire ne dispose d'aucune clé/certificat public connu, avec proposition de recherche WKD / annuaire en un clic sans bloquer la saisie. — _fait pour S/MIME (avertissement sous le ruban, certificats appris automatiquement à la lecture des messages signés reçus) ; reste la recherche WKD / annuaire en un clic_
+- [x] 🟡 **Lecture, déchiffrement et vérification (`MainWindow.Reader`, `MessageWindow`)** :
+  - [x] **Déchiffrement automatique** des messages reçus dès leur sélection si la clé privée ou le certificat est accessible, sans boîte de dialogue inutile (mémorisation de la phrase de passe / code PIN pour toute la session). — _réalisé (S/MIME) : la clé privée est prise dans le magasin Windows, qui gère lui-même le code PIN / la phrase de passe_
+  - [x] **Bandeau de sécurité contextuel** au-dessus du message :
+    - [x] Signature valide (vert) : *« Message signé numériquement par [Nom / Adresse] (vérifié) »*, avec lien d'inspection du certificat. — _sans le lien d'inspection du certificat pour l'instant_
+    - [x] Message chiffré (vert) : *« Message chiffré de bout en bout »*.
+    - [x] Avertissement clair (orange / rouge) uniquement en cas d'incohérence, d'expiration de certificat ou d'altération du contenu.
 
 ## 8. Mail – Règles et courrier indésirable — 🔴
 

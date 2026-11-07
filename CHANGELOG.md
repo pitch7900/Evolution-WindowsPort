@@ -12,6 +12,36 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.0.2] — en cours
 
+### Signature et chiffrement des courriels (S/MIME natif Windows)
+
+Les boutons de signature et de chiffrement ne fonctionnaient pas du tout : ils
+s'appuyaient sur GnuPG et sur NSS, absents du portage Windows. Ils sont remplacés
+par un module S/MIME natif (`evo-core-crypto.c`, CryptoAPI / CNG de Windows), conçu
+pour qu'un utilisateur non technique n'ait rien à configurer :
+
+- **Deux boutons seulement dans la rédaction : « Signer » et « Chiffrer »** (au lieu de
+  quatre boutons PGP / S/MIME). Un message en langage clair explique la situation :
+  création automatique du certificat personnel, destinataires dont le certificat est inconnu.
+- **Certificat personnel automatique** : il est pris dans le magasin Windows « Personnel »
+  d'après l'adresse du compte (certificat d'entreprise, carte à puce ou fichier `.pfx` déjà
+  installé inclus) ; à défaut, un certificat auto-signé (RSA 2048, SHA-256, 5 ans) est créé
+  à la première signature, sa clé privée restant dans le fournisseur de clés de Windows.
+- **Signature** : `multipart/signed` avec signature CMS détachée (lisible par Outlook,
+  Thunderbird, Apple Mail, etc.). **Chiffrement** : `application/pkcs7-mime` (AES-256) pour
+  tous les destinataires **et** pour l'expéditeur, afin que la copie dans Envoyés reste lisible.
+- **Certificats des destinataires appris automatiquement** : chaque message signé valide reçu
+  mémorise le certificat de son expéditeur (magasin « Autres personnes ») ; on peut ensuite lui
+  écrire chiffré sans aucune importation manuelle.
+- **Lecture transparente** : déchiffrement automatique et vérification de la signature (détachée
+  ou opaque), avec contrôle que l'adresse du certificat correspond à l'expéditeur et détection
+  de toute altération. Bandeau de sécurité en langage clair (vert : vérifié ; bleu : contenu
+  intact mais certificat auto-signé ou d'une autorité inconnue ; orange : problème), dans le
+  volet de lecture et dans la fenêtre de message.
+- Nouvel export `evo_core_crypto_check` (prévérification à la rédaction) ; tests unitaires des
+  primitives (signature, altération, chiffrement, mauvais destinataire) sur magasin en mémoire.
+- Limites actuelles : OpenPGP / GnuPG, chiffrement natif Exchange Online (OME / IRM), Gmail CSE,
+  récupération des certificats depuis l'annuaire GAL et recherche WKD restent à faire (cf. TODO §7).
+
 ### Ajouté
 
 - **Événement privé** : case « Privé » dans la fenêtre d'événement (création et modification), enregistrée dans la propriété `CLASS:PRIVATE` ; Exchange Online la traduit en sensibilité « privé » (détails masqués aux personnes avec qui le calendrier est partagé). Lecture du réglage à l'ouverture d'un événement existant (champ `private` de `evo_core_get_event`).

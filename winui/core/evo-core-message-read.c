@@ -367,6 +367,19 @@ format_recipients (CamelMimeMessage *message,
 	return formatted ? formatted : g_strdup ("");
 }
 
+/* Adresse électronique de l'expéditeur d'un message (From), à libérer avec g_free, ou NULL. */
+static gchar *
+message_from_email (CamelMimeMessage *message)
+{
+	CamelInternetAddress *from = camel_mime_message_get_from (message);
+	const gchar *address = NULL;
+
+	if (from && camel_internet_address_get (from, 0, NULL, &address) && address && *address)
+		return g_strdup (address);
+
+	return NULL;
+}
+
 /* Vérifie la signature cryptographique ou déchiffre un message MIME (OpenPGP
  * via GnuPG/Gpg4win ou S/MIME via NSS) et écrit l'objet "security" dans le
  * constructeur JSON du message. Si le message était chiffré et que le
@@ -387,6 +400,7 @@ verify_or_decrypt_message (EvoCore *core,
 	gboolean is_encrypted = FALSE;
 	gboolean is_signed = FALSE;
 	gboolean is_valid = FALSE;
+	gboolean is_trusted = FALSE;
 	const gchar *protocol = "";
 	GString *signer_str = g_string_new ("");
 	GString *desc_str = g_string_new ("");
@@ -462,72 +476,39 @@ verify_or_decrypt_message (EvoCore *core,
 		}
 	} else if (ct && (camel_content_type_is (ct, "application", "pkcs7-mime") ||
 			  camel_content_type_is (ct, "application", "x-pkcs7-mime"))) {
-		const gchar *smime_type = camel_content_type_param (ct, "smime-type");
-		CamelCipherContext *ctx = camel_smime_context_new (core->session);
-		GError *local_error = NULL;
-		CamelCipherValidity *validity = NULL;
+		/* S/MIME natif Windows : déchiffrement ou signature opaque */
+		CoreCryptoInfo cinfo = { 0 };
+		gchar *from_email = message_from_email (message);
+		CamelMimePart *inner = core_crypto_open_pkcs7 (CAMEL_MIME_PART (message), from_email, &cinfo);
 
 		protocol = "S/MIME";
-		if (smime_type && g_ascii_strcasecmp (smime_type, "signed-data") == 0) {
-			is_signed = TRUE;
-			validity = camel_cipher_context_verify_sync (
-				ctx, CAMEL_MIME_PART (message), core->cancellable, &local_error);
-		} else {
-			CamelMimePart *decrypted_part = camel_mime_part_new ();
+		if (inner) {
+			CamelDataWrapper *inner_content = camel_medium_get_content (CAMEL_MEDIUM (inner));
+			CamelContentType *inner_type = camel_mime_part_get_content_type (inner);
 
-			is_encrypted = TRUE;
-			validity = camel_cipher_context_decrypt_sync (
-				ctx, CAMEL_MIME_PART (message), decrypted_part,
-				core->cancellable, &local_error);
-			if (validity) {
-				CamelDataWrapper *dec_content = camel_medium_get_content (CAMEL_MEDIUM (decrypted_part));
-				if (dec_content)
-					camel_medium_set_content (CAMEL_MEDIUM (message), dec_content);
+			if (inner_content && inner_type) {
+				gchar *formatted = camel_content_type_format (inner_type);
+
+				camel_medium_set_content (CAMEL_MEDIUM (message), inner_content);
+				camel_mime_part_set_content_type (CAMEL_MIME_PART (message), formatted);
+				if (camel_mime_part_get_encoding (inner) != CAMEL_TRANSFER_ENCODING_DEFAULT)
+					camel_mime_part_set_encoding (CAMEL_MIME_PART (message), camel_mime_part_get_encoding (inner));
+				else
+					camel_medium_remove_header (CAMEL_MEDIUM (message), "Content-Transfer-Encoding");
+				g_free (formatted);
 			}
-			g_object_unref (decrypted_part);
+			g_object_unref (inner);
 		}
-
-		if (validity) {
-			GList *link;
-
-			if (validity->sign.status != CAMEL_CIPHER_VALIDITY_SIGN_NONE) {
-				is_signed = TRUE;
-				is_valid = (validity->sign.status == CAMEL_CIPHER_VALIDITY_SIGN_GOOD);
-			} else {
-				is_valid = (validity->encrypt.status != CAMEL_CIPHER_VALIDITY_ENCRYPT_NONE);
-			}
-
-			for (link = g_queue_peek_head_link (&validity->sign.signers); link; link = link->next) {
-				CamelCipherCertInfo *info = link->data;
-				if (!info)
-					continue;
-				if (signer_str->len > 0)
-					g_string_append (signer_str, ", ");
-				if (info->name && *info->name && info->email && *info->email)
-					g_string_append_printf (signer_str, "%s <%s>", info->name, info->email);
-				else if (info->email && *info->email)
-					g_string_append (signer_str, info->email);
-				else if (info->name && *info->name)
-					g_string_append (signer_str, info->name);
-			}
-
-			if (validity->sign.description && *validity->sign.description)
-				g_string_append (desc_str, validity->sign.description);
-			else if (validity->encrypt.description && *validity->encrypt.description)
-				g_string_append (desc_str, validity->encrypt.description);
-			else
-				g_string_append (desc_str, "Opération cryptographique S/MIME réussie.");
-
-			camel_cipher_validity_free (validity);
-		} else {
-			is_valid = FALSE;
-			g_string_append_printf (desc_str,
-				"Erreur S/MIME : %s",
-				local_error ? local_error->message : "certificat ou clé introuvable");
-			g_clear_error (&local_error);
-		}
-
-		g_object_unref (ctx);
+		is_encrypted = cinfo.encrypted;
+		is_signed = cinfo.is_signed;
+		is_valid = cinfo.valid;
+		is_trusted = cinfo.trusted;
+		if (cinfo.signer)
+			g_string_assign (signer_str, cinfo.signer);
+		if (cinfo.description)
+			g_string_assign (desc_str, cinfo.description);
+		core_crypto_info_clear (&cinfo);
+		g_free (from_email);
 	}
 
 	/* 2. Vérification de signature multipart/signed (y compris après déchiffrement) */
@@ -545,8 +526,26 @@ verify_or_decrypt_message (EvoCore *core,
 			protocol = "OpenPGP";
 		} else if (proto && (g_ascii_strcasecmp (proto, "application/pkcs7-signature") == 0 ||
 				     g_ascii_strcasecmp (proto, "application/x-pkcs7-signature") == 0)) {
-			ctx = camel_smime_context_new (core->session);
+			/* S/MIME natif Windows : signature détachée */
+			CoreCryptoInfo cinfo = { 0 };
+			gchar *from_email = message_from_email (message);
+
 			protocol = "S/MIME";
+			if (CAMEL_IS_MULTIPART (content))
+				core_crypto_verify_multipart_signed (CAMEL_MULTIPART (content), from_email, &cinfo);
+			is_signed = TRUE;
+			is_valid = cinfo.valid;
+			is_trusted = cinfo.trusted;
+			g_string_truncate (signer_str, 0);
+			if (cinfo.signer)
+				g_string_assign (signer_str, cinfo.signer);
+			if (cinfo.description) {
+				if (desc_str->len > 0)
+					g_string_append_c (desc_str, ' ');
+				g_string_append (desc_str, cinfo.description);
+			}
+			core_crypto_info_clear (&cinfo);
+			g_free (from_email);
 		}
 
 		if (ctx) {
@@ -616,6 +615,8 @@ verify_or_decrypt_message (EvoCore *core,
 	json_builder_add_boolean_value (builder, is_signed);
 	json_builder_set_member_name (builder, "valid");
 	json_builder_add_boolean_value (builder, is_valid);
+	json_builder_set_member_name (builder, "trusted");
+	json_builder_add_boolean_value (builder, is_trusted);
 	builder_add_string (builder, "protocol", protocol);
 	builder_add_string (builder, "signer", signer_str->str);
 	builder_add_string (builder, "description", desc_str->str);

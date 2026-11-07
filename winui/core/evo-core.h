@@ -138,6 +138,17 @@ void		evo_core_send_message		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Prépare la signature et le chiffrement S/MIME d'un message en cours de
+ * rédaction (certificats du magasin Windows). Format de check_json :
+ * {"account": "<account uid>", "to": "...", "cc": "...", "bcc": "..."}
+ * Le résultat est {"sender": "adresse", "has_certificate": bool,
+ * "will_create": bool (un certificat personnel sera créé à l'envoi),
+ * "recipients_ready": [adresses], "recipients_missing": [adresses sans certificat]}. */
+void		evo_core_crypto_check		(EvoCore *core,
+						 const char *check_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Traite la demande d'accusé de lecture d'un message (en-tête
  * Disposition-Notification-To ou Return-Receipt-To) : construit un vrai MDN
  * (RFC 8098, multipart/report; report-type=disposition-notification), l'envoie

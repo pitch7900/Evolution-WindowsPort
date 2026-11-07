@@ -58,6 +58,8 @@ add_library(evo-core SHARED
 	evo-core-accounts.c
 	evo-core-calendar.c
 	evo-core-contacts.c
+	evo-core-crypto.c
+	evo-core-crypto-util.h
 	evo-core-detect.c
 	evo-core-drafts.c
 	evo-core-events.c

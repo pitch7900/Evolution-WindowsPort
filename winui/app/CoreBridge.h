@@ -131,6 +131,13 @@ namespace EvolutionWin
             evo_core_send_message(m_core, winrt::to_string(message_json).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Prépare la signature / le chiffrement S/MIME d'un message en rédaction : indique si un
+         * certificat personnel existe (sinon il sera créé) et quels destinataires n'ont pas de certificat connu. */
+        void CryptoCheck(winrt::hstring const& request_json, CoreHandler handler)
+        {
+            evo_core_crypto_check(m_core, winrt::to_string(request_json).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Traite et envoie tous les messages en attente dans la Boîte d'envoi. */
         void SendUnsentMessages()
         {

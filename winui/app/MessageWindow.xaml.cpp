@@ -1446,31 +1446,44 @@ namespace winrt::EvolutionWin::implementation
 
         }
 
-        std::wstring msg;
+        bool trusted = sec.GetNamedBoolean(L"trusted", false);
+        hstring desc = sec.GetNamedString(L"description", L"");
 
-        if (encrypted)
-
-            msg += L"Ce message a été déchiffré avec succès (" + std::wstring{ protocol } + L"). ";
-
-        if (signed_msg)
-
+        std::wstring title;
+        InfoBarSeverity severity = InfoBarSeverity::Warning;
+        if (encrypted && signed_msg)
         {
-
-            if (valid)
-
-                msg += L"Signature numérique valide de " + std::wstring{ signer } + L".";
-
-            else
-
-                msg += L"La signature numérique ne peut pas être vérifiée.";
-
+            title = valid ? L"Message chiffré et signé" : L"Message chiffré, mais la signature pose problème";
+            severity = valid ? (trusted ? InfoBarSeverity::Success : InfoBarSeverity::Informational) : InfoBarSeverity::Warning;
+        }
+        else if (encrypted)
+        {
+            title = valid ? L"Message chiffré : lisible par vous seul" : L"Ce message chiffré n'a pas pu être lu";
+            severity = valid ? InfoBarSeverity::Success : InfoBarSeverity::Warning;
+        }
+        else if (valid)
+        {
+            title = trusted ? L"Message signé et vérifié" : L"Message signé : contenu intact, expéditeur non certifié";
+            severity = trusted ? InfoBarSeverity::Success : InfoBarSeverity::Informational;
+        }
+        else
+        {
+            title = L"Attention : la signature de ce message n'est pas fiable";
         }
 
-        SecurityBanner().Severity(valid ? InfoBarSeverity::Success : (signed_msg ? InfoBarSeverity::Warning : InfoBarSeverity::Informational));
+        std::wstring msg;
+        if (!signer.empty())
+            msg = L"Signataire : " + std::wstring{ signer };
+        if (!desc.empty())
+        {
+            if (!msg.empty())
+                msg += L" — ";
+            msg += desc;
+        }
 
-        SecurityBanner().Title(encrypted ? L"Message chiffré" : L"Message signé");
-
-        SecurityBanner().Message(msg);
+        SecurityBanner().Severity(severity);
+        SecurityBanner().Title(hstring{ title });
+        SecurityBanner().Message(hstring{ msg });
 
         SecurityBanner().IsOpen(true);
 
