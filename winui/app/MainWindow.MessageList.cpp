@@ -192,9 +192,14 @@ namespace winrt::EvolutionWin::implementation
             long long days = std::llround(std::difftime(today0, day0) / 86400.0);
             auto capitalised = [](std::wstring text)
             {
-                if (!text.empty())
-                    text[0] = static_cast<wchar_t>(std::towupper(text[0]));
-                return text;
+                /* le formateur peut faire précéder le nom d'un caractère de contrôle (marque de direction) : 1re lettre */
+                std::wstring cleaned;
+                for (wchar_t c : text)
+                    if (c != 0x200E && c != 0x200F && c != 0x202A && c != 0x202C)
+                        cleaned += c;
+                if (!cleaned.empty())
+                    cleaned[0] = static_cast<wchar_t>(std::towupper(cleaned[0]));
+                return cleaned;
             };
             if (days <= 0)
                 return { L"d0", std::wstring{ Tr(L"Aujourd'hui", L"Today") } };
