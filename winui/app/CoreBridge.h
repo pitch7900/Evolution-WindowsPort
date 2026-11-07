@@ -707,6 +707,22 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Boîte de réception prioritaire (Microsoft 365) : {"other": ["uid", ...], "complete": bool}. */
+        void ListInboxClassification(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_list_inbox_classification(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Classe un message dans « focused » ou « other » (avec règle pour l'expéditeur si sender non vide). */
+        void SetMessageClassification(winrt::hstring const& account, winrt::hstring const& uid,
+            winrt::hstring const& classification, winrt::hstring const& sender, CoreHandler handler)
+        {
+            evo_core_set_message_classification(m_core, winrt::to_string(account).c_str(), winrt::to_string(uid).c_str(),
+                winrt::to_string(classification).c_str(), winrt::to_string(sender).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Éléments récupérables d'un compte Microsoft 365 : [{"id", "subject", "from", "received"}]. */
         void ListRecoverableItems(winrt::hstring const& account, CoreHandler handler)
         {

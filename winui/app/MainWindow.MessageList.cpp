@@ -48,6 +48,8 @@ namespace winrt::EvolutionWin::implementation
         if (account.empty() || folder.empty())
             return;
 
+        UpdateFocusedInbox();
+
         /* vue unifiée : agrégation des dossiers de même rôle de tous les comptes */
         if (IsUnifiedView())
         {
@@ -712,6 +714,27 @@ namespace winrt::EvolutionWin::implementation
                 menu_items.Append(raw_source_item);
 
                 menu_items.Append(MenuFlyoutSeparator{});
+
+                /* Boîte de réception prioritaire (Microsoft 365) : Prioritaire / Autres, avec règle pour l'expéditeur */
+                if (m_focused_inbox_active && !multi)
+                {
+                    bool is_other = m_inbox_other_ids.count(std::wstring{ uid }) != 0;
+                    hstring target = is_other ? L"focused" : L"other";
+                    MenuFlyoutItem move_item;
+                    move_item.Text(is_other ? Tr(L"Déplacer vers Prioritaire", L"Move to Focused") : Tr(L"Déplacer vers Autres", L"Move to Other"));
+                    FontIcon move_icon;
+                    move_icon.Glyph(L"\xE8DE");
+                    move_item.Icon(move_icon);
+                    move_item.Click([this, uid, target](IInspectable const&, RoutedEventArgs const&) { ClassifyMessage(uid, target, false); });
+                    menu_items.Append(move_item);
+
+                    MenuFlyoutItem always_item;
+                    always_item.Text(is_other ? Tr(L"Toujours déplacer vers Prioritaire", L"Always move to Focused")
+                                              : Tr(L"Toujours déplacer vers Autres", L"Always move to Other"));
+                    always_item.Click([this, uid, target](IInspectable const&, RoutedEventArgs const&) { ClassifyMessage(uid, target, true); });
+                    menu_items.Append(always_item);
+                    menu_items.Append(MenuFlyoutSeparator{});
+                }
 
                 auto state_it = m_message_states.find(std::wstring{ target_uids.front() });
                 bool is_seen = state_it != m_message_states.end() ? state_it->second.seen : true;

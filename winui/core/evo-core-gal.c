@@ -2617,3 +2617,225 @@ evo_core_purge_recoverable_items (EvoCore *core,
 
 	core_submit (core, core_restore_recoverable_run, g_strdupv (args), func, user_data);
 }
+
+/* Boîte de réception prioritaire (Focused Inbox) d'un compte Microsoft 365 : identifiants des messages
+ * de la Boîte de réception classés « Autres » (propriété Graph inferenceClassification = other).
+ * Les identifiants Graph sont aussi les identifiants (UID) des messages du moteur.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = uid du compte courrier
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : {"other": ["id", ...], "complete": true|false}, NULL en cas d'erreur. */
+static gchar *
+core_inbox_classification_run (EvoCore *core,
+			       gchar **args,
+			       GError **error)
+{
+	gchar *token = NULL, *base, *uri, *json = NULL;
+	JsonBuilder *builder;
+	guint page;
+	gboolean complete = FALSE;
+
+	if (!recoverable_get_token (core, args[0], &token, error))
+		return NULL;
+
+	base = recoverable_mailbox_base (core, args[0]);
+	uri = g_strdup_printf ("%s/mailFolders/inbox/messages?$filter=inferenceClassification%%20eq%%20'other'&$select=id&$top=250", base);
+	g_free (base);
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	json_builder_set_member_name (builder, "other");
+	json_builder_begin_array (builder);
+
+	for (page = 0; page < 4 && uri; page++) {
+		GBytes *bytes;
+		guint status = 0;
+		gchar *next = NULL;
+
+		bytes = gal_http_get (core, GAL_PROVIDER_MICROSOFT365, uri, token, &status, error);
+		g_clear_pointer (&uri, g_free);
+		if (!bytes) {
+			g_object_unref (builder);
+			e_util_safe_free_string (token);
+			return NULL;
+		}
+		if (status == 200) {
+			JsonNode *root = gal_bytes_to_json (bytes);
+
+			if (root && JSON_NODE_HOLDS_OBJECT (root)) {
+				JsonObject *object = json_node_get_object (root);
+				JsonArray *items = json_object_get_array_member (object, "value");
+				guint ii;
+
+				for (ii = 0; items && ii < json_array_get_length (items); ii++)
+					json_builder_add_string_value (builder, json_object_get_string_member_with_default (
+						json_array_get_object_element (items, ii), "id", ""));
+				if (json_object_has_member (object, "@odata.nextLink"))
+					next = g_strdup (json_object_get_string_member_with_default (object, "@odata.nextLink", ""));
+			}
+			if (root)
+				json_node_unref (root);
+		} else {
+			gchar *message = gal_response_error_message (bytes);
+
+			g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Microsoft Graph (HTTP %u) : %s", status,
+				message ? message : "erreur");
+			g_free (message);
+			g_bytes_unref (bytes);
+			g_object_unref (builder);
+			e_util_safe_free_string (token);
+			return NULL;
+		}
+		g_bytes_unref (bytes);
+		if (next && *next)
+			uri = next;
+		else {
+			g_free (next);
+			complete = TRUE;
+		}
+	}
+	g_free (uri);
+
+	json_builder_end_array (builder);
+	json_builder_set_member_name (builder, "complete");
+	json_builder_add_boolean_value (builder, complete);
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+	e_util_safe_free_string (token);
+
+	return json;
+}
+
+/* Classe un message dans « Prioritaire » ou « Autres » et, si demandé, mémorise la règle pour
+ * l'expéditeur (Graph : inferenceClassification des messages et /inferenceClassification/overrides).
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = uid du compte, [1] = identifiant du message, [2] = « focused » ou « other »,
+ *           [3] = adresse de l'expéditeur pour mémoriser la règle ("" : aucune règle)
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : {"override_error": "..."} (vide si tout a réussi), NULL en cas d'erreur. */
+static gchar *
+core_set_classification_run (EvoCore *core,
+			     gchar **args,
+			     GError **error)
+{
+	gchar *token = NULL, *base, *uri, *body, *encoded, *json, *override_error = NULL;
+	const gchar *classification = g_strcmp0 (args[2], "other") == 0 ? "other" : "focused";
+	GBytes *bytes;
+	guint status = 0;
+	JsonBuilder *builder;
+
+	if (!recoverable_get_token (core, args[0], &token, error))
+		return NULL;
+
+	base = recoverable_mailbox_base (core, args[0]);
+	encoded = g_uri_escape_string (args[1], NULL, FALSE);
+	uri = g_strdup_printf ("%s/messages/%s", base, encoded);
+	body = g_strdup_printf ("{\"inferenceClassification\":\"%s\"}", classification);
+	bytes = gal_http_send_json (core, "PATCH", uri, token, body, &status, error);
+	g_free (body);
+	g_free (uri);
+	g_free (encoded);
+
+	if (!bytes) {
+		g_free (base);
+		e_util_safe_free_string (token);
+		return NULL;
+	}
+	if (status < 200 || status >= 300) {
+		gchar *message = gal_response_error_message (bytes);
+
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Microsoft Graph (HTTP %u) : %s", status,
+			message ? message : "erreur");
+		g_free (message);
+		g_bytes_unref (bytes);
+		g_free (base);
+		e_util_safe_free_string (token);
+		return NULL;
+	}
+	g_bytes_unref (bytes);
+
+	if (args[3] && *args[3]) {
+		JsonBuilder *override = json_builder_new ();
+		JsonGenerator *generator;
+		JsonNode *node;
+
+		json_builder_begin_object (override);
+		json_builder_set_member_name (override, "classifyAs");
+		json_builder_add_string_value (override, classification);
+		json_builder_set_member_name (override, "senderEmailAddress");
+		json_builder_begin_object (override);
+		json_builder_set_member_name (override, "address");
+		json_builder_add_string_value (override, args[3]);
+		json_builder_end_object (override);
+		json_builder_end_object (override);
+		node = json_builder_get_root (override);
+		generator = json_generator_new ();
+		json_generator_set_root (generator, node);
+		body = json_generator_to_data (generator, NULL);
+		json_node_unref (node);
+		g_object_unref (generator);
+		g_object_unref (override);
+
+		uri = g_strdup_printf ("%s/inferenceClassification/overrides", base);
+		bytes = gal_http_send_json (core, "POST", uri, token, body, &status, NULL);
+		if (!bytes || status < 200 || status >= 300) {
+			gchar *message = bytes ? gal_response_error_message (bytes) : NULL;
+
+			override_error = g_strdup_printf ("HTTP %u : %s", status, message ? message : "erreur");
+			g_free (message);
+		}
+		if (bytes)
+			g_bytes_unref (bytes);
+		g_free (uri);
+		g_free (body);
+	}
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	builder_add_string (builder, "override_error", override_error ? override_error : "");
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+
+	g_free (override_error);
+	g_free (base);
+	e_util_safe_free_string (token);
+	return json;
+}
+
+/* Soumet la lecture des messages « Autres » (voir evo_core_list_inbox_classification dans evo-core.h). */
+void
+evo_core_list_inbox_classification (EvoCore *core,
+				    const char *account_uid,
+				    EvoCoreResultFunc func,
+				    void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, NULL };
+
+	g_return_if_fail (core != NULL);
+	g_return_if_fail (account_uid != NULL);
+
+	core_submit (core, core_inbox_classification_run, g_strdupv (args), func, user_data);
+}
+
+/* Soumet le classement d'un message (voir evo_core_set_message_classification dans evo-core.h). */
+void
+evo_core_set_message_classification (EvoCore *core,
+				     const char *account_uid,
+				     const char *message_id,
+				     const char *classification,
+				     const char *sender_address,
+				     EvoCoreResultFunc func,
+				     void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, (gchar *) message_id, (gchar *) (classification ? classification : "focused"),
+		(gchar *) (sender_address ? sender_address : ""), NULL };
+
+	g_return_if_fail (core != NULL);
+	g_return_if_fail (account_uid != NULL && message_id != NULL);
+
+	core_submit (core, core_set_classification_run, g_strdupv (args), func, user_data);
+}

@@ -1089,6 +1089,39 @@ void		evo_core_restore_recoverable_items
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Boîte de réception prioritaire (Focused Inbox, Microsoft 365) : identifiants des messages de la
+ * Boîte de réception classés « Autres » (au plus 1000 plus récents ; les autres sont « Prioritaire »).
+ * Ces identifiants sont les "uid" des messages renvoyés par evo_core_list_messages ().
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte courrier Microsoft 365
+ *   func        : rappel recevant {"other": ["uid", ...], "complete": true|false}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_list_inbox_classification
+						(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Classe un message de la Boîte de réception dans « Prioritaire » ou « Autres » (Microsoft 365) ;
+ * avec sender_address, mémorise aussi la règle pour l'expéditeur (« toujours classer dans… »).
+ * Paramètres :
+ *   core           : instance du moteur evo-core
+ *   account_uid    : compte courrier Microsoft 365
+ *   message_id     : "uid" du message
+ *   classification : "focused" ou "other"
+ *   sender_address : adresse de l'expéditeur pour la règle, "" : aucune règle
+ *   func           : rappel recevant {"override_error": "..."} (vide si tout a réussi)
+ *   user_data      : données utilisateur transmises au rappel */
+void		evo_core_set_message_classification
+						(EvoCore *core,
+						 const char *account_uid,
+						 const char *message_id,
+						 const char *classification,
+						 const char *sender_address,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Comme evo_core_list_contacts (), limité aux carnets book_uids (uids
  * séparés par des virgules ; NULL ou "" : tous les carnets activés). */
 void		evo_core_list_book_contacts	(EvoCore *core,

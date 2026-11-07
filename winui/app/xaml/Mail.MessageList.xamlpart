@@ -58,6 +58,16 @@
 
                         </Grid>
 
+                        <!-- Boîte de réception prioritaire (Microsoft 365) : visible seulement dans la Boîte de réception de ces comptes -->
+
+                        <SelectorBar x:Name="FocusedBar" Visibility="Collapsed" SelectionChanged="OnFocusedBarChanged">
+
+                            <SelectorBarItem Text="Prioritaire" Tag="focused" IsSelected="True" />
+
+                            <SelectorBarItem Text="Autres" Tag="other" />
+
+                        </SelectorBar>
+
                         <!-- filtres rapides, combinés avec la recherche (appliqués par ShowMessages) -->
 
                         <Grid>
@@ -132,6 +142,18 @@
                                 <FontIcon x:Name="SortDirectionIcon" Glyph="&#xE74B;" FontSize="12" />
 
                             </Button>
+
+                            <!-- regroupement (mémorisé par dossier) : MainWindow::OnGroupMenuOpening -->
+
+                            <TextBlock Text="Grouper par :" VerticalAlignment="Center" Opacity="0.7" Margin="12,0,0,0"
+                                       Style="{StaticResource CaptionTextBlockStyle}" />
+
+                            <DropDownButton x:Name="GroupButton" Content="Aucun" Padding="8,2" FontSize="12"
+                                            ToolTipService.ToolTip="Regrouper les messages (Conversation ou Aucun)">
+                                <DropDownButton.Flyout>
+                                    <MenuFlyout Opening="OnGroupMenuOpening" />
+                                </DropDownButton.Flyout>
+                            </DropDownButton>
 
                         </StackPanel>
 

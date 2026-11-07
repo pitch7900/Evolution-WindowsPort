@@ -87,6 +87,16 @@ namespace winrt::EvolutionWin::implementation
                 return false;
         }
 
+        /* Boîte de réception prioritaire : onglet « Prioritaire » ou « Autres » (sans effet pendant une recherche) */
+        if (m_focused_inbox_active && SearchBox().Text().empty())
+        {
+            auto tab = FocusedBar().SelectedItem();
+            bool other_tab = tab && unbox_value_or<hstring>(tab.Tag(), L"focused") == L"other";
+            bool is_other = m_inbox_other_ids.count(std::wstring{ message.GetNamedString(L"uid", L"") }) != 0;
+            if (other_tab != is_other)
+                return false;
+        }
+
         if (!::EvolutionWin::Categories::MatchesCategoryFilter(::EvolutionWin::CategoryStore::CategoriesOf(message), m_mail_category_filter))
             return false;
 
@@ -130,6 +140,110 @@ namespace winrt::EvolutionWin::implementation
     void MainWindow::OnQuickFilterToggled(IInspectable const&, RoutedEventArgs const&)
     {
         ReapplyMessageFilters();
+    }
+
+    void MainWindow::OnFocusedBarChanged(SelectorBar const&, SelectorBarSelectionChangedEventArgs const&)
+    {
+        ReapplyMessageFilters();
+    }
+
+    /* Boîte de réception prioritaire (Focused Inbox) : affiche les onglets « Prioritaire » / « Autres » dans la
+     * Boîte de réception d'un compte Microsoft 365 (réglage « account.<uid>.focused-inbox », activé par défaut)
+     * et lit les messages classés « Autres » par Exchange Online. */
+    void MainWindow::UpdateFocusedInbox()
+    {
+        bool active = false;
+        if (!IsUnifiedView() && !m_account.empty() && !m_folder.empty())
+        {
+            bool m365 = false, inbox = false;
+            for (auto const& value : m_accounts ? m_accounts : JsonArray{})
+            {
+                auto account = value.GetObject();
+                if (account.GetNamedString(L"uid", L"") == m_account && account.GetNamedString(L"protocol", L"") == L"microsoft365")
+                    m365 = true;
+            }
+            auto folders = m_account_folders.find(std::wstring{ m_account });
+            if (folders != m_account_folders.end() && folders->second)
+                if (auto folder = FindFolderJson(folders->second, m_folder))
+                    inbox = folder.GetNamedString(L"type", L"") == L"inbox";
+            active = m365 && inbox && ::EvolutionWin::Settings::Instance().GetBoolean(L"account." + m_account + L".focused-inbox", true);
+        }
+
+        FocusedBar().Visibility(active ? Visibility::Visible : Visibility::Collapsed);
+        if (!active)
+        {
+            m_focused_inbox_active = false;
+            m_inbox_other_ids.clear();
+            return;
+        }
+
+        if (!m_focused_inbox_active)
+            m_inbox_other_ids.clear();
+        m_focused_inbox_active = true;
+
+        hstring account = m_account;
+        m_core->ListInboxClassification(account, [this, account](hstring const& json, hstring const& error)
+        {
+            if (account != m_account || !m_focused_inbox_active || !error.empty())
+                return;
+            JsonObject result;
+            if (!JsonObject::TryParse(json, result))
+                return;
+            std::set<std::wstring> others;
+            for (auto const& id : result.GetNamedArray(L"other", JsonArray{}))
+                others.insert(std::wstring{ id.GetString() });
+            m_inbox_other_ids = std::move(others);
+            ReapplyMessageFilters();
+        });
+    }
+
+    /* Classe un message dans « Prioritaire » ou « Autres » (menu contextuel), avec ou sans règle pour l'expéditeur.
+     * Paramètres :
+     *   uid             : identifiant du message
+     *   classification  : « focused » ou « other »
+     *   remember_sender : mémoriser la règle pour l'expéditeur (« toujours déplacer… ») */
+    void MainWindow::ClassifyMessage(hstring const& uid, hstring const& classification, bool remember_sender)
+    {
+        hstring sender;
+        if (remember_sender && m_all_messages)
+        {
+            for (auto const& value : m_all_messages)
+            {
+                auto message = value.GetObject();
+                if (message.GetNamedString(L"uid", L"") != uid)
+                    continue;
+                std::wstring from{ message.GetNamedString(L"from", L"") };
+                size_t open = from.find(L'<'), close = from.find(L'>');
+                sender = hstring{ open != std::wstring::npos && close != std::wstring::npos && close > open
+                    ? from.substr(open + 1, close - open - 1) : from };
+            }
+        }
+
+        bool to_other = classification == L"other";
+        m_core->SetMessageClassification(m_account, uid, classification, sender,
+            [this, uid, to_other, remember_sender](hstring const& json, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                ShowStatus(Tr(L"Classement du message : ", L"Message classification: ") + error, InfoBarSeverity::Error);
+                return;
+            }
+            if (to_other)
+                m_inbox_other_ids.insert(std::wstring{ uid });
+            else
+                m_inbox_other_ids.erase(std::wstring{ uid });
+            ReapplyMessageFilters();
+
+            JsonObject outcome;
+            hstring override_error = JsonObject::TryParse(json, outcome) ? outcome.GetNamedString(L"override_error", L"") : hstring{};
+            hstring text = to_other ? Tr(L"Message déplacé vers « Autres ».", L"Message moved to \"Other\".")
+                                    : Tr(L"Message déplacé vers « Prioritaire ».", L"Message moved to \"Focused\".");
+            if (remember_sender && !override_error.empty())
+                ShowStatus(text + Tr(L" La règle pour l'expéditeur n'a pas pu être mémorisée : ", L" The sender rule could not be saved: ") + override_error,
+                    InfoBarSeverity::Warning);
+            else
+                ShowStatus(text, InfoBarSeverity::Success);
+        });
     }
 
     /* Renvoie l'identifiant de la portée actuellement sélectionnée
@@ -420,8 +534,39 @@ namespace winrt::EvolutionWin::implementation
                 L"conversations." + m_account + L"/" + m_folder, false);
         }
 
+        UpdateGroupHeader();
+    }
+
+    /**
+     * @brief Met à jour le libellé du bouton « Grouper par » et le bouton « Conversations » du ruban.
+     */
+    void MainWindow::UpdateGroupHeader()
+    {
+        GroupButton().Content(box_value(m_conversations_enabled ? L"Conversation" : L"Aucun"));
         if (auto toggle = RibbonMailConversationToggle())
             toggle.IsChecked(m_conversations_enabled);
+    }
+
+    /**
+     * @brief Menu « Grouper par » : Aucun ou Conversation (choix unique, mémorisé par dossier).
+     * @param sender Menu contextuel émetteur.
+     */
+    void MainWindow::OnGroupMenuOpening(IInspectable const& sender, IInspectable const&)
+    {
+        auto menu = sender.as<MenuFlyout>();
+        menu.Items().Clear();
+        for (bool conversation : { false, true })
+        {
+            RadioMenuFlyoutItem entry;
+            entry.Text(conversation ? L"Conversation" : L"Aucun");
+            entry.GroupName(L"group-key");
+            entry.IsChecked(m_conversations_enabled == conversation);
+            entry.Click([this, conversation](IInspectable const&, RoutedEventArgs const&)
+            {
+                SaveFolderConversations(conversation);
+            });
+            menu.Items().Append(entry);
+        }
     }
 
     /**
@@ -436,6 +581,7 @@ namespace winrt::EvolutionWin::implementation
             ::EvolutionWin::Settings::Instance().SetBoolean(
                 L"conversations." + m_account + L"/" + m_folder, enabled);
         }
+        UpdateGroupHeader();
         ReapplyMessageFilters();
     }
 

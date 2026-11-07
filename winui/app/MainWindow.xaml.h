@@ -68,6 +68,10 @@ namespace winrt::EvolutionWin::implementation
         void OnConfidentialToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnQuickAccessSizeChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::SizeChangedEventArgs const& args);
         void OnSortMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
+        /** @brief Remplit le menu « Grouper par » (Conversation / Aucun). */
+        void OnGroupMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
+        /** @brief Met à jour le libellé du bouton « Grouper par » et l'état du bouton du ruban. */
+        void UpdateGroupHeader();
         void OnCancelSyncClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         fire_and_forget OnRibbonAccountQuotaClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnSortDirectionClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -98,6 +102,14 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::SelectorBar const& sender,
             Microsoft::UI::Xaml::Controls::SelectorBarSelectionChangedEventArgs const& args);
         void OnQuickFilterToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        /* Boîte de réception prioritaire (Microsoft 365) : MainWindow.MessageFilter.cpp */
+        void OnFocusedBarChanged(
+            Microsoft::UI::Xaml::Controls::SelectorBar const& sender,
+            Microsoft::UI::Xaml::Controls::SelectorBarSelectionChangedEventArgs const& args);
+        void UpdateFocusedInbox();
+        void ClassifyMessage(hstring const& uid, hstring const& classification, bool remember_sender);
+        std::set<std::wstring> m_inbox_other_ids;
+        bool m_focused_inbox_active{ false };
         void OnMailCategoryFilterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnTaskCategoryFilterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnContactCategoryFilterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);

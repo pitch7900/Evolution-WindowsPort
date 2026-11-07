@@ -326,6 +326,22 @@ namespace winrt::EvolutionWin::implementation
                 }
                 if (m365_account)
                 {
+                    ToggleMenuFlyoutItem focused_item;
+                    focused_item.Text(Tr(L"Boîte de réception prioritaire", L"Focused Inbox"));
+                    FontIcon focused_icon;
+                    focused_icon.Glyph(L"\xE8D5");
+                    focused_item.Icon(focused_icon);
+                    hstring focused_key = L"account." + item.Account() + L".focused-inbox";
+                    focused_item.IsChecked(::EvolutionWin::Settings::Instance().GetBoolean(focused_key, true));
+                    focused_item.Click([this, focused_key](IInspectable const& sender, RoutedEventArgs const&)
+                    {
+                        if (auto toggle = sender.try_as<ToggleMenuFlyoutItem>())
+                            ::EvolutionWin::Settings::Instance().SetBoolean(focused_key, toggle.IsChecked());
+                        UpdateFocusedInbox();
+                        ReapplyMessageFilters();
+                    });
+                    menu.Items().Append(focused_item);
+
                     MenuFlyoutItem recover_item;
                     recover_item.Text(Tr(L"Récupérer les éléments supprimés du serveur…", L"Recover deleted items from the server…"));
                     FontIcon recover_icon;
