@@ -168,6 +168,64 @@ namespace winrt::EvolutionWin::implementation
             UpdateFolderStatusText();
         });
     }
+    namespace
+    {
+        /* Groupe de dates d'un message (façon Outlook) : clé stable et libellé.
+         * Aujourd'hui, Hier, jours de la semaine en cours, Semaine dernière, Il y a deux / trois semaines, Mois dernier, Avant le mois dernier. */
+        std::pair<std::wstring, std::wstring> DateBucket(double message_time)
+        {
+            using Windows::Globalization::DateTimeFormatting::DateTimeFormatter;
+            std::time_t now = std::time(nullptr);
+            std::tm today{};
+            localtime_s(&today, &now);
+            today.tm_hour = today.tm_min = today.tm_sec = 0;
+            today.tm_isdst = -1;
+            std::time_t today0 = std::mktime(&today);
+
+            std::time_t raw = static_cast<std::time_t>(message_time);
+            std::tm day{};
+            localtime_s(&day, &raw);
+            day.tm_hour = day.tm_min = day.tm_sec = 0;
+            day.tm_isdst = -1;
+            std::time_t day0 = std::mktime(&day);
+
+            long long days = std::llround(std::difftime(today0, day0) / 86400.0);
+            auto capitalised = [](std::wstring text)
+            {
+                if (!text.empty())
+                    text[0] = static_cast<wchar_t>(std::towupper(text[0]));
+                return text;
+            };
+            if (days <= 0)
+                return { L"d0", std::wstring{ Tr(L"Aujourd'hui", L"Today") } };
+            if (days == 1)
+                return { L"d1", std::wstring{ Tr(L"Hier", L"Yesterday") } };
+
+            /* semaines du lundi au dimanche, comme dans Outlook : jours de la semaine en cours, puis
+             * « Semaine dernière », « Il y a deux semaines », « Il y a trois semaines », puis mois */
+            long long today_offset = (today.tm_wday + 6) % 7;
+            long long day_offset = (day.tm_wday + 6) % 7;
+            if (days <= today_offset)
+                return { L"d" + std::to_wstring(days),
+                    capitalised(std::wstring{ DateTimeFormatter{ L"dayofweek.full" }.Format(winrt::clock::from_time_t(raw)) }) };
+
+            long long weeks = std::llround(std::difftime(today0 - today_offset * 86400, day0 - day_offset * 86400) / (7 * 86400.0));
+            if (weeks == 1)
+                return { L"w1", std::wstring{ Tr(L"Semaine dernière", L"Last week") } };
+            if (weeks == 2)
+                return { L"w2", std::wstring{ Tr(L"Il y a deux semaines", L"Two weeks ago") } };
+            if (weeks == 3)
+                return { L"w3", std::wstring{ Tr(L"Il y a trois semaines", L"Three weeks ago") } };
+
+            int months_ago = (today.tm_year - day.tm_year) * 12 + (today.tm_mon - day.tm_mon);
+            if (months_ago <= 0)
+                return { L"m0", std::wstring{ Tr(L"Plus tôt ce mois-ci", L"Earlier this month") } };
+            if (months_ago == 1)
+                return { L"m1", std::wstring{ Tr(L"Mois dernier", L"Last month") } };
+            return { L"m2", std::wstring{ Tr(L"Avant le mois dernier", L"Before last month") } };
+        }
+    }
+
     /* Construit et affiche les éléments de la liste de messages avec leurs
      * indicateurs (non lu, suivi, pièce jointe) et leur menu contextuel.
      * Paramètres :
@@ -275,6 +333,23 @@ namespace winrt::EvolutionWin::implementation
             }
         }
 
+        /* groupes de dates (liste triée par date) : un en-tête repliable par groupe */
+        bool date_groups = m_sort_key == L"date" && ::EvolutionWin::Settings::Instance().GetBoolean(L"mail.group-by-date", true);
+        std::vector<std::pair<std::wstring, std::wstring>> buckets(shown.size());
+        std::map<std::wstring, size_t> bucket_counts;
+        if (date_groups)
+        {
+            for (size_t i = 0; i < shown.size(); ++i)
+            {
+                /* un message d'un fil suit le groupe de l'en-tête du fil */
+                buckets[i] = (i > 0 && m_conversations_enabled && !rows[i].header)
+                    ? buckets[i - 1] : DateBucket(shown[i].GetNamedNumber(L"date", 0));
+                if (!rows[i].hidden)
+                    ++bucket_counts[buckets[i].first];
+            }
+        }
+        std::wstring last_bucket;
+
         size_t row_index = static_cast<size_t>(-1);
         for (auto const& message : shown)
         {
@@ -302,11 +377,59 @@ namespace winrt::EvolutionWin::implementation
             if (thread_row.hidden)
                 continue;
 
+            if (date_groups)
+            {
+                auto const& bucket = buckets[row_index];
+                bool collapsed = m_collapsed_date_groups.count(bucket.first) != 0;
+                if (bucket.first != last_bucket)
+                {
+                    last_bucket = bucket.first;
+
+                    Grid header;
+                    header.Padding(ThicknessHelper::FromLengths(12, 5, 12, 5));
+                    header.ColumnSpacing(8);
+                    header.HorizontalAlignment(HorizontalAlignment::Stretch);
+                    header.Background(Application::Current().Resources().Lookup(box_value(L"SubtleFillColorSecondaryBrush")).as<Brush>());
+                    header.Tag(box_value(L""));
+                    ColumnDefinition chevron_column, label_column;
+                    chevron_column.Width(GridLengthHelper::Auto());
+                    label_column.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+                    header.ColumnDefinitions().Append(chevron_column);
+                    header.ColumnDefinitions().Append(label_column);
+                    FontIcon chevron;
+                    chevron.Glyph(collapsed ? L"\xE76C" : L"\xE70D");
+                    chevron.FontSize(11);
+                    chevron.VerticalAlignment(VerticalAlignment::Center);
+                    header.Children().Append(chevron);
+                    TextBlock label;
+                    label.Text(hstring{ bucket.second + L" (" + std::to_wstring(bucket_counts[bucket.first]) + L")" });
+                    label.FontWeight(Microsoft::UI::Text::FontWeights::SemiBold());
+                    label.FontSize(12);
+                    Grid::SetColumn(label, 1);
+                    header.Children().Append(label);
+                    std::wstring bucket_key = bucket.first;
+                    header.Tapped([this, bucket_key](IInspectable const&, Input::TappedRoutedEventArgs const& args)
+                    {
+                        args.Handled(true);
+                        if (!m_collapsed_date_groups.erase(bucket_key))
+                            m_collapsed_date_groups.insert(bucket_key);
+                        ReapplyMessageFilters();
+                    });
+                    items.Append(header);
+                }
+                /* le message affiché reste visible même dans un groupe replié */
+                if (collapsed && !(!selected.empty() && uid == selected))
+                    continue;
+            }
+
             Grid item;
+            /* trait fin entre deux messages et un peu d'espace autour */
+            item.BorderThickness(ThicknessHelper::FromLengths(0, 0, 0, 1));
+            item.BorderBrush(Application::Current().Resources().Lookup(box_value(L"DividerStrokeColorDefaultBrush")).as<Brush>());
             if (m_compact_density)
-                item.Padding(ThicknessHelper::FromLengths(8, 2, 8, 2));
+                item.Padding(ThicknessHelper::FromLengths(8, 5, 8, 5));
             else
-                item.Padding(ThicknessHelper::FromLengths(8, 8, 8, 8));
+                item.Padding(ThicknessHelper::FromLengths(8, 12, 8, 12));
             item.HorizontalAlignment(HorizontalAlignment::Stretch);
             /* Fond transparent explicite pour que le survol (PointerEntered/PointerExited)
              * soit détecté sur toute la surface de la ligne et pas uniquement sur le texte */
@@ -1014,6 +1137,14 @@ namespace winrt::EvolutionWin::implementation
         hstring mode = ::EvolutionWin::Settings::Instance().GetString(L"mail.mark-as-read", L"immediate");
 
         auto item = MessageList().SelectedItem().try_as<Grid>();
+        if (item && unbox_value_or<hstring>(item.Tag(), L"").empty())
+        {
+            /* en-tête de groupe de dates : le clic le plie / déplie, il n'est pas sélectionnable */
+            m_reselecting = true;
+            MessageList().SelectedItem(nullptr);
+            m_reselecting = false;
+            return;
+        }
         if (!item)
         {
             CancelMarkAsReadTimer();

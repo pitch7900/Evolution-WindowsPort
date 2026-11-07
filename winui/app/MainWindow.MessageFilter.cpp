@@ -594,6 +594,19 @@ namespace winrt::EvolutionWin::implementation
             });
             menu.Items().Append(entry);
         }
+
+        /* regroupement par date (liste triée par date) : en-têtes Aujourd'hui, Hier, jours, semaines, mois */
+        menu.Items().Append(MenuFlyoutSeparator{});
+        ToggleMenuFlyoutItem by_date;
+        by_date.Text(Tr(L"Regrouper par date", L"Group by date"));
+        by_date.IsChecked(::EvolutionWin::Settings::Instance().GetBoolean(L"mail.group-by-date", true));
+        by_date.Click([this](IInspectable const& sender, RoutedEventArgs const&)
+        {
+            if (auto toggle = sender.try_as<ToggleMenuFlyoutItem>())
+                ::EvolutionWin::Settings::Instance().SetBoolean(L"mail.group-by-date", toggle.IsChecked());
+            ReapplyMessageFilters();
+        });
+        menu.Items().Append(by_date);
     }
 
     /**

@@ -12,7 +12,7 @@
 
                         <Grid>
 
-                            <TextBlock x:Name="FolderTitle" Text="Courrier" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+                            <TextBlock x:Name="FolderTitle" Text="Courrier" Visibility="Collapsed" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
 
                             <!-- clic : relève (F5) ; flèche : autres modes (F9, Maj+F9) -->
 
