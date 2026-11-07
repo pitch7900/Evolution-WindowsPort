@@ -71,25 +71,25 @@
   </data>
 
   <!-- Dossiers spéciaux de messagerie -->
-  <data name="Folder_Inbox" xml:space="preserve">
+  <data name="SpecialFolder_Inbox" xml:space="preserve">
     <value>Inbox</value>
   </data>
-  <data name="Folder_Drafts" xml:space="preserve">
+  <data name="SpecialFolder_Drafts" xml:space="preserve">
     <value>Drafts</value>
   </data>
-  <data name="Folder_Sent" xml:space="preserve">
+  <data name="SpecialFolder_Sent" xml:space="preserve">
     <value>Sent Items</value>
   </data>
-  <data name="Folder_Trash" xml:space="preserve">
+  <data name="SpecialFolder_Trash" xml:space="preserve">
     <value>Deleted Items</value>
   </data>
-  <data name="Folder_Archive" xml:space="preserve">
+  <data name="SpecialFolder_Archive" xml:space="preserve">
     <value>Archive</value>
   </data>
-  <data name="Folder_Junk" xml:space="preserve">
+  <data name="SpecialFolder_Junk" xml:space="preserve">
     <value>Junk Email</value>
   </data>
-  <data name="Folder_Outbox" xml:space="preserve">
+  <data name="SpecialFolder_Outbox" xml:space="preserve">
     <value>Outbox</value>
   </data>
   <data name="Folder_Favorites" xml:space="preserve">
@@ -150,4 +150,19 @@
   <data name="Common_Close" xml:space="preserve">
     <value>Close</value>
   </data>
+
+  <!-- Portées de recherche -->
+  <data name="SearchScope_Subfolders" xml:space="preserve">
+    <value>Search folder and subfolders (Ctrl+E)</value>
+  </data>
+  <data name="SearchScope_Account" xml:space="preserve">
+    <value>Search entire account (Ctrl+E)</value>
+  </data>
+  <data name="SearchScope_AllAccounts" xml:space="preserve">
+    <value>Search all accounts (Ctrl+E)</value>
+  </data>
+  <data name="SearchScope_Folder" xml:space="preserve">
+    <value>Search folder (Ctrl+E)</value>
+  </data>
 </root>
+

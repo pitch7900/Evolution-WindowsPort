@@ -951,9 +951,9 @@ Les textes d'EvolutionWin sont aujourd'hui écrits en dur en français dans le c
 
 - [x] 🟢 Français (langue source actuelle)
 - [x] 🟢 Anglais (fichiers `Resources.resw` et bilinguisme `Tr`)
-- [ ] 🟡 Allemand
-- [ ] 🟡 Italien
-- [ ] 🟡 Espagnol, portugais, néerlandais (autres langues selon les besoins ; s'appuyer sur les traductions existantes d'Evolution pour la terminologie)
+- [x] 🟢 Allemand (fichier `de-DE/Resources.resw` calqué sur les traductions officielles Evolution)
+- [x] 🟢 Italien (fichier `it-IT/Resources.resw` calqué sur les traductions officielles Evolution)
+- [x] 🟢 Espagnol, portugais, néerlandais (fichiers `es-ES`, `pt-PT`, `nl-NL/Resources.resw` calqués sur la terminologie officielle Evolution)
 - [x] 🟢 Processus de traduction : fichiers `.resw` (ou `.po` convertis) relus par des locuteurs natifs, vérification des clés manquantes à la compilation
 
 ### Choix de la langue

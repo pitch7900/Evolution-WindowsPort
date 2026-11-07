@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Navigation générale -->
+  <data name="Nav_Mail" xml:space="preserve">
+    <value>Correo</value>
+  </data>
+  <data name="Nav_Calendar" xml:space="preserve">
+    <value>Calendario</value>
+  </data>
+  <data name="Nav_Contacts" xml:space="preserve">
+    <value>Contactos</value>
+  </data>
+  <data name="Nav_Tasks" xml:space="preserve">
+    <value>Tareas</value>
+  </data>
+  <data name="Nav_Settings" xml:space="preserve">
+    <value>Configuración</value>
+  </data>
+
+  <!-- Dossiers spéciaux de messagerie -->
+  <data name="SpecialFolder_Inbox" xml:space="preserve">
+    <value>Bandeja de entrada</value>
+  </data>
+  <data name="SpecialFolder_Drafts" xml:space="preserve">
+    <value>Borradores</value>
+  </data>
+  <data name="SpecialFolder_Sent" xml:space="preserve">
+    <value>Elementos enviados</value>
+  </data>
+  <data name="SpecialFolder_Trash" xml:space="preserve">
+    <value>Elementos eliminados</value>
+  </data>
+  <data name="SpecialFolder_Archive" xml:space="preserve">
+    <value>Archivo</value>
+  </data>
+  <data name="SpecialFolder_Junk" xml:space="preserve">
+    <value>Correo no deseado</value>
+  </data>
+  <data name="SpecialFolder_Outbox" xml:space="preserve">
+    <value>Bandeja de salida</value>
+  </data>
+  <data name="Folder_Favorites" xml:space="preserve">
+    <value>Favoritos</value>
+  </data>
+  <data name="Folder_AllAccounts" xml:space="preserve">
+    <value>Todas las cuentas</value>
+  </data>
+  <data name="Folder_SearchFolders" xml:space="preserve">
+    <value>Carpetas de búsqueda</value>
+  </data>
+
+  <!-- Actions sur les dossiers -->
+  <data name="FolderAction_MarkAllRead" xml:space="preserve">
+    <value>Marcar todo como leído</value>
+  </data>
+  <data name="FolderAction_EmptyTrash" xml:space="preserve">
+    <value>Vaciar Papelera</value>
+  </data>
+  <data name="FolderAction_EmptyJunk" xml:space="preserve">
+    <value>Vaciar Correo no deseado</value>
+  </data>
+  <data name="FolderAction_EmptyFolder" xml:space="preserve">
+    <value>Vaciar carpeta</value>
+  </data>
+  <data name="FolderAction_NewFolder" xml:space="preserve">
+    <value>Nueva carpeta…</value>
+  </data>
+  <data name="FolderAction_Rename" xml:space="preserve">
+    <value>Cambiar nombre…</value>
+  </data>
+  <data name="FolderAction_MoveTo" xml:space="preserve">
+    <value>Mover a</value>
+  </data>
+  <data name="FolderAction_CopyTo" xml:space="preserve">
+    <value>Copiar a</value>
+  </data>
+  <data name="FolderAction_Delete" xml:space="preserve">
+    <value>Eliminar carpeta…</value>
+  </data>
+  <data name="FolderAction_ExportEml" xml:space="preserve">
+    <value>Exportar todos los mensajes (.eml)…</value>
+  </data>
+
+  <!-- Boîtes de dialogue courantes -->
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="Common_Delete" xml:space="preserve">
+    <value>Eliminar</value>
+  </data>
+  <data name="Common_Empty" xml:space="preserve">
+    <value>Vaciar</value>
+  </data>
+  <data name="Common_Save" xml:space="preserve">
+    <value>Guardar</value>
+  </data>
+  <data name="Common_Close" xml:space="preserve">
+    <value>Cerrar</value>
+  </data>
+
+  <!-- Portées de recherche -->
+  <data name="SearchScope_Subfolders" xml:space="preserve">
+    <value>Buscar en la carpeta y subcarpetas (Ctrl+E)</value>
+  </data>
+  <data name="SearchScope_Account" xml:space="preserve">
+    <value>Buscar en toda la cuenta (Ctrl+E)</value>
+  </data>
+  <data name="SearchScope_AllAccounts" xml:space="preserve">
+    <value>Buscar en todas las cuentas (Ctrl+E)</value>
+  </data>
+  <data name="SearchScope_Folder" xml:space="preserve">
+    <value>Buscar en la carpeta (Ctrl+E)</value>
+  </data>
+</root>

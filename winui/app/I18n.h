@@ -65,3 +65,4 @@ namespace EvolutionWin::I18n
         return winrt::hstring{ fallback };
     }
 }
+
