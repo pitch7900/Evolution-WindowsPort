@@ -202,7 +202,7 @@ namespace EvolutionWin::Helpers
             {
                 std::lock_guard<std::mutex> guard(s_lock);
                 auto it = s_cache.find(cache_key);
-                if (it != s_cache.end())
+                if (it != s_cache.end() && !it->second.empty())
                     return it->second;
             }
             hstring found = ::EvolutionWin::I18n::GetString(::EvolutionWin::I18n::KeyFor(fr), L"", lang);
