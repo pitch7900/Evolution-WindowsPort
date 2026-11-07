@@ -36,6 +36,7 @@ Pour chaque point : compte nécessaire entre parenthèses. « Test » = compte d
 - [ ] Bouton « Rejoindre la réunion » dans la fenêtre d'un événement existant avec un lien Teams, Google Meet ou Zoom (M365 / Gmail).
 - [ ] « Afficher comme » (Disponible, Travaille ailleurs, Provisoire, Occupé, Absent) dans la fenêtre d'événement : enregistrement, relecture et affichage dans Outlook Online (M365) ; Libre / Occupé seulement pour Gmail.
 - [ ] Fenêtre d'événement (création et modification) : bandeau (Enregistrer, Supprimer, Afficher comme, Rappel, Périodicité, Classer, Privé, Importance) ; catégories visibles dans le formulaire ; clic droit sur un événement (Ouvrir, Classer, Afficher comme, Privé, Importance) dans les vues Jour, Semaine, Mois et Liste.
+- [ ] Liens cliquables : adresse web dans un message en texte brut (et en mode texte brut) et dans la description d'un événement (liste sous la description) ; le clic ouvre le navigateur par défaut.
 - [x] Boîte partagée Microsoft 365 : clic droit sur le compte › « Ouvrir la boîte d'un autre utilisateur… », connexion Microsoft, dossiers de la boîte partagée, envoi avec l'adresse de la boîte partagée (M365 + boîte partagée avec droit FullAccess).
 - [x] Boîte partagée : choix de la boîte dans « De : » à la rédaction, envoi avec l'adresse de la boîte partagée (droit Send As ; attendre la diffusion des droits côté Exchange, jusqu'à environ une heure) et dossiers de la boîte affichés.
 - [x] Boîte partagée : agenda et contacts partagés (cases à l'ouverture) et « Fermer la boîte partagée » (clic droit).

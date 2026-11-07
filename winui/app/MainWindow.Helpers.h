@@ -280,6 +280,64 @@ namespace EvolutionWin::Helpers
                 prefix.data(), static_cast<int>(prefix.size()), TRUE) == CSTR_EQUAL;
     }
 
+    /* Plages (début, longueur) des adresses web (http://, https://) d'un texte.
+     * Une adresse s'arrête à un espace, « < », « > », une guillemet ou, dans un texte déjà échappé en HTML
+     * (escaped = true), à « &lt; », « &gt; » ou « &quot; » ; la ponctuation finale (.,;:!?)]) est écartée. */
+    inline std::vector<std::pair<size_t, size_t>> FindUrlRanges(std::wstring_view text, bool escaped = false)
+    {
+        std::vector<std::pair<size_t, size_t>> ranges;
+        size_t pos = 0;
+        while (pos < text.size())
+        {
+            size_t http = text.find(L"http", pos);
+            if (http == std::wstring_view::npos)
+                break;
+            std::wstring_view rest = text.substr(http);
+            size_t prefix = rest.rfind(L"https://", 0) == 0 ? 8 : (rest.rfind(L"http://", 0) == 0 ? 7 : 0);
+            if (prefix == 0 || (http > 0 && iswalnum(text[http - 1])))
+            {
+                pos = http + 4;
+                continue;
+            }
+            size_t end = http + prefix;
+            while (end < text.size())
+            {
+                wchar_t c = text[end];
+                if (iswspace(c) || c == L'<' || c == L'>' || c == L'"')
+                    break;
+                if (escaped && c == L'&')
+                {
+                    std::wstring_view tail = text.substr(end);
+                    if (tail.rfind(L"&lt;", 0) == 0 || tail.rfind(L"&gt;", 0) == 0 || tail.rfind(L"&quot;", 0) == 0)
+                        break;
+                }
+                ++end;
+            }
+            while (end > http + prefix && wcschr(L".,;:!?)]'", text[end - 1]))
+                --end;
+            if (end > http + prefix)
+                ranges.emplace_back(http, end - http);
+            pos = end > http ? end : http + 4;
+        }
+        return ranges;
+    }
+
+    /* Texte HTML déjà échappé dont les adresses web deviennent des liens (ouverts par le navigateur du système). */
+    inline std::wstring LinkifyEscapedHtml(std::wstring_view escaped)
+    {
+        std::wstring out;
+        size_t last = 0;
+        for (auto const& range : FindUrlRanges(escaped, true))
+        {
+            out.append(escaped.substr(last, range.first - last));
+            std::wstring url{ escaped.substr(range.first, range.second) };
+            out += L"<a href=\"" + url + L"\">" + url + L"</a>";
+            last = range.first + range.second;
+        }
+        out.append(escaped.substr(last));
+        return out;
+    }
+
     /* Échappe les caractères spéciaux HTML d'une chaîne brute. */
     inline std::wstring EscapeHtml(std::wstring_view text)
     {

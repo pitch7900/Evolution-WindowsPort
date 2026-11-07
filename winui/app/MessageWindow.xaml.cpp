@@ -1204,7 +1204,7 @@ namespace winrt::EvolutionWin::implementation
 
             std::wstring plain_html = L"<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>"
                 L"body { margin:0; padding:16px; background:#fff; color:#1a1a1a; font-family:'Segoe UI Variable Text','Segoe UI',sans-serif; font-size:14px; line-height:1.6; word-break:break-word; white-space:pre-wrap; }"
-                L"</style></head><body>" + std::wstring{ ::EvolutionWin::Helpers::EscapeHtml(body_text) } + L"</body></html>";
+                L"</style></head><body>" + ::EvolutionWin::Helpers::LinkifyEscapedHtml(::EvolutionWin::Helpers::EscapeHtml(body_text)) + L"</body></html>";
 
             ShowInReader(hstring{ plain_html }, false);
             return;

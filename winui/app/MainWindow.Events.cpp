@@ -1645,7 +1645,33 @@ namespace winrt::EvolutionWin::implementation
             if (any_extra)
                 add_row(Tr(L"Réunion en ligne", L"Online meeting"), extras, false);
         }
+        /* adresses web de la description : liens cliquables (ouverts par le navigateur du système) */
+        StackPanel links_panel;
+        links_panel.Spacing(2);
+        {
+            auto refresh_links = [links_panel, desc_box]()
+            {
+                links_panel.Children().Clear();
+                std::wstring text{ desc_box.Text() };
+                for (auto const& range : ::EvolutionWin::Helpers::FindUrlRanges(text))
+                {
+                    std::wstring url = text.substr(range.first, range.second);
+                    HyperlinkButton link;
+                    link.Content(box_value(hstring{ url }));
+                    link.Padding(ThicknessHelper::FromLengths(0, 2, 0, 2));
+                    link.Click([url](IInspectable const&, RoutedEventArgs const&)
+                    {
+                        Windows::System::Launcher::LaunchUriAsync(Windows::Foundation::Uri{ hstring{ url } });
+                    });
+                    links_panel.Children().Append(link);
+                }
+                links_panel.Visibility(links_panel.Children().Size() > 0 ? Visibility::Visible : Visibility::Collapsed);
+            };
+            refresh_links();
+            desc_box.TextChanged([refresh_links](auto&&, auto&&) { refresh_links(); });
+        }
         add_row(Tr(L"Description", L"Description"), desc_box, true);
+        add_row(hstring{}, links_panel, false);
 
         Grid window_root;
         {

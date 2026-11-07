@@ -230,6 +230,55 @@ part_decode_bytes (CamelMimePart *part,
 	return data ? data : g_strdup ("");
 }
 
+/* Texte déjà échappé en HTML dont les adresses web (http://, https://) deviennent des liens.
+ * Paramètres :
+ *   escaped : texte échappé (g_markup_escape_text)
+ * Retourne : HTML (g_free). */
+static gchar *
+linkify_escaped_text (const gchar *escaped)
+{
+	GString *out = g_string_new (NULL);
+	const gchar *cursor = escaped;
+
+	while (*cursor) {
+		const gchar *scheme = strstr (cursor, "http");
+		const gchar *end;
+		gsize prefix;
+
+		if (!scheme) {
+			g_string_append (out, cursor);
+			break;
+		}
+		prefix = g_str_has_prefix (scheme, "https://") ? 8 : (g_str_has_prefix (scheme, "http://") ? 7 : 0);
+		if (!prefix || (scheme > escaped && g_ascii_isalnum (scheme[-1]))) {
+			g_string_append_len (out, cursor, scheme + 4 - cursor);
+			cursor = scheme + 4;
+			continue;
+		}
+
+		g_string_append_len (out, cursor, scheme - cursor);
+		end = scheme + prefix;
+		while (*end && !g_ascii_isspace (*end) && *end != '<' && *end != '>' && *end != '"' &&
+		       !g_str_has_prefix (end, "&lt;") && !g_str_has_prefix (end, "&gt;") && !g_str_has_prefix (end, "&quot;"))
+			end++;
+		while (end > scheme + prefix && strchr (".,;:!?)]'", end[-1]))
+			end--;
+		if (end > scheme + prefix) {
+			g_string_append (out, "<a href=\"");
+			g_string_append_len (out, scheme, end - scheme);
+			g_string_append (out, "\">");
+			g_string_append_len (out, scheme, end - scheme);
+			g_string_append (out, "</a>");
+		} else {
+			g_string_append_len (out, scheme, prefix);
+			end = scheme + prefix;
+		}
+		cursor = end;
+	}
+
+	return g_string_free (out, FALSE);
+}
+
 /* Extrait le corps HTML d'un message, son équivalent texte brut et la liste
  * de ses pièces jointes.
  * Paramètres :
@@ -281,8 +330,10 @@ message_body_html (CamelMimeMessage *message,
 		g_free (inlined);
 	} else {
 		gchar *text = parts.plain ? part_get_text (parts.plain, cancellable) : g_strdup ("");
-		gchar *escaped = g_markup_escape_text (text, -1);
+		gchar *plain_escaped = g_markup_escape_text (text, -1);
+		gchar *escaped = linkify_escaped_text (plain_escaped);
 
+		g_free (plain_escaped);
 		*out_text = g_strdup (text);
 
 		html = g_strdup_printf (
