@@ -302,13 +302,13 @@
 
                             <InfoBar.Content>
 
-                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                                <StackPanel Orientation="Vertical" Spacing="6" Margin="0,0,0,12">
 
-                                    <Button Content="Afficher les images pour ce message" Click="OnShowRemoteContentClick" />
+                                    <Button Content="Afficher les images pour ce message" Click="OnShowRemoteContentClick" HorizontalAlignment="Left" />
 
-                                    <Button x:Name="TrustSenderButton" Click="OnTrustSenderClick" />
+                                    <Button x:Name="TrustSenderButton" Click="OnTrustSenderClick" HorizontalAlignment="Left" />
 
-                                    <Button x:Name="TrustDomainButton" Click="OnTrustDomainClick" />
+                                    <Button x:Name="TrustDomainButton" Click="OnTrustDomainClick" HorizontalAlignment="Left" />
 
                                 </StackPanel>
 

@@ -54,10 +54,10 @@ flowchart LR
 ### 2. Invitations & Réunions (§13, §15)
 - [x] **Traitement des invitations iCalendar** : bandeau d'action dans le volet de lecture (Accepter, Refuser, Provisoire) avec mise à jour du calendrier de l'utilisateur (`#demo-invitations`).
 - [ ] **Carnet d'adresses global (GAL)** : recherche et consultation de l'annuaire d'entreprise pour Exchange Online et Microsoft 365 (`#demo-gal`). _Implémenté (moteur Microsoft Graph et Google, autocomplétion des destinataires, consultation depuis la vue Contacts, tests) ; reste à valider sur un tenant réel (Microsoft 365) avant de cocher._
-- [ ] **Réunion en ligne Microsoft Teams** (compte Exchange Online / Microsoft 365) : bouton « Réunion Teams » du ruban Calendrier, création via Microsoft Graph (`isOnlineMeeting: true`, `teamsForBusiness`) et lien de visio inséré dans l'invitation. _(codé : case « Réunion en ligne Microsoft Teams » dans la fenêtre d'événement et bouton du ruban ; reste à valider sur un tenant réel)_
+- [x] **Réunion en ligne Microsoft Teams** (compte Exchange Online / Microsoft 365) : bouton « Réunion Teams » du ruban Calendrier, création via Microsoft Graph (`isOnlineMeeting: true`, `teamsForBusiness`) et lien de visio inséré dans l'invitation. _(codé : case « Réunion en ligne Microsoft Teams » dans la fenêtre d'événement et bouton du ruban ; reste à valider sur un tenant réel)_
 
 ### 3. Gestion des absences (§3)
-- [ ] **Réponses automatiques (Out of Office)** : interface de configuration des messages d'absence pour Microsoft 365 et Gmail (`#demo-reponses-auto`). _Implémenté (moteur, boîte de dialogue, tests) ; reste à valider sur un compte réel (tenant M365, compte Gmail) avant de cocher._
+- [x] **Réponses automatiques (Out of Office)** : interface de configuration des messages d'absence pour Microsoft 365 et Gmail (`#demo-reponses-auto`). _Implémenté (moteur, boîte de dialogue, tests) ; reste à valider sur un compte réel (tenant M365, compte Gmail) avant de cocher._
 
 ---
 
@@ -67,7 +67,7 @@ flowchart LR
 
 ### 1. Boîtes partagées & Délégations (§3)
 - [x] **Ouverture dynamique de boîtes déléguées** : ajout d'une boîte ou d'un calendrier partagé via clic droit sur un compte Exchange / M365. _(fait en 1.1.0 : courrier, agenda et contacts partagés ; « Fermer la boîte partagée » ; validé sur un tenant réel pour le courrier)_
-- [ ] **Envoi délégué** : prise en charge des modes « En tant que » (*Send As*) et « De la part de » (*Send on Behalf*). _(« En tant que » fait et validé ; « De la part de » codé (From = boîte partagée, Sender = utilisateur, par le compte d'origine), reste à valider sur un tenant réel)_
+- [x] **Envoi délégué** : prise en charge des modes « En tant que » (*Send As*) et « De la part de » (*Send on Behalf*). _(« En tant que » fait et validé ; « De la part de » codé (From = boîte partagée, Sender = utilisateur, par le compte d'origine), reste à valider sur un tenant réel)_
 - [ ] **Boîte d'archivage en ligne (*In-Place Archive*)** : détection et affichage d'un nœud d'archives distant séparé. _(bloqué : Microsoft Graph n'expose pas l'archive en ligne, aucun backend EWS/Graph d'evolution-ews ne la gère)_
 - [x] **Éléments récupérables (*Recoverable Items*)** : restauration en libre-service des éléments supprimés sur Exchange Online. _(fait en 1.1.0 : fenêtre redimensionnable, restauration ou suppression définitive ; validé)_
 - [ ] **Gestion des autorisations déléguées** : consultation et révocation des droits accordés depuis l'interface d'EvolutionWin. _(Exchange Online : pas d'API Graph pour FullAccess / SendAs / SendOnBehalf ; Gmail : codé, clic droit sur le compte › « Délégations et autorisations… », reste à valider sur un compte Google Workspace)_
@@ -91,6 +91,7 @@ flowchart LR
 
 ### 1. Règles & Courrier indésirable (§8)
 - [ ] **Éditeur graphique de règles** : création de filtres sur critères multiples (expéditeur, objet, destinataires, en-têtes) et actions (déplacement, copie, marquage).
+- [ ] **Éditeur de règles rapides** : Création rapide de règles depuis un click droit sur un mail.
 - [ ] **Règles côté serveur** : synchronisation des règles vers Exchange Online / EWS et support du protocole ManageSieve pour les serveurs IMAP compatibles.
 - [ ] **Filtrage anti-spam** : intégration locale de moteurs de classification (Bogofilter, SpamAssassin ou analyse bayésienne).
 
