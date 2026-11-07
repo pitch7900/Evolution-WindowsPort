@@ -219,9 +219,9 @@ Les règles suivantes ont été définies par Pierre et doivent être respectée
   > [!IMPORTANT]
   > **Règle impérative pour l'interface graphique** :
   > Dès qu'un texte, libellé, bouton, titre de dialogue, menu ou infobulle est **créé ou modifié** dans l'interface (XAML ou C++), l'agent **doit impérativement** :
-  > 1. Définir la clé correspondante dans `winui/app/Strings/fr-FR/Resources.resw`.
-  > 2. Reporter cette clé dans tous les autres catalogues de langues supportées (`en-US`, `de-DE`, `it-IT`, `es-ES`, `pt-PT`, `nl-NL`), en s'appuyant sur la terminologie officielle d'Evolution (`evolution/po/*.po`).
-  > 3. Utiliser le helper `Tr(L"Texte FR", L"Texte EN", L"Cle_Ressource")` dans le code C++ ou `x:Uid="Cle_Ressource"` en XAML.
+  > 1. Écrire le texte en français : `Tr(L"Texte FR")` ou `Fmt(Tr(L"… {0} …"), { valeur })` en C++ (jamais de fragments concaténés autour d'une valeur), texte brut dans le XAML (traduit au chargement par `UiTranslate.h`). **Aucun texte français en dur** dans un setter d'interface (`box_value(L"…")`, `Text(L"…")`, `Content`, `Title`, `ShowStatus`…).
+  > 2. Fournir les traductions `en`, `de`, `it`, `es`, `pt`, `nl` dans un JSON et les fusionner : `python tools\i18n-sync.py merge fichier.json` (la clé `T_<hash>` est déduite du libellé français ; terminologie officielle d'Evolution : `evolution/po/*.po`).
+  > 3. Vérifier avec `python tools\i18n-sync.py check` (exécuté aussi par `tools\run-tests.bat`).
 
 ---
 
