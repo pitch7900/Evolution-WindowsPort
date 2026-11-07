@@ -31,51 +31,28 @@
                           SelectionChanged="OnSearchScopeChanged" ToolTipService.ToolTip="Portée de la recherche">
 
                     <ComboBoxItem Tag="folder" IsSelected="True">
-
                         <StackPanel Orientation="Horizontal" Spacing="8">
-
                             <FontIcon Glyph="&#xE8B7;" FontSize="13" />
-
-                            <TextBlock Text="Dossier courant" />
-
+                            <TextBlock x:Name="SearchScopeFolderText" Text="Dossier courant" />
                         </StackPanel>
-
                     </ComboBoxItem>
-
                     <ComboBoxItem Tag="subfolders">
-
                         <StackPanel Orientation="Horizontal" Spacing="8">
-
                             <FontIcon Glyph="&#xED43;" FontSize="13" />
-
-                            <TextBlock Text="Sous-dossiers" />
-
+                            <TextBlock x:Name="SearchScopeSubfoldersText" Text="Sous-dossiers" />
                         </StackPanel>
-
                     </ComboBoxItem>
-
                     <ComboBoxItem Tag="account">
-
                         <StackPanel Orientation="Horizontal" Spacing="8">
-
                             <FontIcon Glyph="&#xE715;" FontSize="13" />
-
-                            <TextBlock Text="Compte courant" />
-
+                            <TextBlock x:Name="SearchScopeAccountText" Text="Compte courant" />
                         </StackPanel>
-
                     </ComboBoxItem>
-
                     <ComboBoxItem Tag="all">
-
                         <StackPanel Orientation="Horizontal" Spacing="8">
-
                             <FontIcon Glyph="&#xE774;" FontSize="13" />
-
-                            <TextBlock Text="Tous les comptes" />
-
+                            <TextBlock x:Name="SearchScopeAllText" Text="Tous les comptes" />
                         </StackPanel>
-
                     </ComboBoxItem>
 
                 </ComboBox>

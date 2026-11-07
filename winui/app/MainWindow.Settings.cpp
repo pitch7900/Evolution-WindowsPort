@@ -28,10 +28,9 @@
 
 
 using namespace winrt;
-
 using namespace Microsoft::UI::Xaml;
-
 using namespace Microsoft::UI::Xaml::Controls;
+using namespace ::EvolutionWin::Helpers;
 
 
 
@@ -1215,142 +1214,91 @@ namespace winrt::EvolutionWin::implementation
 
 
         if (category_tag == L"accounts")
-
         {
-
-            title = L"Comptes";
-
-            desc = L"Gérez vos comptes de messagerie Microsoft 365, Exchange, Gmail et IMAP / SMTP.";
-
+            title = Tr(L"Comptes", L"Accounts");
+            desc = Tr(L"Gérez vos comptes de messagerie Microsoft 365, Exchange, Gmail et IMAP / SMTP.",
+                      L"Manage your Microsoft 365, Exchange, Gmail and IMAP / SMTP mail accounts.");
             if (auto s = SettingsCategoryAccounts()) s.Visibility(Visibility::Visible);
-
             RefreshAccountsView();
-
         }
-
         else if (category_tag == L"mail")
-
         {
-
-            title = L"Courrier";
-
-            desc = L"Paramètres de réception, lecture, rédaction de messages et gestion des signatures.";
-
+            title = Tr(L"Courrier", L"Mail");
+            desc = Tr(L"Paramètres de réception, lecture, rédaction de messages et gestion des signatures.",
+                      L"Settings for receiving, reading, composing messages and managing signatures.");
             if (auto s = SettingsCategoryMail()) s.Visibility(Visibility::Visible);
-
             RefreshSignaturesView();
-
         }
-
         else if (category_tag == L"calendar")
-
         {
-
-            title = L"Calendrier";
-
-            desc = L"Options d'affichage de la semaine, heures de travail, rappels et durées par défaut.";
-
+            title = Tr(L"Calendrier", L"Calendar");
+            desc = Tr(L"Options d'affichage de la semaine, heures de travail, rappels et durées par défaut.",
+                      L"Week display options, work hours, reminders and default event durations.");
             if (auto s = SettingsCategoryCalendar()) s.Visibility(Visibility::Visible);
-
         }
-
         else if (category_tag == L"contacts")
-
         {
-
-            title = L"Contacts";
-
-            desc = L"Format d'affichage des noms et ordre de tri des fiches de contacts.";
-
+            title = Tr(L"Contacts", L"Contacts");
+            desc = Tr(L"Format d'affichage des noms et ordre de tri des fiches de contacts.",
+                      L"Name display format and sorting order for contact cards.");
             if (auto s = SettingsCategoryContacts()) s.Visibility(Visibility::Visible);
-
         }
-
         else if (category_tag == L"tasks")
-
         {
-
-            title = L"Tâches";
-
-            desc = L"Affichage des tâches achevées, échéances et rappels automatiques.";
-
+            title = Tr(L"Tâches", L"Tasks");
+            desc = Tr(L"Affichage des tâches achevées, échéances et rappels automatiques.",
+                      L"Display of completed tasks, due dates and automatic reminders.");
             if (auto s = SettingsCategoryTasks()) s.Visibility(Visibility::Visible);
-
         }
-
         else if (category_tag == L"categories")
         {
-            title = L"Catégories";
-            desc = L"Palette de catégories et codes couleur partagés par les courriels, contacts, tâches et événements.";
+            title = Tr(L"Catégories", L"Categories");
+            desc = Tr(L"Palette de catégories et codes couleur partagés par les courriels, contacts, tâches et événements.",
+                      L"Shared category palette and color codes for emails, contacts, tasks and events.");
             if (auto s = SettingsCategoryCategories()) s.Visibility(Visibility::Visible);
             RefreshCategoriesView();
         }
         else if (category_tag == L"notifications")
-
         {
-
-            title = L"Notifications";
-
-            desc = L"Alertes Windows (toasts), signaux sonores, pastille de la barre des tâches et mode confidentiel.";
-
+            title = Tr(L"Notifications", L"Notifications");
+            desc = Tr(L"Alertes Windows (toasts), signaux sonores, pastille de la barre des tâches et mode confidentiel.",
+                      L"Windows alerts (toasts), sounds, taskbar badge and confidential mode.");
             if (auto s = SettingsCategoryNotifications()) s.Visibility(Visibility::Visible);
-
         }
-
         else if (category_tag == L"appearance")
-
         {
-
-            title = L"Apparence";
-
-            desc = L"Personnalisation du thème visuel, taille des polices de lecture et comportement au démarrage.";
-
+            title = Tr(L"Apparence", L"Appearance");
+            desc = Tr(L"Personnalisation du thème visuel, taille des polices de lecture et comportement au démarrage.",
+                      L"Visual theme customization, reading font sizes and startup behavior.");
             if (auto s = SettingsCategoryAppearance()) s.Visibility(Visibility::Visible);
-
         }
-
         else if (category_tag == L"privacy")
-
         {
-
-            title = L"Confidentialité et sécurité";
-
-            desc = L"Protection contre les pixels espions, blocage du contenu distant et liste de confiance.";
-
+            title = Tr(L"Confidentialité et sécurité", L"Privacy & Security");
+            desc = Tr(L"Protection contre les pixels espions, blocage du contenu distant et liste de confiance.",
+                      L"Web bug protection, remote content blocking and trusted senders list.");
             if (auto s = SettingsCategoryPrivacy()) s.Visibility(Visibility::Visible);
-
             RefreshPrivacyView();
-
         }
-
         else if (category_tag == L"update")
-
         {
-
-            title = L"Mise à jour";
-
-            desc = L"Recherche automatique de nouvelles versions et canal de distribution du logiciel.";
-
+            title = Tr(L"Mise à jour", L"Update");
+            desc = Tr(L"Recherche automatique de nouvelles versions et canal de distribution du logiciel.",
+                      L"Automatic check for updates and software distribution channel.");
             if (auto s = SettingsCategoryUpdate()) s.Visibility(Visibility::Visible);
-
         }
-
         else if (category_tag == L"advanced")
-
         {
-
-            title = L"Avancé";
-
-            desc = L"Gestion des données locales, vidage du cache de rendu et réinitialisation des paramètres.";
-
+            title = Tr(L"Avancé", L"Advanced");
+            desc = Tr(L"Gestion des données locales, vidage du cache de rendu et réinitialisation des paramètres.",
+                      L"Local data management, rendering cache purge and settings reset.");
             if (auto s = SettingsCategoryAdvanced()) s.Visibility(Visibility::Visible);
-
         }
-
         else if (category_tag == L"about")
         {
-            title = L"À propos";
-            desc = L"Informations sur le portage Windows natif d'Evolution, technologies et mentions légales.";
+            title = Tr(L"À propos", L"About");
+            desc = Tr(L"Informations sur le portage Windows natif d'Evolution, technologies et mentions légales.",
+                      L"Information about the native Windows port of Evolution, technologies and legal notices.");
             if (auto s = SettingsCategoryAbout())
             {
                 s.Visibility(Visibility::Visible);

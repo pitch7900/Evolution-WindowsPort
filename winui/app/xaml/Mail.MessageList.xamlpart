@@ -29,25 +29,16 @@
                         <!-- Boîte de réception prioritaire (Microsoft 365) : visible seulement dans la Boîte de réception de ces comptes -->
 
                         <SelectorBar x:Name="FocusedBar" Visibility="Collapsed" SelectionChanged="OnFocusedBarChanged">
-
-                            <SelectorBarItem Text="Prioritaire" Tag="focused" IsSelected="True" />
-
-                            <SelectorBarItem Text="Autres" Tag="other" />
-
+                            <SelectorBarItem x:Name="FocusedBarItemFocused" Text="Prioritaire" Tag="focused" IsSelected="True" />
+                            <SelectorBarItem x:Name="FocusedBarItemOther" Text="Autres" Tag="other" />
                         </SelectorBar>
 
                         <!-- filtres rapides, combinés avec la recherche (appliqués par ShowMessages) -->
-
                         <Grid>
-
                             <SelectorBar x:Name="ReadFilterBar" SelectionChanged="OnQuickFilterChanged">
-
-                                <SelectorBarItem Text="Tous" Tag="all" IsSelected="True" />
-
-                                <SelectorBarItem Text="Non lus" Tag="unread" />
-
-                                <SelectorBarItem Text="Lus" Tag="read" />
-
+                                <SelectorBarItem x:Name="ReadFilterAll" Text="Tous" Tag="all" IsSelected="True" />
+                                <SelectorBarItem x:Name="ReadFilterUnread" Text="Non lus" Tag="unread" />
+                                <SelectorBarItem x:Name="ReadFilterRead" Text="Lus" Tag="read" />
                             </SelectorBar>
 
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4">

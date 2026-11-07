@@ -594,6 +594,82 @@ namespace winrt::EvolutionWin::implementation
                 }
             }
         }
+
+        // 3. Portée de la recherche dans la barre de titre
+        if (auto t = SearchScopeFolderText()) t.Text(Tr(L"Dossier courant", L"Current folder"));
+        if (auto t = SearchScopeSubfoldersText()) t.Text(Tr(L"Sous-dossiers", L"Subfolders"));
+        if (auto t = SearchScopeAccountText()) t.Text(Tr(L"Compte courant", L"Current account"));
+        if (auto t = SearchScopeAllText()) t.Text(Tr(L"Tous les comptes", L"All accounts"));
+
+        // 4. Filtres de la liste de messages (Prioritaire / Autres, Tous / Non lus / Lus)
+        if (auto t = FocusedBarItemFocused()) t.Text(Tr(L"Prioritaire", L"Focused"));
+        if (auto t = FocusedBarItemOther()) t.Text(Tr(L"Autres", L"Other"));
+        if (auto t = ReadFilterAll()) t.Text(Tr(L"Tous", L"All"));
+        if (auto t = ReadFilterUnread()) t.Text(Tr(L"Non lus", L"Unread"));
+        if (auto t = ReadFilterRead()) t.Text(Tr(L"Lus", L"Read"));
+
+        // 5. Boutons principaux du ruban Accueil (Mail)
+        if (auto b = RibbonNewMessageBtn()) b.Label(Tr(L"Nouveau message", L"New message"));
+        if (auto b = RibbonNewItemBtn()) b.Label(Tr(L"Nouvel élément", L"New item"));
+        if (auto b = RibbonDeleteBtn()) b.Label(Tr(L"Supprimer", L"Delete"));
+        if (auto b = RibbonJunkBtn()) b.Label(Tr(L"Indésirable", L"Junk"));
+        if (auto b = RibbonArchiveBtn()) b.Label(Tr(L"Archiver", L"Archive"));
+        if (auto b = RibbonMoveButton()) b.Label(Tr(L"Déplacer", L"Move"));
+        if (auto b = RibbonReplyBtn()) b.Label(Tr(L"Répondre", L"Reply"));
+        if (auto b = RibbonReplyAllBtn()) b.Label(Tr(L"Répondre à tous", L"Reply all"));
+        if (auto b = RibbonForwardBtn()) b.Label(Tr(L"Transférer", L"Forward"));
+        if (auto b = RibbonForwardAttachmentBtn()) b.Label(Tr(L"Transférer en PJ", L"Forward as attachment"));
+
+        // Sous-éléments de 'Nouvel élément'
+        if (auto m = RibbonNewItemMessage()) m.Text(Tr(L"Message", L"Message"));
+        if (auto m = RibbonNewItemEvent()) m.Text(Tr(L"Rendez-vous", L"Appointment"));
+        if (auto m = RibbonNewItemMeeting()) m.Text(Tr(L"Réunion (bientôt)", L"Meeting (soon)"));
+        if (auto m = RibbonNewItemTask()) m.Text(Tr(L"Tâche", L"Task"));
+        if (auto m = RibbonNewItemContact()) m.Text(Tr(L"Contact", L"Contact"));
+
+        // 6. Navigation des Paramètres (titres, recherche, éléments de liste, fil d'Ariane)
+        if (auto t = SettingsNavTitle()) t.Text(Tr(L"Paramètres", L"Settings"));
+        if (auto s = SettingsSearchBox()) s.PlaceholderText(Tr(L"Rechercher un paramètre", L"Search setting"));
+        if (auto h = SettingsBreadcrumbRoot()) h.Content(box_value(Tr(L"Paramètres", L"Settings")));
+
+        if (auto nav_list = SettingsNavList())
+        {
+            for (auto const& item_obj : nav_list.Items())
+            {
+                if (auto item = item_obj.try_as<ListViewItem>())
+                {
+                    hstring tag = unbox_value_or<hstring>(item.Tag(), L"");
+                    if (auto sp = item.Content().try_as<StackPanel>())
+                    {
+                        for (auto const& child : sp.Children())
+                        {
+                            if (auto tb = child.try_as<TextBlock>())
+                            {
+                                if (tag == L"accounts") tb.Text(Tr(L"Comptes", L"Accounts"));
+                                else if (tag == L"mail") tb.Text(Tr(L"Courrier", L"Mail"));
+                                else if (tag == L"calendar") tb.Text(Tr(L"Calendrier", L"Calendar"));
+                                else if (tag == L"contacts") tb.Text(Tr(L"Contacts", L"Contacts"));
+                                else if (tag == L"tasks") tb.Text(Tr(L"Tâches", L"Tasks"));
+                                else if (tag == L"categories") tb.Text(Tr(L"Catégories", L"Categories"));
+                                else if (tag == L"notifications") tb.Text(Tr(L"Notifications", L"Notifications"));
+                                else if (tag == L"appearance") tb.Text(Tr(L"Apparence", L"Appearance"));
+                                else if (tag == L"privacy") tb.Text(Tr(L"Confidentialité et sécurité", L"Privacy & Security"));
+                                else if (tag == L"update") tb.Text(Tr(L"Mise à jour", L"Update"));
+                                else if (tag == L"advanced") tb.Text(Tr(L"Avancé", L"Advanced"));
+                                else if (tag == L"about") tb.Text(Tr(L"À propos", L"About"));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 7. En-têtes fixes de la vue Paramètres > Comptes
+        if (auto t = AddAccountCardTitle()) t.Text(Tr(L"Ajouter un compte de messagerie", L"Add a mail account"));
+        if (auto t = AddAccountCardDesc()) t.Text(Tr(L"Configurez une nouvelle boîte aux lettres Exchange Online, Gmail, Outlook ou IMAP / SMTP.",
+                                                     L"Set up a new Exchange Online, Gmail, Outlook or IMAP / SMTP mailbox."));
+        if (auto t = AddAccountButtonText()) t.Text(Tr(L"Ajouter un compte", L"Add account"));
+        if (auto t = ConfiguredAccountsHeader()) t.Text(Tr(L"Comptes configurés", L"Configured accounts"));
     }
 
     /**

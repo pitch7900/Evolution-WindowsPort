@@ -55,59 +55,35 @@
 
                                 HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
 
-                        <AppBarButton Label="Nouveau message" Click="OnNewMessageClick">
-
+                        <AppBarButton x:Name="RibbonNewMessageBtn" Label="Nouveau message" Click="OnNewMessageClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE710;" /></AppBarButton.Icon>
-
                             <AppBarButton.KeyboardAccelerators>
-
                                 <KeyboardAccelerator Modifiers="Control" Key="N" />
-
                             </AppBarButton.KeyboardAccelerators>
-
                         </AppBarButton>
 
-                        <AppBarButton Label="Nouvel élément">
-
+                        <AppBarButton x:Name="RibbonNewItemBtn" Label="Nouvel élément">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8F4;" /></AppBarButton.Icon>
-
                             <AppBarButton.Flyout>
-
                                 <MenuFlyout>
-
-                                    <MenuFlyoutItem Text="Message" Click="OnNewMessageClick"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE715;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
-
-                                    <MenuFlyoutItem Text="Rendez-vous" Click="OnNewEventClick"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE787;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
-
-                                    <MenuFlyoutItem Text="Réunion (bientôt)" IsEnabled="False"
-
+                                    <MenuFlyoutItem x:Name="RibbonNewItemMessage" Text="Message" Click="OnNewMessageClick"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE715;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                                    <MenuFlyoutItem x:Name="RibbonNewItemEvent" Text="Rendez-vous" Click="OnNewEventClick"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE787;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                                    <MenuFlyoutItem x:Name="RibbonNewItemMeeting" Text="Réunion (bientôt)" IsEnabled="False"
                                                     ToolTipService.ToolTip="Réunion avec participants et invitations : à venir"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE716;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
-
-                                    <MenuFlyoutItem Text="Tâche" Click="OnNewTaskClick" KeyboardAcceleratorTextOverride="Ctrl+Maj+K"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE9D5;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
-
-                                    <MenuFlyoutItem Text="Contact" Click="OnNewContactClick"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE77B;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
-
+                                    <MenuFlyoutItem x:Name="RibbonNewItemTask" Text="Tâche" Click="OnNewTaskClick" KeyboardAcceleratorTextOverride="Ctrl+Maj+K"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE9D5;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                                    <MenuFlyoutItem x:Name="RibbonNewItemContact" Text="Contact" Click="OnNewContactClick"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE77B;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
                                 </MenuFlyout>
-
                             </AppBarButton.Flyout>
-
                         </AppBarButton>
-
                         <AppBarSeparator />
-
-                        <AppBarButton Label="Supprimer" Click="OnDeleteClick">
-
+                        <AppBarButton x:Name="RibbonDeleteBtn" Label="Supprimer" Click="OnDeleteClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE74D;" /></AppBarButton.Icon>
-
                         </AppBarButton>
-
-                        <AppBarButton Label="Indésirable" Click="OnJunkClick" ToolTipService.ToolTip="Marquer comme indésirable / non indésirable">
+                        <AppBarButton x:Name="RibbonJunkBtn" Label="Indésirable" Click="OnJunkClick" ToolTipService.ToolTip="Marquer comme indésirable / non indésirable">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE7BA;" /></AppBarButton.Icon>
                         </AppBarButton>
-                        <AppBarButton Label="Archiver" Click="OnArchiveClick" ToolTipService.ToolTip="Archiver (Retour arrière)">
-
+                        <AppBarButton x:Name="RibbonArchiveBtn" Label="Archiver" Click="OnArchiveClick" ToolTipService.ToolTip="Archiver (Retour arrière)">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE7B8;" /></AppBarButton.Icon>
-
                         </AppBarButton>
                         <AppBarButton x:Name="RibbonMoveButton" Label="Déplacer" ToolTipService.ToolTip="Déplacer vers un dossier (Ctrl+Maj+V)">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8DE;" /></AppBarButton.Icon>
@@ -120,35 +96,20 @@
                         </AppBarButton>
 
                         <AppBarSeparator />
-
-                        <AppBarButton Label="Répondre" Click="OnReplyClick">
-
+                        <AppBarButton x:Name="RibbonReplyBtn" Label="Répondre" Click="OnReplyClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE97A;" /></AppBarButton.Icon>
-
                         </AppBarButton>
-
-                        <AppBarButton Label="Répondre à tous" Click="OnReplyAllClick">
-
+                        <AppBarButton x:Name="RibbonReplyAllBtn" Label="Répondre à tous" Click="OnReplyAllClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xEE35;" /></AppBarButton.Icon>
-
                         </AppBarButton>
-
-                        <AppBarButton Label="Transférer" Click="OnForwardClick">
-
+                        <AppBarButton x:Name="RibbonForwardBtn" Label="Transférer" Click="OnForwardClick">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE72D;" /></AppBarButton.Icon>
-
                         </AppBarButton>
-
-                        <AppBarButton Label="Transférer en PJ" Click="OnForwardAsAttachmentClick" ToolTipService.ToolTip="Transférer en tant que pièce jointe (Ctrl+Maj+F)">
-
+                        <AppBarButton x:Name="RibbonForwardAttachmentBtn" Label="Transférer en PJ" Click="OnForwardAsAttachmentClick" ToolTipService.ToolTip="Transférer en tant que pièce jointe (Ctrl+Maj+F)">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE723;" /></AppBarButton.Icon>
-
                             <AppBarButton.KeyboardAccelerators>
-
                                 <KeyboardAccelerator Modifiers="Control,Shift" Key="F" />
-
                             </AppBarButton.KeyboardAccelerators>
-
                         </AppBarButton>
 
                         <AppBarSeparator />

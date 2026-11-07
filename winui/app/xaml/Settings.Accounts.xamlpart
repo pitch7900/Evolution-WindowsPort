@@ -21,32 +21,19 @@
                                         <FontIcon Grid.Column="0" Glyph="&#xE710;" FontSize="20" Foreground="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center" />
 
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-
-                                            <TextBlock Text="Ajouter un compte de messagerie" Style="{StaticResource BodyStrongTextBlockStyle}" />
-
-                                            <TextBlock Text="Configurez une nouvelle boîte aux lettres Exchange Online, Gmail, Outlook ou IMAP / SMTP."
-
+                                            <TextBlock x:Name="AddAccountCardTitle" Text="Ajouter un compte de messagerie" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock x:Name="AddAccountCardDesc" Text="Configurez une nouvelle boîte aux lettres Exchange Online, Gmail, Outlook ou IMAP / SMTP."
                                                        Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-
                                         </StackPanel>
-
                                         <Button Grid.Column="2" Style="{StaticResource AccentButtonStyle}" Click="OnAddAccountClick">
-
                                             <StackPanel Orientation="Horizontal" Spacing="8">
-
                                                 <FontIcon Glyph="&#xE710;" FontSize="14" />
-
-                                                <TextBlock Text="Ajouter un compte" />
-
+                                                <TextBlock x:Name="AddAccountButtonText" Text="Ajouter un compte" />
                                             </StackPanel>
-
                                         </Button>
-
                                     </Grid>
-
                                 </Border>
-
-                                <TextBlock Text="Comptes configurés" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+                                <TextBlock x:Name="ConfiguredAccountsHeader" Text="Comptes configurés" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
 
                                 <ListView x:Name="AccountList" SelectionMode="None" />
 

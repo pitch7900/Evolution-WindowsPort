@@ -745,7 +745,7 @@ namespace winrt::EvolutionWin::implementation
                 badge.VerticalAlignment(VerticalAlignment::Center);
                 badge.Background(Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
                 TextBlock badge_text;
-                badge_text.Text(L"Par défaut");
+                badge_text.Text(Tr(L"Par défaut", L"Default"));
                 badge_text.FontSize(11);
                 badge_text.Foreground(Application::Current().Resources().Lookup(box_value(L"TextOnAccentFillColorPrimaryBrush")).as<Brush>());
                 badge.Child(badge_text);
@@ -754,8 +754,8 @@ namespace winrt::EvolutionWin::implementation
             info.Children().Append(title_line);
 
             TextBlock subtitle;
-            subtitle.Text((address.empty() ? L"Compte local" : address) +
-                (backend.empty() ? hstring{} : L"  •  Protocole : " + backend));
+            subtitle.Text((address.empty() ? Tr(L"Compte local", L"Local account") : address) +
+                (backend.empty() ? hstring{} : Tr(L"  •  Protocole : ", L"  •  Protocol: ") + backend));
             subtitle.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
             info.Children().Append(subtitle);
 
@@ -772,18 +772,18 @@ namespace winrt::EvolutionWin::implementation
                 if (!is_default)
                 {
                     Button default_btn;
-                    default_btn.Content(box_value(L"Définir par défaut"));
-                    ToolTipService::SetToolTip(default_btn, box_value(L"Compte utilisé pour les nouveaux messages"));
+                    default_btn.Content(box_value(Tr(L"Définir par défaut", L"Set as default")));
+                    ToolTipService::SetToolTip(default_btn, box_value(Tr(L"Compte utilisé pour les nouveaux messages", L"Account used for new messages")));
                     default_btn.Click([this, uid, name](IInspectable const&, RoutedEventArgs const&)
                     {
                         m_core->SetDefaultAccount(uid, [this, name](hstring const&, hstring const& error)
                         {
                             if (!error.empty())
                             {
-                                ShowStatus(L"Compte par défaut : " + error, InfoBarSeverity::Error);
+                                ShowStatus(Tr(L"Compte par défaut : ", L"Default account: ") + error, InfoBarSeverity::Error);
                                 return;
                             }
-                            ShowStatus(L"« " + name + L" » est le compte par défaut.", InfoBarSeverity::Success);
+                            ShowStatus(L"« " + name + Tr(L" » est le compte par défaut.", L"\" is the default account."), InfoBarSeverity::Success);
                             LoadAccounts();
                         });
                     });
@@ -791,8 +791,8 @@ namespace winrt::EvolutionWin::implementation
                 }
 
                 Button edit_btn;
-                edit_btn.Content(box_value(L"Modifier"));
-                ToolTipService::SetToolTip(edit_btn, box_value(L"Modifier les serveurs, le mot de passe et les dossiers spéciaux"));
+                edit_btn.Content(box_value(Tr(L"Modifier", L"Edit")));
+                ToolTipService::SetToolTip(edit_btn, box_value(Tr(L"Modifier les serveurs, le mot de passe et les dossiers spéciaux", L"Edit servers, password and special folders")));
                 edit_btn.Click([this, uid](IInspectable const&, RoutedEventArgs const&)
                 {
                     ShowEditAccountDialogAsync(uid);
@@ -805,8 +805,8 @@ namespace winrt::EvolutionWin::implementation
                 if (domain == L"gmail.com" || domain == L"googlemail.com")
                 {
                     Button google_btn;
-                    google_btn.Content(box_value(L"Activer le calendrier et les contacts"));
-                    ToolTipService::SetToolTip(google_btn, box_value(L"Synchronise Google Agenda et Google Contacts avec ce compte (nouvelle autorisation Google)"));
+                    google_btn.Content(box_value(Tr(L"Activer le calendrier et les contacts", L"Enable calendar and contacts")));
+                    ToolTipService::SetToolTip(google_btn, box_value(Tr(L"Synchronise Google Agenda et Google Contacts avec ce compte (nouvelle autorisation Google)", L"Sync Google Calendar and Contacts with this account (new Google authorization)")));
                     google_btn.Click([this, address, name](IInspectable const&, RoutedEventArgs const&)
                     {
                         m_core->EnableGoogleServices(address, [this, name](hstring const& json, hstring const& error)
@@ -814,15 +814,15 @@ namespace winrt::EvolutionWin::implementation
                             JsonObject result;
                             if (!error.empty() || !JsonObject::TryParse(json, result))
                             {
-                                ShowStatus(L"Activation du calendrier et des contacts : " + error, InfoBarSeverity::Error);
+                                ShowStatus(Tr(L"Activation du calendrier et des contacts : ", L"Calendar and contacts activation: ") + error, InfoBarSeverity::Error);
                                 return;
                             }
                             if (result.GetNamedBoolean(L"already_enabled", false))
                             {
-                                ShowStatus(L"Le calendrier et les contacts de « " + name + L" » sont déjà activés.", InfoBarSeverity::Informational);
+                                ShowStatus(Tr(L"Le calendrier et les contacts de « ", L"Calendar and contacts for \"") + name + Tr(L" » sont déjà activés.", L"\" are already enabled."), InfoBarSeverity::Informational);
                                 return;
                             }
-                            ShowStatus(L"Autorisez l'accès à Google Agenda et Google Contacts dans le navigateur.", InfoBarSeverity::Informational);
+                            ShowStatus(Tr(L"Autorisez l'accès à Google Agenda et Google Contacts dans le navigateur.", L"Authorize access to Google Calendar and Google Contacts in your browser."), InfoBarSeverity::Informational);
                             SignInGoogleOAuth2BrowserAsync(result.GetNamedString(L"collection_uid", L""), name);
                         });
                     });
@@ -830,17 +830,17 @@ namespace winrt::EvolutionWin::implementation
                 }
 
                 Button remove_btn;
-                remove_btn.Content(box_value(L"Supprimer"));
+                remove_btn.Content(box_value(Tr(L"Supprimer", L"Delete")));
                 remove_btn.Click([this, uid, name](IInspectable const&, RoutedEventArgs const&)
                 {
                     m_core->RemoveAccount(uid, [this, name](hstring const&, hstring const& error)
                     {
                         if (!error.empty())
                         {
-                            ShowStatus(L"Suppression du compte : " + error, InfoBarSeverity::Error);
+                            ShowStatus(Tr(L"Suppression du compte : ", L"Delete account: ") + error, InfoBarSeverity::Error);
                             return;
                         }
-                        ShowStatus(L"Compte « " + name + L" » supprimé.", InfoBarSeverity::Informational);
+                        ShowStatus(Tr(L"Compte « ", L"Account \"") + name + Tr(L" » supprimé.", L"\" deleted."), InfoBarSeverity::Informational);
                         LoadAccounts();
                     });
                 });

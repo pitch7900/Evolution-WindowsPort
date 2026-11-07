@@ -12,7 +12,7 @@
 
 
 
-                    <TextBlock Grid.Row="0" Text="Paramètres" Style="{StaticResource TitleTextBlockStyle}" Margin="8,0,0,16" />
+                    <TextBlock Grid.Row="0" x:Name="SettingsNavTitle" Text="Paramètres" Style="{StaticResource TitleTextBlockStyle}" Margin="8,0,0,16" />
 
 
 
