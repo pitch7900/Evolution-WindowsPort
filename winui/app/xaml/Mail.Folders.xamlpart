@@ -2,9 +2,6 @@
 
                     <TreeView x:Name="FolderTree" SelectionMode="Single"
                               AllowDrop="True"
-                              DragOver="OnFolderTreeDragOver"
-                              DragLeave="OnFolderTreeDragLeave"
-                              Drop="OnFolderTreeDrop"
 
                               ItemInvoked="OnFolderInvoked">
 

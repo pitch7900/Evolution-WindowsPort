@@ -339,6 +339,9 @@ namespace winrt::EvolutionWin::implementation
                             latest = k;
                     m_thread_latest[std::wstring{ shown[i].GetNamedString(L"uid") }] =
                         { std::wstring{ shown[latest].GetNamedString(L"uid") }, key };
+                }
+                if (end - i > 1)
+                {
                     auto& members = m_thread_members[std::wstring{ shown[i].GetNamedString(L"uid") }];
                     for (size_t k = i; k < end; ++k)
                         members.push_back(std::wstring{ shown[k].GetNamedString(L"uid") });
@@ -1837,10 +1840,28 @@ namespace winrt::EvolutionWin::implementation
                 sel_uids.push_back(cur_uid);
         }
 
+        /* l'élément réellement glissé peut ne pas faire partie de la sélection : il prime alors */
+        {
+            std::vector<hstring> dragged;
+            for (auto const& entry : args.Items())
+                if (auto grid = entry.try_as<Grid>())
+                {
+                    hstring u = unbox_value_or<hstring>(grid.Tag(), L"");
+                    if (!u.empty())
+                        dragged.push_back(u);
+                }
+            bool in_selection = false;
+            for (auto const& u : dragged)
+                if (std::find(sel_uids.begin(), sel_uids.end(), u) != sel_uids.end())
+                    in_selection = true;
+            if (!dragged.empty() && !in_selection)
+                sel_uids = std::move(dragged);
+        }
+
         if (sel_uids.empty() || m_account.empty() || m_folder.empty())
             return;
 
-        /* une conversation repliée est glissée en entier : tous ses messages suivent l'en-tête */
+        /* l'en-tête d'une conversation (repliée ou non) est glissée en entier : tous ses messages suivent l'en-tête */
         {
             std::vector<hstring> expanded_uids;
             std::set<std::wstring> seen;

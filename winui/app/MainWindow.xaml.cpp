@@ -217,6 +217,15 @@ namespace winrt::EvolutionWin::implementation
         m_updating_period = false;
 
         /* menu contextuel des dossiers (clic droit, touche Menu) */
+        /* glisser-déposer de messages : les éléments de l'arbre traitent eux-mêmes ces événements
+           (et les marquent « traités », ce qui donnait le sens interdit) ; on les reçoit donc aussi traités */
+        FolderTree().AddHandler(UIElement::DragOverEvent(),
+            box_value(DragEventHandler{ this, &MainWindow::OnFolderTreeDragOver }), true);
+        FolderTree().AddHandler(UIElement::DropEvent(),
+            box_value(DragEventHandler{ this, &MainWindow::OnFolderTreeDrop }), true);
+        FolderTree().AddHandler(UIElement::DragLeaveEvent(),
+            box_value(DragEventHandler{ this, &MainWindow::OnFolderTreeDragLeave }), true);
+
         FolderTree().ContextRequested([this](UIElement const& sender, Input::ContextRequestedEventArgs const& args)
         {
             ShowFolderContextMenu(sender, args);

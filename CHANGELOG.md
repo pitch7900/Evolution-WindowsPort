@@ -22,6 +22,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 - **Glisser-déposer : surlignage stable et conversations complètes** : le surlignage du dossier cible ne clignote plus (il ne s'effaçait à tort que parce que l'événement « quitte » remonte à chaque changement d'élément enfant ; il n'est plus effacé que lorsque le pointeur sort réellement de l'arborescence). Glisser l'en-tête d'une conversation repliée déplace maintenant tous les messages du fil, et non plus seulement le premier.
 
+- **Glisser-déposer : sens interdit sur certains dossiers, conversations** : les éléments de l'arborescence traitent eux-mêmes les événements de glisser et les marquent « traités » ; le gestionnaire du dossier ne les recevait donc pas au-dessus du nom d'un dossier (sens interdit, surlignage perdu). Il est maintenant enregistré pour recevoir aussi les événements déjà traités. Le message réellement glissé est pris en compte même s'il n'est pas dans la sélection, et l'en-tête d'une conversation déplace tout le fil, qu'elle soit repliée ou dépliée.
+
 ## [1.1.0] — 2026-11-07
 
 - **Corrections issues de la validation** : les boutons du bandeau « Contenu externe bloqué » sont empilés (plus de bouton tronqué) ; une conversation dépliée peut de nouveau être repliée, et un clic sur une conversation repliée affiche son message le plus récent ; un cache de traduction mémorisait à tort les textes introuvables (libellés vides).
