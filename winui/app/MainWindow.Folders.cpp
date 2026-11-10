@@ -1721,6 +1721,20 @@ namespace winrt::EvolutionWin::implementation
     }
 
     /**
+     * @brief Survol de la fenêtre pendant le glisser de messages : ne garde que le pointeur
+     *        (ni aperçu du texte du message, ni pictogramme, ni légende).
+     */
+    void MainWindow::OnWindowDragOver(IInspectable const&, DragEventArgs const& args)
+    {
+        if (m_drag_move_uids.empty())
+            return;
+        auto ui = args.DragUIOverride();
+        ui.IsContentVisible(false);
+        ui.IsGlyphVisible(false);
+        ui.IsCaptionVisible(false);
+    }
+
+    /**
      * @brief Le pointeur quitte l'arborescence : retire le surlignage.
      */
     void MainWindow::OnFolderTreeDragLeave(IInspectable const&, DragEventArgs const&)

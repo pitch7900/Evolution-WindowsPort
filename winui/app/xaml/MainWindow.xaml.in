@@ -24,7 +24,7 @@
 
 
 
-    <Grid>
+    <Grid AllowDrop="True" DragEnter="OnWindowDragOver" DragOver="OnWindowDragOver">
 
         <!-- raccourcis actifs dans toute la fenêtre, quelle que soit la vue -->
 
