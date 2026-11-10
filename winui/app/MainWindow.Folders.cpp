@@ -17,6 +17,7 @@
 #include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include <algorithm>
+#include <functional>
 #include <chrono>
 #include <cmath>
 #include <cwctype>
@@ -1740,13 +1741,34 @@ namespace winrt::EvolutionWin::implementation
      */
     void MainWindow::SetFolderDropHighlight(TreeViewItem const& container)
     {
-        if (m_drop_highlight == container)
+        /* le fond du TreeViewItem est repris par ses états visuels (survol, glisser) : il clignotait.
+           On colore donc la grille du gabarit, qui appartient à l'application (premier Grid à 3 colonnes). */
+        Grid target{ nullptr };
+        if (container)
+        {
+            std::function<Grid(DependencyObject const&)> find = [&find](DependencyObject const& parent) -> Grid
+            {
+                int32_t count = VisualTreeHelper::GetChildrenCount(parent);
+                for (int32_t i = 0; i < count; ++i)
+                {
+                    auto child = VisualTreeHelper::GetChild(parent, i);
+                    if (auto grid = child.try_as<Grid>(); grid && grid.ColumnDefinitions().Size() == 3)
+                        return grid;
+                    if (auto found = find(child))
+                        return found;
+                }
+                return nullptr;
+            };
+            target = find(container);
+        }
+
+        if (m_drop_highlight_grid == target)
             return;
-        if (m_drop_highlight)
-            m_drop_highlight.ClearValue(Controls::Control::BackgroundProperty());
-        m_drop_highlight = container;
-        if (m_drop_highlight)
-            m_drop_highlight.Background(Application::Current().Resources()
+        if (m_drop_highlight_grid)
+            m_drop_highlight_grid.ClearValue(Controls::Panel::BackgroundProperty());
+        m_drop_highlight_grid = target;
+        if (m_drop_highlight_grid)
+            m_drop_highlight_grid.Background(Application::Current().Resources()
                 .Lookup(box_value(L"AccentFillColorSecondaryBrush")).as<Media::Brush>());
     }
 

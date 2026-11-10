@@ -467,7 +467,7 @@ namespace winrt::EvolutionWin::implementation
         /* conteneurs de la liste dont le visuel de glisser est déjà neutralisé */
         std::set<void*> m_drag_hooked_containers;
         /* dossier actuellement surligné comme cible de dépôt */
-        Microsoft::UI::Xaml::Controls::TreeViewItem m_drop_highlight{ nullptr };
+        Microsoft::UI::Xaml::Controls::Grid m_drop_highlight_grid{ nullptr };
 
         void OpenCompose(::EvolutionWin::ComposeData const& data);
         void Reply(ReplyKind kind);
