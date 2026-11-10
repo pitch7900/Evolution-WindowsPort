@@ -20,6 +20,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 - **Glisser-déposer : repérage du dossier cible** : le dossier sous le pointeur est maintenant trouvé par sa position à l'écran (et non par la source de l'événement), et un dépôt refusé est consigné dans `errors.log` (nombre de messages, dossier trouvé) pour faciliter le diagnostic.
 
+- **Glisser-déposer : surlignage stable et conversations complètes** : le surlignage du dossier cible ne clignote plus (il ne s'effaçait à tort que parce que l'événement « quitte » remonte à chaque changement d'élément enfant ; il n'est plus effacé que lorsque le pointeur sort réellement de l'arborescence). Glisser l'en-tête d'une conversation repliée déplace maintenant tous les messages du fil, et non plus seulement le premier.
+
 ## [1.1.0] — 2026-11-07
 
 - **Corrections issues de la validation** : les boutons du bandeau « Contenu externe bloqué » sont empilés (plus de bouton tronqué) ; une conversation dépliée peut de nouveau être repliée, et un clic sur une conversation repliée affiche son message le plus récent ; un cache de traduction mémorisait à tort les textes introuvables (libellés vides).

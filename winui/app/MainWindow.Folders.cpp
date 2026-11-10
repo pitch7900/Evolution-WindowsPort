@@ -1804,8 +1804,20 @@ namespace winrt::EvolutionWin::implementation
     /**
      * @brief Le pointeur quitte l'arborescence : retire le surlignage.
      */
-    void MainWindow::OnFolderTreeDragLeave(IInspectable const&, DragEventArgs const&)
+    void MainWindow::OnFolderTreeDragLeave(IInspectable const&, DragEventArgs const& args)
     {
+        /* DragLeave remonte aussi quand le pointeur passe d'un élément enfant à un autre :
+           le surlignage ne s'efface que si le pointeur est réellement sorti de l'arborescence */
+        try
+        {
+            auto position = args.GetPosition(FolderTree());
+            if (position.X >= 0 && position.Y >= 0 &&
+                position.X < FolderTree().ActualWidth() && position.Y < FolderTree().ActualHeight())
+                return;
+        }
+        catch (...)
+        {
+        }
         SetFolderDropHighlight(nullptr);
     }
 

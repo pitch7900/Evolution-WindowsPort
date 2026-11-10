@@ -783,6 +783,8 @@ namespace winrt::EvolutionWin::implementation
         std::set<std::wstring> m_collapsed_threads;
         /* en-tête d'un fil replié -> (uid du message le plus récent, clé du fil) */
         std::map<std::wstring, std::pair<std::wstring, std::wstring>> m_thread_latest;
+        /* conversation repliée : uid de l'en-tête -> uid de tous les messages du fil (glisser-déposer) */
+        std::map<std::wstring, std::vector<std::wstring>> m_thread_members;
         Windows::Data::Json::JsonArray m_last_shown_messages{ nullptr };
         void LoadFolderConversations();
         void SaveFolderConversations(bool enabled);

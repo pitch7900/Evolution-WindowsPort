@@ -265,6 +265,7 @@ namespace winrt::EvolutionWin::implementation
          * n'est pas développé */
         struct ThreadRow { bool header{ true }; bool hidden{ false }; size_t count{ 1 }; size_t unread{ 0 }; std::wstring key; };
         m_thread_latest.clear();
+        m_thread_members.clear();
         std::vector<ThreadRow> rows(shown.size());
         m_last_shown_messages = messages;
         if (m_conversations_enabled)
@@ -338,6 +339,9 @@ namespace winrt::EvolutionWin::implementation
                             latest = k;
                     m_thread_latest[std::wstring{ shown[i].GetNamedString(L"uid") }] =
                         { std::wstring{ shown[latest].GetNamedString(L"uid") }, key };
+                    auto& members = m_thread_members[std::wstring{ shown[i].GetNamedString(L"uid") }];
+                    for (size_t k = i; k < end; ++k)
+                        members.push_back(std::wstring{ shown[k].GetNamedString(L"uid") });
                 }
                 for (size_t k = i; k < end; ++k)
                 {
@@ -1835,6 +1839,26 @@ namespace winrt::EvolutionWin::implementation
 
         if (sel_uids.empty() || m_account.empty() || m_folder.empty())
             return;
+
+        /* une conversation repliée est glissée en entier : tous ses messages suivent l'en-tête */
+        {
+            std::vector<hstring> expanded_uids;
+            std::set<std::wstring> seen;
+            for (auto const& u : sel_uids)
+            {
+                auto members = m_thread_members.find(std::wstring{ u });
+                if (members == m_thread_members.end())
+                {
+                    if (seen.insert(std::wstring{ u }).second)
+                        expanded_uids.push_back(u);
+                    continue;
+                }
+                for (auto const& member : members->second)
+                    if (seen.insert(member).second)
+                        expanded_uids.push_back(hstring{ member });
+            }
+            sel_uids = std::move(expanded_uids);
+        }
 
         /* mémorise les messages pour un dépôt sur un dossier de l'arborescence (déplacement) */
         m_drag_move_uids = sel_uids;
