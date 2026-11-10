@@ -204,6 +204,12 @@
 
                         </AppBarButton>
 
+                        <AppBarButton Label="Nouveau dossier racine" Click="OnRibbonNewRootFolderClick">
+
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8F4;" /></AppBarButton.Icon>
+
+                        </AppBarButton>
+
                         <AppBarButton x:Name="RibbonRenameFolder" Label="Renommer" Click="OnRibbonRenameFolderClick">
 
                             <AppBarButton.Icon><FontIcon Glyph="&#xE8AC;" /></AppBarButton.Icon>

@@ -6831,5 +6831,13 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Offline-Download wird vorbereitet: {0}</value>
     <comment>Préparation du téléchargement hors connexion : {0}</comment>
   </data>
+  <data name="T_D2507577" xml:space="preserve">
+    <value>Neuer Ordner auf Kontoebene…</value>
+    <comment>Nouveau dossier à la racine du compte…</comment>
+  </data>
+  <data name="T_505049F5" xml:space="preserve">
+    <value>Neuer Stammordner</value>
+    <comment>Nouveau dossier racine</comment>
+  </data>
 </root>
 

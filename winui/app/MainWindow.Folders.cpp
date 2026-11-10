@@ -635,7 +635,7 @@ namespace winrt::EvolutionWin::implementation
 
         auto folders_it = m_account_folders.find(std::wstring{ account });
         JsonArray folders = folders_it != m_account_folders.end() ? folders_it->second : nullptr;
-        if (!folders)
+        if (!folders && !is_account)
             return;
 
         JsonObject folder = is_account ? nullptr : FindFolderJson(folders, full_name);
@@ -663,6 +663,13 @@ namespace winrt::EvolutionWin::implementation
             {
                 CreateFolderAsync(account, full_name, name);
             });
+
+        if (!is_account)
+            add_item(Tr(L"Nouveau dossier à la racine du compte…"), L"\xE8F4", true,
+                [this, account](IInspectable const&, RoutedEventArgs const&)
+                {
+                    CreateFolderAsync(account, L"", L"");
+                });
 
         add_item(Tr(L"Synchronisation hors connexion…"), L"\xE895", selectable,
             [this, account, full_name, name, is_account](IInspectable const&, RoutedEventArgs const&)
@@ -861,6 +868,17 @@ namespace winrt::EvolutionWin::implementation
     fire_and_forget MainWindow::CreateFolderAsync(hstring account, hstring parent, hstring parent_name)
     {
         auto strong = get_strong();
+        if (parent.empty() && parent_name.empty())
+        {
+            /* racine du compte : affiche le nom du compte dans la boîte de saisie */
+            parent_name = account;
+            for (auto const& value : m_accounts ? m_accounts : JsonArray{})
+            {
+                auto entry = value.GetObject();
+                if (entry.GetNamedString(L"uid", L"") == account)
+                    parent_name = entry.GetNamedString(L"name", account);
+            }
+        }
         hstring name = co_await PromptFolderNameAsync(Tr(L"Nouveau dossier"),
             Fmt(parent.empty() ? Tr(L"Nom du nouveau dossier au premier niveau de « {0} »") : Tr(L"Nom du nouveau sous-dossier de « {0} »"),
                 { parent_name }),
@@ -1476,6 +1494,13 @@ namespace winrt::EvolutionWin::implementation
             CreateFolderAsync(m_account, L"", L"");
     }
 
+    /* onglet Dossier : nouveau dossier au premier niveau du compte affiché */
+    void MainWindow::OnRibbonNewRootFolderClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (!m_account.empty() && !IsUnifiedView())
+            CreateFolderAsync(m_account, L"", L"");
+    }
+
     void MainWindow::OnRibbonRenameFolderClick(IInspectable const&, RoutedEventArgs const&)
     {
         if (auto item = CurrentFolderItem())
@@ -1643,6 +1668,46 @@ namespace winrt::EvolutionWin::implementation
     }
 
     /**
+     * @brief Retrouve le dossier de l'arborescence situé sous le pointeur d'un glisser-déposer, par test
+     *        de position (plus fiable que la source de l'événement, qui peut être l'arbre lui-même).
+     * @param tree Arborescence des dossiers.
+     * @param args Arguments de l'événement de glisser-déposer.
+     * @param item Reçoit le dossier correspondant (nul si aucun).
+     * @return Le TreeViewItem concerné, ou nul.
+     */
+    static TreeViewItem FolderContainerAtPointer(
+        TreeView const& tree, DragEventArgs const& args, EvolutionWin::FolderItem& item)
+    {
+        item = nullptr;
+        try
+        {
+            auto hits = VisualTreeHelper::FindElementsInHostCoordinates(args.GetPosition(nullptr), tree);
+            for (auto const& hit : hits)
+            {
+                DependencyObject element = hit;
+                while (element)
+                {
+                    if (auto container = element.try_as<TreeViewItem>())
+                    {
+                        auto node = tree.NodeFromContainer(container);
+                        if (node)
+                        {
+                            item = node.Content().try_as<EvolutionWin::FolderItem>();
+                            if (item)
+                                return container;
+                        }
+                    }
+                    element = VisualTreeHelper::GetParent(element);
+                }
+            }
+        }
+        catch (...)
+        {
+        }
+        return nullptr;
+    }
+
+    /**
      * @brief Retrouve le conteneur et l'élément de dossier de l'arborescence situés sous une source de glisser-déposer.
      * @param source Élément visuel sous le pointeur (OriginalSource de l'événement).
      * @param item Reçoit le dossier correspondant (nul si aucun).
@@ -1702,7 +1767,9 @@ namespace winrt::EvolutionWin::implementation
     void MainWindow::OnFolderTreeDragOver(IInspectable const&, DragEventArgs const& args)
     {
         EvolutionWin::FolderItem item{ nullptr };
-        auto container = FolderContainerAt(args.OriginalSource(), item);
+        auto container = FolderContainerAtPointer(FolderTree(), args, item);
+        if (!container)
+            container = FolderContainerAt(args.OriginalSource(), item);
 
         if (m_drag_move_uids.empty() || !container || !IsFolderDropTarget(item))
         {
@@ -1748,11 +1815,19 @@ namespace winrt::EvolutionWin::implementation
     void MainWindow::OnFolderTreeDrop(IInspectable const&, DragEventArgs const& args)
     {
         EvolutionWin::FolderItem item{ nullptr };
-        auto container = FolderContainerAt(args.OriginalSource(), item);
+        auto container = FolderContainerAtPointer(FolderTree(), args, item);
+        if (!container)
+            container = FolderContainerAt(args.OriginalSource(), item);
         SetFolderDropHighlight(nullptr);
 
         if (m_drag_move_uids.empty() || !container || !IsFolderDropTarget(item))
+        {
+            wchar_t info[160]{};
+            swprintf_s(info, L"dépôt ignoré : messages=%zu, dossier trouvé=%d, valide=%d",
+                m_drag_move_uids.size(), container ? 1 : 0, IsFolderDropTarget(item) ? 1 : 0);
+            ::EvolutionWin::LogError(L"glisser-déposer", 0, info);
             return;
+        }
 
         auto uids = std::move(m_drag_move_uids);
         m_drag_move_uids.clear();

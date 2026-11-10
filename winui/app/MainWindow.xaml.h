@@ -438,6 +438,7 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::ListViewBase const& sender,
             Microsoft::UI::Xaml::Controls::DragItemsCompletedEventArgs const& args);
         void OnFolderTreeDragOver(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::DragEventArgs const& args);
+        void OnRibbonNewRootFolderClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnWindowDragOver(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::DragEventArgs const& args);
         void OnFolderTreeDragLeave(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::DragEventArgs const& args);
         void OnFolderTreeDrop(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::DragEventArgs const& args);

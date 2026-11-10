@@ -16,6 +16,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 - **Glisser-déposer : seul le pointeur reste visible** : l'aperçu du texte du message sous le pointeur est masqué pendant tout le glisser (dans toute la fenêtre, pas seulement au-dessus des dossiers), ainsi que le pictogramme et la légende. L'instantané du message est un visuel du système, qu'on ne pouvait pas masquer depuis la fenêtre : il est remplacé, dès le début du glisser, par une image transparente (`DragStarting` de chaque élément de la liste).
 
+- **Dossier à la racine d'un compte** : « Nouveau dossier à la racine du compte… » est ajouté au menu contextuel de chaque dossier, et un bouton « Nouveau dossier racine » à l'onglet Dossier du ruban (jusqu'ici, il fallait créer un sous-dossier puis le déplacer). Le menu d'un compte propose toujours « Nouveau dossier… » même si ses dossiers ne sont pas encore chargés, et la boîte de saisie affiche le nom du compte.
+
+- **Glisser-déposer : repérage du dossier cible** : le dossier sous le pointeur est maintenant trouvé par sa position à l'écran (et non par la source de l'événement), et un dépôt refusé est consigné dans `errors.log` (nombre de messages, dossier trouvé) pour faciliter le diagnostic.
+
 ## [1.1.0] — 2026-11-07
 
 - **Corrections issues de la validation** : les boutons du bandeau « Contenu externe bloqué » sont empilés (plus de bouton tronqué) ; une conversation dépliée peut de nouveau être repliée, et un clic sur une conversation repliée affiche son message le plus récent ; un cache de traduction mémorisait à tort les textes introuvables (libellés vides).
