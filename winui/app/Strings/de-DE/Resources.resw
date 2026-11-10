@@ -6839,5 +6839,25 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Neuer Stammordner</value>
     <comment>Nouveau dossier racine</comment>
   </data>
+  <data name="T_C08156A0" xml:space="preserve">
+    <value>Hierher kopieren</value>
+    <comment>Copier ici</comment>
+  </data>
+  <data name="T_B6410212" xml:space="preserve">
+    <value>Hierher verschieben</value>
+    <comment>Déplacer ici</comment>
+  </data>
+  <data name="T_2A6415EA" xml:space="preserve">
+    <value>Kein Ordner passt.</value>
+    <comment>Aucun dossier ne correspond.</comment>
+  </data>
+  <data name="T_D71188C5" xml:space="preserve">
+    <value>Ordner „{0}“ kopieren nach…</value>
+    <comment>Copier le dossier « {0} » vers…</comment>
+  </data>
+  <data name="T_A43437BB" xml:space="preserve">
+    <value>Ordner „{0}“ verschieben nach…</value>
+    <comment>Déplacer le dossier « {0} » vers…</comment>
+  </data>
 </root>
 

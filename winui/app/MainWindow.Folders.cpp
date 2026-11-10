@@ -765,37 +765,34 @@ namespace winrt::EvolutionWin::implementation
 
         for (bool copy : { false, true })
         {
-            MenuFlyoutSubItem sub;
-            sub.Text(copy ? Tr(L"Copier vers", L"Copy to", L"FolderAction_CopyTo") : Tr(L"Déplacer vers", L"Move to", L"FolderAction_MoveTo"));
-            sub.Icon(FontIcon{});
-            sub.Icon().as<FontIcon>().Glyph(copy ? L"\xE8C8" : L"\xE8DE");
-            sub.IsEnabled(copy ? selectable : !special);
-
-            auto on_pick = [this, account, full_name, name, copy](hstring const& target)
+            /* ouvre la fenêtre de choix du dossier de destination (arborescence par compte, avec recherche) */
+            MenuFlyoutItem pick_item;
+            pick_item.Text(copy ? Tr(L"Copier vers", L"Copy to", L"FolderAction_CopyTo") : Tr(L"Déplacer vers", L"Move to", L"FolderAction_MoveTo"));
+            pick_item.Icon(FontIcon{});
+            pick_item.Icon().as<FontIcon>().Glyph(copy ? L"èC8" : L"èDE");
+            pick_item.IsEnabled(copy ? selectable : !special);
+            pick_item.Click([this, account, full_name, name, copy, parent](IInspectable const&, RoutedEventArgs const&)
             {
-                MoveOrCopyFolder(account, full_name, name, target, copy);
-            };
-
-            if (!parent.empty())
-            {
-                MenuFlyoutItem top;
-                top.Text(Tr(L"Premier niveau du compte", L"Top level of account"));
-                top.Icon(FontIcon{});
-                top.Icon().as<FontIcon>().Glyph(L"\xE715");
-                top.Click([on_pick](IInspectable const&, RoutedEventArgs const&) { on_pick(L""); });
-                sub.Items().Append(top);
-            }
-
-            AppendFolderTargetItems(sub.Items(), folders, L"", copy ? hstring{} : full_name, parent, copy, on_pick);
-
-            if (sub.Items().Size() == 0)
-            {
-                MenuFlyoutItem none;
-                none.Text(Tr(L"Aucun dossier disponible", L"No available folder"));
-                none.IsEnabled(false);
-                sub.Items().Append(none);
-            }
-            menu.Items().Append(sub);
+                FolderPickOptions options;
+                options.title = Fmt(copy ? Tr(L"Copier le dossier « {0} » vers…") : Tr(L"Déplacer le dossier « {0} » vers…"), { name });
+                options.confirm_label = copy ? Tr(L"Copier ici") : Tr(L"Déplacer ici");
+                options.only_account = account;
+                options.allow_account_root = true;
+                /* destinations sans effet : le parent actuel ; pour un déplacement, le dossier lui-même et ses sous-dossiers */
+                options.blocked = [this, account, full_name, parent, copy](hstring const& target_account, hstring const& target)
+                {
+                    if (target_account != account)
+                        return true;
+                    if (target == parent)
+                        return true;
+                    return !copy && !target.empty() && IsFolderOrSubfolder(target, full_name);
+                };
+                PickFolderAsync(options, [this, account, full_name, name, copy](hstring const&, hstring const& target)
+                {
+                    MoveOrCopyFolder(account, full_name, name, target, copy);
+                });
+            });
+            menu.Items().Append(pick_item);
         }
 
         add_item(Tr(L"Supprimer le dossier…", L"Delete folder…", L"FolderAction_Delete"), L"\xE74D", !special && !has_children,

@@ -153,6 +153,19 @@ namespace winrt::EvolutionWin::implementation
         void OnMoveFolderDialogClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnMoveFolderAccelerator(Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender, Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
         fire_and_forget ShowMoveFolderDialogAsync(std::vector<winrt::hstring> uids, bool copy);
+        /** @brief Options de la fenêtre de choix d'un dossier de destination. */
+        struct FolderPickOptions
+        {
+            hstring title;
+            hstring confirm_label;
+            /** @brief Si non vide, seuls les dossiers de ce compte sont proposés. */
+            hstring only_account;
+            /** @brief Autorise le choix de la racine d'un compte (déplacement de dossier). */
+            bool allow_account_root{ false };
+            /** @brief Destinations interdites (compte, dossier ; dossier vide = racine) : grisées. */
+            std::function<bool(hstring const&, hstring const&)> blocked;
+        };
+        fire_and_forget PickFolderAsync(FolderPickOptions options, std::function<void(hstring const&, hstring const&)> on_pick);
         void ApplyReaderZoom(double zoom);
         void OnMoveMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
         void OnSearchTextChanged(

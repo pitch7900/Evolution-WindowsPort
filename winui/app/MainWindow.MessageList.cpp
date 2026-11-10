@@ -960,19 +960,25 @@ namespace winrt::EvolutionWin::implementation
                 });
                 menu_items.Append(create_task_item);
 
-                MenuFlyoutSubItem move_sub;
-                move_sub.Text(with_count(Tr(L"Déplacer vers")));
-                move_sub.Icon(FontIcon{});
-                move_sub.Icon().as<FontIcon>().Glyph(L"\xE8DE");
-                PopulateMoveMenuItems(move_sub.Items(), target_uids);
-                menu_items.Append(move_sub);
+                MenuFlyoutItem move_item_dialog;
+                move_item_dialog.Text(with_count(Tr(L"Déplacer vers")));
+                move_item_dialog.Icon(FontIcon{});
+                move_item_dialog.Icon().as<FontIcon>().Glyph(L"èDE");
+                move_item_dialog.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
+                {
+                    ShowMoveFolderDialogAsync(target_uids, false);
+                });
+                menu_items.Append(move_item_dialog);
 
-                MenuFlyoutSubItem copy_sub;
-                copy_sub.Text(with_count(Tr(L"Copier vers")));
-                copy_sub.Icon(FontIcon{});
-                copy_sub.Icon().as<FontIcon>().Glyph(L"\xE8C8");
-                PopulateMoveMenuItems(copy_sub.Items(), target_uids, true);
-                menu_items.Append(copy_sub);
+                MenuFlyoutItem copy_item_dialog;
+                copy_item_dialog.Text(with_count(Tr(L"Copier vers")));
+                copy_item_dialog.Icon(FontIcon{});
+                copy_item_dialog.Icon().as<FontIcon>().Glyph(L"èC8");
+                copy_item_dialog.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
+                {
+                    ShowMoveFolderDialogAsync(target_uids, true);
+                });
+                menu_items.Append(copy_item_dialog);
 
                 MenuFlyoutItem archive_item;
                 archive_item.Text(with_count(Tr(L"Archiver")));
