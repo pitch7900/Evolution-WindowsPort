@@ -14,7 +14,7 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 - **Glisser-déposer d'un message sur un dossier** : le déplacement par glisser-déposer ne fonctionnait pas (la liste n'exportait que des fichiers `.eml` et l'arborescence n'acceptait aucun dépôt). Déposer un ou plusieurs messages sur un dossier les y déplace désormais (comptes réels uniquement, pas les vues unifiées ni les recherches). L'aperçu translucide du texte du message, illisible, est supprimé : le dossier survolé est surligné à la couleur d'accentuation, et le surlignage disparaît à la sortie ou au dépôt. Le glisser vers l'Explorateur Windows reste possible.
 
-- **Glisser-déposer : seul le pointeur reste visible** : l'aperçu du texte du message sous le pointeur est masqué pendant tout le glisser (dans toute la fenêtre, pas seulement au-dessus des dossiers), ainsi que le pictogramme et la légende.
+- **Glisser-déposer : seul le pointeur reste visible** : l'aperçu du texte du message sous le pointeur est masqué pendant tout le glisser (dans toute la fenêtre, pas seulement au-dessus des dossiers), ainsi que le pictogramme et la légende. L'instantané du message est un visuel du système, qu'on ne pouvait pas masquer depuis la fenêtre : il est remplacé, dès le début du glisser, par une image transparente (`DragStarting` de chaque élément de la liste).
 
 ## [1.1.0] — 2026-11-07
 

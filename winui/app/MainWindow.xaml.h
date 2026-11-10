@@ -431,6 +431,9 @@ namespace winrt::EvolutionWin::implementation
         void OnMessageListDragItemsStarting(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::Controls::DragItemsStartingEventArgs const& args);
+        void OnMessageListContainerChanging(
+            Microsoft::UI::Xaml::Controls::ListViewBase const& sender,
+            Microsoft::UI::Xaml::Controls::ContainerContentChangingEventArgs const& args);
         void OnMessageListDragItemsCompleted(
             Microsoft::UI::Xaml::Controls::ListViewBase const& sender,
             Microsoft::UI::Xaml::Controls::DragItemsCompletedEventArgs const& args);
@@ -460,6 +463,8 @@ namespace winrt::EvolutionWin::implementation
         std::vector<std::wstring> m_drag_cached_files;
         /* messages en cours de glisser vers un dossier de l'arborescence (vide hors glisser interne) */
         std::vector<hstring> m_drag_move_uids;
+        /* conteneurs de la liste dont le visuel de glisser est déjà neutralisé */
+        std::set<void*> m_drag_hooked_containers;
         /* dossier actuellement surligné comme cible de dépôt */
         Microsoft::UI::Xaml::Controls::TreeViewItem m_drop_highlight{ nullptr };
 

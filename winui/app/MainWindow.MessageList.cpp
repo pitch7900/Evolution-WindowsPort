@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <winrt/Windows.Graphics.Imaging.h>
 #include "MainWindow.xaml.h"
 #include "MainWindow.Helpers.h"
 #include "FollowUp.h"
@@ -1908,6 +1909,27 @@ namespace winrt::EvolutionWin::implementation
                 Windows::ApplicationModel::DataTransfer::DataPackageOperation::Copy |
                 Windows::ApplicationModel::DataTransfer::DataPackageOperation::Move);
         }
+    }
+
+    /**
+     * @brief Neutralise le visuel de glisser d'un élément de la liste : le système affichait un instantané
+     *        du texte du message sous le pointeur ; on le remplace par une image transparente d'un pixel.
+     * @param args Arguments du conteneur en cours de préparation.
+     */
+    void MainWindow::OnMessageListContainerChanging(
+        [[maybe_unused]] ListViewBase const& sender,
+        ContainerContentChangingEventArgs const& args)
+    {
+        auto container = args.ItemContainer();
+        if (!container || !m_drag_hooked_containers.insert(winrt::get_abi(container)).second)
+            return;
+        container.DragStarting([](UIElement const&, DragStartingEventArgs const& e)
+        {
+            Windows::Graphics::Imaging::SoftwareBitmap blank(
+                Windows::Graphics::Imaging::BitmapPixelFormat::Bgra8, 1, 1,
+                Windows::Graphics::Imaging::BitmapAlphaMode::Premultiplied);
+            e.DragUI().SetContentFromSoftwareBitmap(blank);
+        });
     }
 
     /**

@@ -126,6 +126,7 @@
 
                               KeyDown="OnMessageListKeyDown"
                               CanDragItems="True"
+                              ContainerContentChanging="OnMessageListContainerChanging"
                               DragItemsStarting="OnMessageListDragItemsStarting"
                               DragItemsCompleted="OnMessageListDragItemsCompleted">
 
