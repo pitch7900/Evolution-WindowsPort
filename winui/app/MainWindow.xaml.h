@@ -431,6 +431,14 @@ namespace winrt::EvolutionWin::implementation
         void OnMessageListDragItemsStarting(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::Controls::DragItemsStartingEventArgs const& args);
+        void OnMessageListDragItemsCompleted(
+            Microsoft::UI::Xaml::Controls::ListViewBase const& sender,
+            Microsoft::UI::Xaml::Controls::DragItemsCompletedEventArgs const& args);
+        void OnFolderTreeDragOver(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::DragEventArgs const& args);
+        void OnFolderTreeDragLeave(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::DragEventArgs const& args);
+        void OnFolderTreeDrop(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::DragEventArgs const& args);
+        Microsoft::UI::Xaml::Controls::TreeViewItem FolderContainerAt(Windows::Foundation::IInspectable const& source, EvolutionWin::FolderItem& item);
+        void SetFolderDropHighlight(Microsoft::UI::Xaml::Controls::TreeViewItem const& container);
         void PrepareDragDropCache();
 
     private:
@@ -449,6 +457,10 @@ namespace winrt::EvolutionWin::implementation
         void StyleFollowUpIcon(Microsoft::UI::Xaml::Controls::FontIcon const& icon, MessageState const& state);
 
         std::vector<std::wstring> m_drag_cached_files;
+        /* messages en cours de glisser vers un dossier de l'arborescence (vide hors glisser interne) */
+        std::vector<hstring> m_drag_move_uids;
+        /* dossier actuellement surligné comme cible de dépôt */
+        Microsoft::UI::Xaml::Controls::TreeViewItem m_drop_highlight{ nullptr };
 
         void OpenCompose(::EvolutionWin::ComposeData const& data);
         void Reply(ReplyKind kind);

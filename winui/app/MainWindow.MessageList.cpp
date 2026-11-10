@@ -1835,6 +1835,9 @@ namespace winrt::EvolutionWin::implementation
         if (sel_uids.empty() || m_account.empty() || m_folder.empty())
             return;
 
+        /* mémorise les messages pour un dépôt sur un dossier de l'arborescence (déplacement) */
+        m_drag_move_uids = sel_uids;
+
         std::wstring temp_dir = ::EvolutionWin::Helpers::GetDragDropTempDir();
         std::vector<Windows::Storage::IStorageItem> storage_items;
 
@@ -1901,7 +1904,20 @@ namespace winrt::EvolutionWin::implementation
         if (!storage_items.empty())
         {
             args.Data().SetStorageItems(storage_items);
-            args.Data().RequestedOperation(Windows::ApplicationModel::DataTransfer::DataPackageOperation::Copy);
+            args.Data().RequestedOperation(
+                Windows::ApplicationModel::DataTransfer::DataPackageOperation::Copy |
+                Windows::ApplicationModel::DataTransfer::DataPackageOperation::Move);
         }
+    }
+
+    /**
+     * @brief Fin du glisser-déposer : oublie les messages mémorisés et retire le surlignage du dossier cible.
+     */
+    void MainWindow::OnMessageListDragItemsCompleted(
+        [[maybe_unused]] ListViewBase const& sender,
+        [[maybe_unused]] DragItemsCompletedEventArgs const& args)
+    {
+        m_drag_move_uids.clear();
+        SetFolderDropHighlight(nullptr);
     }
 }

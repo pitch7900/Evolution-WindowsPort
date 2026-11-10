@@ -126,7 +126,8 @@
 
                               KeyDown="OnMessageListKeyDown"
                               CanDragItems="True"
-                              DragItemsStarting="OnMessageListDragItemsStarting">
+                              DragItemsStarting="OnMessageListDragItemsStarting"
+                              DragItemsCompleted="OnMessageListDragItemsCompleted">
 
                         <ListView.ItemContainerStyle>
 

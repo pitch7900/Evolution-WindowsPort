@@ -1641,4 +1641,109 @@ namespace winrt::EvolutionWin::implementation
             );
         }
     }
+
+    /**
+     * @brief Retrouve le conteneur et l'élément de dossier de l'arborescence situés sous une source de glisser-déposer.
+     * @param source Élément visuel sous le pointeur (OriginalSource de l'événement).
+     * @param item Reçoit le dossier correspondant (nul si aucun).
+     * @return Le TreeViewItem concerné, ou nul.
+     */
+    TreeViewItem MainWindow::FolderContainerAt(IInspectable const& source, EvolutionWin::FolderItem& item)
+    {
+        item = nullptr;
+        DependencyObject element = source.try_as<DependencyObject>();
+        while (element)
+        {
+            if (auto container = element.try_as<TreeViewItem>())
+            {
+                /* le gabarit contient lui-même un TreeViewItem : seul le conteneur réel a un nœud */
+                auto node = FolderTree().NodeFromContainer(container);
+                if (node)
+                {
+                    item = node.Content().try_as<EvolutionWin::FolderItem>();
+                    return container;
+                }
+            }
+            element = VisualTreeHelper::GetParent(element);
+        }
+        return nullptr;
+    }
+
+    /**
+     * @brief Surligne (couleur d'accentuation) le dossier cible d'un glisser-déposer de messages ; nul efface le surlignage.
+     * @param container Conteneur à surligner, ou nul.
+     */
+    void MainWindow::SetFolderDropHighlight(TreeViewItem const& container)
+    {
+        if (m_drop_highlight == container)
+            return;
+        if (m_drop_highlight)
+            m_drop_highlight.ClearValue(Controls::Control::BackgroundProperty());
+        m_drop_highlight = container;
+        if (m_drop_highlight)
+            m_drop_highlight.Background(Application::Current().Resources()
+                .Lookup(box_value(L"AccentFillColorSecondaryBrush")).as<Media::Brush>());
+    }
+
+    /**
+     * @brief Indique si un dossier peut recevoir des messages déplacés (dossier réel, sélectionnable, hors vues unifiées et recherches).
+     * @param item Dossier cible.
+     * @return Vrai si le dépôt est autorisé.
+     */
+    static bool IsFolderDropTarget(EvolutionWin::FolderItem const& item)
+    {
+        return item && !item.IsAccount() && !item.Folder().empty() &&
+            !::EvolutionWin::UnifiedViews::IsUnifiedAccount(std::wstring_view{ item.Account() });
+    }
+
+    /**
+     * @brief Survol de l'arborescence pendant le glisser de messages : surligne le dossier cible et masque l'aperçu du glisser.
+     */
+    void MainWindow::OnFolderTreeDragOver(IInspectable const&, DragEventArgs const& args)
+    {
+        EvolutionWin::FolderItem item{ nullptr };
+        auto container = FolderContainerAt(args.OriginalSource(), item);
+
+        if (m_drag_move_uids.empty() || !container || !IsFolderDropTarget(item))
+        {
+            SetFolderDropHighlight(nullptr);
+            args.AcceptedOperation(Windows::ApplicationModel::DataTransfer::DataPackageOperation::None);
+            return;
+        }
+
+        SetFolderDropHighlight(container);
+        args.AcceptedOperation(Windows::ApplicationModel::DataTransfer::DataPackageOperation::Move);
+        auto ui = args.DragUIOverride();
+        ui.IsContentVisible(false);
+        ui.IsGlyphVisible(false);
+        ui.IsCaptionVisible(false);
+        args.Handled(true);
+    }
+
+    /**
+     * @brief Le pointeur quitte l'arborescence : retire le surlignage.
+     */
+    void MainWindow::OnFolderTreeDragLeave(IInspectable const&, DragEventArgs const&)
+    {
+        SetFolderDropHighlight(nullptr);
+    }
+
+    /**
+     * @brief Dépôt de messages sur un dossier : les déplace vers ce dossier.
+     */
+    void MainWindow::OnFolderTreeDrop(IInspectable const&, DragEventArgs const& args)
+    {
+        EvolutionWin::FolderItem item{ nullptr };
+        auto container = FolderContainerAt(args.OriginalSource(), item);
+        SetFolderDropHighlight(nullptr);
+
+        if (m_drag_move_uids.empty() || !container || !IsFolderDropTarget(item))
+            return;
+
+        auto uids = std::move(m_drag_move_uids);
+        m_drag_move_uids.clear();
+        args.Handled(true);
+        MoveMessagesByUids(uids, item.Account(), item.Folder());
+    }
 }
+

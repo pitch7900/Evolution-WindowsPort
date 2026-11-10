@@ -10,6 +10,10 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
+## [1.1.1] — en cours
+
+- **Glisser-déposer d'un message sur un dossier** : le déplacement par glisser-déposer ne fonctionnait pas (la liste n'exportait que des fichiers `.eml` et l'arborescence n'acceptait aucun dépôt). Déposer un ou plusieurs messages sur un dossier les y déplace désormais (comptes réels uniquement, pas les vues unifiées ni les recherches). L'aperçu translucide du texte du message, illisible, est supprimé : le dossier survolé est surligné à la couleur d'accentuation, et le surlignage disparaît à la sortie ou au dépôt. Le glisser vers l'Explorateur Windows reste possible.
+
 ## [1.1.0] — 2026-11-07
 
 - **Corrections issues de la validation** : les boutons du bandeau « Contenu externe bloqué » sont empilés (plus de bouton tronqué) ; une conversation dépliée peut de nouveau être repliée, et un clic sur une conversation repliée affiche son message le plus récent ; un cache de traduction mémorisait à tort les textes introuvables (libellés vides).
