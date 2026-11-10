@@ -6859,5 +6859,9 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Mover la carpeta «{0}» a…</value>
     <comment>Déplacer le dossier « {0} » vers…</comment>
   </data>
+  <data name="T_9C1C1C80" xml:space="preserve">
+    <value>Una carpeta solo se puede mover o copiar dentro de su propia cuenta: las demás cuentas aparecen atenuadas.</value>
+    <comment>Un dossier ne peut être déplacé ou copié que dans son propre compte : les autres comptes sont grisés.</comment>
+  </data>
 </root>
 

@@ -769,14 +769,14 @@ namespace winrt::EvolutionWin::implementation
             MenuFlyoutItem pick_item;
             pick_item.Text(copy ? Tr(L"Copier vers", L"Copy to", L"FolderAction_CopyTo") : Tr(L"Déplacer vers", L"Move to", L"FolderAction_MoveTo"));
             pick_item.Icon(FontIcon{});
-            pick_item.Icon().as<FontIcon>().Glyph(copy ? L"èC8" : L"èDE");
+            pick_item.Icon().as<FontIcon>().Glyph(copy ? L"\xE8C8" : L"\xE8DE");
             pick_item.IsEnabled(copy ? selectable : !special);
             pick_item.Click([this, account, full_name, name, copy, parent](IInspectable const&, RoutedEventArgs const&)
             {
                 FolderPickOptions options;
                 options.title = Fmt(copy ? Tr(L"Copier le dossier « {0} » vers…") : Tr(L"Déplacer le dossier « {0} » vers…"), { name });
                 options.confirm_label = copy ? Tr(L"Copier ici") : Tr(L"Déplacer ici");
-                options.only_account = account;
+                options.note = Tr(L"Un dossier ne peut être déplacé ou copié que dans son propre compte : les autres comptes sont grisés.");
                 options.allow_account_root = true;
                 /* destinations sans effet : le parent actuel ; pour un déplacement, le dossier lui-même et ses sous-dossiers */
                 options.blocked = [this, account, full_name, parent, copy](hstring const& target_account, hstring const& target)

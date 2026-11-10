@@ -158,6 +158,8 @@ namespace winrt::EvolutionWin::implementation
         {
             hstring title;
             hstring confirm_label;
+            /** @brief Texte d'information affiché sous la zone de recherche (facultatif). */
+            hstring note;
             /** @brief Si non vide, seuls les dossiers de ce compte sont proposés. */
             hstring only_account;
             /** @brief Autorise le choix de la racine d'un compte (déplacement de dossier). */

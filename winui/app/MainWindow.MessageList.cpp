@@ -963,7 +963,7 @@ namespace winrt::EvolutionWin::implementation
                 MenuFlyoutItem move_item_dialog;
                 move_item_dialog.Text(with_count(Tr(L"Déplacer vers")));
                 move_item_dialog.Icon(FontIcon{});
-                move_item_dialog.Icon().as<FontIcon>().Glyph(L"èDE");
+                move_item_dialog.Icon().as<FontIcon>().Glyph(L"\xE8DE");
                 move_item_dialog.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
                 {
                     ShowMoveFolderDialogAsync(target_uids, false);
@@ -973,7 +973,7 @@ namespace winrt::EvolutionWin::implementation
                 MenuFlyoutItem copy_item_dialog;
                 copy_item_dialog.Text(with_count(Tr(L"Copier vers")));
                 copy_item_dialog.Icon(FontIcon{});
-                copy_item_dialog.Icon().as<FontIcon>().Glyph(L"èC8");
+                copy_item_dialog.Icon().as<FontIcon>().Glyph(L"\xE8C8");
                 copy_item_dialog.Click([this, target_uids](IInspectable const&, RoutedEventArgs const&)
                 {
                     ShowMoveFolderDialogAsync(target_uids, true);

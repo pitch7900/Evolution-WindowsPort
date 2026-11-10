@@ -3,6 +3,7 @@
 #include "MainWindow.Helpers.h"
 #include "Settings.h"
 
+#include <winrt/Microsoft.UI.Xaml.Markup.h>
 #include <algorithm>
 #include <functional>
 #include <map>
@@ -58,13 +59,33 @@ namespace winrt::EvolutionWin::implementation
         std::optional<Target> chosen;
         bool double_clicked = false;
 
-        /* comptes dans l'ordre d'affichage, avec leur nom */
-        std::vector<std::pair<hstring, hstring>> accounts;
+        /* comptes dans le même ordre que l'arborescence principale : compte par défaut, distants A-Z, local en dernier */
+        std::vector<JsonObject> sorted_accounts;
         for (auto const& value : m_accounts ? m_accounts : JsonArray{})
+            sorted_accounts.push_back(value.GetObject());
+        std::stable_sort(sorted_accounts.begin(), sorted_accounts.end(), [](JsonObject const& a, JsonObject const& b)
         {
-            auto obj = value.GetObject();
+            bool def_a = a.GetNamedBoolean(L"default", false);
+            bool def_b = b.GetNamedBoolean(L"default", false);
+            if (def_a != def_b)
+                return def_a > def_b;
+            bool loc_a = a.GetNamedBoolean(L"local", false);
+            bool loc_b = b.GetNamedBoolean(L"local", false);
+            if (loc_a != loc_b)
+                return loc_a < loc_b;
+            hstring na = a.GetNamedString(L"name", L"");
+            hstring nb = b.GetNamedString(L"name", L"");
+            return CompareStringEx(LOCALE_NAME_USER_DEFAULT, NORM_IGNORECASE | SORT_DIGITSASNUMBERS,
+                na.c_str(), static_cast<int>(na.size()), nb.c_str(), static_cast<int>(nb.size()),
+                nullptr, nullptr, 0) == CSTR_LESS_THAN;
+        });
+
+        /* tous les comptes sont listés, même si leurs dossiers ne sont pas (encore) chargés */
+        std::vector<std::pair<hstring, hstring>> accounts;
+        for (auto const& obj : sorted_accounts)
+        {
             hstring uid = obj.GetNamedString(L"uid", L"");
-            if (uid.empty() || m_account_folders.find(std::wstring{ uid }) == m_account_folders.end())
+            if (uid.empty())
                 continue;
             accounts.emplace_back(uid, obj.GetNamedString(L"name", obj.GetNamedString(L"display_name", uid)));
         }
@@ -97,7 +118,20 @@ namespace winrt::EvolutionWin::implementation
         search_box.PlaceholderText(Tr(L"Rechercher un dossier..."));
         panel.Children().Append(search_box);
 
+        if (!options.note.empty())
+        {
+            TextBlock note;
+            note.Text(options.note);
+            note.Opacity(0.7);
+            note.TextWrapping(TextWrapping::Wrap);
+            panel.Children().Append(note);
+        }
+
         TreeView tree;
+        /* le contenu d'un nœud est un élément visuel (icône + libellé) : le gabarit l'affiche tel quel */
+        tree.ItemTemplate(Microsoft::UI::Xaml::Markup::XamlReader::Load(
+            L"<DataTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'>"
+            L"<ContentPresenter Content='{Binding Content}'/></DataTemplate>").as<DataTemplate>());
         tree.SelectionMode(TreeViewSelectionMode::Single);
         tree.Height(340);
         panel.Children().Append(tree);
@@ -173,11 +207,10 @@ namespace winrt::EvolutionWin::implementation
             for (auto const& [account, account_name] : accounts)
             {
                 auto folders_it = m_account_folders.find(std::wstring{ account });
-                if (folders_it == m_account_folders.end() || !folders_it->second)
-                    continue;
 
                 TreeViewNode account_node;
-                bool any = add_folders(folders_it->second, account_node, account, query);
+                bool any = folders_it != m_account_folders.end() && folders_it->second &&
+                    add_folders(folders_it->second, account_node, account, query);
                 bool name_match = query.empty() || lower(std::wstring_view{ account_name }).find(query) != std::wstring::npos;
                 if (!any && !name_match)
                     continue;

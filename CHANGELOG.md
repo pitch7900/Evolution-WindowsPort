@@ -28,6 +28,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 - **Fenêtre de choix du dossier pour Déplacer / Copier** : le clic droit sur un message (« Déplacer vers », « Copier vers », « Autre dossier… » des menus du ruban) ou sur un dossier ouvre une fenêtre qui présente les dossiers **par compte**, dans une arborescence que l'on peut déplier / replier, avec une **zone de recherche** (les dossiers correspondants restent affichés avec leurs parents, dépliés). Deux boutons : « Déplacer ici » (ou « Copier ici ») et « Annuler » ; un double-clic sur un dossier valide aussitôt. Les destinations sans effet (dossier affiché, parent actuel, le dossier lui-même et ses sous-dossiers) sont grisées ; pour un dossier, la racine du compte est proposée. Remplace les longs sous-menus. Code : `MainWindow.FolderPicker.cpp` (`PickFolderAsync`).
 
+- **Fenêtre de choix du dossier : icônes et comptes** : les nœuds de l'arborescence s'affichaient sous la forme « Microsoft.UI.Xaml.Controls.TreeViewNode » (gabarit manquant) ; ils affichent de nouveau icône et nom. Tous les comptes sont listés (dans l'ordre de l'arborescence principale), y compris pour un déplacement de dossier, où les autres comptes sont grisés avec une note explicative (le moteur ne déplace un dossier qu'au sein de son compte). Les icônes « Déplacer vers » / « Copier vers » des menus, corrompues par une erreur d'échappement, sont rétablies.
+
 ## [1.1.0] — 2026-11-07
 
 - **Corrections issues de la validation** : les boutons du bandeau « Contenu externe bloqué » sont empilés (plus de bouton tronqué) ; une conversation dépliée peut de nouveau être repliée, et un clic sur une conversation repliée affiche son message le plus récent ; un cache de traduction mémorisait à tort les textes introuvables (libellés vides).
