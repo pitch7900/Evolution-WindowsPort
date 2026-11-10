@@ -885,6 +885,230 @@ core_delete_folder_run (EvoCore *core,
 	return json;
 }
 
+/* Supprime un dossier et ses sous-dossiers (du plus profond au plus haut) :
+ * messages supprimés d'abord (les dossiers locaux doivent être vides), puis
+ * désabonnement et suppression du dossier.
+ * Retourne : TRUE en cas de succès. */
+static gboolean
+folder_delete_tree (EvoCore *core,
+		    FolderOpContext *ctx,
+		    const gchar *account_uid,
+		    CamelFolderInfo *fi,
+		    GError **error)
+{
+	CamelFolderInfo *child;
+
+	for (child = fi->child; child; child = child->next) {
+		if (!folder_delete_tree (core, ctx, account_uid, child, error))
+			return FALSE;
+	}
+
+	if ((fi->flags & (CAMEL_FOLDER_NOSELECT | CAMEL_FOLDER_VIRTUAL)) == 0) {
+		CamelFolder *folder = core_ref_folder (core, account_uid, fi->full_name, error);
+		GPtrArray *uids;
+		gboolean ok;
+		guint ii, count;
+
+		if (!folder || !camel_folder_refresh_info_sync (folder, core->cancellable, error)) {
+			g_clear_object (&folder);
+			return FALSE;
+		}
+
+		uids = camel_folder_dup_uids (folder);
+		count = uids ? uids->len : 0;
+
+		camel_folder_freeze (folder);
+		for (ii = 0; ii < count; ii++)
+			camel_folder_set_message_flags (folder, uids->pdata[ii],
+				CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_SEEN,
+				CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_SEEN);
+		camel_folder_thaw (folder);
+
+		ok = count == 0 || camel_folder_synchronize_sync (folder, TRUE, core->cancellable, error);
+
+		if (uids)
+			g_ptr_array_unref (uids);
+		g_object_unref (folder);
+
+		if (!ok)
+			return FALSE;
+	}
+
+	core_untrack_folder_tree (core, account_uid, fi->full_name);
+
+	if (CAMEL_IS_SUBSCRIBABLE (ctx->store) &&
+	    camel_subscribable_folder_is_subscribed (CAMEL_SUBSCRIBABLE (ctx->store), fi->full_name))
+		camel_subscribable_unsubscribe_folder_sync (CAMEL_SUBSCRIBABLE (ctx->store), fi->full_name, core->cancellable, NULL);
+
+	return camel_store_delete_folder_sync (ctx->store, fi->full_name, core->cancellable, error);
+}
+
+/* Copie un dossier, ses messages et ses sous-dossiers vers un autre compte
+ * (ou un autre emplacement) : crée un dossier de même nom sous dst_parent de
+ * la destination, y transfère les messages, puis recommence pour chaque
+ * sous-dossier. Les originaux restent en place.
+ * top_name reçoit le nom complet du dossier créé au sommet (si non NULL et
+ * encore vide), count le nombre total de messages copiés.
+ * Retourne : TRUE en cas de succès. */
+static gboolean
+folder_transfer_tree (EvoCore *core,
+		      FolderOpContext *dst,
+		      const gchar *src_account,
+		      const gchar *dst_account,
+		      CamelFolderInfo *fi,
+		      const gchar *dst_parent,
+		      guint *count,
+		      gchar **top_name,
+		      GError **error)
+{
+	CamelFolderInfo *child;
+	gchar *new_name;
+	gboolean ok = TRUE;
+
+	new_name = folder_op_create (core, dst, dst_parent, folder_base_name (fi->full_name), error);
+	if (!new_name)
+		return FALSE;
+
+	if (top_name && !*top_name)
+		*top_name = g_strdup (new_name);
+
+	if ((fi->flags & (CAMEL_FOLDER_NOSELECT | CAMEL_FOLDER_VIRTUAL)) == 0) {
+		CamelFolder *src, *dest;
+		GPtrArray *uids;
+
+		src = core_ref_folder (core, src_account, fi->full_name, error);
+		dest = src ? core_ref_folder (core, dst_account, new_name, error) : NULL;
+		ok = src && dest && camel_folder_refresh_info_sync (src, core->cancellable, error);
+
+		if (ok) {
+			uids = camel_folder_dup_uids (src);
+			if (uids && uids->len > 0) {
+				ok = camel_folder_transfer_messages_to_sync (src, uids, dest, FALSE, NULL, core->cancellable, error);
+				if (ok) {
+					*count += uids->len;
+					camel_folder_synchronize_sync (dest, FALSE, core->cancellable, NULL);
+				}
+			}
+			if (uids)
+				g_ptr_array_unref (uids);
+		}
+
+		g_clear_object (&src);
+		g_clear_object (&dest);
+	}
+
+	for (child = fi->child; ok && child; child = child->next)
+		ok = folder_transfer_tree (core, dst, src_account, dst_account, child, new_name, count, NULL, error);
+
+	g_free (new_name);
+
+	return ok;
+}
+
+/* Copie ou déplace un dossier (sous-dossiers compris) vers n'importe quel
+ * compte. Un déplacement copie d'abord toute l'arborescence, puis supprime
+ * l'original seulement si la copie a réussi.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] compte source, [1] dossier source, [2] compte de destination,
+ *           [3] parent de destination ("" : racine du compte), [4] "1" pour
+ *           copier, "0" pour déplacer
+ *   error : emplacement d'erreur GError
+ * Retourne : {"full_name": "<dossier créé>", "count": n}, ou NULL en cas d'erreur. */
+static gchar *
+core_transfer_folder_run (EvoCore *core,
+			  gchar **args,
+			  GError **error)
+{
+	FolderOpContext src = { NULL, NULL }, dst = { NULL, NULL };
+	CamelFolderInfo *fi = NULL;
+	gboolean copy = args[4][0] == '1', ok = FALSE;
+	gchar *top = NULL, *json = NULL;
+	gsize src_len = strlen (args[1]);
+	guint count = 0;
+
+	if (folder_op_begin (core, args[0], &src, error) &&
+	    folder_op_begin (core, args[2], &dst, error))
+		fi = folder_op_lookup (&src, args[1], error);
+
+	if (fi && !copy) {
+		GPtrArray *configured = core_dup_configured_special_folders (core, args[0]);
+		gboolean special = folder_info_is_special (fi, configured, TRUE);
+
+		g_ptr_array_unref (configured);
+		if (special) {
+			g_set_error (error, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED,
+				"« %s » est un dossier spécial (ou en contient un) : il ne peut pas être déplacé.",
+				fi->display_name ? fi->display_name : args[1]);
+			fi = NULL;
+		}
+	}
+
+	/* un dossier ne va pas dans lui-même ni dans l'un de ses sous-dossiers (même compte, déplacement) */
+	if (fi && !copy && strcmp (args[0], args[2]) == 0 &&
+	    strncmp (args[3], args[1], src_len) == 0 &&
+	    (args[3][src_len] == '\0' || args[3][src_len] == '/')) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
+			"Un dossier ne peut pas être déplacé dans lui-même ni dans l'un de ses sous-dossiers.");
+		fi = NULL;
+	}
+
+	if (fi) {
+		ok = folder_transfer_tree (core, &dst, args[0], args[2], fi, args[3], &count, &top, error);
+		if (ok && !copy)
+			ok = folder_delete_tree (core, &src, args[0], fi, error);
+	}
+
+	folder_op_end (&src);
+	folder_op_end (&dst);
+
+	/* des dossiers ont pu être créés (ou supprimés) même en cas d'échec partiel */
+	if (top) {
+		core_emit_folders_updated (core, args[2]);
+		if (!copy && strcmp (args[0], args[2]) != 0)
+			core_emit_folders_updated (core, args[0]);
+	}
+
+	if (ok)
+		json = folder_op_result_full_name (top, (gint) count);
+
+	g_free (top);
+
+	return json;
+}
+
+/* Copie ou déplace un dossier avec ses sous-dossiers et ses messages vers un
+ * dossier (ou la racine) de n'importe quel compte.
+ * Paramètres :
+ *   core               : instance du moteur evo-core
+ *   src_account_uid    : compte du dossier
+ *   folder_full_name   : chemin complet du dossier
+ *   dest_account_uid   : compte de destination
+ *   dest_parent_name   : chemin complet du parent de destination ("" : racine)
+ *   copy               : TRUE pour copier (l'original reste), FALSE pour déplacer
+ *   func               : rappel recevant {"full_name": "<créé>", "count": n}
+ *   user_data          : données utilisateur transmises au rappel */
+void
+evo_core_transfer_folder (EvoCore *core,
+			  const char *src_account_uid,
+			  const char *folder_full_name,
+			  const char *dest_account_uid,
+			  const char *dest_parent_name,
+			  int copy,
+			  EvoCoreResultFunc func,
+			  void *user_data)
+{
+	gchar *args[] = { (gchar *) src_account_uid, (gchar *) folder_full_name,
+		(gchar *) dest_account_uid, (gchar *) dest_parent_name, (gchar *) (copy ? "1" : "0"), NULL };
+
+	g_return_if_fail (src_account_uid != NULL);
+	g_return_if_fail (folder_full_name != NULL);
+	g_return_if_fail (dest_account_uid != NULL);
+	g_return_if_fail (dest_parent_name != NULL);
+
+	core_submit (core, core_transfer_folder_run, g_strdupv (args), func, user_data);
+}
+
 void
 evo_core_folder_action (EvoCore *core,
 			const char *account_uid,

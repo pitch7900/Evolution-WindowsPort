@@ -128,10 +128,14 @@ namespace winrt::EvolutionWin::implementation
         }
 
         TreeView tree;
-        /* le contenu d'un nœud est un élément visuel (icône + libellé) : le gabarit l'affiche tel quel */
+        /* même gabarit que l'arborescence principale : le contenu d'un nœud est un FolderItem (icône + nom) */
         tree.ItemTemplate(Microsoft::UI::Xaml::Markup::XamlReader::Load(
             L"<DataTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'>"
-            L"<ContentPresenter Content='{Binding Content}'/></DataTemplate>").as<DataTemplate>());
+            L"<TreeViewItem><Grid ColumnSpacing='8'>"
+            L"<Grid.ColumnDefinitions><ColumnDefinition Width='Auto'/><ColumnDefinition Width='*'/></Grid.ColumnDefinitions>"
+            L"<FontIcon Glyph='{Binding Content.Glyph}' FontFamily='{Binding Content.GlyphFontFamily}' FontSize='14'/>"
+            L"<TextBlock Grid.Column='1' Text='{Binding Content.Name}' TextTrimming='CharacterEllipsis'/>"
+            L"</Grid></TreeViewItem></DataTemplate>").as<DataTemplate>());
         tree.SelectionMode(TreeViewSelectionMode::Single);
         tree.Height(340);
         panel.Children().Append(tree);
@@ -148,23 +152,6 @@ namespace winrt::EvolutionWin::implementation
             if (!result.empty())
                 ::CharLowerBuffW(result.data(), static_cast<DWORD>(result.size()));
             return result;
-        };
-
-        /* contenu d'un nœud : icône + libellé (estompé si la destination n'est pas permise) */
-        auto make_content = [](hstring const& label, FontIcon const& icon, bool dim)
-        {
-            StackPanel row;
-            row.Orientation(Orientation::Horizontal);
-            row.Spacing(8);
-            icon.FontSize(14);
-            TextBlock text;
-            text.Text(label);
-            text.VerticalAlignment(VerticalAlignment::Center);
-            row.Children().Append(icon);
-            row.Children().Append(text);
-            if (dim)
-                row.Opacity(0.5);
-            return row;
         };
 
         /* ajoute récursivement les dossiers d'un compte ; renvoie vrai si au moins un nœud est ajouté */
@@ -187,7 +174,7 @@ namespace winrt::EvolutionWin::implementation
                     continue;
 
                 bool allowed = selectable && !(options.blocked && options.blocked(account, full_name));
-                node.Content(make_content(name, ::EvolutionWin::Helpers::CreateFolderIcon(type), !allowed));
+                node.Content(EvolutionWin::FolderItem(name, FolderGlyph(type), 0, account, full_name, false));
                 node.IsExpanded(!query.empty() && node.Children().Size() > 0);
                 targets[node_key(node)] = Target{ account, full_name, allowed };
                 parent.Children().Append(node);
@@ -215,10 +202,8 @@ namespace winrt::EvolutionWin::implementation
                 if (!any && !name_match)
                     continue;
 
-                FontIcon account_icon;
-                account_icon.Glyph(L"\xE779");
                 bool root_allowed = options.allow_account_root && !(options.blocked && options.blocked(account, L""));
-                account_node.Content(make_content(account_name, account_icon, options.allow_account_root && !root_allowed));
+                account_node.Content(EvolutionWin::FolderItem(account_name, L"\xE715", 0, account, L"", true));
                 account_node.IsExpanded(true);
                 targets[node_key(account_node)] = Target{ account, L"", root_allowed };
                 tree.RootNodes().Append(account_node);

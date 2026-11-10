@@ -422,6 +422,19 @@ void		evo_core_copy_folder		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Copie ou déplace un dossier, avec ses sous-dossiers et ses messages, vers un
+ * dossier ou la racine de n'importe quel compte (copy : TRUE copie, FALSE
+ * déplace). dest_parent_name vide = racine du compte. Le rappel reçoit
+ * {"full_name": "<dossier créé>", "count": <messages copiés>}. */
+void		evo_core_transfer_folder	(EvoCore *core,
+						 const char *src_account_uid,
+						 const char *folder_full_name,
+						 const char *dest_account_uid,
+						 const char *dest_parent_name,
+						 int copy,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Supprime un dossier. Refusé s'il a des sous-dossiers ; ses messages sont
  * supprimés définitivement avec lui (à confirmer dans l'interface).
  * Paramètres :

@@ -30,6 +30,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 - **Fenêtre de choix du dossier : icônes et comptes** : les nœuds de l'arborescence s'affichaient sous la forme « Microsoft.UI.Xaml.Controls.TreeViewNode » (gabarit manquant) ; ils affichent de nouveau icône et nom. Tous les comptes sont listés (dans l'ordre de l'arborescence principale), y compris pour un déplacement de dossier, où les autres comptes sont grisés avec une note explicative (le moteur ne déplace un dossier qu'au sein de son compte). Les icônes « Déplacer vers » / « Copier vers » des menus, corrompues par une erreur d'échappement, sont rétablies.
 
+- **Déplacer / copier un dossier vers un autre compte ou à la racine** : la fenêtre de choix propose tous les comptes (et leur racine) comme destination d'un dossier. Nouvelle fonction du moteur `evo_core_transfer_folder` : copie le dossier avec ses sous-dossiers et tous ses messages dans l'autre compte ; un déplacement supprime l'original (messages, sous-dossiers, abonnement) seulement une fois toute la copie réussie, et refuse les dossiers spéciaux. Dans un même compte, le renommage existant est conservé. À valider sur des comptes réels (Exchange Online, Gmail) avant usage sur des données importantes. Le gabarit de l'arborescence reprend celui de l'arborescence principale (icône + nom).
+
 ## [1.1.0] — 2026-11-07
 
 - **Corrections issues de la validation** : les boutons du bandeau « Contenu externe bloqué » sont empilés (plus de bouton tronqué) ; une conversation dépliée peut de nouveau être repliée, et un clic sur une conversation repliée affiche son message le plus récent ; un cache de traduction mémorisait à tort les textes introuvables (libellés vides).

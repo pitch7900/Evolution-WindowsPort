@@ -382,6 +382,23 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Copie ou déplace un dossier (sous-dossiers et messages compris) vers un dossier
+         * ou la racine de n'importe quel compte.
+         * Paramètres :
+         *   account        : compte du dossier
+         *   folder         : chemin complet du dossier
+         *   dest_account   : compte de destination
+         *   dest_parent    : chemin complet du parent de destination ("" : racine du compte)
+         *   copy           : copier (l'original reste) au lieu de déplacer
+         *   handler        : rappel recevant {"full_name": "<créé>", "count": n} */
+        void TransferFolder(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& dest_account,
+                            winrt::hstring const& dest_parent, bool copy, CoreHandler handler)
+        {
+            evo_core_transfer_folder(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                winrt::to_string(dest_account).c_str(), winrt::to_string(dest_parent).c_str(), copy ? 1 : 0,
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Supprime un dossier sans sous-dossiers, et définitivement ses messages.
          * Paramètres :
          *   account : identifiant du compte

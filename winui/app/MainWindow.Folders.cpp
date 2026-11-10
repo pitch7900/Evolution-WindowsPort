@@ -776,20 +776,23 @@ namespace winrt::EvolutionWin::implementation
                 FolderPickOptions options;
                 options.title = Fmt(copy ? Tr(L"Copier le dossier « {0} » vers…") : Tr(L"Déplacer le dossier « {0} » vers…"), { name });
                 options.confirm_label = copy ? Tr(L"Copier ici") : Tr(L"Déplacer ici");
-                options.note = Tr(L"Un dossier ne peut être déplacé ou copié que dans son propre compte : les autres comptes sont grisés.");
                 options.allow_account_root = true;
                 /* destinations sans effet : le parent actuel ; pour un déplacement, le dossier lui-même et ses sous-dossiers */
                 options.blocked = [this, account, full_name, parent, copy](hstring const& target_account, hstring const& target)
                 {
+                    /* un autre compte accepte tout emplacement */
                     if (target_account != account)
-                        return true;
+                        return false;
                     if (target == parent)
                         return true;
                     return !copy && !target.empty() && IsFolderOrSubfolder(target, full_name);
                 };
-                PickFolderAsync(options, [this, account, full_name, name, copy](hstring const&, hstring const& target)
+                PickFolderAsync(options, [this, account, full_name, name, copy](hstring const& target_account, hstring const& target)
                 {
-                    MoveOrCopyFolder(account, full_name, name, target, copy);
+                    if (target_account == account)
+                        MoveOrCopyFolder(account, full_name, name, target, copy);
+                    else
+                        TransferFolderToAccount(account, full_name, name, target_account, target, copy);
                 });
             });
             menu.Items().Append(pick_item);
@@ -971,6 +974,48 @@ namespace winrt::EvolutionWin::implementation
                 ShowStatus(Fmt(Tr(L"Dossier « {0} » déplacé."), { name }), InfoBarSeverity::Success);
                 ReloadAccountFolders(account, full_name, target);
             }
+        });
+    }
+
+    /* Copie ou déplace un dossier (avec ses sous-dossiers et ses messages) vers un autre compte.
+     * Un déplacement ne supprime l'original qu'une fois toute la copie réussie.
+     * Paramètres :
+     *   account      : compte du dossier
+     *   full_name    : chemin complet du dossier
+     *   name         : nom affiché du dossier
+     *   dest_account : compte de destination
+     *   dest_parent  : chemin complet du parent de destination ("" : racine du compte)
+     *   copy         : copier (l'original reste) plutôt que déplacer */
+    void MainWindow::TransferFolderToAccount(hstring const& account, hstring const& full_name, hstring const& name,
+                                             hstring const& dest_account, hstring const& dest_parent, bool copy)
+    {
+        ShowStatus(Fmt(copy ? Tr(L"Copie du dossier « {0} »…") : Tr(L"Déplacement du dossier « {0} »…"), { name }),
+            InfoBarSeverity::Informational);
+
+        m_core->TransferFolder(account, full_name, dest_account, dest_parent, copy,
+            [this, account, full_name, name, dest_account, copy](hstring const& json, hstring const& error)
+        {
+            /* des dossiers ont pu être créés même en cas d'échec : on relit la destination */
+            if (!error.empty())
+            {
+                ShowStatus(Fmt(copy ? Tr(L"Copier « {0} » : {1}") : Tr(L"Déplacer « {0} » : {1}"), { name, error }), InfoBarSeverity::Error);
+                ReloadAccountFolders(dest_account, L"", L"");
+                if (!copy)
+                    ReloadAccountFolders(account, L"", L"");
+                return;
+            }
+
+            JsonObject result;
+            if (!JsonObject::TryParse(json, result))
+                result = JsonObject{};
+            hstring target = result.GetNamedString(L"full_name", L"");
+            auto count = static_cast<uint32_t>(result.GetNamedNumber(L"count", 0));
+
+            ShowStatus(Fmt(copy ? Tr(L"Dossier « {0} » copié ({1} message(s)).") : Tr(L"Dossier « {0} » déplacé ({1} message(s))."),
+                { name, to_hstring(count) }), InfoBarSeverity::Success);
+            ReloadAccountFolders(dest_account, L"", target);
+            if (!copy)
+                ReloadAccountFolders(account, full_name, L"");
         });
     }
 

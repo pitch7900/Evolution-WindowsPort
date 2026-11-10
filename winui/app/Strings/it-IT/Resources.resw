@@ -6863,5 +6863,9 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Una cartella può essere spostata o copiata solo all'interno del proprio account: gli altri account sono disattivati.</value>
     <comment>Un dossier ne peut être déplacé ou copié que dans son propre compte : les autres comptes sont grisés.</comment>
   </data>
+  <data name="T_2C03E845" xml:space="preserve">
+    <value>Cartella «{0}» spostata ({1} messaggio/i).</value>
+    <comment>Dossier « {0} » déplacé ({1} message(s)).</comment>
+  </data>
 </root>
 
