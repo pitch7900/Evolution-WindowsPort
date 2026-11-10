@@ -986,13 +986,50 @@ namespace winrt::EvolutionWin::implementation
      *   dest_account : compte de destination
      *   dest_parent  : chemin complet du parent de destination ("" : racine du compte)
      *   copy         : copier (l'original reste) plutôt que déplacer */
-    void MainWindow::TransferFolderToAccount(hstring const& account, hstring const& full_name, hstring const& name,
-                                             hstring const& dest_account, hstring const& dest_parent, bool copy)
+    fire_and_forget MainWindow::TransferFolderToAccount(hstring account, hstring full_name, hstring name,
+                                                        hstring dest_account, hstring dest_parent, bool copy)
     {
+        auto strong = get_strong();
+
+        /* un dossier de même nom existe déjà à la destination : on propose de le renommer */
+        auto exists_at_destination = [this, &dest_account, &dest_parent](std::wstring const& candidate)
+        {
+            auto folders_it = m_account_folders.find(std::wstring{ dest_account });
+            if (folders_it == m_account_folders.end() || !folders_it->second)
+                return false;
+            std::wstring wanted = dest_parent.empty() ? candidate : std::wstring{ dest_parent } + L"/" + candidate;
+            std::function<bool(JsonArray const&)> search = [&](JsonArray const& list)
+            {
+                for (auto const& value : list)
+                {
+                    auto folder = value.GetObject();
+                    hstring existing = folder.GetNamedString(L"full_name", L"");
+                    if (CompareStringOrdinal(existing.c_str(), static_cast<int>(existing.size()),
+                            wanted.c_str(), static_cast<int>(wanted.size()), TRUE) == CSTR_EQUAL)
+                        return true;
+                    if (search(folder.GetNamedArray(L"children", JsonArray{})))
+                        return true;
+                }
+                return false;
+            };
+            return search(folders_it->second);
+        };
+
+        hstring new_name = name;
+        while (exists_at_destination(std::wstring{ new_name }))
+        {
+            hstring suggestion = Fmt(Tr(L"{0} (copie)"), { new_name });
+            new_name = co_await PromptFolderNameAsync(Tr(L"Dossier déjà existant"),
+                Fmt(Tr(L"Un dossier « {0} » existe déjà à la destination. Saisissez un autre nom pour « {1} » :"), { new_name, name }),
+                suggestion);
+            if (new_name.empty())
+                co_return; /* annulé : rien n'est copié ni déplacé */
+        }
+
         ShowStatus(Fmt(copy ? Tr(L"Copie du dossier « {0} »…") : Tr(L"Déplacement du dossier « {0} »…"), { name }),
             InfoBarSeverity::Informational);
 
-        m_core->TransferFolder(account, full_name, dest_account, dest_parent, copy,
+        m_core->TransferFolder(account, full_name, dest_account, dest_parent, new_name == name ? hstring{} : new_name, copy,
             [this, account, full_name, name, dest_account, copy](hstring const& json, hstring const& error)
         {
             /* des dossiers ont pu être créés même en cas d'échec : on relit la destination */

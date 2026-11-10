@@ -6867,5 +6867,17 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Carpeta «{0}» movida ({1} mensaje(s)).</value>
     <comment>Dossier « {0} » déplacé ({1} message(s)).</comment>
   </data>
+  <data name="T_456DE4C2" xml:space="preserve">
+    <value>{0} (copia)</value>
+    <comment>{0} (copie)</comment>
+  </data>
+  <data name="T_08A3230D" xml:space="preserve">
+    <value>La carpeta ya existe</value>
+    <comment>Dossier déjà existant</comment>
+  </data>
+  <data name="T_2F563196" xml:space="preserve">
+    <value>Ya existe una carpeta «{0}» en el destino. Introduzca otro nombre para «{1}»:</value>
+    <comment>Un dossier « {0} » existe déjà à la destination. Saisissez un autre nom pour « {1} » :</comment>
+  </data>
 </root>
 

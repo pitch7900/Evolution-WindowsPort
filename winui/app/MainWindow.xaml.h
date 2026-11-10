@@ -668,8 +668,8 @@ namespace winrt::EvolutionWin::implementation
         Windows::Foundation::IAsyncOperation<hstring> PromptFolderNameAsync(hstring title, hstring label, hstring initial);
         fire_and_forget CreateFolderAsync(hstring account, hstring parent, hstring parent_name);
         fire_and_forget RenameFolderAsync(hstring account, hstring full_name, hstring name);
-        void TransferFolderToAccount(hstring const& account, hstring const& full_name, hstring const& name,
-                                     hstring const& dest_account, hstring const& dest_parent, bool copy);
+        fire_and_forget TransferFolderToAccount(hstring account, hstring full_name, hstring name,
+                                     hstring dest_account, hstring dest_parent, bool copy);
         void MoveOrCopyFolder(hstring const& account, hstring const& full_name, hstring const& name,
                               hstring const& parent, bool copy);
         fire_and_forget DeleteFolderAsync(hstring account, hstring full_name, hstring name, int32_t total);

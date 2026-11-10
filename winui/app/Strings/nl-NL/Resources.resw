@@ -6867,5 +6867,17 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Map ‘{0}’ verplaatst ({1} bericht(en)).</value>
     <comment>Dossier « {0} » déplacé ({1} message(s)).</comment>
   </data>
+  <data name="T_456DE4C2" xml:space="preserve">
+    <value>{0} (kopie)</value>
+    <comment>{0} (copie)</comment>
+  </data>
+  <data name="T_08A3230D" xml:space="preserve">
+    <value>Map bestaat al</value>
+    <comment>Dossier déjà existant</comment>
+  </data>
+  <data name="T_2F563196" xml:space="preserve">
+    <value>Er bestaat al een map ‘{0}’ op de bestemming. Geef een andere naam op voor ‘{1}’:</value>
+    <comment>Un dossier « {0} » existe déjà à la destination. Saisissez un autre nom pour « {1} » :</comment>
+  </data>
 </root>
 

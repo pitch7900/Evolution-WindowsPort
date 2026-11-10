@@ -6867,5 +6867,17 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Ordner „{0}“ verschoben ({1} Nachricht(en)).</value>
     <comment>Dossier « {0} » déplacé ({1} message(s)).</comment>
   </data>
+  <data name="T_456DE4C2" xml:space="preserve">
+    <value>{0} (Kopie)</value>
+    <comment>{0} (copie)</comment>
+  </data>
+  <data name="T_08A3230D" xml:space="preserve">
+    <value>Ordner existiert bereits</value>
+    <comment>Dossier déjà existant</comment>
+  </data>
+  <data name="T_2F563196" xml:space="preserve">
+    <value>Am Ziel existiert bereits ein Ordner „{0}“. Geben Sie einen anderen Namen für „{1}“ ein:</value>
+    <comment>Un dossier « {0} » existe déjà à la destination. Saisissez un autre nom pour « {1} » :</comment>
+  </data>
 </root>
 

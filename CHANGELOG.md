@@ -32,6 +32,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 - **Déplacer / copier un dossier vers un autre compte ou à la racine** : la fenêtre de choix propose tous les comptes (et leur racine) comme destination d'un dossier. Nouvelle fonction du moteur `evo_core_transfer_folder` : copie le dossier avec ses sous-dossiers et tous ses messages dans l'autre compte ; un déplacement supprime l'original (messages, sous-dossiers, abonnement) seulement une fois toute la copie réussie, et refuse les dossiers spéciaux. Dans un même compte, le renommage existant est conservé. À valider sur des comptes réels (Exchange Online, Gmail) avant usage sur des données importantes. Le gabarit de l'arborescence reprend celui de l'arborescence principale (icône + nom).
 
+- **Dossier de même nom à la destination** : en déplaçant ou copiant un dossier vers un autre compte, si le dossier de destination contient déjà un dossier du même nom (comparaison insensible à la casse), une boîte propose de saisir un autre nom (suggestion « nom (copie) », redemandé tant qu'il existe) ; annuler n'effectue rien. Le moteur reçoit le nouveau nom (`new_name` de `evo_core_transfer_folder`) et l'applique au dossier de tête ; ses sous-dossiers gardent leur nom.
+
 ## [1.1.0] — 2026-11-07
 
 - **Corrections issues de la validation** : les boutons du bandeau « Contenu externe bloqué » sont empilés (plus de bouton tronqué) ; une conversation dépliée peut de nouveau être repliée, et un clic sur une conversation repliée affiche son message le plus récent ; un cache de traduction mémorisait à tort les textes introuvables (libellés vides).

@@ -957,6 +957,7 @@ folder_transfer_tree (EvoCore *core,
 		      const gchar *dst_account,
 		      CamelFolderInfo *fi,
 		      const gchar *dst_parent,
+		      const gchar *name_override,
 		      guint *count,
 		      gchar **top_name,
 		      GError **error)
@@ -965,7 +966,8 @@ folder_transfer_tree (EvoCore *core,
 	gchar *new_name;
 	gboolean ok = TRUE;
 
-	new_name = folder_op_create (core, dst, dst_parent, folder_base_name (fi->full_name), error);
+	new_name = folder_op_create (core, dst, dst_parent,
+		name_override && *name_override ? name_override : folder_base_name (fi->full_name), error);
 	if (!new_name)
 		return FALSE;
 
@@ -998,7 +1000,7 @@ folder_transfer_tree (EvoCore *core,
 	}
 
 	for (child = fi->child; ok && child; child = child->next)
-		ok = folder_transfer_tree (core, dst, src_account, dst_account, child, new_name, count, NULL, error);
+		ok = folder_transfer_tree (core, dst, src_account, dst_account, child, new_name, NULL, count, NULL, error);
 
 	g_free (new_name);
 
@@ -1012,7 +1014,8 @@ folder_transfer_tree (EvoCore *core,
  *   core  : instance du moteur evo-core
  *   args  : [0] compte source, [1] dossier source, [2] compte de destination,
  *           [3] parent de destination ("" : racine du compte), [4] "1" pour
- *           copier, "0" pour déplacer
+ *           copier, "0" pour déplacer, [5] nouveau nom du dossier copié ("" :
+ *           garder le nom d'origine)
  *   error : emplacement d'erreur GError
  * Retourne : {"full_name": "<dossier créé>", "count": n}, ou NULL en cas d'erreur. */
 static gchar *
@@ -1054,7 +1057,7 @@ core_transfer_folder_run (EvoCore *core,
 	}
 
 	if (fi) {
-		ok = folder_transfer_tree (core, &dst, args[0], args[2], fi, args[3], &count, &top, error);
+		ok = folder_transfer_tree (core, &dst, args[0], args[2], fi, args[3], args[5], &count, &top, error);
 		if (ok && !copy)
 			ok = folder_delete_tree (core, &src, args[0], fi, error);
 	}
@@ -1085,6 +1088,7 @@ core_transfer_folder_run (EvoCore *core,
  *   folder_full_name   : chemin complet du dossier
  *   dest_account_uid   : compte de destination
  *   dest_parent_name   : chemin complet du parent de destination ("" : racine)
+ *   new_name           : nouveau nom du dossier à la destination (NULL ou "" : nom d'origine)
  *   copy               : TRUE pour copier (l'original reste), FALSE pour déplacer
  *   func               : rappel recevant {"full_name": "<créé>", "count": n}
  *   user_data          : données utilisateur transmises au rappel */
@@ -1094,12 +1098,14 @@ evo_core_transfer_folder (EvoCore *core,
 			  const char *folder_full_name,
 			  const char *dest_account_uid,
 			  const char *dest_parent_name,
+			  const char *new_name,
 			  int copy,
 			  EvoCoreResultFunc func,
 			  void *user_data)
 {
 	gchar *args[] = { (gchar *) src_account_uid, (gchar *) folder_full_name,
-		(gchar *) dest_account_uid, (gchar *) dest_parent_name, (gchar *) (copy ? "1" : "0"), NULL };
+		(gchar *) dest_account_uid, (gchar *) dest_parent_name, (gchar *) (copy ? "1" : "0"),
+		(gchar *) (new_name ? new_name : ""), NULL };
 
 	g_return_if_fail (src_account_uid != NULL);
 	g_return_if_fail (folder_full_name != NULL);
