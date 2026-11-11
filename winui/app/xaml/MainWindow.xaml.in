@@ -396,6 +396,8 @@
 
 <!--#include xaml/Settings.Mail.Spam.xamlpart-->
 
+<!--#include xaml/Settings.Mail.Mailto.xamlpart-->
+
                             </StackPanel>
 
                             <!-- ======================================================== -->

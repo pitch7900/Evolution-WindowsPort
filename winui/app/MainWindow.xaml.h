@@ -233,6 +233,19 @@ namespace winrt::EvolutionWin::implementation
         fire_and_forget ShowConflictDialogAsync(winrt::hstring kind, Windows::Data::Json::JsonObject conflict,
             Windows::Data::Json::JsonObject request, std::function<void()> on_done);
 
+        /* Lecteur immersif (MainWindow.Immersive.cpp ; logique pure dans ImmersiveReader.h) */
+        void OpenImmersiveReader();
+        void OnImmersiveReaderClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
+        /* Liens mailto: et enregistrement système (MainWindow.Mailto.cpp ; logique pure dans Mailto.h) */
+        void InstallMailtoSupport(winrt::hstring const& pending_url);
+        void HandleMailto(winrt::hstring const& url);
+        void InitMailtoSettingsView();
+        void OnMailtoRegisterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnMailtoUnregisterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnMailtoDefaultAppsClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        static bool ForwardMailtoToRunningInstance(std::wstring const& url);
+
         /* Écran de démarrage (Splash screen) */
         void SetSplashWindow(winrt::EvolutionWin::SplashWindow const& splash);
         void CloseSplash();
@@ -840,6 +853,11 @@ namespace winrt::EvolutionWin::implementation
         std::map<std::wstring, winrt::EvolutionWin::MessageWindow> m_open_message_windows;
         /* fenêtres de rédaction ouvertes */
         std::vector<winrt::EvolutionWin::ComposeWindow> m_open_compose_windows;
+        /* fenêtre plein écran du lecteur immersif (nulle si fermée) */
+        Microsoft::UI::Xaml::Window m_immersive_window{ nullptr };
+        /* lien mailto: reçu au lancement ou d'une autre instance, en attente du chargement des comptes */
+        winrt::hstring m_pending_mailto;
+        Microsoft::UI::Xaml::DispatcherTimer m_mailto_timer{ nullptr };
 
         /* Bandeau d'information (vues Courrier et Calendrier) : avis identifiés,
          * le dernier est affiché ; voir ShowBanner */

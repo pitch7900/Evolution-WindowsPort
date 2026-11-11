@@ -122,8 +122,8 @@ flowchart LR
 - [ ] **Exportation de données** : export complet de dossiers ou de sélections aux formats standard (`.eml`, `.mbox`, `.ics`, `.vcf`).
 
 ### 3. Ergonomie avancée, protocoles & Traductions (§2, §6, §19, §20)
-- [ ] **Lecteur immersif** : vue plein écran épurée dédiée à la lecture concentrée.
-- [ ] **Enregistrement système `mailto:`** : enregistrement en tant que client de messagerie par défaut auprès de Windows 11.
+- [x] **Lecteur immersif** : vue plein écran épurée dédiée à la lecture concentrée. _(fait : ruban Affichage, texte seul, taille / espacement / thème réglables, Échap pour quitter ; à valider à la main)_
+- [x] **Enregistrement système `mailto:`** : enregistrement en tant que client de messagerie par défaut auprès de Windows 11. _(fait : Paramètres > Courrier, ouverture d'une rédaction depuis un lien, transmission à l'instance ouverte ; option dans le MSI non faite ; à valider à la main)_
 - [x] **Traduction et internationalisation** : infrastructure de ressources `.resw` / MRT Core opérationnelle (`I18n.h`, `TRANSLATIONS.md`), catalogues multilingues complets (`fr-FR`, `en-US`, `de-DE`, `it-IT`, `es-ES`, `pt-PT`, `nl-NL`) et support de déploiement MSI (`UILANGUAGE`).
 - [ ] **Revue finale des critères de conformité** : validation croisée de toutes les cases de [TODO.md](TODO.md).
 

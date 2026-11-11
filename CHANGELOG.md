@@ -12,6 +12,14 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.3.0] — en cours
 
+### Lecteur immersif et liens mailto:
+
+- **Lecteur immersif** (`ImmersiveReader.h`, `MainWindow.Immersive.cpp`) : bouton « Lecteur immersif » du ruban Affichage du courrier ; le message s'affiche en plein écran, texte seul dans une colonne étroite, avec boutons A− / A+ (taille du texte), espacement des lignes et thème (clair, sépia, sombre), réglages mémorisés (`immersive.*`). Échap quitte ; les touches + - T L fonctionnent aussi. Document généré sans contenu distant, texte échappé et politique de sécurité de contenu.
+- **Liens `mailto:`** (`Mailto.h`, `MainWindow.Mailto.cpp`) : Paramètres > Courrier > Liens de messagerie enregistre EvolutionWin comme application de messagerie Windows (clés `Software\Clients\Mail\EvolutionWin`, `RegisteredApplications`, protocole `mailto`, pour l'utilisateur courant) et ouvre « Applications par défaut ». Un lien reçu ouvre une rédaction préremplie (À, Cc, Cci, objet, corps ; décodage %XX UTF-8, sauts de ligne retirés des en-têtes). Si EvolutionWin est déjà ouvert, le lien lui est transmis (WM_COPYDATA) au lieu de lancer une seconde instance. `ComposeData` gagne le champ `bcc`.
+- **Tests** : `tests/unit/test_immersive.cpp` (29 vérifications) et `tests/unit/test_mailto.cpp` (49).
+- **Reste à valider à la main** : voir `VALIDATION.md`. L'option d'enregistrement `mailto:` à l'installation du MSI n'est pas faite.
+
+
 ### Déploiement d'entreprise : MSI silencieux avancé et stratégies de groupe
 
 - **`FORCECLOSE`** (MSI, défaut `1`) : propriété publique documentée (`deploy/DEPLOIEMENT.md`). Elle conditionne la fermeture d'EvolutionWin et des services EDS ; `FORCECLOSE=0` désactive toute fermeture. Nouvelle action `CloseDependencies` (PowerShell, `deploy/msi/close-dependencies.ps1`, passée en base64 par `build-msi.ps1`) : ferme dans toutes les sessions `camel-index-control`, `gspawn-win64-helper` et les `msedgewebview2.exe` du dossier de données d'EvolutionWin (demande propre, 5 s, puis arrêt forcé).

@@ -113,6 +113,26 @@ cl.exe /nologo /utf-8 /W4 /O2 ^
         exit /b 1
     )
 
+rem Compilation des tests du lecteur immersif (C++17 ; ImmersiveReader.h)
+echo [immersif] Compilation de test_immersive.cpp ...
+cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_immersive.cpp" ^
+    /Fe:"%TEST_BIN_DIR%\test_immersive.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_immersive.obj" || (
+        echo [ERREUR] Echec de la compilation de test_immersive.cpp
+        exit /b 1
+    )
+
+rem Compilation des tests des liens mailto: (C++17 ; Mailto.h)
+echo [mailto] Compilation de test_mailto.cpp ...
+cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_mailto.cpp" ^
+    /Fe:"%TEST_BIN_DIR%\test_mailto.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_mailto.obj" || (
+        echo [ERREUR] Echec de la compilation de test_mailto.cpp
+        exit /b 1
+    )
+
 rem Compilation des tests d'export / import du courrier et des contacts (C)
 echo [transfert] Compilation de test_transfer.c ...
 cl.exe /nologo /utf-8 /W4 /O2 ^
@@ -166,6 +186,14 @@ if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
 rem Execution de la suite : file hors ligne et conflits
 "%TEST_BIN_DIR%\test_offline_queue.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : lecteur immersif
+"%TEST_BIN_DIR%\test_immersive.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : liens mailto:
+"%TEST_BIN_DIR%\test_mailto.exe"
 if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
 rem Execution de la suite : export / import du courrier et des contacts

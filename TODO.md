@@ -187,7 +187,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 
 - [ ] 🟡 **Ouvrir un événement ou un dossier dans une nouvelle fenêtre** (pour un message : fenêtre de lecture indépendante, §6) — _fait : message (§6) et événement (fenêtre dédiée depuis la 1.1.0) ; reste : dossier_ ; [x] 🟢 **Fermer tous les éléments ouverts**
 - [ ] 🟠 **Fenêtre des rappels** : rappels des rendez-vous (alarmes EDS) et des messages en suivi, avec Reporter / Ignorer _(partiel : notification Windows à l'heure du rappel des événements, vérifiée toutes les 30 s, sans répétition ; restent Reporter / Ignorer, les messages en suivi et les tâches)_
-- [ ] 🟡 **Lecteur immersif** : vue de lecture plein écran épurée (taille du texte, espacement)
+- [x] 🟡 **Lecteur immersif** : vue de lecture plein écran épurée (taille du texte, espacement) — _fait en 1.3.0 : bouton du ruban Affichage, texte seul, taille / espacement / thème (clair, sépia, sombre) mémorisés, Échap ou touches + - T L_
 - [x] 🟢 **Lecture à voix haute** du message (`Windows.Media.SpeechSynthesis`)
 
 ## 3. Comptes — 🟠
@@ -291,7 +291,7 @@ Dans Microsoft 365 / Exchange Online, les utilisateurs disposent souvent d'une b
 - [x] 🟢 **Désigner le compte par défaut** dans la liste des comptes, avec indication visuelle (`e_source_registry_set_default_mail_account`)
 - [x] 🟢 Utilisé pour les nouveaux messages ; pour une réponse / un transfert, compte ayant reçu le message (repli sur le compte par défaut)
 - [x] 🟢 Calendrier et carnet d'adresses par défaut pour les nouveaux événements et contacts — _les nouveaux éléments vont déjà dans le calendrier / carnet par défaut d'EDS ; reste : les choisir dans l'interface_
-- [ ] 🟡 Gestionnaire des liens `mailto:` (inscription d'EvolutionWin comme application de messagerie Windows). Facultatif au moment de l'installation MSI et dans les menus de configuration de l'application par la suite.
+- [x] 🟡 Gestionnaire des liens `mailto:` (inscription d'EvolutionWin comme application de messagerie Windows). Facultatif au moment de l'installation MSI et dans les menus de configuration de l'application par la suite. — _fait en 1.3.0 dans les Paramètres (Courrier › Liens de messagerie) ; l'option d'enregistrement dans le MSI reste à faire_
 
 ### Signatures — 🟡
 

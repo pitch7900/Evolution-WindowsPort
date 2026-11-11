@@ -7723,5 +7723,89 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Su administrador ha desactivado las actualizaciones.</value>
     <comment>Les mises à jour sont désactivées par votre administrateur.</comment>
   </data>
+  <data name="T_E5524EFD" xml:space="preserve">
+    <value>Lector inmersivo</value>
+    <comment>Lecteur immersif</comment>
+  </data>
+  <data name="T_88997AB4" xml:space="preserve">
+    <value>Reducir el texto (tecla -)</value>
+    <comment>Réduire le texte (touche -)</comment>
+  </data>
+  <data name="T_331A606C" xml:space="preserve">
+    <value>Aumentar el texto (tecla +)</value>
+    <comment>Agrandir le texte (touche +)</comment>
+  </data>
+  <data name="T_6BEE659E" xml:space="preserve">
+    <value>Cambiar el espaciado de líneas (tecla L)</value>
+    <comment>Changer l'espacement des lignes (touche L)</comment>
+  </data>
+  <data name="T_84531D22" xml:space="preserve">
+    <value>Cambiar el tema: claro, sepia, oscuro (tecla T)</value>
+    <comment>Changer le thème : clair, sépia, sombre (touche T)</comment>
+  </data>
+  <data name="T_03DDE14C" xml:space="preserve">
+    <value>Salir del lector inmersivo (Esc)</value>
+    <comment>Quitter le lecteur immersif (Échap)</comment>
+  </data>
+  <data name="T_3879A62D" xml:space="preserve">
+    <value>Correo, calendario, contactos y tareas de Evolution</value>
+    <comment>Messagerie, calendrier, contacts et tâches Evolution</comment>
+  </data>
+  <data name="T_B7AEEEBA" xml:space="preserve">
+    <value>Las cuentas no se cargaron: no se pudo abrir el vínculo de correo.</value>
+    <comment>Les comptes ne se sont pas chargés : le lien de messagerie n'a pas pu être ouvert.</comment>
+  </data>
+  <data name="T_78056A0C" xml:space="preserve">
+    <value>EvolutionWin está registrado como aplicación de correo para su cuenta de Windows.</value>
+    <comment>EvolutionWin est enregistré comme application de messagerie pour votre compte Windows.</comment>
+  </data>
+  <data name="T_28D40CD8" xml:space="preserve">
+    <value>EvolutionWin no está registrado como aplicación de correo.</value>
+    <comment>EvolutionWin n'est pas enregistré comme application de messagerie.</comment>
+  </data>
+  <data name="T_810A63C1" xml:space="preserve">
+    <value>Error al registrar como aplicación de correo.</value>
+    <comment>L'enregistrement comme application de messagerie a échoué.</comment>
+  </data>
+  <data name="T_4B52A490" xml:space="preserve">
+    <value>EvolutionWin está registrado. Elíjalo en «Aplicaciones predeterminadas» para los vínculos de correo.</value>
+    <comment>EvolutionWin est enregistré. Choisissez-le dans « Applications par défaut » pour les liens de messagerie.</comment>
+  </data>
+  <data name="T_F1FC52E5" xml:space="preserve">
+    <value>Se ha quitado el registro como aplicación de correo.</value>
+    <comment>L'enregistrement comme application de messagerie a été retiré.</comment>
+  </data>
+  <data name="T_F988E908" xml:space="preserve">
+    <value>No se pudo abrir la configuración de Windows.</value>
+    <comment>Impossible d'ouvrir les paramètres Windows.</comment>
+  </data>
+  <data name="T_D43F4761" xml:space="preserve">
+    <value>Lee el mensaje a pantalla completa, solo texto, con tamaño y espaciado ajustables</value>
+    <comment>Lit le message en plein écran, texte seul, avec taille du texte et espacement réglables</comment>
+  </data>
+  <data name="T_D850FE95" xml:space="preserve">
+    <value>Vínculos de correo (mailto:)</value>
+    <comment>Liens de messagerie (mailto:)</comment>
+  </data>
+  <data name="T_5BC572A8" xml:space="preserve">
+    <value>Aplicación de correo de Windows</value>
+    <comment>Application de messagerie Windows</comment>
+  </data>
+  <data name="T_68EF8775" xml:space="preserve">
+    <value>Declara EvolutionWin como aplicación de correo para que los vínculos de correo (clic en una dirección en un navegador o un documento) abran una nueva ventana de redacción. Después, Windows pide confirmar la elección en «Aplicaciones predeterminadas».</value>
+    <comment>Déclare EvolutionWin comme application de messagerie pour que les liens de messagerie (clic sur une adresse dans un navigateur ou un document) ouvrent une nouvelle fenêtre de rédaction. Windows demande ensuite de confirmer le choix dans « Applications par défaut ».</comment>
+  </data>
+  <data name="T_49E7615C" xml:space="preserve">
+    <value>Registrar como aplicación de correo</value>
+    <comment>Enregistrer comme application de messagerie</comment>
+  </data>
+  <data name="T_5367749D" xml:space="preserve">
+    <value>Abrir aplicaciones predeterminadas</value>
+    <comment>Ouvrir les applications par défaut</comment>
+  </data>
+  <data name="T_9AE4DC95" xml:space="preserve">
+    <value>Quitar el registro</value>
+    <comment>Retirer l'enregistrement</comment>
+  </data>
 </root>
 

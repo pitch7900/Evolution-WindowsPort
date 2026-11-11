@@ -15,6 +15,8 @@ namespace EvolutionWin
         winrt::hstring account;
         winrt::hstring to;
         winrt::hstring cc;
+        /* copie cachée (Cci), renseignée par les liens mailto: */
+        winrt::hstring bcc;
         winrt::hstring subject;
         winrt::hstring body;
         winrt::hstring html_body;

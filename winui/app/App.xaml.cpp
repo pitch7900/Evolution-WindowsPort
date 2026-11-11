@@ -4,6 +4,7 @@
 #include "MainWindow.Helpers.h"
 #include "Settings.h"
 #include "ErrorLog.h"
+#include "Mailto.h"
 
 #include <winrt/Windows.Globalization.h>
 #include <winrt/Microsoft.Windows.Globalization.h>
@@ -66,6 +67,15 @@ namespace winrt::EvolutionWin::implementation
 
     void App::OnLaunched([[maybe_unused]] LaunchActivatedEventArgs const& e)
     {
+        /* lien mailto: sur la ligne de commande (clic sur une adresse dans une autre application) :
+           confié à l'instance déjà ouverte s'il y en a une, sinon ouvert par cette instance au démarrage */
+        std::wstring mailto_url = ::EvolutionWin::Mailto::FindUrlInCommandLine(GetCommandLineW());
+        if (!mailto_url.empty() && MainWindow::ForwardMailtoToRunningInstance(mailto_url))
+        {
+            Exit();
+            return;
+        }
+
         /* Affichage instantané de l'écran de démarrage avant le chargement de CoreBridge */
         evo_core_trace("interface : OnLaunched");
         m_splash = make<SplashWindow>();
@@ -75,5 +85,6 @@ namespace winrt::EvolutionWin::implementation
         auto main_window = make<MainWindow>();
         winrt::get_self<MainWindow>(main_window)->SetSplashWindow(m_splash);
         window = main_window;
+        winrt::get_self<MainWindow>(main_window)->InstallMailtoSupport(hstring{ mailto_url });
     }
 }

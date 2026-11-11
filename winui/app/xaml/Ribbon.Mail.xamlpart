@@ -314,6 +314,11 @@
 
                         </AppBarButton>
 
+                        <AppBarButton Label="Lecteur immersif" Click="OnImmersiveReaderClick"
+                                      ToolTipService.ToolTip="Lit le message en plein écran, texte seul, avec taille du texte et espacement réglables">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE736;" /></AppBarButton.Icon>
+                        </AppBarButton>
+
                         <AppBarButton Label="Rétablir la disposition" Click="OnRibbonResetLayoutClick">
 
                             <AppBarButton.Icon><FontIcon Glyph="&#xE72C;" /></AppBarButton.Icon>

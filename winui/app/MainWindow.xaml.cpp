@@ -842,6 +842,7 @@ namespace winrt::EvolutionWin::implementation
             SettingsViewPane().Visibility(Visibility::Visible);
             InitSettingsView();
             InitSpamSettingsView();
+            InitMailtoSettingsView();
             InitFullTextIndexSettingsView();
             SelectSettingsCategory(m_current_settings_category);
             UpdateTodoBarVisibility();

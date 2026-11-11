@@ -118,6 +118,8 @@
     <ClInclude Include="WindowIcon.h" />
     <ClInclude Include="Categories.h" />
     <ClInclude Include="Rules.h" />
+    <ClInclude Include="ImmersiveReader.h" />
+    <ClInclude Include="Mailto.h" />
     <ClInclude Include="RuleStore.h" />
     <ClInclude Include="CategoryStore.h" />
     <ClInclude Include="Policy.h" />
@@ -305,6 +307,12 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="MainWindow.Rules.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="MainWindow.Immersive.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="MainWindow.Mailto.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="MainWindow.Index.cpp">
