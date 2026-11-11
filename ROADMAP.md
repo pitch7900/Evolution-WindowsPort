@@ -114,8 +114,8 @@ flowchart LR
 > **Objectif :** Clôturer l'ensemble des points restants de [TODO.md](TODO.md), peaufiner l'administration et finaliser l'internationalisation.
 
 ### 1. Déploiement & Administration d'entreprise (§1)
-- [ ] **Installation silencieuse avancée du MSI** : support complet des propriétés `FORCECLOSE=1`, `PURGEUSERDATA=1` et arrêt propre multi-sessions.
-- [ ] **Stratégies de groupe (GPO / Registre)** : verrouillage centralisé de paramètres (désactivation des mises à jour automatiques, configuration imposée).
+- [x] **Installation silencieuse avancée du MSI** : support complet des propriétés `FORCECLOSE=1`, `PURGEUSERDATA=1` et arrêt propre multi-sessions. _(codé : à valider sur une VM, y compris multi-sessions)_
+- [x] **Stratégies de groupe (GPO / Registre)** : verrouillage centralisé de paramètres (désactivation des mises à jour automatiques, configuration imposée). _(codé : `Policy.h`, modèle ADMX/ADML, `DisableAutoUpdate` et réglages imposés ; à valider avec une GPO réelle)_
 
 ### 2. Importation & Exportation (§18)
 - [ ] **Assistant d'importation** : prise en charge des conteneurs Outlook (fichiers `.pst` et `.ost`) et des profils tiers (Thunderbird MBOX / Maildir).

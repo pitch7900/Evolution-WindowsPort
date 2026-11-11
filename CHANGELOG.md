@@ -12,6 +12,13 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.3.0] — en cours
 
+### Déploiement d'entreprise : MSI silencieux avancé et stratégies de groupe
+
+- **`FORCECLOSE`** (MSI, défaut `1`) : propriété publique documentée (`deploy/DEPLOIEMENT.md`). Elle conditionne la fermeture d'EvolutionWin et des services EDS ; `FORCECLOSE=0` désactive toute fermeture. Nouvelle action `CloseDependencies` (PowerShell, `deploy/msi/close-dependencies.ps1`, passée en base64 par `build-msi.ps1`) : ferme dans toutes les sessions `camel-index-control`, `gspawn-win64-helper` et les `msedgewebview2.exe` du dossier de données d'EvolutionWin (demande propre, 5 s, puis arrêt forcé).
+- **`PURGEUSERDATA=1`** (désinstallation) : supprime les données de l'utilisateur qui désinstalle (`%LOCALAPPDATA%\EvolutionWin`, `%LOCALAPPDATA%\evolution`, cache `INetCache\evolution`, identifiants `Evolution-Data-Server:*`), jamais lors d'une mise à jour (`REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE`) ; journal dans `%TEMP%\EvolutionWin-purge.log`.
+- **Stratégies de groupe** (`winui/app/Policy.h`, testé par `tests/unit/test_policy.cpp`) : lecture de `HKLM\SOFTWARE\Policies\EvolutionWin` puis, en repli, `HKCU\Software\Policies\EvolutionWin`. `DisableAutoUpdate` supprime la recherche au démarrage et grise le bouton de Paramètres › À propos ; la sous-clé `Settings` impose n'importe quel réglage de `settings.json` (priorité sur le fichier, écriture ignorée, liste du contenu distant grisée dans Confidentialité). Modèle d'administration ADMX/ADML (fr-FR, en-US) dans `deploy/policy`, copié dans `Evolution\policy` par le MSI.
+- **Reste à valider** : installation, mise à jour et désinstallation silencieuses sur VM (dont plusieurs sessions), `PURGEUSERDATA`, GPO réelle. Non fait : boîte de dialogue interactive « fermer Evolution ? », case de purge dans l'interface du MSI, propriété MSI `AUTOUPDATE=0`.
+
 ## [1.2.0] — en cours
 
 ### Mode hors connexion : file d'attente d'actions et résolution des conflits
