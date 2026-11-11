@@ -773,9 +773,12 @@ core_gal_photo_run (EvoCore *core,
 	for (slink = sources; slink && !photo; slink = g_list_next (slink)) {
 		ESource *source = slink->data;
 		GalProvider provider;
-		gchar *token = NULL, *uri;
-		GBytes *bytes;
-		guint status = 0;
+		/* /photo/$value d'abord ; certaines photos (synchronisées depuis l'annuaire
+		 * local, par exemple) ne sont servies que par les tailles fixes */
+		const gchar *suffixes[] = { "/photo/$value", "/photos/648x648/$value", "/photos/240x240/$value",
+			"/photos/120x120/$value", "/photos/96x96/$value", "/photos/64x64/$value", "/photos/48x48/$value", NULL };
+		gchar *token = NULL;
+		guint ii;
 
 		if (!gal_collection_provider (source, &provider) || provider != GAL_PROVIDER_MICROSOFT365)
 			continue;
@@ -785,23 +788,30 @@ core_gal_photo_run (EvoCore *core,
 		if (!gal_get_token (core, source, &token, NULL))
 			continue;
 
-		uri = g_strconcat ("https://graph.microsoft.com/v1.0/users/", escaped, "/photo/$value", NULL);
-		bytes = gal_http_get (core, provider, uri, token, &status, NULL);
-		g_message ("photo annuaire Graph : HTTP %u pour %s (%.200s)", status, args[1],
-			bytes && status >= 300 && g_bytes_get_data (bytes, NULL) ? (const gchar *) g_bytes_get_data (bytes, NULL) : "");
-		if (bytes && status >= 200 && status < 300) {
-			gsize size = 0;
-			gconstpointer data = g_bytes_get_data (bytes, &size);
+		for (ii = 0; suffixes[ii] && !photo; ii++) {
+			gchar *uri = g_strconcat ("https://graph.microsoft.com/v1.0/users/", escaped, suffixes[ii], NULL);
+			guint status = 0;
+			GBytes *bytes = gal_http_get (core, provider, uri, token, &status, NULL);
 
-			if (data && size > 0) {
-				gchar *base64 = g_base64_encode (data, size);
+			g_message ("photo annuaire Graph : HTTP %u pour %s%s (%.200s)", status, args[1], suffixes[ii],
+				bytes && status >= 300 && g_bytes_get_data (bytes, NULL) ? (const gchar *) g_bytes_get_data (bytes, NULL) : "");
+			if (bytes && status >= 200 && status < 300) {
+				gsize size = 0;
+				gconstpointer data = g_bytes_get_data (bytes, &size);
 
-				photo = g_strconcat ("data:image/jpeg;base64,", base64, NULL);
-				g_free (base64);
+				if (data && size > 0) {
+					gchar *base64 = g_base64_encode (data, size);
+
+					photo = g_strconcat ("data:image/jpeg;base64,", base64, NULL);
+					g_free (base64);
+				}
 			}
+			g_clear_pointer (&bytes, g_bytes_unref);
+			g_free (uri);
+			/* 401/403 : inutile d'insister avec les autres tailles */
+			if (!photo && (status == 401 || status == 403))
+				break;
 		}
-		g_clear_pointer (&bytes, g_bytes_unref);
-		g_free (uri);
 		e_util_safe_free_string (token);
 	}
 	g_list_free_full (sources, g_object_unref);
