@@ -1,6 +1,10 @@
-            <Grid x:Name="TasksViewPane" Grid.Row="2" Visibility="Collapsed" Padding="24,16,24,16" RowSpacing="12">
+            <Grid x:Name="TasksViewPane" Grid.Row="2" Visibility="Collapsed" Padding="24,16,24,16" RowSpacing="12" ColumnSpacing="16">
 
-                <Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+<ColumnDefinition Width="260" />
+<ColumnDefinition Width="*" />
+</Grid.ColumnDefinitions>
+<Grid.RowDefinitions>
 
                     <RowDefinition Height="Auto" />
 
@@ -9,8 +13,22 @@
                     <RowDefinition Height="*" />
 
                 </Grid.RowDefinitions>
+<!-- volet des listes de tâches groupées par compte (facon Outlook) -->
+<Border Grid.Column="0" Grid.Row="0" Grid.RowSpan="3" CornerRadius="8" BorderThickness="1"
+        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+    <Grid RowSpacing="4" Padding="4,12,4,8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <TextBlock Text="Mes tâches" Style="{StaticResource SubtitleTextBlockStyle}" Margin="12,0,12,4" />
+        <ListView x:Name="TaskListChoice" Grid.Row="1" SelectionMode="Single" SelectionChanged="OnTaskListChanged"
+                  ToolTipService.ToolTip="Liste de tâches" />
+    </Grid>
+</Border>
 
-                <Grid Grid.Row="0" ColumnSpacing="16">
+
+                <Grid Grid.Row="0" Grid.Column="1" ColumnSpacing="16">
 
                     <Grid.ColumnDefinitions>
 
@@ -22,11 +40,7 @@
 
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Text="Tâches" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
-
-                    <ComboBox x:Name="TaskListChoice" Grid.Column="1" HorizontalAlignment="Left" MinWidth="220" VerticalAlignment="Center"
-
-                              SelectionChanged="OnTaskListChanged" ToolTipService.ToolTip="Liste de tâches" />
+                    <TextBlock x:Name="TaskViewTitle" Text="Toutes les tâches" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
 
                     <AutoSuggestBox x:Name="TaskSearchBox" Grid.Column="2" HorizontalAlignment="Right" Width="280"
 
@@ -38,7 +52,7 @@
 
                 <!-- filtres et tri, appliqués localement (ShowTasks) et mémorisés -->
 
-                <Grid Grid.Row="1" ColumnSpacing="16">
+                <Grid Grid.Row="1" Grid.Column="1" ColumnSpacing="16">
 
                     <Grid.ColumnDefinitions>
 
@@ -83,7 +97,7 @@
 
                 </Grid>
 
-                <ListView x:Name="TaskList" Grid.Row="2" SelectionMode="None" IsItemClickEnabled="True" ItemClick="OnTaskItemClick">
+                <ListView x:Name="TaskList" Grid.Row="2" Grid.Column="1" SelectionMode="None" IsItemClickEnabled="True" ItemClick="OnTaskItemClick">
 
                     <ListView.ItemContainerStyle>
 
@@ -97,6 +111,6 @@
 
                 </ListView>
 
-                <ProgressRing x:Name="TaskProgress" Grid.Row="2" IsActive="False" Width="32" Height="32" />
+                <ProgressRing x:Name="TaskProgress" Grid.Row="2" Grid.Column="1" IsActive="False" Width="32" Height="32" />
 
             </Grid>

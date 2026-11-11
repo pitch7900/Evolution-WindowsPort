@@ -6967,5 +6967,13 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Berichten worden weergegeven…</value>
     <comment>Affichage des messages en cours…</comment>
   </data>
+  <data name="T_01C7B8DE" xml:space="preserve">
+    <value>Alle taken</value>
+    <comment>Toutes les tâches</comment>
+  </data>
+  <data name="T_E6D71139" xml:space="preserve">
+    <value>Mijn taken</value>
+    <comment>Mes tâches</comment>
+  </data>
 </root>
 

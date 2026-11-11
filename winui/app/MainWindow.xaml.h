@@ -712,7 +712,7 @@ namespace winrt::EvolutionWin::implementation
         void ShowTasks();
         bool MatchesTaskFilter(Windows::Data::Json::JsonObject const& task, hstring const& filter);
         bool MatchesTaskSearch(Windows::Data::Json::JsonObject const& task, hstring const& query);
-        Microsoft::UI::Xaml::UIElement BuildTaskRow(Windows::Data::Json::JsonObject const& task, bool show_list);
+        Microsoft::UI::Xaml::UIElement BuildTaskRow(Windows::Data::Json::JsonObject const& task, bool show_list, bool show_account = true);
         void GetTaskAccountInfo(Windows::Data::Json::JsonObject const& task, hstring& out_name, hstring& out_email);
         void CreateTaskFromMessage(hstring const& message_uid);
         void CreateTaskFromEvent(Windows::Data::Json::JsonObject const& event_data);
