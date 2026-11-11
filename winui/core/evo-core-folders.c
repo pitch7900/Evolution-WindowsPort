@@ -417,6 +417,9 @@ core_folder_changed_cb (CamelFolder *folder,
 
 	core_emit_builder (core, "folder-changed", builder);
 
+	/* index plein texte local : prise en compte des messages arrivés ou supprimés (en tâche de fond) */
+	core_index_folder_changed (core, folder, changes);
+
 	/* Émet "new-mail" lorsque de nouveaux messages non lus arrivent dans la
 	 * boîte de réception après la synchronisation initiale */
 	if (g_object_get_data (G_OBJECT (folder), "evo-initial-sync-done") != NULL &&
@@ -447,11 +450,11 @@ core_folder_changed_cb (CamelFolder *folder,
 			g_object_unref (info);
 		}
 
-		if (unread_added > 0 && newest) {
-			JsonBuilder *mail_builder = core_event_builder ();
-
 		/* filtre anti-spam : classement des nouveaux messages vers Indésirables (en tâche de fond) */
 		core_spam_classify_added (core, folder, changes->uid_added);
+
+		if (unread_added > 0 && newest) {
+			JsonBuilder *mail_builder = core_event_builder ();
 
 			builder_add_string (mail_builder, "account", camel_service_get_uid (CAMEL_SERVICE (store)));
 			builder_add_string (mail_builder, "folder", camel_folder_get_full_name (folder));
