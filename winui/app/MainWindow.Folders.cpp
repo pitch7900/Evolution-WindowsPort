@@ -529,6 +529,7 @@ namespace winrt::EvolutionWin::implementation
                 if (action != L"empty" && m_all_messages)
                 {
                     /* « Tout marquer comme lu » : les messages du dossier passent en lu à l'écran sans attendre le rechargement */
+                    uint32_t updated = 0;
                     for (uint32_t i = 0; i < m_all_messages.Size(); ++i)
                     {
                         auto message = m_all_messages.GetAt(i).GetObject();
@@ -542,10 +543,19 @@ namespace winrt::EvolutionWin::implementation
                         auto& state = m_message_states[std::wstring{ uid }];
                         state.seen = true;
                         if (auto grid = FindMessageItem(uid))
+                        {
                             UpdateMessageItemVisual(grid, true, state.flagged);
+                            ++updated;
+                        }
                     }
+                    wchar_t info[120]{};
+                    swprintf_s(info, L"tout marquer comme lu : %u message(s) mis à jour à l'écran sur %u", updated, m_all_messages.Size());
+                    ::EvolutionWin::LogError(L"liste", 0, info);
                 }
-                LoadMessages(action != L"empty");
+                /* « Tout marquer comme lu » : pas de rechargement immédiat, qui relirait le résumé local avant que le serveur
+                   ait enregistré les nouveaux indicateurs et ré-afficherait les messages non lus */
+                if (action == L"empty")
+                    LoadMessages(false);
             }
         });
     }
