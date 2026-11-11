@@ -91,7 +91,7 @@ flowchart LR
 - [ ] **Éditeur graphique de règles** : création de filtres sur critères multiples (expéditeur, objet, destinataires, en-têtes) et actions (déplacement, copie, marquage).
 - [ ] **Éditeur de règles rapides** : Création rapide de règles depuis un click droit sur un mail.
 - [ ] **Règles côté serveur** : synchronisation des règles vers Exchange Online / EWS et support du protocole ManageSieve pour les serveurs IMAP compatibles.
-- [ ] **Filtrage anti-spam** : intégration locale de moteurs de classification (Bogofilter, SpamAssassin ou analyse bayésienne).
+- [x] **Filtrage anti-spam** : intégration locale de moteurs de classification (Bogofilter, SpamAssassin ou analyse bayésienne). _(analyse bayésienne locale autonome ; reste à valider sur des comptes réels)_
 
 ### 2. Mode hors-connexion et synchronisation fine (§4)
 - [ ] **Plages de synchronisation par dossier** : réglage de la rétention locale (ex. 1 mois, 6 mois, 1 an, tout l'historique). _(codé : clic droit sur un compte ou un dossier › « Synchronisation hors connexion… » ; reste à valider sur un compte IMAP réel)_
