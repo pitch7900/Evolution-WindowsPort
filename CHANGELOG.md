@@ -10,7 +10,7 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
-## [1.1.1] — en cours
+## [1.1.1] — 2026-11-11
 
 Version corrective : glisser-déposer des messages, fenêtre de choix du dossier, copie de dossiers entre comptes et fiabilité de la liste des messages.
 
@@ -20,6 +20,7 @@ Version corrective : glisser-déposer des messages, fenêtre de choix du dossier
 - **Glisser-déposer : aperçu et conversations** : l'aperçu translucide du texte du message, illisible, est supprimé : seul le pointeur reste visible pendant le glisser. Glisser l'en-tête d'une conversation déplace tous les messages du fil (repliée ou dépliée) ; un message glissé hors de la sélection est bien celui déplacé. Un dépôt refusé est consigné dans `errors.log` pour faciliter le diagnostic.
 - **Suppression d'un message : le voisin reste non lu** : après une suppression ou un déplacement, le message suivant, sélectionné automatiquement, n'est plus marqué comme lu (il disparaissait de la liste avec le filtre « Non lus »). Il s'affiche dans le volet de lecture et reste non lu tant que l'utilisateur ne le sélectionne pas lui-même.
 - **Suppression / déplacement d'un message : la liste ne se recharge plus** : le rechargement complet qui suivait faisait perdre le défilement et le message en cours de lecture. Un retrait déjà affiché ne recharge plus la liste ; les autres rechargements silencieux (nouveau message, actualisation) conservent la barre de défilement et la sélection, y compris dans les vues unifiées.
+- **« Tout marquer comme lu » : la liste se met à jour** : après l'action (menu contextuel d'un dossier), les messages du dossier affiché, ou inclus dans la vue unifiée affichée, passent en lu à l'écran immédiatement ; il fallait auparavant actualiser la liste.
 
 ### Ajouté
 

@@ -523,8 +523,30 @@ namespace winrt::EvolutionWin::implementation
                 : Fmt(Tr(L"{0} message(s) marqué(s) comme lu(s) dans « {1} »."), { to_hstring(count), name }),
                 InfoBarSeverity::Success);
 
-            if (account == m_account && folder == m_folder)
-                LoadMessages(false);
+            /* dossier affiché (ou inclus dans la vue unifiée affichée) : la liste est mise à jour tout de suite */
+            if ((account == m_account && folder == m_folder) || UnifiedFolderMatches(account, folder))
+            {
+                if (action != L"empty" && m_all_messages)
+                {
+                    /* « Tout marquer comme lu » : les messages du dossier passent en lu à l'écran sans attendre le rechargement */
+                    for (uint32_t i = 0; i < m_all_messages.Size(); ++i)
+                    {
+                        auto message = m_all_messages.GetAt(i).GetObject();
+                        hstring uid = message.GetNamedString(L"uid", L"");
+                        auto location = GetMessageLocation(uid);
+                        hstring message_account = location.account.empty() ? m_account : location.account;
+                        hstring message_folder = location.folder.empty() ? m_folder : location.folder;
+                        if (uid.empty() || message_account != account || message_folder != folder)
+                            continue;
+                        message.SetNamedValue(L"seen", JsonValue::CreateBooleanValue(true));
+                        auto& state = m_message_states[std::wstring{ uid }];
+                        state.seen = true;
+                        if (auto grid = FindMessageItem(uid))
+                            UpdateMessageItemVisual(grid, true, state.flagged);
+                    }
+                }
+                LoadMessages(action != L"empty");
+            }
         });
     }
 
