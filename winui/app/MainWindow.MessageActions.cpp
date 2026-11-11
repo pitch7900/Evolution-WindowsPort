@@ -313,7 +313,12 @@ namespace winrt::EvolutionWin::implementation
 
                 uint32_t next_index = removed_index < items.Size() ? removed_index : items.Size() - 1;
 
+                /* le message voisin est affiché mais n'est pas marqué comme lu (l'utilisateur ne l'a pas choisi) */
+                m_keep_unread_on_select = true;
                 MessageList().SelectedIndex(static_cast<int32_t>(next_index));
+                /* la remise à zéro est différée : l'événement de sélection peut être traité après le retour */
+                DispatcherQueue().TryEnqueue(Microsoft::UI::Dispatching::DispatcherQueuePriority::Low,
+                    [this] { m_keep_unread_on_select = false; });
 
             }
 

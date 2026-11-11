@@ -1238,7 +1238,9 @@ namespace winrt::EvolutionWin::implementation
 
         CloseAttachmentPreview();
         StopSpeech();
-        ScheduleMarkAsRead(uid);
+        /* sélection automatique après suppression / déplacement : le message voisin reste non lu */
+        if (!m_keep_unread_on_select)
+            ScheduleMarkAsRead(uid);
         PrepareDragDropCache();
 
         /* Si le volet de lecture est désactivé, conserver la sélection et les boutons sans charger le WebView2 */

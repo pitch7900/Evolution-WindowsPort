@@ -952,6 +952,8 @@ namespace winrt::EvolutionWin::implementation
 
         /* Gestion automatique du statut Lu / Non lu */
         Microsoft::UI::Xaml::DispatcherTimer m_mark_read_timer{ nullptr };
+        /* vrai pendant la sélection automatique du message voisin d'un message supprimé / déplacé */
+        bool m_keep_unread_on_select{ false };
         winrt::hstring m_pending_read_uid;
         winrt::hstring m_previous_selected_uid;
         void ScheduleMarkAsRead(winrt::hstring const& uid);

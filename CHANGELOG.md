@@ -34,6 +34,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 - **Dossier de même nom à la destination** : en déplaçant ou copiant un dossier vers un autre compte, si le dossier de destination contient déjà un dossier du même nom (comparaison insensible à la casse), une boîte propose de saisir un autre nom (suggestion « nom (copie) », redemandé tant qu'il existe) ; annuler n'effectue rien. Le moteur reçoit le nouveau nom (`new_name` de `evo_core_transfer_folder`) et l'applique au dossier de tête ; ses sous-dossiers gardent leur nom.
 
+- **Suppression d'un message : le voisin reste non lu** : après la suppression (ou le déplacement) d'un message, le message suivant est sélectionné automatiquement ; il était alors marqué comme lu alors que l'utilisateur ne l'avait pas choisi (visible avec le filtre « Non lus », où il disparaissait de la liste). Il est maintenant affiché dans le volet de lecture mais reste non lu tant que l'utilisateur ne le sélectionne pas lui-même.
+
 ## [1.1.0] — 2026-11-07
 
 - **Corrections issues de la validation** : les boutons du bandeau « Contenu externe bloqué » sont empilés (plus de bouton tronqué) ; une conversation dépliée peut de nouveau être repliée, et un clic sur une conversation repliée affiche son message le plus récent ; un cache de traduction mémorisait à tort les textes introuvables (libellés vides).
