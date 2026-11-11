@@ -80,6 +80,8 @@ namespace winrt::EvolutionWin::implementation
 
     /**
      * @brief Associe la fenêtre d'écran de démarrage (Splash screen) et arme le minuteur de secours.
+     *        Le splash reste affiché tant que le moteur n'est pas prêt (événements ready, error ou demande
+     *        de connexion) ; le minuteur ne sert que si le moteur ne répond plus du tout.
      * @param splash Instance de la SplashWindow affichée au lancement.
      */
     void MainWindow::SetSplashWindow(winrt::EvolutionWin::SplashWindow const& splash)
@@ -90,7 +92,7 @@ namespace winrt::EvolutionWin::implementation
             StartCore();
 
             m_splash_timer = DispatcherTimer();
-            m_splash_timer.Interval(std::chrono::seconds(6));
+            m_splash_timer.Interval(std::chrono::seconds(90));
             m_splash_timer.Tick([this](IInspectable const&, IInspectable const&)
             {
                 if (m_splash)
@@ -109,6 +111,27 @@ namespace winrt::EvolutionWin::implementation
     }
 
     /**
+     * @brief Affiche la fenêtre principale et ferme l'écran de démarrage. L'écran de démarrage reste
+     *        affiché jusqu'à ce que la fenêtre ait de quoi montrer (première liste de messages, dossier
+     *        restauré), pour éviter une fenêtre vide avec un indicateur de chargement.
+     * @param reason Raison de l'affichage (repère du journal de démarrage).
+     */
+    void MainWindow::RevealMainWindow(wchar_t const* reason)
+    {
+        if (m_reveal_timer)
+        {
+            m_reveal_timer.Stop();
+            m_reveal_timer = nullptr;
+        }
+        if (!m_splash)
+            return;
+
+        evo_core_trace(winrt::to_string(hstring{ L"interface : fenêtre principale affichée (" } + reason + L")").c_str());
+        Activate();
+        CloseSplash();
+    }
+
+    /**
      * @brief Ferme l'écran de démarrage et désactive le minuteur de secours.
      */
     void MainWindow::CloseSplash()
@@ -118,11 +141,17 @@ namespace winrt::EvolutionWin::implementation
             m_splash_timer.Stop();
             m_splash_timer = nullptr;
         }
+        if (m_reveal_timer)
+        {
+            m_reveal_timer.Stop();
+            m_reveal_timer = nullptr;
+        }
         if (m_splash)
         {
             auto splash = m_splash;
             m_splash = nullptr;
             splash.Close();
+            evo_core_trace("interface : splash fermé");
         }
     }
 
@@ -247,6 +276,9 @@ namespace winrt::EvolutionWin::implementation
 
         Closed([this](IInspectable const&, WindowEventArgs const&)
         {
+            /* la fenêtre disparaît tout de suite : l'arrêt du moteur ne doit pas donner l'impression d'un gel */
+            try { AppWindow().Hide(); } catch (...) {}
+
             /* Purge automatique de la corbeille si le paramètre est activé */
             if (::EvolutionWin::Settings::Instance().GetBoolean(L"mail.empty-trash-on-exit", false))
             {
@@ -277,14 +309,24 @@ namespace winrt::EvolutionWin::implementation
 
         if (event == L"ready")
         {
+            evo_core_trace("interface : événement ready reçu");
             if (m_splash)
             {
-                Activate();
-                CloseSplash();
                 if (!m_initialized)
                 {
                     m_initialized = true;
                     Initialize();
+                    evo_core_trace("interface : Initialize terminé");
+                }
+
+                /* l'écran de démarrage reste affiché jusqu'à la première liste de messages
+                   (RevealMainWindow) ; ce minuteur évite une attente trop longue (réseau lent, compte sans cache) */
+                if (!m_reveal_timer)
+                {
+                    m_reveal_timer = DispatcherTimer();
+                    m_reveal_timer.Interval(std::chrono::seconds(20));
+                    m_reveal_timer.Tick([this](IInspectable const&, IInspectable const&) { RevealMainWindow(L"délai maximal"); });
+                    m_reveal_timer.Start();
                 }
             }
             if (m_initialized)
@@ -321,8 +363,21 @@ namespace winrt::EvolutionWin::implementation
                 if (only_removals && recent && m_local_removals > 0)
                     m_local_removals = removed >= m_local_removals ? 0 : m_local_removals - removed;
                 else
-                    LoadMessages(true);
+                    ScheduleListRefresh();
             }
+        }
+        else if (event == L"folder-refreshed")
+        {
+            /* la relève en fond du dossier affiché est terminée : la liste n'applique que la différence */
+            hstring account = object.GetNamedString(L"account", L"");
+            hstring folder = object.GetNamedString(L"folder", L"");
+
+            if ((account == m_account && folder == m_folder) || UnifiedFolderMatches(account, folder))
+                ScheduleListRefresh();
+
+            /* synchronisation du dossier affiché terminée : le bandeau de progression disparaît */
+            if (account == m_account && folder == m_folder)
+                SetFolderSyncing(false);
         }
         else if (event == L"folders-updated")
         {

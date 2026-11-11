@@ -58,6 +58,21 @@ namespace EvolutionWin
                 max_count, &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* État d'une invitation dans l'agenda : {"found", "my_status", "sequence"} (peut être long). */
+        void FindInvitationEvent(winrt::hstring const& account, winrt::hstring const& event_uid, CoreHandler handler)
+        {
+            evo_core_find_invitation_event(m_core, winrt::to_string(account).c_str(), winrt::to_string(event_uid).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Relit la liste d'un dossier depuis le cache local, sans relève du serveur (mise à jour
+         * de la liste affichée à la fin d'une relève en fond). */
+        void ReloadMessages(winrt::hstring const& account, winrt::hstring const& folder, unsigned max_count, CoreHandler handler)
+        {
+            evo_core_reload_messages(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                max_count, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* not GetMessage: a Win32 macro */
         void FetchMessage(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& uid, CoreHandler handler)
         {
@@ -74,6 +89,12 @@ namespace EvolutionWin
         void RefreshAll()
         {
             evo_core_refresh_all(m_core);
+        }
+
+        /* Relève de base (Boîte de réception, Éléments envoyés, Brouillons) : démarrage. */
+        void RefreshBase()
+        {
+            evo_core_refresh_base(m_core);
         }
 
         /* Active ou désactive le mode hors connexion global du moteur.
@@ -855,6 +876,14 @@ namespace EvolutionWin
         void GetGalPhoto(winrt::hstring const& account, winrt::hstring const& email, CoreHandler handler)
         {
             evo_core_get_gal_photo(m_core, winrt::to_string(account).c_str(), winrt::to_string(email).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Photo d'un correspondant (annuaire du domaine, puis contacts, avec cache disque) :
+         * {"photo": "data:image/...;base64,..."} ("photo" vide si aucune). */
+        void GetSenderPhoto(winrt::hstring const& email, CoreHandler handler)
+        {
+            evo_core_get_sender_photo(m_core, winrt::to_string(email).c_str(),
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 

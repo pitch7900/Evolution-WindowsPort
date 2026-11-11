@@ -672,12 +672,42 @@ core_get_message_run (EvoCore *core,
 	gint offset = 0;
 	guint ii;
 
+	gint64 started_at = g_get_monotonic_time (), opened_at;
+
 	folder = core_ref_folder (core, args[0], args[1], error);
 	if (!folder)
 		return NULL;
+	opened_at = g_get_monotonic_time ();
 
 	message = camel_folder_get_message_sync (folder, args[2], core->cancellable, error);
+
+	/* lecture lente : où passe le temps (connexion, téléchargement) */
+	if ((g_get_monotonic_time () - started_at) >= 1000 * 1000)
+		g_message ("lecture lente d'un message : ouverture et connexion %" G_GINT64_FORMAT " ms, téléchargement %" G_GINT64_FORMAT " ms",
+			(opened_at - started_at) / 1000, (g_get_monotonic_time () - opened_at) / 1000);
+
 	if (!message) {
+		/* message absent du serveur (déplacé ou supprimé depuis l'affichage de la liste, par exemple
+		 * invitation traitée ailleurs) : texte stable, l'interface met alors la liste à jour */
+		if (error && *error && g_error_matches (*error, CAMEL_FOLDER_ERROR, CAMEL_FOLDER_ERROR_INVALID_UID)) {
+			CamelFolderSummary *summary = camel_folder_get_folder_summary (folder);
+
+			g_clear_error (error);
+			g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+				"Ce message n'existe plus sur le serveur (déplacé ou supprimé)");
+
+			/* le serveur n'a plus ce message : on le retire tout de suite du cache local. La synchronisation
+			 * complète d'un gros dossier peut durer de longues minutes (et ne retire les messages disparus
+			 * qu'à sa fin) : sans cela, il resterait dans la liste jusque-là */
+			if (summary && camel_folder_summary_remove_uid (summary, args[2])) {
+				CamelFolderChangeInfo *changes = camel_folder_change_info_new ();
+
+				camel_folder_change_info_remove_uid (changes, args[2]);
+				camel_folder_changed (folder, changes);
+				camel_folder_change_info_free (changes);
+				g_message ("message %s absent du serveur : retiré du cache local de « %s »", args[2], args[1]);
+			}
+		}
 		g_object_unref (folder);
 		return NULL;
 	}
@@ -772,7 +802,15 @@ core_get_message_run (EvoCore *core,
 	}
 
 	/* Invitation iCalendar (réunion) : résumé affiché dans le bandeau d'action */
-	core_invitation_describe (core, args[0], folder, args[2], message, builder);
+	{
+		gint64 invitation_started_at = g_get_monotonic_time ();
+
+		core_invitation_describe (core, args[0], folder, args[2], message, builder);
+
+		if ((g_get_monotonic_time () - invitation_started_at) >= 500 * 1000)
+			g_message ("lecture d'un message : analyse de l'invitation %" G_GINT64_FORMAT " ms",
+				(g_get_monotonic_time () - invitation_started_at) / 1000);
+	}
 
 	verify_or_decrypt_message (core, message, builder);
 
@@ -1129,5 +1167,6 @@ evo_core_export_messages_eml (EvoCore *core,
 
 	g_return_if_fail (request_json != NULL);
 
-	core_submit (core, core_export_messages_eml_run, g_strdupv (args), func, user_data);
+	/* préparation du glisser-déposer : tâche de fond, elle ne doit pas occuper les threads de l'affichage */
+	core_submit_background (core, core_export_messages_eml_run, g_strdupv (args), func, user_data);
 }

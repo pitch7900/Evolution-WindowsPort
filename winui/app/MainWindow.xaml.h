@@ -196,6 +196,14 @@ namespace winrt::EvolutionWin::implementation
         void UpdateTaskbarBadge(int32_t count);
         void UpdateConnectionStatus(winrt::hstring const& account, winrt::hstring const& status, winrt::hstring const& message);
         void RefreshConnectionAccountsList();
+        void RefreshConnectionIndicator();
+        void UpdateSenderPhoto(winrt::hstring const& from);
+        void RevealMainWindow(wchar_t const* reason);
+        void SetReaderLoading(bool loading);
+        void ScheduleListRefresh();
+        void RefreshMessageListDelta();
+        void SetFolderSyncing(bool syncing);
+        void ApplyMessageDelta(Windows::Data::Json::JsonArray const& fresh);
         void UpdateFolderStatusText();
         void RestoreSessionFolder();
         void UpdateOutOfOfficeBanner();
@@ -460,6 +468,7 @@ namespace winrt::EvolutionWin::implementation
         Microsoft::UI::Xaml::Controls::TreeViewItem FolderContainerAt(Windows::Foundation::IInspectable const& source, EvolutionWin::FolderItem& item);
         void SetFolderDropHighlight(Microsoft::UI::Xaml::Controls::TreeViewItem const& container);
         void PrepareDragDropCache();
+        void SchedulePrepareDragDropCache();
 
     private:
         using ReplyKind = ::EvolutionWin::ReplyKind;
@@ -477,6 +486,7 @@ namespace winrt::EvolutionWin::implementation
         void StyleFollowUpIcon(Microsoft::UI::Xaml::Controls::FontIcon const& icon, MessageState const& state);
 
         std::vector<std::wstring> m_drag_cached_files;
+        Microsoft::UI::Xaml::DispatcherTimer m_drag_cache_timer{ nullptr };
         /* messages en cours de glisser vers un dossier de l'arborescence (vide hors glisser interne) */
         std::vector<hstring> m_drag_move_uids;
         /* conteneurs de la liste dont le visuel de glisser est déjà neutralisé */
@@ -591,6 +601,7 @@ namespace winrt::EvolutionWin::implementation
         void TrustCurrentSender(hstring const& key, std::wstring const& entry, hstring const& label);
         void RefreshPrivacyView();
         void UpdateInvitationBar(Windows::Data::Json::JsonObject const& message);
+        void CheckInvitationInCalendar();
         void HideInvitationBar();
         void RespondToInvitation(hstring const& response);
         void UpdateReceiptBars(Windows::Data::Json::JsonObject const& message);
@@ -908,6 +919,7 @@ namespace winrt::EvolutionWin::implementation
         hstring m_folder;
         /* only the latest message request is shown */
         uint64_t m_message_request{ 0 };
+        uint64_t m_sender_photo_request{ 0 };
         uint64_t m_search_request{ 0 };
         /* the list was reloaded and its selection restored: keep the reader */
         bool m_reselecting{ false };
@@ -969,6 +981,12 @@ namespace winrt::EvolutionWin::implementation
         /* Splash screen et progression barre des tâches */
         winrt::EvolutionWin::SplashWindow m_splash{ nullptr };
         Microsoft::UI::Xaml::DispatcherTimer m_splash_timer{ nullptr };
+        Microsoft::UI::Xaml::DispatcherTimer m_reveal_timer{ nullptr };
+        Microsoft::UI::Xaml::DispatcherTimer m_reader_loading_timer{ nullptr };
+        Microsoft::UI::Xaml::DispatcherTimer m_list_refresh_timer{ nullptr };
+        Microsoft::UI::Xaml::DispatcherTimer m_folder_sync_timer{ nullptr };
+        uint64_t m_list_delta_request{ 0 };
+        bool m_reader_loading_pending_nav{ false };
         winrt::com_ptr<ITaskbarList3> m_taskbar_list{ nullptr };
 
         /* État de la page Paramètres */

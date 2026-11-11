@@ -35,8 +35,20 @@ struct _EvoCore {
 	GThread *thread;
 	GMainContext *context;
 	GMainLoop *loop;
-	GThreadPool *pool;
+	GThreadPool *pool;	/* requêtes de l'interface (listes, lecture, actions) */
+	GThreadPool *bg_pool;	/* tâches de fond lentes (relève, découverte des calendriers) : elles ne doivent
+				 * jamais retarder les requêtes d'affichage du pool principal */
 	GCancellable *cancellable;
+
+	/* requêtes en cours d'exécution et arrêt demandé (accès atomique) : evo_core_free ()
+	 * n'attend les requêtes en cours que quelques secondes */
+	gint running_requests;
+	gint shutting_down;
+
+	/* requêtes de l'interface (pool principal) en cours d'exécution : la synchronisation en
+	 * fond (core_bg_yield ()) leur cède la place (accès atomique) */
+	gint user_requests;
+	gpointer user_activity_ms;	/* début de la dernière requête de l'interface (ms depuis le démarrage du moteur) */
 
 	ESourceRegistry *registry;
 	CamelSession *session;
@@ -47,8 +59,17 @@ struct _EvoCore {
 	GMutex folders_lock;
 	GSource *refresh_source;
 
-	/* serializes core_ensure_connected () */
+	/* connect_lock protège la table connect_locks (uid du magasin -> GMutex *) ;
+	 * core_ensure_connected () sérialise les connexions d'un même magasin, pas celles
+	 * de comptes différents */
 	GMutex connect_lock;
+	GHashTable *connect_locks;
+
+	/* relèves en cours par dossier ("compte\x1Fdossier" -> nombre d'appels), protégées par refreshing_lock :
+	 * le fournisseur répond tout de suite quand une relève du même dossier est déjà en cours, la fin
+	 * n'est donc annoncée (folder-refreshed) que quand la dernière relève du dossier est terminée */
+	GMutex refreshing_lock;
+	GHashTable *refreshing;
 
 	/* startup state, protected by lock */
 	GMutex lock;
@@ -217,11 +238,28 @@ core_ignore_result (const char *json,
 		    const char *error_message,
 		    void *user_data);
 void
-core_submit (EvoCore *core,
-	     RequestFunc func,
-	     gchar **args,
-	     EvoCoreResultFunc result_func,
-	     gpointer user_data);
+core_submit_named (EvoCore *core,
+		   RequestFunc func,
+		   const gchar *name,
+		   gchar **args,
+		   EvoCoreResultFunc result_func,
+		   gpointer user_data);
+/* Le nom de la fonction exécutante est conservé pour le journal des requêtes lentes
+ * du démarrage (attente dans la file et durée d'exécution). */
+#define core_submit(core, func, args, result_func, user_data) \
+	core_submit_named ((core), (func), #func, (args), (result_func), (user_data))
+/* Tâche de fond lente : pool séparé (voir EvoCore.bg_pool). */
+void
+core_submit_background_named (EvoCore *core,
+				 RequestFunc func,
+				 const gchar *name,
+				 gchar **args,
+				 EvoCoreResultFunc result_func,
+				 gpointer user_data);
+#define core_submit_background(core, func, args, result_func, user_data) \
+	core_submit_background_named ((core), (func), #func, (args), (result_func), (user_data))
+void
+core_connect_lock_free (gpointer data);
 CamelStore *
 core_ref_store (EvoCore *core,
 		const gchar *account_uid,
@@ -254,6 +292,12 @@ core_ref_folder (EvoCore *core,
 		 const gchar *account_uid,
 		 const gchar *folder_name,
 		 GError **error);
+CamelFolder *
+core_ref_folder_cached (EvoCore *core,
+			const gchar *account_uid,
+			const gchar *folder_name,
+			gboolean *from_cache,
+			GError **error);
 gchar *
 core_find_role_folder (EvoCore *core,
 		       CamelStore *store,
@@ -346,6 +390,51 @@ core_crypto_verify_multipart_signed (CamelMultipart *signed_part,
 				     CoreCryptoInfo *info);
 void
 core_crypto_info_clear (CoreCryptoInfo *info);
+
+/* evo-core.c */
+gboolean
+core_startup_tracing (void);
+
+/* evo-core-requests.c */
+void
+core_bg_yield (EvoCore *core);
+
+/* evo-core-folders.c */
+GHashTable *
+core_dup_base_folder_names (EvoCore *core,
+			    CamelStore *store,
+			    CamelFolderInfo *fi);
+
+/* evo-core-refresh.c */
+void
+core_folder_refresh_begin (EvoCore *core,
+			   const gchar *account_uid,
+			   const gchar *folder_name);
+void
+core_folder_refresh_end (EvoCore *core,
+			 const gchar *account_uid,
+			 const gchar *folder_name);
+void
+core_emit_folder_refreshed (EvoCore *core,
+			    const gchar *account_uid,
+			    const gchar *folder_name);
+
+/* evo-core-gal.c */
+void
+core_log_m365_identity (EvoCore *core,
+			const gchar *display_name);
+gchar *
+core_photo_data_uri (gconstpointer data,
+		     gsize size);
+gchar *
+core_gal_photo_by_domain (EvoCore *core,
+			  const gchar *email,
+			  gboolean *uncertain);
+
+/* evo-core-contacts.c */
+gchar *
+core_contact_photo_by_email (EvoCore *core,
+			     const gchar *email);
 
 /* evo-core-send.c */
 ESource *

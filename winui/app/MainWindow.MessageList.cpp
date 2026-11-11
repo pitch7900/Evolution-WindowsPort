@@ -120,6 +120,8 @@ namespace winrt::EvolutionWin::implementation
             m_message_states.clear();
             ListProgress().IsActive(true);
         }
+        evo_core_trace("interface : demande de la liste des messages");
+        SetFolderSyncing(true);
         m_core->ListMessages(account, folder, 500, [this, account, folder, selected, scroll_offset](hstring const& json, hstring const& error)
         {
             /* another folder was chosen meanwhile */
@@ -130,7 +132,9 @@ namespace winrt::EvolutionWin::implementation
 
             if (!error.empty())
             {
+                SetFolderSyncing(false);
                 ShowStatus(Tr(L"Messages : ") + error, InfoBarSeverity::Error);
+                RevealMainWindow(L"erreur de la liste des messages");
                 return;
             }
 
@@ -140,6 +144,14 @@ namespace winrt::EvolutionWin::implementation
                 FilterLocalMessages(SearchBox().Text());
             else
                 ShowMessages(m_all_messages);
+
+            static bool traced_list = false;
+            if (!traced_list)
+            {
+                traced_list = true;
+                evo_core_trace("interface : première liste de messages affichée");
+            }
+            RevealMainWindow(L"première liste de messages");
 
             /* the reader keeps its message: reselect it silently */
             if (!selected.empty())
@@ -155,6 +167,197 @@ namespace winrt::EvolutionWin::implementation
             RestoreListScroll(MessageList(), scroll_offset);
             UpdateFolderStatusText();
         });
+    }
+
+    /* Texte JSON d'un champ d'un résumé de message (vide s'il est absent) : sert à
+     * comparer deux versions d'un même message. */
+    static hstring MessageField(JsonObject const& message, wchar_t const* name)
+    {
+        auto value = message.TryLookup(name);
+        return value ? value.Stringify() : hstring{};
+    }
+
+    /* TRUE si deux versions d'un même message ne diffèrent que par les indicateurs
+     * lu / suivi (mise à jour possible en place, sans reconstruire la ligne). */
+    static bool OnlyReadFlagsDiffer(JsonObject const& before, JsonObject const& after)
+    {
+        auto left = JsonObject::Parse(before.Stringify());
+        auto right = JsonObject::Parse(after.Stringify());
+        for (auto const* name : { L"seen", L"flagged" })
+        {
+            if (left.HasKey(name))
+                left.Remove(name);
+            if (right.HasKey(name))
+                right.Remove(name);
+        }
+        return left.Stringify() == right.Stringify();
+    }
+
+    /* Bandeau « Synchronisation du dossier en cours » avec indicateur de progression linéaire :
+     * affiché à l'ouverture d'un dossier (la liste vient du cache, la relève du serveur se fait en
+     * fond), retiré à la fin de la relève (événement folder-refreshed du moteur, réussie ou non).
+     * Une sécurité le retire au bout de 2 minutes.
+     * Paramètres :
+     *   syncing : TRUE au début de la synchronisation, FALSE à sa fin */
+    void MainWindow::SetFolderSyncing(bool syncing)
+    {
+        if (m_folder_sync_timer)
+        {
+            m_folder_sync_timer.Stop();
+            m_folder_sync_timer = nullptr;
+        }
+
+        FolderSyncBanner().Visibility(syncing ? Visibility::Visible : Visibility::Collapsed);
+        if (!syncing)
+            return;
+
+        m_folder_sync_timer = DispatcherTimer();
+        m_folder_sync_timer.Interval(std::chrono::seconds(120));
+        m_folder_sync_timer.Tick([this](IInspectable const&, IInspectable const&) { SetFolderSyncing(false); });
+        m_folder_sync_timer.Start();
+    }
+
+    /* Planifie la mise à jour de la liste du dossier affiché (après 400 ms : plusieurs
+     * événements rapprochés, relève de plusieurs lots, ne donnent qu'une mise à jour). */
+    void MainWindow::ScheduleListRefresh()
+    {
+        if (m_list_refresh_timer)
+        {
+            m_list_refresh_timer.Stop();
+        }
+        else
+        {
+            m_list_refresh_timer = DispatcherTimer();
+            m_list_refresh_timer.Interval(std::chrono::milliseconds(400));
+            m_list_refresh_timer.Tick([this](IInspectable const&, IInspectable const&)
+            {
+                m_list_refresh_timer.Stop();
+                RefreshMessageListDelta();
+            });
+        }
+        m_list_refresh_timer.Start();
+    }
+
+    /* Met à jour la liste du dossier affiché quand sa relève en fond est terminée : relit
+     * le cache local (sans relancer de relève) et n'applique que la différence. Le
+     * lecteur n'est jamais touché : le message en cours de lecture reste affiché. */
+    void MainWindow::RefreshMessageListDelta()
+    {
+        if (m_account.empty() || m_folder.empty() || !m_all_messages)
+            return;
+
+        /* vue unifiée : rechargement habituel, qui garde la sélection */
+        if (IsUnifiedView())
+        {
+            LoadUnifiedMessages(true);
+            return;
+        }
+
+        hstring account = m_account;
+        hstring folder = m_folder;
+        uint64_t request = ++m_list_delta_request;
+
+        m_core->ReloadMessages(account, folder, 500, [this, account, folder, request](hstring const& json, hstring const& error)
+        {
+            if (!error.empty() || request != m_list_delta_request || account != m_account || folder != m_folder || !m_all_messages)
+                return;   /* échec, ou un autre dossier est affiché entre-temps */
+
+            JsonArray fresh{ nullptr };
+            if (!JsonArray::TryParse(json, fresh))
+                return;
+
+            ApplyMessageDelta(fresh);
+        });
+    }
+
+    /* Applique à la liste affichée la différence avec le cache local :
+     *  - rien de changé : aucun travail (pas de clignotement) ;
+     *  - seuls les indicateurs lu / suivi changés : lignes mises à jour en place ;
+     *  - messages ajoutés ou retirés (ou ligne à refaire) : la liste est reconstruite, car les
+     *    regroupements par date et par discussion dépendent de l'ensemble ; la sélection et la
+     *    position de défilement sont conservées, et le lecteur n'est pas rechargé.
+     * Paramètres :
+     *   fresh : résumés des messages relus depuis le cache local */
+    void MainWindow::ApplyMessageDelta(JsonArray const& fresh)
+    {
+        std::map<std::wstring, JsonObject> before;
+        for (auto const& value : m_all_messages)
+        {
+            auto message = value.GetObject();
+            before.emplace(std::wstring{ message.GetNamedString(L"uid", L"") }, message);
+        }
+
+        size_t added = 0, removed = 0;
+        bool rebuild = false;
+        std::vector<std::pair<std::wstring, JsonObject>> flag_changes;
+        std::set<std::wstring> present;
+
+        for (auto const& value : fresh)
+        {
+            auto message = value.GetObject();
+            std::wstring uid{ message.GetNamedString(L"uid", L"") };
+            present.insert(uid);
+
+            auto it = before.find(uid);
+            if (it == before.end())
+            {
+                ++added;
+                continue;
+            }
+            if (it->second.Stringify() == message.Stringify())
+                continue;
+            if (OnlyReadFlagsDiffer(it->second, message))
+                flag_changes.emplace_back(uid, message);
+            else
+                rebuild = true;   /* sujet, date, pièce jointe, suivi… : la ligne est à refaire */
+        }
+        for (auto const& [uid, message] : before)
+            if (!present.count(uid))
+                ++removed;
+
+        if (!added && !removed && !rebuild && flag_changes.empty())
+            return;   /* rien n'a changé */
+
+        if (!added && !removed && !rebuild)
+        {
+            for (auto const& [uid, message] : flag_changes)
+            {
+                bool seen = message.GetNamedBoolean(L"seen", true);
+                bool flagged = message.GetNamedBoolean(L"flagged", false);
+                if (auto state = m_message_states.find(uid); state != m_message_states.end())
+                {
+                    state->second.seen = seen;
+                    state->second.flagged = flagged;
+                }
+                if (auto item = FindMessageItem(hstring{ uid }))
+                    UpdateMessageItemVisual(item, seen, flagged);
+            }
+            m_all_messages = fresh;
+            UpdateMailBadge();
+            return;
+        }
+
+        hstring selected = SelectedMessageUid();
+        double scroll_offset = ListScrollOffset(MessageList());
+        m_all_messages = fresh;
+
+        if (!SearchBox().Text().empty())
+            FilterLocalMessages(SearchBox().Text());
+        else
+            ShowMessages(m_all_messages);
+
+        /* le lecteur garde son message : la sélection est rétablie en silence */
+        if (!selected.empty())
+        {
+            if (auto grid = FindMessageItem(selected))
+            {
+                m_reselecting = true;
+                MessageList().SelectedItem(grid);
+                m_reselecting = false;
+            }
+        }
+        RestoreListScroll(MessageList(), scroll_offset);
+        UpdateFolderStatusText();
     }
 
     /* Charge une vue unifiée (Boîte de réception, Envoyés, Brouillons ou
@@ -197,6 +400,7 @@ namespace winrt::EvolutionWin::implementation
             if (!error.empty())
             {
                 ShowStatus(Tr(L"Vue unifiée : ", L"Unified view: ") + error, InfoBarSeverity::Error);
+                RevealMainWindow(L"erreur de la vue unifiée");
                 return;
             }
 
@@ -206,6 +410,7 @@ namespace winrt::EvolutionWin::implementation
                 FilterLocalMessages(SearchBox().Text());
             else
                 ShowMessages(m_all_messages);
+            RevealMainWindow(L"première vue unifiée");
 
             if (!selected.empty())
             {
@@ -1293,7 +1498,7 @@ namespace winrt::EvolutionWin::implementation
         /* sélection automatique après suppression / déplacement : le message voisin reste non lu */
         if (!m_keep_unread_on_select)
             ScheduleMarkAsRead(uid);
-        PrepareDragDropCache();
+        SchedulePrepareDragDropCache();
 
         /* Si le volet de lecture est désactivé, conserver la sélection et les boutons sans charger le WebView2 */
         if (::EvolutionWin::Settings::Instance().GetString(L"layout.reading-pane", L"right") == L"off")
@@ -1306,6 +1511,9 @@ namespace winrt::EvolutionWin::implementation
         hstring target_account = loc.account.empty() ? m_account : loc.account;
         hstring target_folder = loc.folder.empty() ? m_folder : loc.folder;
 
+        /* le message précédent reste visible tant que celui-ci n'est pas là : indicateur de chargement */
+        SetReaderLoading(true);
+
         m_core->FetchMessage(target_account, target_folder, uid, [this, request, uid, target_account, target_folder](hstring const& json, hstring const& error)
         {
             if (request != m_message_request)
@@ -1313,6 +1521,19 @@ namespace winrt::EvolutionWin::implementation
 
             if (!error.empty())
             {
+                SetReaderLoading(false);
+
+                /* le message a disparu du serveur (déplacé, supprimé, invitation traitée ailleurs) alors que la liste,
+                   affichée depuis le cache local, le montre encore : relève du dossier, la liste applique la différence */
+                constexpr std::wstring_view gone_prefix = L"Ce message n'existe plus";
+                if (std::wstring_view{ error }.substr(0, gone_prefix.size()) == gone_prefix)
+                {
+                    ShowStatus(Tr(L"Ce message n'existe plus sur le serveur : la liste est mise à jour.",
+                        L"This message no longer exists on the server: the list is being updated."), InfoBarSeverity::Warning);
+                    LoadMessages(true);
+                    return;
+                }
+
                 ShowStatus(Tr(L"Message : ") + error, InfoBarSeverity::Error);
                 return;
             }
@@ -1327,6 +1548,7 @@ namespace winrt::EvolutionWin::implementation
 
             MessageSubject().Text(message.GetNamedString(L"subject", L""));
             MessageFrom().Text(message.GetNamedString(L"from", L""));
+            UpdateSenderPhoto(message.GetNamedString(L"from", L""));
             MessageTo().Text(Tr(L"À : ") + to + (cc.empty() ? hstring{} : L"   " + Tr(L"Cc : ") + cc));
             MessageDate().Text(FormatDate(message.GetNamedNumber(L"date", 0)));
             UpdateSecurityBanner(message.GetNamedObject(L"security", JsonObject{}));
@@ -1339,6 +1561,23 @@ namespace winrt::EvolutionWin::implementation
             UpdateActionButtons(uid);
 
             ShowCurrentMessageInReader(false);
+
+            /* le voile disparaît à la fin du chargement du document (NavigationCompleted) ;
+               sécurité : au bout de 2 s au plus, même si cet événement n'arrive pas */
+            if (ReaderLoadingOverlay().Visibility() == Visibility::Visible)
+            {
+                m_reader_loading_pending_nav = true;
+                if (m_reader_loading_timer)
+                    m_reader_loading_timer.Stop();
+                m_reader_loading_timer = DispatcherTimer();
+                m_reader_loading_timer.Interval(std::chrono::seconds(2));
+                m_reader_loading_timer.Tick([this](IInspectable const&, IInspectable const&) { SetReaderLoading(false); });
+                m_reader_loading_timer.Start();
+            }
+            else
+            {
+                SetReaderLoading(false);
+            }
         });
     }
 
@@ -1837,6 +2076,33 @@ namespace winrt::EvolutionWin::implementation
 
         window.Activate();
     }
+    /**
+     * @brief Planifie le préchargement des fichiers .eml du glisser-déposer 2,5 s après la dernière
+     *        sélection. Le lancer à chaque clic téléchargeait le message une seconde fois, en même
+     *        temps que son affichage, et occupait les threads du moteur.
+     */
+    void MainWindow::SchedulePrepareDragDropCache()
+    {
+        /* les fichiers préparés pour la sélection précédente ne correspondent plus */
+        m_drag_cached_files.clear();
+
+        if (m_drag_cache_timer)
+        {
+            m_drag_cache_timer.Stop();
+        }
+        else
+        {
+            m_drag_cache_timer = DispatcherTimer();
+            m_drag_cache_timer.Interval(std::chrono::milliseconds(2500));
+            m_drag_cache_timer.Tick([this](IInspectable const&, IInspectable const&)
+            {
+                m_drag_cache_timer.Stop();
+                PrepareDragDropCache();
+            });
+        }
+        m_drag_cache_timer.Start();
+    }
+
     /**
      * @brief Pré-génère en tâche de fond les fichiers .eml des messages sélectionnés pour le glisser-déposer.
      */

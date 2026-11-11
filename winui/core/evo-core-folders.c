@@ -181,6 +181,44 @@ folder_roles_type (FolderRoles *fr,
 	return type;
 }
 
+/* Parcourt l'arborescence et retient les dossiers de base (voir core_dup_base_folder_names). */
+static void
+folder_roles_collect_base (FolderRoles *fr,
+			   CamelFolderInfo *fi,
+			   GHashTable *names)
+{
+	for (; fi; fi = fi->next) {
+		const gchar *type = folder_roles_type (fr, fi);
+
+		if (g_strcmp0 (type, "inbox") == 0 || g_strcmp0 (type, "sent") == 0 || g_strcmp0 (type, "drafts") == 0)
+			g_hash_table_add (names, g_strdup (fi->full_name));
+
+		folder_roles_collect_base (fr, fi->child, names);
+	}
+}
+
+/* Noms complets des dossiers de base d'un compte : Boîte de réception, Éléments envoyés et
+ * Brouillons, reconnus comme dans la liste des dossiers (rôle du serveur, dossier configuré dans le
+ * compte, nom usuel) : IMAP n'attribue pas toujours de type aux dossiers envoyés et brouillons.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   store : magasin du compte
+ *   fi    : arborescence des dossiers du compte
+ * Retourne : ensemble de noms complets (g_hash_table_destroy). */
+GHashTable *
+core_dup_base_folder_names (EvoCore *core,
+			    CamelStore *store,
+			    CamelFolderInfo *fi)
+{
+	FolderRoles *roles = folder_roles_new (core, store, fi);
+	GHashTable *names = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+
+	folder_roles_collect_base (roles, fi, names);
+	folder_roles_free (roles);
+
+	return names;
+}
+
 static void
 add_folder_infos (JsonBuilder *builder,
 		  CamelFolderInfo *fi,
@@ -476,8 +514,16 @@ core_ref_folder (EvoCore *core,
 	g_mutex_unlock (&core->folders_lock);
 	g_free (key);
 
-	if (folder)
+	if (folder) {
+		/* dossier déjà suivi : il a pu être ouvert hors connexion depuis le cache
+		 * (core_ref_folder_cached) ; une action sur le serveur exige la connexion */
+		store = core_ref_store (core, account_uid, NULL);
+		if (store) {
+			core_ensure_connected (core, store, NULL);
+			g_object_unref (store);
+		}
 		return folder;
+	}
 
 	store = core_ref_store (core, account_uid, error);
 	if (!store)
@@ -492,6 +538,61 @@ core_ref_folder (EvoCore *core,
 	}
 
 	g_object_unref (store);
+
+	return tracked;
+}
+
+/* Ouvre un dossier depuis le cache local de Camel, sans se connecter : le résumé des
+ * messages déjà téléchargés s'affiche alors tout de suite, pendant que la mise à jour
+ * tourne en tâche de fond (IMAP et Microsoft 365 savent ouvrir un dossier hors
+ * connexion). Si le dossier est inconnu du cache (premier lancement du compte), se
+ * rabat sur core_ref_folder (), qui se connecte.
+ * À réserver à l'affichage d'une liste : toute action sur le serveur (lire un message,
+ * déplacer, supprimer...) doit passer par core_ref_folder ().
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   account_uid  : identifiant du compte
+ *   folder_name  : nom complet du dossier
+ *   from_cache   : reçoit TRUE si le dossier a été ouvert sans connexion (peut être NULL)
+ *   error        : emplacement pour une éventuelle erreur
+ * Retourne : le dossier suivi (g_object_unref), NULL en cas d'échec. */
+CamelFolder *
+core_ref_folder_cached (EvoCore *core,
+			const gchar *account_uid,
+			const gchar *folder_name,
+			gboolean *from_cache,
+			GError **error)
+{
+	CamelStore *store;
+	CamelFolder *folder = NULL, *tracked = NULL;
+	gchar *key = folder_key (account_uid, folder_name);
+
+	if (from_cache)
+		*from_cache = FALSE;
+
+	g_mutex_lock (&core->folders_lock);
+	folder = g_hash_table_lookup (core->folders, key);
+	if (folder)
+		g_object_ref (folder);
+	g_mutex_unlock (&core->folders_lock);
+	g_free (key);
+
+	if (folder)
+		return folder;
+
+	store = core_ref_store (core, account_uid, NULL);
+	if (store) {
+		folder = camel_store_get_folder_sync (store, folder_name, 0, core->cancellable, NULL);
+		g_object_unref (store);
+	}
+
+	if (!folder)
+		return core_ref_folder (core, account_uid, folder_name, error);
+
+	tracked = core_track_folder (core, account_uid, folder);
+	g_object_unref (folder);
+	if (from_cache && tracked)
+		*from_cache = TRUE;
 
 	return tracked;
 }

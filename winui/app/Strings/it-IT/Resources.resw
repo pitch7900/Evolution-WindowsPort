@@ -6879,5 +6879,29 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Una cartella «{0}» esiste già nella destinazione. Inserisci un altro nome per «{1}»:</value>
     <comment>Un dossier « {0} » existe déjà à la destination. Saisissez un autre nom pour « {1} » :</comment>
   </data>
+  <data name="T_74FF8600" xml:space="preserve">
+    <value>Installa l'aggiornamento</value>
+    <comment>Installer la mise à jour</comment>
+  </data>
+  <data name="T_02BE2675" xml:space="preserve">
+    <value>L'applicazione verrà chiusa per installare {0}. Salva il lavoro in corso: i messaggi in scrittura non salvati andranno persi.</value>
+    <comment>L'application va se fermer pour installer {0}. Enregistrez votre travail en cours : les messages en cours de rédaction non enregistrés seront perdus.</comment>
+  </data>
+  <data name="T_A59081C3" xml:space="preserve">
+    <value>Installa e chiudi</value>
+    <comment>Installer et fermer</comment>
+  </data>
+  <data name="T_B384AD70" xml:space="preserve">
+    <value>Questo messaggio non esiste più sul server: l'elenco viene aggiornato.</value>
+    <comment>Ce message n'existe plus sur le serveur : la liste est mise à jour.</comment>
+  </data>
+  <data name="T_C7451865" xml:space="preserve">
+    <value>Sincronizza la posta in arrivo, gli elementi inviati e le bozze di tutti gli account all'avvio di EvolutionWin.</value>
+    <comment>Synchroniser dès l'ouverture d'EvolutionWin la boîte de réception, les éléments envoyés et les brouillons de tous les comptes.</comment>
+  </data>
+  <data name="T_75EB9B85" xml:space="preserve">
+    <value>Sincronizzazione della cartella in corso…</value>
+    <comment>Synchronisation du dossier en cours…</comment>
+  </data>
 </root>
 

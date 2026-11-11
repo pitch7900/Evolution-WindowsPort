@@ -38,7 +38,10 @@
 				" Tasks.ReadWrite" \
 				" Tasks.ReadWrite.Shared" \
 				" User.Read" \
-				" User.ReadBasic.All" /* User.Read.All requires admin approval */
+				" User.ReadBasic.All" \
+				/* Annuaire de l'organisation (EvolutionWin), consentement administrateur requis */ \
+				" User.Read.All" \
+				" ProfilePhoto.Read.All"
 
 struct _EOAuth2ServiceMicrosoft365Private
 {

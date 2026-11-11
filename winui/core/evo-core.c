@@ -196,17 +196,21 @@ core_thread_func (gpointer user_data)
 
 	camel_init (e_get_user_data_dir (), TRUE);
 	e_source_camel_register_types ();
+	evo_core_trace ("moteur : Camel initialisé");
 
 	core_emit (core, "status", "Connecting to evolution-data-server");
 
 	core_load_oauth2_modules ();
+	evo_core_trace ("moteur : modules OAuth2 chargés");
 
 	/* starts evolution-source-registry when needed */
 	core->registry = e_source_registry_new_sync (core->cancellable, &error);
+	evo_core_trace ("moteur : registre des sources prêt (evolution-source-registry)");
 
 	if (core->registry) {
 		core->session = evo_core_session_new (core, core->registry);
 		core_add_stores (core);
+		evo_core_trace ("moteur : magasins de courrier ajoutés");
 		g_signal_connect (core->registry, "credentials-required",
 			G_CALLBACK (core_credentials_required_cb), core);
 		core_check_pending_credentials (core);
@@ -223,6 +227,7 @@ core_thread_func (gpointer user_data)
 		core_emit (core, "error", error->message);
 		g_clear_error (&error);
 	} else {
+		evo_core_trace ("moteur : événement ready émis");
 		core_emit (core, "ready", NULL);
 
 		/* new mail: now, then periodically */
@@ -263,6 +268,46 @@ core_wait_started (EvoCore *core,
 	return success;
 }
 
+/* Millisecondes écoulées depuis la création du processus (même horloge pour le
+ * moteur et l'interface, donc des repères comparables). */
+static gint64
+core_process_age_ms (void)
+{
+	FILETIME created, exited, kernel, user, now;
+	ULARGE_INTEGER start, current;
+
+	if (!GetProcessTimes (GetCurrentProcess (), &created, &exited, &kernel, &user))
+		return -1;
+	GetSystemTimeAsFileTime (&now);
+	start.LowPart = created.dwLowDateTime;
+	start.HighPart = created.dwHighDateTime;
+	current.LowPart = now.dwLowDateTime;
+	current.HighPart = now.dwHighDateTime;
+
+	return (gint64) ((current.QuadPart - start.QuadPart) / 10000);
+}
+
+/* TRUE pendant les 90 premières secondes du processus : les requêtes lentes et les
+ * étapes de démarrage sont alors journalisées (evo_core_trace). */
+gboolean
+core_startup_tracing (void)
+{
+	gint64 age = core_process_age_ms ();
+
+	return age >= 0 && age < 90000;
+}
+
+/* Repère chronométré du démarrage : « démarrage +1234 ms : étape » dans le journal
+ * (voir evo-core.h ; analyse par tools\analyse-demarrage.ps1).
+ * Paramètres :
+ *   step : libellé de l'étape franchie */
+void
+evo_core_trace (const char *step)
+{
+	core_log_open ();
+	g_message ("démarrage +%" G_GINT64_FORMAT " ms : %s", core_process_age_ms (), step ? step : "");
+}
+
 EvoCore *
 evo_core_new (EvoCoreEventFunc event_func,
 	      void *user_data)
@@ -271,6 +316,7 @@ evo_core_new (EvoCoreEventFunc event_func,
 
 	core_log_open ();
 	g_message ("evo-core starting");
+	evo_core_trace ("moteur : création");
 	core_add_module_dir_to_path ();
 
 	core->event_func = event_func;
@@ -282,12 +328,17 @@ evo_core_new (EvoCoreEventFunc event_func,
 	g_cond_init (&core->cond);
 	g_mutex_init (&core->folders_lock);
 	g_mutex_init (&core->connect_lock);
+	g_mutex_init (&core->refreshing_lock);
+	core->refreshing = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+	core->connect_locks = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, core_connect_lock_free);
 	core->folders =g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 	core->oauth2_pending = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, core_oauth2_pending_free);
 	core->book_clients = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 
 	/* network requests run in parallel, a few at a time */
 	core->pool = g_thread_pool_new (core_request_run, core, 4, FALSE, NULL);
+	/* tâches de fond lentes : leur propre pool, pour ne jamais retarder l'affichage */
+	core->bg_pool = g_thread_pool_new (core_request_run, core, 4, FALSE, NULL);
 	core->thread = g_thread_new ("evo-core", core_thread_func, core);
 
 	return core;
@@ -300,16 +351,41 @@ core_quit_cb (gpointer user_data)
 	return G_SOURCE_REMOVE;
 }
 
+/* durée maximale d'attente des requêtes en cours à l'arrêt (ms) */
+#define CORE_SHUTDOWN_WAIT_MS 1500
+
 void
 evo_core_free (EvoCore *core)
 {
+	gint64 started_at = g_get_monotonic_time ();
+
 	if (!core)
 		return;
 
+	g_atomic_int_set (&core->shutting_down, TRUE);
+	g_message ("arrêt : début (%d requête(s) en cours)", g_atomic_int_get (&core->running_requests));
+
 	g_cancellable_cancel (core->cancellable);
 
-	/* running requests finish (cancelled), queued ones are dropped */
-	g_thread_pool_free (core->pool, TRUE, TRUE);
+	/* les requêtes en attente sont abandonnées ; celles en cours reçoivent l'annulation, mais
+	 * une synchronisation de gros dossier ou une connexion réseau peut tarder à réagir : on ne
+	 * les attend que quelques secondes (sinon la fermeture de l'application gèle) */
+	g_thread_pool_free (core->pool, TRUE, FALSE);
+	core->pool = NULL;
+	g_thread_pool_free (core->bg_pool, TRUE, FALSE);
+	core->bg_pool = NULL;
+
+	while (g_atomic_int_get (&core->running_requests) > 0 &&
+	       (g_get_monotonic_time () - started_at) / 1000 < CORE_SHUTDOWN_WAIT_MS)
+		g_usleep (20 * 1000);
+
+	if (g_atomic_int_get (&core->running_requests) > 0) {
+		/* des threads utilisent encore le moteur : on ne le libère pas (le processus se termine) */
+		g_message ("arrêt : %d requête(s) encore en cours après %" G_GINT64_FORMAT " ms, libération abandonnée",
+			g_atomic_int_get (&core->running_requests), (g_get_monotonic_time () - started_at) / 1000);
+		return;
+	}
+	g_message ("arrêt : requêtes terminées en %" G_GINT64_FORMAT " ms", (g_get_monotonic_time () - started_at) / 1000);
 
 	g_main_context_invoke (core->context, core_quit_cb, core->loop);
 	g_thread_join (core->thread);
@@ -325,6 +401,9 @@ evo_core_free (EvoCore *core)
 	}
 	g_hash_table_destroy (core->folders);
 	g_mutex_clear (&core->folders_lock);
+	g_hash_table_destroy (core->connect_locks);
+	g_hash_table_destroy (core->refreshing);
+	g_mutex_clear (&core->refreshing_lock);
 	g_mutex_clear (&core->connect_lock);
 
 	g_clear_object (&core->session);
@@ -337,6 +416,7 @@ evo_core_free (EvoCore *core)
 	g_mutex_clear (&core->lock);
 	g_cond_clear (&core->cond);
 	g_free (core->start_error);
+	g_message ("arrêt : moteur libéré en %" G_GINT64_FORMAT " ms", (g_get_monotonic_time () - started_at) / 1000);
 	g_free (core);
 }
 

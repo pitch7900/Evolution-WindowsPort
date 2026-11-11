@@ -194,23 +194,64 @@ itip_component_response (ICalComponent *icomp,
 	return response;
 }
 
+/* Échéance d'une recherche : annule l'appel d'agenda en cours. */
+static gboolean
+itip_budget_expired_cb (gpointer user_data)
+{
+	g_cancellable_cancel (user_data);
+
+	return G_SOURCE_REMOVE;
+}
+
 /* Cherche un événement (par UID) dans l'agenda par défaut puis dans les autres
  * agendas activés. Les erreurs de connexion sont ignorées (recherche au mieux).
  * Paramètres :
- *   core       : moteur
- *   uid        : UID de l'événement
- *   out_client : reçoit le client de l'agenda qui le contient (à libérer), ou NULL
- *   out_icomp  : reçoit l'événement (à libérer), ou NULL
+ *   core        : moteur
+ *   account_uid : compte qui a reçu l'invitation : seuls ses agendas (et l'agenda par défaut)
+ *                 sont consultés ; NULL pour consulter tous les agendas activés
+ *   uid         : UID de l'événement
+ *   out_client  : reçoit le client de l'agenda qui le contient (à libérer), ou NULL
+ *   out_icomp   : reçoit l'événement (à libérer), ou NULL
+ *   budget_ms   : durée maximale de la recherche (0 : illimitée). Ouvrir un agenda dont le
+ *                 service n'est pas encore démarré peut prendre plus d'une minute (mesuré : 58 à
+ *                 82 s) : l'affichage d'un message ne doit pas l'attendre. Un minuteur annule
+ *                 l'appel d'agenda en cours à l'échéance (un simple contrôle entre deux agendas
+ *                 ne suffit pas, un seul appel peut bloquer).
  * Retourne : TRUE si l'événement existe dans un agenda. */
 static gboolean
 itip_find_event (EvoCore *core,
+		 const gchar *account_uid,
 		 const gchar *uid,
 		 ECalClient **out_client,
-		 ICalComponent **out_icomp)
+		 ICalComponent **out_icomp,
+		 gint64 budget_ms)
 {
 	ESource *default_source = e_source_registry_ref_default_calendar (core->registry);
 	GList *sources, *link;
 	gboolean found = FALSE;
+	gint64 started_at = g_get_monotonic_time ();
+	gchar *account_parent = NULL;
+	GCancellable *cancellable = core->cancellable;
+	GCancellable *budget = NULL;
+	GSource *budget_timer = NULL;
+
+	if (budget_ms > 0) {
+		/* la source garde sa propre référence : pas d'accès à un objet libéré si elle se déclenche en même temps */
+		budget = g_cancellable_new ();
+		budget_timer = g_timeout_source_new ((guint) budget_ms);
+		g_source_set_callback (budget_timer, itip_budget_expired_cb, g_object_ref (budget), g_object_unref);
+		g_source_attach (budget_timer, core->context);
+		cancellable = budget;
+	}
+
+	if (account_uid && *account_uid) {
+		ESource *account_source = e_source_registry_ref_source (core->registry, account_uid);
+
+		if (account_source) {
+			account_parent = e_source_dup_parent (account_source);
+			g_object_unref (account_source);
+		}
+	}
 
 	sources = e_source_registry_list_enabled (core->registry, E_SOURCE_EXTENSION_CALENDAR);
 	if (default_source)
@@ -225,11 +266,25 @@ itip_find_event (EvoCore *core,
 		if (link != sources && default_source && g_strcmp0 (e_source_get_uid (source), e_source_get_uid (default_source)) == 0)
 			continue;
 
-		client = e_cal_client_connect_sync (source, E_CAL_CLIENT_SOURCE_TYPE_EVENTS, 5, core->cancellable, NULL);
+		/* les agendas d'un autre compte ne contiennent pas l'événement d'une invitation reçue ici */
+		if (link != sources || !default_source) {
+			gchar *parent = e_source_dup_parent (source);
+			gboolean other_account = account_parent && g_strcmp0 (parent, account_parent) != 0;
+
+			g_free (parent);
+			if (other_account)
+				continue;
+		}
+
+		if (budget && g_cancellable_is_cancelled (budget))
+			break;
+
+		client = e_cal_client_connect_sync (source, E_CAL_CLIENT_SOURCE_TYPE_EVENTS, budget_ms > 0 ? 2 : 5,
+			cancellable, NULL);
 		if (!client)
 			continue;
 
-		if (e_cal_client_get_object_sync (E_CAL_CLIENT (client), uid, NULL, &icomp, core->cancellable, NULL) && icomp) {
+		if (e_cal_client_get_object_sync (E_CAL_CLIENT (client), uid, NULL, &icomp, cancellable, NULL) && icomp) {
 			found = TRUE;
 			if (out_icomp)
 				*out_icomp = icomp;
@@ -241,8 +296,18 @@ itip_find_event (EvoCore *core,
 		g_object_unref (client);
 	}
 
+	if (budget_timer) {
+		g_source_destroy (budget_timer);
+		g_source_unref (budget_timer);
+	}
+	if (budget && g_cancellable_is_cancelled (budget) && !found)
+		g_message ("invitation : recherche de l'événement abandonnée après %" G_GINT64_FORMAT " ms",
+			(g_get_monotonic_time () - started_at) / 1000);
+	g_clear_object (&budget);
+
 	g_list_free_full (sources, g_object_unref);
 	g_clear_object (&default_source);
+	g_free (account_parent);
 
 	return found;
 }
@@ -258,7 +323,7 @@ itip_find_event (EvoCore *core,
  * Émet un membre « invitation » si le message contient une partie iCalendar décrivant
  * un événement : {method, uid, sequence, summary, start, end, all_day, location,
  * recurring, instance, status, organizer{name,email}, attendees[], is_organizer,
- * my_status, already_in_calendar, calendar_sequence}. */
+ * my_status, already_in_calendar, calendar_checked, calendar_sequence}. */
 void
 core_invitation_describe (EvoCore *core,
 			  const gchar *account_uid,
@@ -274,7 +339,7 @@ core_invitation_describe (EvoCore *core,
 	const gchar *my_status = "needs-action", *tag;
 	gint64 start, end;
 	gint attendee_index, existing_sequence = 0, ii;
-	gboolean in_calendar = FALSE, is_organizer;
+	gboolean in_calendar = FALSE, is_organizer, calendar_checked;
 
 	text = find_calendar_part (CAMEL_MIME_PART (message), core->cancellable, &method_param);
 	if (!text || !evo_itip_parse (text, itip)) {
@@ -298,15 +363,10 @@ core_invitation_describe (EvoCore *core,
 	if (attendee_index >= 0)
 		my_status = evo_itip_response_from_partstat (itip->attendees[attendee_index].partstat);
 
-	/* présent dans un agenda ? (inutile pour une réponse reçue) */
-	if (g_strcmp0 (itip->method, "REQUEST") == 0 || g_strcmp0 (itip->method, "CANCEL") == 0) {
-		if (itip_find_event (core, itip->uid, NULL, &existing)) {
-			in_calendar = TRUE;
-			existing_sequence = i_cal_component_get_sequence (existing);
-			if (my_address && g_strcmp0 (itip_component_response (existing, my_address), "needs-action") != 0)
-				my_status = itip_component_response (existing, my_address);
-		}
-	}
+	/* présent dans un agenda ? Ouvrir un agenda Microsoft 365 peut prendre plus d'une minute : la
+	 * recherche n'est plus faite ici, pour que le message s'affiche tout de suite. L'interface la
+	 * demande ensuite (evo_core_find_invitation_event) et complète le bandeau. */
+	calendar_checked = !(g_strcmp0 (itip->method, "REQUEST") == 0 || g_strcmp0 (itip->method, "CANCEL") == 0);
 
 	/* réponse déjà donnée depuis cette application */
 	info = camel_folder_get_message_info (folder, message_uid);
@@ -351,6 +411,7 @@ core_invitation_describe (EvoCore *core,
 	builder_add_boolean (builder, "is_organizer", is_organizer);
 	builder_add_string (builder, "my_status", my_status);
 	builder_add_boolean (builder, "already_in_calendar", in_calendar);
+	builder_add_boolean (builder, "calendar_checked", calendar_checked);
 	builder_add_int (builder, "calendar_sequence", existing_sequence);
 	json_builder_end_object (builder);
 
@@ -361,6 +422,101 @@ core_invitation_describe (EvoCore *core,
 	g_free (method_param);
 	g_free (text);
 	g_free (itip);
+}
+
+/* --- état d'une invitation dans l'agenda (recherche asynchrone) --- */
+
+typedef struct {
+	gchar *json;
+	gint64 expires_at;	/* horloge monotone, µs */
+} ItipCacheEntry;
+
+static GMutex itip_cache_lock;
+static GHashTable *itip_cache = NULL;
+
+static void
+itip_cache_entry_free (gpointer data)
+{
+	ItipCacheEntry *entry = data;
+
+	g_free (entry->json);
+	g_free (entry);
+}
+
+/* Cherche l'événement d'une invitation dans les agendas du compte et renvoie son état.
+ * Le résultat est mémorisé (10 min si trouvé, 1 min sinon) : les clics suivants sont instantanés.
+ * Paramètres :
+ *   core  : moteur
+ *   args  : [0] = compte qui a reçu le message, [1] = UID de l'événement
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : {"found": bool, "my_status": "accepted|declined|tentative|needs-action", "sequence": n}. */
+static gchar *
+core_find_invitation_event_run (EvoCore *core,
+				gchar **args,
+				GError **error)
+{
+	gchar *key = g_strconcat (args[0] ? args[0] : "", "\x1F", args[1] ? args[1] : "", NULL);
+	gchar *json = NULL;
+	ItipCacheEntry *entry;
+
+	g_mutex_lock (&itip_cache_lock);
+	if (!itip_cache)
+		itip_cache = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, itip_cache_entry_free);
+	entry = g_hash_table_lookup (itip_cache, key);
+	if (entry && entry->expires_at > g_get_monotonic_time ())
+		json = g_strdup (entry->json);
+	g_mutex_unlock (&itip_cache_lock);
+
+	if (!json) {
+		ICalComponent *existing = NULL;
+		gboolean found = itip_find_event (core, args[0], args[1], NULL, &existing, 60000);
+		gchar *my_address = found ? itip_identity_address (core, args[0], NULL) : NULL;
+		JsonBuilder *builder = json_builder_new ();
+
+		json_builder_begin_object (builder);
+		builder_add_boolean (builder, "found", found);
+		builder_add_string (builder, "my_status", found && my_address ? itip_component_response (existing, my_address) : "needs-action");
+		builder_add_int (builder, "sequence", found ? i_cal_component_get_sequence (existing) : 0);
+		json_builder_end_object (builder);
+		json = json_from_builder (builder);
+
+		entry = g_new0 (ItipCacheEntry, 1);
+		entry->json = g_strdup (json);
+		entry->expires_at = g_get_monotonic_time () + (found ? 600 : 60) * G_USEC_PER_SEC;
+		g_mutex_lock (&itip_cache_lock);
+		g_hash_table_insert (itip_cache, g_strdup (key), entry);
+		g_mutex_unlock (&itip_cache_lock);
+
+		g_object_unref (builder);
+		g_clear_object (&existing);
+		g_free (my_address);
+	}
+
+	g_free (key);
+
+	return json;
+}
+
+/* Soumet la recherche de l'état d'une invitation dans l'agenda (voir evo-core.h).
+ * Paramètres :
+ *   core        : moteur
+ *   account_uid : compte qui a reçu le message
+ *   event_uid   : UID de l'événement (membre « uid » de l'invitation)
+ *   func        : rappel recevant {"found", "my_status", "sequence"}
+ *   user_data   : données utilisateur transmises au rappel */
+void
+evo_core_find_invitation_event (EvoCore *core,
+				const char *account_uid,
+				const char *event_uid,
+				EvoCoreResultFunc func,
+				void *user_data)
+{
+	gchar *args[] = { (gchar *) (account_uid ? account_uid : ""), (gchar *) (event_uid ? event_uid : ""), NULL };
+
+	g_return_if_fail (core != NULL);
+
+	/* peut durer longtemps (agenda Microsoft 365 à ouvrir) : tâche de fond */
+	core_submit_background (core, core_find_invitation_event_run, g_strdupv (args), func, user_data);
 }
 
 /* Fixe le PARTSTAT d'une adresse dans un événement ; ajoute le participant s'il
@@ -464,7 +620,7 @@ itip_update_calendar (EvoCore *core,
 	else if (partstat && g_strcmp0 (partstat, "TENTATIVE") == 0)
 		ical_partstat = I_CAL_PARTSTAT_TENTATIVE;
 
-	has_existing = itip_find_event (core, itip->uid, &client, &existing);
+	has_existing = itip_find_event (core, NULL, itip->uid, &client, &existing, 0);
 	action = evo_itip_decide (itip->method, has_existing, existing ? i_cal_component_get_sequence (existing) : 0,
 		itip->sequence, g_strcmp0 (partstat, "DECLINED") == 0);
 

@@ -102,6 +102,20 @@ core_oauth2_begin_run (EvoCore *core,
 				g_strconcat (scope, " https://www.googleapis.com/auth/directory.readonly", NULL));
 	}
 
+	/* Impose l'identité du compte dans la page de connexion (login_hint) : sans
+	 * cela, le navigateur réutilise la session déjà ouverte (par exemple un compte
+	 * administrateur) et le jeton est émis pour un autre utilisateur, ce qui donne
+	 * « Default folder Inbox not found » à la première synchronisation. */
+	if (!g_hash_table_contains (query_form, "login_hint") &&
+	    e_source_has_extension (source, E_SOURCE_EXTENSION_AUTHENTICATION)) {
+		ESourceAuthentication *authentication = e_source_get_extension (source, E_SOURCE_EXTENSION_AUTHENTICATION);
+		gchar *hint = e_source_authentication_dup_user (authentication);
+
+		if (hint && strchr (hint, '@'))
+			g_hash_table_insert (query_form, g_strdup ("login_hint"), g_strdup (hint));
+		g_free (hint);
+	}
+
 	if (custom_redirect)
 		g_hash_table_insert (query_form, g_strdup ("redirect_uri"), g_strdup (custom_redirect));
 	query = soup_form_encode_hash (query_form);

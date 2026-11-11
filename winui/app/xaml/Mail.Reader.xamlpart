@@ -258,11 +258,19 @@
 
                         <TextBlock x:Name="MessageSubject" Style="{StaticResource SubtitleTextBlockStyle}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
 
-                        <TextBlock x:Name="MessageFrom" Style="{StaticResource BodyStrongTextBlockStyle}" IsTextSelectionEnabled="True" />
-
-                        <TextBlock x:Name="MessageTo" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-
-                        <TextBlock x:Name="MessageDate" Style="{StaticResource CaptionTextBlockStyle}" />
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <!-- photo de l'expéditeur, ou ses initiales (MainWindow.Reader.cpp, UpdateSenderPhoto) -->
+                            <PersonPicture x:Name="SenderPhoto" Grid.Column="0" Width="48" Height="48" VerticalAlignment="Top" Visibility="Collapsed" />
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock x:Name="MessageFrom" Style="{StaticResource BodyStrongTextBlockStyle}" IsTextSelectionEnabled="True" />
+                                <TextBlock x:Name="MessageTo" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                <TextBlock x:Name="MessageDate" Style="{StaticResource CaptionTextBlockStyle}" />
+                            </StackPanel>
+                        </Grid>
 
                         <InfoBar x:Name="SecurityBar" IsOpen="False" IsClosable="True" Margin="0,4,0,0" />
 
@@ -445,5 +453,14 @@
                                HorizontalAlignment="Center" VerticalAlignment="Center"
 
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                    <!-- message en cours de chargement : le contenu précédent est masqué (MainWindow.Reader.cpp, SetReaderLoading) -->
+                    <Grid x:Name="ReaderLoadingOverlay" Grid.Row="0" Grid.RowSpan="2" Visibility="Collapsed">
+                        <Grid.Background>
+                            <SolidColorBrush Color="{ThemeResource SolidBackgroundFillColorBase}" Opacity="0.94" />
+                        </Grid.Background>
+                        <ProgressRing x:Name="ReaderLoadingRing" IsActive="False" Width="48" Height="48"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
 
                 </Grid>

@@ -78,6 +78,7 @@ namespace winrt::EvolutionWin::implementation
 
     private:
         void LoadCurrentMessage();
+        void UpdateSenderPhoto(winrt::hstring const& from);
         void UpdateNavigationButtons();
         fire_and_forget InitializeReaderAsync();
         void ShowInReader(winrt::hstring const& html, bool allow_remote);
@@ -99,6 +100,7 @@ namespace winrt::EvolutionWin::implementation
         winrt::hstring m_account;
         winrt::hstring m_folder;
         winrt::hstring m_uid;
+        uint64_t m_sender_photo_request{ 0 };
         std::vector<winrt::hstring> m_all_uids;
         size_t m_current_index{ 0 };
 

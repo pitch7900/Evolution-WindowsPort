@@ -675,12 +675,38 @@ namespace winrt::EvolutionWin::implementation
                 co_return;
         }
 
+        /* l'installeur remplace les fichiers de l'application : elle doit être fermée. Avertissement, puis fermeture
+           automatique dès que l'installation est lancée */
+        {
+            ContentDialog warning;
+            warning.XamlRoot(Content().XamlRoot());
+            warning.Title(box_value(Tr(L"Installer la mise à jour")));
+            TextBlock warning_text;
+            warning_text.TextWrapping(TextWrapping::Wrap);
+            warning_text.MaxWidth(420);
+            warning_text.Text(Fmt(Tr(L"L'application va se fermer pour installer {0}. Enregistrez votre travail en cours : les messages en cours de rédaction non enregistrés seront perdus."),
+                { m_update_tag }));
+            warning.Content(warning_text);
+            warning.PrimaryButtonText(Tr(L"Installer et fermer"));
+            warning.CloseButtonText(Tr(L"Annuler"));
+            warning.DefaultButton(ContentDialogButton::Primary);
+            m_dialog_open = true;
+            auto answer = co_await warning.ShowAsync();
+            m_dialog_open = false;
+            if (answer != ContentDialogResult::Primary)
+                co_return;
+        }
+
         std::wstring arguments = L"/i \"" + outcome->path + L"\"";
         auto launched = reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr, L"open", L"msiexec.exe", arguments.c_str(), nullptr, SW_SHOWNORMAL));
         if (launched <= 32)
+        {
             ShowStatus(Tr(L"Impossible de lancer l'installeur."), InfoBarSeverity::Error);
-        else
-            ShowStatus(Fmt(Tr(L"Installation de {0} lancée."), { m_update_tag }), InfoBarSeverity::Success);
+            co_return;
+        }
+
+        /* fermeture normale de l'application (moteur, fenêtres secondaires) pour libérer ses fichiers */
+        Close();
     }
 
     /* Au démarrage : vérifie en arrière-plan si une version plus récente est

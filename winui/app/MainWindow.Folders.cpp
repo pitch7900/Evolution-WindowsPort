@@ -54,6 +54,13 @@ namespace winrt::EvolutionWin::implementation
                 return;
             }
 
+            static bool traced_accounts = false;
+            if (!traced_accounts)
+            {
+                traced_accounts = true;
+                evo_core_trace("interface : liste des comptes reçue");
+            }
+
             FolderTree().RootNodes().Clear();
             m_nodes.clear();
             m_favorite_nodes.clear();
@@ -62,7 +69,24 @@ namespace winrt::EvolutionWin::implementation
             m_account_folders.clear();
             m_accounts = JsonArray::Parse(json);
             RefreshAccountsView();
-            RefreshConnectionAccountsList();
+
+            /* états de connexion des comptes supprimés : sans cette purge, une erreur
+             * restée en mémoire garde la pastille rouge alors que le compte a disparu */
+            for (auto it = m_account_states.begin(); it != m_account_states.end();)
+            {
+                bool known = false;
+                for (auto const& value : m_accounts)
+                    if (value.GetObject().GetNamedString(L"uid", L"") == it->first)
+                    {
+                        known = true;
+                        break;
+                    }
+                if (known || it->first == L"global")
+                    ++it;
+                else
+                    it = m_account_states.erase(it);
+            }
+            RefreshConnectionIndicator();
 
             std::vector<JsonObject> sorted_accounts;
             for (auto const& value : m_accounts)
@@ -94,6 +118,13 @@ namespace winrt::EvolutionWin::implementation
             /* vues unifiées (Boîte de réception, Envoyés, Brouillons, Corbeille de tous les comptes) en tête */
             AddUnifiedViewsNodes();
 
+            /* nombre de listes de dossiers attendues : quand elles sont toutes arrivées sans qu'aucun dossier
+               n'ait pu être restauré, aucune liste de messages ne viendra (aucun compte, boîtes introuvables) :
+               l'écran de démarrage ne doit pas attendre */
+            auto pending_folder_lists = std::make_shared<size_t>(sorted_accounts.size());
+            if (sorted_accounts.empty())
+                RevealMainWindow(L"aucun compte");
+
             for (auto const& account : sorted_accounts)
             {
                 hstring uid = account.GetNamedString(L"uid");
@@ -111,20 +142,30 @@ namespace winrt::EvolutionWin::implementation
                 FolderTree().RootNodes().Append(node);
                 m_nodes[NodeKey(uid, L"")] = node;
 
-                m_core->ListFolders(uid, [this, node, uid](hstring const& folders, hstring const& folders_error)
+                m_core->ListFolders(uid, [this, node, uid, pending_folder_lists](hstring const& folders, hstring const& folders_error)
                 {
+                    /* dernière liste de dossiers reçue, sans dossier à afficher : on ne reste pas sur l'écran de démarrage */
+                    auto finish_wait = [this, pending_folder_lists]()
+                    {
+                        if (*pending_folder_lists > 0 && --(*pending_folder_lists) == 0 && (m_account.empty() || m_folder.empty()))
+                            RevealMainWindow(L"aucun dossier à afficher");
+                    };
+
                     if (!folders_error.empty())
                     {
                         ShowStatus(Tr(L"Dossiers : ") + folders_error, InfoBarSeverity::Warning);
+                        finish_wait();
                         return;
                     }
 
+                    evo_core_trace("interface : arborescence des dossiers reçue");
                     auto parsed = JsonArray::Parse(folders);
                     m_account_folders[std::wstring{ uid }] = parsed;
                     AddFolders(node, parsed, uid);
                     RefreshFavoritesNode();
                     UpdateMailBadge();
                     RestoreSessionFolder();
+                    finish_wait();
                 });
             }
 
@@ -135,7 +176,8 @@ namespace winrt::EvolutionWin::implementation
             if (!m_startup_synced && ::EvolutionWin::Settings::Instance().GetBoolean(L"mail.sync-on-startup", true))
             {
                 m_startup_synced = true;
-                m_core->RefreshAll();
+                /* dossiers de base seulement : les autres se synchronisent à l'ouverture (liste depuis le cache, relève en fond) */
+                m_core->RefreshBase();
             }
         });
     }

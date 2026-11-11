@@ -84,6 +84,18 @@ void		evo_core_list_messages		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Relit la liste des messages d'un dossier depuis le cache local de Camel, sans
+ * relève du serveur : sert à mettre à jour la liste affichée quand une relève en
+ * fond vient de se terminer (événement "folder-refreshed"). Même format de résultat
+ * que evo_core_list_messages ().
+ * Paramètres : voir evo_core_list_messages () */
+void		evo_core_reload_messages	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 unsigned int max_count,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Télécharge un message, le marque comme lu, et le retourne prêt à afficher :
  * {"subject": "...", "from": "...", "to": "...", "cc": "...", "date": 1730000000,
  *  "reply_to": "...", "message_id": "<...>", "references": "<...> <...>",
@@ -103,6 +115,11 @@ void		evo_core_refresh		(EvoCore *core);
 /* Envoyer/Recevoir tous les dossiers (F9) : comme evo_core_refresh, plus
  * tous les autres dossiers de chaque compte. */
 void		evo_core_refresh_all		(EvoCore *core);
+
+/* Relève de base de tous les comptes : Boîte de réception, Éléments envoyés, Brouillons et dossiers
+ * ouverts. Les autres dossiers se synchronisent quand on les ouvre. Remplace la relève complète
+ * du démarrage (evo_core_refresh_all () reste utilisée par « Tous les dossiers », F9). */
+void		evo_core_refresh_base		(EvoCore *core);
 
 /* Interrompt les opérations réseau ou de synchronisation actives
  * en annulant le GCancellable de la session, puis le réinitialise. */
@@ -981,6 +998,46 @@ void		evo_core_search_gal_account	(EvoCore *core,
  *   user_data   : données utilisateur transmises au rappel */
 void		evo_core_get_gal_photo		(EvoCore *core,
 						 const char *account_uid,
+						 const char *email,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Repère chronométré du démarrage, écrit dans evo-core.log :
+ * « démarrage +1234 ms : étape » (millisecondes depuis la création du processus).
+ * Sert à mesurer où passe le temps au lancement (tools\analyse-demarrage.ps1).
+ * Paramètres :
+ *   step : libellé de l'étape franchie */
+void		evo_core_trace			(const char *step);
+
+/* État d'une invitation dans l'agenda : cherche l'événement (UID du bandeau d'invitation) dans
+ * l'agenda par défaut et dans les agendas du compte qui a reçu le message. Peut durer longtemps
+ * (agenda Microsoft 365 à ouvrir) : l'interface l'appelle après l'affichage du message. Le résultat
+ * est mémorisé (10 min si trouvé, 1 min sinon).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte qui a reçu le message
+ *   event_uid   : UID de l'événement
+ *   func        : rappel recevant {"found": true|false, "my_status": "accepted|declined|tentative|needs-action",
+ *                 "sequence": n}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_find_invitation_event	(EvoCore *core,
+						 const char *account_uid,
+						 const char *event_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Photo d'un expéditeur ou d'un correspondant, retrouvée par son adresse :
+ * annuaire du compte (Microsoft 365 ou Google Workspace) si le domaine de
+ * l'adresse est celui d'un compte, puis carnets d'adresses personnels. Le
+ * résultat (photo ou absence de photo) est conservé dans un cache disque
+ * (%LOCALAPPDATA%\\EvolutionWin\\photos) : une semaine au plus pour une photo.
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   email     : adresse de la personne
+ *   func      : rappel recevant {"photo": "data:image/jpeg;base64,..."},
+ *               "photo" vide s'il n'y en a aucune
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_get_sender_photo	(EvoCore *core,
 						 const char *email,
 						 EvoCoreResultFunc func,
 						 void *user_data);

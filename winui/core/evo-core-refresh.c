@@ -26,6 +26,79 @@ core_dup_inbox_name (EvoCore *core,
 	return name ? name : g_strdup ("INBOX");
 }
 
+/* Annonce la fin de la relève d'un dossier ("folder-refreshed") : l'interface
+ * compare alors la liste affichée au cache local et n'applique que la différence.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   account_uid  : identifiant du compte
+ *   folder_name  : nom complet du dossier */
+void
+core_emit_folder_refreshed (EvoCore *core,
+			    const gchar *account_uid,
+			    const gchar *folder_name)
+{
+	JsonBuilder *builder = core_event_builder ();
+
+	builder_add_string (builder, "account", account_uid);
+	builder_add_string (builder, "folder", folder_name);
+	core_emit_builder (core, "folder-refreshed", builder);
+}
+
+/* Clé d'un dossier dans la table des relèves en cours. */
+static gchar *
+refresh_key (const gchar *account_uid,
+	     const gchar *folder_name)
+{
+	return g_strconcat (account_uid ? account_uid : "", "\x1F", folder_name ? folder_name : "", NULL);
+}
+
+/* Une relève du dossier commence (ou une demande de relève, même si le fournisseur la regroupe avec
+ * une relève déjà en cours).
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   account_uid  : identifiant du compte
+ *   folder_name  : nom complet du dossier */
+void
+core_folder_refresh_begin (EvoCore *core,
+			   const gchar *account_uid,
+			   const gchar *folder_name)
+{
+	gchar *key = refresh_key (account_uid, folder_name);
+	gint count;
+
+	g_mutex_lock (&core->refreshing_lock);
+	count = GPOINTER_TO_INT (g_hash_table_lookup (core->refreshing, key));
+	g_hash_table_insert (core->refreshing, key, GINT_TO_POINTER (count + 1));
+	g_mutex_unlock (&core->refreshing_lock);
+}
+
+/* Fin d'une relève du dossier : quand c'est la dernière, "folder-refreshed" est émis (réussie ou
+ * non), l'interface retire alors l'indicateur de synchronisation du dossier.
+ * Paramètres : voir core_folder_refresh_begin () */
+void
+core_folder_refresh_end (EvoCore *core,
+			 const gchar *account_uid,
+			 const gchar *folder_name)
+{
+	gchar *key = refresh_key (account_uid, folder_name);
+	gint count;
+	gboolean last = FALSE;
+
+	g_mutex_lock (&core->refreshing_lock);
+	count = GPOINTER_TO_INT (g_hash_table_lookup (core->refreshing, key));
+	if (count <= 1) {
+		g_hash_table_remove (core->refreshing, key);
+		last = TRUE;
+	} else {
+		g_hash_table_insert (core->refreshing, g_strdup (key), GINT_TO_POINTER (count - 1));
+	}
+	g_mutex_unlock (&core->refreshing_lock);
+	g_free (key);
+
+	if (last)
+		core_emit_folder_refreshed (core, account_uid, folder_name);
+}
+
 /* F9: every folder of the store besides the opened ones (already
  * refreshed), each opened for its refresh only, so that later periodic
  * refreshes stay limited to the inbox and the folders shown */
@@ -33,7 +106,8 @@ static void
 core_refresh_folder_infos (EvoCore *core,
 			   CamelStore *store,
 			   CamelFolderInfo *fi,
-			   GPtrArray *opened)
+			   GPtrArray *opened,
+			   GHashTable *only)
 {
 	for (; fi && !g_cancellable_is_cancelled (core->cancellable); fi = fi->next) {
 		gboolean done = (fi->flags & (CAMEL_FOLDER_NOSELECT | CAMEL_FOLDER_VIRTUAL)) != 0;
@@ -42,10 +116,16 @@ core_refresh_folder_infos (EvoCore *core,
 		for (ii = 0; !done && ii < opened->len; ii++)
 			done = g_strcmp0 (camel_folder_get_full_name (opened->pdata[ii]), fi->full_name) == 0;
 
+		/* passe de base : seuls les dossiers retenus sont relevés (les sous-dossiers sont tout de même parcourus) */
+		if (!done && only && !g_hash_table_contains (only, fi->full_name))
+			done = TRUE;
+
 		if (!done) {
 			CamelFolder *folder;
 			GError *local_error = NULL;
 			gchar *status;
+
+			core_bg_yield (core);
 
 			status = g_strdup_printf ("Relève de « %s » : %s",
 				camel_service_get_display_name (CAMEL_SERVICE (store)), fi->display_name);
@@ -53,8 +133,14 @@ core_refresh_folder_infos (EvoCore *core,
 			g_free (status);
 
 			folder = camel_store_get_folder_sync (store, fi->full_name, 0, core->cancellable, &local_error);
-			if (folder && camel_folder_refresh_info_sync (folder, core->cancellable, &local_error))
-				g_message ("  “%s” refreshed: %d messages", fi->full_name, camel_folder_get_message_count (folder));
+			if (folder) {
+				const gchar *store_uid = camel_service_get_uid (CAMEL_SERVICE (store));
+
+				core_folder_refresh_begin (core, store_uid, fi->full_name);
+				if (camel_folder_refresh_info_sync (folder, core->cancellable, &local_error))
+					g_message ("  “%s” refreshed: %d messages", fi->full_name, camel_folder_get_message_count (folder));
+				core_folder_refresh_end (core, store_uid, fi->full_name);
+			}
 			if (local_error) {
 				g_warning ("Cannot refresh “%s”: %s", fi->full_name, local_error->message);
 				g_clear_error (&local_error);
@@ -62,9 +148,12 @@ core_refresh_folder_infos (EvoCore *core,
 			g_clear_object (&folder);
 		}
 
-		core_refresh_folder_infos (core, store, fi->child, opened);
+		core_refresh_folder_infos (core, store, fi->child, opened, only);
 	}
 }
+
+/* repères chronométrés (evo_core_trace) pendant la première actualisation seulement */
+#define startup_tracing (core_startup_tracing ())
 
 static gchar *
 core_refresh_run (EvoCore *core,
@@ -74,6 +163,9 @@ core_refresh_run (EvoCore *core,
 	GList *services, *link;
 
 	guint total_services = 0, current_service = 0;
+	const gchar *pass = (args[0] && g_str_equal (args[0], "all")) ? "passe complète"
+		: (args[0] && g_str_equal (args[0], "base")) ? "passe de base" : "passe rapide";
+
 	services = camel_session_list_services (core->session);
 
 	for (link = services; link; link = g_list_next (link)) {
@@ -98,7 +190,14 @@ core_refresh_run (EvoCore *core,
 			continue;
 
 		current_service++;
+		core_bg_yield (core);
 		g_message ("refresh of “%s”", camel_service_get_display_name (service));
+		if (startup_tracing) {
+			gchar *step = g_strdup_printf ("actualisation (%s) « %s » : début", pass, camel_service_get_display_name (service));
+
+			evo_core_trace (step);
+			g_free (step);
+		}
 
 		core_emit_progress (core, uid, NULL,
 			camel_service_get_display_name (service),
@@ -108,6 +207,7 @@ core_refresh_run (EvoCore *core,
 		if (!core_ensure_connected (core, CAMEL_STORE (service), &local_error)) {
 			g_warning ("Cannot connect “%s”: %s", camel_service_get_display_name (service),
 				local_error ? local_error->message : "?");
+			core_log_m365_identity (core, camel_service_get_display_name (service));
 			core_emit_connection_status (core, uid, "imap", "error",
 				local_error ? local_error->message : "Échec de connexion au serveur");
 			g_clear_error (&local_error);
@@ -115,6 +215,12 @@ core_refresh_run (EvoCore *core,
 		}
 
 		core_emit_connection_status (core, uid, "imap", "connected", "Connecté");
+		if (startup_tracing) {
+			gchar *step = g_strdup_printf ("actualisation (%s) « %s » : connexion établie", pass, camel_service_get_display_name (service));
+
+			evo_core_trace (step);
+			g_free (step);
+		}
 
 		/* the inbox is followed even when not shown, for new mail */
 		inbox_name = core_dup_inbox_name (core, CAMEL_STORE (service));
@@ -134,9 +240,12 @@ core_refresh_run (EvoCore *core,
 		}
 		g_mutex_unlock (&core->folders_lock);
 
-		for (ii = 0; ii < opened->len; ii++) {
+		for (ii = 0; ii < opened->len && !g_cancellable_is_cancelled (core->cancellable); ii++) {
 			CamelFolder *folder = opened->pdata[ii];
 
+			core_bg_yield (core);
+
+			core_folder_refresh_begin (core, uid, camel_folder_get_full_name (folder));
 			if (!camel_folder_refresh_info_sync (folder, core->cancellable, &local_error)) {
 				g_warning ("Cannot refresh “%s”: %s", camel_folder_get_full_name (folder),
 					local_error ? local_error->message : "?");
@@ -145,22 +254,36 @@ core_refresh_run (EvoCore *core,
 				g_message ("  “%s” refreshed: %d messages", camel_folder_get_full_name (folder),
 					camel_folder_get_message_count (folder));
 			}
+			core_folder_refresh_end (core, uid, camel_folder_get_full_name (folder));
 			g_object_set_data (G_OBJECT (folder), "evo-initial-sync-done", GINT_TO_POINTER (1));
 		}
 
-		/* args[0] = "all" (evo_core_refresh_all): every other folder too */
-		if (args[0] && g_str_equal (args[0], "all")) {
+		/* args[0] = "all" (evo_core_refresh_all): every other folder too ;
+		 * "base" (evo_core_refresh_base) : seulement Boîte de réception, Éléments envoyés et Brouillons */
+		if (args[0] && (g_str_equal (args[0], "all") || g_str_equal (args[0], "base"))) {
 			CamelFolderInfo *fi;
+			GHashTable *only = NULL;
 
 			fi = camel_store_get_folder_info_sync (CAMEL_STORE (service), NULL,
 				CAMEL_STORE_FOLDER_INFO_RECURSIVE, core->cancellable, NULL);
-			core_refresh_folder_infos (core, CAMEL_STORE (service), fi, opened);
+			if (g_str_equal (args[0], "base"))
+				only = core_dup_base_folder_names (core, CAMEL_STORE (service), fi);
+			core_refresh_folder_infos (core, CAMEL_STORE (service), fi, opened, only);
+			if (only)
+				g_hash_table_destroy (only);
 			camel_folder_info_free (fi);
 			core_emit (core, "status", "");
 		}
 
 		g_ptr_array_unref (opened);
 		g_free (prefix);
+
+		if (startup_tracing) {
+			gchar *step = g_strdup_printf ("actualisation (%s) « %s » : dossiers ouverts actualisés", pass, camel_service_get_display_name (service));
+
+			evo_core_trace (step);
+			g_free (step);
+		}
 
 		{
 			JsonBuilder *builder = core_event_builder ();
@@ -172,6 +295,13 @@ core_refresh_run (EvoCore *core,
 
 	core_emit_progress (core, NULL, NULL, "Tous les dossiers sont à jour", 100, FALSE);
 	core_emit_connection_status (core, NULL, "global", "connected", "Connecté");
+
+	if (startup_tracing) {
+		gchar *step = g_strdup_printf ("actualisation (%s) : terminée pour tous les comptes", pass);
+
+		evo_core_trace (step);
+		g_free (step);
+	}
 
 	g_list_free_full (services, g_object_unref);
 
@@ -214,7 +344,7 @@ void
 evo_core_refresh (EvoCore *core)
 {
 	core_process_outbox (core);
-	core_submit (core, core_refresh_run, g_new0 (gchar *, 1), core_ignore_result, NULL);
+	core_submit_background (core, core_refresh_run, g_new0 (gchar *, 1), core_ignore_result, NULL);
 }
 
 void
@@ -223,7 +353,21 @@ evo_core_refresh_all (EvoCore *core)
 	gchar *args[] = { (gchar *) "all", NULL };
 
 	core_process_outbox (core);
-	core_submit (core, core_refresh_run, g_strdupv (args), core_ignore_result, NULL);
+	core_submit_background (core, core_refresh_run, g_strdupv (args), core_ignore_result, NULL);
+}
+
+/* Relève de base de tous les comptes : Boîte de réception, Éléments envoyés, Brouillons et dossiers
+ * ouverts (voir evo-core.h). Les autres dossiers se synchronisent à leur ouverture.
+ * Paramètres :
+ *   core : instance du moteur evo-core */
+void
+evo_core_refresh_base (EvoCore *core)
+{
+	gchar *args[] = { (gchar *) "base", NULL };
+
+	g_return_if_fail (core != NULL);
+
+	core_submit_background (core, core_refresh_run, g_strdupv (args), core_ignore_result, NULL);
 }
 
 /* Relance la connexion / l'authentification pour un compte spécifique.
