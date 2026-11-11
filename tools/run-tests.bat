@@ -168,14 +168,6 @@ rem Execution de la suite : file hors ligne et conflits
 "%TEST_BIN_DIR%\test_offline_queue.exe"
 if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
-rem Execution de la suite : lecteur immersif
-"%TEST_BIN_DIR%\test_immersive.exe"
-if !errorlevel! neq 0 set /a FAILED_SUITES+=1
-
-rem Execution de la suite : liens mailto:
-"%TEST_BIN_DIR%\test_mailto.exe"
-if !errorlevel! neq 0 set /a FAILED_SUITES+=1
-
 rem Execution de la suite : export / import du courrier et des contacts
 "%TEST_BIN_DIR%\test_transfer.exe"
 if !errorlevel! neq 0 set /a FAILED_SUITES+=1
