@@ -859,7 +859,7 @@ core_list_unified_run (EvoCore *core,
 
 			bg_args[0] = g_strdup (s_uid);
 			bg_args[1] = g_strdup (folder_name);
-			core_submit (core, core_folder_background_refresh_run, bg_args, core_ignore_result, NULL);
+			core_submit_background (core, core_folder_background_refresh_run, bg_args, core_ignore_result, NULL);
 		}
 
 		g_object_set_data (G_OBJECT (folder), "evo-initial-sync-done", GINT_TO_POINTER (1));

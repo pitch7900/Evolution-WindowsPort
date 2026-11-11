@@ -328,12 +328,15 @@ evo_core_new (EvoCoreEventFunc event_func,
 	g_cond_init (&core->cond);
 	g_mutex_init (&core->folders_lock);
 	g_mutex_init (&core->connect_lock);
+	core->connect_locks = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, core_connect_lock_free);
 	core->folders =g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 	core->oauth2_pending = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, core_oauth2_pending_free);
 	core->book_clients = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 
 	/* network requests run in parallel, a few at a time */
 	core->pool = g_thread_pool_new (core_request_run, core, 4, FALSE, NULL);
+	/* tâches de fond lentes : leur propre pool, pour ne jamais retarder l'affichage */
+	core->bg_pool = g_thread_pool_new (core_request_run, core, 4, FALSE, NULL);
 	core->thread = g_thread_new ("evo-core", core_thread_func, core);
 
 	return core;
@@ -347,7 +350,7 @@ core_quit_cb (gpointer user_data)
 }
 
 /* durée maximale d'attente des requêtes en cours à l'arrêt (ms) */
-#define CORE_SHUTDOWN_WAIT_MS 4000
+#define CORE_SHUTDOWN_WAIT_MS 1500
 
 void
 evo_core_free (EvoCore *core)
@@ -367,6 +370,8 @@ evo_core_free (EvoCore *core)
 	 * les attend que quelques secondes (sinon la fermeture de l'application gèle) */
 	g_thread_pool_free (core->pool, TRUE, FALSE);
 	core->pool = NULL;
+	g_thread_pool_free (core->bg_pool, TRUE, FALSE);
+	core->bg_pool = NULL;
 
 	while (g_atomic_int_get (&core->running_requests) > 0 &&
 	       (g_get_monotonic_time () - started_at) / 1000 < CORE_SHUTDOWN_WAIT_MS)
@@ -394,6 +399,7 @@ evo_core_free (EvoCore *core)
 	}
 	g_hash_table_destroy (core->folders);
 	g_mutex_clear (&core->folders_lock);
+	g_hash_table_destroy (core->connect_locks);
 	g_mutex_clear (&core->connect_lock);
 
 	g_clear_object (&core->session);

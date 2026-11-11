@@ -77,8 +77,14 @@ core_ignore_result (const char *json,
 {
 }
 
-void
-core_submit_named (EvoCore *core,
+/* Met une requête dans un pool de threads.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   background  : TRUE pour le pool des tâches de fond, FALSE pour le pool principal
+ *   func, name, args, result_func, user_data : voir core_submit_named () */
+static void
+core_push_request (EvoCore *core,
+		   gboolean background,
 		   RequestFunc func,
 		   const gchar *name,
 		   gchar **args,
@@ -104,7 +110,29 @@ core_submit_named (EvoCore *core,
 	request->name = name;
 	request->queued_at = g_get_monotonic_time ();
 
-	g_thread_pool_push (core->pool, request, NULL);
+	g_thread_pool_push (background ? core->bg_pool : core->pool, request, NULL);
+}
+
+void
+core_submit_named (EvoCore *core,
+		   RequestFunc func,
+		   const gchar *name,
+		   gchar **args,
+		   EvoCoreResultFunc result_func,
+		   gpointer user_data)
+{
+	core_push_request (core, FALSE, func, name, args, result_func, user_data);
+}
+
+void
+core_submit_background_named (EvoCore *core,
+			     RequestFunc func,
+			     const gchar *name,
+			     gchar **args,
+			     EvoCoreResultFunc result_func,
+			     gpointer user_data)
+{
+	core_push_request (core, TRUE, func, name, args, result_func, user_data);
 }
 
 CamelStore *
@@ -125,22 +153,57 @@ core_ref_store (EvoCore *core,
 	return CAMEL_STORE (service);
 }
 
+void
+core_connect_lock_free (gpointer data)
+{
+	g_mutex_clear (data);
+	g_free (data);
+}
+
+/* Verrou de connexion d'un magasin (créé à la demande).
+ * Paramètres :
+ *   core    : instance du moteur evo-core
+ *   service : magasin de courrier
+ * Retourne : verrou propre à ce magasin (appartient au moteur). */
+static GMutex *
+core_store_connect_lock (EvoCore *core,
+			 CamelService *service)
+{
+	const gchar *uid = camel_service_get_uid (service);
+	GMutex *lock;
+
+	g_mutex_lock (&core->connect_lock);
+	lock = g_hash_table_lookup (core->connect_locks, uid);
+	if (!lock) {
+		lock = g_new0 (GMutex, 1);
+		g_mutex_init (lock);
+		g_hash_table_insert (core->connect_locks, g_strdup (uid), lock);
+	}
+	g_mutex_unlock (&core->connect_lock);
+
+	return lock;
+}
+
 gboolean
 core_ensure_connected (EvoCore *core,
 		       CamelStore *store,
 		       GError **error)
 {
 	gboolean success = TRUE;
+	GMutex *store_lock;
 
 	if (!CAMEL_IS_NETWORK_SERVICE (store))
 		return TRUE;
 
-	/* One connection at a time, and connected on return: while another
-	 * thread is connecting, camel_offline_store_set_online_sync () returns
+	/* One connection at a time for a given store, and connected on return: while
+	 * another thread is connecting it, camel_offline_store_set_online_sync () returns
 	 * success at once, and an IMAP refresh started then is skipped without
 	 * error, e.g. an empty inbox on a first run (startup refresh and the
-	 * message list connecting together). */
-	g_mutex_lock (&core->connect_lock);
+	 * message list connecting together). Les comptes différents se connectent en
+	 * parallèle : la connexion lente d'un compte (Microsoft 365, Gmail) ne retarde pas
+	 * l'affichage d'un autre. */
+	store_lock = core_store_connect_lock (core, CAMEL_SERVICE (store));
+	g_mutex_lock (store_lock);
 
 	/* offline-capable stores (IMAP) refuse to work until set online;
 	 * this also connects them */
@@ -150,7 +213,7 @@ core_ensure_connected (EvoCore *core,
 	if (success && camel_service_get_connection_status (CAMEL_SERVICE (store)) != CAMEL_SERVICE_CONNECTED)
 		success = camel_service_connect_sync (CAMEL_SERVICE (store), core->cancellable, error);
 
-	g_mutex_unlock (&core->connect_lock);
+	g_mutex_unlock (store_lock);
 
 	return success;
 }

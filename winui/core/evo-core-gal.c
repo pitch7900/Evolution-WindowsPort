@@ -1633,7 +1633,7 @@ evo_core_list_calendar_groups (EvoCore *core,
 
 	g_return_if_fail (core != NULL);
 
-	core_submit (core, core_list_calendar_groups_run, g_strdupv (args), func, user_data);
+	core_submit_background (core, core_list_calendar_groups_run, g_strdupv (args), func, user_data);
 }
 
 /* --- groupes de calendriers d'Outlook lus par EWS (navigation de la boîte aux lettres) --- */
@@ -2255,7 +2255,7 @@ evo_core_list_nav_calendars (EvoCore *core,
 
 	g_return_if_fail (core != NULL);
 
-	core_submit (core, core_list_nav_calendars_run, g_strdupv (args), func, user_data);
+	core_submit_background (core, core_list_nav_calendars_run, g_strdupv (args), func, user_data);
 }
 
 /* Adresse de la page d'autorisation Microsoft pour l'accès EWS (lecture de la

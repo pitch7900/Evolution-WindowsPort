@@ -176,7 +176,7 @@ core_list_messages_run (EvoCore *core,
 		gchar **bg_args = g_new0 (gchar *, 3);
 		bg_args[0] = g_strdup (args[0]);
 		bg_args[1] = g_strdup (args[1]);
-		core_submit (core, core_folder_background_refresh_run, bg_args, core_ignore_result, NULL);
+		core_submit_background (core, core_folder_background_refresh_run, bg_args, core_ignore_result, NULL);
 	}
 
 	g_object_set_data (G_OBJECT (folder), "evo-initial-sync-done", GINT_TO_POINTER (1));

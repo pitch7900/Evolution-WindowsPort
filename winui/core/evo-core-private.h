@@ -35,7 +35,9 @@ struct _EvoCore {
 	GThread *thread;
 	GMainContext *context;
 	GMainLoop *loop;
-	GThreadPool *pool;
+	GThreadPool *pool;	/* requêtes de l'interface (listes, lecture, actions) */
+	GThreadPool *bg_pool;	/* tâches de fond lentes (relève, découverte des calendriers) : elles ne doivent
+				 * jamais retarder les requêtes d'affichage du pool principal */
 	GCancellable *cancellable;
 
 	/* requêtes en cours d'exécution et arrêt demandé (accès atomique) : evo_core_free ()
@@ -52,8 +54,11 @@ struct _EvoCore {
 	GMutex folders_lock;
 	GSource *refresh_source;
 
-	/* serializes core_ensure_connected () */
+	/* connect_lock protège la table connect_locks (uid du magasin -> GMutex *) ;
+	 * core_ensure_connected () sérialise les connexions d'un même magasin, pas celles
+	 * de comptes différents */
 	GMutex connect_lock;
+	GHashTable *connect_locks;
 
 	/* startup state, protected by lock */
 	GMutex lock;
@@ -232,6 +237,18 @@ core_submit_named (EvoCore *core,
  * du démarrage (attente dans la file et durée d'exécution). */
 #define core_submit(core, func, args, result_func, user_data) \
 	core_submit_named ((core), (func), #func, (args), (result_func), (user_data))
+/* Tâche de fond lente : pool séparé (voir EvoCore.bg_pool). */
+void
+core_submit_background_named (EvoCore *core,
+				 RequestFunc func,
+				 const gchar *name,
+				 gchar **args,
+				 EvoCoreResultFunc result_func,
+				 gpointer user_data);
+#define core_submit_background(core, func, args, result_func, user_data) \
+	core_submit_background_named ((core), (func), #func, (args), (result_func), (user_data))
+void
+core_connect_lock_free (gpointer data);
 CamelStore *
 core_ref_store (EvoCore *core,
 		const gchar *account_uid,

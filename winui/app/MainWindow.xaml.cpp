@@ -250,6 +250,9 @@ namespace winrt::EvolutionWin::implementation
 
         Closed([this](IInspectable const&, WindowEventArgs const&)
         {
+            /* la fenêtre disparaît tout de suite : l'arrêt du moteur ne doit pas donner l'impression d'un gel */
+            try { AppWindow().Hide(); } catch (...) {}
+
             /* Purge automatique de la corbeille si le paramètre est activé */
             if (::EvolutionWin::Settings::Instance().GetBoolean(L"mail.empty-trash-on-exit", false))
             {
