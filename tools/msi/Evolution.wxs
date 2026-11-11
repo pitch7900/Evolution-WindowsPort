@@ -30,22 +30,49 @@
          échoue alors avec l'erreur 1618). EvolutionWin est invité à se fermer,
          puis arrêté ; les services EDS (sans fenêtre) sont arrêtés, EvolutionWin
          les redémarre au besoin. -->
-    <util:CloseApplication Id="CloseEvolutionWin" Target="EvolutionWin.exe"
+    <util:CloseApplication Id="CloseEvolutionWin" Target="EvolutionWin.exe" Condition="FORCECLOSE &lt;&gt; &quot;0&quot;"
                            Description="Fermeture d'Evolution"
                            CloseMessage="yes" ElevatedCloseMessage="yes"
                            Timeout="5" TerminateProcess="1" RebootPrompt="no" />
-    <util:CloseApplication Id="CloseSourceRegistry" Target="evolution-source-registry.exe"
+    <util:CloseApplication Id="CloseSourceRegistry" Target="evolution-source-registry.exe" Condition="FORCECLOSE &lt;&gt; &quot;0&quot;"
                            TerminateProcess="1" RebootPrompt="no" />
-    <util:CloseApplication Id="CloseAddressBookFactory" Target="evolution-addressbook-factory.exe"
+    <util:CloseApplication Id="CloseAddressBookFactory" Target="evolution-addressbook-factory.exe" Condition="FORCECLOSE &lt;&gt; &quot;0&quot;"
                            TerminateProcess="1" RebootPrompt="no" />
-    <util:CloseApplication Id="CloseAddressBookSubprocess" Target="evolution-addressbook-factory-subprocess.exe"
+    <util:CloseApplication Id="CloseAddressBookSubprocess" Target="evolution-addressbook-factory-subprocess.exe" Condition="FORCECLOSE &lt;&gt; &quot;0&quot;"
                            TerminateProcess="1" RebootPrompt="no" />
-    <util:CloseApplication Id="CloseCalendarFactory" Target="evolution-calendar-factory.exe"
+    <util:CloseApplication Id="CloseCalendarFactory" Target="evolution-calendar-factory.exe" Condition="FORCECLOSE &lt;&gt; &quot;0&quot;"
                            TerminateProcess="1" RebootPrompt="no" />
-    <util:CloseApplication Id="CloseCalendarSubprocess" Target="evolution-calendar-factory-subprocess.exe"
+    <util:CloseApplication Id="CloseCalendarSubprocess" Target="evolution-calendar-factory-subprocess.exe" Condition="FORCECLOSE &lt;&gt; &quot;0&quot;"
                            TerminateProcess="1" RebootPrompt="no" />
-    <util:CloseApplication Id="CloseSessionBus" Target="gdbus.exe"
+    <util:CloseApplication Id="CloseSessionBus" Target="gdbus.exe" Condition="FORCECLOSE &lt;&gt; &quot;0&quot;"
                            TerminateProcess="1" RebootPrompt="no" />
+
+    <!-- Propriété publique FORCECLOSE (défaut « 1 » : comportement historique) :
+           msiexec /i Evolution-<version>-x64.msi /qn FORCECLOSE=1
+         ferme EvolutionWin, les services EDS et leurs dépendances avant de remplacer
+         les fichiers ; FORCECLOSE=0 désactive toute fermeture (fichiers verrouillés :
+         remplacement au redémarrage, code de sortie 3010). -->
+    <Property Id="FORCECLOSE" Value="1" />
+
+    <!-- Fermeture, dans TOUTES les sessions, des dépendances que CloseApplication ne sait
+         pas viser : camel-index-control, gspawn-win64-helper et les processus
+         msedgewebview2.exe du dossier de données d'EvolutionWin (script source :
+         deploy\msi\close-dependencies.ps1, passé en base64 par build-msi.ps1). -->
+    <CustomAction Id="CloseDependencies" Directory="SystemFolder" Return="ignore"
+                  ExeCommand="&quot;[SystemFolder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $(var.CloseDepsB64)" />
+
+    <!-- Nettoyage des données de l'utilisateur à la désinstallation, sur demande :
+           msiexec /x Evolution-<version>-x64.msi PURGEUSERDATA=1
+         Jamais lors d'une mise à jour (UPGRADINGPRODUCTCODE). Journal : %TEMP%\EvolutionWin-purge.log
+         (script source : deploy\msi\purge-userdata.ps1). -->
+    <Property Id="PURGEUSERDATA" Value="0" />
+    <CustomAction Id="PurgeUserData" Directory="SystemFolder" Return="ignore"
+                  ExeCommand="&quot;[SystemFolder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $(var.PurgeUserDataB64)" />
+    <InstallExecuteSequence>
+      <Custom Action="CloseDependencies" Before="InstallValidate" Condition='FORCECLOSE &lt;&gt; "0"' />
+      <Custom Action="PurgeUserData" After="InstallInitialize"
+              Condition='REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE AND PURGEUSERDATA="1"' />
+    </InstallExecuteSequence>
 
     <!-- Runtime Edge WebView2 (inclus dans Windows 11) : lecture et
          rédaction des messages -->

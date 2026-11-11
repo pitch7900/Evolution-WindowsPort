@@ -175,6 +175,19 @@ function Invoke-Sign([string[]] $Files) {
 	& signtool @signArgs @Files
 	if ($LASTEXITCODE) { throw 'signtool a échoué' }
 }
+# --- Modèle d'administration (GPO) : copié dans l'installation, dossier policy ---
+$PolicySrc = Join-Path $Workspace 'deploy\policy'
+if (Test-Path $PolicySrc) {
+	Copy-Item -Recurse -Force $PolicySrc (Join-Path $Stage 'policy')
+}
+
+# --- Scripts PowerShell des actions personnalisées (passés en base64 UTF-16LE) ---
+function ConvertTo-EncodedCommand([string] $Path) {
+	[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes((Get-Content -Raw -Encoding UTF8 $Path)))
+}
+$CloseDepsB64 = ConvertTo-EncodedCommand (Join-Path $Workspace 'deploy\msi\close-dependencies.ps1')
+$PurgeUserDataB64 = ConvertTo-EncodedCommand (Join-Path $Workspace 'deploy\msi\purge-userdata.ps1')
+
 Invoke-Sign @((Join-Path $StageBin 'EvolutionWin.exe'), (Join-Path $StageBin 'evo-core.dll'))
 
 $size = (Get-ChildItem $Stage -Recurse -File | Measure-Object Length -Sum).Sum / 1MB
@@ -189,6 +202,7 @@ New-Item -ItemType Directory -Force $Dist | Out-Null
 $Msi = Join-Path $Dist "Evolution-$Version-x64.msi"
 & $WixExe build (Join-Path $Tools 'msi\Evolution.wxs') -arch x64 -ext WixToolset.Util.wixext `
 	-d "StageDir=$Stage" -d "Version=$Version" `
+	-d "CloseDepsB64=$CloseDepsB64" -d "PurgeUserDataB64=$PurgeUserDataB64" `
 	-d "IconFile=$(Join-Path $env:WINUI_SRC 'app\Assets\EvolutionWin.ico')" `
 	-intermediatefolder (Join-Path $env:BUILD_INTERMEDIATE 'msi-obj') -o $Msi
 if ($LASTEXITCODE) { throw 'wix build a échoué' }
