@@ -194,6 +194,15 @@ itip_component_response (ICalComponent *icomp,
 	return response;
 }
 
+/* Échéance d'une recherche : annule l'appel d'agenda en cours. */
+static gboolean
+itip_budget_expired_cb (gpointer user_data)
+{
+	g_cancellable_cancel (user_data);
+
+	return G_SOURCE_REMOVE;
+}
+
 /* Cherche un événement (par UID) dans l'agenda par défaut puis dans les autres
  * agendas activés. Les erreurs de connexion sont ignorées (recherche au mieux).
  * Paramètres :
@@ -204,8 +213,10 @@ itip_component_response (ICalComponent *icomp,
  *   out_client  : reçoit le client de l'agenda qui le contient (à libérer), ou NULL
  *   out_icomp   : reçoit l'événement (à libérer), ou NULL
  *   budget_ms   : durée maximale de la recherche (0 : illimitée). Ouvrir un agenda dont le
- *                 service n'est pas encore démarré peut prendre plusieurs secondes : l'affichage
- *                 d'un message ne doit pas attendre tous les agendas.
+ *                 service n'est pas encore démarré peut prendre plus d'une minute (mesuré : 58 à
+ *                 82 s) : l'affichage d'un message ne doit pas l'attendre. Un minuteur annule
+ *                 l'appel d'agenda en cours à l'échéance (un simple contrôle entre deux agendas
+ *                 ne suffit pas, un seul appel peut bloquer).
  * Retourne : TRUE si l'événement existe dans un agenda. */
 static gboolean
 itip_find_event (EvoCore *core,
@@ -220,6 +231,18 @@ itip_find_event (EvoCore *core,
 	gboolean found = FALSE;
 	gint64 started_at = g_get_monotonic_time ();
 	gchar *account_parent = NULL;
+	GCancellable *cancellable = core->cancellable;
+	GCancellable *budget = NULL;
+	GSource *budget_timer = NULL;
+
+	if (budget_ms > 0) {
+		/* la source garde sa propre référence : pas d'accès à un objet libéré si elle se déclenche en même temps */
+		budget = g_cancellable_new ();
+		budget_timer = g_timeout_source_new ((guint) budget_ms);
+		g_source_set_callback (budget_timer, itip_budget_expired_cb, g_object_ref (budget), g_object_unref);
+		g_source_attach (budget_timer, core->context);
+		cancellable = budget;
+	}
 
 	if (account_uid && *account_uid) {
 		ESource *account_source = e_source_registry_ref_source (core->registry, account_uid);
@@ -253,15 +276,15 @@ itip_find_event (EvoCore *core,
 				continue;
 		}
 
-		if (budget_ms > 0 && (g_get_monotonic_time () - started_at) / 1000 >= budget_ms)
+		if (budget && g_cancellable_is_cancelled (budget))
 			break;
 
 		client = e_cal_client_connect_sync (source, E_CAL_CLIENT_SOURCE_TYPE_EVENTS, budget_ms > 0 ? 2 : 5,
-			core->cancellable, NULL);
+			cancellable, NULL);
 		if (!client)
 			continue;
 
-		if (e_cal_client_get_object_sync (E_CAL_CLIENT (client), uid, NULL, &icomp, core->cancellable, NULL) && icomp) {
+		if (e_cal_client_get_object_sync (E_CAL_CLIENT (client), uid, NULL, &icomp, cancellable, NULL) && icomp) {
 			found = TRUE;
 			if (out_icomp)
 				*out_icomp = icomp;
@@ -272,6 +295,15 @@ itip_find_event (EvoCore *core,
 		}
 		g_object_unref (client);
 	}
+
+	if (budget_timer) {
+		g_source_destroy (budget_timer);
+		g_source_unref (budget_timer);
+	}
+	if (budget && g_cancellable_is_cancelled (budget) && !found)
+		g_message ("invitation : recherche de l'événement abandonnée après %" G_GINT64_FORMAT " ms",
+			(g_get_monotonic_time () - started_at) / 1000);
+	g_clear_object (&budget);
 
 	g_list_free_full (sources, g_object_unref);
 	g_clear_object (&default_source);
