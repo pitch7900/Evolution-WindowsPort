@@ -258,6 +258,22 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Modifie une catégorie d'un compte Microsoft 365 / Gmail.
+         * Paramètres :
+         *   account   : identifiant du compte
+         *   action    : "create", "rename", "recolor" ou "delete"
+         *   name      : nom de la catégorie (ancien nom pour "rename")
+         *   new_name  : nouveau nom ("rename"), sinon vide
+         *   color_hex : couleur « #RRGGBB » (ignorée pour "delete" et "rename" sous Gmail)
+         *   handler   : rappel recevant {"ok": true} */
+        void EditMailCategory(winrt::hstring const& account, winrt::hstring const& action, winrt::hstring const& name,
+            winrt::hstring const& new_name, winrt::hstring const& color_hex, CoreHandler handler)
+        {
+            evo_core_edit_mail_category(m_core, winrt::to_string(account).c_str(), winrt::to_string(action).c_str(),
+                winrt::to_string(name).c_str(), winrt::to_string(new_name).c_str(), winrt::to_string(color_hex).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Enregistre les réponses automatiques (absence) d'un compte.
          * Paramètres :
          *   account       : identifiant du compte

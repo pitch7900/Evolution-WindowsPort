@@ -7107,5 +7107,21 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Aggiungi una regola</value>
     <comment>Ajouter une règle</comment>
   </data>
+  <data name="T_1AB967D0" xml:space="preserve">
+    <value>Eliminare la categoria dagli account?</value>
+    <comment>Supprimer la catégorie des comptes ?</comment>
+  </data>
+  <data name="T_7382BFDF" xml:space="preserve">
+    <value>La categoria «{0}» verrà eliminata anche dall'elenco delle categorie dei suoi account (Microsoft 365, Gmail). I messaggi già classificati la mantengono.</value>
+    <comment>La catégorie « {0} » sera aussi supprimée de la liste des catégories de ses comptes (Microsoft 365, Gmail). Les messages déjà classés la conservent.</comment>
+  </data>
+  <data name="T_F8F10453" xml:space="preserve">
+    <value>Locale (questo computer)</value>
+    <comment>Locale (cet ordinateur)</comment>
+  </data>
+  <data name="T_319D7875" xml:space="preserve">
+    <value>Categoria non aggiornata sull'account {0}: {1}</value>
+    <comment>Catégorie non mise à jour sur le compte {0} : {1}</comment>
+  </data>
 </root>
 

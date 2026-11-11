@@ -86,6 +86,45 @@ namespace winrt::EvolutionWin::implementation
     }
 
     /**
+     * @brief Répercute une modification de catégorie sur les comptes auxquels elle est rattachée.
+     *
+     * Les échecs (droits manquants, réseau) sont signalés dans la barre d'état ; la
+     * modification locale reste valable.
+     *
+     * @param action "create", "rename", "recolor" ou "delete".
+     * @param name Nom de la catégorie (ancien nom pour "rename").
+     * @param new_name Nouveau nom ("rename"), sinon vide.
+     * @param color_source Nom sous lequel lire la couleur dans le registre (vide : pas de couleur).
+     * @param accounts Comptes visés ; nullptr pour lire ceux de la catégorie dans le registre.
+     */
+    void MainWindow::PushCategoryChange(
+        std::wstring const& action,
+        std::wstring const& name,
+        std::wstring const& new_name,
+        std::wstring const& color_source,
+        std::vector<std::wstring> const* accounts)
+    {
+        auto const* found = ::EvolutionWin::CategoryStore::Registry().Find(color_source);
+        std::vector<std::wstring> targets = accounts ? *accounts : (found ? found->accounts : std::vector<std::wstring>{});
+        if (targets.empty())
+            return;
+
+        std::wstring color;
+        if (found)
+            color = Cat::FormatHexColor(found->r, found->g, found->b);
+
+        for (auto const& uid : targets)
+        {
+            m_core->EditMailCategory(hstring{ uid }, hstring{ action }, hstring{ name }, hstring{ new_name }, hstring{ color },
+                [this, uid](hstring const&, hstring const& error)
+            {
+                if (!error.empty())
+                    ShowStatus(Fmt(Tr(L"Catégorie non mise à jour sur le compte {0} : {1}"), { hstring{ uid }, error }), InfoBarSeverity::Warning);
+            });
+        }
+    }
+
+    /**
      * @brief Regroupe les catégories du registre par compte pour l'affichage.
      *
      * Les catégories locales viennent en premier, puis un groupe par compte
@@ -193,9 +232,10 @@ namespace winrt::EvolutionWin::implementation
             });
             Flyout picker_flyout;
             picker_flyout.Content(picker);
-            picker_flyout.Closed([this](IInspectable const&, IInspectable const&)
+            picker_flyout.Closed([this, current](IInspectable const&, IInspectable const&)
             {
                 OnCategoriesRegistryChanged();
+                PushCategoryChange(L"recolor", *current, L"", *current);
             });
             swatch.Flyout(picker_flyout);
             row.Children().Append(swatch);
@@ -217,9 +257,11 @@ namespace winrt::EvolutionWin::implementation
                     box.Text(hstring{ *current });
                     return;
                 }
+                std::wstring previous = *current;
                 *current = wanted;
                 box.Text(hstring{ wanted });
                 OnCategoriesRegistryChanged();
+                PushCategoryChange(L"rename", previous, wanted, wanted);
                 ShowStatus(Tr(L"Catégorie renommée. Les éléments déjà classés gardent l'ancien nom.", L"Category renamed. Items already categorised keep the old name."), InfoBarSeverity::Informational);
             });
             name_box.KeyDown([swatch](IInspectable const&, Input::KeyRoutedEventArgs const& args)
@@ -247,12 +289,40 @@ namespace winrt::EvolutionWin::implementation
             Controls::ToolTipService::SetToolTip(delete_button, box_value(Tr(L"Supprimer la catégorie", L"Delete category")));
             delete_button.Click([this, current](IInspectable const&, RoutedEventArgs const&)
             {
-                if (::EvolutionWin::CategoryStore::Registry().Remove(*current))
+                auto do_delete = [this, current]()
                 {
-                    OnCategoriesRegistryChanged();
-                    RefreshCategoriesView();
-                    ShowStatus(Tr(L"Catégorie supprimée de la palette. Les éléments déjà classés la conservent.", L"Category removed from the palette. Items already categorised keep it."), InfoBarSeverity::Informational);
+                    auto const* found = ::EvolutionWin::CategoryStore::Registry().Find(*current);
+                    auto linked_accounts = found ? found->accounts : std::vector<std::wstring>{};
+                    std::wstring name = *current;
+                    if (::EvolutionWin::CategoryStore::Registry().Remove(name))
+                    {
+                        PushCategoryChange(L"delete", name, L"", name, &linked_accounts);
+                        OnCategoriesRegistryChanged();
+                        RefreshCategoriesView();
+                        ShowStatus(Tr(L"Catégorie supprimée de la palette. Les éléments déjà classés la conservent.", L"Category removed from the palette. Items already categorised keep it."), InfoBarSeverity::Informational);
+                    }
+                };
+
+                auto const* found = ::EvolutionWin::CategoryStore::Registry().Find(*current);
+                if (!found || found->accounts.empty() || !Content().XamlRoot())
+                {
+                    do_delete();
+                    return;
                 }
+
+                /* la suppression se répercute sur le serveur : confirmation */
+                ContentDialog dialog;
+                dialog.XamlRoot(Content().XamlRoot());
+                dialog.Title(box_value(Tr(L"Supprimer la catégorie des comptes ?")));
+                dialog.Content(box_value(Fmt(Tr(L"La catégorie « {0} » sera aussi supprimée de la liste des catégories de ses comptes (Microsoft 365, Gmail). Les messages déjà classés la conservent."), { hstring{ *current } })));
+                dialog.PrimaryButtonText(Tr(L"Supprimer"));
+                dialog.CloseButtonText(Tr(L"Annuler"));
+                dialog.DefaultButton(ContentDialogButton::Close);
+                dialog.ShowAsync().Completed([do_delete](IAsyncOperation<ContentDialogResult> const& operation, AsyncStatus)
+                {
+                    if (operation.GetResults() == ContentDialogResult::Primary)
+                        do_delete();
+                });
             });
             Grid::SetColumn(delete_button, 3);
             row.Children().Append(delete_button);
@@ -295,6 +365,9 @@ namespace winrt::EvolutionWin::implementation
         add_row.ColumnSpacing(8);
         add_row.Margin(ThicknessHelper::FromLengths(0, 8, 0, 0));
         add_row.ColumnDefinitions().Append(ColumnDefinition{});
+        ColumnDefinition target_col;
+        target_col.Width(GridLengthHelper::Auto());
+        add_row.ColumnDefinitions().Append(target_col);
         ColumnDefinition add_col;
         add_col.Width(GridLengthHelper::Auto());
         add_row.ColumnDefinitions().Append(add_col);
@@ -304,9 +377,31 @@ namespace winrt::EvolutionWin::implementation
         new_name.MaxLength(100);
         add_row.Children().Append(new_name);
 
+        /* destination : locale, ou un compte (la catégorie y est créée aussi) */
+        ComboBox target_box;
+        target_box.Width(220);
+        target_box.Items().Append(box_value(Tr(L"Locale (cet ordinateur)")));
+        auto target_uids = std::make_shared<std::vector<std::wstring>>();
+        target_uids->push_back(L"");
+        if (m_accounts)
+        {
+            for (auto const& value : m_accounts)
+            {
+                auto account = value.GetObject();
+                hstring uid = account.GetNamedString(L"uid", L"");
+                if (account.GetNamedBoolean(L"local", false) || uid.empty())
+                    continue;
+                target_box.Items().Append(box_value(account.GetNamedString(L"name", uid)));
+                target_uids->push_back(std::wstring{ uid });
+            }
+        }
+        target_box.SelectedIndex(0);
+        Grid::SetColumn(target_box, 1);
+        add_row.Children().Append(target_box);
+
         Button add_button;
         add_button.Content(box_value(Tr(L"Ajouter une catégorie", L"Add a category")));
-        auto add_action = [this, new_name]()
+        auto add_action = [this, new_name, target_box, target_uids]()
         {
             std::wstring name = Cat::TrimName(std::wstring_view{ new_name.Text() });
             uint8_t r = 0, g = 0, b = 0;
@@ -315,6 +410,13 @@ namespace winrt::EvolutionWin::implementation
             {
                 ShowStatus(Tr(L"Nom de catégorie vide, contenant une virgule ou déjà utilisé.", L"Category name is empty, contains a comma or is already used."), InfoBarSeverity::Warning);
                 return;
+            }
+            int target = target_box.SelectedIndex();
+            if (target > 0 && static_cast<size_t>(target) < target_uids->size())
+            {
+                ::EvolutionWin::CategoryStore::Registry().AddAccount(name, (*target_uids)[target]);
+                std::vector<std::wstring> accounts{ (*target_uids)[target] };
+                PushCategoryChange(L"create", name, L"", name, &accounts);
             }
             OnCategoriesRegistryChanged();
             RefreshCategoriesView();
@@ -325,7 +427,7 @@ namespace winrt::EvolutionWin::implementation
             if (args.Key() == Windows::System::VirtualKey::Enter)
                 add_action();
         });
-        Grid::SetColumn(add_button, 1);
+        Grid::SetColumn(add_button, 2);
         add_row.Children().Append(add_button);
         host.Children().Append(add_row);
 
@@ -361,6 +463,13 @@ namespace winrt::EvolutionWin::implementation
         host.Children().Append(note);
 
         RefreshFormatRulesView();
+
+        /* reprise automatique, une fois par session, des catégories des comptes */
+        if (!m_categories_auto_imported && m_accounts && m_accounts.Size() > 0)
+        {
+            m_categories_auto_imported = true;
+            ImportAccountCategories(nullptr);
+        }
     }
 
     /**
@@ -618,7 +727,8 @@ namespace winrt::EvolutionWin::implementation
             return;
         }
 
-        button.IsEnabled(false);
+        if (button)
+            button.IsEnabled(false);
         state->pending = uids.size();
         for (auto const& uid : uids)
         {
@@ -666,9 +776,12 @@ namespace winrt::EvolutionWin::implementation
                 if (--state->pending > 0)
                     return;
 
-                button.IsEnabled(true);
+                if (button)
+                    button.IsEnabled(true);
                 if (state->accounts_ok == 0)
                 {
+                    if (!button)
+                        return;
                     ShowStatus(Fmt(Tr(L"Aucune catégorie reprise (comptes Microsoft 365 / Exchange Online et Gmail uniquement) : {0}"), { hstring{ state->last_error } }), InfoBarSeverity::Warning);
                     return;
                 }
@@ -677,7 +790,8 @@ namespace winrt::EvolutionWin::implementation
                     OnCategoriesRegistryChanged();
                     RefreshCategoriesView();
                 }
-                ShowStatus(Fmt(Tr(L"{0} catégorie(s) reprise(s) depuis {1} compte(s)."), { to_hstring(state->added), to_hstring(state->accounts_ok) }), InfoBarSeverity::Success);
+                if (button || state->added > 0)
+                    ShowStatus(Fmt(Tr(L"{0} catégorie(s) reprise(s) depuis {1} compte(s)."), { to_hstring(state->added), to_hstring(state->accounts_ok) }), InfoBarSeverity::Success);
             });
         }
     }

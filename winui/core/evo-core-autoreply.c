@@ -948,36 +948,37 @@ evo_core_remove_delegate (EvoCore *core,
 
 /* Couleur « #RRGGBB » d'un préréglage de couleur Outlook ("preset0".."preset24").
  * Retourne : la couleur, NULL si le préréglage est inconnu ou « none ». */
+static const gchar * const categories_preset_colors[] = {
+	"#E74856", /* preset0  Rouge */
+	"#F7630C", /* preset1  Orange */
+	"#8E562E", /* preset2  Marron */
+	"#FFB900", /* preset3  Jaune */
+	"#10893E", /* preset4  Vert */
+	"#00B7C3", /* preset5  Sarcelle */
+	"#847545", /* preset6  Olive */
+	"#0078D4", /* preset7  Bleu */
+	"#8764B8", /* preset8  Violet */
+	"#C30052", /* preset9  Canneberge */
+	"#69797E", /* preset10 Acier */
+	"#4A5459", /* preset11 Acier foncé */
+	"#767676", /* preset12 Gris */
+	"#4C4A48", /* preset13 Gris foncé */
+	"#1F1F1F", /* preset14 Noir */
+	"#A4262C", /* preset15 Rouge foncé */
+	"#CA5010", /* preset16 Orange foncé */
+	"#603D1F", /* preset17 Marron foncé */
+	"#986F0B", /* preset18 Jaune foncé */
+	"#0B6A0B", /* preset19 Vert foncé */
+	"#038387", /* preset20 Sarcelle foncé */
+	"#5E5A3A", /* preset21 Olive foncé */
+	"#004E8C", /* preset22 Bleu foncé */
+	"#5C2E91", /* preset23 Violet foncé */
+	"#8E1F4D"  /* preset24 Canneberge foncé */
+};
+
 static const gchar *
 categories_color_from_preset (const gchar *preset)
 {
-	static const gchar * const colors[] = {
-		"#E74856", /* preset0  Rouge */
-		"#F7630C", /* preset1  Orange */
-		"#8E562E", /* preset2  Marron */
-		"#FFB900", /* preset3  Jaune */
-		"#10893E", /* preset4  Vert */
-		"#00B7C3", /* preset5  Sarcelle */
-		"#847545", /* preset6  Olive */
-		"#0078D4", /* preset7  Bleu */
-		"#8764B8", /* preset8  Violet */
-		"#C30052", /* preset9  Canneberge */
-		"#69797E", /* preset10 Acier */
-		"#4A5459", /* preset11 Acier foncé */
-		"#767676", /* preset12 Gris */
-		"#4C4A48", /* preset13 Gris foncé */
-		"#1F1F1F", /* preset14 Noir */
-		"#A4262C", /* preset15 Rouge foncé */
-		"#CA5010", /* preset16 Orange foncé */
-		"#603D1F", /* preset17 Marron foncé */
-		"#986F0B", /* preset18 Jaune foncé */
-		"#0B6A0B", /* preset19 Vert foncé */
-		"#038387", /* preset20 Sarcelle foncé */
-		"#5E5A3A", /* preset21 Olive foncé */
-		"#004E8C", /* preset22 Bleu foncé */
-		"#5C2E91", /* preset23 Violet foncé */
-		"#8E1F4D"  /* preset24 Canneberge foncé */
-	};
 	gchar *end = NULL;
 	gint64 index;
 
@@ -985,10 +986,10 @@ categories_color_from_preset (const gchar *preset)
 		return NULL;
 
 	index = g_ascii_strtoll (preset + 6, &end, 10);
-	if (!end || *end || index < 0 || index >= (gint64) G_N_ELEMENTS (colors))
+	if (!end || *end || index < 0 || index >= (gint64) G_N_ELEMENTS (categories_preset_colors))
 		return NULL;
 
-	return colors[index];
+	return categories_preset_colors[index];
 }
 
 /* Lit les catégories d'un compte.
@@ -1092,4 +1093,263 @@ evo_core_get_mail_categories (EvoCore *core,
 	g_return_if_fail (account_uid != NULL);
 
 	core_submit (core, core_get_mail_categories_run, g_strdupv (args), func, user_data);
+}
+
+/* ---- Écriture des catégories d'un compte (création, renommage, couleur, suppression) ---- */
+
+/* Préréglage Outlook (« presetN ») le plus proche d'une couleur « #RRGGBB » (renvoyé dans buffer). */
+static void
+categories_nearest_preset (const gchar *hex,
+			   gchar *buffer,
+			   gsize size)
+{
+	guint value = 0;
+	gint best = 0, best_distance = G_MAXINT, index;
+	gint r, g, b;
+
+	if (!hex || strlen (hex) != 7 || hex[0] != '#' || sscanf (hex + 1, "%x", &value) != 1) {
+		g_snprintf (buffer, size, "preset7");
+		return;
+	}
+	r = (value >> 16) & 0xFF;
+	g = (value >> 8) & 0xFF;
+	b = value & 0xFF;
+
+	for (index = 0; index < (gint) G_N_ELEMENTS (categories_preset_colors); index++) {
+		guint other = 0;
+		gint distance;
+
+		sscanf (categories_preset_colors[index] + 1, "%x", &other);
+		distance = (r - (gint) ((other >> 16) & 0xFF)) * (r - (gint) ((other >> 16) & 0xFF)) +
+			   (g - (gint) ((other >> 8) & 0xFF)) * (g - (gint) ((other >> 8) & 0xFF)) +
+			   (b - (gint) (other & 0xFF)) * (b - (gint) (other & 0xFF));
+		if (distance < best_distance) {
+			best_distance = distance;
+			best = index;
+		}
+	}
+	g_snprintf (buffer, size, "preset%d", best);
+}
+
+/* Identifiant (Graph : id, Gmail : id du libellé) de la catégorie de ce nom, NULL si absente.
+ * Paramètres : provider, token, name (insensible à la casse). */
+static gchar *
+categories_find_id (EvoCore *core,
+		    AutoReplyProvider provider,
+		    const gchar *token,
+		    const gchar *name,
+		    GError **error)
+{
+	gboolean gmail = provider == AUTOREPLY_PROVIDER_GMAIL;
+	GBytes *bytes = autoreply_http (core, gmail ? AUTOREPLY_PROVIDER_GMAIL_LABELS : AUTOREPLY_PROVIDER_MICROSOFT365,
+		"GET", gmail ? CATEGORIES_GMAIL_URI : CATEGORIES_GRAPH_URI, token, NULL, error);
+	JsonNode *root;
+	JsonObject *object;
+	const gchar *member = gmail ? "labels" : "value";
+	gchar *found = NULL;
+
+	if (!bytes)
+		return NULL;
+	root = autoreply_parse_response (bytes, error);
+	g_bytes_unref (bytes);
+	if (!root)
+		return NULL;
+
+	object = json_node_get_object (root);
+	if (json_object_has_member (object, member) && JSON_NODE_HOLDS_ARRAY (json_object_get_member (object, member))) {
+		JsonArray *array = json_object_get_array_member (object, member);
+		guint ii, count = json_array_get_length (array);
+
+		for (ii = 0; ii < count && !found; ii++) {
+			JsonObject *entry = json_array_get_object_element (array, ii);
+			const gchar *entry_name;
+
+			if (!entry)
+				continue;
+			entry_name = json_object_get_string_member_with_default (entry, gmail ? "name" : "displayName", "");
+			if (gmail && g_strcmp0 (json_object_get_string_member_with_default (entry, "type", ""), "user") != 0)
+				continue;
+			if (g_ascii_strcasecmp (entry_name, name) == 0 || g_utf8_collate (entry_name, name) == 0)
+				found = g_strdup (json_object_get_string_member_with_default (entry, "id", ""));
+		}
+	}
+	json_node_unref (root);
+	if (found && !*found)
+		g_clear_pointer (&found, g_free);
+	return found;
+}
+
+/* Corps JSON {"<member>": "<value>" [, "<member2>": "<value2>"]}. */
+static gchar *
+categories_body (const gchar *member,
+		 const gchar *value,
+		 const gchar *member2,
+		 const gchar *value2)
+{
+	JsonBuilder *builder = json_builder_new ();
+	gchar *body;
+
+	json_builder_begin_object (builder);
+	builder_add_string (builder, member, value);
+	if (member2)
+		builder_add_string (builder, member2, value2);
+	json_builder_end_object (builder);
+	body = json_from_builder (builder);
+	g_object_unref (builder);
+	return body;
+}
+
+/* Crée une catégorie sur le compte (Graph : avec couleur ; Gmail : sans couleur, la palette
+ * des libellés étant imposée). */
+static gboolean
+categories_create (EvoCore *core,
+		   AutoReplyProvider provider,
+		   const gchar *token,
+		   const gchar *name,
+		   const gchar *color_hex,
+		   GError **error)
+{
+	gboolean gmail = provider == AUTOREPLY_PROVIDER_GMAIL;
+	gchar preset[16], *body;
+	GBytes *bytes;
+
+	if (gmail) {
+		body = categories_body ("name", name, "labelListVisibility", "labelShow");
+	} else {
+		categories_nearest_preset (color_hex, preset, sizeof (preset));
+		body = categories_body ("displayName", name, "color", preset);
+	}
+	bytes = autoreply_http (core, gmail ? AUTOREPLY_PROVIDER_GMAIL_LABELS : AUTOREPLY_PROVIDER_MICROSOFT365,
+		"POST", gmail ? CATEGORIES_GMAIL_URI : CATEGORIES_GRAPH_URI, token, body, error);
+	g_free (body);
+	if (!bytes)
+		return FALSE;
+	g_bytes_unref (bytes);
+	return TRUE;
+}
+
+/* Supprime la catégorie d'identifiant id (rien à faire si id est NULL). */
+static gboolean
+categories_delete (EvoCore *core,
+		   AutoReplyProvider provider,
+		   const gchar *token,
+		   const gchar *id,
+		   GError **error)
+{
+	gboolean gmail = provider == AUTOREPLY_PROVIDER_GMAIL;
+	gchar *escaped, *uri;
+	GBytes *bytes;
+
+	if (!id)
+		return TRUE;
+	escaped = g_uri_escape_string (id, NULL, FALSE);
+	uri = g_strdup_printf ("%s/%s", gmail ? CATEGORIES_GMAIL_URI : CATEGORIES_GRAPH_URI, escaped);
+	bytes = autoreply_http (core, gmail ? AUTOREPLY_PROVIDER_GMAIL_LABELS : AUTOREPLY_PROVIDER_MICROSOFT365,
+		"DELETE", uri, token, NULL, error);
+	g_free (uri);
+	g_free (escaped);
+	if (!bytes)
+		return FALSE;
+	g_bytes_unref (bytes);
+	return TRUE;
+}
+
+/* Modifie une catégorie du compte.
+ *   args : [0] = uid du compte, [1] = action ("create", "rename", "recolor", "delete"),
+ *          [2] = nom, [3] = nouveau nom (rename), [4] = couleur « #RRGGBB » (create, recolor, rename)
+ * Retourne : {"ok": true}, NULL sinon. */
+static gchar *
+core_edit_mail_category_run (EvoCore *core,
+			     gchar **args,
+			     GError **error)
+{
+	AutoReplyProvider provider;
+	gchar *token = NULL, *id = NULL, *result = NULL;
+	const gchar *action = args[1], *name = args[2], *new_name = args[3], *color = args[4];
+	gboolean gmail, ok = FALSE;
+
+	if (!autoreply_get_token (core, args[0], &provider, &token, error))
+		return NULL;
+	if (provider != AUTOREPLY_PROVIDER_MICROSOFT365 && provider != AUTOREPLY_PROVIDER_GMAIL) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			"L'envoi des catégories n'est disponible que pour Microsoft 365 / Exchange Online et Gmail.");
+		goto exit;
+	}
+	gmail = provider == AUTOREPLY_PROVIDER_GMAIL;
+
+	if (g_strcmp0 (action, "create") == 0) {
+		ok = categories_create (core, provider, token, name, color, error);
+	} else if (g_strcmp0 (action, "delete") == 0) {
+		id = categories_find_id (core, provider, token, name, error);
+		ok = (id || !(error && *error)) && categories_delete (core, provider, token, id, error);
+	} else if (g_strcmp0 (action, "recolor") == 0) {
+		if (gmail) {
+			ok = TRUE; /* palette de libellés imposée : la couleur reste locale */
+		} else {
+			id = categories_find_id (core, provider, token, name, error);
+			if (id) {
+				gchar preset[16], *uri, *body;
+				GBytes *bytes;
+
+				categories_nearest_preset (color, preset, sizeof (preset));
+				uri = g_strdup_printf ("%s/%s", CATEGORIES_GRAPH_URI, id);
+				body = categories_body ("color", preset, NULL, NULL);
+				bytes = autoreply_http (core, AUTOREPLY_PROVIDER_MICROSOFT365, "PATCH", uri, token, body, error);
+				ok = bytes != NULL;
+				g_clear_pointer (&bytes, g_bytes_unref);
+				g_free (body);
+				g_free (uri);
+			} else {
+				ok = !(error && *error) && categories_create (core, provider, token, name, color, error);
+			}
+		}
+	} else if (g_strcmp0 (action, "rename") == 0 && new_name && *new_name) {
+		id = categories_find_id (core, provider, token, name, error);
+		if (error && *error) {
+			ok = FALSE;
+		} else if (gmail && id) {
+			gchar *uri = g_strdup_printf ("%s/%s", CATEGORIES_GMAIL_URI, id);
+			gchar *body = categories_body ("name", new_name, NULL, NULL);
+			GBytes *bytes = autoreply_http (core, AUTOREPLY_PROVIDER_GMAIL_LABELS, "PATCH", uri, token, body, error);
+
+			ok = bytes != NULL;
+			g_clear_pointer (&bytes, g_bytes_unref);
+			g_free (body);
+			g_free (uri);
+		} else {
+			/* Graph n'autorise pas le changement de nom : suppression puis recréation */
+			ok = categories_delete (core, provider, token, id, error) &&
+				categories_create (core, provider, token, new_name, color, error);
+		}
+	} else {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Action de catégorie invalide : %s", action ? action : "(vide)");
+	}
+
+	if (ok)
+		result = g_strdup ("{\"ok\":true}");
+
+ exit:
+	g_free (id);
+	e_util_safe_free_string (token);
+	return result;
+}
+
+void
+evo_core_edit_mail_category (EvoCore *core,
+			     const char *account_uid,
+			     const char *action,
+			     const char *name,
+			     const char *new_name,
+			     const char *color_hex,
+			     EvoCoreResultFunc func,
+			     void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, (gchar *) action, (gchar *) name,
+		(gchar *) (new_name ? new_name : ""), (gchar *) (color_hex ? color_hex : ""), NULL };
+
+	g_return_if_fail (account_uid != NULL);
+	g_return_if_fail (action != NULL);
+	g_return_if_fail (name != NULL);
+
+	core_submit (core, core_edit_mail_category_run, g_strdupv (args), func, user_data);
 }

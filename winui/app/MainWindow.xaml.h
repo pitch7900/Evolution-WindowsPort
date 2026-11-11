@@ -559,6 +559,9 @@ namespace winrt::EvolutionWin::implementation
         /* Catégories unifiées (MainWindow.Categories.cpp) */
         void RefreshCategoriesView();
         void OnCategoriesRegistryChanged();
+        void PushCategoryChange(std::wstring const& action, std::wstring const& name, std::wstring const& new_name,
+            std::wstring const& color_source, std::vector<std::wstring> const* accounts = nullptr);
+        bool m_categories_auto_imported{ false };
         void RefreshFormatRulesView();
         void OnFormatRulesChanged();
         std::vector<std::pair<winrt::hstring, std::vector<size_t>>> CategoryGroupsForDisplay();

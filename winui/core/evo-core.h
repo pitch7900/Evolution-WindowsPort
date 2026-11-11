@@ -1472,6 +1472,29 @@ void		evo_core_get_mail_categories	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Modifie une catégorie sur un compte Microsoft 365 / Exchange Online (liste principale) ou
+ * Gmail (libellé). Portées OAuth2 : MailboxSettings.ReadWrite (Microsoft 365) ; accès Gmail
+ * complet (déjà accordé pour IMAP). Microsoft 365 ne permettant pas de renommer, un
+ * renommage supprime puis recrée la catégorie. Gmail impose une palette de couleurs de
+ * libellés : la couleur n'y est pas envoyée.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   action      : "create", "rename", "recolor" ou "delete"
+ *   name        : nom de la catégorie (ancien nom pour "rename")
+ *   new_name    : nouveau nom ("rename" ; ignoré sinon, peut être NULL)
+ *   color_hex   : couleur « #RRGGBB » ("create", "recolor", "rename" ; peut être NULL)
+ *   func        : rappel recevant {"ok": true}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_edit_mail_category	(EvoCore *core,
+						 const char *account_uid,
+						 const char *action,
+						 const char *name,
+						 const char *new_name,
+						 const char *color_hex,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Enregistre les réponses automatiques d'un compte Microsoft 365 ou Gmail.
  * Microsoft 365 exige les deux dates ou aucune ; Gmail n'a qu'un message (celui des
  * expéditeurs externes, sinon l'interne) ; l'audience « none » équivaut chez Gmail
