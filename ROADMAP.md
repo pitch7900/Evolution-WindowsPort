@@ -94,9 +94,9 @@ flowchart LR
 - [x] **Filtrage anti-spam** : intégration locale de moteurs de classification (Bogofilter, SpamAssassin ou analyse bayésienne). _(analyse bayésienne locale autonome ; reste à valider sur des comptes réels)_
 
 ### 2. Mode hors-connexion et synchronisation fine (§4)
-- [ ] **Plages de synchronisation par dossier** : réglage de la rétention locale (ex. 1 mois, 6 mois, 1 an, tout l'historique). _(codé : clic droit sur un compte ou un dossier › « Synchronisation hors connexion… » ; reste à valider sur un compte IMAP réel)_
-- [ ] **File d'attente d'actions hors-ligne** : exécution différée des suppressions, déplacements et envois avec réconciliation automatique à la reconnexion. _(codé : journal sur disque, rejeu, réconciliation, liste et annulation dans la barre d'état ; reste à valider sur un compte réel)_
-- [ ] **Résolution des conflits** : détection et arbitrage des modifications concurrentes sur les calendriers et contacts. _(codé : révision / ETag et boîte « Garder la version locale / distante / les deux » ; reste à valider sur CalDAV, CardDAV et EWS réels)_
+- [x] **Plages de synchronisation par dossier** : réglage de la rétention locale (ex. 1 mois, 6 mois, 1 an, tout l'historique). _(codé : clic droit sur un compte ou un dossier › « Synchronisation hors connexion… » ; reste à valider sur un compte IMAP réel)_
+- [x] **File d'attente d'actions hors-ligne** : exécution différée des suppressions, déplacements et envois avec réconciliation automatique à la reconnexion. _(codé : journal sur disque, rejeu, réconciliation, liste et annulation dans la barre d'état ; reste à valider sur un compte réel)_
+- [x] **Résolution des conflits** : détection et arbitrage des modifications concurrentes sur les calendriers et contacts. _(codé : révision / ETag et boîte « Garder la version locale / distante / les deux » ; reste à valider sur CalDAV, CardDAV et EWS réels)_
 
 ### 3. Moteur de recherche avancé (§10)
 - [x] **Indexation plein texte locale** : recherche instantanée dans le corps des messages et le contenu des pièces jointes indexables. _(index inversé maison ; pièces jointes texte seulement, PDF/Office non extraits ; messages non téléchargés et Microsoft 365 : recherche Camel ; reste à valider sur un compte IMAP réel)_
