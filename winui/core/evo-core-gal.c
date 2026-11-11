@@ -866,6 +866,54 @@ gal_ref_m365_collection (EvoCore *core,
 	return found;
 }
 
+/* Diagnostic : journalise l'utilisateur réellement associé au jeton d'un compte
+ * Microsoft 365 (Graph GET /me) et l'état de sa boîte de réception, pour
+ * comprendre un échec de connexion (jeton émis pour un autre utilisateur,
+ * boîte aux lettres absente...). Sans effet pour les autres comptes.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   display_name : nom affiché du compte (service de messagerie) */
+void
+core_log_m365_identity (EvoCore *core,
+			const gchar *display_name)
+{
+	GList *sources, *slink;
+
+	sources = e_source_registry_list_enabled (core->registry, E_SOURCE_EXTENSION_COLLECTION);
+	for (slink = sources; slink; slink = g_list_next (slink)) {
+		ESource *source = slink->data;
+		GalProvider provider;
+		gchar *token = NULL;
+		const gchar *uris[] = {
+			"https://graph.microsoft.com/v1.0/me?$select=id,userPrincipalName,mail",
+			"https://graph.microsoft.com/v1.0/me/mailFolders/inbox?$select=id,displayName,totalItemCount",
+			NULL
+		};
+		guint ii;
+
+		if (!gal_collection_provider (source, &provider) || provider != GAL_PROVIDER_MICROSOFT365 ||
+		    g_strcmp0 (display_name, e_source_get_display_name (source)) != 0)
+			continue;
+		if (!gal_get_token (core, source, &token, NULL)) {
+			g_message ("diagnostic Graph « %s » : jeton d'accès introuvable", display_name);
+			continue;
+		}
+
+		for (ii = 0; uris[ii]; ii++) {
+			guint status = 0;
+			GBytes *bytes = gal_http_get (core, provider, uris[ii], token, &status, NULL);
+			const gchar *body = bytes ? g_bytes_get_data (bytes, NULL) : NULL;
+
+			g_message ("diagnostic Graph « %s » : %s -> HTTP %u %.300s", display_name,
+				strstr (uris[ii], "/me/mailFolders") ? "/me/mailFolders/inbox" : "/me",
+				status, body ? body : "");
+			g_clear_pointer (&bytes, g_bytes_unref);
+		}
+		e_util_safe_free_string (token);
+	}
+	g_list_free_full (sources, g_object_unref);
+}
+
 /* Date Graph {"dateTime": "2026-11-05T09:00:00.0000000", "timeZone": "UTC"} en
  * secondes Unix (0 si absente ou invalide). */
 static gint64

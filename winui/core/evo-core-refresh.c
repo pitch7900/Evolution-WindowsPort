@@ -108,6 +108,7 @@ core_refresh_run (EvoCore *core,
 		if (!core_ensure_connected (core, CAMEL_STORE (service), &local_error)) {
 			g_warning ("Cannot connect “%s”: %s", camel_service_get_display_name (service),
 				local_error ? local_error->message : "?");
+			core_log_m365_identity (core, camel_service_get_display_name (service));
 			core_emit_connection_status (core, uid, "imap", "error",
 				local_error ? local_error->message : "Échec de connexion au serveur");
 			g_clear_error (&local_error);

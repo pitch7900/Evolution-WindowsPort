@@ -347,6 +347,11 @@ core_crypto_verify_multipart_signed (CamelMultipart *signed_part,
 void
 core_crypto_info_clear (CoreCryptoInfo *info);
 
+/* evo-core-gal.c */
+void
+core_log_m365_identity (EvoCore *core,
+			const gchar *display_name);
+
 /* evo-core-send.c */
 ESource *
 core_ref_identity (EvoCore *core,
