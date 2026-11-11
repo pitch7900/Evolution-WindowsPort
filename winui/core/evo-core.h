@@ -1004,6 +1004,23 @@ void		evo_core_get_gal_photo		(EvoCore *core,
  *   step : libellé de l'étape franchie */
 void		evo_core_trace			(const char *step);
 
+/* État d'une invitation dans l'agenda : cherche l'événement (UID du bandeau d'invitation) dans
+ * l'agenda par défaut et dans les agendas du compte qui a reçu le message. Peut durer longtemps
+ * (agenda Microsoft 365 à ouvrir) : l'interface l'appelle après l'affichage du message. Le résultat
+ * est mémorisé (10 min si trouvé, 1 min sinon).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : compte qui a reçu le message
+ *   event_uid   : UID de l'événement
+ *   func        : rappel recevant {"found": true|false, "my_status": "accepted|declined|tentative|needs-action",
+ *                 "sequence": n}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_find_invitation_event	(EvoCore *core,
+						 const char *account_uid,
+						 const char *event_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Photo d'un expéditeur ou d'un correspondant, retrouvée par son adresse :
  * annuaire du compte (Microsoft 365 ou Google Workspace) si le domaine de
  * l'adresse est celui d'un compte, puis carnets d'adresses personnels. Le

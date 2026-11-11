@@ -122,9 +122,16 @@ namespace winrt::EvolutionWin::implementation
             std::wstring_view{ organizer_email });
         bool is_organizer = inv.GetNamedBoolean(L"is_organizer", false);
         bool in_calendar = inv.GetNamedBoolean(L"already_in_calendar", false);
+        /* FALSE tant que la recherche dans l'agenda (asynchrone) n'est pas terminée */
+        bool calendar_checked = inv.GetNamedBoolean(L"calendar_checked", true);
         Answer mine = ParseAnswer(std::wstring_view{ inv.GetNamedString(L"my_status", L"") });
 
         BannerState state = Decide(kind, is_organizer, !organizer_email.empty(), in_calendar);
+
+        /* l'état dans l'agenda se complète en tâche de fond, sans retarder l'affichage du message */
+        if (!calendar_checked)
+            CheckInvitationInCalendar();
+
         if (!state.visible)
             return;
 
@@ -180,6 +187,9 @@ namespace winrt::EvolutionWin::implementation
             else if (kind == Kind::Request && (mine == Answer::Accepted || mine == Answer::Tentative))
                 state.tone = Tone::Success;
         }
+        /* état dans l'agenda encore inconnu : on n'affirme rien (« Merci de répondre » serait faux pour une invitation déjà acceptée) */
+        if (!calendar_checked && kind != Kind::Reply)
+            status_text.clear();
         InviteState().Text(hstring{ status_text });
         InviteState().Visibility(status_text.empty() ? Visibility::Collapsed : Visibility::Visible);
 
@@ -204,6 +214,42 @@ namespace winrt::EvolutionWin::implementation
 
         InviteBar().Severity(SeverityOf(state.tone));
         InviteBar().IsOpen(true);
+    }
+
+    /**
+     * @brief Cherche l'événement de l'invitation affichée dans l'agenda (en tâche de fond) puis complète
+     *        le bandeau : déjà dans l'agenda, réponse déjà donnée (acceptée, provisoire, refusée).
+     */
+    void MainWindow::CheckInvitationInCalendar()
+    {
+        if (!m_current_message || !m_current_message.HasKey(L"invitation") || m_current_message_account.empty())
+            return;
+
+        hstring event_uid = m_current_message.GetNamedObject(L"invitation", JsonObject{}).GetNamedString(L"uid", L"");
+        if (event_uid.empty())
+            return;
+
+        hstring message_uid = m_current_message_uid;
+        m_core->FindInvitationEvent(m_current_message_account, event_uid,
+            [this, message_uid](hstring const& json, hstring const& error)
+        {
+            if (!m_current_message || m_current_message_uid != message_uid || !m_current_message.HasKey(L"invitation"))
+                return;   /* un autre message est affiché entre-temps */
+
+            JsonObject inv = m_current_message.GetNamedObject(L"invitation", JsonObject{});
+            JsonObject result;
+            if (error.empty() && JsonObject::TryParse(json, result) && result.GetNamedBoolean(L"found", false))
+            {
+                inv.SetNamedValue(L"already_in_calendar", JsonValue::CreateBooleanValue(true));
+                inv.SetNamedValue(L"calendar_sequence", JsonValue::CreateNumberValue(result.GetNamedNumber(L"sequence", 0)));
+                /* une réponse donnée depuis l'application (étiquette du message) prime sur l'agenda */
+                if (inv.GetNamedString(L"my_status", L"needs-action") == L"needs-action")
+                    inv.SetNamedValue(L"my_status", JsonValue::CreateStringValue(result.GetNamedString(L"my_status", L"needs-action")));
+            }
+            /* en cas d'échec ou d'événement introuvable : état par défaut, le bandeau ne reste pas en attente */
+            inv.SetNamedValue(L"calendar_checked", JsonValue::CreateBooleanValue(true));
+            UpdateInvitationBar(m_current_message);
+        });
     }
 
     /**

@@ -323,7 +323,7 @@ itip_find_event (EvoCore *core,
  * Émet un membre « invitation » si le message contient une partie iCalendar décrivant
  * un événement : {method, uid, sequence, summary, start, end, all_day, location,
  * recurring, instance, status, organizer{name,email}, attendees[], is_organizer,
- * my_status, already_in_calendar, calendar_sequence}. */
+ * my_status, already_in_calendar, calendar_checked, calendar_sequence}. */
 void
 core_invitation_describe (EvoCore *core,
 			  const gchar *account_uid,
@@ -339,7 +339,7 @@ core_invitation_describe (EvoCore *core,
 	const gchar *my_status = "needs-action", *tag;
 	gint64 start, end;
 	gint attendee_index, existing_sequence = 0, ii;
-	gboolean in_calendar = FALSE, is_organizer;
+	gboolean in_calendar = FALSE, is_organizer, calendar_checked;
 
 	text = find_calendar_part (CAMEL_MIME_PART (message), core->cancellable, &method_param);
 	if (!text || !evo_itip_parse (text, itip)) {
@@ -363,15 +363,10 @@ core_invitation_describe (EvoCore *core,
 	if (attendee_index >= 0)
 		my_status = evo_itip_response_from_partstat (itip->attendees[attendee_index].partstat);
 
-	/* présent dans un agenda ? (inutile pour une réponse reçue) */
-	if (g_strcmp0 (itip->method, "REQUEST") == 0 || g_strcmp0 (itip->method, "CANCEL") == 0) {
-		if (itip_find_event (core, account_uid, itip->uid, NULL, &existing, 2500)) {
-			in_calendar = TRUE;
-			existing_sequence = i_cal_component_get_sequence (existing);
-			if (my_address && g_strcmp0 (itip_component_response (existing, my_address), "needs-action") != 0)
-				my_status = itip_component_response (existing, my_address);
-		}
-	}
+	/* présent dans un agenda ? Ouvrir un agenda Microsoft 365 peut prendre plus d'une minute : la
+	 * recherche n'est plus faite ici, pour que le message s'affiche tout de suite. L'interface la
+	 * demande ensuite (evo_core_find_invitation_event) et complète le bandeau. */
+	calendar_checked = !(g_strcmp0 (itip->method, "REQUEST") == 0 || g_strcmp0 (itip->method, "CANCEL") == 0);
 
 	/* réponse déjà donnée depuis cette application */
 	info = camel_folder_get_message_info (folder, message_uid);
@@ -416,6 +411,7 @@ core_invitation_describe (EvoCore *core,
 	builder_add_boolean (builder, "is_organizer", is_organizer);
 	builder_add_string (builder, "my_status", my_status);
 	builder_add_boolean (builder, "already_in_calendar", in_calendar);
+	builder_add_boolean (builder, "calendar_checked", calendar_checked);
 	builder_add_int (builder, "calendar_sequence", existing_sequence);
 	json_builder_end_object (builder);
 
@@ -426,6 +422,101 @@ core_invitation_describe (EvoCore *core,
 	g_free (method_param);
 	g_free (text);
 	g_free (itip);
+}
+
+/* --- état d'une invitation dans l'agenda (recherche asynchrone) --- */
+
+typedef struct {
+	gchar *json;
+	gint64 expires_at;	/* horloge monotone, µs */
+} ItipCacheEntry;
+
+static GMutex itip_cache_lock;
+static GHashTable *itip_cache = NULL;
+
+static void
+itip_cache_entry_free (gpointer data)
+{
+	ItipCacheEntry *entry = data;
+
+	g_free (entry->json);
+	g_free (entry);
+}
+
+/* Cherche l'événement d'une invitation dans les agendas du compte et renvoie son état.
+ * Le résultat est mémorisé (10 min si trouvé, 1 min sinon) : les clics suivants sont instantanés.
+ * Paramètres :
+ *   core  : moteur
+ *   args  : [0] = compte qui a reçu le message, [1] = UID de l'événement
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : {"found": bool, "my_status": "accepted|declined|tentative|needs-action", "sequence": n}. */
+static gchar *
+core_find_invitation_event_run (EvoCore *core,
+				gchar **args,
+				GError **error)
+{
+	gchar *key = g_strconcat (args[0] ? args[0] : "", "\x1F", args[1] ? args[1] : "", NULL);
+	gchar *json = NULL;
+	ItipCacheEntry *entry;
+
+	g_mutex_lock (&itip_cache_lock);
+	if (!itip_cache)
+		itip_cache = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, itip_cache_entry_free);
+	entry = g_hash_table_lookup (itip_cache, key);
+	if (entry && entry->expires_at > g_get_monotonic_time ())
+		json = g_strdup (entry->json);
+	g_mutex_unlock (&itip_cache_lock);
+
+	if (!json) {
+		ICalComponent *existing = NULL;
+		gboolean found = itip_find_event (core, args[0], args[1], NULL, &existing, 60000);
+		gchar *my_address = found ? itip_identity_address (core, args[0], NULL) : NULL;
+		JsonBuilder *builder = json_builder_new ();
+
+		json_builder_begin_object (builder);
+		builder_add_boolean (builder, "found", found);
+		builder_add_string (builder, "my_status", found && my_address ? itip_component_response (existing, my_address) : "needs-action");
+		builder_add_int (builder, "sequence", found ? i_cal_component_get_sequence (existing) : 0);
+		json_builder_end_object (builder);
+		json = json_from_builder (builder);
+
+		entry = g_new0 (ItipCacheEntry, 1);
+		entry->json = g_strdup (json);
+		entry->expires_at = g_get_monotonic_time () + (found ? 600 : 60) * G_USEC_PER_SEC;
+		g_mutex_lock (&itip_cache_lock);
+		g_hash_table_insert (itip_cache, g_strdup (key), entry);
+		g_mutex_unlock (&itip_cache_lock);
+
+		g_object_unref (builder);
+		g_clear_object (&existing);
+		g_free (my_address);
+	}
+
+	g_free (key);
+
+	return json;
+}
+
+/* Soumet la recherche de l'état d'une invitation dans l'agenda (voir evo-core.h).
+ * Paramètres :
+ *   core        : moteur
+ *   account_uid : compte qui a reçu le message
+ *   event_uid   : UID de l'événement (membre « uid » de l'invitation)
+ *   func        : rappel recevant {"found", "my_status", "sequence"}
+ *   user_data   : données utilisateur transmises au rappel */
+void
+evo_core_find_invitation_event (EvoCore *core,
+				const char *account_uid,
+				const char *event_uid,
+				EvoCoreResultFunc func,
+				void *user_data)
+{
+	gchar *args[] = { (gchar *) (account_uid ? account_uid : ""), (gchar *) (event_uid ? event_uid : ""), NULL };
+
+	g_return_if_fail (core != NULL);
+
+	/* peut durer longtemps (agenda Microsoft 365 à ouvrir) : tâche de fond */
+	core_submit_background (core, core_find_invitation_event_run, g_strdupv (args), func, user_data);
 }
 
 /* Fixe le PARTSTAT d'une adresse dans un événement ; ajoute le participant s'il

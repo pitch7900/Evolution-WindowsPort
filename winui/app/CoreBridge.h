@@ -58,6 +58,13 @@ namespace EvolutionWin
                 max_count, &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* État d'une invitation dans l'agenda : {"found", "my_status", "sequence"} (peut être long). */
+        void FindInvitationEvent(winrt::hstring const& account, winrt::hstring const& event_uid, CoreHandler handler)
+        {
+            evo_core_find_invitation_event(m_core, winrt::to_string(account).c_str(), winrt::to_string(event_uid).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Relit la liste d'un dossier depuis le cache local, sans relève du serveur (mise à jour
          * de la liste affichée à la fin d'une relève en fond). */
         void ReloadMessages(winrt::hstring const& account, winrt::hstring const& folder, unsigned max_count, CoreHandler handler)

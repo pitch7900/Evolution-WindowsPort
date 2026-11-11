@@ -600,6 +600,7 @@ namespace winrt::EvolutionWin::implementation
         void TrustCurrentSender(hstring const& key, std::wstring const& entry, hstring const& label);
         void RefreshPrivacyView();
         void UpdateInvitationBar(Windows::Data::Json::JsonObject const& message);
+        void CheckInvitationInCalendar();
         void HideInvitationBar();
         void RespondToInvitation(hstring const& response);
         void UpdateReceiptBars(Windows::Data::Json::JsonObject const& message);
