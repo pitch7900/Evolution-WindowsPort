@@ -6,6 +6,7 @@
 #include "MessageWindow.xaml.h"
 #include "SplashWindow.xaml.h"
 #include "Categories.h"
+#include "Rules.h"
 
 #include <map>
 #include <set>
@@ -222,6 +223,16 @@ namespace winrt::EvolutionWin::implementation
         fire_and_forget ShowDelegatesDialogAsync(winrt::hstring account, winrt::hstring name);
         fire_and_forget ShowOfflineSyncDialogAsync(winrt::hstring account, winrt::hstring folder, winrt::hstring name, Windows::Data::Json::JsonObject data);
 
+        /* File d'attente des actions hors ligne et résolution des conflits (MainWindow.OfflineQueue.cpp) */
+        void OnPendingActionsButtonClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void RefreshPendingActions();
+        void OnPendingActionsCancelAllClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnPendingActionsReplayClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void UpdatePendingActionsBadge(int pending, int failed);
+        void OnOfflineReplayEvent(Windows::Data::Json::JsonObject const& report);
+        fire_and_forget ShowConflictDialogAsync(winrt::hstring kind, Windows::Data::Json::JsonObject conflict,
+            Windows::Data::Json::JsonObject request, std::function<void()> on_done);
+
         /* Écran de démarrage (Splash screen) */
         void SetSplashWindow(winrt::EvolutionWin::SplashWindow const& splash);
         void CloseSplash();
@@ -401,6 +412,16 @@ namespace winrt::EvolutionWin::implementation
         void OnThemeChoiceChanged(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+        /* Index plein texte local (MainWindow.Index.cpp) : gestionnaires de la section des Paramètres */
+        void OnFullTextIndexToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnFullTextIndexRebuildClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
+        /* Filtre anti-spam (MainWindow.Spam.cpp) : gestionnaires de la section des Paramètres */
+        void OnSpamEnabledToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnSpamThresholdChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::Primitives::RangeBaseValueChangedEventArgs const& args);
+        void OnSpamLearnClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnSpamResetClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
         void OnSettingToggleChanged(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -412,16 +433,6 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
         void OnSettingTextBoxLostFocus(
             Windows::Foundation::IInspectable const& sender,
-        /* Index plein texte local (MainWindow.Index.cpp) : gestionnaires de la section des Paramètres */
-        void OnFullTextIndexToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
-        void OnFullTextIndexRebuildClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
-
-        /* Filtre anti-spam (MainWindow.Spam.cpp) : gestionnaires de la section des Paramètres */
-        void OnSpamEnabledToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
-        void OnSpamThresholdChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::Primitives::RangeBaseValueChangedEventArgs const& args);
-        void OnSpamLearnClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
-        void OnSpamResetClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
-
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnCheckUpdateNowClick(
             Windows::Foundation::IInspectable const& sender,
@@ -566,17 +577,6 @@ namespace winrt::EvolutionWin::implementation
         void ToggleCategoryForMessages(std::vector<hstring> const& uids, std::wstring const& category_name, bool apply);
         void ClearCategoriesForMessages(std::vector<hstring> const& uids);
 
-        /* Catégories unifiées (MainWindow.Categories.cpp) */
-        void RefreshCategoriesView();
-        void OnCategoriesRegistryChanged();
-        void PushCategoryChange(std::wstring const& action, std::wstring const& name, std::wstring const& new_name,
-            std::wstring const& color_source, std::vector<std::wstring> const* accounts = nullptr);
-        bool m_categories_auto_imported{ false };
-        void RefreshFormatRulesView();
-        void OnFormatRulesChanged();
-        std::vector<std::pair<winrt::hstring, std::vector<size_t>>> CategoryGroupsForDisplay();
-        void ImportAccountCategories(Microsoft::UI::Xaml::Controls::Button const& button);
-        void PopulateItemCategoryMenu(
         /* Index plein texte local (MainWindow.Index.cpp) */
         void ApplyFullTextIndexSetting();
         void InitFullTextIndexSettingsView();
@@ -590,6 +590,29 @@ namespace winrt::EvolutionWin::implementation
             std::function<void()> const& then);
         void ShowSpamFilteredNotice(Windows::Data::Json::JsonObject const& object);
 
+        /* Catégories unifiées (MainWindow.Categories.cpp) */
+        void RefreshCategoriesView();
+
+        /* Règles de messagerie (MainWindow.Rules.cpp ; logique pure dans Rules.h) */
+        void RefreshRulesView();
+        void OnRulesChanged();
+        fire_and_forget EditRuleAsync(::EvolutionWin::Rules::Rule rule, bool is_new);
+        fire_and_forget ShowQuickRuleDialogAsync(hstring uid);
+        Microsoft::UI::Xaml::Controls::MenuFlyoutItem MakeCreateRuleMenuItem(hstring uid);
+        void ApplyRulesToMessages(hstring account, hstring folder, Windows::Data::Json::JsonArray messages, bool at_reception);
+        void ApplyRulesToNewMail(hstring account, hstring folder);
+        void RunRulesOnFolder(hstring account, hstring folder);
+        fire_and_forget SyncServerRulesFor(hstring account);
+        void AppendRuleFolderItem(Microsoft::UI::Xaml::Controls::MenuFlyout const& menu, hstring const& account, hstring const& folder);
+        void OnCategoriesRegistryChanged();
+        void PushCategoryChange(std::wstring const& action, std::wstring const& name, std::wstring const& new_name,
+            std::wstring const& color_source, std::vector<std::wstring> const* accounts = nullptr);
+        bool m_categories_auto_imported{ false };
+        void RefreshFormatRulesView();
+        void OnFormatRulesChanged();
+        std::vector<std::pair<winrt::hstring, std::vector<size_t>>> CategoryGroupsForDisplay();
+        void ImportAccountCategories(Microsoft::UI::Xaml::Controls::Button const& button);
+        void PopulateItemCategoryMenu(
             Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items,
             std::vector<std::wstring> const& current,
             std::function<void(std::vector<std::wstring> const&)> apply);

@@ -148,7 +148,7 @@ core_folder_action_run (EvoCore *core,
  *           [5] "copy" pour copier (l'original reste en place), facultatif
  *   error : emplacement d'erreur GError
  * Retourne : "{}" en cas de succès, ou NULL en cas d'erreur. */
-static gchar *
+gchar *
 core_move_message_run (EvoCore *core,
 		       gchar **args,
 		       GError **error)
@@ -1401,7 +1401,7 @@ evo_core_copy_message (EvoCore *core,
 	g_return_if_fail (src_account_uid != NULL && src_folder_full_name != NULL && message_uid != NULL);
 	g_return_if_fail (dest_account_uid != NULL && dest_folder_full_name != NULL);
 
-	core_submit (core, core_move_message_run, g_strdupv (args), func, user_data);
+	core_submit (core, core_oq_move_run, g_strdupv (args), func, user_data);
 }
 
 void
@@ -1429,7 +1429,7 @@ evo_core_move_message (EvoCore *core,
 	g_return_if_fail (dest_account_uid != NULL);
 	g_return_if_fail (dest_folder_full_name != NULL);
 
-	core_submit (core, core_move_message_run, g_strdupv (args), func, user_data);
+	core_submit (core, core_oq_move_run, g_strdupv (args), func, user_data);
 }
 
 /* Soumet la création d'un dossier.

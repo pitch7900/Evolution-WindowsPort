@@ -117,6 +117,8 @@
     <ResourceCompile Include="EvolutionWin.rc" />
     <ClInclude Include="WindowIcon.h" />
     <ClInclude Include="Categories.h" />
+    <ClInclude Include="Rules.h" />
+    <ClInclude Include="RuleStore.h" />
     <ClInclude Include="CategoryStore.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="Signatures.h" />
@@ -268,6 +270,9 @@
     <ClCompile Include="MainWindow.OfflineSync.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="MainWindow.OfflineQueue.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
     <ClCompile Include="MainWindow.FolderPicker.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
@@ -298,11 +303,6 @@
     <ClCompile Include="MainWindow.Categories.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
-    <ClCompile Include="MainWindow.Settings.cpp">
-      <DependentUpon>MainWindow.xaml</DependentUpon>
-    </ClCompile>
-    <ClCompile Include="ComposeWindow.xaml.cpp">
-      <DependentUpon>ComposeWindow.xaml</DependentUpon>
     <ClCompile Include="MainWindow.Rules.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
@@ -312,6 +312,11 @@
     <ClCompile Include="MainWindow.Spam.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="MainWindow.Settings.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="ComposeWindow.xaml.cpp">
+      <DependentUpon>ComposeWindow.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="MessageWindow.xaml.cpp">
       <DependentUpon>MessageWindow.xaml</DependentUpon>

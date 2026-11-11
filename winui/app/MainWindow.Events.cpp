@@ -1837,11 +1837,19 @@ namespace winrt::EvolutionWin::implementation
             payload.SetNamedValue(L"uid", JsonValue::CreateStringValue(event.GetNamedString(L"uid", L"")));
             hstring edit_calendar = event.GetNamedString(L"calendar_uid", L"");
             hstring edit_uid = event.GetNamedString(L"uid", L"");
-            m_core->ModifyEvent(payload.Stringify(), [this, sender_uid, edit_calendar, edit_uid](hstring const&, hstring const& error)
+            /* révision chargée : le moteur refuse d'écraser une modification concurrente */
+            payload.SetNamedValue(L"base_revision", JsonValue::CreateStringValue(event.GetNamedString(L"revision", L"")));
+            m_core->ModifyEvent(payload.Stringify(), [this, payload, sender_uid, edit_calendar, edit_uid](hstring const& json, hstring const& error)
             {
                 if (!error.empty())
                 {
                     ShowStatus(EventSaveErrorText(m_calendar_sources, edit_calendar, Tr(L"Modification de l'événement : {0}"), error), InfoBarSeverity::Error);
+                    return;
+                }
+                JsonObject outcome;
+                if (JsonObject::TryParse(json, outcome) && outcome.GetNamedBoolean(L"conflict", false))
+                {
+                    ShowConflictDialogAsync(L"event", outcome, payload, [this]() { LoadEvents(); });
                     return;
                 }
                 ShowStatus(Tr(L"Événement modifié."), InfoBarSeverity::Success);

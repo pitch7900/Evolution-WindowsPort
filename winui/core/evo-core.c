@@ -455,6 +455,7 @@ evo_core_set_offline (EvoCore *core,
 			offline ? "Mode hors connexion activé" : "Connexion en cours...");
 
 		if (!offline) {
+			core_oq_replay (core);
 			core_process_outbox (core);
 			evo_core_refresh (core);
 		}

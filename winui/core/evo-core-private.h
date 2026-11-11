@@ -333,6 +333,48 @@ void
 core_emit_folders_updated (EvoCore *core,
 			   const gchar *account_uid);
 
+/* Exécutants des actions de message, appelés directement par le rejeu hors ligne */
+gchar *
+core_move_message_run (EvoCore *core, gchar **args, GError **error);
+gchar *
+core_delete_message_run (EvoCore *core, gchar **args, GError **error);
+gchar *
+core_set_message_flags_run (EvoCore *core, gchar **args, GError **error);
+
+/* evo-core-offline-queue.c : file d'attente des actions hors ligne */
+gchar *
+core_oq_delete_run (EvoCore *core, gchar **args, GError **error);
+gchar *
+core_oq_move_run (EvoCore *core, gchar **args, GError **error);
+gchar *
+core_oq_flags_run (EvoCore *core, gchar **args, GError **error);
+gboolean
+core_oq_is_offline (EvoCore *core);
+gboolean
+core_oq_is_pending_removal (const gchar *account,
+			    const gchar *folder,
+			    const gchar *uid);
+void
+core_oq_replay (EvoCore *core);
+
+/* evo-core-conflicts.c : détection des modifications concurrentes (événements, contacts) */
+gchar *
+core_conflict_event_revision (ICalComponent *icomp);
+gchar *
+core_conflict_contact_revision (EContact *contact);
+void
+core_conflict_strip_server_props (ICalComponent *icomp);
+gchar *
+core_conflict_event_json (JsonObject *local,
+			  ICalComponent *remote,
+			  const gchar *revision,
+			  gint *out_count);
+gchar *
+core_conflict_contact_json (JsonObject *local,
+			    EContact *remote,
+			    const gchar *revision,
+			    gint *out_count);
+
 /* evo-core-message-read.c */
 gchar *
 part_get_text (CamelMimePart *part,
@@ -500,13 +542,6 @@ core_set_google_mail_settings (ESource *source,
 			       guint16 port,
 			       const gchar *email);
 
-/* evo-core-sources.c */
-gchar *
-unique_file_path (const gchar *dir,
-		  const gchar *name,
-		  const gchar *ext);
-
-#endif /* EVO_CORE_PRIVATE_H */
 /* evo-core-index.c : index plein texte local (corps des messages et pièces jointes texte) */
 void
 core_index_folder_changed (EvoCore *core,
@@ -533,3 +568,10 @@ core_graph_request (EvoCore *core,
 		    const gchar *body,
 		    GError **error);
 
+/* evo-core-sources.c */
+gchar *
+unique_file_path (const gchar *dir,
+		  const gchar *name,
+		  const gchar *ext);
+
+#endif /* EVO_CORE_PRIVATE_H */

@@ -436,18 +436,24 @@ namespace winrt::EvolutionWin::implementation
             }
             ShowStatus(display_status, InfoBarSeverity::Informational);
         }
+        else if (event == L"index-progress")
+        {
+            ShowFullTextIndexStatus(object);
+        }
         else if (event == L"new-mail")
         {
             ShowNewMailNotification(object);
+            /* règles de messagerie : classement des messages arrivés (MainWindow.Rules.cpp) */
+            ApplyRulesToNewMail(object.GetNamedString(L"account", L""), object.GetNamedString(L"folder", L""));
+        }
+        else if (event == L"spam-filtered")
+        {
+            ShowSpamFilteredNotice(object);
         }
         else if (event == L"progress")
         {
             bool active = object.GetNamedBoolean(L"active", true);
             int32_t percent = static_cast<int32_t>(object.GetNamedNumber(L"percent", -1));
-        else if (event == L"spam-filtered")
-        {
-            ShowSpamFilteredNotice(object);
-        }
             hstring progress_text = message;
             if (object.GetNamedString(L"kind", L"") == L"offline")
             {
@@ -472,6 +478,15 @@ namespace winrt::EvolutionWin::implementation
                         : Fmt(Tr(L"Transfert du dossier « {0} » : {1} message(s)"), { label, to_hstring(done) });
             }
             UpdateStatusBarProgress(active, progress_text, percent);
+        }
+        else if (event == L"offline-queue")
+        {
+            UpdatePendingActionsBadge(static_cast<int>(object.GetNamedNumber(L"pending", 0)),
+                static_cast<int>(object.GetNamedNumber(L"failed", 0)));
+        }
+        else if (event == L"offline-replay")
+        {
+            OnOfflineReplayEvent(object);
         }
         else if (event == L"connection-status")
         {
@@ -826,6 +841,8 @@ namespace winrt::EvolutionWin::implementation
             TasksViewPane().Visibility(Visibility::Collapsed);
             SettingsViewPane().Visibility(Visibility::Visible);
             InitSettingsView();
+            InitSpamSettingsView();
+            InitFullTextIndexSettingsView();
             SelectSettingsCategory(m_current_settings_category);
             UpdateTodoBarVisibility();
             return;
@@ -839,8 +856,6 @@ namespace winrt::EvolutionWin::implementation
 
         if (auto box = SearchBox())
         {
-            InitSpamSettingsView();
-            InitFullTextIndexSettingsView();
             if (tag == L"contacts")
                 box.PlaceholderText(Tr(L"Rechercher un contact (Ctrl+E)", L"Search contact (Ctrl+E)"));
             else if (tag == L"mail")

@@ -400,11 +400,20 @@ namespace winrt::EvolutionWin::implementation
         payload.SetNamedValue(L"org", JsonValue::CreateStringValue(org_box.Text()));
         payload.SetNamedValue(L"notes", JsonValue::CreateStringValue(note_box.Text()));
 
-        m_core->ModifyContact(payload.Stringify(), [this](hstring const&, hstring const& error)
+        /* révision chargée : le moteur refuse d'écraser une modification concurrente */
+        payload.SetNamedValue(L"base_revision", JsonValue::CreateStringValue(m_selected_contact.GetNamedString(L"revision", L"")));
+
+        m_core->ModifyContact(payload.Stringify(), [this, payload](hstring const& json, hstring const& error)
         {
             if (!error.empty())
             {
                 ShowStatus(Fmt(Tr(L"Modification du contact : {0}"), { error }), InfoBarSeverity::Error);
+                return;
+            }
+            JsonObject outcome;
+            if (JsonObject::TryParse(json, outcome) && outcome.GetNamedBoolean(L"conflict", false))
+            {
+                ShowConflictDialogAsync(L"contact", outcome, payload, [this]() { LoadContacts(ContactSearchBox().Text()); });
                 return;
             }
             ShowStatus(Tr(L"Contact modifié avec succès."), InfoBarSeverity::Success);

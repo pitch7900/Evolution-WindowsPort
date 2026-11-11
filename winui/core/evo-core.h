@@ -1560,6 +1560,58 @@ void		evo_core_offline_sync_now	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* File d'attente des actions hors ligne : les suppressions, déplacements, copies et changements
+ * d'indicateurs demandés hors connexion (ou qui échouent faute de réseau) sont journalisés sur
+ * disque (%LOCALAPPDATA%\EvolutionWin\offline-queue.json) et rejoués dans l'ordre au retour du
+ * réseau, avec réconciliation (message disparu du serveur : action abandonnée sans erreur).
+ * Les exécutants habituels (evo_core_delete_message, evo_core_move_message, evo_core_copy_message,
+ * evo_core_set_message_flags) répondent alors {"queued": true, "result": "added"|"merged"|"dropped"|"full"}
+ * et les messages promis à la suppression / au déplacement sont masqués des listes jusqu'au rejeu.
+ * Événements : « offline-queue » {"pending", "failed"} à chaque changement de la file,
+ * « offline-replay » {"done", "gone", "failed", "remaining"} à la fin d'un rejeu qui a agi. */
+
+/* Liste les actions en attente (journal et messages de la Boîte d'envoi).
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   func      : rappel recevant {"pending", "failed", "actions": [{"id", "kind":
+ *               "delete"|"move"|"copy"|"flag"|"send", "account", "folder", "uid", "subject",
+ *               "dest_account", "dest_folder", "flag", "value", "created", "attempts",
+ *               "status" (0 en attente, 1 abandonnée), "error"}]} ("send" : id "send:<uid>")
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_offline_queue_list	(EvoCore *core,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Annule une action en attente (changement d'indicateur rétabli localement, message supprimé
+ * ou déplacé de nouveau visible, envoi retiré de la Boîte d'envoi).
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   action_id : identifiant donné par evo_core_offline_queue_list
+ *   func      : rappel recevant {"cancelled": true|false}
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_offline_queue_cancel	(EvoCore *core,
+						 const char *action_id,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Annule toutes les actions du journal (la Boîte d'envoi n'est pas touchée).
+ * Paramètres : comme evo_core_offline_queue_list ; func reçoit {"cancelled": nombre} */
+void		evo_core_offline_queue_cancel_all	(EvoCore *core,
+							 EvoCoreResultFunc func,
+							 void *user_data);
+
+/* Rejoue la file maintenant (sans attendre un retour du réseau ni les délais de nouvelle tentative).
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   force     : non nul pour relancer aussi les actions abandonnées après trop d'échecs
+ *   func      : rappel recevant {"status": "done"|"offline"|"busy"|"interrupted", "done", "gone",
+ *               "failed", "waiting", "remaining"}
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_offline_queue_replay	(EvoCore *core,
+						 int force,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Liste les délégués de la boîte Gmail d'un compte (API Gmail settings.delegates, portée
  * gmail.settings.sharing, comptes Google Workspace). Erreur explicative pour les autres
  * comptes (Microsoft 365 : droits gérés dans le centre d'administration Exchange).
@@ -1600,6 +1652,55 @@ void		evo_core_remove_delegate	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Lit le Cc et les en-têtes d'un message SANS le marquer comme lu (règles côté client :
+ * critères sur les destinataires et les en-têtes, absents de la liste des messages).
+ * Paramètres :
+ *   core, account_uid, folder_full_name, message_uid : message visé
+ *   func : rappel recevant {"cc": "...", "headers": {"Nom": "valeur", ...}} (un en-tête répété
+ *          est joint par des virgules ; valeurs tronquées à 2000 caractères)
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_get_message_headers	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *message_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Règles côté serveur, Exchange Online : remplace dans la boîte (dossier Boîte de réception)
+ * les règles dont le nom commence par « [Evolution] » par celles fournies (Microsoft Graph,
+ * messageRules ; autorisation MailboxSettings.ReadWrite). Les règles de l'utilisateur ne sont jamais touchées.
+ * Paramètres :
+ *   core, account_uid : compte Microsoft 365
+ *   rules_json : tableau d'objets messageRule ; les membres actions.moveToFolder et actions.copyToFolder
+ *                contiennent un chemin de dossier Camel (« INBOX/Factures »), remplacé par l'identifiant Graph
+ *   func : rappel recevant {"removed": n, "created": n}
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_sync_server_rules	(EvoCore *core,
+						 const char *account_uid,
+						 const char *rules_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Règles côté serveur, IMAP : envoie un script Sieve par ManageSieve (RFC 5804) avec STARTTLS et
+ * authentification PLAIN (identifiant et mot de passe du compte), puis l'active si demandé
+ * (ce qui remplace le script actif du serveur).
+ * Paramètres :
+ *   core, account_uid : compte IMAP
+ *   script_name : nom du script sur le serveur
+ *   script : texte du script Sieve (UTF-8)
+ *   activate : non nul pour activer le script après l'envoi
+ *   port : port ManageSieve (NULL ou vide : 4190)
+ *   func : rappel recevant {"uploaded": true, "active": bool}
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_managesieve_put	(EvoCore *core,
+						 const char *account_uid,
+						 const char *script_name,
+						 const char *script,
+						 int activate,
+						 const char *port,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Versions des composants du moteur, pour la boîte « À propos » et les
  * rapports de bug (sans instance du moteur, appel synchrone) :
  * {"evolution_data_server": "3.63.1", "evolution_ews": "3.63.1" (vide si
@@ -1607,11 +1708,6 @@ void		evo_core_remove_delegate	(EvoCore *core,
  * Retourne : chaîne JSON statique, à ne pas libérer. */
 const char *	evo_core_version_info		(void);
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* EVO_CORE_H */
 /* ---- Filtrage anti-spam local (classificateur bayésien, evo-core-spam.c) ----
  * Événement émis : "spam-filtered" {"account", "folder", "junk_folder", "count"}
  * quand des messages arrivés dans la boîte de réception sont classés
@@ -1700,3 +1796,8 @@ void		evo_core_index_rebuild		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* EVO_CORE_H */

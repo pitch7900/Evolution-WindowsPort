@@ -337,6 +337,38 @@ namespace EvolutionWin
                 winrt::to_string(settings_json).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Liste les actions hors ligne en attente (journal et Boîte d'envoi).
+         * Paramètres :
+         *   handler : rappel recevant {"pending", "failed", "actions": [{"id", "kind", "account",
+         *             "folder", "uid", "subject", "dest_folder", "flag", "value", "created",
+         *             "attempts", "status", "error"}]} */
+        void ListOfflineQueue(CoreHandler handler)
+        {
+            evo_core_offline_queue_list(m_core, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Annule une action hors ligne en attente.
+         * Paramètres :
+         *   action_id : identifiant donné par ListOfflineQueue
+         *   handler   : rappel recevant {"cancelled"} */
+        void CancelOfflineAction(winrt::hstring const& action_id, CoreHandler handler)
+        {
+            evo_core_offline_queue_cancel(m_core, winrt::to_string(action_id).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Annule toutes les actions du journal hors ligne. */
+        void CancelAllOfflineActions(CoreHandler handler)
+        {
+            evo_core_offline_queue_cancel_all(m_core, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Rejoue la file hors ligne maintenant (force : relance aussi les actions abandonnées). */
+        void ReplayOfflineQueue(bool force, CoreHandler handler)
+        {
+            evo_core_offline_queue_replay(m_core, force ? 1 : 0, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Lit les réglages de synchronisation hors connexion d'un compte (et d'un dossier).
          * Paramètres :
          *   account : identifiant du compte
@@ -371,6 +403,31 @@ namespace EvolutionWin
                 winrt::to_string(folder).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Active ou désactive l'index plein texte local (corps des messages et pièces jointes texte).
+         * Paramètres :
+         *   enabled : true pour indexer en tâche de fond */
+        void IndexSetEnabled(bool enabled)
+        {
+            evo_core_index_set_enabled(m_core, enabled ? 1 : 0);
+        }
+
+        /* État de l'index plein texte.
+         * Paramètres :
+         *   handler : rappel recevant {"enabled", "state", "messages_indexed", "messages_total",
+         *             "size_bytes", "pass_done", "pass_total", "current"...} */
+        void IndexStatus(CoreHandler handler)
+        {
+            evo_core_index_status(m_core, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Efface puis reconstruit l'index plein texte.
+         * Paramètres :
+         *   handler : rappel recevant {} (ou une erreur si l'index est désactivé) */
+        void IndexRebuild(CoreHandler handler)
+        {
+            evo_core_index_rebuild(m_core, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Délégués de la boîte Gmail : liste.
          * Paramètres :
          *   account : identifiant du compte
@@ -401,6 +458,33 @@ namespace EvolutionWin
         {
             evo_core_remove_delegate(m_core, winrt::to_string(account).c_str(),
                 winrt::to_string(email).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Règles : lit le Cc et les en-têtes d'un message sans le marquer comme lu.
+         * Paramètres : compte, dossier, uid du message ; handler reçoit {"cc": "...", "headers": {...}} */
+        void GetMessageHeaders(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& uid,
+                               CoreHandler handler)
+        {
+            evo_core_get_message_headers(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                CoreUid(uid).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Règles côté serveur Exchange Online : remplace les règles « [Evolution] » du compte (Microsoft Graph).
+         * Paramètres : compte, tableau JSON de règles ; handler reçoit {"removed": n, "created": n} */
+        void SyncServerRules(winrt::hstring const& account, winrt::hstring const& rules_json, CoreHandler handler)
+        {
+            evo_core_sync_server_rules(m_core, winrt::to_string(account).c_str(), winrt::to_string(rules_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Règles côté serveur IMAP : envoie (et active) un script Sieve par ManageSieve.
+         * Paramètres : compte, nom du script, script, activation, port ("" : 4190) ; handler reçoit {"uploaded": true, "active": bool} */
+        void ManageSievePut(winrt::hstring const& account, winrt::hstring const& script_name, winrt::hstring const& script,
+                            bool activate, winrt::hstring const& port, CoreHandler handler)
+        {
+            evo_core_managesieve_put(m_core, winrt::to_string(account).c_str(), winrt::to_string(script_name).c_str(),
+                winrt::to_string(script).c_str(), activate ? 1 : 0, winrt::to_string(port).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
         /* Supprime un message (vers la corbeille du compte ou définitivement).

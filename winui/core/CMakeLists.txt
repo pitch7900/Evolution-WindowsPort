@@ -55,6 +55,8 @@ add_library(evo-core SHARED
 	evo-core-account-setup.c
 	evo-core-autoreply.c
 	evo-core-offline-sync.c
+	evo-core-offline-queue.c
+	evo-core-conflicts.c
 	evo-core-autoreply-util.h
 	evo-core-accounts.c
 	evo-core-calendar.c
@@ -77,17 +79,21 @@ add_library(evo-core SHARED
 	evo-core-refresh.c
 	evo-core-requests.c
 	evo-core-search.c
+	evo-core-index.c
+	evo-core-index-util.h
 	evo-core-send.c
 	evo-core-session.c
+	evo-core-rules.c
+	evo-core-rules-util.h
 	evo-core-signatures.c
+	evo-core-spam.c
+	evo-core-spam-util.h
 	evo-core-sources.c
 	evo-core-tasks.c
 	"${CMAKE_CURRENT_BINARY_DIR}/ispdb-resources.c"
 )
 
 # evolution-ews is loaded at run time (Camel provider, registry modules),
-	evo-core-spam.c
-	evo-core-spam-util.h
 # not linked: its version comes from its sources, for the "About" dialog
 set(EWS_VERSION "")
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../evolution-ews/CMakeLists.txt")
