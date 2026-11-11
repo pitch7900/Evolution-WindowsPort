@@ -10,6 +10,8 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
+## [1.1.3] — en cours
+
 ## [1.1.2] — 2026-11-11
 
 Version corrective et de performance : démarrage et lecture des messages plus rapides, invitations de réunion, synchronisation Microsoft 365, photo de l'expéditeur et de l'annuaire.
