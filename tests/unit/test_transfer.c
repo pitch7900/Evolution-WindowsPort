@@ -193,6 +193,8 @@ static void test_flags(void)
         ASSERT_EQ_INT(MT_FLAG_SEEN, mt_maildir_flags("1700000000.M1P2.host:2,S", 0));
         ASSERT_EQ_INT(MT_FLAG_SEEN | MT_FLAG_REPLIED | MT_FLAG_FLAGGED, mt_maildir_flags("1.x:2,FRS", 0));
         ASSERT_TRUE(mt_maildir_flags("1.x:2,ST", 0) & MT_FLAG_DELETED);
+        ASSERT_EQ_INT(MT_FLAG_SEEN | MT_FLAG_FLAGGED, mt_maildir_flags("1.x!2,SF", 0));
+        ASSERT_EQ_INT(MT_FLAG_SEEN, mt_maildir_flags("1.x;2,S", 1));
         ASSERT_EQ_INT(0, mt_maildir_flags("1.x", 1));
         ASSERT_EQ_INT(MT_FLAG_SEEN, mt_maildir_flags("1.x", 0));
     }

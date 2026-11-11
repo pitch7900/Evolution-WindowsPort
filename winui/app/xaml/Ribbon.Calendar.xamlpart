@@ -2,6 +2,11 @@
 
                                 HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
 
+                        <AppBarButton Label="Importer des données…" Tag="calendar" Click="OnImportDataClick" ToolTipService.ToolTip="Importer du courrier (mbox, EML, Maildir, Thunderbird), des contacts (vCard) ou un agenda (iCalendar)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE896;" /></AppBarButton.Icon>
+                        </AppBarButton>
+
+
                         <AppBarButton Label="Exporter" Click="OnExportCalendarClick">
 
                             <AppBarButton.Icon><FontIcon Glyph="&#xEDE1;" /></AppBarButton.Icon>

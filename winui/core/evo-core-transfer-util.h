@@ -577,6 +577,12 @@ static inline int
 mt_maildir_flags (const char *filename, int in_new)
 {
 	const char *info = strstr (filename, ":2,");
+
+	/* Windows interdit « : » dans un nom de fichier : « ! » ou « ; » le remplacent */
+	if (!info)
+		info = strstr (filename, "!2,");
+	if (!info)
+		info = strstr (filename, ";2,");
 	int flags = 0;
 
 	if (!info)

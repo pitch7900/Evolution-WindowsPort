@@ -2,6 +2,16 @@
 
                                 HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
 
+                        <AppBarButton Label="Exporter des données…" Tag="mail" Click="OnExportDataClick" ToolTipService.ToolTip="Exporter du courrier (mbox, EML), des contacts (vCard) ou des agendas (iCalendar)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xEDE1;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton Label="Importer des données…" Tag="mail" Click="OnImportDataClick" ToolTipService.ToolTip="Importer du courrier (mbox, EML, Maildir, Thunderbird), des contacts (vCard) ou un agenda (iCalendar)">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE896;" /></AppBarButton.Icon>
+                        </AppBarButton>
+
+                        <AppBarSeparator />
+
+
                         <AppBarButton Label="Enregistrer sous" Click="OnSaveMessageClick" ToolTipService.ToolTip="Enregistrer le message au format .eml (Ctrl+S)">
 
                             <AppBarButton.Icon><FontIcon Glyph="&#xE74E;" /></AppBarButton.Icon>

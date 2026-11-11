@@ -124,6 +124,7 @@
     <ClInclude Include="CategoryStore.h" />
     <ClInclude Include="Policy.h" />
     <ClInclude Include="Settings.h" />
+    <ClInclude Include="DataTransfer.h" />
     <ClInclude Include="Signatures.h" />
     <None Include="Assets\EvolutionWin.ico" />
     <!-- image de la boîte « À propos », à côté de l'exécutable -->
@@ -262,6 +263,9 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="MainWindow.Contacts.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="MainWindow.Transfer.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="MainWindow.Receipts.cpp">

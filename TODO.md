@@ -853,15 +853,15 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 
 ### Assistant et formats d'export
 
-- [ ] 🟡 **Assistant d'export** (_Fichier › Exporter_) : compte, éléments (emails, contacts, calendriers, tâches), dossier de destination
+- [x] 🟡 **Assistant d'export** (_Fichier › Exporter des données…_) : compte, éléments (emails, contacts, calendriers, tâches), dossier de destination _(fait en 1.3.0 : le courrier est exporté par l'assistant lui-même, les contacts et les agendas passent par leurs assistants existants)_
 - [ ] **Emails** :
-  - [ ] 🟡 Format mbox (un fichier par dossier, arborescence conservée)
-  - [ ] 🟢 Format EML (un fichier `.eml` par message, arborescence conservée ; export `.eml` existant dans `evo-core`)
-  - [ ] 🟢 Choix des dossiers (tous / sélection / dossier courant)
+  - [x] 🟡 Format mbox (un fichier par dossier, arborescence conservée) _(fait en 1.3.0 : `<dossier>.mbox`, variante mboxrd)_
+  - [x] 🟢 Format EML (un fichier `.eml` par message, arborescence conservée ; export `.eml` existant dans `evo-core`) _(fait en 1.3.0)_
+  - [x] 🟢 Choix des dossiers (tous / sélection / dossier courant) _(fait en 1.3.0 : sélection multiple dans l'arborescence du compte, « Tout sélectionner », option sous-dossiers)_
 - [x] 🟢 **Contacts** : vCard (`.vcf`, fichier unique ou un par contact) ; 🟡 CSV en option
 - [x] 🟢 **Calendriers et tâches** : iCalendar (`.ics`, un fichier par calendrier)
-- [ ] 🟡 **Options** : filtre par plage de dates, export en arrière-plan avec progression (dépend de §4), rapport de fin
-- [ ] 🟠 **Import** : mbox / EML, vCard, iCalendar (_Fichier › Ouvrir et exporter_)
+- [x] 🟡 **Options** : filtre par plage de dates, export en arrière-plan avec progression (dépend de §4), rapport de fin _(fait en 1.3.0 : période sur la date de réception, progression et annulation dans la barre d'état, rapport avec « Ouvrir le dossier »)_
+- [x] 🟠 **Import** : mbox / EML, vCard, iCalendar (_Fichier › Importer des données…_) _(fait en 1.3.0, avec en plus Maildir et le profil Thunderbird ; les `.pst` / `.ost` d'Outlook ne sont pas lisibles : l'assistant explique la conversion en mbox avec readpst)_
 
 ## 19. Configuration de l'application — 🟡
 

@@ -477,6 +477,25 @@ namespace winrt::EvolutionWin::implementation
                         ? Fmt(Tr(L"Transfert du dossier « {0} » : {1}/{2}"), { label, to_hstring(done), to_hstring(total) })
                         : Fmt(Tr(L"Transfert du dossier « {0} » : {1} message(s)"), { label, to_hstring(done) });
             }
+            {
+                /* exportation / importation de données (MainWindow.Transfer.cpp) */
+                hstring transfer_kind = object.GetNamedString(L"kind", L"");
+                if (transfer_kind == L"export" || transfer_kind == L"import")
+                {
+                    hstring label = object.GetNamedString(L"label", L"");
+                    int32_t total = static_cast<int32_t>(object.GetNamedNumber(L"total", 0));
+                    int32_t done = static_cast<int32_t>(object.GetNamedNumber(L"done", 0));
+                    int32_t messages = static_cast<int32_t>(object.GetNamedNumber(L"messages", 0));
+                    if (transfer_kind == L"export")
+                        progress_text = !active ? Tr(L"Exportation terminée")
+                            : total > 0
+                                ? Fmt(Tr(L"Exportation du courrier : {0} ({1}/{2})"), { label, to_hstring(done), to_hstring(total) })
+                                : Fmt(Tr(L"Exportation du courrier : {0}"), { label });
+                    else
+                        progress_text = !active ? Tr(L"Importation terminée")
+                            : Fmt(Tr(L"Importation : {0} ({1} message(s) ou élément(s))"), { label, to_hstring(messages) });
+                }
+            }
             UpdateStatusBarProgress(active, progress_text, percent);
         }
         else if (event == L"offline-queue")

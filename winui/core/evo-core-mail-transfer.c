@@ -356,7 +356,9 @@ export_one_folder (EvoCore *core,
 				size_t qlen = 0;
 				gchar *quoted = mt_mbox_quote (data, size, &qlen);
 
-				mt_from_line (sender, date, from_line, sizeof (from_line));
+				gint64 sent = camel_mime_message_get_date (message, NULL);
+
+				mt_from_line (sender, sent > 0 ? sent : date, from_line, sizeof (from_line));
 				if (!quoted || fputs (from_line, mbox_file) < 0 || fwrite (quoted, 1, qlen, mbox_file) != qlen)
 					local_error = g_error_new (G_IO_ERROR, G_IO_ERROR_FAILED, "Écriture impossible dans « %s »", mbox_path);
 				else
@@ -623,13 +625,25 @@ import_ensure_folder (ImportContext *ctx,
 					*slash = '\0';
 			}
 
-			created = camel_store_create_folder_sync (ctx->store, parent_path, parts[ii], ctx->st->cancel, error);
+			GError *create_error = NULL;
+
+			created = camel_store_create_folder_sync (ctx->store, parent_path, parts[ii], ctx->st->cancel, &create_error);
 			g_free (parent_path);
-			if (!created) {
-				ok = FALSE;
-				break;
+			if (created) {
+				camel_folder_info_free (created);
+			} else {
+				/* un dossier supprimé peut rester connu du magasin (« existe déjà ») : l'ouvrir en le créant au besoin */
+				CamelFolder *opened = camel_store_get_folder_sync (ctx->store, prefix,
+					CAMEL_STORE_FOLDER_CREATE, ctx->st->cancel, NULL);
+
+				if (!opened) {
+					g_propagate_error (error, create_error);
+					ok = FALSE;
+					break;
+				}
+				g_object_unref (opened);
+				g_clear_error (&create_error);
 			}
-			camel_folder_info_free (created);
 			core_subscribe_new_folder (ctx->st->core, ctx->store, prefix);
 			ctx->st->folders++;
 		}
@@ -681,6 +695,15 @@ import_append_message (ImportContext *ctx,
 		set |= CAMEL_MESSAGE_DRAFT;
 
 	info = camel_message_info_new (NULL);
+	/* garde la date d'origine : tri, recherche et périodes d'exportation restent justes */
+	{
+		gint64 date = camel_mime_message_get_date (message, NULL);
+
+		if (date > 0) {
+			camel_message_info_set_date_sent (info, date);
+			camel_message_info_set_date_received (info, date);
+		}
+	}
 	camel_message_info_set_flags (info, CAMEL_MESSAGE_SEEN | CAMEL_MESSAGE_ANSWERED |
 		CAMEL_MESSAGE_FLAGGED | CAMEL_MESSAGE_DRAFT, set);
 	if (camel_folder_append_message_sync (folder, message, info, NULL, ctx->st->cancel, &local_error)) {

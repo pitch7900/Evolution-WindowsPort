@@ -143,6 +143,16 @@ cl.exe /nologo /utf-8 /W4 /O2 ^
         exit /b 1
     )
 
+rem Compilation des tests des assistants d'export / import cote interface (C++17)
+echo [assistants] Compilation de test_datatransfer.cpp ...
+cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_datatransfer.cpp" ^
+    /Fe:"%TEST_BIN_DIR%\test_datatransfer.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_datatransfer.obj" || (
+        echo [ERREUR] Echec de la compilation de test_datatransfer.cpp
+        exit /b 1
+    )
+
 echo Compilation achevee avec succes.
 echo.
 
@@ -198,6 +208,10 @@ if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
 rem Execution de la suite : export / import du courrier et des contacts
 "%TEST_BIN_DIR%\test_transfer.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : assistants d'export / import (interface)
+"%TEST_BIN_DIR%\test_datatransfer.exe"
 if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
 rem Execution du test d'assemblage du XAML de la fenetre principale

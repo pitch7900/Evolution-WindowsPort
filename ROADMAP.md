@@ -118,8 +118,8 @@ flowchart LR
 - [x] **Stratégies de groupe (GPO / Registre)** : verrouillage centralisé de paramètres (désactivation des mises à jour automatiques, configuration imposée). _(codé : `Policy.h`, modèle ADMX/ADML, `DisableAutoUpdate` et réglages imposés ; à valider avec une GPO réelle)_
 
 ### 2. Importation & Exportation (§18)
-- [ ] **Assistant d'importation** : prise en charge des conteneurs Outlook (fichiers `.pst` et `.ost`) et des profils tiers (Thunderbird MBOX / Maildir).
-- [ ] **Exportation de données** : export complet de dossiers ou de sélections aux formats standard (`.eml`, `.mbox`, `.ics`, `.vcf`).
+- [ ] **Assistant d'importation** : prise en charge des conteneurs Outlook (fichiers `.pst` et `.ost`) et des profils tiers (Thunderbird MBOX / Maildir). _(fait : mbox, EML, Maildir, profil Thunderbird (détection du profil et arborescence de dossiers), vCard, iCalendar ; non fait : `.pst` / `.ost`, format propriétaire sans bibliothèque disponible (libpst absente de la pile) — l'assistant détecte le cas et explique la conversion en mbox avec `readpst`)_
+- [x] **Exportation de données** : export complet de dossiers ou de sélections aux formats standard (`.eml`, `.mbox`, `.ics`, `.vcf`). _(codé : assistant Fichier › Exporter des données…, mbox / EML avec période, `.ics` / `.vcf` par les assistants existants ; reste à valider à la main : voir VALIDATION.md)_
 
 ### 3. Ergonomie avancée, protocoles & Traductions (§2, §6, §19, §20)
 - [x] **Lecteur immersif** : vue plein écran épurée dédiée à la lecture concentrée. _(fait : ruban Affichage, texte seul, taille / espacement / thème réglables, Échap pour quitter ; à valider à la main)_

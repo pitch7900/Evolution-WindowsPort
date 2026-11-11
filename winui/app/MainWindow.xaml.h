@@ -295,6 +295,9 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
         void OnNewContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnExportContactsClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        /* Assistants d'exportation et d'importation de données (MainWindow.Transfer.cpp ; logique pure dans DataTransfer.h) */
+        void OnExportDataClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnImportDataClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnComposeToContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnDeleteContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnEditContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -771,6 +774,10 @@ namespace winrt::EvolutionWin::implementation
         /* Exportation vCard / iCalendar */
         fire_and_forget ExportCalendarAsync(Windows::Data::Json::JsonArray sources);
         fire_and_forget ExportContactsAsync(Windows::Data::Json::JsonArray books);
+        fire_and_forget ExportDataAsync(Windows::Data::Json::JsonArray accounts);
+        fire_and_forget ImportDataAsync(Windows::Data::Json::JsonArray accounts, Windows::Data::Json::JsonArray books,
+            Windows::Data::Json::JsonArray calendars, hstring preselect);
+        fire_and_forget ShowTransferReportAsync(hstring title, hstring summary, hstring dest);
 
         /* Tâches (VTODO) */
         void LoadTasks();

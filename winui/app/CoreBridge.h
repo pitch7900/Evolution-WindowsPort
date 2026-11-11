@@ -1151,6 +1151,46 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Exporte des dossiers de courrier vers des fichiers mbox ou EML (progression : événement « progress » de type « export »).
+         * Paramètres :
+         *   request_json : JSON {"account", "folders": [...], "recursive", "dest", "format": "mbox"|"eml", "date_from", "date_to"}
+         *   handler      : rappel recevant {"messages", "folders", "skipped", "failed", "cancelled", "dest", "error"} */
+        void ExportMail(winrt::hstring const& request_json, CoreHandler handler)
+        {
+            evo_core_export_mail(m_core, winrt::to_string(request_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Importe du courrier (fichier mbox ou .eml, dossier, Maildir, profil Thunderbird) dans un dossier d'un compte.
+         * Paramètres :
+         *   request_json : JSON {"account", "dest_folder", "path"}
+         *   handler      : rappel recevant {"messages", "folders", "skipped", "failed", "cancelled", "error"} */
+        void ImportMail(winrt::hstring const& request_json, CoreHandler handler)
+        {
+            evo_core_import_mail(m_core, winrt::to_string(request_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Importe des contacts d'un fichier vCard dans un carnet d'adresses.
+         * Paramètres :
+         *   request_json : JSON {"book_uid", "path"}
+         *   handler      : rappel recevant {"count", "skipped", "failed", "cancelled", "error"} */
+        void ImportContacts(winrt::hstring const& request_json, CoreHandler handler)
+        {
+            evo_core_import_contacts(m_core, winrt::to_string(request_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Importe les composants d'un fichier iCalendar dans un agenda ou une liste de tâches.
+         * Paramètres :
+         *   request_json : JSON {"source_uid", "path"}
+         *   handler      : rappel recevant {"count", "skipped", "failed", "cancelled", "error"} */
+        void ImportCalendar(winrt::hstring const& request_json, CoreHandler handler)
+        {
+            evo_core_import_calendar(m_core, winrt::to_string(request_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Crée un calendrier local vide ou un abonnement à une URL iCalendar.
          * Paramètres :
          *   request_json : JSON {"name": "...", "url": "..." ("" : local), "color": "#rrggbb"}

@@ -7807,5 +7807,241 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Registrierung entfernen</value>
     <comment>Retirer l'enregistrement</comment>
   </data>
+  <data name="T_A3BFCFDB" xml:space="preserve">
+    <value>{0} Nachricht(en) aus {1} Ordner(n) exportiert.</value>
+    <comment>{0} message(s) exporté(s) depuis {1} dossier(s).</comment>
+  </data>
+  <data name="T_81922125" xml:space="preserve">
+    <value>{0} Nachricht(en) importiert, {1} Ordner erstellt.</value>
+    <comment>{0} message(s) importé(s), {1} dossier(s) créé(s).</comment>
+  </data>
+  <data name="T_4BCB1105" xml:space="preserve">
+    <value>{0} Element(e) importiert.</value>
+    <comment>{0} élément(s) importé(s).</comment>
+  </data>
+  <data name="T_CA6FE46B" xml:space="preserve">
+    <value>{0} Element(e) übersprungen (gelöscht, bereits vorhanden oder außerhalb des Zeitraums).</value>
+    <comment>{0} élément(s) ignoré(s) (supprimés, déjà présents ou hors période).</comment>
+  </data>
+  <data name="T_76B88D30" xml:space="preserve">
+    <value>{0} Element(e) fehlgeschlagen. Erster Fehler: {1}</value>
+    <comment>{0} élément(s) en échec. Première erreur : {1}</comment>
+  </data>
+  <data name="T_BE3C703E" xml:space="preserve">
+    <value>Der Vorgang wurde vor dem Abschluss abgebrochen.</value>
+    <comment>L'opération a été annulée avant la fin.</comment>
+  </data>
+  <data name="T_8CE06495" xml:space="preserve">
+    <value>Import: {0}</value>
+    <comment>Importation : {0}</comment>
+  </data>
+  <data name="T_85BEEAF4" xml:space="preserve">
+    <value>Daten exportieren</value>
+    <comment>Exporter des données</comment>
+  </data>
+  <data name="T_2C8CC674" xml:space="preserve">
+    <value>Zu exportierende Daten</value>
+    <comment>Données à exporter</comment>
+  </data>
+  <data name="T_E9617582" xml:space="preserve">
+    <value>E-Mail (mbox oder .eml-Dateien)</value>
+    <comment>Courrier (mbox ou fichiers .eml)</comment>
+  </data>
+  <data name="T_B47788BB" xml:space="preserve">
+    <value>Kontakte (vCard)</value>
+    <comment>Contacts (vCard)</comment>
+  </data>
+  <data name="T_504CA6A5" xml:space="preserve">
+    <value>Kalender und Aufgabenlisten (iCalendar)</value>
+    <comment>Agendas et listes de tâches (iCalendar)</comment>
+  </data>
+  <data name="T_8002292D" xml:space="preserve">
+    <value>Konto</value>
+    <comment>Compte</comment>
+  </data>
+  <data name="T_BF3E8DD4" xml:space="preserve">
+    <value>Zu exportierende Ordner</value>
+    <comment>Dossiers à exporter</comment>
+  </data>
+  <data name="T_BDF3EDD0" xml:space="preserve">
+    <value>Alle auswählen</value>
+    <comment>Tout sélectionner</comment>
+  </data>
+  <data name="T_13BC587D" xml:space="preserve">
+    <value>Auch die Unterordner der ausgewählten Ordner einbeziehen</value>
+    <comment>Inclure aussi les sous-dossiers des dossiers choisis</comment>
+  </data>
+  <data name="T_FFB0FF72" xml:space="preserve">
+    <value>Format</value>
+    <comment>Format</comment>
+  </data>
+  <data name="T_13E3F1A2" xml:space="preserve">
+    <value>mbox: eine Datei pro Ordner</value>
+    <comment>mbox : un fichier par dossier</comment>
+  </data>
+  <data name="T_74E8AFDC" xml:space="preserve">
+    <value>EML: eine Datei pro Nachricht</value>
+    <comment>EML : un fichier par message</comment>
+  </data>
+  <data name="T_B3840E6C" xml:space="preserve">
+    <value>Auf einen Zeitraum beschränken (Empfangsdatum)</value>
+    <comment>Limiter à une période (date de réception)</comment>
+  </data>
+  <data name="T_4BCE9692" xml:space="preserve">
+    <value>Von</value>
+    <comment>Du</comment>
+  </data>
+  <data name="T_0A734EB2" xml:space="preserve">
+    <value>Bis (einschließlich)</value>
+    <comment>Au (inclus)</comment>
+  </data>
+  <data name="T_A5EE3A54" xml:space="preserve">
+    <value>Export: Wählen Sie ein Konto und mindestens einen Ordner aus.</value>
+    <comment>Exportation : choisissez un compte et au moins un dossier.</comment>
+  </data>
+  <data name="T_D378397B" xml:space="preserve">
+    <value>E-Mails werden exportiert …</value>
+    <comment>Exportation du courrier en cours…</comment>
+  </data>
+  <data name="T_C198F2CA" xml:space="preserve">
+    <value>E-Mail-Export: {0}</value>
+    <comment>Exportation du courrier : {0}</comment>
+  </data>
+  <data name="T_38411A73" xml:space="preserve">
+    <value>Export abgeschlossen</value>
+    <comment>Exportation terminée</comment>
+  </data>
+  <data name="T_75B48483" xml:space="preserve">
+    <value>Daten importieren</value>
+    <comment>Importer des données</comment>
+  </data>
+  <data name="T_E29D5323" xml:space="preserve">
+    <value>Importieren</value>
+    <comment>Importer</comment>
+  </data>
+  <data name="T_61E2A3F8" xml:space="preserve">
+    <value>Quelle</value>
+    <comment>Source</comment>
+  </data>
+  <data name="T_972FA843" xml:space="preserve">
+    <value>E-Mail: mbox-Datei oder .eml-Nachricht</value>
+    <comment>Courrier : fichier mbox ou message .eml</comment>
+  </data>
+  <data name="T_6827AEE8" xml:space="preserve">
+    <value>E-Mail: Ordner (mbox, .eml oder Maildir)</value>
+    <comment>Courrier : dossier (mbox, .eml ou Maildir)</comment>
+  </data>
+  <data name="T_672ECF33" xml:space="preserve">
+    <value>E-Mail: Thunderbird-Profil</value>
+    <comment>Courrier : profil Thunderbird</comment>
+  </data>
+  <data name="T_37A370E4" xml:space="preserve">
+    <value>Kontakte: vCard-Datei (.vcf)</value>
+    <comment>Contacts : fichier vCard (.vcf)</comment>
+  </data>
+  <data name="T_382E8BC9" xml:space="preserve">
+    <value>Kalender oder Aufgaben: iCalendar-Datei (.ics)</value>
+    <comment>Agenda ou tâches : fichier iCalendar (.ics)</comment>
+  </data>
+  <data name="T_2312C9B5" xml:space="preserve">
+    <value>Outlook: Datendatei (.pst oder .ost)</value>
+    <comment>Outlook : fichier de données (.pst ou .ost)</comment>
+  </data>
+  <data name="T_823D4E1C" xml:space="preserve">
+    <value>Zielkonto</value>
+    <comment>Compte de destination</comment>
+  </data>
+  <data name="T_2CDE7B99" xml:space="preserve">
+    <value>Zielordner (wird erstellt, falls er nicht existiert; „/“ trennt die Ebenen)</value>
+    <comment>Dossier de destination (créé s'il n'existe pas ; « / » sépare les niveaux)</comment>
+  </data>
+  <data name="T_73A9EBA7" xml:space="preserve">
+    <value>Importiert</value>
+    <comment>Importé</comment>
+  </data>
+  <data name="T_AF1026EB" xml:space="preserve">
+    <value>Erkannter Thunderbird-Mailordner</value>
+    <comment>Dossier de courrier Thunderbird détecté</comment>
+  </data>
+  <data name="T_418E8B92" xml:space="preserve">
+    <value>Kein Thunderbird-Profil erkannt: Sie können den Ordner manuell auswählen (Mail oder ImapMail des Profils).</value>
+    <comment>Aucun profil Thunderbird détecté : vous pourrez choisir le dossier à la main (Mail ou ImapMail du profil).</comment>
+  </data>
+  <data name="T_049BECE3" xml:space="preserve">
+    <value>Die Ordner und Unterordner dieses Kontos werden unter dem Zielordner neu erstellt.</value>
+    <comment>Les dossiers et sous-dossiers de ce compte seront recréés sous le dossier de destination.</comment>
+  </data>
+  <data name="T_CED096C2" xml:space="preserve">
+    <value>Ziel-Adressbuch</value>
+    <comment>Carnet d'adresses de destination</comment>
+  </data>
+  <data name="T_7C7EAC77" xml:space="preserve">
+    <value>Ziel-Kalender oder -Aufgabenliste</value>
+    <comment>Agenda ou liste de tâches de destination</comment>
+  </data>
+  <data name="T_88B74727" xml:space="preserve">
+    <value>Outlook-Dateien (.pst und .ost) haben ein proprietäres Format, das EvolutionWin nicht direkt lesen kann. Konvertieren Sie die Datei zuerst in mbox-Ordner (zum Beispiel mit dem freien Werkzeug readpst aus libpst: „readpst -r archive.pst“) und importieren Sie dann den entstandenen Ordner mit „E-Mail: Ordner“. Exportieren Sie Kontakte und Kalender aus Outlook als .vcf / .ics und importieren Sie sie hier.</value>
+    <comment>Les fichiers .pst et .ost d'Outlook sont un format propriétaire que EvolutionWin ne sait pas lire directement. Convertissez d'abord le fichier en dossiers mbox (par exemple avec l'outil libre readpst, de libpst : « readpst -r archive.pst »), puis importez le dossier obtenu avec « Courrier : dossier ». Pour les contacts et les agendas, exportez-les d'Outlook en .vcf / .ics et importez-les ici.</comment>
+  </data>
+  <data name="T_C8AC80D3" xml:space="preserve">
+    <value>.pst- und .ost-Dateien können nicht direkt gelesen werden: Konvertieren Sie sie zuerst in mbox (readpst).</value>
+    <comment>Les fichiers .pst et .ost ne peuvent pas être lus directement : convertissez-les d'abord en mbox (readpst).</comment>
+  </data>
+  <data name="T_D2F054B8" xml:space="preserve">
+    <value>Import: Wählen Sie ein Konto und einen Zielordner aus.</value>
+    <comment>Importation : choisissez un compte et un dossier de destination.</comment>
+  </data>
+  <data name="T_09E7CE4A" xml:space="preserve">
+    <value>E-Mails werden importiert …</value>
+    <comment>Importation du courrier en cours…</comment>
+  </data>
+  <data name="T_F241CF97" xml:space="preserve">
+    <value>E-Mail-Import: {0}</value>
+    <comment>Importation du courrier : {0}</comment>
+  </data>
+  <data name="T_BF1AD19C" xml:space="preserve">
+    <value>Import abgeschlossen</value>
+    <comment>Importation terminée</comment>
+  </data>
+  <data name="T_40FB13B8" xml:space="preserve">
+    <value>Kein Ziel-Adressbuch.</value>
+    <comment>Aucun carnet d'adresses de destination.</comment>
+  </data>
+  <data name="T_4CF40F3F" xml:space="preserve">
+    <value>Kontakte werden importiert …</value>
+    <comment>Importation des contacts en cours…</comment>
+  </data>
+  <data name="T_2FA2F37A" xml:space="preserve">
+    <value>Kein Zielkalender.</value>
+    <comment>Aucun agenda de destination.</comment>
+  </data>
+  <data name="T_CCC29CE8" xml:space="preserve">
+    <value>Kalender wird importiert …</value>
+    <comment>Importation de l'agenda en cours…</comment>
+  </data>
+  <data name="T_5E33AE31" xml:space="preserve">
+    <value>E-Mail-Export: {0} ({1}/{2})</value>
+    <comment>Exportation du courrier : {0} ({1}/{2})</comment>
+  </data>
+  <data name="T_4C266D98" xml:space="preserve">
+    <value>Import: {0} ({1} Nachricht(en) oder Element(e))</value>
+    <comment>Importation : {0} ({1} message(s) ou élément(s))</comment>
+  </data>
+  <data name="T_F05F2FBF" xml:space="preserve">
+    <value>Daten importieren …</value>
+    <comment>Importer des données…</comment>
+  </data>
+  <data name="T_1F9C4500" xml:space="preserve">
+    <value>E-Mails (mbox, EML, Maildir, Thunderbird), Kontakte (vCard) oder einen Kalender (iCalendar) importieren</value>
+    <comment>Importer du courrier (mbox, EML, Maildir, Thunderbird), des contacts (vCard) ou un agenda (iCalendar)</comment>
+  </data>
+  <data name="T_5D594896" xml:space="preserve">
+    <value>Daten exportieren …</value>
+    <comment>Exporter des données…</comment>
+  </data>
+  <data name="T_711FE2C6" xml:space="preserve">
+    <value>E-Mails (mbox, EML), Kontakte (vCard) oder Kalender (iCalendar) exportieren</value>
+    <comment>Exporter du courrier (mbox, EML), des contacts (vCard) ou des agendas (iCalendar)</comment>
+  </data>
 </root>
 
