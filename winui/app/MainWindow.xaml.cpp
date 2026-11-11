@@ -377,7 +377,13 @@ namespace winrt::EvolutionWin::implementation
 
             /* synchronisation du dossier affiché terminée : le bandeau de progression disparaît */
             if (account == m_account && folder == m_folder)
+            {
                 SetFolderSyncing(false);
+
+                /* Microsoft 365 : le serveur a-t-il des messages plus anciens que les 1 000 synchronisés ? */
+                if (object.GetNamedBoolean(L"window", false))
+                    UpdateOlderMessagesFooter(object.GetNamedBoolean(L"truncated", false), static_cast<int>(object.GetNamedNumber(L"limit", 0)));
+            }
         }
         else if (event == L"folders-updated")
         {

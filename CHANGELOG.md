@@ -12,6 +12,9 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.1.3] — en cours
 
+### Ajouté
+
+- **Microsoft 365 : première synchronisation limitée aux 1 000 messages les plus récents de chaque dossier, avec « Charger 1 000 messages de plus »** : la première énumération d'un gros dossier (plus de 10 000 messages) durait de longues minutes, ne se terminait pas si l'application était fermée avant, et les messages supprimés sur le serveur restaient donc dans la liste. Le fournisseur calcule la date du 1 000ᵉ message le plus récent (une seule requête d'un message) et ne synchronise que les messages reçus depuis cette date (`$filter=receivedDateTime ge …` sur la requête de synchronisation différentielle) ; les dossiers de moins de 1 000 messages restent entièrement synchronisés. La fenêtre est conservée dans l'en-tête du résumé du dossier (propriétés `sync-limit` et `sync-truncated` du dossier, nouvelle version du résumé : une seule resynchronisation par dossier à la mise à jour). En bas de la liste, « Seuls les 1000 messages les plus récents de ce dossier sont synchronisés. » et le lien « Charger 1000 messages de plus » étendent la fenêtre de 1 000 messages plus anciens (relève en fond, bandeau de progression) ; ils n'apparaissent que si le serveur a des messages plus anciens. Nouvelles fonctions `evo_core_get_folder_sync_info` et `evo_core_extend_folder_sync` ; la liste affiche autant de messages que la fenêtre (500 pour les autres comptes).
 ## [1.1.2] — 2026-11-11
 
 Version corrective et de performance : démarrage et lecture des messages plus rapides, invitations de réunion, synchronisation Microsoft 365, photo de l'expéditeur et de l'annuaire.

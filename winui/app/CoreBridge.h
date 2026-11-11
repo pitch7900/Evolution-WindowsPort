@@ -73,6 +73,20 @@ namespace EvolutionWin
                 max_count, &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Fenêtre de synchronisation d'un dossier ouvert : {"supported", "truncated", "limit"}. */
+        void GetFolderSyncInfo(winrt::hstring const& account, winrt::hstring const& folder, CoreHandler handler)
+        {
+            evo_core_get_folder_sync_info(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Étend la synchronisation d'un dossier de extra_count messages plus anciens : {"limit"} ou erreur. */
+        void ExtendFolderSync(winrt::hstring const& account, winrt::hstring const& folder, unsigned extra_count, CoreHandler handler)
+        {
+            evo_core_extend_folder_sync(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                extra_count, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* not GetMessage: a Win32 macro */
         void FetchMessage(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& uid, CoreHandler handler)
         {

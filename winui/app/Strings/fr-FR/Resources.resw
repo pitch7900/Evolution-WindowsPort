@@ -6903,5 +6903,13 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Synchronisation du dossier en cours…</value>
     <comment>Synchronisation du dossier en cours…</comment>
   </data>
+  <data name="T_E1F0C263" xml:space="preserve">
+    <value>Seuls les {0} messages les plus récents de ce dossier sont synchronisés.</value>
+    <comment>Seuls les {0} messages les plus récents de ce dossier sont synchronisés.</comment>
+  </data>
+  <data name="T_95F2DDA4" xml:space="preserve">
+    <value>Charger {0} messages de plus</value>
+    <comment>Charger {0} messages de plus</comment>
+  </data>
 </root>
 

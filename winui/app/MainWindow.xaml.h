@@ -203,6 +203,9 @@ namespace winrt::EvolutionWin::implementation
         void ScheduleListRefresh();
         void RefreshMessageListDelta();
         void SetFolderSyncing(bool syncing);
+        void UpdateOlderMessagesFooter(bool visible, int limit);
+        void RefreshOlderMessagesFooter();
+        void LoadOlderMessages();
         void ApplyMessageDelta(Windows::Data::Json::JsonArray const& fresh);
         void UpdateFolderStatusText();
         void RestoreSessionFolder();
@@ -985,6 +988,9 @@ namespace winrt::EvolutionWin::implementation
         Microsoft::UI::Xaml::DispatcherTimer m_reader_loading_timer{ nullptr };
         Microsoft::UI::Xaml::DispatcherTimer m_list_refresh_timer{ nullptr };
         Microsoft::UI::Xaml::DispatcherTimer m_folder_sync_timer{ nullptr };
+        Microsoft::UI::Xaml::Controls::StackPanel m_older_footer{ nullptr };
+        Microsoft::UI::Xaml::Controls::TextBlock m_older_footer_text{ nullptr };
+        Microsoft::UI::Xaml::Controls::HyperlinkButton m_older_footer_button{ nullptr };
         uint64_t m_list_delta_request{ 0 };
         bool m_reader_loading_pending_nav{ false };
         winrt::com_ptr<ITaskbarList3> m_taskbar_list{ nullptr };

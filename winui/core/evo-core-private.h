@@ -400,6 +400,16 @@ void
 core_bg_yield (EvoCore *core);
 
 /* evo-core-folders.c */
+gboolean
+core_folder_sync_window_of (CamelFolder *folder,
+			     gboolean *out_truncated,
+			     gint *out_limit);
+gboolean
+core_folder_sync_window (EvoCore *core,
+			 const gchar *account_uid,
+			 const gchar *folder_name,
+			 gboolean *out_truncated,
+			 gint *out_limit);
 GHashTable *
 core_dup_base_folder_names (EvoCore *core,
 			    CamelStore *store,

@@ -122,7 +122,10 @@ namespace winrt::EvolutionWin::implementation
         }
         evo_core_trace("interface : demande de la liste des messages");
         SetFolderSyncing(true);
-        m_core->ListMessages(account, folder, 500, [this, account, folder, selected, scroll_offset](hstring const& json, hstring const& error)
+        if (!keep_selection)
+            UpdateOlderMessagesFooter(false, 0);
+        /* 0 : la taille de la liste suit la fenêtre de synchronisation du compte (1 000 messages pour Microsoft 365, 500 sinon) */
+        m_core->ListMessages(account, folder, 0, [this, account, folder, selected, scroll_offset](hstring const& json, hstring const& error)
         {
             /* another folder was chosen meanwhile */
             if (account != m_account || folder != m_folder)
@@ -152,6 +155,7 @@ namespace winrt::EvolutionWin::implementation
                 evo_core_trace("interface : première liste de messages affichée");
             }
             RevealMainWindow(L"première liste de messages");
+            RefreshOlderMessagesFooter();
 
             /* the reader keeps its message: reselect it silently */
             if (!selected.empty())
@@ -217,6 +221,88 @@ namespace winrt::EvolutionWin::implementation
         m_folder_sync_timer.Start();
     }
 
+    /* Pied de la liste : « Seuls les N messages les plus récents de ce dossier sont synchronisés » et lien
+     * « Charger N messages de plus ». Visible seulement quand le serveur a des messages plus anciens (Microsoft 365) :
+     * l'utilisateur qui a fait défiler la liste jusque-là veut les voir.
+     * Paramètres :
+     *   visible : afficher le pied
+     *   limit   : nombre de messages les plus récents synchronisés */
+    void MainWindow::UpdateOlderMessagesFooter(bool visible, int limit)
+    {
+        if (!m_older_footer)
+        {
+            m_older_footer = StackPanel();
+            m_older_footer.Padding(ThicknessHelper::FromLengths(16, 12, 16, 16));
+            m_older_footer.Spacing(2);
+            m_older_footer.HorizontalAlignment(HorizontalAlignment::Stretch);
+
+            m_older_footer_text = TextBlock();
+            m_older_footer_text.TextWrapping(TextWrapping::Wrap);
+            m_older_footer_text.Opacity(0.8);
+            m_older_footer_text.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+            m_older_footer.Children().Append(m_older_footer_text);
+
+            m_older_footer_button = HyperlinkButton();
+            m_older_footer_button.Padding(ThicknessHelper::FromLengths(0, 4, 0, 4));
+            m_older_footer_button.Click([this](IInspectable const&, RoutedEventArgs const&) { LoadOlderMessages(); });
+            m_older_footer.Children().Append(m_older_footer_button);
+
+            MessageList().Footer(m_older_footer);
+        }
+
+        if (visible)
+        {
+            m_older_footer_text.Text(Fmt(Tr(L"Seuls les {0} messages les plus récents de ce dossier sont synchronisés."), { to_hstring(limit) }));
+            m_older_footer_button.Content(box_value(Fmt(Tr(L"Charger {0} messages de plus"), { to_hstring(1000) })));
+        }
+        m_older_footer.Visibility(visible ? Visibility::Visible : Visibility::Collapsed);
+    }
+
+    /* Demande au moteur si le dossier affiché a des messages plus anciens sur le serveur, puis met à jour le pied. */
+    void MainWindow::RefreshOlderMessagesFooter()
+    {
+        hstring account = m_account;
+        hstring folder = m_folder;
+
+        if (account.empty() || folder.empty() || IsUnifiedView() || !m_core)
+            return;
+
+        m_core->GetFolderSyncInfo(account, folder, [this, account, folder](hstring const& json, hstring const& error)
+        {
+            JsonObject info;
+            if (!error.empty() || account != m_account || folder != m_folder || !JsonObject::TryParse(json, info))
+                return;
+
+            UpdateOlderMessagesFooter(info.GetNamedBoolean(L"supported", false) && info.GetNamedBoolean(L"truncated", false),
+                static_cast<int>(info.GetNamedNumber(L"limit", 0)));
+        });
+    }
+
+    /* Clic sur « Charger N messages de plus » : étend la synchronisation du dossier affiché de 1 000 messages
+     * plus anciens ; le bandeau de progression reste affiché jusqu'à la fin de la relève. */
+    void MainWindow::LoadOlderMessages()
+    {
+        hstring account = m_account;
+        hstring folder = m_folder;
+
+        if (account.empty() || folder.empty() || !m_core)
+            return;
+
+        UpdateOlderMessagesFooter(false, 0);
+        SetFolderSyncing(true);
+
+        m_core->ExtendFolderSync(account, folder, 1000, [this, account, folder](hstring const&, hstring const& error)
+        {
+            if (error.empty())
+                return;   /* la fin est annoncée par l'événement folder-refreshed */
+
+            SetFolderSyncing(false);
+            ShowStatus(Tr(L"Messages : ") + error, InfoBarSeverity::Warning);
+            if (account == m_account && folder == m_folder)
+                RefreshOlderMessagesFooter();
+        });
+    }
+
     /* Planifie la mise à jour de la liste du dossier affiché (après 400 ms : plusieurs
      * événements rapprochés, relève de plusieurs lots, ne donnent qu'une mise à jour). */
     void MainWindow::ScheduleListRefresh()
@@ -257,7 +343,7 @@ namespace winrt::EvolutionWin::implementation
         hstring folder = m_folder;
         uint64_t request = ++m_list_delta_request;
 
-        m_core->ReloadMessages(account, folder, 500, [this, account, folder, request](hstring const& json, hstring const& error)
+        m_core->ReloadMessages(account, folder, 0, [this, account, folder, request](hstring const& json, hstring const& error)
         {
             if (!error.empty() || request != m_list_delta_request || account != m_account || folder != m_folder || !m_all_messages)
                 return;   /* échec, ou un autre dossier est affiché entre-temps */

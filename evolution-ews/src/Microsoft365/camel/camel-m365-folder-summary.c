@@ -14,12 +14,19 @@
 #define LOCK(_summary) g_mutex_lock (&_summary->priv->property_lock)
 #define UNLOCK(_summary) g_mutex_unlock (&_summary->priv->property_lock)
 
-#define CAMEL_M365_FOLDER_SUMMARY_VERSION (3)
+#define CAMEL_M365_FOLDER_SUMMARY_VERSION (4)
 
 struct _CamelM365FolderSummaryPrivate {
 	GMutex property_lock;
 	gchar *delta_link;
 	gint32 version;
+
+	/* Fenêtre de synchronisation : seuls les 'limit' messages les plus récents sont synchronisés.
+	   window_start = date de réception du plus ancien (0 : pas de fenêtre), truncated = le serveur
+	   a des messages plus anciens. */
+	gint64 window_start;
+	gboolean truncated;
+	gint limit;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (CamelM365FolderSummary, camel_m365_folder_summary, CAMEL_TYPE_FOLDER_SUMMARY)
@@ -30,6 +37,9 @@ m365_folder_summary_header_load (CamelFolderSummary *summary,
 {
 	CamelM365FolderSummary *m365_summary = CAMEL_M365_FOLDER_SUMMARY (summary);
 	const gchar *delta_link = NULL;
+	gint64 window_start;
+	gboolean truncated;
+	gint limit;
 	gchar *part;
 
 	if (!CAMEL_FOLDER_SUMMARY_CLASS (camel_m365_folder_summary_parent_class)->summary_header_load (summary, record))
@@ -42,6 +52,17 @@ m365_folder_summary_header_load (CamelFolderSummary *summary,
 	if (part)
 		m365_summary->priv->version = camel_util_bdata_get_number (&part, 0);
 
+	/* version 4 : « 4 <début de fenêtre> <tronqué> <limite> <jeton> » ; avant : « <version> <jeton> » */
+	window_start = 0;
+	truncated = FALSE;
+	limit = CAMEL_M365_DEFAULT_SYNC_LIMIT;
+
+	if (m365_summary->priv->version >= 4 && part) {
+		window_start = camel_util_bdata_get_number (&part, 0);
+		truncated = camel_util_bdata_get_number (&part, 0) != 0;
+		limit = (gint) camel_util_bdata_get_number (&part, CAMEL_M365_DEFAULT_SYNC_LIMIT);
+	}
+
 	if (part && *part && part[1])
 		delta_link = part + 1;
 
@@ -49,8 +70,12 @@ m365_folder_summary_header_load (CamelFolderSummary *summary,
 	   to not mark the summary dirty after load. */
 	LOCK (m365_summary);
 
+	m365_summary->priv->window_start = window_start;
+	m365_summary->priv->truncated = truncated;
+	m365_summary->priv->limit = limit > 0 ? limit : CAMEL_M365_DEFAULT_SYNC_LIMIT;
+
 	if (m365_summary->priv->version < CAMEL_M365_FOLDER_SUMMARY_VERSION) {
-		/* the list of summary items to fetch changed for version 2 and 3,
+		/* the list of summary items to fetch changed for version 2, 3 and 4 (fenêtre de synchronisation),
 		   thus use a new delta link, to reflect it */
 		g_clear_pointer (&m365_summary->priv->delta_link, g_free);
 	} else if (g_strcmp0 (m365_summary->priv->delta_link, delta_link) != 0) {
@@ -76,7 +101,11 @@ m365_folder_summary_header_save (CamelFolderSummary *summary,
 
 	delta_link = camel_m365_folder_summary_dup_delta_link (m365_summary);
 
-	inout_record->bdata = g_strdup_printf ("%d %s", CAMEL_M365_FOLDER_SUMMARY_VERSION, delta_link ? delta_link : "");
+	LOCK (m365_summary);
+	inout_record->bdata = g_strdup_printf ("%d %" G_GINT64_FORMAT " %d %d %s", CAMEL_M365_FOLDER_SUMMARY_VERSION,
+		m365_summary->priv->window_start, m365_summary->priv->truncated ? 1 : 0, m365_summary->priv->limit,
+		delta_link ? delta_link : "");
+	UNLOCK (m365_summary);
 
 	g_free (delta_link);
 
@@ -122,6 +151,8 @@ camel_m365_folder_summary_init (CamelM365FolderSummary *m365_summary)
 	m365_summary->priv = camel_m365_folder_summary_get_instance_private (m365_summary);
 
 	g_mutex_init (&m365_summary->priv->property_lock);
+
+	m365_summary->priv->limit = CAMEL_M365_DEFAULT_SYNC_LIMIT;
 }
 
 CamelFolderSummary *
@@ -191,6 +222,74 @@ camel_m365_folder_summary_dup_delta_link (CamelM365FolderSummary *m365_summary)
 	UNLOCK (m365_summary);
 
 	return delta_link;
+}
+
+void
+camel_m365_folder_summary_get_window (CamelM365FolderSummary *m365_summary,
+				      gint64 *out_window_start,
+				      gboolean *out_truncated,
+				      gint *out_limit)
+{
+	g_return_if_fail (CAMEL_IS_M365_FOLDER_SUMMARY (m365_summary));
+
+	LOCK (m365_summary);
+
+	if (out_window_start)
+		*out_window_start = m365_summary->priv->window_start;
+	if (out_truncated)
+		*out_truncated = m365_summary->priv->truncated;
+	if (out_limit)
+		*out_limit = m365_summary->priv->limit;
+
+	UNLOCK (m365_summary);
+}
+
+void
+camel_m365_folder_summary_set_window (CamelM365FolderSummary *m365_summary,
+				      gint64 window_start,
+				      gboolean truncated,
+				      gint limit)
+{
+	gboolean changed;
+
+	g_return_if_fail (CAMEL_IS_M365_FOLDER_SUMMARY (m365_summary));
+
+	LOCK (m365_summary);
+
+	changed = m365_summary->priv->window_start != window_start ||
+		(m365_summary->priv->truncated ? 1 : 0) != (truncated ? 1 : 0) ||
+		m365_summary->priv->limit != limit;
+
+	m365_summary->priv->window_start = window_start;
+	m365_summary->priv->truncated = truncated;
+	m365_summary->priv->limit = limit;
+
+	UNLOCK (m365_summary);
+
+	if (changed)
+		camel_folder_summary_touch (CAMEL_FOLDER_SUMMARY (m365_summary));
+}
+
+/* Change le nombre de messages synchronisés ; la prochaine relève recalcule la fenêtre et refait
+   l'énumération (jeton de synchronisation effacé). */
+void
+camel_m365_folder_summary_set_sync_limit (CamelM365FolderSummary *m365_summary,
+					  gint limit)
+{
+	g_return_if_fail (CAMEL_IS_M365_FOLDER_SUMMARY (m365_summary));
+
+	if (limit < 0)
+		limit = 0;
+
+	LOCK (m365_summary);
+
+	m365_summary->priv->limit = limit;
+	m365_summary->priv->window_start = 0;
+	g_clear_pointer (&m365_summary->priv->delta_link, g_free);
+
+	UNLOCK (m365_summary);
+
+	camel_folder_summary_touch (CAMEL_FOLDER_SUMMARY (m365_summary));
 }
 
 void

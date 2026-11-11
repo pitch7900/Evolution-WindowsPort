@@ -2694,11 +2694,12 @@ e_m365_connection_list_messages_sync (EM365Connection *cnc,
    https://learn.microsoft.com/en-us/graph/api/user-delta?view=graph-rest-1.0&tabs=http */
 
 gboolean
-e_m365_connection_get_objects_delta_sync (EM365Connection *cnc,
+e_m365_connection_get_objects_delta_filtered_sync (EM365Connection *cnc,
 					  const gchar *user_override, /* for which user, NULL to use the account user */
 					  EM365FolderKind kind,
 					  const gchar *folder_id, /* folder ID to get delta messages in, nullable for orgContacts, users */
 					  const gchar *select, /* properties to select, nullable */
+					  const gchar *filter, /* filter of the first enumeration, nullable */
 					  const gchar *delta_link, /* previous delta link */
 					  guint max_page_size, /* 0 for default by the server */
 					  EM365ConnectionJsonFunc func, /* function to call with each result set */
@@ -2762,6 +2763,7 @@ e_m365_connection_get_objects_delta_sync (EM365Connection *cnc,
 			kind_path_str,
 			"", "delta",
 			"$select", select,
+			"$filter", filter,
 			with_mailsummary ? "expand" : NULL,
 			with_mailsummary ? "singleValueExtendedProperties($filter=id eq '" E_M365_PT_MESSAGE_SIZE_NAME "' or id eq '" E_M365_PT_ICON_INDEX "')" : NULL,
 			NULL);
@@ -2795,6 +2797,81 @@ e_m365_connection_get_objects_delta_sync (EM365Connection *cnc,
 
 	success = m365_connection_send_request_sync (cnc, message, e_m365_read_valued_response_cb, NULL, &rd, cancellable, error);
 
+	g_clear_object (&message);
+
+	return success;
+}
+
+gboolean
+e_m365_connection_get_objects_delta_sync (EM365Connection *cnc,
+					  const gchar *user_override, /* for which user, NULL to use the account user */
+					  EM365FolderKind kind,
+					  const gchar *folder_id, /* folder ID to get delta messages in, nullable for orgContacts, users */
+					  const gchar *select, /* properties to select, nullable */
+					  const gchar *delta_link, /* previous delta link */
+					  guint max_page_size, /* 0 for default by the server */
+					  EM365ConnectionJsonFunc func, /* function to call with each result set */
+					  gpointer func_user_data, /* user data passed into the 'func' */
+					  gchar **out_delta_link,
+					  GCancellable *cancellable,
+					  GError **error)
+{
+	return e_m365_connection_get_objects_delta_filtered_sync (cnc, user_override, kind, folder_id, select, NULL,
+		delta_link, max_page_size, func, func_user_data, out_delta_link, cancellable, error);
+}
+
+/* Date de réception du message de rang 'skip' d'un dossier (du plus récent au plus ancien) : sert à
+   borner la première synchronisation aux N messages les plus récents. Une seule page d'un seul message
+   est demandée, donc la réponse est immédiate même pour un dossier de dizaines de milliers de messages. */
+gboolean
+e_m365_connection_get_mail_window_start_sync (EM365Connection *cnc,
+					      const gchar *user_override, /* for which user, NULL to use the account user */
+					      const gchar *folder_id,
+					      guint skip,
+					      time_t *out_received_time,
+					      GCancellable *cancellable,
+					      GError **error)
+{
+	EM365ResponseData rd;
+	SoupMessage *message;
+	GSList *items = NULL;
+	gchar *uri, *skip_str;
+	gboolean success;
+
+	g_return_val_if_fail (E_IS_M365_CONNECTION (cnc), FALSE);
+	g_return_val_if_fail (folder_id != NULL, FALSE);
+	g_return_val_if_fail (out_received_time != NULL, FALSE);
+
+	*out_received_time = 0;
+
+	skip_str = g_strdup_printf ("%u", skip);
+	uri = e_m365_connection_construct_uri (cnc, TRUE, user_override, E_M365_API_V1_0, NULL,
+		"mailFolders",
+		folder_id,
+		"messages",
+		"$select", "receivedDateTime",
+		"$orderby", "receivedDateTime desc",
+		"$top", "1",
+		"$skip", skip_str,
+		NULL);
+	g_free (skip_str);
+
+	message = m365_connection_new_soup_message (SOUP_METHOD_GET, uri, CSM_DEFAULT, error);
+	g_free (uri);
+
+	if (!message)
+		return FALSE;
+
+	memset (&rd, 0, sizeof (EM365ResponseData));
+
+	rd.out_items = &items;
+
+	success = m365_connection_send_request_sync (cnc, message, e_m365_read_valued_response_cb, NULL, &rd, cancellable, error);
+
+	if (success && items)
+		*out_received_time = e_m365_mail_message_get_received_date_time (items->data);
+
+	g_slist_free_full (items, (GDestroyNotify) json_object_unref);
 	g_clear_object (&message);
 
 	return success;

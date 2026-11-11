@@ -84,6 +84,30 @@ void		evo_core_list_messages		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Fenêtre de synchronisation d'un dossier ouvert : certains comptes (Microsoft 365) ne synchronisent
+ * que les N messages les plus récents de chaque dossier.
+ * Paramètres :
+ *   core, account_uid, folder_full_name : dossier (déjà ouvert par evo_core_list_messages ())
+ *   func : rappel recevant {"supported": bool, "truncated": bool, "limit": n} ("truncated" : le serveur
+ *          a des messages plus anciens que ceux synchronisés)
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_get_folder_sync_info	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Étend la fenêtre de synchronisation d'un dossier de extra_count messages plus anciens et lance la
+ * relève en fond ; la fin est annoncée par l'événement "folder-refreshed" (membres "truncated", "limit").
+ * Paramètres : voir evo_core_get_folder_sync_info () ; func reçoit {"limit": nouvelle limite}, ou une erreur
+ * si le compte synchronise déjà tous les messages. */
+void		evo_core_extend_folder_sync	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 unsigned int extra_count,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Relit la liste des messages d'un dossier depuis le cache local de Camel, sans
  * relève du serveur : sert à mettre à jour la liste affichée quand une relève en
  * fond vient de se terminer (événement "folder-refreshed"). Même format de résultat
