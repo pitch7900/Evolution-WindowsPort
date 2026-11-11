@@ -93,6 +93,50 @@ gal_get_token (EvoCore *core,
 	return ok;
 }
 
+/* Diagnostic : journalise les portées (claim « scp ») d'un jeton d'accès JWT.
+ * Seule la liste des portées est écrite, jamais le jeton lui-même.
+ * Paramètres :
+ *   label : texte identifiant le compte dans le journal
+ *   token : jeton d'accès (JWT) */
+static void
+gal_log_token_scopes (const gchar *label,
+		      const gchar *token)
+{
+	gchar **parts = token ? g_strsplit (token, ".", 3) : NULL;
+	gchar *payload = NULL;
+	gsize length = 0;
+	JsonParser *parser;
+
+	if (parts && parts[0] && parts[1] && *parts[1]) {
+		gchar *padded = g_strdup (parts[1]);
+		gsize ii, len = strlen (padded);
+
+		for (ii = 0; ii < len; ii++) {
+			if (padded[ii] == '-')
+				padded[ii] = '+';
+			else if (padded[ii] == '_')
+				padded[ii] = '/';
+		}
+		payload = (gchar *) g_base64_decode (padded, &length);
+		g_free (padded);
+	}
+
+	parser = json_parser_new ();
+	if (payload && json_parser_load_from_data (parser, payload, (gssize) length, NULL) &&
+	    JSON_NODE_HOLDS_OBJECT (json_parser_get_root (parser))) {
+		JsonObject *object = json_node_get_object (json_parser_get_root (parser));
+
+		g_message ("jeton « %s » : portées = %s", label,
+			json_object_get_string_member_with_default (object, "scp", "(aucune claim scp)"));
+	} else {
+		g_message ("jeton « %s » : portées illisibles (jeton non JWT)", label);
+	}
+
+	g_object_unref (parser);
+	g_free (payload);
+	g_strfreev (parts);
+}
+
 /* Requête GET authentifiée (Bearer) sur une API d'annuaire.
  * Paramètres :
  *   core       : instance du moteur evo-core
@@ -775,8 +819,8 @@ core_gal_photo_run (EvoCore *core,
 		GalProvider provider;
 		/* /photo/$value d'abord ; certaines photos (synchronisées depuis l'annuaire
 		 * local, par exemple) ne sont servies que par les tailles fixes */
-		const gchar *suffixes[] = { "/photo/$value", "/photos/648x648/$value", "/photos/240x240/$value",
-			"/photos/120x120/$value", "/photos/96x96/$value", "/photos/64x64/$value", "/photos/48x48/$value", NULL };
+		const gchar *suffixes[] = { "v1.0/users/%s/photo/$value", "beta/users/%s/photo/$value",
+			"v1.0/users/%s/photos/240x240/$value", "v1.0/users/%s/photos/48x48/$value", NULL };
 		gchar *token = NULL;
 		guint ii;
 
@@ -788,12 +832,17 @@ core_gal_photo_run (EvoCore *core,
 		if (!gal_get_token (core, source, &token, NULL))
 			continue;
 
+		gal_log_token_scopes (e_source_get_display_name (source), token);
+
 		for (ii = 0; suffixes[ii] && !photo; ii++) {
-			gchar *uri = g_strconcat ("https://graph.microsoft.com/v1.0/users/", escaped, suffixes[ii], NULL);
+			gchar *path = g_strdup_printf (suffixes[ii], escaped);
+			gchar *uri = g_strconcat ("https://graph.microsoft.com/", path, NULL);
+
+			g_free (path);
 			guint status = 0;
 			GBytes *bytes = gal_http_get (core, provider, uri, token, &status, NULL);
 
-			g_message ("photo annuaire Graph : HTTP %u pour %s%s (%.200s)", status, args[1], suffixes[ii],
+			g_message ("photo annuaire Graph : HTTP %u pour %s (%.200s)", status, uri + strlen ("https://graph.microsoft.com/"),
 				bytes && status >= 300 && g_bytes_get_data (bytes, NULL) ? (const gchar *) g_bytes_get_data (bytes, NULL) : "");
 			if (bytes && status >= 200 && status < 300) {
 				gsize size = 0;
