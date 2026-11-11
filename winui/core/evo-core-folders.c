@@ -181,6 +181,44 @@ folder_roles_type (FolderRoles *fr,
 	return type;
 }
 
+/* Parcourt l'arborescence et retient les dossiers de base (voir core_dup_base_folder_names). */
+static void
+folder_roles_collect_base (FolderRoles *fr,
+			   CamelFolderInfo *fi,
+			   GHashTable *names)
+{
+	for (; fi; fi = fi->next) {
+		const gchar *type = folder_roles_type (fr, fi);
+
+		if (g_strcmp0 (type, "inbox") == 0 || g_strcmp0 (type, "sent") == 0 || g_strcmp0 (type, "drafts") == 0)
+			g_hash_table_add (names, g_strdup (fi->full_name));
+
+		folder_roles_collect_base (fr, fi->child, names);
+	}
+}
+
+/* Noms complets des dossiers de base d'un compte : Boîte de réception, Éléments envoyés et
+ * Brouillons, reconnus comme dans la liste des dossiers (rôle du serveur, dossier configuré dans le
+ * compte, nom usuel) : IMAP n'attribue pas toujours de type aux dossiers envoyés et brouillons.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   store : magasin du compte
+ *   fi    : arborescence des dossiers du compte
+ * Retourne : ensemble de noms complets (g_hash_table_destroy). */
+GHashTable *
+core_dup_base_folder_names (EvoCore *core,
+			    CamelStore *store,
+			    CamelFolderInfo *fi)
+{
+	FolderRoles *roles = folder_roles_new (core, store, fi);
+	GHashTable *names = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+
+	folder_roles_collect_base (roles, fi, names);
+	folder_roles_free (roles);
+
+	return names;
+}
+
 static void
 add_folder_infos (JsonBuilder *builder,
 		  CamelFolderInfo *fi,

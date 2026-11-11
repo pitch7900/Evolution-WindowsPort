@@ -176,7 +176,8 @@ namespace winrt::EvolutionWin::implementation
             if (!m_startup_synced && ::EvolutionWin::Settings::Instance().GetBoolean(L"mail.sync-on-startup", true))
             {
                 m_startup_synced = true;
-                m_core->RefreshAll();
+                /* dossiers de base seulement : les autres se synchronisent à l'ouverture (liste depuis le cache, relève en fond) */
+                m_core->RefreshBase();
             }
         });
     }

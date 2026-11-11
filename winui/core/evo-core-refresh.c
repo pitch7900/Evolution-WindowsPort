@@ -51,7 +51,8 @@ static void
 core_refresh_folder_infos (EvoCore *core,
 			   CamelStore *store,
 			   CamelFolderInfo *fi,
-			   GPtrArray *opened)
+			   GPtrArray *opened,
+			   GHashTable *only)
 {
 	for (; fi && !g_cancellable_is_cancelled (core->cancellable); fi = fi->next) {
 		gboolean done = (fi->flags & (CAMEL_FOLDER_NOSELECT | CAMEL_FOLDER_VIRTUAL)) != 0;
@@ -59,6 +60,10 @@ core_refresh_folder_infos (EvoCore *core,
 
 		for (ii = 0; !done && ii < opened->len; ii++)
 			done = g_strcmp0 (camel_folder_get_full_name (opened->pdata[ii]), fi->full_name) == 0;
+
+		/* passe de base : seuls les dossiers retenus sont relevés (les sous-dossiers sont tout de même parcourus) */
+		if (!done && only && !g_hash_table_contains (only, fi->full_name))
+			done = TRUE;
 
 		if (!done) {
 			CamelFolder *folder;
@@ -82,7 +87,7 @@ core_refresh_folder_infos (EvoCore *core,
 			g_clear_object (&folder);
 		}
 
-		core_refresh_folder_infos (core, store, fi->child, opened);
+		core_refresh_folder_infos (core, store, fi->child, opened, only);
 	}
 }
 
@@ -97,7 +102,8 @@ core_refresh_run (EvoCore *core,
 	GList *services, *link;
 
 	guint total_services = 0, current_service = 0;
-	const gchar *pass = (args[0] && g_str_equal (args[0], "all")) ? "passe complète" : "passe rapide";
+	const gchar *pass = (args[0] && g_str_equal (args[0], "all")) ? "passe complète"
+		: (args[0] && g_str_equal (args[0], "base")) ? "passe de base" : "passe rapide";
 
 	services = camel_session_list_services (core->session);
 
@@ -190,13 +196,19 @@ core_refresh_run (EvoCore *core,
 			g_object_set_data (G_OBJECT (folder), "evo-initial-sync-done", GINT_TO_POINTER (1));
 		}
 
-		/* args[0] = "all" (evo_core_refresh_all): every other folder too */
-		if (args[0] && g_str_equal (args[0], "all")) {
+		/* args[0] = "all" (evo_core_refresh_all): every other folder too ;
+		 * "base" (evo_core_refresh_base) : seulement Boîte de réception, Éléments envoyés et Brouillons */
+		if (args[0] && (g_str_equal (args[0], "all") || g_str_equal (args[0], "base"))) {
 			CamelFolderInfo *fi;
+			GHashTable *only = NULL;
 
 			fi = camel_store_get_folder_info_sync (CAMEL_STORE (service), NULL,
 				CAMEL_STORE_FOLDER_INFO_RECURSIVE, core->cancellable, NULL);
-			core_refresh_folder_infos (core, CAMEL_STORE (service), fi, opened);
+			if (g_str_equal (args[0], "base"))
+				only = core_dup_base_folder_names (core, CAMEL_STORE (service), fi);
+			core_refresh_folder_infos (core, CAMEL_STORE (service), fi, opened, only);
+			if (only)
+				g_hash_table_destroy (only);
 			camel_folder_info_free (fi);
 			core_emit (core, "status", "");
 		}
@@ -279,6 +291,20 @@ evo_core_refresh_all (EvoCore *core)
 	gchar *args[] = { (gchar *) "all", NULL };
 
 	core_process_outbox (core);
+	core_submit_background (core, core_refresh_run, g_strdupv (args), core_ignore_result, NULL);
+}
+
+/* Relève de base de tous les comptes : Boîte de réception, Éléments envoyés, Brouillons et dossiers
+ * ouverts (voir evo-core.h). Les autres dossiers se synchronisent à leur ouverture.
+ * Paramètres :
+ *   core : instance du moteur evo-core */
+void
+evo_core_refresh_base (EvoCore *core)
+{
+	gchar *args[] = { (gchar *) "base", NULL };
+
+	g_return_if_fail (core != NULL);
+
 	core_submit_background (core, core_refresh_run, g_strdupv (args), core_ignore_result, NULL);
 }
 

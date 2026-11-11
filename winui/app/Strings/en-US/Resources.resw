@@ -6895,5 +6895,9 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>This message no longer exists on the server: the list is being updated.</value>
     <comment>Ce message n'existe plus sur le serveur : la liste est mise à jour.</comment>
   </data>
+  <data name="T_C7451865" xml:space="preserve">
+    <value>Synchronize the inbox, sent items and drafts of all accounts as soon as EvolutionWin starts.</value>
+    <comment>Synchroniser dès l'ouverture d'EvolutionWin la boîte de réception, les éléments envoyés et les brouillons de tous les comptes.</comment>
+  </data>
 </root>
 

@@ -91,6 +91,12 @@ namespace EvolutionWin
             evo_core_refresh_all(m_core);
         }
 
+        /* Relève de base (Boîte de réception, Éléments envoyés, Brouillons) : démarrage. */
+        void RefreshBase()
+        {
+            evo_core_refresh_base(m_core);
+        }
+
         /* Active ou désactive le mode hors connexion global du moteur.
          * Paramètres :
          *   offline : true pour travailler hors connexion, false pour se reconnecter */

@@ -393,6 +393,12 @@ core_startup_tracing (void);
 void
 core_bg_yield (EvoCore *core);
 
+/* evo-core-folders.c */
+GHashTable *
+core_dup_base_folder_names (EvoCore *core,
+			    CamelStore *store,
+			    CamelFolderInfo *fi);
+
 /* evo-core-refresh.c */
 void
 core_emit_folder_refreshed (EvoCore *core,

@@ -82,7 +82,7 @@
 
                                             <TextBlock Text="Relever le courrier au démarrage" Style="{StaticResource BodyStrongTextBlockStyle}" />
 
-                                            <TextBlock Text="Synchroniser immédiatement tous les comptes dès l'ouverture d'EvolutionWin."
+                                            <TextBlock Text="Synchroniser dès l'ouverture d'EvolutionWin la boîte de réception, les éléments envoyés et les brouillons de tous les comptes."
 
                                                        Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 

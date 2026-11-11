@@ -116,6 +116,11 @@ void		evo_core_refresh		(EvoCore *core);
  * tous les autres dossiers de chaque compte. */
 void		evo_core_refresh_all		(EvoCore *core);
 
+/* Relève de base de tous les comptes : Boîte de réception, Éléments envoyés, Brouillons et dossiers
+ * ouverts. Les autres dossiers se synchronisent quand on les ouvre. Remplace la relève complète
+ * du démarrage (evo_core_refresh_all () reste utilisée par « Tous les dossiers », F9). */
+void		evo_core_refresh_base		(EvoCore *core);
+
 /* Interrompt les opérations réseau ou de synchronisation actives
  * en annulant le GCancellable de la session, puis le réinitialise. */
 void		evo_core_cancel_operations	(EvoCore *core);
