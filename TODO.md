@@ -140,7 +140,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] **Notification** de la nouvelle version (bandeau / toast) avec les nouveautés extraites du [CHANGELOG.md](CHANGELOG.md), boutons _Installer maintenant_, _Plus tard_, _Ignorer cette version_
   - [x] **Téléchargement automatique** du MSI joint à la Release GitHub (`Evolution-<version>-x64.msi`) en arrière-plan, avec progression dans la barre d'état (§4), dans `%LOCALAPPDATA%\EvolutionWin\Updates`
   - [x] **Vérification d'intégrité avant installation** : empreinte SHA-256 publiée à côté du MSI (`.sha256`) et signature Authenticode du MSI (`WinVerifyTrust`, éditeur attendu) ; refus d'installer si la vérification échoue
-  - [ ] **Installation** : fermeture propre de l'application (boîte d'envoi vidée, synchronisation terminée), lancement de `msiexec /i … /passive` (élévation UAC, installation par machine), redémarrage automatique d'EvolutionWin à la fin
+  - [ ] **Installation** : fermeture propre de l'application (boîte d'envoi vidée, synchronisation terminée), lancement de `msiexec /i … /passive` (élévation UAC, installation par machine), redémarrage automatique d'EvolutionWin à la fin — _fait : avertissement puis fermeture automatique de l'application au lancement de `msiexec /i` (c2f3832) ; reste : `/passive`, attente de la fin de la synchronisation / de la boîte d'envoi et redémarrage automatique d'EvolutionWin_
   - [ ] Nettoyage des MSI téléchargés après installation réussie
   - [ ] **Paramètres** (§19) : mise à jour automatique / notification seulement / désactivée ; canal (versions stables, préversions)
   - [ ] **Politique d'entreprise** : désactivation par clé de registre machine ou propriété MSI (`AUTOUPDATE=0`) pour les déploiements gérés (GPO / Intune)
@@ -185,7 +185,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 
 ### Fenêtres et lecture
 
-- [ ] 🟡 **Ouvrir un événement ou un dossier dans une nouvelle fenêtre** (pour un message : fenêtre de lecture indépendante, §6) ; [x] 🟢 **Fermer tous les éléments ouverts**
+- [ ] 🟡 **Ouvrir un événement ou un dossier dans une nouvelle fenêtre** (pour un message : fenêtre de lecture indépendante, §6) — _fait : message (§6) et événement (fenêtre dédiée depuis la 1.1.0) ; reste : dossier_ ; [x] 🟢 **Fermer tous les éléments ouverts**
 - [ ] 🟠 **Fenêtre des rappels** : rappels des rendez-vous (alarmes EDS) et des messages en suivi, avec Reporter / Ignorer _(partiel : notification Windows à l'heure du rappel des événements, vérifiée toutes les 30 s, sans répétition ; restent Reporter / Ignorer, les messages en suivi et les tâches)_
 - [ ] 🟡 **Lecteur immersif** : vue de lecture plein écran épurée (taille du texte, espacement)
 - [x] 🟢 **Lecture à voix haute** du message (`Windows.Media.SpeechSynthesis`)
@@ -495,8 +495,8 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
   - [ ] **Création du dossier Brouillons** s'il n'existe pas encore sur le serveur (`camel_store_create_folder_sync`), puis inscription dans l'identité du compte (`e_source_mail_composition_set_drafts_folder`) ; repli sur un dossier Brouillons local si le serveur refuse ou si l'on est hors connexion, avec transfert au retour du réseau (§4)
   - [ ] Changement de compte expéditeur pendant la rédaction : brouillon déplacé vers le dossier Brouillons du nouveau compte
   - [ ] À l'envoi : brouillon supprimé du dossier Brouillons ; à la fermeture sans envoi : **pas de question**, le brouillon est déjà enregistré (dernier autosave à la fermeture) ; bouton _Supprimer le brouillon_ dans la fenêtre de rédaction pour abandonner le message
-  - [ ] Reprise d'un brouillon : double-clic dans le dossier Brouillons → fenêtre de rédaction pré-remplie (cf. §6), compte, signature et format (HTML / texte) restaurés
-  - [ ] Indication discrète de l'état de l'autosave dans la fenêtre de rédaction (« Enregistrement… », « Brouillon enregistré à 14:32 », « Non enregistré — nouvelle tentative »)
+  - [x] Reprise d'un brouillon : double-clic dans le dossier Brouillons → fenêtre de rédaction pré-remplie (cf. §6), compte, signature et format (HTML / texte) restaurés
+  - [ ] Indication discrète de l'état de l'autosave dans la fenêtre de rédaction (« Enregistrement… », « Brouillon enregistré à 14:32 », « Non enregistré — nouvelle tentative ») — _fait : « Brouillon enregistré à HH:mm » ; reste : « Enregistrement… » et l'état d'échec (l'échec d'un autosave est aujourd'hui silencieux)_
   - [ ] Récupération après plantage : copie locale écrite à chaque autosave, brouillons non synchronisés retrouvés au redémarrage
 - [ ] 🟡 **Répondre par une réunion** (réunion pré-remplie avec les participants) — dépend de §13
 - [x] 🟢 **Transférer en pièce jointe** pour un message seul (déjà fait en sélection multiple)
