@@ -399,6 +399,13 @@ core_startup_tracing (void);
 void
 core_bg_yield (EvoCore *core);
 
+/* evo-core-gal.c */
+gchar *
+core_graph_invitation_event (EvoCore *core,
+			     const gchar *account_uid,
+			     const gchar *event_uid,
+			     gboolean *out_found);
+
 /* evo-core-folders.c */
 gboolean
 core_folder_sync_window_of (CamelFolder *folder,

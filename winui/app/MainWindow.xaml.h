@@ -605,6 +605,7 @@ namespace winrt::EvolutionWin::implementation
         void RefreshPrivacyView();
         void UpdateInvitationBar(Windows::Data::Json::JsonObject const& message);
         void CheckInvitationInCalendar();
+        void RenderInvitationDayGrid(Windows::Data::Json::JsonObject const& inv);
         void HideInvitationBar();
         void RespondToInvitation(hstring const& response);
         void UpdateReceiptBars(Windows::Data::Json::JsonObject const& message);

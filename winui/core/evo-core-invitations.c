@@ -469,7 +469,24 @@ core_find_invitation_event_run (EvoCore *core,
 
 	if (!json) {
 		ICalComponent *existing = NULL;
-		gboolean found = itip_find_event (core, args[0], args[1], NULL, &existing, 60000);
+		gboolean found = FALSE;
+
+		/* compte Microsoft 365 : Microsoft Graph (réponse, date de réponse, événements du jour), en une ou deux
+		 * requêtes ; sinon (ou si Graph est injoignable) recherche dans les agendas EDS, qui peut être très lente */
+		json = core_graph_invitation_event (core, args[0], args[1], &found);
+		if (json) {
+			entry = g_new0 (ItipCacheEntry, 1);
+			entry->json = g_strdup (json);
+			entry->expires_at = g_get_monotonic_time () + (found ? 600 : 60) * G_USEC_PER_SEC;
+			g_mutex_lock (&itip_cache_lock);
+			g_hash_table_insert (itip_cache, g_strdup (key), entry);
+			g_mutex_unlock (&itip_cache_lock);
+			g_free (key);
+
+			return json;
+		}
+
+		found = itip_find_event (core, args[0], args[1], NULL, &existing, 60000);
 		gchar *my_address = found ? itip_identity_address (core, args[0], NULL) : NULL;
 		JsonBuilder *builder = json_builder_new ();
 

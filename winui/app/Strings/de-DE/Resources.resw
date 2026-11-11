@@ -6911,6 +6911,18 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>{0} weitere Nachrichten laden</value>
     <comment>Charger {0} messages de plus</comment>
   </data>
+  <data name="T_673FD122" xml:space="preserve">
+    <value>Am {0} angenommen.</value>
+    <comment>Acceptée le {0}.</comment>
+  </data>
+  <data name="T_13E9D796" xml:space="preserve">
+    <value>Am {0} vorläufig zugesagt.</value>
+    <comment>Provisoire le {0}.</comment>
+  </data>
+  <data name="T_3A6FCFF5" xml:space="preserve">
+    <value>Am {0} abgelehnt.</value>
+    <comment>Refusée le {0}.</comment>
+  </data>
   <data name="T_37F00D41" xml:space="preserve">
     <value>Erkennung fehlgeschlagen</value>
     <comment>Détection impossible</comment>

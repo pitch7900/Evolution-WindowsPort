@@ -187,6 +187,16 @@ namespace winrt::EvolutionWin::implementation
             else if (kind == Kind::Request && (mine == Answer::Accepted || mine == Answer::Tentative))
                 state.tone = Tone::Success;
         }
+        /* réponse déjà donnée : « Acceptée le 11.11.2026 09:16. » comme dans Outlook (date lue dans l'agenda Microsoft 365) */
+        double response_time = inv.GetNamedNumber(L"response_time", 0);
+        if (kind != Kind::Reply && response_time > 0 && (mine == Answer::Accepted || mine == Answer::Tentative || mine == Answer::Declined))
+        {
+            hstring when_text = ::EvolutionWin::Helpers::FormatDate(response_time);
+            status_text = std::wstring{ mine == Answer::Accepted ? Fmt(Tr(L"Acceptée le {0}."), { when_text })
+                : mine == Answer::Tentative ? Fmt(Tr(L"Provisoire le {0}."), { when_text })
+                : Fmt(Tr(L"Refusée le {0}."), { when_text }) };
+        }
+
         /* état dans l'agenda encore inconnu : on n'affirme rien (« Merci de répondre » serait faux pour une invitation déjà acceptée) */
         if (!calendar_checked && kind != Kind::Reply)
             status_text.clear();
@@ -212,8 +222,159 @@ namespace winrt::EvolutionWin::implementation
         InviteSendReplyCheck().IsChecked(true);
         InviteSendReplyCheck().Visibility(state.showSendChoice ? Visibility::Visible : Visibility::Collapsed);
 
+        RenderInvitationDayGrid(inv);
+
         InviteBar().Severity(SeverityOf(state.tone));
         InviteBar().IsOpen(true);
+    }
+
+    /**
+     * @brief Dessine, dans le bandeau d'invitation, la mini-grille de la journée autour de la réunion
+     *        (comme Outlook) : colonne des heures, la réunion proposée en couleur d'accentuation, et les autres
+     *        événements de l'agenda (voies côte à côte quand ils se chevauchent) pour voir les conflits.
+     *        Masquée tant que les événements de l'agenda ne sont pas connus (Microsoft 365 seulement).
+     * @param inv Objet « invitation » du message (start, end, summary, day_events).
+     */
+    void MainWindow::RenderInvitationDayGrid(JsonObject const& inv)
+    {
+        auto grid = InviteDayGrid();
+        grid.Children().Clear();
+        grid.ColumnDefinitions().Clear();
+        grid.RowDefinitions().Clear();
+        InviteDayHost().Visibility(Visibility::Collapsed);
+
+        double start = inv.GetNamedNumber(L"start", 0);
+        double end = inv.GetNamedNumber(L"end", 0);
+        if (inv.GetNamedBoolean(L"all_day", false) || start <= 0 || end <= start || !inv.HasKey(L"day_events"))
+            return;
+
+        constexpr double kPxPerHour = 44.0;
+
+        /* fenêtre : une heure avant, une heure et demie après, au quart d'heure près, 3 h au moins */
+        double window_start = std::floor((start - 3600.0) / 1800.0) * 1800.0;
+        double window_end = std::ceil((end + 5400.0) / 1800.0) * 1800.0;
+        if (window_end - window_start < 3 * 3600.0)
+            window_end = window_start + 3 * 3600.0;
+        double total_height = (window_end - window_start) / 3600.0 * kPxPerHour;
+
+        struct Item { double start; double end; hstring subject; hstring show_as; bool self; };
+        std::vector<Item> items;
+        items.push_back({ start, end, inv.GetNamedString(L"summary", L""), L"busy", true });
+
+        for (auto const& value : inv.GetNamedArray(L"day_events", JsonArray{}))
+        {
+            auto event = value.GetObject();
+            double event_start = event.GetNamedNumber(L"start", 0);
+            double event_end = event.GetNamedNumber(L"end", 0);
+            if (event.GetNamedBoolean(L"self", false) || event.GetNamedBoolean(L"all_day", false) ||
+                event_end <= window_start || event_start >= window_end || event_end <= event_start)
+                continue;
+            items.push_back({ event_start, event_end, event.GetNamedString(L"subject", L""), event.GetNamedString(L"show_as", L"busy"), false });
+        }
+        std::stable_sort(items.begin() + 1, items.end(), [](Item const& a, Item const& b) { return a.start < b.start; });
+
+        /* voies : la réunion proposée d'abord, puis chaque événement dans la première voie libre */
+        std::vector<double> lane_end;
+        std::vector<size_t> lane_of(items.size(), 0);
+        for (size_t i = 0; i < items.size(); ++i)
+        {
+            size_t lane = 0;
+            while (lane < lane_end.size() && lane_end[lane] > items[i].start)
+                ++lane;
+            if (lane == lane_end.size())
+                lane_end.push_back(0);
+            lane_end[lane] = items[i].end;
+            lane_of[i] = lane;
+        }
+
+        ColumnDefinition label_column, lanes_column;
+        label_column.Width(GridLengthHelper::FromPixels(52));
+        lanes_column.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+        grid.ColumnDefinitions().Append(label_column);
+        grid.ColumnDefinitions().Append(lanes_column);
+        grid.Height(total_height);
+
+        auto resources = Application::Current().Resources();
+        auto brush = [&](wchar_t const* key) { return resources.Lookup(box_value(key)).as<Microsoft::UI::Xaml::Media::Brush>(); };
+
+        /* heures et traits */
+        for (double hour = std::ceil(window_start / 3600.0) * 3600.0; hour < window_end; hour += 3600.0)
+        {
+            double y = (hour - window_start) / 3600.0 * kPxPerHour;
+
+            TextBlock label;
+            label.Text(::EvolutionWin::Helpers::FormatTime(hour));
+            label.FontSize(11);
+            label.Opacity(0.7);
+            label.Margin(ThicknessHelper::FromLengths(8, y - 8, 0, 0));
+            label.VerticalAlignment(VerticalAlignment::Top);
+            Grid::SetColumn(label, 0);
+            grid.Children().Append(label);
+
+            Border line;
+            line.Height(1);
+            line.VerticalAlignment(VerticalAlignment::Top);
+            line.Margin(ThicknessHelper::FromLengths(0, y, 0, 0));
+            line.Background(brush(L"DividerStrokeColorDefaultBrush"));
+            Grid::SetColumn(line, 1);
+            grid.Children().Append(line);
+        }
+
+        /* événements, une colonne par voie */
+        Grid lanes;
+        Grid::SetColumn(lanes, 1);
+        for (size_t lane = 0; lane < lane_end.size(); ++lane)
+        {
+            ColumnDefinition column;
+            column.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+            lanes.ColumnDefinitions().Append(column);
+        }
+
+        for (size_t i = 0; i < items.size(); ++i)
+        {
+            auto const& item = items[i];
+            double top = (std::max)(item.start, window_start);
+            double bottom = (std::min)(item.end, window_end);
+            double y = (top - window_start) / 3600.0 * kPxPerHour;
+            double height = (std::max)(20.0, (bottom - top) / 3600.0 * kPxPerHour - 1);
+
+            Border block;
+            block.VerticalAlignment(VerticalAlignment::Top);
+            block.Margin(ThicknessHelper::FromLengths(2, y, 2, 0));
+            block.Height(height);
+            block.CornerRadius(CornerRadiusHelper::FromUniformRadius(3));
+            block.Padding(ThicknessHelper::FromLengths(6, 2, 6, 2));
+            block.BorderThickness(ThicknessHelper::FromUniformLength(1));
+
+            TextBlock text;
+            text.FontSize(11);
+            text.TextTrimming(TextTrimming::CharacterEllipsis);
+            text.TextWrapping(TextWrapping::NoWrap);
+            hstring subject = item.subject.empty() ? hstring{ L"…" } : item.subject;
+
+            if (item.self)
+            {
+                /* la réunion proposée : couleur d'accentuation */
+                block.Background(brush(L"AccentFillColorDefaultBrush"));
+                block.BorderBrush(brush(L"AccentFillColorDefaultBrush"));
+                text.Foreground(brush(L"TextOnAccentFillColorPrimaryBrush"));
+                text.FontWeight(Microsoft::UI::Text::FontWeights::SemiBold());
+            }
+            else
+            {
+                bool free_time = item.show_as == L"free";
+                block.Background(free_time ? brush(L"LayerFillColorDefaultBrush") : brush(L"CardBackgroundFillColorSecondaryBrush"));
+                block.BorderBrush(brush(L"CardStrokeColorDefaultBrush"));
+                text.Opacity(free_time ? 0.7 : 1.0);
+            }
+            text.Text(subject);
+            block.Child(text);
+            Grid::SetColumn(block, static_cast<int32_t>(lane_of[i]));
+            lanes.Children().Append(block);
+        }
+        grid.Children().Append(lanes);
+
+        InviteDayHost().Visibility(Visibility::Visible);
     }
 
     /**
@@ -242,6 +403,9 @@ namespace winrt::EvolutionWin::implementation
             {
                 inv.SetNamedValue(L"already_in_calendar", JsonValue::CreateBooleanValue(true));
                 inv.SetNamedValue(L"calendar_sequence", JsonValue::CreateNumberValue(result.GetNamedNumber(L"sequence", 0)));
+                inv.SetNamedValue(L"response_time", JsonValue::CreateNumberValue(result.GetNamedNumber(L"response_time", 0)));
+                if (result.HasKey(L"events"))
+                    inv.SetNamedValue(L"day_events", result.GetNamedArray(L"events"));
                 /* une réponse donnée depuis l'application (étiquette du message) prime sur l'agenda */
                 if (inv.GetNamedString(L"my_status", L"needs-action") == L"needs-action")
                     inv.SetNamedValue(L"my_status", JsonValue::CreateStringValue(result.GetNamedString(L"my_status", L"needs-action")));
