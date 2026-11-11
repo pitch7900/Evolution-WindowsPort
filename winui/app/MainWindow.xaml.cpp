@@ -310,6 +310,9 @@ namespace winrt::EvolutionWin::implementation
         if (event == L"ready")
         {
             evo_core_trace("interface : événement ready reçu");
+            ApplySpamSettings();
+            ApplyFullTextIndexSetting();
+            RefreshPendingActions();
             if (m_splash)
             {
                 if (!m_initialized)
@@ -441,6 +444,10 @@ namespace winrt::EvolutionWin::implementation
         {
             bool active = object.GetNamedBoolean(L"active", true);
             int32_t percent = static_cast<int32_t>(object.GetNamedNumber(L"percent", -1));
+        else if (event == L"spam-filtered")
+        {
+            ShowSpamFilteredNotice(object);
+        }
             hstring progress_text = message;
             if (object.GetNamedString(L"kind", L"") == L"offline")
             {
@@ -832,6 +839,8 @@ namespace winrt::EvolutionWin::implementation
 
         if (auto box = SearchBox())
         {
+            InitSpamSettingsView();
+            InitFullTextIndexSettingsView();
             if (tag == L"contacts")
                 box.PlaceholderText(Tr(L"Rechercher un contact (Ctrl+E)", L"Search contact (Ctrl+E)"));
             else if (tag == L"mail")

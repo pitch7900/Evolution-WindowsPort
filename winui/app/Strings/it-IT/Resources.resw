@@ -7123,5 +7123,81 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Categoria non aggiornata sull'account {0}: {1}</value>
     <comment>Catégorie non mise à jour sur le compte {0} : {1}</comment>
   </data>
+  <data name="T_384C69A2" xml:space="preserve">
+    <value>Appresi: {0} indesiderati, {1} legittimi. Il filtro è operativo.</value>
+    <comment>Appris : {0} indésirable(s), {1} légitime(s). Le filtre est opérationnel.</comment>
+  </data>
+  <data name="T_C08CC8BD" xml:space="preserve">
+    <value>Appresi: {0} indesiderati, {1} legittimi. Il filtro non è ancora operativo: servono almeno {2} messaggi di ogni tipo.</value>
+    <comment>Appris : {0} indésirable(s), {1} légitime(s). Le filtre n'est pas encore opérationnel : il lui faut au moins {2} messages de chaque sorte.</comment>
+  </data>
+  <data name="T_CC8FDE62" xml:space="preserve">
+    <value>Nessuna cartella Posta indesiderata o Posta in arrivo da analizzare.</value>
+    <comment>Aucun dossier Indésirables ou Boîte de réception à analyser.</comment>
+  </data>
+  <data name="T_51FB65F1" xml:space="preserve">
+    <value>Addestramento del filtro antispam in corso…</value>
+    <comment>Apprentissage du filtre anti-spam en cours…</comment>
+  </data>
+  <data name="T_35A144F7" xml:space="preserve">
+    <value>Addestramento completato: {0} messaggio/i appreso/i.</value>
+    <comment>Apprentissage terminé : {0} message(s) appris.</comment>
+  </data>
+  <data name="T_81B04DF1" xml:space="preserve">
+    <value>Reimpostare l'addestramento?</value>
+    <comment>Réinitialiser l'apprentissage ?</comment>
+  </data>
+  <data name="T_A662795E" xml:space="preserve">
+    <value>Tutto ciò che il filtro antispam ha appreso verrà cancellato. Non classificherà più nulla automaticamente finché non avrà imparato di nuovo dai tuoi messaggi.</value>
+    <comment>Tout ce que le filtre anti-spam a appris sera effacé. Il ne classera plus rien automatiquement avant d'avoir de nouveau appris sur vos messages.</comment>
+  </data>
+  <data name="T_9995DF1B" xml:space="preserve">
+    <value>Reimpostazione dell'addestramento: </value>
+    <comment>Réinitialisation de l'apprentissage : </comment>
+  </data>
+  <data name="T_152FD0C8" xml:space="preserve">
+    <value>L'addestramento del filtro antispam è stato reimpostato.</value>
+    <comment>L'apprentissage du filtre anti-spam a été réinitialisé.</comment>
+  </data>
+  <data name="T_7BA19B43" xml:space="preserve">
+    <value>{0} messaggio/i spostato/i automaticamente in Posta indesiderata.</value>
+    <comment>{0} message(s) classé(s) automatiquement dans Indésirables.</comment>
+  </data>
+  <data name="T_0280DEE4" xml:space="preserve">
+    <value>Posta indesiderata</value>
+    <comment>Courrier indésirable</comment>
+  </data>
+  <data name="T_4B356A4E" xml:space="preserve">
+    <value>Filtro antispam intelligente</value>
+    <comment>Filtre anti-spam intelligent</comment>
+  </data>
+  <data name="T_7F6E7EC9" xml:space="preserve">
+    <value>Sposta automaticamente nella cartella Posta indesiderata i nuovi messaggi della posta in arrivo simili a quelli che hai segnalato come indesiderati. L'analisi avviene interamente su questo computer.</value>
+    <comment>Classe automatiquement dans le dossier Indésirables les nouveaux messages de la boîte de réception qui ressemblent à ceux que vous avez signalés comme indésirables. L'analyse se fait entièrement sur cet ordinateur.</comment>
+  </data>
+  <data name="T_7E74F024" xml:space="preserve">
+    <value>Soglia di classificazione come indesiderato</value>
+    <comment>Seuil de classement en indésirable</comment>
+  </data>
+  <data name="T_64F38CDC" xml:space="preserve">
+    <value>Più la soglia è alta, meno il filtro sbaglia sui messaggi legittimi, ma più posta indesiderata lascia passare.</value>
+    <comment>Plus le seuil est élevé, moins le filtre se trompe sur des messages légitimes, mais plus il laisse passer de courrier indésirable.</comment>
+  </data>
+  <data name="T_F55BE7EE" xml:space="preserve">
+    <value>Addestramento del filtro</value>
+    <comment>Apprentissage du filtre</comment>
+  </data>
+  <data name="T_B6B1A42D" xml:space="preserve">
+    <value>Il filtro impara ogni volta che usi «Indesiderato» o «Non indesiderato». Diventa attivo non appena ha appreso almeno 20 messaggi di ogni tipo.</value>
+    <comment>Le filtre apprend à chaque fois que vous utilisez « Indésirable » ou « Non indésirable ». Il devient actif dès qu'il a appris au moins 20 messages de chaque sorte.</comment>
+  </data>
+  <data name="T_45A5A04E" xml:space="preserve">
+    <value>Impara dalle mie cartelle</value>
+    <comment>Apprendre à partir de mes dossiers</comment>
+  </data>
+  <data name="T_592D4C7C" xml:space="preserve">
+    <value>Reimposta addestramento</value>
+    <comment>Réinitialiser l'apprentissage</comment>
+  </data>
 </root>
 

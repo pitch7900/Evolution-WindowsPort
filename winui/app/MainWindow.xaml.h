@@ -412,6 +412,16 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
         void OnSettingTextBoxLostFocus(
             Windows::Foundation::IInspectable const& sender,
+        /* Index plein texte local (MainWindow.Index.cpp) : gestionnaires de la section des Paramètres */
+        void OnFullTextIndexToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnFullTextIndexRebuildClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
+        /* Filtre anti-spam (MainWindow.Spam.cpp) : gestionnaires de la section des Paramètres */
+        void OnSpamEnabledToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnSpamThresholdChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::Primitives::RangeBaseValueChangedEventArgs const& args);
+        void OnSpamLearnClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnSpamResetClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnCheckUpdateNowClick(
             Windows::Foundation::IInspectable const& sender,
@@ -567,6 +577,19 @@ namespace winrt::EvolutionWin::implementation
         std::vector<std::pair<winrt::hstring, std::vector<size_t>>> CategoryGroupsForDisplay();
         void ImportAccountCategories(Microsoft::UI::Xaml::Controls::Button const& button);
         void PopulateItemCategoryMenu(
+        /* Index plein texte local (MainWindow.Index.cpp) */
+        void ApplyFullTextIndexSetting();
+        void InitFullTextIndexSettingsView();
+        void ShowFullTextIndexStatus(Windows::Data::Json::JsonObject const& status);
+
+        /* Filtre anti-spam local (MainWindow.Spam.cpp) */
+        void ApplySpamSettings();
+        void RefreshSpamStats();
+        void InitSpamSettingsView();
+        void TrainSpamThenMove(std::vector<hstring> const& uids, hstring const& account, hstring const& folder, bool is_spam,
+            std::function<void()> const& then);
+        void ShowSpamFilteredNotice(Windows::Data::Json::JsonObject const& object);
+
             Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items,
             std::vector<std::wstring> const& current,
             std::function<void(std::vector<std::wstring> const&)> apply);

@@ -1612,3 +1612,91 @@ const char *	evo_core_version_info		(void);
 #endif
 
 #endif /* EVO_CORE_H */
+/* ---- Filtrage anti-spam local (classificateur bayésien, evo-core-spam.c) ----
+ * Événement émis : "spam-filtered" {"account", "folder", "junk_folder", "count"}
+ * quand des messages arrivés dans la boîte de réception sont classés
+ * automatiquement dans le dossier Indésirables. */
+
+/* Configure le filtre (appel synchrone, à refaire à chaque changement de réglage).
+ * Paramètres :
+ *   core              : instance du moteur evo-core (peut être NULL)
+ *   db_path           : chemin UTF-8 de la base d'apprentissage (NULL ou "" : %LOCALAPPDATA%\EvolutionWin\spam.db)
+ *   enabled           : non nul pour activer le classement automatique des nouveaux messages
+ *   threshold_percent : score minimal (50 à 99) pour classer un message en indésirable */
+void		evo_core_spam_configure		(EvoCore *core,
+						 const char *db_path,
+						 int enabled,
+						 int threshold_percent);
+
+/* Apprend des messages comme indésirables ou légitimes (à appeler avant leur déplacement).
+ * Paramètres :
+ *   message_uids : identifiants des messages du dossier, séparés par des sauts de ligne
+ *   is_spam      : non nul : indésirables ; 0 : légitimes
+ *   func         : rappel recevant {"trained", "failed", "spam", "ham", "tokens", "ready"} */
+void		evo_core_spam_train		(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *message_uids,
+						 int is_spam,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Apprend en lot les messages les plus récents d'un dossier (tâche de fond).
+ * Paramètres : comme evo_core_spam_train (), plus max_messages (nombre maximal de messages lus).
+ * func reçoit le même JSON que evo_core_spam_train (). */
+void		evo_core_spam_train_folder	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 int is_spam,
+						 int max_messages,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Score d'indésirabilité d'un message.
+ * func reçoit {"score": 0..1, "junk": bool, "ready": bool, "significant": n}. */
+void		evo_core_spam_score		(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *message_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Compteurs de l'apprentissage : func reçoit
+ * {"spam": n, "ham": n, "tokens": n, "ready": bool, "min_trained": n}. */
+void		evo_core_spam_stats		(EvoCore *core,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Efface tout l'apprentissage (mémoire et fichier) : func reçoit les compteurs remis à zéro. */
+void		evo_core_spam_reset		(EvoCore *core,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* --- Index plein texte local --- */
+
+/* Active ou désactive l'indexation plein texte locale du corps des messages et des pièces
+ * jointes texte (TXT, CSV, HTML, JSON, XML, iCalendar…). L'indexation se fait en tâche de fond, à partir
+ * des seuls messages déjà présents sur le disque (rien n'est téléchargé), et la recherche dans le
+ * corps des messages s'en sert dès qu'un dossier est entièrement indexé. À appeler au démarrage avec
+ * le réglage de l'utilisateur ; sans effet si l'état ne change pas.
+ * Paramètres :
+ *   core    : instance du moteur evo-core
+ *   enabled : 1 pour activer, 0 pour désactiver (les fichiers d'index sont conservés) */
+void		evo_core_index_set_enabled	(EvoCore *core,
+						 int enabled);
+
+/* État de l'index : func reçoit {"enabled", "state": "disabled"|"indexing"|"idle",
+ * "folders", "folders_complete", "messages_indexed", "messages_total", "words", "size_bytes",
+ * "updated" (secondes Unix du dernier passage), "pass_done", "pass_total", "pending",
+ * "current" (dossier en cours)}. Le même objet est émis dans l'événement "index-progress"
+ * pendant l'indexation. */
+void		evo_core_index_status		(EvoCore *core,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Efface tous les index (mémoire et disque) puis les reconstruit en tâche de fond.
+ * Erreur si l'indexation est désactivée. func reçoit {}. */
+void		evo_core_index_rebuild		(EvoCore *core,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+

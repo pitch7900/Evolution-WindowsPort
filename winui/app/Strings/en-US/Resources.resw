@@ -7123,5 +7123,81 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Category not updated on account {0}: {1}</value>
     <comment>Catégorie non mise à jour sur le compte {0} : {1}</comment>
   </data>
+  <data name="T_384C69A2" xml:space="preserve">
+    <value>Learned: {0} junk, {1} legitimate message(s). The filter is operational.</value>
+    <comment>Appris : {0} indésirable(s), {1} légitime(s). Le filtre est opérationnel.</comment>
+  </data>
+  <data name="T_C08CC8BD" xml:space="preserve">
+    <value>Learned: {0} junk, {1} legitimate message(s). The filter is not operational yet: it needs at least {2} messages of each kind.</value>
+    <comment>Appris : {0} indésirable(s), {1} légitime(s). Le filtre n'est pas encore opérationnel : il lui faut au moins {2} messages de chaque sorte.</comment>
+  </data>
+  <data name="T_CC8FDE62" xml:space="preserve">
+    <value>No Junk or Inbox folder to analyze.</value>
+    <comment>Aucun dossier Indésirables ou Boîte de réception à analyser.</comment>
+  </data>
+  <data name="T_51FB65F1" xml:space="preserve">
+    <value>Training the spam filter…</value>
+    <comment>Apprentissage du filtre anti-spam en cours…</comment>
+  </data>
+  <data name="T_35A144F7" xml:space="preserve">
+    <value>Training complete: {0} message(s) learned.</value>
+    <comment>Apprentissage terminé : {0} message(s) appris.</comment>
+  </data>
+  <data name="T_81B04DF1" xml:space="preserve">
+    <value>Reset the training?</value>
+    <comment>Réinitialiser l'apprentissage ?</comment>
+  </data>
+  <data name="T_A662795E" xml:space="preserve">
+    <value>Everything the spam filter has learned will be erased. It will not sort anything automatically until it has learned from your messages again.</value>
+    <comment>Tout ce que le filtre anti-spam a appris sera effacé. Il ne classera plus rien automatiquement avant d'avoir de nouveau appris sur vos messages.</comment>
+  </data>
+  <data name="T_9995DF1B" xml:space="preserve">
+    <value>Resetting the training: </value>
+    <comment>Réinitialisation de l'apprentissage : </comment>
+  </data>
+  <data name="T_152FD0C8" xml:space="preserve">
+    <value>The spam filter training has been reset.</value>
+    <comment>L'apprentissage du filtre anti-spam a été réinitialisé.</comment>
+  </data>
+  <data name="T_7BA19B43" xml:space="preserve">
+    <value>{0} message(s) automatically moved to Junk.</value>
+    <comment>{0} message(s) classé(s) automatiquement dans Indésirables.</comment>
+  </data>
+  <data name="T_0280DEE4" xml:space="preserve">
+    <value>Junk mail</value>
+    <comment>Courrier indésirable</comment>
+  </data>
+  <data name="T_4B356A4E" xml:space="preserve">
+    <value>Smart spam filter</value>
+    <comment>Filtre anti-spam intelligent</comment>
+  </data>
+  <data name="T_7F6E7EC9" xml:space="preserve">
+    <value>Automatically moves new Inbox messages that look like those you reported as junk to the Junk folder. The analysis is done entirely on this computer.</value>
+    <comment>Classe automatiquement dans le dossier Indésirables les nouveaux messages de la boîte de réception qui ressemblent à ceux que vous avez signalés comme indésirables. L'analyse se fait entièrement sur cet ordinateur.</comment>
+  </data>
+  <data name="T_7E74F024" xml:space="preserve">
+    <value>Junk classification threshold</value>
+    <comment>Seuil de classement en indésirable</comment>
+  </data>
+  <data name="T_64F38CDC" xml:space="preserve">
+    <value>The higher the threshold, the less the filter mistakes legitimate messages, but the more junk mail it lets through.</value>
+    <comment>Plus le seuil est élevé, moins le filtre se trompe sur des messages légitimes, mais plus il laisse passer de courrier indésirable.</comment>
+  </data>
+  <data name="T_F55BE7EE" xml:space="preserve">
+    <value>Filter training</value>
+    <comment>Apprentissage du filtre</comment>
+  </data>
+  <data name="T_B6B1A42D" xml:space="preserve">
+    <value>The filter learns each time you use “Junk” or “Not junk”. It becomes active as soon as it has learned at least 20 messages of each kind.</value>
+    <comment>Le filtre apprend à chaque fois que vous utilisez « Indésirable » ou « Non indésirable ». Il devient actif dès qu'il a appris au moins 20 messages de chaque sorte.</comment>
+  </data>
+  <data name="T_45A5A04E" xml:space="preserve">
+    <value>Learn from my folders</value>
+    <comment>Apprendre à partir de mes dossiers</comment>
+  </data>
+  <data name="T_592D4C7C" xml:space="preserve">
+    <value>Reset training</value>
+    <comment>Réinitialiser l'apprentissage</comment>
+  </data>
 </root>
 

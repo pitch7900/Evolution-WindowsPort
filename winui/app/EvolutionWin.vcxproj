@@ -303,6 +303,15 @@
     </ClCompile>
     <ClCompile Include="ComposeWindow.xaml.cpp">
       <DependentUpon>ComposeWindow.xaml</DependentUpon>
+    <ClCompile Include="MainWindow.Rules.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="MainWindow.Index.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="MainWindow.Spam.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
     </ClCompile>
     <ClCompile Include="MessageWindow.xaml.cpp">
       <DependentUpon>MessageWindow.xaml</DependentUpon>

@@ -86,6 +86,8 @@ add_library(evo-core SHARED
 )
 
 # evolution-ews is loaded at run time (Camel provider, registry modules),
+	evo-core-spam.c
+	evo-core-spam-util.h
 # not linked: its version comes from its sources, for the "About" dialog
 set(EWS_VERSION "")
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../evolution-ews/CMakeLists.txt")

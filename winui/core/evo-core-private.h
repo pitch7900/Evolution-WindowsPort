@@ -507,3 +507,29 @@ unique_file_path (const gchar *dir,
 		  const gchar *ext);
 
 #endif /* EVO_CORE_PRIVATE_H */
+/* evo-core-index.c : index plein texte local (corps des messages et pièces jointes texte) */
+void
+core_index_folder_changed (EvoCore *core,
+			   CamelFolder *folder,
+			   CamelFolderChangeInfo *changes);
+gboolean
+core_index_search (EvoCore *core,
+		   CamelFolder *folder,
+		   const gchar *query,
+		   GHashTable **out_uids);
+
+/* evo-core-spam.c : classement automatique des nouveaux messages (courrier indésirable) */
+void
+core_spam_classify_added (EvoCore *core,
+			  CamelFolder *folder,
+			  GPtrArray *added);
+
+/* evo-core-autoreply.c : requête Microsoft Graph authentifiée (règles côté serveur, evo-core-rules.c) */
+gchar *
+core_graph_request (EvoCore *core,
+		    const gchar *account_uid,
+		    const gchar *method,
+		    const gchar *uri,
+		    const gchar *body,
+		    GError **error);
+

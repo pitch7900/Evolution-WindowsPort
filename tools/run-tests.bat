@@ -63,6 +63,26 @@ cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
         exit /b 1
     )
 
+rem Compilation des tests du classificateur bayesien anti-spam (C)
+echo [spam] Compilation de test_spam.c ...
+cl.exe /nologo /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_spam.c" ^
+    /Fe:"%TEST_BIN_DIR%\test_spam.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_spam.obj" || (
+        echo [ERREUR] Echec de la compilation de test_spam.c
+        exit /b 1
+    )
+
+rem Compilation des tests de l'index plein texte local (C)
+echo [index] Compilation de test_fulltext_index.c ...
+cl.exe /nologo /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_fulltext_index.c" ^
+    /Fe:"%TEST_BIN_DIR%\test_fulltext_index.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_fulltext_index.obj" || (
+        echo [ERREUR] Echec de la compilation de test_fulltext_index.c
+        exit /b 1
+    )
+
 echo Compilation achevee avec succes.
 echo.
 
@@ -86,6 +106,14 @@ if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
 rem Execution de la suite 4 : Categories unifiees
 "%TEST_BIN_DIR%\test_categories.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : classificateur bayesien anti-spam
+"%TEST_BIN_DIR%\test_spam.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : index plein texte local
+"%TEST_BIN_DIR%\test_fulltext_index.exe"
 if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
 rem Execution du test d'assemblage du XAML de la fenetre principale

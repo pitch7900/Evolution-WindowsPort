@@ -537,7 +537,11 @@ core_search_messages_run (EvoCore *core,
 		if (!folder)
 			continue;
 
-		if (n_words > 0 && camel_folder_search_sync (folder, sexp->str, &body_uids, core->cancellable, NULL) && body_uids) {
+		/* corps des messages : l'index plein texte local répond instantanément quand il couvre tout le
+		 * dossier ; sinon (désactivé, dossier pas encore indexé, messages non téléchargés), recherche Camel */
+		if (n_words > 0 && core_index_search (core, folder, query, &body_set)) {
+			/* body_set renseigné par l'index */
+		} else if (n_words > 0 && camel_folder_search_sync (folder, sexp->str, &body_uids, core->cancellable, NULL) && body_uids) {
 			body_set = g_hash_table_new (g_str_hash, g_str_equal);
 			for (ii = 0; ii < body_uids->len; ii++)
 				g_hash_table_add (body_set, body_uids->pdata[ii]);

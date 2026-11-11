@@ -450,6 +450,9 @@ core_folder_changed_cb (CamelFolder *folder,
 		if (unread_added > 0 && newest) {
 			JsonBuilder *mail_builder = core_event_builder ();
 
+		/* filtre anti-spam : classement des nouveaux messages vers Indésirables (en tâche de fond) */
+		core_spam_classify_added (core, folder, changes->uid_added);
+
 			builder_add_string (mail_builder, "account", camel_service_get_uid (CAMEL_SERVICE (store)));
 			builder_add_string (mail_builder, "folder", camel_folder_get_full_name (folder));
 			json_builder_set_member_name (mail_builder, "count");

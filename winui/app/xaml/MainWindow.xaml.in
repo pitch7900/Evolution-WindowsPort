@@ -392,6 +392,10 @@
                                 <!-- Signatures de courrier : gestion, éditeur et attribution -->
 <!--#include xaml/Settings.Mail.Signatures.xamlpart-->
 
+<!--#include xaml/Settings.Mail.Rules.xamlpart-->
+
+<!--#include xaml/Settings.Mail.Spam.xamlpart-->
+
                             </StackPanel>
 
                             <!-- ======================================================== -->

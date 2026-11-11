@@ -195,6 +195,58 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Configure le filtre anti-spam local (appel synchrone).
+         * Paramètres :
+         *   db_path           : chemin de la base d'apprentissage ("" : %LOCALAPPDATA%\EvolutionWin\spam.db)
+         *   enabled           : classement automatique des nouveaux messages actif
+         *   threshold_percent : score minimal (50 à 99) pour classer en indésirable */
+        void SpamConfigure(winrt::hstring const& db_path, bool enabled, int threshold_percent)
+        {
+            evo_core_spam_configure(m_core, winrt::to_string(db_path).c_str(), enabled ? 1 : 0, threshold_percent);
+        }
+
+        /* Apprend des messages comme indésirables / légitimes.
+         * Paramètres :
+         *   account, folder : emplacement des messages
+         *   uids            : identifiants des messages
+         *   is_spam         : true pour indésirables, false pour légitimes
+         *   handler         : rappel recevant {"trained", "failed", "spam", "ham", "tokens", "ready"} */
+        void SpamTrain(winrt::hstring const& account, winrt::hstring const& folder,
+                       std::vector<winrt::hstring> const& uids, bool is_spam, CoreHandler handler)
+        {
+            std::string joined;
+            for (auto const& uid : uids)
+            {
+                if (!joined.empty())
+                    joined += '\n';
+                joined += CoreUid(uid);
+            }
+            evo_core_spam_train(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                joined.c_str(), is_spam ? 1 : 0, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Apprend en lot les messages les plus récents d'un dossier (tâche de fond).
+         * Paramètres : account, folder, is_spam, max_messages (nombre maximal de messages), handler
+         *              (même JSON que SpamTrain). */
+        void SpamTrainFolder(winrt::hstring const& account, winrt::hstring const& folder, bool is_spam,
+                             int max_messages, CoreHandler handler)
+        {
+            evo_core_spam_train_folder(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                is_spam ? 1 : 0, max_messages, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Compteurs de l'apprentissage : {"spam", "ham", "tokens", "ready", "min_trained"}. */
+        void SpamStats(CoreHandler handler)
+        {
+            evo_core_spam_stats(m_core, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Efface tout l'apprentissage du filtre anti-spam ; le rappel reçoit les compteurs remis à zéro. */
+        void SpamReset(CoreHandler handler)
+        {
+            evo_core_spam_reset(m_core, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Traite la demande d'accusé de lecture d'un message : envoie un MDN
          * (RFC 8098) ou marque seulement le message comme traité ($MDNSent).
          * Paramètres :
