@@ -62,7 +62,24 @@ namespace winrt::EvolutionWin::implementation
             m_account_folders.clear();
             m_accounts = JsonArray::Parse(json);
             RefreshAccountsView();
-            RefreshConnectionAccountsList();
+
+            /* états de connexion des comptes supprimés : sans cette purge, une erreur
+             * restée en mémoire garde la pastille rouge alors que le compte a disparu */
+            for (auto it = m_account_states.begin(); it != m_account_states.end();)
+            {
+                bool known = false;
+                for (auto const& value : m_accounts)
+                    if (value.GetObject().GetNamedString(L"uid", L"") == it->first)
+                    {
+                        known = true;
+                        break;
+                    }
+                if (known || it->first == L"global")
+                    ++it;
+                else
+                    it = m_account_states.erase(it);
+            }
+            RefreshConnectionIndicator();
 
             std::vector<JsonObject> sorted_accounts;
             for (auto const& value : m_accounts)

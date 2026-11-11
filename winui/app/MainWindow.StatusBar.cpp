@@ -280,6 +280,13 @@ namespace winrt::EvolutionWin::implementation
             m_account_states[std::wstring{ account }] = AccountConnectionState{ account_name, status, message };
         }
 
+        RefreshConnectionIndicator();
+    }
+
+    /* Recalcule la pastille d'état de connexion (rouge, orange, verte ou grise) à
+     * partir des états mémorisés des comptes, puis la liste du menu déroulant. */
+    void MainWindow::RefreshConnectionIndicator()
+    {
         if (!m_initialized)
             return;
 

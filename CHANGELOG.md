@@ -14,6 +14,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Corrigé
 
+- **Pastille « Erreur de connexion » bloquée après suppression d'un compte** : l'état de connexion d'un compte supprimé restait en mémoire et gardait la pastille rouge alors que tous les comptes listés étaient connectés. Les états des comptes disparus sont désormais purgés au rechargement de la liste des comptes, et la pastille est recalculée (nouvelle méthode `RefreshConnectionIndicator`).
+- **Diagnostic des échecs de connexion Microsoft 365** : quand la connexion d'un compte échoue, le journal `evo-core.log` indique l'utilisateur réel du jeton (Graph `/me`) et l'état de sa boîte de réception.
 - **Reconnexion d'un compte : mauvais utilisateur dans le navigateur** : la page de connexion OAuth2 (Microsoft 365, Google) ne recevait pas l'adresse du compte (`login_hint`) et le navigateur réutilisait la session déjà ouverte, par exemple un compte administrateur. Le jeton était alors émis pour un autre utilisateur, d'où l'erreur « ErrorItemNotFound : Default folder Inbox not found » après la recréation du compte. L'adresse du compte est désormais imposée dans l'URL de connexion.
 - **Annuaire Microsoft 365 : photo et fiche complète** : la connexion Microsoft 365 ne demandait que `User.ReadBasic.All`, ce qui limitait la fiche de l'annuaire au nom et à l'adresse (fonction, service, téléphones, bureau absents) et faisait répondre 404 à la lecture de la photo (`/users/{id}/photo/$value`). Les portées `User.Read.All` et `ProfilePhoto.Read.All` sont ajoutées à `MICROSOFT365_SCOPE` (evolution-ews). **Le consentement de l'administrateur du tenant est requis**, puis le compte doit être reconnecté pour renouveler le jeton. Reste à valider sur le tenant réel.
 

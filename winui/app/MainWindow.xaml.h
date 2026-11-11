@@ -196,6 +196,7 @@ namespace winrt::EvolutionWin::implementation
         void UpdateTaskbarBadge(int32_t count);
         void UpdateConnectionStatus(winrt::hstring const& account, winrt::hstring const& status, winrt::hstring const& message);
         void RefreshConnectionAccountsList();
+        void RefreshConnectionIndicator();
         void UpdateFolderStatusText();
         void RestoreSessionFolder();
         void UpdateOutOfOfficeBanner();
