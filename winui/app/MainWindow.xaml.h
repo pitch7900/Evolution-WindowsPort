@@ -954,6 +954,9 @@ namespace winrt::EvolutionWin::implementation
         Microsoft::UI::Xaml::DispatcherTimer m_mark_read_timer{ nullptr };
         /* vrai pendant la sélection automatique du message voisin d'un message supprimé / déplacé */
         bool m_keep_unread_on_select{ false };
+        /* retraits de la liste faits localement et dont l'événement « folder-changed » est attendu */
+        int64_t m_local_removals{ 0 };
+        ULONGLONG m_local_removals_time{ 0 };
         winrt::hstring m_pending_read_uid;
         winrt::hstring m_previous_selected_uid;
         void ScheduleMarkAsRead(winrt::hstring const& uid);

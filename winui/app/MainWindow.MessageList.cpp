@@ -40,12 +40,61 @@ using namespace ::EvolutionWin::Helpers;
 
 namespace winrt::EvolutionWin::implementation
 {
+    /**
+     * @brief Retrouve le ScrollViewer interne d'une liste.
+     * @param root Élément racine de la recherche.
+     * @return Le premier ScrollViewer descendant, ou nul.
+     */
+    static ScrollViewer FindListScrollViewer(DependencyObject const& root)
+    {
+        int32_t count = Media::VisualTreeHelper::GetChildrenCount(root);
+        for (int32_t i = 0; i < count; ++i)
+        {
+            auto child = Media::VisualTreeHelper::GetChild(root, i);
+            if (auto viewer = child.try_as<ScrollViewer>())
+                return viewer;
+            if (auto found = FindListScrollViewer(child))
+                return found;
+        }
+        return nullptr;
+    }
+
+    /**
+     * @brief Position verticale actuelle de la liste (pour la retrouver après un rechargement).
+     * @param list Liste des messages.
+     * @return Décalage en pixels, ou -1 si inconnu.
+     */
+    static double ListScrollOffset(ListView const& list)
+    {
+        auto viewer = FindListScrollViewer(list);
+        return viewer ? viewer.VerticalOffset() : -1.0;
+    }
+
+    /**
+     * @brief Remet la liste à une position verticale mémorisée, sans animation.
+     * @param list Liste des messages.
+     * @param offset Décalage mémorisé (négatif : rien à faire).
+     */
+    static void RestoreListScroll(ListView const& list, double offset)
+    {
+        if (offset < 0)
+            return;
+        if (auto viewer = FindListScrollViewer(list))
+        {
+            list.UpdateLayout();
+            viewer.ChangeView(nullptr, offset, nullptr, true);
+        }
+    }
+}
+
+namespace winrt::EvolutionWin::implementation
+{
     void MainWindow::LoadMessages(bool keep_selection)
     {
         hstring account = m_account;
         hstring folder = m_folder;
         hstring selected;
-
+        double scroll_offset = -1.0;
         if (account.empty() || folder.empty())
             return;
 
@@ -61,6 +110,7 @@ namespace winrt::EvolutionWin::implementation
         if (keep_selection)
         {
             selected = SelectedMessageUid();
+            scroll_offset = ListScrollOffset(MessageList());
         }
         else
         {
@@ -70,8 +120,7 @@ namespace winrt::EvolutionWin::implementation
             m_message_states.clear();
             ListProgress().IsActive(true);
         }
-
-        m_core->ListMessages(account, folder, 500, [this, account, folder, selected](hstring const& json, hstring const& error)
+        m_core->ListMessages(account, folder, 500, [this, account, folder, selected, scroll_offset](hstring const& json, hstring const& error)
         {
             /* another folder was chosen meanwhile */
             if (account != m_account || folder != m_folder)
@@ -102,7 +151,8 @@ namespace winrt::EvolutionWin::implementation
                     m_reselecting = false;
                 }
             }
-
+            /* rechargement silencieux : la liste garde sa position */
+            RestoreListScroll(MessageList(), scroll_offset);
             UpdateFolderStatusText();
         });
     }
@@ -119,10 +169,11 @@ namespace winrt::EvolutionWin::implementation
         hstring account = m_account;
         hstring role = m_folder;
         hstring selected;
-
+        double scroll_offset = -1.0;
         if (keep_selection)
         {
             selected = SelectedMessageUid();
+            scroll_offset = ListScrollOffset(MessageList());
         }
         else
         {
@@ -135,7 +186,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         RequestUnifiedMessages(role,
-            [this, account, role, selected](hstring const& json, hstring const& error)
+            [this, account, role, selected, scroll_offset](hstring const& json, hstring const& error)
         {
             /* une autre vue a été choisie entre-temps */
             if (account != m_account || role != m_folder)
@@ -165,10 +216,11 @@ namespace winrt::EvolutionWin::implementation
                     m_reselecting = false;
                 }
             }
-
+            RestoreListScroll(MessageList(), scroll_offset);
             UpdateFolderStatusText();
         });
     }
+
     namespace
     {
         /* Groupe de dates d'un message (façon Outlook) : clé stable et libellé.

@@ -276,9 +276,12 @@ namespace winrt::EvolutionWin::implementation
 
 
         m_message_states.erase(std::wstring{ uid });
-
-
-
+        if (found)
+        {
+            /* le retrait est déjà affiché : l'événement « folder-changed » correspondant ne doit pas recharger la liste */
+            ++m_local_removals;
+            m_local_removals_time = ::GetTickCount64();
+        }
         if (m_all_messages)
 
         {

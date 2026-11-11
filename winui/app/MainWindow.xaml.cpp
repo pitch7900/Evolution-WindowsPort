@@ -312,7 +312,17 @@ namespace winrt::EvolutionWin::implementation
             /* new or removed messages in the folder on screen */
             if (((account == m_account && folder == m_folder) || UnifiedFolderMatches(account, folder)) &&
                 (object.GetNamedNumber(L"added", 0) > 0 || object.GetNamedNumber(L"removed", 0) > 0))
-                LoadMessages(true);
+            {
+                /* simple retrait déjà appliqué à l'écran (suppression / déplacement par l'utilisateur) : pas de rechargement,
+                   la liste, la sélection et le défilement restent tels quels */
+                auto removed = static_cast<int64_t>(object.GetNamedNumber(L"removed", 0));
+                bool only_removals = object.GetNamedNumber(L"added", 0) <= 0;
+                bool recent = ::GetTickCount64() - m_local_removals_time < 15000;
+                if (only_removals && recent && m_local_removals > 0)
+                    m_local_removals = removed >= m_local_removals ? 0 : m_local_removals - removed;
+                else
+                    LoadMessages(true);
+            }
         }
         else if (event == L"folders-updated")
         {

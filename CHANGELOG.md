@@ -12,6 +12,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.1.1] — en cours
 
+### Corrigé
+
 - **Glisser-déposer d'un message sur un dossier** : le déplacement par glisser-déposer ne fonctionnait pas (la liste n'exportait que des fichiers `.eml` et l'arborescence n'acceptait aucun dépôt). Déposer un ou plusieurs messages sur un dossier les y déplace désormais (comptes réels uniquement, pas les vues unifiées ni les recherches). L'aperçu translucide du texte du message, illisible, est supprimé : le dossier survolé est surligné à la couleur d'accentuation, et le surlignage disparaît à la sortie ou au dépôt. Le glisser vers l'Explorateur Windows reste possible.
 
 - **Glisser-déposer : seul le pointeur reste visible** : l'aperçu du texte du message sous le pointeur est masqué pendant tout le glisser (dans toute la fenêtre, pas seulement au-dessus des dossiers), ainsi que le pictogramme et la légende. L'instantané du message est un visuel du système, qu'on ne pouvait pas masquer depuis la fenêtre : il est remplacé, dès le début du glisser, par une image transparente (`DragStarting` de chaque élément de la liste).
@@ -35,6 +37,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 - **Dossier de même nom à la destination** : en déplaçant ou copiant un dossier vers un autre compte, si le dossier de destination contient déjà un dossier du même nom (comparaison insensible à la casse), une boîte propose de saisir un autre nom (suggestion « nom (copie) », redemandé tant qu'il existe) ; annuler n'effectue rien. Le moteur reçoit le nouveau nom (`new_name` de `evo_core_transfer_folder`) et l'applique au dossier de tête ; ses sous-dossiers gardent leur nom.
 
 - **Suppression d'un message : le voisin reste non lu** : après la suppression (ou le déplacement) d'un message, le message suivant est sélectionné automatiquement ; il était alors marqué comme lu alors que l'utilisateur ne l'avait pas choisi (visible avec le filtre « Non lus », où il disparaissait de la liste). Il est maintenant affiché dans le volet de lecture mais reste non lu tant que l'utilisateur ne le sélectionne pas lui-même.
+
+- **Suppression / déplacement d'un message : la liste ne se recharge plus** : le retrait d'un message déclenchait un rechargement complet de la liste (événement « folder-changed »), qui faisait perdre le défilement et le message en cours de lecture. Un retrait déjà affiché à l'écran n'entraîne plus de rechargement (compteur de retraits locaux, valable 15 s) ; et tout rechargement silencieux (nouveau message, actualisation) conserve désormais la position de la barre de défilement et la sélection, y compris dans les vues unifiées.
 
 ## [1.1.0] — 2026-11-07
 
