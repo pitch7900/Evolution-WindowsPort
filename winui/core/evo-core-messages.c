@@ -119,6 +119,15 @@ core_folder_background_refresh_run (EvoCore *core,
 				    GError **error)
 {
 	CamelFolder *folder;
+	CamelStore *store;
+
+	/* le dossier a pu être ouvert depuis le cache sans connexion (core_ref_folder_cached) :
+	 * la connexion se fait ici, en fond, avant la relève du serveur */
+	store = core_ref_store (core, args[0], NULL);
+	if (store) {
+		core_ensure_connected (core, store, NULL);
+		g_object_unref (store);
+	}
 
 	folder = core_ref_folder (core, args[0], args[1], error);
 	if (folder) {
@@ -151,7 +160,9 @@ core_list_messages_run (EvoCore *core,
 	gchar *json;
 	gboolean has_cache = FALSE;
 
-	folder = core_ref_folder (core, args[0], args[1], error);
+	/* cache local d'abord : les derniers messages s'affichent sans attendre la connexion
+	 * au serveur, la mise à jour part tout de suite en tâche de fond */
+	folder = core_ref_folder_cached (core, args[0], args[1], NULL, error);
 	if (!folder)
 		return NULL;
 
@@ -162,7 +173,15 @@ core_list_messages_run (EvoCore *core,
 	has_cache = (uids != NULL && uids->len > 0);
 
 	if (!has_cache) {
-		/* Premier chargement de ce dossier sans cache : interrogation serveur */
+		/* Premier chargement de ce dossier sans cache : interrogation serveur, donc connexion
+		 * d'abord (le dossier a pu être ouvert hors connexion) */
+		CamelStore *store = core_ref_store (core, args[0], NULL);
+
+		if (store) {
+			core_ensure_connected (core, store, NULL);
+			g_object_unref (store);
+		}
+
 		if (!camel_folder_refresh_info_sync (folder, core->cancellable, &refresh_error)) {
 			g_warning ("Cannot refresh “%s”: %s", args[1], refresh_error ? refresh_error->message : "?");
 			g_clear_error (&refresh_error);

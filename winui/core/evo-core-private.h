@@ -281,6 +281,12 @@ core_ref_folder (EvoCore *core,
 		 const gchar *account_uid,
 		 const gchar *folder_name,
 		 GError **error);
+CamelFolder *
+core_ref_folder_cached (EvoCore *core,
+			const gchar *account_uid,
+			const gchar *folder_name,
+			gboolean *from_cache,
+			GError **error);
 gchar *
 core_find_role_folder (EvoCore *core,
 		       CamelStore *store,

@@ -496,6 +496,61 @@ core_ref_folder (EvoCore *core,
 	return tracked;
 }
 
+/* Ouvre un dossier depuis le cache local de Camel, sans se connecter : le résumé des
+ * messages déjà téléchargés s'affiche alors tout de suite, pendant que la mise à jour
+ * tourne en tâche de fond (IMAP et Microsoft 365 savent ouvrir un dossier hors
+ * connexion). Si le dossier est inconnu du cache (premier lancement du compte), se
+ * rabat sur core_ref_folder (), qui se connecte.
+ * À réserver à l'affichage d'une liste : toute action sur le serveur (lire un message,
+ * déplacer, supprimer...) doit passer par core_ref_folder ().
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   account_uid  : identifiant du compte
+ *   folder_name  : nom complet du dossier
+ *   from_cache   : reçoit TRUE si le dossier a été ouvert sans connexion (peut être NULL)
+ *   error        : emplacement pour une éventuelle erreur
+ * Retourne : le dossier suivi (g_object_unref), NULL en cas d'échec. */
+CamelFolder *
+core_ref_folder_cached (EvoCore *core,
+			const gchar *account_uid,
+			const gchar *folder_name,
+			gboolean *from_cache,
+			GError **error)
+{
+	CamelStore *store;
+	CamelFolder *folder = NULL, *tracked = NULL;
+	gchar *key = folder_key (account_uid, folder_name);
+
+	if (from_cache)
+		*from_cache = FALSE;
+
+	g_mutex_lock (&core->folders_lock);
+	folder = g_hash_table_lookup (core->folders, key);
+	if (folder)
+		g_object_ref (folder);
+	g_mutex_unlock (&core->folders_lock);
+	g_free (key);
+
+	if (folder)
+		return folder;
+
+	store = core_ref_store (core, account_uid, NULL);
+	if (store) {
+		folder = camel_store_get_folder_sync (store, folder_name, 0, core->cancellable, NULL);
+		g_object_unref (store);
+	}
+
+	if (!folder)
+		return core_ref_folder (core, account_uid, folder_name, error);
+
+	tracked = core_track_folder (core, account_uid, folder);
+	g_object_unref (folder);
+	if (from_cache && tracked)
+		*from_cache = TRUE;
+
+	return tracked;
+}
+
 void
 evo_core_list_folders (EvoCore *core,
 		       const char *account_uid,
