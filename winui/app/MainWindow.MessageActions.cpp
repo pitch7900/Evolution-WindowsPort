@@ -1501,6 +1501,19 @@ namespace winrt::EvolutionWin::implementation
             ClearCategoriesForMessages(uids);
         });
         items.Append(clear_item);
+
+        /* Lien vers Paramètres > Catégories */
+        MenuFlyoutItem manage_item;
+        manage_item.Text(Tr(L"Gérer les catégories…"));
+        FontIcon manage_icon;
+        manage_icon.Glyph(L"\xE713");
+        manage_item.Icon(manage_icon);
+        manage_item.Click([this](IInspectable const&, RoutedEventArgs const&)
+        {
+            Navigation().SelectedItem(Navigation().SettingsItem());
+            SelectSettingsCategory(L"categories");
+        });
+        items.Append(manage_item);
     }
 
     /**
