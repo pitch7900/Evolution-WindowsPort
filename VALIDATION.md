@@ -51,7 +51,7 @@ Pour chaque point : compte nécessaire entre parenthèses. « Test » = compte d
 
 - [x] Lien « Annuaire de l'organisation » sous chaque compte, recherche, fiche en lecture seule, écrire un message (M365, Google) — validé.
 - [x] Adresse postale et numéros de téléphone dans la fiche — validé.
-- [!] Photo du profil : Microsoft répond « aucune image » pour les comptes testés ; seules les initiales s'affichent (voir `TODO.md`, section Annuaire).
+- [x] Photo du profil (M365) : validé le 2026-11-11 en 1.1.2, photos et fiche complète (fonction, service, téléphones, bureau, adresse) affichées. Deux causes corrigées : permissions `User.Read.All` et `ProfilePhoto.Read.All` (consentement administrateur, puis reconnexion du compte) et lecture par l'identifiant du profil, l'adresse de messagerie pouvant différer du nom d'utilisateur principal.
 - [x] Suggestions « Annuaire » dans la rédaction (À:) — validé.
 
 ## 4. Réponses automatiques (Out of Office)
