@@ -468,8 +468,18 @@ void		evo_core_copy_folder		(EvoCore *core,
 /* Copie ou déplace un dossier, avec ses sous-dossiers et ses messages, vers un
  * dossier ou la racine de n'importe quel compte (copy : TRUE copie, FALSE
  * déplace). dest_parent_name vide = racine du compte ; new_name (facultatif)
- * renomme le dossier à la destination. Le rappel reçoit
- * {"full_name": "<dossier créé>", "count": <messages copiés>}. */
+ * renomme le dossier à la destination.
+ * Les messages sont copiés un à un en arrière-plan avec leurs indicateurs, leurs
+ * étiquettes et leur date de réception (quand le serveur de destination le
+ * permet). Progression : événements « progress » avec "kind": "transfer",
+ * "label", "folder", "done", "total", "percent", "active" ; annulation par
+ * evo_core_cancel_operations. Un message déjà présent à la destination (même
+ * Message-ID) est ignoré : avec merge = TRUE, un transfert interrompu se
+ * reprend dans le dossier de même nom déjà créé. Un déplacement ne supprime
+ * l'original que si tout a été copié sans échec ni annulation.
+ * Le rappel reçoit {"full_name": "<dossier créé>", "count": <messages copiés>,
+ * "skipped": <déjà présents>, "failed": <en échec>, "cancelled": bool,
+ * "error": "<première erreur>"}. */
 void		evo_core_transfer_folder	(EvoCore *core,
 						 const char *src_account_uid,
 						 const char *folder_full_name,
@@ -477,6 +487,7 @@ void		evo_core_transfer_folder	(EvoCore *core,
 						 const char *dest_parent_name,
 						 const char *new_name,
 						 int copy,
+						 int merge,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 

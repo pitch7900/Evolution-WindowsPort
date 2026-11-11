@@ -453,6 +453,17 @@ namespace winrt::EvolutionWin::implementation
                             { folder_name, to_hstring(static_cast<int32_t>(object.GetNamedNumber(L"done", 0))), to_hstring(total) })
                         : Fmt(Tr(L"Préparation du téléchargement hors connexion : {0}"), { folder_name });
             }
+            else if (object.GetNamedString(L"kind", L"") == L"transfer")
+            {
+                /* copie ou déplacement d'un dossier vers un autre compte */
+                hstring label = object.GetNamedString(L"label", L"");
+                int32_t total = static_cast<int32_t>(object.GetNamedNumber(L"total", 0));
+                int32_t done = static_cast<int32_t>(object.GetNamedNumber(L"done", 0));
+                progress_text = !active ? Tr(L"Transfert du dossier terminé")
+                    : total > 0
+                        ? Fmt(Tr(L"Transfert du dossier « {0} » : {1}/{2}"), { label, to_hstring(done), to_hstring(total) })
+                        : Fmt(Tr(L"Transfert du dossier « {0} » : {1} message(s)"), { label, to_hstring(done) });
+            }
             UpdateStatusBarProgress(active, progress_text, percent);
         }
         else if (event == L"connection-status")

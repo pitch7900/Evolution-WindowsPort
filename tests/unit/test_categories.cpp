@@ -223,6 +223,45 @@ static void test_category_filter(void)
     TEST_CASE_END();
 }
 
+static void test_group_by_account(void)
+{
+    TEST_CASE("Categories: rattachement et regroupement par comptes");
+    {
+        CategoryRegistry registry{ std::vector<CategoryDefinition>{} };
+        registry.Add(L"Local", 1, 2, 3);
+        registry.Add(L"Client", 4, 5, 6);
+        registry.Add(L"Partage", 7, 8, 9);
+        registry.Add(L"Orpheline", 9, 9, 9);
+        ASSERT_TRUE(registry.AddAccount(L"Client", L"acc-a"));
+        ASSERT_FALSE(registry.AddAccount(L"client", L"acc-a"));   /* doublon, casse ignorée */
+        ASSERT_TRUE(registry.AddAccount(L"Partage", L"acc-a"));
+        ASSERT_TRUE(registry.AddAccount(L"Partage", L"acc-b"));
+        ASSERT_TRUE(registry.AddAccount(L"Orpheline", L"acc-supprime"));
+        ASSERT_FALSE(registry.AddAccount(L"Inconnue", L"acc-a"));
+        ASSERT_FALSE(registry.AddAccount(L"Local", L""));
+
+        auto groups = GroupByAccount(registry.Items(), { L"acc-a", L"acc-b" });
+        ASSERT_EQ_INT(3, groups.size());
+        ASSERT_TRUE(groups[0].account.empty());                    /* locales d'abord */
+        ASSERT_EQ_INT(2, groups[0].indices.size());                /* Local + Orpheline (compte inconnu) */
+        ASSERT_TRUE(groups[1].account == L"acc-a");
+        ASSERT_EQ_INT(2, groups[1].indices.size());                /* Client + Partage */
+        ASSERT_TRUE(groups[2].account == L"acc-b");
+        ASSERT_EQ_INT(1, groups[2].indices.size());                /* Partage dans les deux groupes */
+
+        /* aucun rattachement connu : affichage à plat */
+        ASSERT_EQ_INT(0, GroupByAccount(registry.Items(), {}).size());
+
+        /* les rattachements survivent à la sérialisation */
+        CategoryRegistry loaded = CategoryRegistry::Deserialize(registry.Serialize());
+        ASSERT_EQ_INT(2, loaded.Find(L"Partage")->accounts.size());
+        ASSERT_TRUE(loaded.Find(L"Partage")->accounts[1] == L"acc-b");
+        ASSERT_EQ_INT(0, loaded.Find(L"Local")->accounts.size());
+        ASSERT_TRUE(loaded.Serialize() == registry.Serialize());
+    }
+    TEST_CASE_END();
+}
+
 int main(void)
 {
     TEST_SUITE_BEGIN("Categories unifiees (Categories.h)");
@@ -233,6 +272,7 @@ int main(void)
     test_registry_serialization();
     test_category_lists();
     test_category_filter();
+    test_group_by_account();
 
     return test_suite_summary();
 }

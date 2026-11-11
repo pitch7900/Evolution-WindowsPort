@@ -1090,7 +1090,33 @@ namespace winrt::EvolutionWin::implementation
         };
 
         hstring new_name = name;
-        while (exists_at_destination(std::wstring{ new_name }))
+        bool merge = false;
+        if (exists_at_destination(std::wstring{ new_name }) && !m_dialog_open && Content() && Content().XamlRoot())
+        {
+            /* fusionner = reprendre un transfert interrompu : seuls les messages absents sont copiés */
+            ContentDialog choice;
+            choice.XamlRoot(Content().XamlRoot());
+            choice.Title(box_value(Tr(L"Dossier déjà existant")));
+            TextBlock text;
+            text.TextWrapping(TextWrapping::Wrap);
+            text.Text(Fmt(Tr(L"Un dossier « {0} » existe déjà à la destination. « Fusionner » ne copie que les messages qui n'y sont pas encore (reprise d'un transfert interrompu) ; « Renommer » crée un dossier distinct."),
+                { name }));
+            choice.Content(text);
+            choice.PrimaryButtonText(Tr(L"Fusionner"));
+            choice.SecondaryButtonText(Tr(L"Renommer…"));
+            choice.CloseButtonText(Tr(L"Annuler"));
+            choice.DefaultButton(ContentDialogButton::Primary);
+
+            m_dialog_open = true;
+            auto answer = co_await choice.ShowAsync();
+            m_dialog_open = false;
+
+            if (answer == ContentDialogResult::Primary)
+                merge = true;
+            else if (answer != ContentDialogResult::Secondary)
+                co_return; /* annulé : rien n'est copié ni déplacé */
+        }
+        while (!merge && exists_at_destination(std::wstring{ new_name }))
         {
             hstring suggestion = Fmt(Tr(L"{0} (copie)"), { new_name });
             new_name = co_await PromptFolderNameAsync(Tr(L"Dossier déjà existant"),
@@ -1103,7 +1129,7 @@ namespace winrt::EvolutionWin::implementation
         ShowStatus(Fmt(copy ? Tr(L"Copie du dossier « {0} »…") : Tr(L"Déplacement du dossier « {0} »…"), { name }),
             InfoBarSeverity::Informational);
 
-        m_core->TransferFolder(account, full_name, dest_account, dest_parent, new_name == name ? hstring{} : new_name, copy,
+        m_core->TransferFolder(account, full_name, dest_account, dest_parent, new_name == name ? hstring{} : new_name, copy, merge,
             [this, account, full_name, name, dest_account, copy](hstring const& json, hstring const& error)
         {
             /* des dossiers ont pu être créés même en cas d'échec : on relit la destination */
@@ -1121,9 +1147,32 @@ namespace winrt::EvolutionWin::implementation
                 result = JsonObject{};
             hstring target = result.GetNamedString(L"full_name", L"");
             auto count = static_cast<uint32_t>(result.GetNamedNumber(L"count", 0));
+            auto skipped = static_cast<uint32_t>(result.GetNamedNumber(L"skipped", 0));
+            auto failed = static_cast<uint32_t>(result.GetNamedNumber(L"failed", 0));
+            bool cancelled = result.GetNamedBoolean(L"cancelled", false);
 
-            ShowStatus(Fmt(copy ? Tr(L"Dossier « {0} » copié ({1} message(s)).") : Tr(L"Dossier « {0} » déplacé ({1} message(s))."),
-                { name, to_hstring(count) }), InfoBarSeverity::Success);
+            if (cancelled)
+            {
+                /* l'original est conservé ; « Fusionner » reprend là où le transfert s'est arrêté */
+                ShowStatus(Fmt(Tr(L"Transfert du dossier « {0} » annulé : {1} message(s) copié(s). Relancez-le avec « Fusionner » pour le reprendre."),
+                    { name, to_hstring(count) }), InfoBarSeverity::Warning);
+            }
+            else if (failed > 0)
+            {
+                ShowStatus(Fmt(Tr(L"Dossier « {0} » : {1} message(s) copié(s), {2} en échec ({3}). L'original est conservé."),
+                    { name, to_hstring(count), to_hstring(failed), result.GetNamedString(L"error", L"") }), InfoBarSeverity::Warning);
+            }
+            else if (skipped > 0)
+            {
+                ShowStatus(Fmt(copy ? Tr(L"Dossier « {0} » copié ({1} message(s), {2} déjà présent(s)).")
+                                    : Tr(L"Dossier « {0} » déplacé ({1} message(s), {2} déjà présent(s))."),
+                    { name, to_hstring(count), to_hstring(skipped) }), InfoBarSeverity::Success);
+            }
+            else
+            {
+                ShowStatus(Fmt(copy ? Tr(L"Dossier « {0} » copié ({1} message(s)).") : Tr(L"Dossier « {0} » déplacé ({1} message(s))."),
+                    { name, to_hstring(count) }), InfoBarSeverity::Success);
+            }
             ReloadAccountFolders(dest_account, L"", target);
             if (!copy)
                 ReloadAccountFolders(account, full_name, L"");

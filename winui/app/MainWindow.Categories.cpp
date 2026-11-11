@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 /* Catégories unifiées : éditeur de palette (Paramètres), menus d'affectation
@@ -85,6 +86,46 @@ namespace winrt::EvolutionWin::implementation
     }
 
     /**
+     * @brief Regroupe les catégories du registre par compte pour l'affichage.
+     *
+     * Les catégories locales viennent en premier, puis un groupe par compte
+     * (dans l'ordre de la liste des comptes). Une catégorie présente sur plusieurs
+     * comptes figure dans chaque groupe.
+     *
+     * @return Paires (titre du groupe, positions dans le registre) ; vide pour un affichage à plat
+     *         (aucune catégorie rattachée à un compte).
+     */
+    std::vector<std::pair<hstring, std::vector<size_t>>> MainWindow::CategoryGroupsForDisplay()
+    {
+        std::vector<std::pair<hstring, std::vector<size_t>>> result;
+        if (!m_accounts)
+            return result;
+
+        std::vector<std::wstring> uids;
+        std::unordered_map<std::wstring, hstring> titles;
+        for (auto const& value : m_accounts)
+        {
+            auto account = value.GetObject();
+            if (account.GetNamedBoolean(L"local", false))
+                continue;
+            hstring uid = account.GetNamedString(L"uid", L"");
+            if (uid.empty())
+                continue;
+            hstring name = account.GetNamedString(L"name", uid);
+            hstring address = account.GetNamedString(L"address", L"");
+            uids.emplace_back(uid);
+            titles[std::wstring{ uid }] = (address.empty() || address == name) ? name : name + L" — " + address;
+        }
+
+        for (auto& group : Cat::GroupByAccount(CategoryStore::Registry().Items(), uids))
+        {
+            hstring title = group.account.empty() ? Tr(L"Catégories locales") : titles[group.account];
+            result.emplace_back(title, std::move(group.indices));
+        }
+        return result;
+    }
+
+    /**
      * @brief Construit l'éditeur de palette dans Paramètres > Catégories.
      *
      * Une ligne par catégorie : pastille de couleur (sélecteur de couleur), nom
@@ -105,9 +146,10 @@ namespace winrt::EvolutionWin::implementation
         auto stroke_brush = resources.Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>();
 
         auto& registry = ::EvolutionWin::CategoryStore::Registry();
-        size_t index = 0;
-        for (auto const& cat : registry.Items())
+        /* une carte d'édition par catégorie ; index = position dans le registre (raccourci) */
+        auto make_card = [&](size_t index) -> Border
         {
+            auto const cat = registry.Items()[index];
             /* nom courant partagé entre les gestionnaires (change au renommage) */
             auto current = std::make_shared<std::wstring>(cat.name);
 
@@ -216,8 +258,36 @@ namespace winrt::EvolutionWin::implementation
             row.Children().Append(delete_button);
 
             card.Child(row);
-            host.Children().Append(card);
-            ++index;
+            return card;
+        };
+
+        auto groups = CategoryGroupsForDisplay();
+        if (groups.empty())
+        {
+            for (size_t i = 0; i < registry.Items().size(); ++i)
+                host.Children().Append(make_card(i));
+        }
+        else
+        {
+            /* regroupement par comptes : un groupe repliable par compte */
+            for (auto const& group : groups)
+            {
+                StackPanel content;
+                content.Spacing(8);
+                for (size_t i : group.second)
+                    content.Children().Append(make_card(i));
+
+                Expander expander;
+                expander.IsExpanded(true);
+                expander.HorizontalAlignment(HorizontalAlignment::Stretch);
+                expander.HorizontalContentAlignment(HorizontalAlignment::Stretch);
+                TextBlock header;
+                header.Text(Fmt(Tr(L"{0} ({1})"), { group.first, to_hstring(group.second.size()) }));
+                header.FontWeight(Microsoft::UI::Text::FontWeights::SemiBold());
+                expander.Header(header);
+                expander.Content(content);
+                host.Children().Append(expander);
+            }
         }
 
         /* ajout d'une catégorie */
@@ -307,6 +377,7 @@ namespace winrt::EvolutionWin::implementation
             size_t pending{ 0 };
             size_t accounts_ok{ 0 };
             size_t added{ 0 };
+            size_t linked{ 0 };
             std::wstring last_error;
         };
         auto state = std::make_shared<ImportState>();
@@ -334,7 +405,7 @@ namespace winrt::EvolutionWin::implementation
         state->pending = uids.size();
         for (auto const& uid : uids)
         {
-            m_core->GetMailCategories(uid, [this, state, button](hstring const& json, hstring const& error)
+            m_core->GetMailCategories(uid, [this, state, button, uid](hstring const& json, hstring const& error)
             {
                 if (!error.empty() || json.empty())
                 {
@@ -354,13 +425,23 @@ namespace winrt::EvolutionWin::implementation
                             /* la virgule sépare les catégories d'un courriel : on l'évite */
                             std::replace(name.begin(), name.end(), L',', L' ');
                             name = Cat::TrimName(std::wstring_view{ name });
-                            if (name.empty() || registry.Contains(name))
+                            if (name.empty())
                                 continue;
+                            if (registry.Contains(name))
+                            {
+                                /* déjà connue : on garde sa couleur, on la rattache au compte */
+                                if (registry.AddAccount(name, std::wstring_view{ uid }))
+                                    ++state->linked;
+                                continue;
+                            }
                             uint8_t r = 0, g = 0, b = 0;
                             if (!Cat::ParseHexColor(std::wstring_view{ entry.GetNamedString(L"color", L"") }, r, g, b))
                                 Cat::FallbackColor(name, r, g, b);
                             if (registry.Add(name, r, g, b))
+                            {
+                                registry.AddAccount(name, std::wstring_view{ uid });
                                 ++state->added;
+                            }
                         }
                     }
                 }
@@ -374,7 +455,7 @@ namespace winrt::EvolutionWin::implementation
                     ShowStatus(Fmt(Tr(L"Aucune catégorie reprise (comptes Microsoft 365 / Exchange Online et Gmail uniquement) : {0}"), { hstring{ state->last_error } }), InfoBarSeverity::Warning);
                     return;
                 }
-                if (state->added > 0)
+                if (state->added > 0 || state->linked > 0)
                 {
                     OnCategoriesRegistryChanged();
                     RefreshCategoriesView();
@@ -422,9 +503,30 @@ namespace winrt::EvolutionWin::implementation
         };
 
         auto const& registry = ::EvolutionWin::CategoryStore::Registry();
-        size_t index = 0;
-        for (auto const& cat : registry.Items())
-            add_toggle(cat.name, Windows::UI::Color{ 255, cat.r, cat.g, cat.b }, Cat::CategoryRegistry::ShortcutForIndex(index++));
+        auto add_by_index = [&](size_t index)
+        {
+            auto const& cat = registry.Items()[index];
+            add_toggle(cat.name, Windows::UI::Color{ 255, cat.r, cat.g, cat.b }, Cat::CategoryRegistry::ShortcutForIndex(index));
+        };
+        auto groups = CategoryGroupsForDisplay();
+        if (groups.empty())
+        {
+            for (size_t i = 0; i < registry.Items().size(); ++i)
+                add_by_index(i);
+        }
+        else
+        {
+            /* regroupement par comptes : en-tête (inactif) puis catégories du compte */
+            for (auto const& group : groups)
+            {
+                MenuFlyoutItem header;
+                header.Text(group.first);
+                header.IsEnabled(false);
+                items.Append(header);
+                for (size_t i : group.second)
+                    add_by_index(i);
+            }
+        }
 
         for (auto const& name : current)
         {

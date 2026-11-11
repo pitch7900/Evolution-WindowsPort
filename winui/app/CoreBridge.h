@@ -436,13 +436,14 @@ namespace EvolutionWin
          *   dest_parent    : chemin complet du parent de destination ("" : racine du compte)
          *   new_name       : nouveau nom à la destination ("" : nom d'origine)
          *   copy           : copier (l'original reste) au lieu de déplacer
-         *   handler        : rappel recevant {"full_name": "<créé>", "count": n} */
+         *   merge          : fusionner avec le dossier de même nom déjà présent (reprise d'un transfert interrompu)
+         *   handler        : rappel recevant {"full_name", "count", "skipped", "failed", "cancelled", "error"} */
         void TransferFolder(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& dest_account,
-                            winrt::hstring const& dest_parent, winrt::hstring const& new_name, bool copy, CoreHandler handler)
+                            winrt::hstring const& dest_parent, winrt::hstring const& new_name, bool copy, bool merge, CoreHandler handler)
         {
             evo_core_transfer_folder(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
                 winrt::to_string(dest_account).c_str(), winrt::to_string(dest_parent).c_str(), winrt::to_string(new_name).c_str(), copy ? 1 : 0,
-                &CoreBridge::OnResult, NewCall(std::move(handler)));
+                merge ? 1 : 0, &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
         /* Supprime un dossier sans sous-dossiers, et définitivement ses messages.

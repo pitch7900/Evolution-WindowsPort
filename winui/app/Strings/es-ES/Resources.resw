@@ -7007,5 +7007,53 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>No se importó ninguna categoría (solo cuentas de Microsoft 365 / Exchange Online y Gmail): {0}</value>
     <comment>Aucune catégorie reprise (comptes Microsoft 365 / Exchange Online et Gmail uniquement) : {0}</comment>
   </data>
+  <data name="T_41CA98FA" xml:space="preserve">
+    <value>Categorías locales</value>
+    <comment>Catégories locales</comment>
+  </data>
+  <data name="T_00455D33" xml:space="preserve">
+    <value>{0} ({1})</value>
+    <comment>{0} ({1})</comment>
+  </data>
+  <data name="T_B40FA0D7" xml:space="preserve">
+    <value>Ya existe una carpeta "{0}" en el destino. "Combinar" solo copia los mensajes que aún no están (reanudación de una transferencia interrumpida); "Cambiar nombre" crea una carpeta distinta.</value>
+    <comment>Un dossier « {0} » existe déjà à la destination. « Fusionner » ne copie que les messages qui n'y sont pas encore (reprise d'un transfert interrompu) ; « Renommer » crée un dossier distinct.</comment>
+  </data>
+  <data name="T_FC9BF982" xml:space="preserve">
+    <value>Combinar</value>
+    <comment>Fusionner</comment>
+  </data>
+  <data name="T_AA315C44" xml:space="preserve">
+    <value>Cambiar nombre…</value>
+    <comment>Renommer…</comment>
+  </data>
+  <data name="T_C6D3AA2F" xml:space="preserve">
+    <value>Transferencia de la carpeta "{0}" cancelada: {1} mensaje(s) copiado(s). Vuelva a lanzarla con "Combinar" para reanudarla.</value>
+    <comment>Transfert du dossier « {0} » annulé : {1} message(s) copié(s). Relancez-le avec « Fusionner » pour le reprendre.</comment>
+  </data>
+  <data name="T_68B44DD2" xml:space="preserve">
+    <value>Carpeta "{0}": {1} mensaje(s) copiado(s), {2} con error ({3}). Se conserva el original.</value>
+    <comment>Dossier « {0} » : {1} message(s) copié(s), {2} en échec ({3}). L'original est conservé.</comment>
+  </data>
+  <data name="T_50A2514D" xml:space="preserve">
+    <value>Carpeta "{0}" copiada ({1} mensaje(s), {2} ya presente(s)).</value>
+    <comment>Dossier « {0} » copié ({1} message(s), {2} déjà présent(s)).</comment>
+  </data>
+  <data name="T_7B9CEC73" xml:space="preserve">
+    <value>Carpeta "{0}" movida ({1} mensaje(s), {2} ya presente(s)).</value>
+    <comment>Dossier « {0} » déplacé ({1} message(s), {2} déjà présent(s)).</comment>
+  </data>
+  <data name="T_2F4D22DC" xml:space="preserve">
+    <value>Transferencia de la carpeta terminada</value>
+    <comment>Transfert du dossier terminé</comment>
+  </data>
+  <data name="T_E6F99930" xml:space="preserve">
+    <value>Transfiriendo la carpeta "{0}": {1}/{2}</value>
+    <comment>Transfert du dossier « {0} » : {1}/{2}</comment>
+  </data>
+  <data name="T_D10582F8" xml:space="preserve">
+    <value>Transfiriendo la carpeta "{0}": {1} mensaje(s)</value>
+    <comment>Transfert du dossier « {0} » : {1} message(s)</comment>
+  </data>
 </root>
 
