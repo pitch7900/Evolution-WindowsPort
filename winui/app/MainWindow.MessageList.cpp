@@ -141,6 +141,13 @@ namespace winrt::EvolutionWin::implementation
             else
                 ShowMessages(m_all_messages);
 
+            static bool traced_list = false;
+            if (!traced_list)
+            {
+                traced_list = true;
+                evo_core_trace("interface : première liste de messages affichée");
+            }
+
             /* the reader keeps its message: reselect it silently */
             if (!selected.empty())
             {

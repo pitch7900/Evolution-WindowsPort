@@ -985,6 +985,13 @@ void		evo_core_get_gal_photo		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Repère chronométré du démarrage, écrit dans evo-core.log :
+ * « démarrage +1234 ms : étape » (millisecondes depuis la création du processus).
+ * Sert à mesurer où passe le temps au lancement (tools\analyse-demarrage.ps1).
+ * Paramètres :
+ *   step : libellé de l'étape franchie */
+void		evo_core_trace			(const char *step);
+
 /* Photo d'un expéditeur ou d'un correspondant, retrouvée par son adresse :
  * annuaire du compte (Microsoft 365 ou Google Workspace) si le domaine de
  * l'adresse est celui d'un compte, puis carnets d'adresses personnels. Le

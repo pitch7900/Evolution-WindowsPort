@@ -80,6 +80,8 @@ namespace winrt::EvolutionWin::implementation
 
     /**
      * @brief Associe la fenêtre d'écran de démarrage (Splash screen) et arme le minuteur de secours.
+     *        Le splash reste affiché tant que le moteur n'est pas prêt (événements ready, error ou demande
+     *        de connexion) ; le minuteur ne sert que si le moteur ne répond plus du tout.
      * @param splash Instance de la SplashWindow affichée au lancement.
      */
     void MainWindow::SetSplashWindow(winrt::EvolutionWin::SplashWindow const& splash)
@@ -90,7 +92,7 @@ namespace winrt::EvolutionWin::implementation
             StartCore();
 
             m_splash_timer = DispatcherTimer();
-            m_splash_timer.Interval(std::chrono::seconds(6));
+            m_splash_timer.Interval(std::chrono::seconds(90));
             m_splash_timer.Tick([this](IInspectable const&, IInspectable const&)
             {
                 if (m_splash)
@@ -123,6 +125,7 @@ namespace winrt::EvolutionWin::implementation
             auto splash = m_splash;
             m_splash = nullptr;
             splash.Close();
+            evo_core_trace("interface : splash fermé");
         }
     }
 
@@ -277,6 +280,7 @@ namespace winrt::EvolutionWin::implementation
 
         if (event == L"ready")
         {
+            evo_core_trace("interface : événement ready reçu");
             if (m_splash)
             {
                 Activate();
@@ -285,6 +289,7 @@ namespace winrt::EvolutionWin::implementation
                 {
                     m_initialized = true;
                     Initialize();
+                    evo_core_trace("interface : Initialize terminé");
                 }
             }
             if (m_initialized)

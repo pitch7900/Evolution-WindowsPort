@@ -66,6 +66,9 @@ core_refresh_folder_infos (EvoCore *core,
 	}
 }
 
+/* repères chronométrés (evo_core_trace) pendant la première actualisation seulement */
+static gboolean startup_tracing = TRUE;
+
 static gchar *
 core_refresh_run (EvoCore *core,
 		  gchar **args,
@@ -99,6 +102,12 @@ core_refresh_run (EvoCore *core,
 
 		current_service++;
 		g_message ("refresh of “%s”", camel_service_get_display_name (service));
+		if (startup_tracing) {
+			gchar *step = g_strdup_printf ("actualisation « %s » : début", camel_service_get_display_name (service));
+
+			evo_core_trace (step);
+			g_free (step);
+		}
 
 		core_emit_progress (core, uid, NULL,
 			camel_service_get_display_name (service),
@@ -116,6 +125,12 @@ core_refresh_run (EvoCore *core,
 		}
 
 		core_emit_connection_status (core, uid, "imap", "connected", "Connecté");
+		if (startup_tracing) {
+			gchar *step = g_strdup_printf ("actualisation « %s » : connexion établie", camel_service_get_display_name (service));
+
+			evo_core_trace (step);
+			g_free (step);
+		}
 
 		/* the inbox is followed even when not shown, for new mail */
 		inbox_name = core_dup_inbox_name (core, CAMEL_STORE (service));
@@ -163,6 +178,13 @@ core_refresh_run (EvoCore *core,
 		g_ptr_array_unref (opened);
 		g_free (prefix);
 
+		if (startup_tracing) {
+			gchar *step = g_strdup_printf ("actualisation « %s » : dossiers ouverts actualisés", camel_service_get_display_name (service));
+
+			evo_core_trace (step);
+			g_free (step);
+		}
+
 		{
 			JsonBuilder *builder = core_event_builder ();
 
@@ -173,6 +195,11 @@ core_refresh_run (EvoCore *core,
 
 	core_emit_progress (core, NULL, NULL, "Tous les dossiers sont à jour", 100, FALSE);
 	core_emit_connection_status (core, NULL, "global", "connected", "Connecté");
+
+	if (startup_tracing) {
+		evo_core_trace ("actualisation : première passe terminée (tous les comptes)");
+		startup_tracing = FALSE;
+	}
 
 	g_list_free_full (services, g_object_unref);
 

@@ -54,6 +54,13 @@ namespace winrt::EvolutionWin::implementation
                 return;
             }
 
+            static bool traced_accounts = false;
+            if (!traced_accounts)
+            {
+                traced_accounts = true;
+                evo_core_trace("interface : liste des comptes reçue");
+            }
+
             FolderTree().RootNodes().Clear();
             m_nodes.clear();
             m_favorite_nodes.clear();

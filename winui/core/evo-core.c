@@ -196,17 +196,21 @@ core_thread_func (gpointer user_data)
 
 	camel_init (e_get_user_data_dir (), TRUE);
 	e_source_camel_register_types ();
+	evo_core_trace ("moteur : Camel initialisé");
 
 	core_emit (core, "status", "Connecting to evolution-data-server");
 
 	core_load_oauth2_modules ();
+	evo_core_trace ("moteur : modules OAuth2 chargés");
 
 	/* starts evolution-source-registry when needed */
 	core->registry = e_source_registry_new_sync (core->cancellable, &error);
+	evo_core_trace ("moteur : registre des sources prêt (evolution-source-registry)");
 
 	if (core->registry) {
 		core->session = evo_core_session_new (core, core->registry);
 		core_add_stores (core);
+		evo_core_trace ("moteur : magasins de courrier ajoutés");
 		g_signal_connect (core->registry, "credentials-required",
 			G_CALLBACK (core_credentials_required_cb), core);
 		core_check_pending_credentials (core);
@@ -223,6 +227,7 @@ core_thread_func (gpointer user_data)
 		core_emit (core, "error", error->message);
 		g_clear_error (&error);
 	} else {
+		evo_core_trace ("moteur : événement ready émis");
 		core_emit (core, "ready", NULL);
 
 		/* new mail: now, then periodically */
@@ -263,6 +268,36 @@ core_wait_started (EvoCore *core,
 	return success;
 }
 
+/* Millisecondes écoulées depuis la création du processus (même horloge pour le
+ * moteur et l'interface, donc des repères comparables). */
+static gint64
+core_process_age_ms (void)
+{
+	FILETIME created, exited, kernel, user, now;
+	ULARGE_INTEGER start, current;
+
+	if (!GetProcessTimes (GetCurrentProcess (), &created, &exited, &kernel, &user))
+		return -1;
+	GetSystemTimeAsFileTime (&now);
+	start.LowPart = created.dwLowDateTime;
+	start.HighPart = created.dwHighDateTime;
+	current.LowPart = now.dwLowDateTime;
+	current.HighPart = now.dwHighDateTime;
+
+	return (gint64) ((current.QuadPart - start.QuadPart) / 10000);
+}
+
+/* Repère chronométré du démarrage : « démarrage +1234 ms : étape » dans le journal
+ * (voir evo-core.h ; analyse par tools\analyse-demarrage.ps1).
+ * Paramètres :
+ *   step : libellé de l'étape franchie */
+void
+evo_core_trace (const char *step)
+{
+	core_log_open ();
+	g_message ("démarrage +%" G_GINT64_FORMAT " ms : %s", core_process_age_ms (), step ? step : "");
+}
+
 EvoCore *
 evo_core_new (EvoCoreEventFunc event_func,
 	      void *user_data)
@@ -271,6 +306,7 @@ evo_core_new (EvoCoreEventFunc event_func,
 
 	core_log_open ();
 	g_message ("evo-core starting");
+	evo_core_trace ("moteur : création");
 	core_add_module_dir_to_path ();
 
 	core->event_func = event_func;
