@@ -197,20 +197,38 @@ itip_component_response (ICalComponent *icomp,
 /* Cherche un événement (par UID) dans l'agenda par défaut puis dans les autres
  * agendas activés. Les erreurs de connexion sont ignorées (recherche au mieux).
  * Paramètres :
- *   core       : moteur
- *   uid        : UID de l'événement
- *   out_client : reçoit le client de l'agenda qui le contient (à libérer), ou NULL
- *   out_icomp  : reçoit l'événement (à libérer), ou NULL
+ *   core        : moteur
+ *   account_uid : compte qui a reçu l'invitation : seuls ses agendas (et l'agenda par défaut)
+ *                 sont consultés ; NULL pour consulter tous les agendas activés
+ *   uid         : UID de l'événement
+ *   out_client  : reçoit le client de l'agenda qui le contient (à libérer), ou NULL
+ *   out_icomp   : reçoit l'événement (à libérer), ou NULL
+ *   budget_ms   : durée maximale de la recherche (0 : illimitée). Ouvrir un agenda dont le
+ *                 service n'est pas encore démarré peut prendre plusieurs secondes : l'affichage
+ *                 d'un message ne doit pas attendre tous les agendas.
  * Retourne : TRUE si l'événement existe dans un agenda. */
 static gboolean
 itip_find_event (EvoCore *core,
+		 const gchar *account_uid,
 		 const gchar *uid,
 		 ECalClient **out_client,
-		 ICalComponent **out_icomp)
+		 ICalComponent **out_icomp,
+		 gint64 budget_ms)
 {
 	ESource *default_source = e_source_registry_ref_default_calendar (core->registry);
 	GList *sources, *link;
 	gboolean found = FALSE;
+	gint64 started_at = g_get_monotonic_time ();
+	gchar *account_parent = NULL;
+
+	if (account_uid && *account_uid) {
+		ESource *account_source = e_source_registry_ref_source (core->registry, account_uid);
+
+		if (account_source) {
+			account_parent = e_source_dup_parent (account_source);
+			g_object_unref (account_source);
+		}
+	}
 
 	sources = e_source_registry_list_enabled (core->registry, E_SOURCE_EXTENSION_CALENDAR);
 	if (default_source)
@@ -225,7 +243,21 @@ itip_find_event (EvoCore *core,
 		if (link != sources && default_source && g_strcmp0 (e_source_get_uid (source), e_source_get_uid (default_source)) == 0)
 			continue;
 
-		client = e_cal_client_connect_sync (source, E_CAL_CLIENT_SOURCE_TYPE_EVENTS, 5, core->cancellable, NULL);
+		/* les agendas d'un autre compte ne contiennent pas l'événement d'une invitation reçue ici */
+		if (link != sources || !default_source) {
+			gchar *parent = e_source_dup_parent (source);
+			gboolean other_account = account_parent && g_strcmp0 (parent, account_parent) != 0;
+
+			g_free (parent);
+			if (other_account)
+				continue;
+		}
+
+		if (budget_ms > 0 && (g_get_monotonic_time () - started_at) / 1000 >= budget_ms)
+			break;
+
+		client = e_cal_client_connect_sync (source, E_CAL_CLIENT_SOURCE_TYPE_EVENTS, budget_ms > 0 ? 2 : 5,
+			core->cancellable, NULL);
 		if (!client)
 			continue;
 
@@ -243,6 +275,7 @@ itip_find_event (EvoCore *core,
 
 	g_list_free_full (sources, g_object_unref);
 	g_clear_object (&default_source);
+	g_free (account_parent);
 
 	return found;
 }
@@ -300,7 +333,7 @@ core_invitation_describe (EvoCore *core,
 
 	/* présent dans un agenda ? (inutile pour une réponse reçue) */
 	if (g_strcmp0 (itip->method, "REQUEST") == 0 || g_strcmp0 (itip->method, "CANCEL") == 0) {
-		if (itip_find_event (core, itip->uid, NULL, &existing)) {
+		if (itip_find_event (core, account_uid, itip->uid, NULL, &existing, 2500)) {
 			in_calendar = TRUE;
 			existing_sequence = i_cal_component_get_sequence (existing);
 			if (my_address && g_strcmp0 (itip_component_response (existing, my_address), "needs-action") != 0)
@@ -464,7 +497,7 @@ itip_update_calendar (EvoCore *core,
 	else if (partstat && g_strcmp0 (partstat, "TENTATIVE") == 0)
 		ical_partstat = I_CAL_PARTSTAT_TENTATIVE;
 
-	has_existing = itip_find_event (core, itip->uid, &client, &existing);
+	has_existing = itip_find_event (core, NULL, itip->uid, &client, &existing, 0);
 	action = evo_itip_decide (itip->method, has_existing, existing ? i_cal_component_get_sequence (existing) : 0,
 		itip->sequence, g_strcmp0 (partstat, "DECLINED") == 0);
 

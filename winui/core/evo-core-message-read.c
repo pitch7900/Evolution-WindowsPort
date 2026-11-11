@@ -781,7 +781,15 @@ core_get_message_run (EvoCore *core,
 	}
 
 	/* Invitation iCalendar (réunion) : résumé affiché dans le bandeau d'action */
-	core_invitation_describe (core, args[0], folder, args[2], message, builder);
+	{
+		gint64 invitation_started_at = g_get_monotonic_time ();
+
+		core_invitation_describe (core, args[0], folder, args[2], message, builder);
+
+		if ((g_get_monotonic_time () - invitation_started_at) >= 500 * 1000)
+			g_message ("lecture d'un message : analyse de l'invitation %" G_GINT64_FORMAT " ms",
+				(g_get_monotonic_time () - invitation_started_at) / 1000);
+	}
 
 	verify_or_decrypt_message (core, message, builder);
 
