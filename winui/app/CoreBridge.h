@@ -58,6 +58,14 @@ namespace EvolutionWin
                 max_count, &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Relit la liste d'un dossier depuis le cache local, sans relève du serveur (mise à jour
+         * de la liste affichée à la fin d'une relève en fond). */
+        void ReloadMessages(winrt::hstring const& account, winrt::hstring const& folder, unsigned max_count, CoreHandler handler)
+        {
+            evo_core_reload_messages(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                max_count, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* not GetMessage: a Win32 macro */
         void FetchMessage(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& uid, CoreHandler handler)
         {

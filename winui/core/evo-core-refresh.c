@@ -26,6 +26,24 @@ core_dup_inbox_name (EvoCore *core,
 	return name ? name : g_strdup ("INBOX");
 }
 
+/* Annonce la fin de la relève d'un dossier ("folder-refreshed") : l'interface
+ * compare alors la liste affichée au cache local et n'applique que la différence.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   account_uid  : identifiant du compte
+ *   folder_name  : nom complet du dossier */
+void
+core_emit_folder_refreshed (EvoCore *core,
+			    const gchar *account_uid,
+			    const gchar *folder_name)
+{
+	JsonBuilder *builder = core_event_builder ();
+
+	builder_add_string (builder, "account", account_uid);
+	builder_add_string (builder, "folder", folder_name);
+	core_emit_builder (core, "folder-refreshed", builder);
+}
+
 /* F9: every folder of the store besides the opened ones (already
  * refreshed), each opened for its refresh only, so that later periodic
  * refreshes stay limited to the inbox and the folders shown */
@@ -167,6 +185,7 @@ core_refresh_run (EvoCore *core,
 			} else {
 				g_message ("  “%s” refreshed: %d messages", camel_folder_get_full_name (folder),
 					camel_folder_get_message_count (folder));
+				core_emit_folder_refreshed (core, uid, camel_folder_get_full_name (folder));
 			}
 			g_object_set_data (G_OBJECT (folder), "evo-initial-sync-done", GINT_TO_POINTER (1));
 		}

@@ -132,7 +132,8 @@ core_folder_background_refresh_run (EvoCore *core,
 	folder = core_ref_folder (core, args[0], args[1], error);
 	if (folder) {
 		core_bg_yield (core);
-		camel_folder_refresh_info_sync (folder, core->cancellable, NULL);
+		if (camel_folder_refresh_info_sync (folder, core->cancellable, NULL))
+			core_emit_folder_refreshed (core, args[0], args[1]);
 		g_object_set_data (G_OBJECT (folder), "evo-initial-sync-done", GINT_TO_POINTER (1));
 		g_object_unref (folder);
 	}
@@ -160,6 +161,9 @@ core_list_messages_run (EvoCore *core,
 	guint max_count, ii;
 	gchar *json;
 	gboolean has_cache = FALSE;
+	/* args[3] = "cache" : lecture du cache local seulement, sans relève du serveur (rechargement
+	 * déclenché par la fin d'une relève : pas de nouvelle relève, sinon boucle) */
+	gboolean cache_only = args[3] && g_str_equal (args[3], "cache");
 
 	/* cache local d'abord : les derniers messages s'affichent sans attendre la connexion
 	 * au serveur, la mise à jour part tout de suite en tâche de fond */
@@ -173,7 +177,9 @@ core_list_messages_run (EvoCore *core,
 	uids = camel_folder_dup_uids (folder);
 	has_cache = (uids != NULL && uids->len > 0);
 
-	if (!has_cache) {
+	if (!has_cache && cache_only) {
+		/* rien en cache et pas de relève demandée : liste vide */
+	} else if (!has_cache) {
 		/* Premier chargement de ce dossier sans cache : interrogation serveur, donc connexion
 		 * d'abord (le dossier a pu être ouvert hors connexion) */
 		CamelStore *store = core_ref_store (core, args[0], NULL);
@@ -190,7 +196,7 @@ core_list_messages_run (EvoCore *core,
 		if (uids)
 			g_ptr_array_unref (uids);
 		uids = camel_folder_dup_uids (folder);
-	} else {
+	} else if (!cache_only) {
 		/* Cache local présent : on renvoie immédiatement les messages locaux,
 		 * et on lance la synchronisation distante en tâche de fond */
 		gchar **bg_args = g_new0 (gchar *, 3);
@@ -297,6 +303,29 @@ evo_core_list_messages (EvoCore *core,
 {
 	gchar count[16];
 	gchar *args[] = { (gchar *) account_uid, (gchar *) folder_full_name, count, NULL };
+
+	g_return_if_fail (account_uid != NULL);
+	g_return_if_fail (folder_full_name != NULL);
+
+	g_snprintf (count, sizeof (count), "%u", max_count);
+	core_submit (core, core_list_messages_run, g_strdupv (args), func, user_data);
+}
+
+/* Relit la liste des messages d'un dossier depuis le cache local de Camel, sans
+ * relève du serveur (voir evo-core.h).
+ * Paramètres :
+ *   core, account_uid, folder_full_name, max_count, func, user_data : voir
+ *   evo_core_list_messages () */
+void
+evo_core_reload_messages (EvoCore *core,
+			  const char *account_uid,
+			  const char *folder_full_name,
+			  unsigned int max_count,
+			  EvoCoreResultFunc func,
+			  void *user_data)
+{
+	gchar count[16];
+	gchar *args[] = { (gchar *) account_uid, (gchar *) folder_full_name, count, (gchar *) "cache", NULL };
 
 	g_return_if_fail (account_uid != NULL);
 	g_return_if_fail (folder_full_name != NULL);

@@ -84,6 +84,18 @@ void		evo_core_list_messages		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Relit la liste des messages d'un dossier depuis le cache local de Camel, sans
+ * relève du serveur : sert à mettre à jour la liste affichée quand une relève en
+ * fond vient de se terminer (événement "folder-refreshed"). Même format de résultat
+ * que evo_core_list_messages ().
+ * Paramètres : voir evo_core_list_messages () */
+void		evo_core_reload_messages	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 unsigned int max_count,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Télécharge un message, le marque comme lu, et le retourne prêt à afficher :
  * {"subject": "...", "from": "...", "to": "...", "cc": "...", "date": 1730000000,
  *  "reply_to": "...", "message_id": "<...>", "references": "<...> <...>",

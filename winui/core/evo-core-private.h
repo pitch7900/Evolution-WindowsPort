@@ -392,6 +392,12 @@ core_startup_tracing (void);
 void
 core_bg_yield (EvoCore *core);
 
+/* evo-core-refresh.c */
+void
+core_emit_folder_refreshed (EvoCore *core,
+			    const gchar *account_uid,
+			    const gchar *folder_name);
+
 /* evo-core-gal.c */
 void
 core_log_m365_identity (EvoCore *core,

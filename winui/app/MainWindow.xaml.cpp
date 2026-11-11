@@ -363,8 +363,17 @@ namespace winrt::EvolutionWin::implementation
                 if (only_removals && recent && m_local_removals > 0)
                     m_local_removals = removed >= m_local_removals ? 0 : m_local_removals - removed;
                 else
-                    LoadMessages(true);
+                    ScheduleListRefresh();
             }
+        }
+        else if (event == L"folder-refreshed")
+        {
+            /* la relève en fond du dossier affiché est terminée : la liste n'applique que la différence */
+            hstring account = object.GetNamedString(L"account", L"");
+            hstring folder = object.GetNamedString(L"folder", L"");
+
+            if ((account == m_account && folder == m_folder) || UnifiedFolderMatches(account, folder))
+                ScheduleListRefresh();
         }
         else if (event == L"folders-updated")
         {

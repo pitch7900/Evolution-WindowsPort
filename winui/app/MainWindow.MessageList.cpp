@@ -167,6 +167,173 @@ namespace winrt::EvolutionWin::implementation
         });
     }
 
+    /* Texte JSON d'un champ d'un résumé de message (vide s'il est absent) : sert à
+     * comparer deux versions d'un même message. */
+    static hstring MessageField(JsonObject const& message, wchar_t const* name)
+    {
+        auto value = message.TryLookup(name);
+        return value ? value.Stringify() : hstring{};
+    }
+
+    /* TRUE si deux versions d'un même message ne diffèrent que par les indicateurs
+     * lu / suivi (mise à jour possible en place, sans reconstruire la ligne). */
+    static bool OnlyReadFlagsDiffer(JsonObject const& before, JsonObject const& after)
+    {
+        auto left = JsonObject::Parse(before.Stringify());
+        auto right = JsonObject::Parse(after.Stringify());
+        for (auto const* name : { L"seen", L"flagged" })
+        {
+            if (left.HasKey(name))
+                left.Remove(name);
+            if (right.HasKey(name))
+                right.Remove(name);
+        }
+        return left.Stringify() == right.Stringify();
+    }
+
+    /* Planifie la mise à jour de la liste du dossier affiché (après 400 ms : plusieurs
+     * événements rapprochés, relève de plusieurs lots, ne donnent qu'une mise à jour). */
+    void MainWindow::ScheduleListRefresh()
+    {
+        if (m_list_refresh_timer)
+        {
+            m_list_refresh_timer.Stop();
+        }
+        else
+        {
+            m_list_refresh_timer = DispatcherTimer();
+            m_list_refresh_timer.Interval(std::chrono::milliseconds(400));
+            m_list_refresh_timer.Tick([this](IInspectable const&, IInspectable const&)
+            {
+                m_list_refresh_timer.Stop();
+                RefreshMessageListDelta();
+            });
+        }
+        m_list_refresh_timer.Start();
+    }
+
+    /* Met à jour la liste du dossier affiché quand sa relève en fond est terminée : relit
+     * le cache local (sans relancer de relève) et n'applique que la différence. Le
+     * lecteur n'est jamais touché : le message en cours de lecture reste affiché. */
+    void MainWindow::RefreshMessageListDelta()
+    {
+        if (m_account.empty() || m_folder.empty() || !m_all_messages)
+            return;
+
+        /* vue unifiée : rechargement habituel, qui garde la sélection */
+        if (IsUnifiedView())
+        {
+            LoadUnifiedMessages(true);
+            return;
+        }
+
+        hstring account = m_account;
+        hstring folder = m_folder;
+        uint64_t request = ++m_list_delta_request;
+
+        m_core->ReloadMessages(account, folder, 500, [this, account, folder, request](hstring const& json, hstring const& error)
+        {
+            if (!error.empty() || request != m_list_delta_request || account != m_account || folder != m_folder || !m_all_messages)
+                return;   /* échec, ou un autre dossier est affiché entre-temps */
+
+            JsonArray fresh{ nullptr };
+            if (!JsonArray::TryParse(json, fresh))
+                return;
+
+            ApplyMessageDelta(fresh);
+        });
+    }
+
+    /* Applique à la liste affichée la différence avec le cache local :
+     *  - rien de changé : aucun travail (pas de clignotement) ;
+     *  - seuls les indicateurs lu / suivi changés : lignes mises à jour en place ;
+     *  - messages ajoutés ou retirés (ou ligne à refaire) : la liste est reconstruite, car les
+     *    regroupements par date et par discussion dépendent de l'ensemble ; la sélection et la
+     *    position de défilement sont conservées, et le lecteur n'est pas rechargé.
+     * Paramètres :
+     *   fresh : résumés des messages relus depuis le cache local */
+    void MainWindow::ApplyMessageDelta(JsonArray const& fresh)
+    {
+        std::map<std::wstring, JsonObject> before;
+        for (auto const& value : m_all_messages)
+        {
+            auto message = value.GetObject();
+            before.emplace(std::wstring{ message.GetNamedString(L"uid", L"") }, message);
+        }
+
+        size_t added = 0, removed = 0;
+        bool rebuild = false;
+        std::vector<std::pair<std::wstring, JsonObject>> flag_changes;
+        std::set<std::wstring> present;
+
+        for (auto const& value : fresh)
+        {
+            auto message = value.GetObject();
+            std::wstring uid{ message.GetNamedString(L"uid", L"") };
+            present.insert(uid);
+
+            auto it = before.find(uid);
+            if (it == before.end())
+            {
+                ++added;
+                continue;
+            }
+            if (it->second.Stringify() == message.Stringify())
+                continue;
+            if (OnlyReadFlagsDiffer(it->second, message))
+                flag_changes.emplace_back(uid, message);
+            else
+                rebuild = true;   /* sujet, date, pièce jointe, suivi… : la ligne est à refaire */
+        }
+        for (auto const& [uid, message] : before)
+            if (!present.count(uid))
+                ++removed;
+
+        if (!added && !removed && !rebuild && flag_changes.empty())
+            return;   /* rien n'a changé */
+
+        if (!added && !removed && !rebuild)
+        {
+            for (auto const& [uid, message] : flag_changes)
+            {
+                bool seen = message.GetNamedBoolean(L"seen", true);
+                bool flagged = message.GetNamedBoolean(L"flagged", false);
+                if (auto state = m_message_states.find(uid); state != m_message_states.end())
+                {
+                    state->second.seen = seen;
+                    state->second.flagged = flagged;
+                }
+                if (auto item = FindMessageItem(hstring{ uid }))
+                    UpdateMessageItemVisual(item, seen, flagged);
+            }
+            m_all_messages = fresh;
+            UpdateMailBadge();
+            return;
+        }
+
+        hstring selected = SelectedMessageUid();
+        double scroll_offset = ListScrollOffset(MessageList());
+        m_all_messages = fresh;
+
+        if (!SearchBox().Text().empty())
+            FilterLocalMessages(SearchBox().Text());
+        else
+            ShowMessages(m_all_messages);
+
+        /* le lecteur garde son message : la sélection est rétablie en silence */
+        if (!selected.empty())
+        {
+            if (auto grid = FindMessageItem(selected))
+            {
+                m_reselecting = true;
+                MessageList().SelectedItem(grid);
+                m_reselecting = false;
+            }
+        }
+        RestoreListScroll(MessageList(), scroll_offset);
+        UpdateFolderStatusText();
+    }
+
     /* Charge une vue unifiée (Boîte de réception, Envoyés, Brouillons ou
      * Corbeille de tous les comptes) et l'affiche comme un dossier ordinaire :
      * chaque message garde son compte et son dossier d'origine (voir
