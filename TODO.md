@@ -753,7 +753,7 @@ Constat : sur un compte Exchange Online / Microsoft 365 (ex. EVAM), EvolutionWin
   - [x] Moteur : `evo_core_search_gal` (Microsoft Graph `GET /users?$search=` pour Microsoft 365 / Exchange Online, API People `searchDirectoryPeople` pour Google Workspace) avec le jeton OAuth2 du compte ; _reste à valider sur un tenant réel_ (Microsoft 365 et Google Workspace)
   - [x] Consultation : bouton « Annuaire de l'organisation » dans la vue Contacts (recherche dès 2 caractères, fiche en lecture seule : fonction, service, société, téléphones, bureau, bouton _Écrire un message_)
   - [x] Bouton « Annuaire de l'organisation » placé sous chaque compte concerné (et non en bas de la liste des carnets)
-  - [x] Fiche annuaire : adresse postale (rue, ville, code postal, pays), numéros manquants et photo du profil (Graph `/users/{id}/photo/$value`)
+  - [x] Fiche annuaire : adresse postale (rue, ville, code postal, pays), numéros manquants et photo du profil (Graph `/users/{id}/photo/$value`) _(portées `User.Read.All` et `ProfilePhoto.Read.All` ajoutées en 1.1.2 : consentement administrateur + reconnexion du compte nécessaires ; reste à valider)_
   - [ ] Exchange sur site (EWS `ResolveNames`) : non pris en charge (les carnets GAL EDS d'EWS restent visibles dans les carnets habituels)
 - Contacts unifiés et doublons : cf. §11 ; recherche rapide de contacts : cf. §10 ; export par glisser-déposer vers l'extérieur : cf. §18
 - [ ] 🟡 **Fenêtre de sélection de destinataires** (carnet d'adresses, comme le bouton _À…_ d'Outlook) :
