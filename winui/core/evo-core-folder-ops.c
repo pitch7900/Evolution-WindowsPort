@@ -468,7 +468,7 @@ folder_op_check_free (FolderOpContext *ctx,
 /* Abonne le compte à un nouveau dossier (IMAP), comme Evolution : sans
  * abonnement, un compte limité aux dossiers abonnés ne l'afficherait pas.
  * Un échec n'est qu'un avertissement. */
-static void
+void
 core_subscribe_new_folder (EvoCore *core,
 			   CamelStore *store,
 			   const gchar *full_name)

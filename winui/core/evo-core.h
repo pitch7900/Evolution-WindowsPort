@@ -1377,6 +1377,68 @@ void		evo_core_export_calendar	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Exporte des dossiers de courrier vers des fichiers mbox ou EML, en arrière-plan,
+ * avec progression (événements « progress » de type « export ») et annulation
+ * (evo_core_cancel_operations ). Format attendu pour request_json :
+ * {"account": "...", "folders": ["INBOX", "INBOX/Projets"], "recursive": true,
+ *  "dest": "C:\\...", "format": "mbox" ou "eml", "date_from": 0, "date_to": 0}
+ * « mbox » écrit un fichier <dossier>.mbox par dossier de courrier, « eml » un
+ * fichier .eml par message dans un dossier par dossier de courrier ; l'arborescence
+ * du compte est conservée. « date_from » et « date_to » (secondes depuis 1970, 0 :
+ * sans borne) limitent l'exportation aux messages reçus pendant la période.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   request_json : requête au format JSON UTF-8
+ *   func         : rappel recevant {"messages", "folders", "skipped", "failed",
+ *                  "cancelled", "dest", "error"}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_export_mail		(EvoCore *core,
+						 const char *request_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Importe du courrier depuis un fichier mbox, un message .eml ou un répertoire
+ * (arborescence de fichiers mbox / .eml, Maildir, dossier de courrier d'un profil
+ * Thunderbird) vers un dossier d'un compte, en arrière-plan, avec progression
+ * (événements « progress » de type « import ») et annulation. Les dossiers
+ * manquants sont créés. Format attendu pour request_json :
+ * {"account": "...", "dest_folder": "Importé", "path": "C:\\..."}
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   request_json : requête au format JSON UTF-8
+ *   func         : rappel recevant {"messages", "folders", "skipped", "failed",
+ *                  "cancelled", "error"}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_import_mail		(EvoCore *core,
+						 const char *request_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Importe des contacts d'un fichier vCard (.vcf) dans un carnet d'adresses.
+ * Format attendu pour request_json : {"book_uid": "...", "path": "C:\\...\\contacts.vcf"}
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   request_json : requête au format JSON UTF-8
+ *   func         : rappel recevant {"count", "skipped", "failed", "cancelled", "error"}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_import_contacts	(EvoCore *core,
+						 const char *request_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Importe les événements, tâches ou mémos d'un fichier iCalendar (.ics) dans un
+ * agenda, une liste de tâches ou une liste de mémos (selon la source).
+ * Format attendu pour request_json : {"source_uid": "...", "path": "C:\\...\\agenda.ics"}
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   request_json : requête au format JSON UTF-8
+ *   func         : rappel recevant {"count", "skipped", "failed", "cancelled", "error"}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_import_calendar	(EvoCore *core,
+						 const char *request_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Liste les signatures de courrier (sources EDS ESourceMailSignature),
  * triées par nom, avec leur contenu.
  * Paramètres :

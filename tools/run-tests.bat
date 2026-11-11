@@ -103,6 +103,16 @@ cl.exe /nologo /utf-8 /W4 /O2 ^
         exit /b 1
     )
 
+rem Compilation des tests d'export / import du courrier et des contacts (C)
+echo [transfert] Compilation de test_transfer.c ...
+cl.exe /nologo /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_transfer.c" ^
+    /Fe:"%TEST_BIN_DIR%\test_transfer.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_transfer.obj" || (
+        echo [ERREUR] Echec de la compilation de test_transfer.c
+        exit /b 1
+    )
+
 echo Compilation achevee avec succes.
 echo.
 
@@ -142,6 +152,10 @@ if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
 rem Execution de la suite : file hors ligne et conflits
 "%TEST_BIN_DIR%\test_offline_queue.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : export / import du courrier et des contacts
+"%TEST_BIN_DIR%\test_transfer.exe"
 if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
 rem Execution du test d'assemblage du XAML de la fenetre principale

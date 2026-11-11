@@ -67,6 +67,8 @@ add_library(evo-core SHARED
 	evo-core-drafts.c
 	evo-core-events.c
 	evo-core-export.c
+	evo-core-mail-transfer.c
+	evo-core-transfer-util.h
 	evo-core-folder-ops.c
 	evo-core-folders.c
 	evo-core-gal.c

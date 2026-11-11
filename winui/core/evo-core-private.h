@@ -333,6 +333,12 @@ void
 core_emit_folders_updated (EvoCore *core,
 			   const gchar *account_uid);
 
+/* evo-core-folder-ops.c */
+void
+core_subscribe_new_folder (EvoCore *core,
+			   CamelStore *store,
+			   const gchar *full_name);
+
 /* Exécutants des actions de message, appelés directement par le rejeu hors ligne */
 gchar *
 core_move_message_run (EvoCore *core, gchar **args, GError **error);
