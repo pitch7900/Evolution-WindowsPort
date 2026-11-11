@@ -17,7 +17,8 @@
 typedef enum {
 	AUTOREPLY_PROVIDER_MICROSOFT365,
 	AUTOREPLY_PROVIDER_GMAIL,
-	AUTOREPLY_PROVIDER_GMAIL_SHARING	/* seulement pour les messages d'erreur de l'API des délégués */
+	AUTOREPLY_PROVIDER_GMAIL_SHARING,	/* seulement pour les messages d'erreur de l'API des délégués */
+	AUTOREPLY_PROVIDER_GMAIL_LABELS	/* seulement pour les messages d'erreur de l'API des libellés */
 } AutoReplyProvider;
 
 /* Réglages d'absence, indépendants du fournisseur. */
@@ -199,6 +200,8 @@ autoreply_http (EvoCore *core,
 			g_set_error (error, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED,
 				provider == AUTOREPLY_PROVIDER_GMAIL_SHARING
 				? "Gmail : gestion des délégués refusée. Elle est réservée aux comptes Google Workspace et exige la portée « gmail.settings.sharing » : supprimez puis ajoutez de nouveau le compte Google (%s)."
+				: provider == AUTOREPLY_PROVIDER_GMAIL_LABELS
+				? "Gmail : lecture des libellés refusée (%s). Supprimez puis ajoutez de nouveau le compte Google pour accorder l'accès."
 				: provider == AUTOREPLY_PROVIDER_GMAIL
 				? "Gmail : autorisation manquante. Supprimez puis ajoutez de nouveau le compte Google pour accorder la gestion des réponses automatiques (%s)."
 				: "Autorisation insuffisante : la permission « MailboxSettings.ReadWrite » est requise (consentement de l'administrateur possible) ; reconnectez le compte (%s).",
@@ -938,9 +941,10 @@ evo_core_remove_delegate (EvoCore *core,
 	core_submit (core, core_remove_delegate_run, g_strdupv (args), func, user_data);
 }
 
-/* ---- Catégories d'un compte Microsoft 365 (liste principale Outlook) ---- */
+/* ---- Catégories d'un compte : liste principale Outlook (Microsoft 365) ou libellés Gmail ---- */
 
 #define CATEGORIES_GRAPH_URI "https://graph.microsoft.com/v1.0/me/outlook/masterCategories"
+#define CATEGORIES_GMAIL_URI "https://gmail.googleapis.com/gmail/v1/users/me/labels"
 
 /* Couleur « #RRGGBB » d'un préréglage de couleur Outlook ("preset0".."preset24").
  * Retourne : la couleur, NULL si le préréglage est inconnu ou « none ». */
@@ -1005,14 +1009,10 @@ core_get_mail_categories_run (EvoCore *core,
 	if (!autoreply_get_token (core, args[0], &provider, &token, error))
 		return NULL;
 
-	if (provider != AUTOREPLY_PROVIDER_MICROSOFT365) {
-		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-			"La reprise des catégories n'est disponible que pour les comptes Microsoft 365 / Exchange Online.");
-		e_util_safe_free_string (token);
-		return NULL;
-	}
-
-	bytes = autoreply_http (core, AUTOREPLY_PROVIDER_MICROSOFT365, "GET", CATEGORIES_GRAPH_URI, token, NULL, error);
+	bytes = autoreply_http (core,
+		provider == AUTOREPLY_PROVIDER_GMAIL ? AUTOREPLY_PROVIDER_GMAIL_LABELS : AUTOREPLY_PROVIDER_MICROSOFT365,
+		"GET", provider == AUTOREPLY_PROVIDER_GMAIL ? CATEGORIES_GMAIL_URI : CATEGORIES_GRAPH_URI,
+		token, NULL, error);
 	e_util_safe_free_string (token);
 	if (!bytes)
 		return NULL;
@@ -1028,25 +1028,47 @@ core_get_mail_categories_run (EvoCore *core,
 	json_builder_begin_array (builder);
 
 	object = json_node_get_object (root);
-	if (json_object_has_member (object, "value") && JSON_NODE_HOLDS_ARRAY (json_object_get_member (object, "value"))) {
-		JsonArray *array = json_object_get_array_member (object, "value");
-		guint ii, count = json_array_get_length (array);
+	{
+		/* Graph : "value" [{displayName, color: "presetN"}] ;
+		 * Gmail : "labels" [{name, type, color: {backgroundColor: "#rrggbb"}}] */
+		gboolean gmail = provider == AUTOREPLY_PROVIDER_GMAIL;
+		const gchar *member = gmail ? "labels" : "value";
 
-		for (ii = 0; ii < count; ii++) {
-			JsonObject *entry = json_array_get_object_element (array, ii);
-			const gchar *name, *color;
+		if (json_object_has_member (object, member) && JSON_NODE_HOLDS_ARRAY (json_object_get_member (object, member))) {
+			JsonArray *array = json_object_get_array_member (object, member);
+			guint ii, count = json_array_get_length (array);
 
-			if (!entry)
-				continue;
-			name = json_object_get_string_member_with_default (entry, "displayName", "");
-			if (!*name)
-				continue;
-			color = categories_color_from_preset (json_object_get_string_member_with_default (entry, "color", ""));
+			for (ii = 0; ii < count; ii++) {
+				JsonObject *entry = json_array_get_object_element (array, ii);
+				const gchar *name, *color = NULL;
 
-			json_builder_begin_object (builder);
-			builder_add_string (builder, "name", name);
-			builder_add_string (builder, "color", color ? color : "");
-			json_builder_end_object (builder);
+				if (!entry)
+					continue;
+				name = json_object_get_string_member_with_default (entry, gmail ? "name" : "displayName", "");
+				if (!*name)
+					continue;
+				if (gmail) {
+					JsonObject *palette;
+
+					/* seuls les libellés créés par l'utilisateur sont des « catégories » */
+					if (g_strcmp0 (json_object_get_string_member_with_default (entry, "type", ""), "user") != 0)
+						continue;
+					palette = json_object_has_member (entry, "color") &&
+						JSON_NODE_HOLDS_OBJECT (json_object_get_member (entry, "color"))
+						? json_object_get_object_member (entry, "color") : NULL;
+					if (palette)
+						color = json_object_get_string_member_with_default (palette, "backgroundColor", NULL);
+					if (color && (strlen (color) != 7 || color[0] != '#'))
+						color = NULL;
+				} else {
+					color = categories_color_from_preset (json_object_get_string_member_with_default (entry, "color", ""));
+				}
+
+				json_builder_begin_object (builder);
+				builder_add_string (builder, "name", name);
+				builder_add_string (builder, "color", color ? color : "");
+				json_builder_end_object (builder);
+			}
 		}
 	}
 

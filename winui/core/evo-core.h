@@ -1446,9 +1446,10 @@ void		evo_core_get_auto_reply		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
-/* Lit la liste principale des catégories d'un compte Microsoft 365 / Exchange Online
- * (Microsoft Graph /me/outlook/masterCategories). Portée OAuth2 requise :
- * MailboxSettings.Read. Les autres fournisseurs renvoient une erreur « non pris en charge ».
+/* Lit les catégories d'un compte : liste principale Outlook de Microsoft 365 / Exchange
+ * Online (Microsoft Graph /me/outlook/masterCategories, portée MailboxSettings.Read) ou
+ * libellés créés par l'utilisateur d'un compte Gmail (API users.labels, accès Gmail complet
+ * déjà accordé pour IMAP). Les autres fournisseurs renvoient une erreur « non pris en charge ».
  * Paramètres :
  *   core        : instance du moteur evo-core
  *   account_uid : identifiant du compte

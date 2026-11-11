@@ -263,7 +263,7 @@ namespace winrt::EvolutionWin::implementation
         Button import_button;
         import_button.Content(box_value(Tr(L"Reprendre les catégories des comptes")));
         import_button.Margin(ThicknessHelper::FromLengths(0, 8, 0, 0));
-        Controls::ToolTipService::SetToolTip(import_button, box_value(Tr(L"Importe la liste des catégories (noms et couleurs) des comptes Microsoft 365 / Exchange Online ; les catégories déjà présentes sont conservées.")));
+        Controls::ToolTipService::SetToolTip(import_button, box_value(Tr(L"Importe la liste des catégories (noms et couleurs) des comptes Microsoft 365 / Exchange Online (liste de catégories) et Gmail (libellés) ; les catégories déjà présentes sont conservées.")));
         import_button.Click([this](IInspectable const& sender, RoutedEventArgs const&)
         {
             ImportAccountCategories(sender.as<Button>());
@@ -292,7 +292,7 @@ namespace winrt::EvolutionWin::implementation
     }
 
     /**
-     * @brief Reprend dans le registre local les catégories des comptes Microsoft 365.
+     * @brief Reprend dans le registre local les catégories des comptes Microsoft 365 et les libellés des comptes Gmail.
      *
      * Interroge chaque compte non local ; les comptes d'un autre type répondent
      * « non pris en charge » et sont ignorés. Les catégories déjà présentes (même nom,
@@ -371,7 +371,7 @@ namespace winrt::EvolutionWin::implementation
                 button.IsEnabled(true);
                 if (state->accounts_ok == 0)
                 {
-                    ShowStatus(Fmt(Tr(L"Aucune catégorie reprise (comptes Microsoft 365 / Exchange Online uniquement) : {0}"), { hstring{ state->last_error } }), InfoBarSeverity::Warning);
+                    ShowStatus(Fmt(Tr(L"Aucune catégorie reprise (comptes Microsoft 365 / Exchange Online et Gmail uniquement) : {0}"), { hstring{ state->last_error } }), InfoBarSeverity::Warning);
                     return;
                 }
                 if (state->added > 0)
