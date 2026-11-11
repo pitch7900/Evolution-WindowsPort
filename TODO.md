@@ -575,8 +575,8 @@ Sécurisation de bout en bout des courriels par signature et chiffrement avec un
 - [ ] 🟡 **Copier / déplacer des mails et des dossiers d'un compte à un autre** (ex. d'un compte IMAP vers Microsoft 365, d'un ancien compte vers le nouveau) — _existant : le moteur accepte déjà un compte de destination pour un message (`core_move_message_run`, `camel_folder_transfer_messages_to_sync`) mais l'interface ne propose que les dossiers du même compte ; copie / déplacement de dossier limités au même compte, sans sous-dossiers_
   - [x] 🟢 **Unitairement** : menus _Déplacer vers_ / _Copier vers_ listant les dossiers de **tous** les comptes (regroupés par compte, avec recherche dans la liste), pour un message ou une sélection multiple ; boîte de dialogue complète (Ctrl+Maj+V) avec filtrage instantané ; glisser-déposer de messages sur un dossier d'un autre compte (Ctrl = copier)
   - [x] **Dossier complet** : _Copier le dossier vers…_ / _Déplacer le dossier vers…_ un autre compte, avec option **sous-dossiers compris** ; recréation de l'arborescence sur le compte de destination (`camel_store_create_folder_sync`), puis transfert des messages dossier par dossier
-  - [ ] Conservation des indicateurs (lu / non lu, suivi, catégories / mots-clés) et de la date de réception d'origine (`INTERNALDATE` IMAP) quand le serveur de destination le permet
-  - [ ] Transfert par lots en arrière-plan, avec progression et annulation (§4) ; reprise possible après interruption (messages déjà copiés ignorés, repérés par `Message-ID`) ; rapport de fin (nombre de messages copiés, erreurs)
+  - [x] Conservation des indicateurs (lu / non lu, suivi, catégories / mots-clés) et de la date de réception d'origine (`INTERNALDATE` IMAP) quand le serveur de destination le permet
+  - [x] Transfert par lots en arrière-plan, avec progression et annulation (§4) ; reprise possible après interruption (messages déjà copiés ignorés, repérés par `Message-ID`) ; rapport de fin (nombre de messages copiés, erreurs)
   - [x] Déplacement : suppression à la source seulement après copie confirmée sur la destination ; dossiers spéciaux de la source (Boîte de réception, Envoyés…) jamais supprimés, seulement vidés
   - [ ] Confirmation avant un gros transfert (nombre de messages et taille estimés) ; avertissement si le quota du compte de destination risque d'être dépassé (§3)
 - [ ] 🟡 **Nouveau dossier, Renommer, Copier, Déplacer, Supprimer** (`camel_store_create_folder_sync`, etc.), glisser-déposer dans l'arborescence — _fait : menu contextuel (nouveau, renommer, déplacer, copier, supprimer) ; reste : glisser-déposer_
@@ -728,7 +728,7 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
   - [ ] 🟡 À partir d'un fichier `.ics`
   - [ ] 🟠 À partir du carnet d'adresses / de l'annuaire : calendrier d'un autre utilisateur Exchange / M365 selon les droits accordés (disponibilités, détails limités, lecture complète, délégué)
   - [ ] 🟠 À partir d'une liste de salles
-- [ ] 🟡 Plusieurs calendriers partagés ouverts simultanément et conservés (groupe « Calendriers partagés »)
+- [x] 🟡 Plusieurs calendriers partagés ouverts simultanément et conservés (groupe « Calendriers partagés »)
 - Rattachement et interaction avec les calendriers délégués Exchange Online : cf. §3
 - [ ] **Partager le calendrier** :
   - [ ] 🟠 Invitation de partage avec niveaux de droits (disponibilités, titres et lieux, tous les détails, édition, délégué) — Exchange / M365
