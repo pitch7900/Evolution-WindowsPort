@@ -1,6 +1,6 @@
 # Feuille de route (Roadmap) - Evolution Windows Port
 
-Ce document définit la trajectoire de développement pour implémenter 100 % des fonctionnalités restantes du fichier [TODO.md](TODO.md), à partir de la version courante **1.2.0** (en cours, définie dans [VERSION](VERSION)).
+Ce document définit la trajectoire de développement pour implémenter 100 % des fonctionnalités restantes du fichier [TODO.md](TODO.md), à partir de la version courante **1.1.2** (en cours, définie dans [VERSION](VERSION)).
 
 Le plan est articulé autour de 5 versions jalons progressives :
 - **v0.9.8** : Synchronisation en ligne et cycle de vie des données (Microsoft 365 et Gmail)
