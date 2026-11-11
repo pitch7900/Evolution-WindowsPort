@@ -1318,6 +1318,9 @@ namespace winrt::EvolutionWin::implementation
         hstring target_account = loc.account.empty() ? m_account : loc.account;
         hstring target_folder = loc.folder.empty() ? m_folder : loc.folder;
 
+        /* le message précédent reste visible tant que celui-ci n'est pas là : indicateur de chargement */
+        SetReaderLoading(true);
+
         m_core->FetchMessage(target_account, target_folder, uid, [this, request, uid, target_account, target_folder](hstring const& json, hstring const& error)
         {
             if (request != m_message_request)
@@ -1325,6 +1328,7 @@ namespace winrt::EvolutionWin::implementation
 
             if (!error.empty())
             {
+                SetReaderLoading(false);
                 ShowStatus(Tr(L"Message : ") + error, InfoBarSeverity::Error);
                 return;
             }
@@ -1352,6 +1356,23 @@ namespace winrt::EvolutionWin::implementation
             UpdateActionButtons(uid);
 
             ShowCurrentMessageInReader(false);
+
+            /* le voile disparaît à la fin du chargement du document (NavigationCompleted) ;
+               sécurité : au bout de 2 s au plus, même si cet événement n'arrive pas */
+            if (ReaderLoadingOverlay().Visibility() == Visibility::Visible)
+            {
+                m_reader_loading_pending_nav = true;
+                if (m_reader_loading_timer)
+                    m_reader_loading_timer.Stop();
+                m_reader_loading_timer = DispatcherTimer();
+                m_reader_loading_timer.Interval(std::chrono::seconds(2));
+                m_reader_loading_timer.Tick([this](IInspectable const&, IInspectable const&) { SetReaderLoading(false); });
+                m_reader_loading_timer.Start();
+            }
+            else
+            {
+                SetReaderLoading(false);
+            }
         });
     }
 

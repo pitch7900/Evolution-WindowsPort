@@ -454,4 +454,13 @@
 
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 
+                    <!-- message en cours de chargement : le contenu précédent est masqué (MainWindow.Reader.cpp, SetReaderLoading) -->
+                    <Grid x:Name="ReaderLoadingOverlay" Grid.Row="0" Grid.RowSpan="2" Visibility="Collapsed">
+                        <Grid.Background>
+                            <SolidColorBrush Color="{ThemeResource SolidBackgroundFillColorBase}" Opacity="0.94" />
+                        </Grid.Background>
+                        <ProgressRing x:Name="ReaderLoadingRing" IsActive="False" Width="48" Height="48"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+
                 </Grid>

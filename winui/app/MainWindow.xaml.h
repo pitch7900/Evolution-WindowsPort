@@ -199,6 +199,7 @@ namespace winrt::EvolutionWin::implementation
         void RefreshConnectionIndicator();
         void UpdateSenderPhoto(winrt::hstring const& from);
         void RevealMainWindow(wchar_t const* reason);
+        void SetReaderLoading(bool loading);
         void UpdateFolderStatusText();
         void RestoreSessionFolder();
         void UpdateOutOfOfficeBanner();
@@ -974,6 +975,8 @@ namespace winrt::EvolutionWin::implementation
         winrt::EvolutionWin::SplashWindow m_splash{ nullptr };
         Microsoft::UI::Xaml::DispatcherTimer m_splash_timer{ nullptr };
         Microsoft::UI::Xaml::DispatcherTimer m_reveal_timer{ nullptr };
+        Microsoft::UI::Xaml::DispatcherTimer m_reader_loading_timer{ nullptr };
+        bool m_reader_loading_pending_nav{ false };
         winrt::com_ptr<ITaskbarList3> m_taskbar_list{ nullptr };
 
         /* État de la page Paramètres */

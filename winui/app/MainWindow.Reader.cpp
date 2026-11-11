@@ -292,6 +292,10 @@ namespace winrt::EvolutionWin::implementation
 
         core.NavigationCompleted([this](auto const&, Microsoft::Web::WebView2::Core::CoreWebView2NavigationCompletedEventArgs const&)
         {
+            /* le message demandé est affiché : le voile de chargement disparaît */
+            if (m_reader_loading_pending_nav)
+                SetReaderLoading(false);
+
             if (m_reader_zoom != 1.0)
             {
                 ApplyReaderZoom(m_reader_zoom);
@@ -523,12 +527,51 @@ namespace winrt::EvolutionWin::implementation
         ShowCurrentMessageInReader(false);
     }
 
+    /* Indicateur de chargement du message sélectionné : un voile avec un indicateur
+     * d'activité masque le message précédent tant que le nouveau n'est pas affiché.
+     * Le voile n'apparaît qu'après 150 ms, pour qu'un message déjà en cache ne fasse
+     * pas clignoter l'écran.
+     * Paramètres :
+     *   loading : TRUE au début du chargement, FALSE quand le message est affiché
+     *             (ou abandonné) */
+    void MainWindow::SetReaderLoading(bool loading)
+    {
+        if (m_reader_loading_timer)
+        {
+            m_reader_loading_timer.Stop();
+            m_reader_loading_timer = nullptr;
+        }
+
+        if (!loading)
+        {
+            m_reader_loading_pending_nav = false;
+            ReaderLoadingRing().IsActive(false);
+            ReaderLoadingOverlay().Visibility(Visibility::Collapsed);
+            return;
+        }
+
+        m_reader_loading_timer = DispatcherTimer();
+        m_reader_loading_timer.Interval(std::chrono::milliseconds(150));
+        m_reader_loading_timer.Tick([this](IInspectable const&, IInspectable const&)
+        {
+            if (m_reader_loading_timer)
+            {
+                m_reader_loading_timer.Stop();
+                m_reader_loading_timer = nullptr;
+            }
+            ReaderLoadingOverlay().Visibility(Visibility::Visible);
+            ReaderLoadingRing().IsActive(true);
+        });
+        m_reader_loading_timer.Start();
+    }
+
     /* Vide le volet de lecture lorsqu'aucun message n'est sélectionné. */
     void MainWindow::ClearReader()
     {
         CloseAttachmentPreview();
         StopSpeech();
         ++m_message_request;
+        SetReaderLoading(false);
         m_current_message = nullptr;
         m_current_message_uid = L"";
         SecurityBar().IsOpen(false);
