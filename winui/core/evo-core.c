@@ -287,6 +287,16 @@ core_process_age_ms (void)
 	return (gint64) ((current.QuadPart - start.QuadPart) / 10000);
 }
 
+/* TRUE pendant les 90 premières secondes du processus : les requêtes lentes et les
+ * étapes de démarrage sont alors journalisées (evo_core_trace). */
+gboolean
+core_startup_tracing (void)
+{
+	gint64 age = core_process_age_ms ();
+
+	return age >= 0 && age < 90000;
+}
+
 /* Repère chronométré du démarrage : « démarrage +1234 ms : étape » dans le journal
  * (voir evo-core.h ; analyse par tools\analyse-demarrage.ps1).
  * Paramètres :

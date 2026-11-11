@@ -217,11 +217,16 @@ core_ignore_result (const char *json,
 		    const char *error_message,
 		    void *user_data);
 void
-core_submit (EvoCore *core,
-	     RequestFunc func,
-	     gchar **args,
-	     EvoCoreResultFunc result_func,
-	     gpointer user_data);
+core_submit_named (EvoCore *core,
+		   RequestFunc func,
+		   const gchar *name,
+		   gchar **args,
+		   EvoCoreResultFunc result_func,
+		   gpointer user_data);
+/* Le nom de la fonction exécutante est conservé pour le journal des requêtes lentes
+ * du démarrage (attente dans la file et durée d'exécution). */
+#define core_submit(core, func, args, result_func, user_data) \
+	core_submit_named ((core), (func), #func, (args), (result_func), (user_data))
 CamelStore *
 core_ref_store (EvoCore *core,
 		const gchar *account_uid,
@@ -346,6 +351,10 @@ core_crypto_verify_multipart_signed (CamelMultipart *signed_part,
 				     CoreCryptoInfo *info);
 void
 core_crypto_info_clear (CoreCryptoInfo *info);
+
+/* evo-core.c */
+gboolean
+core_startup_tracing (void);
 
 /* evo-core-gal.c */
 void

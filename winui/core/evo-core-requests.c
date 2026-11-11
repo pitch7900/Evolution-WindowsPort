@@ -10,6 +10,8 @@ typedef struct {
 	gchar **args;
 	EvoCoreResultFunc result_func;
 	gpointer user_data;
+	const gchar *name;	/* nom de la fonction exécutante (journal) */
+	gint64 queued_at;	/* instant de mise en file (µs, horloge monotone) */
 } Request;
 
 void
@@ -28,7 +30,24 @@ core_request_run (gpointer data,
 	} else if (g_cancellable_is_cancelled (core->cancellable)) {
 		/* shutting down: no callback */
 	} else {
+		gint64 started_at = g_get_monotonic_time ();
+
 		json = request->func (core, request->args, &error);
+
+		/* démarrage : requêtes lentes (attente dans la file ou exécution), pour repérer
+		 * ce qui retarde l'affichage initial (voir tools\analyse-demarrage.ps1) */
+		{
+			gint64 waited_ms = (started_at - request->queued_at) / 1000;
+			gint64 ran_ms = (g_get_monotonic_time () - started_at) / 1000;
+
+			if (core_startup_tracing () && (waited_ms >= 300 || ran_ms >= 1000)) {
+				gchar *step = g_strdup_printf ("requête %s : attente %" G_GINT64_FORMAT " ms, exécution %" G_GINT64_FORMAT " ms",
+					request->name ? request->name : "?", waited_ms, ran_ms);
+
+				evo_core_trace (step);
+				g_free (step);
+			}
+		}
 
 		if (json)
 			request->result_func (json, NULL, request->user_data);
@@ -55,11 +74,12 @@ core_ignore_result (const char *json,
 }
 
 void
-core_submit (EvoCore *core,
-	     RequestFunc func,
-	     gchar **args,
-	     EvoCoreResultFunc result_func,
-	     gpointer user_data)
+core_submit_named (EvoCore *core,
+		   RequestFunc func,
+		   const gchar *name,
+		   gchar **args,
+		   EvoCoreResultFunc result_func,
+		   gpointer user_data)
 {
 	Request *request;
 
@@ -71,6 +91,8 @@ core_submit (EvoCore *core,
 	request->args = args;
 	request->result_func = result_func;
 	request->user_data = user_data;
+	request->name = name;
+	request->queued_at = g_get_monotonic_time ();
 
 	g_thread_pool_push (core->pool, request, NULL);
 }

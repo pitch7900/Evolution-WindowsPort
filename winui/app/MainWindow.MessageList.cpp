@@ -120,6 +120,7 @@ namespace winrt::EvolutionWin::implementation
             m_message_states.clear();
             ListProgress().IsActive(true);
         }
+        evo_core_trace("interface : demande de la liste des messages");
         m_core->ListMessages(account, folder, 500, [this, account, folder, selected, scroll_offset](hstring const& json, hstring const& error)
         {
             /* another folder was chosen meanwhile */

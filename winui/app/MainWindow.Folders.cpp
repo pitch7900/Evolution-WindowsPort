@@ -143,6 +143,7 @@ namespace winrt::EvolutionWin::implementation
                         return;
                     }
 
+                    evo_core_trace("interface : arborescence des dossiers reçue");
                     auto parsed = JsonArray::Parse(folders);
                     m_account_folders[std::wstring{ uid }] = parsed;
                     AddFolders(node, parsed, uid);

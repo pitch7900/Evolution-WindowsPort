@@ -67,7 +67,7 @@ core_refresh_folder_infos (EvoCore *core,
 }
 
 /* repères chronométrés (evo_core_trace) pendant la première actualisation seulement */
-static gboolean startup_tracing = TRUE;
+#define startup_tracing (core_startup_tracing ())
 
 static gchar *
 core_refresh_run (EvoCore *core,
@@ -77,6 +77,8 @@ core_refresh_run (EvoCore *core,
 	GList *services, *link;
 
 	guint total_services = 0, current_service = 0;
+	const gchar *pass = (args[0] && g_str_equal (args[0], "all")) ? "passe complète" : "passe rapide";
+
 	services = camel_session_list_services (core->session);
 
 	for (link = services; link; link = g_list_next (link)) {
@@ -103,7 +105,7 @@ core_refresh_run (EvoCore *core,
 		current_service++;
 		g_message ("refresh of “%s”", camel_service_get_display_name (service));
 		if (startup_tracing) {
-			gchar *step = g_strdup_printf ("actualisation « %s » : début", camel_service_get_display_name (service));
+			gchar *step = g_strdup_printf ("actualisation (%s) « %s » : début", pass, camel_service_get_display_name (service));
 
 			evo_core_trace (step);
 			g_free (step);
@@ -126,7 +128,7 @@ core_refresh_run (EvoCore *core,
 
 		core_emit_connection_status (core, uid, "imap", "connected", "Connecté");
 		if (startup_tracing) {
-			gchar *step = g_strdup_printf ("actualisation « %s » : connexion établie", camel_service_get_display_name (service));
+			gchar *step = g_strdup_printf ("actualisation (%s) « %s » : connexion établie", pass, camel_service_get_display_name (service));
 
 			evo_core_trace (step);
 			g_free (step);
@@ -179,7 +181,7 @@ core_refresh_run (EvoCore *core,
 		g_free (prefix);
 
 		if (startup_tracing) {
-			gchar *step = g_strdup_printf ("actualisation « %s » : dossiers ouverts actualisés", camel_service_get_display_name (service));
+			gchar *step = g_strdup_printf ("actualisation (%s) « %s » : dossiers ouverts actualisés", pass, camel_service_get_display_name (service));
 
 			evo_core_trace (step);
 			g_free (step);
@@ -197,8 +199,10 @@ core_refresh_run (EvoCore *core,
 	core_emit_connection_status (core, NULL, "global", "connected", "Connecté");
 
 	if (startup_tracing) {
-		evo_core_trace ("actualisation : première passe terminée (tous les comptes)");
-		startup_tracing = FALSE;
+		gchar *step = g_strdup_printf ("actualisation (%s) : terminée pour tous les comptes", pass);
+
+		evo_core_trace (step);
+		g_free (step);
 	}
 
 	g_list_free_full (services, g_object_unref);
