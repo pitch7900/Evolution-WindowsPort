@@ -1446,6 +1446,20 @@ void		evo_core_get_auto_reply		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Lit la liste principale des catégories d'un compte Microsoft 365 / Exchange Online
+ * (Microsoft Graph /me/outlook/masterCategories). Portée OAuth2 requise :
+ * MailboxSettings.Read. Les autres fournisseurs renvoient une erreur « non pris en charge ».
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   func        : rappel recevant {"categories": [{"name", "color": "#RRGGBB" (vide si
+ *                 inconnue)}]}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_get_mail_categories	(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Enregistre les réponses automatiques d'un compte Microsoft 365 ou Gmail.
  * Microsoft 365 exige les deux dates ou aucune ; Gmail n'a qu'un message (celui des
  * expéditeurs externes, sinon l'interne) ; l'audience « none » équivaut chez Gmail

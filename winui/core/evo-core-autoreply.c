@@ -937,3 +937,137 @@ evo_core_remove_delegate (EvoCore *core,
 
 	core_submit (core, core_remove_delegate_run, g_strdupv (args), func, user_data);
 }
+
+/* ---- Catégories d'un compte Microsoft 365 (liste principale Outlook) ---- */
+
+#define CATEGORIES_GRAPH_URI "https://graph.microsoft.com/v1.0/me/outlook/masterCategories"
+
+/* Couleur « #RRGGBB » d'un préréglage de couleur Outlook ("preset0".."preset24").
+ * Retourne : la couleur, NULL si le préréglage est inconnu ou « none ». */
+static const gchar *
+categories_color_from_preset (const gchar *preset)
+{
+	static const gchar * const colors[] = {
+		"#E74856", /* preset0  Rouge */
+		"#F7630C", /* preset1  Orange */
+		"#8E562E", /* preset2  Marron */
+		"#FFB900", /* preset3  Jaune */
+		"#10893E", /* preset4  Vert */
+		"#00B7C3", /* preset5  Sarcelle */
+		"#847545", /* preset6  Olive */
+		"#0078D4", /* preset7  Bleu */
+		"#8764B8", /* preset8  Violet */
+		"#C30052", /* preset9  Canneberge */
+		"#69797E", /* preset10 Acier */
+		"#4A5459", /* preset11 Acier foncé */
+		"#767676", /* preset12 Gris */
+		"#4C4A48", /* preset13 Gris foncé */
+		"#1F1F1F", /* preset14 Noir */
+		"#A4262C", /* preset15 Rouge foncé */
+		"#CA5010", /* preset16 Orange foncé */
+		"#603D1F", /* preset17 Marron foncé */
+		"#986F0B", /* preset18 Jaune foncé */
+		"#0B6A0B", /* preset19 Vert foncé */
+		"#038387", /* preset20 Sarcelle foncé */
+		"#5E5A3A", /* preset21 Olive foncé */
+		"#004E8C", /* preset22 Bleu foncé */
+		"#5C2E91", /* preset23 Violet foncé */
+		"#8E1F4D"  /* preset24 Canneberge foncé */
+	};
+	gchar *end = NULL;
+	gint64 index;
+
+	if (!preset || !g_str_has_prefix (preset, "preset"))
+		return NULL;
+
+	index = g_ascii_strtoll (preset + 6, &end, 10);
+	if (!end || *end || index < 0 || index >= (gint64) G_N_ELEMENTS (colors))
+		return NULL;
+
+	return colors[index];
+}
+
+/* Lit les catégories d'un compte.
+ *   args : [0] = uid du compte
+ * Retourne : {"categories": [{"name", "color": "#RRGGBB" ou ""}]}, NULL sinon. */
+static gchar *
+core_get_mail_categories_run (EvoCore *core,
+			      gchar **args,
+			      GError **error)
+{
+	AutoReplyProvider provider;
+	gchar *token = NULL, *json = NULL;
+	GBytes *bytes;
+	JsonNode *root;
+	JsonBuilder *builder;
+	JsonObject *object;
+
+	if (!autoreply_get_token (core, args[0], &provider, &token, error))
+		return NULL;
+
+	if (provider != AUTOREPLY_PROVIDER_MICROSOFT365) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			"La reprise des catégories n'est disponible que pour les comptes Microsoft 365 / Exchange Online.");
+		e_util_safe_free_string (token);
+		return NULL;
+	}
+
+	bytes = autoreply_http (core, AUTOREPLY_PROVIDER_MICROSOFT365, "GET", CATEGORIES_GRAPH_URI, token, NULL, error);
+	e_util_safe_free_string (token);
+	if (!bytes)
+		return NULL;
+
+	root = autoreply_parse_response (bytes, error);
+	g_bytes_unref (bytes);
+	if (!root)
+		return NULL;
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	json_builder_set_member_name (builder, "categories");
+	json_builder_begin_array (builder);
+
+	object = json_node_get_object (root);
+	if (json_object_has_member (object, "value") && JSON_NODE_HOLDS_ARRAY (json_object_get_member (object, "value"))) {
+		JsonArray *array = json_object_get_array_member (object, "value");
+		guint ii, count = json_array_get_length (array);
+
+		for (ii = 0; ii < count; ii++) {
+			JsonObject *entry = json_array_get_object_element (array, ii);
+			const gchar *name, *color;
+
+			if (!entry)
+				continue;
+			name = json_object_get_string_member_with_default (entry, "displayName", "");
+			if (!*name)
+				continue;
+			color = categories_color_from_preset (json_object_get_string_member_with_default (entry, "color", ""));
+
+			json_builder_begin_object (builder);
+			builder_add_string (builder, "name", name);
+			builder_add_string (builder, "color", color ? color : "");
+			json_builder_end_object (builder);
+		}
+	}
+
+	json_builder_end_array (builder);
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+	json_node_unref (root);
+
+	return json;
+}
+
+void
+evo_core_get_mail_categories (EvoCore *core,
+			      const char *account_uid,
+			      EvoCoreResultFunc func,
+			      void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, NULL };
+
+	g_return_if_fail (account_uid != NULL);
+
+	core_submit (core, core_get_mail_categories_run, g_strdupv (args), func, user_data);
+}

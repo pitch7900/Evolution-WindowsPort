@@ -6979,5 +6979,25 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Mail, calendar, contacts and tasks</value>
     <comment>Messagerie, agenda, contacts et tâches</comment>
   </data>
+  <data name="T_F3ABB543" xml:space="preserve">
+    <value>Import categories from accounts</value>
+    <comment>Reprendre les catégories des comptes</comment>
+  </data>
+  <data name="T_BA98BC7A" xml:space="preserve">
+    <value>Imports the category list (names and colours) of Microsoft 365 / Exchange Online accounts; existing categories are kept.</value>
+    <comment>Importe la liste des catégories (noms et couleurs) des comptes Microsoft 365 / Exchange Online ; les catégories déjà présentes sont conservées.</comment>
+  </data>
+  <data name="T_A804DADC" xml:space="preserve">
+    <value>No account to query.</value>
+    <comment>Aucun compte à interroger.</comment>
+  </data>
+  <data name="T_3798179B" xml:space="preserve">
+    <value>No category imported (Microsoft 365 / Exchange Online accounts only): {0}</value>
+    <comment>Aucune catégorie reprise (comptes Microsoft 365 / Exchange Online uniquement) : {0}</comment>
+  </data>
+  <data name="T_9DD1A05B" xml:space="preserve">
+    <value>{0} categories imported from {1} account(s).</value>
+    <comment>{0} catégorie(s) reprise(s) depuis {1} compte(s).</comment>
+  </data>
 </root>
 

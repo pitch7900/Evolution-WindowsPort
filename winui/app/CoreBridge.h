@@ -248,6 +248,16 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Lit les catégories (liste principale) d'un compte Microsoft 365.
+         * Paramètres :
+         *   account : identifiant du compte
+         *   handler : rappel recevant {"categories": [{"name", "color"}]} */
+        void GetMailCategories(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_get_mail_categories(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Enregistre les réponses automatiques (absence) d'un compte.
          * Paramètres :
          *   account       : identifiant du compte

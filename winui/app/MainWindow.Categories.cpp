@@ -259,6 +259,17 @@ namespace winrt::EvolutionWin::implementation
         add_row.Children().Append(add_button);
         host.Children().Append(add_row);
 
+        /* reprise des catégories existantes des comptes Microsoft 365 / Exchange Online */
+        Button import_button;
+        import_button.Content(box_value(Tr(L"Reprendre les catégories des comptes")));
+        import_button.Margin(ThicknessHelper::FromLengths(0, 8, 0, 0));
+        Controls::ToolTipService::SetToolTip(import_button, box_value(Tr(L"Importe la liste des catégories (noms et couleurs) des comptes Microsoft 365 / Exchange Online ; les catégories déjà présentes sont conservées.")));
+        import_button.Click([this](IInspectable const& sender, RoutedEventArgs const&)
+        {
+            ImportAccountCategories(sender.as<Button>());
+        });
+        host.Children().Append(import_button);
+
         /* palette standard */
         Button reset_button;
         reset_button.Content(box_value(Tr(L"Rétablir la palette standard", L"Restore the standard palette")));
@@ -278,6 +289,99 @@ namespace winrt::EvolutionWin::implementation
         note.Style(caption_style);
         note.Foreground(secondary_brush);
         host.Children().Append(note);
+    }
+
+    /**
+     * @brief Reprend dans le registre local les catégories des comptes Microsoft 365.
+     *
+     * Interroge chaque compte non local ; les comptes d'un autre type répondent
+     * « non pris en charge » et sont ignorés. Les catégories déjà présentes (même nom,
+     * sans tenir compte de la casse) gardent leur couleur locale.
+     *
+     * @param button Bouton déclencheur, désactivé pendant la lecture.
+     */
+    void MainWindow::ImportAccountCategories(Button const& button)
+    {
+        struct ImportState
+        {
+            size_t pending{ 0 };
+            size_t accounts_ok{ 0 };
+            size_t added{ 0 };
+            std::wstring last_error;
+        };
+        auto state = std::make_shared<ImportState>();
+
+        std::vector<hstring> uids;
+        if (m_accounts)
+        {
+            for (auto const& value : m_accounts)
+            {
+                auto account = value.GetObject();
+                if (account.GetNamedBoolean(L"local", false))
+                    continue;
+                hstring uid = account.GetNamedString(L"uid", L"");
+                if (!uid.empty())
+                    uids.push_back(uid);
+            }
+        }
+        if (uids.empty())
+        {
+            ShowStatus(Tr(L"Aucun compte à interroger."), InfoBarSeverity::Warning);
+            return;
+        }
+
+        button.IsEnabled(false);
+        state->pending = uids.size();
+        for (auto const& uid : uids)
+        {
+            m_core->GetMailCategories(uid, [this, state, button](hstring const& json, hstring const& error)
+            {
+                if (!error.empty() || json.empty())
+                {
+                    state->last_error = std::wstring{ error };
+                }
+                else
+                {
+                    JsonObject root;
+                    if (JsonObject::TryParse(json, root) && root.HasKey(L"categories"))
+                    {
+                        ++state->accounts_ok;
+                        auto& registry = ::EvolutionWin::CategoryStore::Registry();
+                        for (auto const& value : root.GetNamedArray(L"categories"))
+                        {
+                            auto entry = value.GetObject();
+                            std::wstring name{ entry.GetNamedString(L"name", L"") };
+                            /* la virgule sépare les catégories d'un courriel : on l'évite */
+                            std::replace(name.begin(), name.end(), L',', L' ');
+                            name = Cat::TrimName(std::wstring_view{ name });
+                            if (name.empty() || registry.Contains(name))
+                                continue;
+                            uint8_t r = 0, g = 0, b = 0;
+                            if (!Cat::ParseHexColor(std::wstring_view{ entry.GetNamedString(L"color", L"") }, r, g, b))
+                                Cat::FallbackColor(name, r, g, b);
+                            if (registry.Add(name, r, g, b))
+                                ++state->added;
+                        }
+                    }
+                }
+
+                if (--state->pending > 0)
+                    return;
+
+                button.IsEnabled(true);
+                if (state->accounts_ok == 0)
+                {
+                    ShowStatus(Fmt(Tr(L"Aucune catégorie reprise (comptes Microsoft 365 / Exchange Online uniquement) : {0}"), { hstring{ state->last_error } }), InfoBarSeverity::Warning);
+                    return;
+                }
+                if (state->added > 0)
+                {
+                    OnCategoriesRegistryChanged();
+                    RefreshCategoriesView();
+                }
+                ShowStatus(Fmt(Tr(L"{0} catégorie(s) reprise(s) depuis {1} compte(s)."), { to_hstring(state->added), to_hstring(state->accounts_ok) }), InfoBarSeverity::Success);
+            });
+        }
     }
 
     /**
