@@ -24,6 +24,8 @@ core_request_run (gpointer data,
 	gchar *start_error = NULL;
 	GError *error = NULL;
 
+	g_atomic_int_inc (&core->running_requests);
+
 	if (!core_wait_started (core, &start_error)) {
 		request->result_func (NULL, start_error, request->user_data);
 		g_free (start_error);
@@ -59,6 +61,8 @@ core_request_run (gpointer data,
 	g_free (json);
 	g_strfreev (request->args);
 	g_free (request);
+
+	g_atomic_int_dec_and_test (&core->running_requests);
 }
 
 /* Fonction de rappel neutre qui ignore le résultat d'une requête asynchrone.
@@ -85,6 +89,12 @@ core_submit_named (EvoCore *core,
 
 	g_return_if_fail (core != NULL);
 	g_return_if_fail (result_func != NULL);
+
+	/* arrêt en cours : aucune nouvelle requête (pas de rappel, comme à l'arrêt) */
+	if (g_atomic_int_get (&core->shutting_down)) {
+		g_strfreev (args);
+		return;
+	}
 
 	request = g_new0 (Request, 1);
 	request->func = func;

@@ -346,16 +346,39 @@ core_quit_cb (gpointer user_data)
 	return G_SOURCE_REMOVE;
 }
 
+/* durée maximale d'attente des requêtes en cours à l'arrêt (ms) */
+#define CORE_SHUTDOWN_WAIT_MS 4000
+
 void
 evo_core_free (EvoCore *core)
 {
+	gint64 started_at = g_get_monotonic_time ();
+
 	if (!core)
 		return;
 
+	g_atomic_int_set (&core->shutting_down, TRUE);
+	g_message ("arrêt : début (%d requête(s) en cours)", g_atomic_int_get (&core->running_requests));
+
 	g_cancellable_cancel (core->cancellable);
 
-	/* running requests finish (cancelled), queued ones are dropped */
-	g_thread_pool_free (core->pool, TRUE, TRUE);
+	/* les requêtes en attente sont abandonnées ; celles en cours reçoivent l'annulation, mais
+	 * une synchronisation de gros dossier ou une connexion réseau peut tarder à réagir : on ne
+	 * les attend que quelques secondes (sinon la fermeture de l'application gèle) */
+	g_thread_pool_free (core->pool, TRUE, FALSE);
+	core->pool = NULL;
+
+	while (g_atomic_int_get (&core->running_requests) > 0 &&
+	       (g_get_monotonic_time () - started_at) / 1000 < CORE_SHUTDOWN_WAIT_MS)
+		g_usleep (20 * 1000);
+
+	if (g_atomic_int_get (&core->running_requests) > 0) {
+		/* des threads utilisent encore le moteur : on ne le libère pas (le processus se termine) */
+		g_message ("arrêt : %d requête(s) encore en cours après %" G_GINT64_FORMAT " ms, libération abandonnée",
+			g_atomic_int_get (&core->running_requests), (g_get_monotonic_time () - started_at) / 1000);
+		return;
+	}
+	g_message ("arrêt : requêtes terminées en %" G_GINT64_FORMAT " ms", (g_get_monotonic_time () - started_at) / 1000);
 
 	g_main_context_invoke (core->context, core_quit_cb, core->loop);
 	g_thread_join (core->thread);
@@ -383,6 +406,7 @@ evo_core_free (EvoCore *core)
 	g_mutex_clear (&core->lock);
 	g_cond_clear (&core->cond);
 	g_free (core->start_error);
+	g_message ("arrêt : moteur libéré en %" G_GINT64_FORMAT " ms", (g_get_monotonic_time () - started_at) / 1000);
 	g_free (core);
 }
 

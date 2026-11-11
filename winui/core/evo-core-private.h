@@ -38,6 +38,11 @@ struct _EvoCore {
 	GThreadPool *pool;
 	GCancellable *cancellable;
 
+	/* requêtes en cours d'exécution et arrêt demandé (accès atomique) : evo_core_free ()
+	 * n'attend les requêtes en cours que quelques secondes */
+	gint running_requests;
+	gint shutting_down;
+
 	ESourceRegistry *registry;
 	CamelSession *session;
 

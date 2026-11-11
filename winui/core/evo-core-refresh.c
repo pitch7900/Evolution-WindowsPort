@@ -152,7 +152,7 @@ core_refresh_run (EvoCore *core,
 		}
 		g_mutex_unlock (&core->folders_lock);
 
-		for (ii = 0; ii < opened->len; ii++) {
+		for (ii = 0; ii < opened->len && !g_cancellable_is_cancelled (core->cancellable); ii++) {
 			CamelFolder *folder = opened->pdata[ii];
 
 			if (!camel_folder_refresh_info_sync (folder, core->cancellable, &local_error)) {
