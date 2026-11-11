@@ -205,7 +205,8 @@ namespace winrt::EvolutionWin::implementation
         void SetFolderSyncing(bool syncing);
         void UpdateOlderMessagesFooter(bool visible, int limit);
         void RefreshOlderMessagesFooter();
-        void LoadOlderMessages();
+        void LoadOlderMessages(unsigned extra_count);
+        fire_and_forget ConfirmLoadAllMessages();
         void ApplyMessageDelta(Windows::Data::Json::JsonArray const& fresh);
         void UpdateFolderStatusText();
         void RestoreSessionFolder();
@@ -991,6 +992,7 @@ namespace winrt::EvolutionWin::implementation
         Microsoft::UI::Xaml::Controls::StackPanel m_older_footer{ nullptr };
         Microsoft::UI::Xaml::Controls::TextBlock m_older_footer_text{ nullptr };
         Microsoft::UI::Xaml::Controls::HyperlinkButton m_older_footer_button{ nullptr };
+        Microsoft::UI::Xaml::Controls::HyperlinkButton m_older_footer_all_button{ nullptr };
         uint64_t m_list_delta_request{ 0 };
         bool m_reader_loading_pending_nav{ false };
         winrt::com_ptr<ITaskbarList3> m_taskbar_list{ nullptr };

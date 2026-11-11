@@ -6931,5 +6931,17 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Elija el tipo de cuenta e introduzca los servidores a continuación.</value>
     <comment>Choisissez le type de compte et renseignez les serveurs ci-dessous.</comment>
   </data>
+  <data name="T_C86D8447" xml:space="preserve">
+    <value>Cargar todo</value>
+    <comment>Tout charger</comment>
+  </data>
+  <data name="T_ADD252EE" xml:space="preserve">
+    <value>¿Cargar todo?</value>
+    <comment>Tout charger ?</comment>
+  </data>
+  <data name="T_04D6244E" xml:space="preserve">
+    <value>Cargar todos los mensajes de esta carpeta puede tardar mucho: varios minutos, o más en una carpeta con decenas de miles de mensajes, y consume ancho de banda. EvolutionWin sigue siendo utilizable durante la carga.</value>
+    <comment>Charger tous les messages de ce dossier peut être très long : plusieurs minutes, voire davantage pour un dossier de plusieurs dizaines de milliers de messages, et consomme de la bande passante. EvolutionWin reste utilisable pendant le chargement.</comment>
+  </data>
 </root>
 

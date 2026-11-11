@@ -904,6 +904,13 @@ m365_folder_window_filter (CamelM365FolderSummary *summary,
 
 	camel_m365_folder_summary_get_window (summary, &window_start, &truncated, &limit);
 
+	/* « Tout charger » : plus de fenêtre, le serveur n'a plus de messages hors de la synchronisation */
+	if (limit == 0 && (truncated || window_start != 0)) {
+		window_start = 0;
+		truncated = FALSE;
+		camel_m365_folder_summary_set_window (summary, 0, FALSE, 0);
+	}
+
 	if (limit > 0 && window_start == 0) {
 		time_t received = 0;
 

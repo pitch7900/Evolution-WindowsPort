@@ -99,8 +99,9 @@ void		evo_core_get_folder_sync_info	(EvoCore *core,
 
 /* Étend la fenêtre de synchronisation d'un dossier de extra_count messages plus anciens et lance la
  * relève en fond ; la fin est annoncée par l'événement "folder-refreshed" (membres "truncated", "limit").
- * Paramètres : voir evo_core_get_folder_sync_info () ; func reçoit {"limit": nouvelle limite}, ou une erreur
- * si le compte synchronise déjà tous les messages. */
+ * Paramètres : voir evo_core_get_folder_sync_info () ; extra_count = G_MAXUINT pour tout charger (plus de limite,
+ * {"limit": 0}) ; func reçoit {"limit": nouvelle limite}, ou une erreur si le compte synchronise déjà tous
+ * les messages. */
 void		evo_core_extend_folder_sync	(EvoCore *core,
 						 const char *account_uid,
 						 const char *folder_full_name,

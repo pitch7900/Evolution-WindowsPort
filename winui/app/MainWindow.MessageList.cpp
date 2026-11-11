@@ -242,10 +242,23 @@ namespace winrt::EvolutionWin::implementation
             m_older_footer_text.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
             m_older_footer.Children().Append(m_older_footer_text);
 
+            StackPanel buttons;
+            buttons.Orientation(Orientation::Horizontal);
+            buttons.Spacing(20);
+
             m_older_footer_button = HyperlinkButton();
             m_older_footer_button.Padding(ThicknessHelper::FromLengths(0, 4, 0, 4));
-            m_older_footer_button.Click([this](IInspectable const&, RoutedEventArgs const&) { LoadOlderMessages(); });
-            m_older_footer.Children().Append(m_older_footer_button);
+            m_older_footer_button.Click([this](IInspectable const&, RoutedEventArgs const&) { LoadOlderMessages(1000); });
+            buttons.Children().Append(m_older_footer_button);
+
+            /* « Tout charger » : avertissement avant, le chargement peut être très long */
+            m_older_footer_all_button = HyperlinkButton();
+            m_older_footer_all_button.Padding(ThicknessHelper::FromLengths(0, 4, 0, 4));
+            m_older_footer_all_button.Content(box_value(Tr(L"Tout charger")));
+            m_older_footer_all_button.Click([this](IInspectable const&, RoutedEventArgs const&) { ConfirmLoadAllMessages(); });
+            buttons.Children().Append(m_older_footer_all_button);
+
+            m_older_footer.Children().Append(buttons);
 
             MessageList().Footer(m_older_footer);
         }
@@ -256,6 +269,32 @@ namespace winrt::EvolutionWin::implementation
             m_older_footer_button.Content(box_value(Fmt(Tr(L"Charger {0} messages de plus"), { to_hstring(1000) })));
         }
         m_older_footer.Visibility(visible ? Visibility::Visible : Visibility::Collapsed);
+    }
+
+    /* « Tout charger » : demande confirmation (le chargement de tous les messages d'un gros dossier peut durer
+     * très longtemps), puis étend la synchronisation du dossier affiché à tous ses messages. */
+    fire_and_forget MainWindow::ConfirmLoadAllMessages()
+    {
+        if (m_dialog_open || !Content() || !Content().XamlRoot() || m_account.empty() || m_folder.empty())
+            co_return;
+
+        ContentDialog confirm;
+        confirm.XamlRoot(Content().XamlRoot());
+        confirm.Title(box_value(Tr(L"Tout charger ?")));
+        TextBlock text;
+        text.TextWrapping(TextWrapping::Wrap);
+        text.Text(Tr(L"Charger tous les messages de ce dossier peut être très long : plusieurs minutes, voire davantage pour un dossier de plusieurs dizaines de milliers de messages, et consomme de la bande passante. EvolutionWin reste utilisable pendant le chargement."));
+        confirm.Content(text);
+        confirm.PrimaryButtonText(Tr(L"Tout charger"));
+        confirm.CloseButtonText(Tr(L"Annuler"));
+        confirm.DefaultButton(ContentDialogButton::Close);
+
+        m_dialog_open = true;
+        auto result = co_await confirm.ShowAsync();
+        m_dialog_open = false;
+
+        if (result == ContentDialogResult::Primary)
+            LoadOlderMessages(0xFFFFFFFFu);   /* tout charger */
     }
 
     /* Demande au moteur si le dossier affiché a des messages plus anciens sur le serveur, puis met à jour le pied. */
@@ -280,7 +319,7 @@ namespace winrt::EvolutionWin::implementation
 
     /* Clic sur « Charger N messages de plus » : étend la synchronisation du dossier affiché de 1 000 messages
      * plus anciens ; le bandeau de progression reste affiché jusqu'à la fin de la relève. */
-    void MainWindow::LoadOlderMessages()
+    void MainWindow::LoadOlderMessages(unsigned extra_count)
     {
         hstring account = m_account;
         hstring folder = m_folder;
@@ -291,7 +330,7 @@ namespace winrt::EvolutionWin::implementation
         UpdateOlderMessagesFooter(false, 0);
         SetFolderSyncing(true);
 
-        m_core->ExtendFolderSync(account, folder, 1000, [this, account, folder](hstring const&, hstring const& error)
+        m_core->ExtendFolderSync(account, folder, extra_count, [this, account, folder](hstring const&, hstring const& error)
         {
             if (error.empty())
                 return;   /* la fin est annoncée par l'événement folder-refreshed */

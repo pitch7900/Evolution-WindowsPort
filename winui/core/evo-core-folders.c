@@ -679,7 +679,8 @@ core_extend_folder_sync_run (EvoCore *core,
 			     GError **error)
 {
 	CamelFolder *folder = core_ref_folder_cached (core, args[0], args[1], NULL, error);
-	gint extra = (gint) g_ascii_strtoll (args[2] ? args[2] : "0", NULL, 10), limit = 0;
+	gint64 extra = g_ascii_strtoll (args[2] ? args[2] : "0", NULL, 10);
+	gint limit = 0;
 	gchar **bg_args;
 
 	if (!folder)
@@ -693,7 +694,8 @@ core_extend_folder_sync_run (EvoCore *core,
 	}
 
 	if (limit > 0 && extra > 0) {
-		limit += extra;
+		/* extra_count très grand (G_MAXUINT) : tout charger, plus de limite */
+		limit = extra >= G_MAXINT / 2 ? 0 : limit + (gint) extra;
 		g_object_set (folder, "sync-limit", limit, NULL);
 	}
 	g_object_unref (folder);
