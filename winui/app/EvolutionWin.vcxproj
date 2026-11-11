@@ -120,6 +120,7 @@
     <ClInclude Include="Rules.h" />
     <ClInclude Include="RuleStore.h" />
     <ClInclude Include="CategoryStore.h" />
+    <ClInclude Include="Policy.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="Signatures.h" />
     <None Include="Assets\EvolutionWin.ico" />

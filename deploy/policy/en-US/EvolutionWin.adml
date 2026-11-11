@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitionResources revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <displayName>EvolutionWin</displayName>
+  <description>Group policies for the EvolutionWin mail client.</description>
+  <resources>
+    <stringTable>
+      <string id="EvolutionWin">EvolutionWin</string>
+      <string id="DisableAutoUpdate">Turn off automatic updates</string>
+      <string id="DisableAutoUpdate_Help">Enabled: EvolutionWin no longer checks for or downloads updates (no check at startup, the "Check for updates" button is disabled). Not configured or disabled: normal behavior.</string>
+      <string id="RemoteContentMode">Remote content of messages</string>
+      <string id="RemoteContentMode_Help">Forces how remote content (images) of messages is loaded. The choice is disabled in Settings > Privacy.</string>
+      <string id="RemoteNever">Never</string>
+      <string id="RemoteTrusted">Only for trusted senders</string>
+      <string id="RemoteAlways">Always</string>
+      <string id="ShowCompletedTasks">Show completed tasks</string>
+      <string id="ShowCompletedTasks_Help">Forces showing (or hiding) completed tasks. The setting is locked in the interface.</string>
+    </stringTable>
+    <presentationTable>
+      <presentation id="RemoteContentMode">
+        <dropdownList refId="RemoteContentModeValue" defaultItem="1">$(string.RemoteContentMode)</dropdownList>
+      </presentation>
+    </presentationTable>
+  </resources>
+</policyDefinitionResources>

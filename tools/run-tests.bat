@@ -63,6 +63,16 @@ cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
         exit /b 1
     )
 
+rem Compilation des tests des strategies de groupe (C++17 ; Policy.h)
+echo [policy] Compilation de test_policy.cpp ...
+cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_policy.cpp" ^
+    /Fe:"%TEST_BIN_DIR%\test_policy.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_policy.obj" advapi32.lib || (
+        echo [ERREUR] Echec de la compilation de test_policy.cpp
+        exit /b 1
+    )
+
 rem Compilation des tests des regles de messagerie (C++17 ; Rules.h et evo-core-rules-util.h)
 echo [regles] Compilation de test_rules.cpp ...
 cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
@@ -138,6 +148,10 @@ rem Execution de la suite 4 : Categories unifiees
 "%TEST_BIN_DIR%\test_categories.exe"
 if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
+rem Execution de la suite : strategies de groupe
+"%TEST_BIN_DIR%\test_policy.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
 rem Execution de la suite : regles de messagerie
 "%TEST_BIN_DIR%\test_rules.exe"
 if !errorlevel! neq 0 set /a FAILED_SUITES+=1
@@ -152,6 +166,14 @@ if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
 rem Execution de la suite : file hors ligne et conflits
 "%TEST_BIN_DIR%\test_offline_queue.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : lecteur immersif
+"%TEST_BIN_DIR%\test_immersive.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : liens mailto:
+"%TEST_BIN_DIR%\test_mailto.exe"
 if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
 rem Execution de la suite : export / import du courrier et des contacts

@@ -3,6 +3,7 @@
 #include "MainWindow.Helpers.h"
 #include "WindowIcon.h"
 #include "Settings.h"
+#include "Policy.h"
 #include "UpdateIntegrity.h"
 
 #include <windows.h>
@@ -505,6 +506,17 @@ namespace winrt::EvolutionWin::implementation
         if (!status || !banner)
             return;
 
+        /* strategie de groupe : pas de recherche, bouton grise, message explicite */
+        if (::EvolutionWin::Policy::AutoUpdateDisabled())
+        {
+            status.Text(Tr(L"Les mises à jour sont désactivées par votre administrateur."));
+            status.Opacity(0.7);
+            banner.IsOpen(false);
+            if (auto button = AboutCheckUpdateButton())
+                button.IsEnabled(false);
+            return;
+        }
+
         if (!force_check && !m_update_tag.empty())
         {
             UpdateCheck known;
@@ -713,6 +725,9 @@ namespace winrt::EvolutionWin::implementation
      * publiée ; la fenêtre d'information n'apparaît qu'une fois par version. */
     void MainWindow::CheckForUpdateOnStartup()
     {
+        /* strategie de groupe : mises a jour desactivees par l'administrateur */
+        if (::EvolutionWin::Policy::AutoUpdateDisabled())
+            return;
         CheckForUpdate([strong = get_strong()](UpdateCheck const& check)
         {
             if (!check.newer)

@@ -674,6 +674,8 @@ namespace winrt::EvolutionWin::implementation
         auto mode = RemoteContentMode();
         m_updating_privacy_view = true;
         RemoteContentModeChoice().SelectedIndex(mode == L"never" ? 0 : mode == L"always" ? 2 : 1);
+        /* verrouille par strategie de groupe (Policy.h) : liste grisee */
+        RemoteContentModeChoice().IsEnabled(!::EvolutionWin::Settings::Instance().IsLocked(RemoteContentKey));
         m_updating_privacy_view = false;
         RefreshReadReceiptSettings();
 

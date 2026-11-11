@@ -8,6 +8,7 @@
  * tirets, regroupées par préfixe (ex. "layout.folders-width"). */
 
 #include <winrt/Windows.Data.Json.h>
+#include "Policy.h"
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -31,6 +32,12 @@ namespace EvolutionWin
          */
         double GetNumber(winrt::hstring const& key, double fallback)
         {
+            if (auto const* forced = Policy::ForcedSetting(std::wstring{ key }))
+            {
+                if (forced->is_number)
+                    return static_cast<double>(forced->number);
+                try { return std::stod(forced->text); } catch (...) {}
+            }
             auto value = Lookup(key);
             if (!value)
                 return fallback;
@@ -60,6 +67,8 @@ namespace EvolutionWin
 
         bool GetBoolean(winrt::hstring const& key, bool fallback)
         {
+            if (auto const* forced = Policy::ForcedSetting(std::wstring{ key }))
+                return Policy::AsBool(*forced);
             auto value = Lookup(key);
             return value && value.ValueType() == winrt::Windows::Data::Json::JsonValueType::Boolean ? value.GetBoolean() : fallback;
         }
@@ -72,6 +81,8 @@ namespace EvolutionWin
          */
         winrt::hstring GetString(winrt::hstring const& key, winrt::hstring const& fallback)
         {
+            if (auto const* forced = Policy::ForcedSetting(std::wstring{ key }))
+                return forced->is_number ? winrt::to_hstring(static_cast<int64_t>(forced->number)) : winrt::hstring{ forced->text };
             auto value = Lookup(key);
             if (!value)
                 return fallback;
@@ -121,8 +132,20 @@ namespace EvolutionWin
             Set(key, winrt::Windows::Data::Json::JsonValue::CreateStringValue(value));
         }
 
+        /**
+         * @brief Indique si un parametre est impose par une strategie de groupe (Policy.h).
+         * @param key Cle du parametre.
+         * @return true si la valeur est verrouillee (lecture seule dans l'interface).
+         */
+        bool IsLocked(winrt::hstring const& key)
+        {
+            return Policy::IsLocked(std::wstring{ key });
+        }
+
         void Set(winrt::hstring const& key, winrt::Windows::Data::Json::IJsonValue const& value)
         {
+            if (Policy::IsLocked(std::wstring{ key }))
+                return; /* parametre impose par strategie de groupe : modification ignoree */
             Load();
             m_root.SetNamedValue(key, value);
             Save();

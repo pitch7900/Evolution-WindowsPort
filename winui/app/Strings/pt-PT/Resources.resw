@@ -7719,5 +7719,9 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Falha ao enviar o script Sieve: {0}</value>
     <comment>Échec de l'envoi du script Sieve : {0}</comment>
   </data>
+  <data name="T_327AB173" xml:space="preserve">
+    <value>As atualizações foram desativadas pelo administrador.</value>
+    <comment>Les mises à jour sont désactivées par votre administrateur.</comment>
+  </data>
 </root>
 
