@@ -45,6 +45,10 @@ struct _EvoCore {
 	gint running_requests;
 	gint shutting_down;
 
+	/* requêtes de l'interface (pool principal) en cours d'exécution : la synchronisation en
+	 * fond (core_bg_yield ()) leur cède la place (accès atomique) */
+	gint user_requests;
+
 	ESourceRegistry *registry;
 	CamelSession *session;
 
@@ -383,6 +387,10 @@ core_crypto_info_clear (CoreCryptoInfo *info);
 /* evo-core.c */
 gboolean
 core_startup_tracing (void);
+
+/* evo-core-requests.c */
+void
+core_bg_yield (EvoCore *core);
 
 /* evo-core-gal.c */
 void

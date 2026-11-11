@@ -672,11 +672,20 @@ core_get_message_run (EvoCore *core,
 	gint offset = 0;
 	guint ii;
 
+	gint64 started_at = g_get_monotonic_time (), opened_at;
+
 	folder = core_ref_folder (core, args[0], args[1], error);
 	if (!folder)
 		return NULL;
+	opened_at = g_get_monotonic_time ();
 
 	message = camel_folder_get_message_sync (folder, args[2], core->cancellable, error);
+
+	/* lecture lente : où passe le temps (connexion, téléchargement) */
+	if ((g_get_monotonic_time () - started_at) >= 1000 * 1000)
+		g_message ("lecture lente d'un message : ouverture et connexion %" G_GINT64_FORMAT " ms, téléchargement %" G_GINT64_FORMAT " ms",
+			(opened_at - started_at) / 1000, (g_get_monotonic_time () - opened_at) / 1000);
+
 	if (!message) {
 		g_object_unref (folder);
 		return NULL;

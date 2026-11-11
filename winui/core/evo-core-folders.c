@@ -476,8 +476,16 @@ core_ref_folder (EvoCore *core,
 	g_mutex_unlock (&core->folders_lock);
 	g_free (key);
 
-	if (folder)
+	if (folder) {
+		/* dossier déjà suivi : il a pu être ouvert hors connexion depuis le cache
+		 * (core_ref_folder_cached) ; une action sur le serveur exige la connexion */
+		store = core_ref_store (core, account_uid, NULL);
+		if (store) {
+			core_ensure_connected (core, store, NULL);
+			g_object_unref (store);
+		}
 		return folder;
+	}
 
 	store = core_ref_store (core, account_uid, error);
 	if (!store)

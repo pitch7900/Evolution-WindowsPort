@@ -131,6 +131,7 @@ core_folder_background_refresh_run (EvoCore *core,
 
 	folder = core_ref_folder (core, args[0], args[1], error);
 	if (folder) {
+		core_bg_yield (core);
 		camel_folder_refresh_info_sync (folder, core->cancellable, NULL);
 		g_object_set_data (G_OBJECT (folder), "evo-initial-sync-done", GINT_TO_POINTER (1));
 		g_object_unref (folder);

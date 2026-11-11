@@ -47,6 +47,8 @@ core_refresh_folder_infos (EvoCore *core,
 			GError *local_error = NULL;
 			gchar *status;
 
+			core_bg_yield (core);
+
 			status = g_strdup_printf ("Relève de « %s » : %s",
 				camel_service_get_display_name (CAMEL_SERVICE (store)), fi->display_name);
 			core_emit (core, "status", status);
@@ -103,6 +105,7 @@ core_refresh_run (EvoCore *core,
 			continue;
 
 		current_service++;
+		core_bg_yield (core);
 		g_message ("refresh of “%s”", camel_service_get_display_name (service));
 		if (startup_tracing) {
 			gchar *step = g_strdup_printf ("actualisation (%s) « %s » : début", pass, camel_service_get_display_name (service));
@@ -154,6 +157,8 @@ core_refresh_run (EvoCore *core,
 
 		for (ii = 0; ii < opened->len && !g_cancellable_is_cancelled (core->cancellable); ii++) {
 			CamelFolder *folder = opened->pdata[ii];
+
+			core_bg_yield (core);
 
 			if (!camel_folder_refresh_info_sync (folder, core->cancellable, &local_error)) {
 				g_warning ("Cannot refresh “%s”: %s", camel_folder_get_full_name (folder),

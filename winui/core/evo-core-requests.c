@@ -12,7 +12,36 @@ typedef struct {
 	gpointer user_data;
 	const gchar *name;	/* nom de la fonction exécutante (journal) */
 	gint64 queued_at;	/* instant de mise en file (µs, horloge monotone) */
+	gboolean background;	/* tâche de fond (pool bg_pool) : priorité de thread réduite */
 } Request;
+
+/* attente maximale de la synchronisation en fond devant une action de l'utilisateur (ms) */
+#define CORE_BG_YIELD_MAX_MS 3000
+
+/* Cède la place aux actions de l'utilisateur : tant qu'une requête de l'interface (lecture
+ * d'un message, liste d'un dossier...) s'exécute, la synchronisation en fond attend, pour ne
+ * pas se disputer avec elle le serveur et la base de Camel. À appeler entre deux étapes d'une
+ * tâche de fond (dossier, compte). L'attente est bornée : la synchronisation avance toujours.
+ * Paramètres :
+ *   core : instance du moteur evo-core */
+void
+core_bg_yield (EvoCore *core)
+{
+	gint64 started_at = g_get_monotonic_time ();
+
+	while (g_atomic_int_get (&core->user_requests) > 0 &&
+	       !g_cancellable_is_cancelled (core->cancellable) &&
+	       (g_get_monotonic_time () - started_at) / 1000 < CORE_BG_YIELD_MAX_MS)
+		g_usleep (50 * 1000);
+
+	if (core_startup_tracing () && (g_get_monotonic_time () - started_at) >= 300 * 1000) {
+		gchar *step = g_strdup_printf ("synchronisation en pause %" G_GINT64_FORMAT " ms (action de l'utilisateur)",
+			(g_get_monotonic_time () - started_at) / 1000);
+
+		evo_core_trace (step);
+		g_free (step);
+	}
+}
 
 void
 core_request_run (gpointer data,
@@ -24,7 +53,16 @@ core_request_run (gpointer data,
 	gchar *start_error = NULL;
 	GError *error = NULL;
 
+	int previous_priority = THREAD_PRIORITY_NORMAL;
+
 	g_atomic_int_inc (&core->running_requests);
+	if (request->background) {
+		/* synchronisation en fond : le processeur va d'abord à l'interface */
+		previous_priority = GetThreadPriority (GetCurrentThread ());
+		SetThreadPriority (GetCurrentThread (), THREAD_PRIORITY_BELOW_NORMAL);
+	} else {
+		g_atomic_int_inc (&core->user_requests);
+	}
 
 	if (!core_wait_started (core, &start_error)) {
 		request->result_func (NULL, start_error, request->user_data);
@@ -48,6 +86,10 @@ core_request_run (gpointer data,
 
 				evo_core_trace (step);
 				g_free (step);
+			} else if (!request->background && (waited_ms >= 2000 || ran_ms >= 5000)) {
+				/* après le démarrage : seules les requêtes de l'interface vraiment lentes */
+				g_message ("requête lente %s : attente %" G_GINT64_FORMAT " ms, exécution %" G_GINT64_FORMAT " ms",
+					request->name ? request->name : "?", waited_ms, ran_ms);
 			}
 		}
 
@@ -60,6 +102,11 @@ core_request_run (gpointer data,
 	g_clear_error (&error);
 	g_free (json);
 	g_strfreev (request->args);
+	if (request->background)
+		SetThreadPriority (GetCurrentThread (), previous_priority);
+	else
+		g_atomic_int_dec_and_test (&core->user_requests);
+
 	g_free (request);
 
 	g_atomic_int_dec_and_test (&core->running_requests);
@@ -109,6 +156,7 @@ core_push_request (EvoCore *core,
 	request->user_data = user_data;
 	request->name = name;
 	request->queued_at = g_get_monotonic_time ();
+	request->background = background;
 
 	g_thread_pool_push (background ? core->bg_pool : core->pool, request, NULL);
 }
