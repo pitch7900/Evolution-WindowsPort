@@ -122,7 +122,7 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
-                            <TextBlock Text="Synchronisation du dossier en cours…" Opacity="0.8"
+                            <TextBlock x:Name="FolderSyncBannerText" Text="Synchronisation du dossier en cours…" Opacity="0.8"
                                        Style="{StaticResource CaptionTextBlockStyle}" />
                             <ProgressBar Grid.Row="1" IsIndeterminate="True" Height="3" />
                         </Grid>

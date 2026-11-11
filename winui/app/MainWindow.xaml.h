@@ -203,6 +203,8 @@ namespace winrt::EvolutionWin::implementation
         void ScheduleListRefresh();
         void RefreshMessageListDelta();
         void SetFolderSyncing(bool syncing);
+        void SetFolderLoading(bool loading);
+        void UpdateFolderBanner();
         void UpdateListFooter(int mode, int shown, int total);
         void ShowMoreMessages(unsigned extra_count);
         fire_and_forget ConfirmShowAllMessages();
@@ -991,6 +993,8 @@ namespace winrt::EvolutionWin::implementation
         Microsoft::UI::Xaml::DispatcherTimer m_reader_loading_timer{ nullptr };
         Microsoft::UI::Xaml::DispatcherTimer m_list_refresh_timer{ nullptr };
         Microsoft::UI::Xaml::DispatcherTimer m_folder_sync_timer{ nullptr };
+        bool m_folder_syncing{ false };		///< synchronisation du dossier avec le serveur en cours (bandeau)
+        bool m_folder_loading{ false };		///< construction d'une grosse liste en cours (bandeau)
         Microsoft::UI::Xaml::Controls::StackPanel m_older_footer{ nullptr };
         Microsoft::UI::Xaml::Controls::TextBlock m_older_footer_text{ nullptr };
         Microsoft::UI::Xaml::Controls::HyperlinkButton m_older_footer_button{ nullptr };

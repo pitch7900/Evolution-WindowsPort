@@ -6963,5 +6963,9 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Mostrare tutti i {0} messaggi di questa cartella può rallentare l'elenco. Continuare?</value>
     <comment>Afficher les {0} messages de ce dossier peut ralentir la liste. Continuer ?</comment>
   </data>
+  <data name="T_5BD83554" xml:space="preserve">
+    <value>Visualizzazione dei messaggi in corso…</value>
+    <comment>Affichage des messages en cours…</comment>
+  </data>
 </root>
 

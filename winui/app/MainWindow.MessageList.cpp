@@ -220,7 +220,8 @@ namespace winrt::EvolutionWin::implementation
             m_folder_sync_timer = nullptr;
         }
 
-        FolderSyncBanner().Visibility(syncing ? Visibility::Visible : Visibility::Collapsed);
+        m_folder_syncing = syncing;
+        UpdateFolderBanner();
         if (!syncing)
             return;
 
@@ -228,6 +229,25 @@ namespace winrt::EvolutionWin::implementation
         m_folder_sync_timer.Interval(std::chrono::seconds(120));
         m_folder_sync_timer.Tick([this](IInspectable const&, IInspectable const&) { SetFolderSyncing(false); });
         m_folder_sync_timer.Start();
+    }
+
+    /* Bandeau « Affichage des messages en cours » : la liste d'un gros dossier (des milliers de messages,
+     * « Tout afficher ») est relue puis reconstruite, ce qui occupe l'interface plusieurs secondes sans
+     * autre signe d'activité.
+     * Paramètres :
+     *   loading : TRUE au début du travail, FALSE à sa fin */
+    void MainWindow::SetFolderLoading(bool loading)
+    {
+        m_folder_loading = loading;
+        UpdateFolderBanner();
+    }
+
+    /* Affiche ou masque le bandeau (barre de progression linéaire) : visible tant que le dossier se synchronise
+     * avec le serveur ou que sa liste se construit ; le texte indique laquelle des deux opérations est en cours. */
+    void MainWindow::UpdateFolderBanner()
+    {
+        FolderSyncBanner().Visibility(m_folder_syncing || m_folder_loading ? Visibility::Visible : Visibility::Collapsed);
+        FolderSyncBannerText().Text(m_folder_loading ? Tr(L"Affichage des messages en cours…") : Tr(L"Synchronisation du dossier en cours…"));
     }
 
     /* Pied de la liste : informe que des messages plus anciens existent et propose de les afficher.
@@ -377,7 +397,11 @@ namespace winrt::EvolutionWin::implementation
         m_list_max = extra_count >= 0xFFFFFFF0u ? 1000000u : base + extra_count;
 
         UpdateListFooter(0, 0, 0);
-        RefreshMessageListDelta();
+        SetFolderLoading(true);
+
+        /* l'indicateur doit être affiché avant la reconstruction de la liste, qui occupe l'interface : le travail
+           démarre à priorité basse, après le rendu du bandeau */
+        DispatcherQueue().TryEnqueue(Microsoft::UI::Dispatching::DispatcherQueuePriority::Low, [this]() { RefreshMessageListDelta(); });
     }
 
     /* Demande au moteur l'état du dossier affiché (fenêtre de synchronisation, nombre de messages en local, taille de
@@ -464,11 +488,15 @@ namespace winrt::EvolutionWin::implementation
     void MainWindow::RefreshMessageListDelta()
     {
         if (m_account.empty() || m_folder.empty() || !m_all_messages)
+        {
+            SetFolderLoading(false);
             return;
+        }
 
         /* vue unifiée : rechargement habituel, qui garde la sélection */
         if (IsUnifiedView())
         {
+            SetFolderLoading(false);
             LoadUnifiedMessages(true);
             return;
         }
@@ -480,13 +508,20 @@ namespace winrt::EvolutionWin::implementation
         m_core->ReloadMessages(account, folder, m_list_max, [this, account, folder, request](hstring const& json, hstring const& error)
         {
             if (!error.empty() || request != m_list_delta_request || account != m_account || folder != m_folder || !m_all_messages)
+            {
+                SetFolderLoading(false);
                 return;   /* échec, ou un autre dossier est affiché entre-temps */
+            }
 
             JsonArray fresh{ nullptr };
             if (!JsonArray::TryParse(json, fresh))
+            {
+                SetFolderLoading(false);
                 return;
+            }
 
             ApplyMessageDelta(fresh);
+            SetFolderLoading(false);
             RefreshOlderMessagesFooter();
         });
     }
