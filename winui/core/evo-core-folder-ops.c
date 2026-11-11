@@ -943,31 +943,222 @@ folder_delete_tree (EvoCore *core,
 	return camel_store_delete_folder_sync (ctx->store, fi->full_name, core->cancellable, error);
 }
 
+/* État d'un transfert de dossier (copie ou déplacement entre comptes) :
+ * compteurs, annulation et premier message d'erreur, partagés par tous les
+ * dossiers de l'arborescence. */
+typedef struct {
+	GCancellable *cancel;	/* annulation de ce transfert (référence prise au début) */
+	gchar *src_account;
+	gchar *dst_account;
+	gchar *label;		/* nom du dossier de tête, pour la progression */
+	gboolean merge;		/* réutiliser les dossiers déjà présents à la destination */
+	guint total;		/* messages à traiter (0 : inconnu) */
+	guint done;		/* messages traités (copiés, ignorés ou en échec) */
+	guint copied;
+	guint skipped;		/* déjà présents à la destination (même Message-ID) */
+	guint failed;
+	gboolean cancelled;
+	gchar *first_error;
+} TransferState;
+
+/* Émet la progression d'un transfert de dossier (événement « progress » de
+ * type « transfer » : l'interface compose le texte dans la langue de
+ * l'utilisateur).
+ * Paramètres :
+ *   core   : instance du moteur evo-core
+ *   st     : état du transfert
+ *   folder : dossier en cours de traitement
+ *   active : FALSE pour le message de fin */
+static void
+transfer_emit_progress (EvoCore *core,
+			TransferState *st,
+			const gchar *folder,
+			gboolean active)
+{
+	JsonBuilder *builder = core_event_builder ();
+
+	builder_add_string (builder, "account", st->src_account);
+	builder_add_string (builder, "kind", "transfer");
+	builder_add_string (builder, "folder", folder ? folder : "");
+	builder_add_string (builder, "label", st->label ? st->label : "");
+	builder_add_int (builder, "done", st->done);
+	builder_add_int (builder, "total", st->total);
+	builder_add_int (builder, "percent", !active ? 100 : st->total > 0 ? (gint64) st->done * 100 / st->total : -1);
+	builder_add_boolean (builder, "active", active);
+	core_emit_builder (core, "progress", builder);
+}
+
+/* Total des messages d'une arborescence de dossiers (d'après les compteurs
+ * déjà connus des dossiers ; ceux qui sont inconnus comptent pour 0). */
+static guint
+transfer_count_messages (CamelFolderInfo *fi)
+{
+	guint total = 0;
+
+	for (; fi; fi = fi->next) {
+		if (fi->total > 0 && (fi->flags & (CAMEL_FOLDER_NOSELECT | CAMEL_FOLDER_VIRTUAL)) == 0)
+			total += (guint) fi->total;
+		total += transfer_count_messages (fi->child);
+	}
+
+	return total;
+}
+
+/* Copie un à un les messages d'un dossier vers un autre dossier, par lots
+ * enregistrés sur le serveur toutes les 50 copies. Le message est transmis avec
+ * son CamelMessageInfo : indicateurs (lu, suivi), étiquettes / mots-clés et date
+ * de réception d'origine (INTERNALDATE IMAP) suivent quand le serveur de
+ * destination les accepte. Un message déjà présent à la destination (même
+ * Message-ID) est ignoré, ce qui permet de reprendre un transfert interrompu ;
+ * un message en échec est compté et le transfert continue. Les messages marqués
+ * supprimés ne sont pas copiés.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   st          : état du transfert (compteurs mis à jour)
+ *   src         : dossier source
+ *   dest        : dossier de destination
+ *   folder_name : nom complet du dossier source (progression et messages d'erreur)
+ * Retourne : FALSE si le transfert a été annulé. */
+static gboolean
+transfer_messages (EvoCore *core,
+		   TransferState *st,
+		   CamelFolder *src,
+		   CamelFolder *dest,
+		   const gchar *folder_name)
+{
+	GHashTable *known;
+	GPtrArray *uids;
+	guint ii, since_sync = 0;
+
+	known = g_hash_table_new_full (g_int64_hash, g_int64_equal, g_free, NULL);
+
+	/* Message-ID des messages déjà présents à la destination (reprise) */
+	if (camel_folder_refresh_info_sync (dest, st->cancel, NULL)) {
+		uids = camel_folder_dup_uids (dest);
+		for (ii = 0; uids && ii < uids->len; ii++) {
+			CamelMessageInfo *mi = camel_folder_get_message_info (dest, uids->pdata[ii]);
+
+			if (mi) {
+				guint64 id = camel_message_info_get_message_id (mi);
+
+				if (id != 0) {
+					gint64 *key = g_new (gint64, 1);
+
+					*key = (gint64) id;
+					g_hash_table_add (known, key);
+				}
+				g_object_unref (mi);
+			}
+		}
+		if (uids)
+			g_ptr_array_unref (uids);
+	}
+
+	uids = camel_folder_dup_uids (src);
+	for (ii = 0; uids && ii < uids->len; ii++) {
+		CamelMessageInfo *mi;
+		CamelMimeMessage *message;
+		GError *local_error = NULL;
+		gint64 id;
+
+		if (g_cancellable_is_cancelled (st->cancel)) {
+			st->cancelled = TRUE;
+			break;
+		}
+
+		mi = camel_folder_get_message_info (src, uids->pdata[ii]);
+		if (!mi) {
+			st->done++;
+			continue;
+		}
+
+		id = (gint64) camel_message_info_get_message_id (mi);
+		if ((camel_message_info_get_flags (mi) & CAMEL_MESSAGE_DELETED) != 0) {
+			/* message déjà supprimé : rien à copier */
+		} else if (id != 0 && g_hash_table_contains (known, &id)) {
+			st->skipped++;
+		} else {
+			message = camel_folder_get_message_sync (src, uids->pdata[ii], st->cancel, &local_error);
+			if (message) {
+				if (camel_folder_append_message_sync (dest, message, mi, NULL, st->cancel, &local_error)) {
+					st->copied++;
+					since_sync++;
+				}
+				g_object_unref (message);
+			}
+
+			if (local_error) {
+				if (g_error_matches (local_error, G_IO_ERROR, G_IO_ERROR_CANCELLED) ||
+				    g_cancellable_is_cancelled (st->cancel)) {
+					st->cancelled = TRUE;
+				} else {
+					st->failed++;
+					if (!st->first_error)
+						st->first_error = g_strdup_printf ("%s : %s", folder_name, local_error->message);
+				}
+				g_error_free (local_error);
+			}
+		}
+
+		g_object_unref (mi);
+		if (st->cancelled)
+			break;
+
+		st->done++;
+		transfer_emit_progress (core, st, folder_name, TRUE);
+
+		if (since_sync >= 50) {
+			camel_folder_synchronize_sync (dest, FALSE, st->cancel, NULL);
+			since_sync = 0;
+		}
+	}
+
+	if (uids)
+		g_ptr_array_unref (uids);
+	if (since_sync > 0)
+		camel_folder_synchronize_sync (dest, FALSE, NULL, NULL);
+	g_hash_table_unref (known);
+
+	return !st->cancelled;
+}
+
 /* Copie un dossier, ses messages et ses sous-dossiers vers un autre compte
  * (ou un autre emplacement) : crée un dossier de même nom sous dst_parent de
- * la destination, y transfère les messages, puis recommence pour chaque
- * sous-dossier. Les originaux restent en place.
+ * la destination (ou réutilise celui qui existe si st->merge), y copie les
+ * messages (transfer_messages), puis recommence pour chaque sous-dossier. Les
+ * originaux restent en place.
  * top_name reçoit le nom complet du dossier créé au sommet (si non NULL et
- * encore vide), count le nombre total de messages copiés.
- * Retourne : TRUE en cas de succès. */
+ * encore vide).
+ * Retourne : FALSE en cas d'erreur de dossier ou d'annulation (voir st). */
 static gboolean
 folder_transfer_tree (EvoCore *core,
 		      FolderOpContext *dst,
-		      const gchar *src_account,
-		      const gchar *dst_account,
+		      TransferState *st,
 		      CamelFolderInfo *fi,
 		      const gchar *dst_parent,
 		      const gchar *name_override,
-		      guint *count,
 		      gchar **top_name,
 		      GError **error)
 {
 	CamelFolderInfo *child;
-	gchar *new_name;
+	const gchar *base = name_override && *name_override ? name_override : folder_base_name (fi->full_name);
+	gchar *new_name = NULL;
 	gboolean ok = TRUE;
 
-	new_name = folder_op_create (core, dst, dst_parent,
-		name_override && *name_override ? name_override : folder_base_name (fi->full_name), error);
+	if (st->merge) {
+		gchar *wanted = folder_build_full_name (dst_parent, base);
+		CamelFolder *existing = camel_store_get_folder_sync (dst->store, wanted, 0, st->cancel, NULL);
+
+		if (existing) {
+			g_object_unref (existing);
+			new_name = wanted;
+		} else {
+			g_free (wanted);
+		}
+	}
+
+	if (!new_name)
+		new_name = folder_op_create (core, dst, dst_parent, base, error);
 	if (!new_name)
 		return FALSE;
 
@@ -976,31 +1167,20 @@ folder_transfer_tree (EvoCore *core,
 
 	if ((fi->flags & (CAMEL_FOLDER_NOSELECT | CAMEL_FOLDER_VIRTUAL)) == 0) {
 		CamelFolder *src, *dest;
-		GPtrArray *uids;
 
-		src = core_ref_folder (core, src_account, fi->full_name, error);
-		dest = src ? core_ref_folder (core, dst_account, new_name, error) : NULL;
-		ok = src && dest && camel_folder_refresh_info_sync (src, core->cancellable, error);
+		src = core_ref_folder (core, st->src_account, fi->full_name, error);
+		dest = src ? core_ref_folder (core, st->dst_account, new_name, error) : NULL;
+		ok = src && dest && camel_folder_refresh_info_sync (src, st->cancel, error);
 
-		if (ok) {
-			uids = camel_folder_dup_uids (src);
-			if (uids && uids->len > 0) {
-				ok = camel_folder_transfer_messages_to_sync (src, uids, dest, FALSE, NULL, core->cancellable, error);
-				if (ok) {
-					*count += uids->len;
-					camel_folder_synchronize_sync (dest, FALSE, core->cancellable, NULL);
-				}
-			}
-			if (uids)
-				g_ptr_array_unref (uids);
-		}
+		if (ok)
+			ok = transfer_messages (core, st, src, dest, fi->full_name);
 
 		g_clear_object (&src);
 		g_clear_object (&dest);
 	}
 
 	for (child = fi->child; ok && child; child = child->next)
-		ok = folder_transfer_tree (core, dst, src_account, dst_account, child, new_name, NULL, count, NULL, error);
+		ok = folder_transfer_tree (core, dst, st, child, new_name, NULL, NULL, error);
 
 	g_free (new_name);
 
@@ -1009,15 +1189,19 @@ folder_transfer_tree (EvoCore *core,
 
 /* Copie ou déplace un dossier (sous-dossiers compris) vers n'importe quel
  * compte. Un déplacement copie d'abord toute l'arborescence, puis supprime
- * l'original seulement si la copie a réussi.
+ * l'original seulement si la copie a réussi sans aucun message en échec et sans
+ * annulation. Émet des événements « progress » de type « transfer ».
  * Paramètres :
  *   core  : instance du moteur evo-core
  *   args  : [0] compte source, [1] dossier source, [2] compte de destination,
  *           [3] parent de destination ("" : racine du compte), [4] "1" pour
  *           copier, "0" pour déplacer, [5] nouveau nom du dossier copié ("" :
- *           garder le nom d'origine)
+ *           garder le nom d'origine), [6] "1" pour fusionner avec le dossier
+ *           de même nom déjà présent (reprise d'un transfert interrompu)
  *   error : emplacement d'erreur GError
- * Retourne : {"full_name": "<dossier créé>", "count": n}, ou NULL en cas d'erreur. */
+ * Retourne : {"full_name": "<dossier créé>", "count": <copiés>, "skipped": <déjà
+ * présents>, "failed": <en échec>, "cancelled": bool, "error": "<première
+ * erreur>"}, ou NULL en cas d'erreur de dossier. */
 static gchar *
 core_transfer_folder_run (EvoCore *core,
 			  gchar **args,
@@ -1025,10 +1209,15 @@ core_transfer_folder_run (EvoCore *core,
 {
 	FolderOpContext src = { NULL, NULL }, dst = { NULL, NULL };
 	CamelFolderInfo *fi = NULL;
-	gboolean copy = args[4][0] == '1', ok = FALSE;
+	TransferState st = { NULL, };
+	gboolean copy = args[4][0] == '1', ok = FALSE, complete;
 	gchar *top = NULL, *json = NULL;
 	gsize src_len = strlen (args[1]);
-	guint count = 0;
+
+	st.cancel = core->cancellable ? g_object_ref (core->cancellable) : g_cancellable_new ();
+	st.src_account = args[0];
+	st.dst_account = args[2];
+	st.merge = args[6][0] == '1';
 
 	if (folder_op_begin (core, args[0], &src, error) &&
 	    folder_op_begin (core, args[2], &dst, error))
@@ -1057,9 +1246,16 @@ core_transfer_folder_run (EvoCore *core,
 	}
 
 	if (fi) {
-		ok = folder_transfer_tree (core, &dst, args[0], args[2], fi, args[3], args[5], &count, &top, error);
-		if (ok && !copy)
+		st.label = g_strdup (fi->display_name ? fi->display_name : folder_base_name (fi->full_name));
+		st.total = transfer_count_messages (fi);
+		transfer_emit_progress (core, &st, fi->full_name, TRUE);
+
+		ok = folder_transfer_tree (core, &dst, &st, fi, args[3], args[5], &top, error);
+		complete = ok && !st.cancelled && st.failed == 0;
+		if (complete && !copy)
 			ok = folder_delete_tree (core, &src, args[0], fi, error);
+
+		transfer_emit_progress (core, &st, fi->full_name, FALSE);
 	}
 
 	folder_op_end (&src);
@@ -1072,16 +1268,37 @@ core_transfer_folder_run (EvoCore *core,
 			core_emit_folders_updated (core, args[0]);
 	}
 
-	if (ok)
-		json = folder_op_result_full_name (top, (gint) count);
+	if (ok) {
+		JsonBuilder *builder = json_builder_new ();
+
+		json_builder_begin_object (builder);
+		builder_add_string (builder, "full_name", top ? top : "");
+		builder_add_int (builder, "count", st.copied);
+		builder_add_int (builder, "skipped", st.skipped);
+		builder_add_int (builder, "failed", st.failed);
+		builder_add_boolean (builder, "cancelled", st.cancelled);
+		if (st.first_error)
+			builder_add_string (builder, "error", st.first_error);
+		json_builder_end_object (builder);
+		json = json_from_builder (builder);
+		g_object_unref (builder);
+	}
 
 	g_free (top);
+	g_free (st.label);
+	g_free (st.first_error);
+	g_object_unref (st.cancel);
 
 	return json;
 }
 
 /* Copie ou déplace un dossier avec ses sous-dossiers et ses messages vers un
- * dossier (ou la racine) de n'importe quel compte.
+ * dossier (ou la racine) de n'importe quel compte, en arrière-plan, avec
+ * progression (événements « progress » de type « transfer », "done" / "total")
+ * et annulation (evo_core_cancel_operations). Les indicateurs, les étiquettes et la
+ * date de réception des messages sont conservés quand le serveur de destination
+ * le permet ; les messages déjà présents à la destination (même Message-ID) ne
+ * sont pas recopiés.
  * Paramètres :
  *   core               : instance du moteur evo-core
  *   src_account_uid    : compte du dossier
@@ -1090,7 +1307,10 @@ core_transfer_folder_run (EvoCore *core,
  *   dest_parent_name   : chemin complet du parent de destination ("" : racine)
  *   new_name           : nouveau nom du dossier à la destination (NULL ou "" : nom d'origine)
  *   copy               : TRUE pour copier (l'original reste), FALSE pour déplacer
- *   func               : rappel recevant {"full_name": "<créé>", "count": n}
+ *   merge              : TRUE pour fusionner avec le dossier de même nom déjà présent
+ *                        à la destination (reprise d'un transfert interrompu)
+ *   func               : rappel recevant {"full_name", "count", "skipped", "failed",
+ *                        "cancelled", "error"}
  *   user_data          : données utilisateur transmises au rappel */
 void
 evo_core_transfer_folder (EvoCore *core,
@@ -1100,12 +1320,13 @@ evo_core_transfer_folder (EvoCore *core,
 			  const char *dest_parent_name,
 			  const char *new_name,
 			  int copy,
+			  int merge,
 			  EvoCoreResultFunc func,
 			  void *user_data)
 {
 	gchar *args[] = { (gchar *) src_account_uid, (gchar *) folder_full_name,
 		(gchar *) dest_account_uid, (gchar *) dest_parent_name, (gchar *) (copy ? "1" : "0"),
-		(gchar *) (new_name ? new_name : ""), NULL };
+		(gchar *) (new_name ? new_name : ""), (gchar *) (merge ? "1" : "0"), NULL };
 
 	g_return_if_fail (src_account_uid != NULL);
 	g_return_if_fail (folder_full_name != NULL);

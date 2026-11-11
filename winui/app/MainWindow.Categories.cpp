@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 /* Catégories unifiées : éditeur de palette (Paramètres), menus d'affectation
@@ -85,6 +86,85 @@ namespace winrt::EvolutionWin::implementation
     }
 
     /**
+     * @brief Répercute une modification de catégorie sur les comptes auxquels elle est rattachée.
+     *
+     * Les échecs (droits manquants, réseau) sont signalés dans la barre d'état ; la
+     * modification locale reste valable.
+     *
+     * @param action "create", "rename", "recolor" ou "delete".
+     * @param name Nom de la catégorie (ancien nom pour "rename").
+     * @param new_name Nouveau nom ("rename"), sinon vide.
+     * @param color_source Nom sous lequel lire la couleur dans le registre (vide : pas de couleur).
+     * @param accounts Comptes visés ; nullptr pour lire ceux de la catégorie dans le registre.
+     */
+    void MainWindow::PushCategoryChange(
+        std::wstring const& action,
+        std::wstring const& name,
+        std::wstring const& new_name,
+        std::wstring const& color_source,
+        std::vector<std::wstring> const* accounts)
+    {
+        auto const* found = ::EvolutionWin::CategoryStore::Registry().Find(color_source);
+        std::vector<std::wstring> targets = accounts ? *accounts : (found ? found->accounts : std::vector<std::wstring>{});
+        if (targets.empty())
+            return;
+
+        std::wstring color;
+        if (found)
+            color = Cat::FormatHexColor(found->r, found->g, found->b);
+
+        for (auto const& uid : targets)
+        {
+            m_core->EditMailCategory(hstring{ uid }, hstring{ action }, hstring{ name }, hstring{ new_name }, hstring{ color },
+                [this, uid](hstring const&, hstring const& error)
+            {
+                if (!error.empty())
+                    ShowStatus(Fmt(Tr(L"Catégorie non mise à jour sur le compte {0} : {1}"), { hstring{ uid }, error }), InfoBarSeverity::Warning);
+            });
+        }
+    }
+
+    /**
+     * @brief Regroupe les catégories du registre par compte pour l'affichage.
+     *
+     * Les catégories locales viennent en premier, puis un groupe par compte
+     * (dans l'ordre de la liste des comptes). Une catégorie présente sur plusieurs
+     * comptes figure dans chaque groupe.
+     *
+     * @return Paires (titre du groupe, positions dans le registre) ; vide pour un affichage à plat
+     *         (aucune catégorie rattachée à un compte).
+     */
+    std::vector<std::pair<hstring, std::vector<size_t>>> MainWindow::CategoryGroupsForDisplay()
+    {
+        std::vector<std::pair<hstring, std::vector<size_t>>> result;
+        if (!m_accounts)
+            return result;
+
+        std::vector<std::wstring> uids;
+        std::unordered_map<std::wstring, hstring> titles;
+        for (auto const& value : m_accounts)
+        {
+            auto account = value.GetObject();
+            if (account.GetNamedBoolean(L"local", false))
+                continue;
+            hstring uid = account.GetNamedString(L"uid", L"");
+            if (uid.empty())
+                continue;
+            hstring name = account.GetNamedString(L"name", uid);
+            hstring address = account.GetNamedString(L"address", L"");
+            uids.emplace_back(uid);
+            titles[std::wstring{ uid }] = (address.empty() || address == name) ? name : name + L" — " + address;
+        }
+
+        for (auto& group : Cat::GroupByAccount(CategoryStore::Registry().Items(), uids))
+        {
+            hstring title = group.account.empty() ? Tr(L"Catégories locales") : titles[group.account];
+            result.emplace_back(title, std::move(group.indices));
+        }
+        return result;
+    }
+
+    /**
      * @brief Construit l'éditeur de palette dans Paramètres > Catégories.
      *
      * Une ligne par catégorie : pastille de couleur (sélecteur de couleur), nom
@@ -105,9 +185,10 @@ namespace winrt::EvolutionWin::implementation
         auto stroke_brush = resources.Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>();
 
         auto& registry = ::EvolutionWin::CategoryStore::Registry();
-        size_t index = 0;
-        for (auto const& cat : registry.Items())
+        /* une carte d'édition par catégorie ; index = position dans le registre (raccourci) */
+        auto make_card = [&](size_t index) -> Border
         {
+            auto const cat = registry.Items()[index];
             /* nom courant partagé entre les gestionnaires (change au renommage) */
             auto current = std::make_shared<std::wstring>(cat.name);
 
@@ -151,9 +232,10 @@ namespace winrt::EvolutionWin::implementation
             });
             Flyout picker_flyout;
             picker_flyout.Content(picker);
-            picker_flyout.Closed([this](IInspectable const&, IInspectable const&)
+            picker_flyout.Closed([this, current](IInspectable const&, IInspectable const&)
             {
                 OnCategoriesRegistryChanged();
+                PushCategoryChange(L"recolor", *current, L"", *current);
             });
             swatch.Flyout(picker_flyout);
             row.Children().Append(swatch);
@@ -175,9 +257,11 @@ namespace winrt::EvolutionWin::implementation
                     box.Text(hstring{ *current });
                     return;
                 }
+                std::wstring previous = *current;
                 *current = wanted;
                 box.Text(hstring{ wanted });
                 OnCategoriesRegistryChanged();
+                PushCategoryChange(L"rename", previous, wanted, wanted);
                 ShowStatus(Tr(L"Catégorie renommée. Les éléments déjà classés gardent l'ancien nom.", L"Category renamed. Items already categorised keep the old name."), InfoBarSeverity::Informational);
             });
             name_box.KeyDown([swatch](IInspectable const&, Input::KeyRoutedEventArgs const& args)
@@ -205,19 +289,75 @@ namespace winrt::EvolutionWin::implementation
             Controls::ToolTipService::SetToolTip(delete_button, box_value(Tr(L"Supprimer la catégorie", L"Delete category")));
             delete_button.Click([this, current](IInspectable const&, RoutedEventArgs const&)
             {
-                if (::EvolutionWin::CategoryStore::Registry().Remove(*current))
+                auto do_delete = [this, current]()
                 {
-                    OnCategoriesRegistryChanged();
-                    RefreshCategoriesView();
-                    ShowStatus(Tr(L"Catégorie supprimée de la palette. Les éléments déjà classés la conservent.", L"Category removed from the palette. Items already categorised keep it."), InfoBarSeverity::Informational);
+                    auto const* found = ::EvolutionWin::CategoryStore::Registry().Find(*current);
+                    auto linked_accounts = found ? found->accounts : std::vector<std::wstring>{};
+                    std::wstring name = *current;
+                    if (::EvolutionWin::CategoryStore::Registry().Remove(name))
+                    {
+                        PushCategoryChange(L"delete", name, L"", name, &linked_accounts);
+                        OnCategoriesRegistryChanged();
+                        RefreshCategoriesView();
+                        ShowStatus(Tr(L"Catégorie supprimée de la palette. Les éléments déjà classés la conservent.", L"Category removed from the palette. Items already categorised keep it."), InfoBarSeverity::Informational);
+                    }
+                };
+
+                auto const* found = ::EvolutionWin::CategoryStore::Registry().Find(*current);
+                if (!found || found->accounts.empty() || !Content().XamlRoot())
+                {
+                    do_delete();
+                    return;
                 }
+
+                /* la suppression se répercute sur le serveur : confirmation */
+                ContentDialog dialog;
+                dialog.XamlRoot(Content().XamlRoot());
+                dialog.Title(box_value(Tr(L"Supprimer la catégorie des comptes ?")));
+                dialog.Content(box_value(Fmt(Tr(L"La catégorie « {0} » sera aussi supprimée de la liste des catégories de ses comptes (Microsoft 365, Gmail). Les messages déjà classés la conservent."), { hstring{ *current } })));
+                dialog.PrimaryButtonText(Tr(L"Supprimer"));
+                dialog.CloseButtonText(Tr(L"Annuler"));
+                dialog.DefaultButton(ContentDialogButton::Close);
+                dialog.ShowAsync().Completed([do_delete](IAsyncOperation<ContentDialogResult> const& operation, AsyncStatus)
+                {
+                    if (operation.GetResults() == ContentDialogResult::Primary)
+                        do_delete();
+                });
             });
             Grid::SetColumn(delete_button, 3);
             row.Children().Append(delete_button);
 
             card.Child(row);
-            host.Children().Append(card);
-            ++index;
+            return card;
+        };
+
+        auto groups = CategoryGroupsForDisplay();
+        if (groups.empty())
+        {
+            for (size_t i = 0; i < registry.Items().size(); ++i)
+                host.Children().Append(make_card(i));
+        }
+        else
+        {
+            /* regroupement par comptes : un groupe repliable par compte */
+            for (auto const& group : groups)
+            {
+                StackPanel content;
+                content.Spacing(8);
+                for (size_t i : group.second)
+                    content.Children().Append(make_card(i));
+
+                Expander expander;
+                expander.IsExpanded(true);
+                expander.HorizontalAlignment(HorizontalAlignment::Stretch);
+                expander.HorizontalContentAlignment(HorizontalAlignment::Stretch);
+                TextBlock header;
+                header.Text(Fmt(Tr(L"{0} ({1})"), { group.first, to_hstring(group.second.size()) }));
+                header.FontWeight(Microsoft::UI::Text::FontWeights::SemiBold());
+                expander.Header(header);
+                expander.Content(content);
+                host.Children().Append(expander);
+            }
         }
 
         /* ajout d'une catégorie */
@@ -225,6 +365,9 @@ namespace winrt::EvolutionWin::implementation
         add_row.ColumnSpacing(8);
         add_row.Margin(ThicknessHelper::FromLengths(0, 8, 0, 0));
         add_row.ColumnDefinitions().Append(ColumnDefinition{});
+        ColumnDefinition target_col;
+        target_col.Width(GridLengthHelper::Auto());
+        add_row.ColumnDefinitions().Append(target_col);
         ColumnDefinition add_col;
         add_col.Width(GridLengthHelper::Auto());
         add_row.ColumnDefinitions().Append(add_col);
@@ -234,9 +377,31 @@ namespace winrt::EvolutionWin::implementation
         new_name.MaxLength(100);
         add_row.Children().Append(new_name);
 
+        /* destination : locale, ou un compte (la catégorie y est créée aussi) */
+        ComboBox target_box;
+        target_box.Width(220);
+        target_box.Items().Append(box_value(Tr(L"Locale (cet ordinateur)")));
+        auto target_uids = std::make_shared<std::vector<std::wstring>>();
+        target_uids->push_back(L"");
+        if (m_accounts)
+        {
+            for (auto const& value : m_accounts)
+            {
+                auto account = value.GetObject();
+                hstring uid = account.GetNamedString(L"uid", L"");
+                if (account.GetNamedBoolean(L"local", false) || uid.empty())
+                    continue;
+                target_box.Items().Append(box_value(account.GetNamedString(L"name", uid)));
+                target_uids->push_back(std::wstring{ uid });
+            }
+        }
+        target_box.SelectedIndex(0);
+        Grid::SetColumn(target_box, 1);
+        add_row.Children().Append(target_box);
+
         Button add_button;
         add_button.Content(box_value(Tr(L"Ajouter une catégorie", L"Add a category")));
-        auto add_action = [this, new_name]()
+        auto add_action = [this, new_name, target_box, target_uids]()
         {
             std::wstring name = Cat::TrimName(std::wstring_view{ new_name.Text() });
             uint8_t r = 0, g = 0, b = 0;
@@ -245,6 +410,13 @@ namespace winrt::EvolutionWin::implementation
             {
                 ShowStatus(Tr(L"Nom de catégorie vide, contenant une virgule ou déjà utilisé.", L"Category name is empty, contains a comma or is already used."), InfoBarSeverity::Warning);
                 return;
+            }
+            int target = target_box.SelectedIndex();
+            if (target > 0 && static_cast<size_t>(target) < target_uids->size())
+            {
+                ::EvolutionWin::CategoryStore::Registry().AddAccount(name, (*target_uids)[target]);
+                std::vector<std::wstring> accounts{ (*target_uids)[target] };
+                PushCategoryChange(L"create", name, L"", name, &accounts);
             }
             OnCategoriesRegistryChanged();
             RefreshCategoriesView();
@@ -255,9 +427,20 @@ namespace winrt::EvolutionWin::implementation
             if (args.Key() == Windows::System::VirtualKey::Enter)
                 add_action();
         });
-        Grid::SetColumn(add_button, 1);
+        Grid::SetColumn(add_button, 2);
         add_row.Children().Append(add_button);
         host.Children().Append(add_row);
+
+        /* reprise des catégories existantes des comptes Microsoft 365 / Exchange Online */
+        Button import_button;
+        import_button.Content(box_value(Tr(L"Reprendre les catégories des comptes")));
+        import_button.Margin(ThicknessHelper::FromLengths(0, 8, 0, 0));
+        Controls::ToolTipService::SetToolTip(import_button, box_value(Tr(L"Importe la liste des catégories (noms et couleurs) des comptes Microsoft 365 / Exchange Online (liste de catégories) et Gmail (libellés) ; les catégories déjà présentes sont conservées.")));
+        import_button.Click([this](IInspectable const& sender, RoutedEventArgs const&)
+        {
+            ImportAccountCategories(sender.as<Button>());
+        });
+        host.Children().Append(import_button);
 
         /* palette standard */
         Button reset_button;
@@ -278,6 +461,339 @@ namespace winrt::EvolutionWin::implementation
         note.Style(caption_style);
         note.Foreground(secondary_brush);
         host.Children().Append(note);
+
+        RefreshFormatRulesView();
+
+        /* reprise automatique, une fois par session, des catégories des comptes */
+        if (!m_categories_auto_imported && m_accounts && m_accounts.Size() > 0)
+        {
+            m_categories_auto_imported = true;
+            ImportAccountCategories(nullptr);
+        }
+    }
+
+    /**
+     * @brief Enregistre les règles de mise en forme conditionnelle et rafraîchit les listes
+     *        déjà chargées (messages, calendrier).
+     */
+    void MainWindow::OnFormatRulesChanged()
+    {
+        ::EvolutionWin::CategoryStore::SaveRules();
+        if (m_all_messages)
+            ShowMessages(m_all_messages);
+        if (m_all_calendar_events)
+            FilterAndRenderCalendarEvents();
+    }
+
+    /**
+     * @brief Construit l'éditeur des règles de mise en forme conditionnelle (Paramètres > Catégories).
+     *
+     * Une ligne par règle : activation, critère, valeur (texte ou importance), couleur,
+     * montée en priorité et suppression ; puis le bouton d'ajout.
+     */
+    void MainWindow::RefreshFormatRulesView()
+    {
+        namespace CF = ::EvolutionWin::ConditionalFormat;
+        auto host = FormatRulesHost();
+        if (!host)
+            return;
+        host.Children().Clear();
+
+        auto resources = Application::Current().Resources();
+        auto card_brush = resources.Lookup(box_value(L"CardBackgroundFillColorDefaultBrush")).as<Brush>();
+        auto stroke_brush = resources.Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>();
+
+        auto& rules = ::EvolutionWin::CategoryStore::Rules();
+        for (size_t index = 0; index < rules.size(); ++index)
+        {
+            auto const rule = rules[index];
+
+            Border card;
+            card.Background(card_brush);
+            card.BorderBrush(stroke_brush);
+            card.BorderThickness(ThicknessHelper::FromUniformLength(1));
+            card.CornerRadius(CornerRadiusHelper::FromUniformRadius(6));
+            card.Padding(ThicknessHelper::FromLengths(12, 8, 12, 8));
+
+            Grid row;
+            row.ColumnSpacing(8);
+            for (int i = 0; i < 6; ++i)
+            {
+                ColumnDefinition column;
+                if (i == 2)
+                    column.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+                else
+                    column.Width(GridLengthHelper::Auto());
+                row.ColumnDefinitions().Append(column);
+            }
+
+            CheckBox enabled;
+            enabled.IsChecked(rule.enabled);
+            enabled.MinWidth(0);
+            enabled.VerticalAlignment(VerticalAlignment::Center);
+            Controls::ToolTipService::SetToolTip(enabled, box_value(Tr(L"Règle active")));
+            enabled.Click([this, index](IInspectable const& sender, RoutedEventArgs const&)
+            {
+                auto& all = ::EvolutionWin::CategoryStore::Rules();
+                if (index < all.size())
+                    all[index].enabled = sender.as<CheckBox>().IsChecked().Value();
+                OnFormatRulesChanged();
+            });
+            row.Children().Append(enabled);
+
+            ComboBox field_box;
+            field_box.Width(240);
+            field_box.VerticalAlignment(VerticalAlignment::Center);
+            for (auto const& label : {
+                     Tr(L"L'expéditeur contient"), Tr(L"Le domaine de l'expéditeur est"), Tr(L"L'objet ou le titre contient"),
+                     Tr(L"L'importance est"), Tr(L"L'organisateur contient") })
+                field_box.Items().Append(box_value(label));
+            field_box.SelectedIndex(static_cast<int>(rule.field));
+            field_box.SelectionChanged([this, index](IInspectable const& sender, SelectionChangedEventArgs const&)
+            {
+                auto& all = ::EvolutionWin::CategoryStore::Rules();
+                int selected = sender.as<ComboBox>().SelectedIndex();
+                if (index >= all.size() || selected < 0 || selected == static_cast<int>(all[index].field))
+                    return;
+                all[index].field = static_cast<CF::RuleField>(selected);
+                if (all[index].field == CF::RuleField::Importance && all[index].text != L"high" && all[index].text != L"low")
+                    all[index].text = L"high";
+                OnFormatRulesChanged();
+                /* la zone de valeur change selon le critère : on reconstruit */
+                DispatcherQueue().TryEnqueue([this]() { RefreshFormatRulesView(); });
+            });
+            Grid::SetColumn(field_box, 1);
+            row.Children().Append(field_box);
+
+            if (rule.field == CF::RuleField::Importance)
+            {
+                ComboBox level_box;
+                level_box.HorizontalAlignment(HorizontalAlignment::Stretch);
+                level_box.VerticalAlignment(VerticalAlignment::Center);
+                level_box.Items().Append(box_value(Tr(L"Haute")));
+                level_box.Items().Append(box_value(Tr(L"Basse")));
+                level_box.SelectedIndex(rule.text == L"low" ? 1 : 0);
+                level_box.SelectionChanged([this, index](IInspectable const& sender, SelectionChangedEventArgs const&)
+                {
+                    auto& all = ::EvolutionWin::CategoryStore::Rules();
+                    if (index < all.size())
+                        all[index].text = sender.as<ComboBox>().SelectedIndex() == 1 ? L"low" : L"high";
+                    OnFormatRulesChanged();
+                });
+                Grid::SetColumn(level_box, 2);
+                row.Children().Append(level_box);
+            }
+            else
+            {
+                TextBox value_box;
+                value_box.Text(hstring{ rule.text });
+                value_box.MaxLength(200);
+                value_box.VerticalAlignment(VerticalAlignment::Center);
+                value_box.PlaceholderText(rule.field == CF::RuleField::SenderDomain ? Tr(L"exemple.fr") : Tr(L"Texte à rechercher"));
+                value_box.LostFocus([this, index](IInspectable const& sender, RoutedEventArgs const&)
+                {
+                    auto& all = ::EvolutionWin::CategoryStore::Rules();
+                    std::wstring text{ sender.as<TextBox>().Text() };
+                    if (index < all.size() && all[index].text != text)
+                    {
+                        all[index].text = text;
+                        OnFormatRulesChanged();
+                    }
+                });
+                Grid::SetColumn(value_box, 2);
+                row.Children().Append(value_box);
+            }
+
+            Button swatch;
+            swatch.Width(36);
+            swatch.Height(32);
+            swatch.Padding(ThicknessHelper::FromUniformLength(0));
+            swatch.Background(SolidColorBrush{ Windows::UI::Color{ 255, rule.r, rule.g, rule.b } });
+            Controls::ToolTipService::SetToolTip(swatch, box_value(Tr(L"Choisir la couleur")));
+            ColorPicker picker;
+            picker.IsAlphaEnabled(false);
+            picker.IsHexInputVisible(true);
+            picker.Color(Windows::UI::Color{ 255, rule.r, rule.g, rule.b });
+            picker.ColorChanged([index, swatch](ColorPicker const&, ColorChangedEventArgs const& args)
+            {
+                auto color = args.NewColor();
+                swatch.Background(SolidColorBrush{ color });
+                auto& all = ::EvolutionWin::CategoryStore::Rules();
+                if (index < all.size())
+                {
+                    all[index].r = color.R;
+                    all[index].g = color.G;
+                    all[index].b = color.B;
+                }
+            });
+            Flyout picker_flyout;
+            picker_flyout.Content(picker);
+            picker_flyout.Closed([this](IInspectable const&, IInspectable const&) { OnFormatRulesChanged(); });
+            swatch.Flyout(picker_flyout);
+            Grid::SetColumn(swatch, 3);
+            row.Children().Append(swatch);
+
+            Button up_button;
+            FontIcon up_icon;
+            up_icon.Glyph(L"\xE70E");
+            up_icon.FontSize(14);
+            up_button.Content(up_icon);
+            up_button.IsEnabled(index > 0);
+            Controls::ToolTipService::SetToolTip(up_button, box_value(Tr(L"Donner plus de priorité")));
+            up_button.Click([this, index](IInspectable const&, RoutedEventArgs const&)
+            {
+                auto& all = ::EvolutionWin::CategoryStore::Rules();
+                if (index > 0 && index < all.size())
+                {
+                    std::swap(all[index], all[index - 1]);
+                    OnFormatRulesChanged();
+                    RefreshFormatRulesView();
+                }
+            });
+            Grid::SetColumn(up_button, 4);
+            row.Children().Append(up_button);
+
+            Button delete_button;
+            FontIcon delete_icon;
+            delete_icon.Glyph(L"\xE74D");
+            delete_icon.FontSize(14);
+            delete_button.Content(delete_icon);
+            Controls::ToolTipService::SetToolTip(delete_button, box_value(Tr(L"Supprimer la règle")));
+            delete_button.Click([this, index](IInspectable const&, RoutedEventArgs const&)
+            {
+                auto& all = ::EvolutionWin::CategoryStore::Rules();
+                if (index < all.size())
+                {
+                    all.erase(all.begin() + index);
+                    OnFormatRulesChanged();
+                    RefreshFormatRulesView();
+                }
+            });
+            Grid::SetColumn(delete_button, 5);
+            row.Children().Append(delete_button);
+
+            card.Child(row);
+            host.Children().Append(card);
+        }
+
+        Button add_button;
+        add_button.Content(box_value(Tr(L"Ajouter une règle")));
+        add_button.Click([this](IInspectable const&, RoutedEventArgs const&)
+        {
+            ::EvolutionWin::CategoryStore::Rules().push_back(CF::FormatRule{});
+            OnFormatRulesChanged();
+            RefreshFormatRulesView();
+        });
+        host.Children().Append(add_button);
+    }
+
+    /**
+     * @brief Reprend dans le registre local les catégories des comptes Microsoft 365 et les libellés des comptes Gmail.
+     *
+     * Interroge chaque compte non local ; les comptes d'un autre type répondent
+     * « non pris en charge » et sont ignorés. Les catégories déjà présentes (même nom,
+     * sans tenir compte de la casse) gardent leur couleur locale.
+     *
+     * @param button Bouton déclencheur, désactivé pendant la lecture.
+     */
+    void MainWindow::ImportAccountCategories(Button const& button)
+    {
+        struct ImportState
+        {
+            size_t pending{ 0 };
+            size_t accounts_ok{ 0 };
+            size_t added{ 0 };
+            size_t linked{ 0 };
+            std::wstring last_error;
+        };
+        auto state = std::make_shared<ImportState>();
+
+        std::vector<hstring> uids;
+        if (m_accounts)
+        {
+            for (auto const& value : m_accounts)
+            {
+                auto account = value.GetObject();
+                if (account.GetNamedBoolean(L"local", false))
+                    continue;
+                hstring uid = account.GetNamedString(L"uid", L"");
+                if (!uid.empty())
+                    uids.push_back(uid);
+            }
+        }
+        if (uids.empty())
+        {
+            ShowStatus(Tr(L"Aucun compte à interroger."), InfoBarSeverity::Warning);
+            return;
+        }
+
+        if (button)
+            button.IsEnabled(false);
+        state->pending = uids.size();
+        for (auto const& uid : uids)
+        {
+            m_core->GetMailCategories(uid, [this, state, button, uid](hstring const& json, hstring const& error)
+            {
+                if (!error.empty() || json.empty())
+                {
+                    state->last_error = std::wstring{ error };
+                }
+                else
+                {
+                    JsonObject root;
+                    if (JsonObject::TryParse(json, root) && root.HasKey(L"categories"))
+                    {
+                        ++state->accounts_ok;
+                        auto& registry = ::EvolutionWin::CategoryStore::Registry();
+                        for (auto const& value : root.GetNamedArray(L"categories"))
+                        {
+                            auto entry = value.GetObject();
+                            std::wstring name{ entry.GetNamedString(L"name", L"") };
+                            /* la virgule sépare les catégories d'un courriel : on l'évite */
+                            std::replace(name.begin(), name.end(), L',', L' ');
+                            name = Cat::TrimName(std::wstring_view{ name });
+                            if (name.empty())
+                                continue;
+                            if (registry.Contains(name))
+                            {
+                                /* déjà connue : on garde sa couleur, on la rattache au compte */
+                                if (registry.AddAccount(name, std::wstring_view{ uid }))
+                                    ++state->linked;
+                                continue;
+                            }
+                            uint8_t r = 0, g = 0, b = 0;
+                            if (!Cat::ParseHexColor(std::wstring_view{ entry.GetNamedString(L"color", L"") }, r, g, b))
+                                Cat::FallbackColor(name, r, g, b);
+                            if (registry.Add(name, r, g, b))
+                            {
+                                registry.AddAccount(name, std::wstring_view{ uid });
+                                ++state->added;
+                            }
+                        }
+                    }
+                }
+
+                if (--state->pending > 0)
+                    return;
+
+                if (button)
+                    button.IsEnabled(true);
+                if (state->accounts_ok == 0)
+                {
+                    if (!button)
+                        return;
+                    ShowStatus(Fmt(Tr(L"Aucune catégorie reprise (comptes Microsoft 365 / Exchange Online et Gmail uniquement) : {0}"), { hstring{ state->last_error } }), InfoBarSeverity::Warning);
+                    return;
+                }
+                if (state->added > 0 || state->linked > 0)
+                {
+                    OnCategoriesRegistryChanged();
+                    RefreshCategoriesView();
+                }
+                if (button || state->added > 0)
+                    ShowStatus(Fmt(Tr(L"{0} catégorie(s) reprise(s) depuis {1} compte(s)."), { to_hstring(state->added), to_hstring(state->accounts_ok) }), InfoBarSeverity::Success);
+            });
+        }
     }
 
     /**
@@ -318,9 +834,30 @@ namespace winrt::EvolutionWin::implementation
         };
 
         auto const& registry = ::EvolutionWin::CategoryStore::Registry();
-        size_t index = 0;
-        for (auto const& cat : registry.Items())
-            add_toggle(cat.name, Windows::UI::Color{ 255, cat.r, cat.g, cat.b }, Cat::CategoryRegistry::ShortcutForIndex(index++));
+        auto add_by_index = [&](size_t index)
+        {
+            auto const& cat = registry.Items()[index];
+            add_toggle(cat.name, Windows::UI::Color{ 255, cat.r, cat.g, cat.b }, Cat::CategoryRegistry::ShortcutForIndex(index));
+        };
+        auto groups = CategoryGroupsForDisplay();
+        if (groups.empty())
+        {
+            for (size_t i = 0; i < registry.Items().size(); ++i)
+                add_by_index(i);
+        }
+        else
+        {
+            /* regroupement par comptes : en-tête (inactif) puis catégories du compte */
+            for (auto const& group : groups)
+            {
+                MenuFlyoutItem header;
+                header.Text(group.first);
+                header.IsEnabled(false);
+                items.Append(header);
+                for (size_t i : group.second)
+                    add_by_index(i);
+            }
+        }
 
         for (auto const& name : current)
         {

@@ -38,6 +38,16 @@ namespace EvolutionWin::Categories
         uint8_t g{ 0 };          ///< Composante verte de la couleur (0-255)
         uint8_t b{ 0 };          ///< Composante bleue de la couleur (0-255)
         std::wstring shortcut;   ///< Raccourci clavier rapide indicatif (ex. "Ctrl+F2"), vide sinon
+        std::vector<std::wstring> accounts; ///< Identifiants des comptes où la catégorie existe (vide : catégorie locale)
+    };
+
+    /**
+     * @brief Groupe de catégories pour l'affichage « par comptes ».
+     */
+    struct CategoryGroup
+    {
+        std::wstring account;          ///< Identifiant du compte, vide pour les catégories locales
+        std::vector<size_t> indices;   ///< Positions des catégories dans le registre, dans l'ordre
     };
 
     /**
@@ -208,7 +218,10 @@ namespace EvolutionWin::Categories
         explicit CategoryRegistry(std::vector<CategoryDefinition> const& items)
         {
             for (auto const& item : items)
-                Add(item.name, item.r, item.g, item.b);
+            {
+                if (Add(item.name, item.r, item.g, item.b))
+                    m_items.back().accounts = item.accounts;
+            }
         }
 
         /** @brief Liste ordonnée des catégories. */
@@ -250,7 +263,25 @@ namespace EvolutionWin::Categories
         {
             if (!IsValidName(name) || Contains(name))
                 return false;
-            m_items.push_back({ TrimName(name), r, g, b, L"" });
+            m_items.push_back({ TrimName(name), r, g, b, L"", {} });
+            return true;
+        }
+
+        /**
+         * @brief Rattache une catégorie à un compte (sans doublon).
+         * @param name Nom de la catégorie.
+         * @param account Identifiant du compte (non vide).
+         * @return true si le rattachement est nouveau.
+         */
+        bool AddAccount(std::wstring_view name, std::wstring_view account)
+        {
+            auto* item = FindMutable(name);
+            if (!item || account.empty())
+                return false;
+            for (auto const& existing : item->accounts)
+                if (existing == account)
+                    return false;
+            item->accounts.emplace_back(account);
             return true;
         }
 
@@ -353,7 +384,16 @@ namespace EvolutionWin::Categories
                 if (!first)
                     json += L",";
                 first = false;
-                json += L"{\"name\":\"" + EscapeJson(item.name) + L"\",\"color\":\"" + FormatHexColor(item.r, item.g, item.b) + L"\"}";
+                json += L"{\"name\":\"" + EscapeJson(item.name) + L"\",\"color\":\"" + FormatHexColor(item.r, item.g, item.b) + L"\"";
+                if (!item.accounts.empty())
+                {
+                    /* identifiants séparés par un saut de ligne (le lecteur ne lit que des chaînes) */
+                    std::wstring joined;
+                    for (auto const& account : item.accounts)
+                        joined += (joined.empty() ? L"" : L"\n") + account;
+                    json += L",\"accounts\":\"" + EscapeJson(joined) + L"\"";
+                }
+                json += L"}";
             }
             json += L"]";
             return json;
@@ -376,7 +416,10 @@ namespace EvolutionWin::Categories
                 return CategoryRegistry{};
             CategoryRegistry registry{ std::vector<CategoryDefinition>{} };
             for (auto const& entry : parsed)
-                registry.Add(entry.name, entry.r, entry.g, entry.b);
+            {
+                if (registry.Add(entry.name, entry.r, entry.g, entry.b))
+                    registry.m_items.back().accounts = entry.accounts;
+            }
             return registry;
         }
 
@@ -521,6 +564,20 @@ namespace EvolutionWin::Categories
                         entry.name = value;
                     else if (key == L"color")
                         has_color = ParseHexColor(value, entry.r, entry.g, entry.b);
+                    else if (key == L"accounts")
+                    {
+                        size_t start = 0;
+                        while (start <= value.size())
+                        {
+                            size_t stop = value.find(L'\n', start);
+                            std::wstring part = value.substr(start, stop == std::wstring::npos ? std::wstring::npos : stop - start);
+                            if (!part.empty())
+                                entry.accounts.push_back(std::move(part));
+                            if (stop == std::wstring::npos)
+                                break;
+                            start = stop + 1;
+                        }
+                    }
                 }
                 if (!has_color)
                     FallbackColor(entry.name, entry.r, entry.g, entry.b);
@@ -530,6 +587,55 @@ namespace EvolutionWin::Categories
 
         std::vector<CategoryDefinition> m_items;
     };
+
+    /**
+     * @brief Regroupe les catégories par compte pour l'affichage.
+     *
+     * Le groupe des catégories locales (sans compte connu) vient en premier, puis un
+     * groupe par compte de @p known_accounts, dans cet ordre. Une catégorie rattachée à
+     * plusieurs comptes figure dans chacun. Les comptes inconnus (supprimés) sont ignorés ;
+     * une catégorie qui n'a que des comptes inconnus est locale. Les groupes vides sont omis.
+     *
+     * @param items Catégories du registre.
+     * @param known_accounts Identifiants des comptes existants, dans l'ordre d'affichage.
+     * @return Groupes ; vide si aucune catégorie n'est rattachée à un compte connu (affichage à plat).
+     */
+    inline std::vector<CategoryGroup> GroupByAccount(
+        std::vector<CategoryDefinition> const& items,
+        std::vector<std::wstring> const& known_accounts)
+    {
+        CategoryGroup local;
+        std::vector<CategoryGroup> per_account;
+        for (auto const& account : known_accounts)
+            per_account.push_back({ account, {} });
+
+        bool any_account = false;
+        for (size_t i = 0; i < items.size(); ++i)
+        {
+            bool placed = false;
+            for (auto& group : per_account)
+            {
+                if (std::find(items[i].accounts.begin(), items[i].accounts.end(), group.account) != items[i].accounts.end())
+                {
+                    group.indices.push_back(i);
+                    placed = true;
+                    any_account = true;
+                }
+            }
+            if (!placed)
+                local.indices.push_back(i);
+        }
+        if (!any_account)
+            return {};
+
+        std::vector<CategoryGroup> result;
+        if (!local.indices.empty())
+            result.push_back(std::move(local));
+        for (auto& group : per_account)
+            if (!group.indices.empty())
+                result.push_back(std::move(group));
+        return result;
+    }
 
     /**
      * @brief Découpe une liste de catégories séparées par des virgules (champ vCard CATEGORIES).

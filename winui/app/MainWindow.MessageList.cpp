@@ -7,6 +7,7 @@
 #include "Settings.h"
 #include "ConversationThreads.h"
 #include "UnifiedViews.h"
+#include "CategoryStore.h"
 
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
@@ -122,7 +123,19 @@ namespace winrt::EvolutionWin::implementation
         }
         evo_core_trace("interface : demande de la liste des messages");
         SetFolderSyncing(true);
-        m_core->ListMessages(account, folder, 500, [this, account, folder, selected, scroll_offset](hstring const& json, hstring const& error)
+        if (!keep_selection)
+            UpdateListFooter(0, 0, 0);
+        /* taille de la liste : celle demandée par « Afficher plus » pour ce dossier, sinon (0) la fenêtre de
+           synchronisation du compte (1 000 messages pour Microsoft 365, 500 sinon) */
+        {
+            std::wstring list_key = NodeKey(account, folder);
+            if (list_key != m_list_max_key)
+            {
+                m_list_max_key = list_key;
+                m_list_max = 0;
+            }
+        }
+        m_core->ListMessages(account, folder, m_list_max, [this, account, folder, selected, scroll_offset](hstring const& json, hstring const& error)
         {
             /* another folder was chosen meanwhile */
             if (account != m_account || folder != m_folder)
@@ -152,6 +165,7 @@ namespace winrt::EvolutionWin::implementation
                 evo_core_trace("interface : première liste de messages affichée");
             }
             RevealMainWindow(L"première liste de messages");
+            RefreshOlderMessagesFooter();
 
             /* the reader keeps its message: reselect it silently */
             if (!selected.empty())
@@ -207,7 +221,8 @@ namespace winrt::EvolutionWin::implementation
             m_folder_sync_timer = nullptr;
         }
 
-        FolderSyncBanner().Visibility(syncing ? Visibility::Visible : Visibility::Collapsed);
+        m_folder_syncing = syncing;
+        UpdateFolderBanner();
         if (!syncing)
             return;
 
@@ -215,6 +230,236 @@ namespace winrt::EvolutionWin::implementation
         m_folder_sync_timer.Interval(std::chrono::seconds(120));
         m_folder_sync_timer.Tick([this](IInspectable const&, IInspectable const&) { SetFolderSyncing(false); });
         m_folder_sync_timer.Start();
+    }
+
+    /* Bandeau « Affichage des messages en cours » : la liste d'un gros dossier (des milliers de messages,
+     * « Tout afficher ») est relue puis reconstruite, ce qui occupe l'interface plusieurs secondes sans
+     * autre signe d'activité.
+     * Paramètres :
+     *   loading : TRUE au début du travail, FALSE à sa fin */
+    void MainWindow::SetFolderLoading(bool loading)
+    {
+        m_folder_loading = loading;
+        UpdateFolderBanner();
+    }
+
+    /* Affiche ou masque le bandeau (barre de progression linéaire) : visible tant que le dossier se synchronise
+     * avec le serveur ou que sa liste se construit ; le texte indique laquelle des deux opérations est en cours. */
+    void MainWindow::UpdateFolderBanner()
+    {
+        FolderSyncBanner().Visibility(m_folder_syncing || m_folder_loading ? Visibility::Visible : Visibility::Collapsed);
+        FolderSyncBannerText().Text(m_folder_loading ? Tr(L"Affichage des messages en cours…") : Tr(L"Synchronisation du dossier en cours…"));
+    }
+
+    /* Pied de la liste : informe que des messages plus anciens existent et propose de les afficher.
+     * Deux cas : (1) Microsoft 365, dossier synchronisé en partie (« Seuls les N messages les plus récents de ce dossier
+     * sont synchronisés », « Charger N messages de plus », « Tout charger ») ; (2) autre compte, dont tous les messages
+     * sont déjà en local mais dont la liste est plafonnée (« … sont affichés (M au total) », « Afficher 500 messages de
+     * plus », « Tout afficher »). L'utilisateur qui a fait défiler la liste jusque-là veut voir la suite.
+     * Paramètres :
+     *   mode  : 0 masqué, 1 fenêtre de synchronisation, 2 liste plafonnée
+     *   shown : nombre de messages synchronisés (mode 1) ou affichés (mode 2)
+     *   total : nombre de messages du dossier en local (mode 2) */
+    void MainWindow::UpdateListFooter(int mode, int shown, int total)
+    {
+        if (!m_older_footer)
+        {
+            m_older_footer = StackPanel();
+            m_older_footer.Padding(ThicknessHelper::FromLengths(16, 12, 16, 16));
+            m_older_footer.Spacing(2);
+            m_older_footer.HorizontalAlignment(HorizontalAlignment::Stretch);
+
+            m_older_footer_text = TextBlock();
+            m_older_footer_text.TextWrapping(TextWrapping::Wrap);
+            m_older_footer_text.Opacity(0.8);
+            m_older_footer_text.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+            m_older_footer.Children().Append(m_older_footer_text);
+
+            StackPanel buttons;
+            buttons.Orientation(Orientation::Horizontal);
+            buttons.Spacing(20);
+
+            m_older_footer_button = HyperlinkButton();
+            m_older_footer_button.Padding(ThicknessHelper::FromLengths(0, 4, 0, 4));
+            m_older_footer_button.Click([this](IInspectable const&, RoutedEventArgs const&)
+            {
+                if (m_list_footer_mode == 2)
+                    ShowMoreMessages(500);
+                else
+                    LoadOlderMessages(1000);
+            });
+            buttons.Children().Append(m_older_footer_button);
+
+            /* « Tout charger » / « Tout afficher » : avertissement avant, ce peut être très long */
+            m_older_footer_all_button = HyperlinkButton();
+            m_older_footer_all_button.Padding(ThicknessHelper::FromLengths(0, 4, 0, 4));
+            m_older_footer_all_button.Click([this](IInspectable const&, RoutedEventArgs const&)
+            {
+                if (m_list_footer_mode == 2)
+                    ConfirmShowAllMessages();
+                else
+                    ConfirmLoadAllMessages();
+            });
+            buttons.Children().Append(m_older_footer_all_button);
+
+            m_older_footer.Children().Append(buttons);
+
+            MessageList().Footer(m_older_footer);
+        }
+
+        m_list_footer_mode = mode;
+        m_list_footer_total = total;
+
+        if (mode == 1)
+        {
+            m_older_footer_text.Text(Fmt(Tr(L"Seuls les {0} messages les plus récents de ce dossier sont synchronisés."), { to_hstring(shown) }));
+            m_older_footer_button.Content(box_value(Fmt(Tr(L"Charger {0} messages de plus"), { to_hstring(1000) })));
+            m_older_footer_all_button.Content(box_value(Tr(L"Tout charger")));
+        }
+        else if (mode == 2)
+        {
+            m_older_footer_text.Text(Fmt(Tr(L"Seuls les {0} messages les plus récents de ce dossier sont affichés ({1} au total)."),
+                { to_hstring(shown), to_hstring(total) }));
+            m_older_footer_button.Content(box_value(Fmt(Tr(L"Afficher {0} messages de plus"), { to_hstring(500) })));
+            m_older_footer_all_button.Content(box_value(Tr(L"Tout afficher")));
+        }
+        m_older_footer.Visibility(mode != 0 ? Visibility::Visible : Visibility::Collapsed);
+    }
+
+    /* « Tout charger » : demande confirmation (le chargement de tous les messages d'un gros dossier peut durer
+     * très longtemps), puis étend la synchronisation du dossier affiché à tous ses messages. */
+    fire_and_forget MainWindow::ConfirmLoadAllMessages()
+    {
+        if (m_dialog_open || !Content() || !Content().XamlRoot() || m_account.empty() || m_folder.empty())
+            co_return;
+
+        ContentDialog confirm;
+        confirm.XamlRoot(Content().XamlRoot());
+        confirm.Title(box_value(Tr(L"Tout charger ?")));
+        TextBlock text;
+        text.TextWrapping(TextWrapping::Wrap);
+        text.Text(Tr(L"Charger tous les messages de ce dossier peut être très long : plusieurs minutes, voire davantage pour un dossier de plusieurs dizaines de milliers de messages, et consomme de la bande passante. EvolutionWin reste utilisable pendant le chargement."));
+        confirm.Content(text);
+        confirm.PrimaryButtonText(Tr(L"Tout charger"));
+        confirm.CloseButtonText(Tr(L"Annuler"));
+        confirm.DefaultButton(ContentDialogButton::Close);
+
+        m_dialog_open = true;
+        auto result = co_await confirm.ShowAsync();
+        m_dialog_open = false;
+
+        if (result == ContentDialogResult::Primary)
+            LoadOlderMessages(0xFFFFFFFFu);   /* tout charger */
+    }
+
+    /* « Tout afficher » : la liste ne montre que 500 messages alors que le dossier en compte davantage en local ;
+     * au-delà de 2 000 messages, la liste peut ralentir : confirmation d'abord. */
+    fire_and_forget MainWindow::ConfirmShowAllMessages()
+    {
+        int total = m_list_footer_total;
+
+        if (total > 2000)
+        {
+            if (m_dialog_open || !Content() || !Content().XamlRoot())
+                co_return;
+
+            ContentDialog confirm;
+            confirm.XamlRoot(Content().XamlRoot());
+            confirm.Title(box_value(Tr(L"Tout afficher ?")));
+            TextBlock text;
+            text.TextWrapping(TextWrapping::Wrap);
+            text.Text(Fmt(Tr(L"Afficher les {0} messages de ce dossier peut ralentir la liste. Continuer ?"), { to_hstring(total) }));
+            confirm.Content(text);
+            confirm.PrimaryButtonText(Tr(L"Tout afficher"));
+            confirm.CloseButtonText(Tr(L"Annuler"));
+            confirm.DefaultButton(ContentDialogButton::Close);
+
+            m_dialog_open = true;
+            auto result = co_await confirm.ShowAsync();
+            m_dialog_open = false;
+
+            if (result != ContentDialogResult::Primary)
+                co_return;
+        }
+
+        ShowMoreMessages(0xFFFFFFFFu);
+    }
+
+    /* Affiche plus de messages dans la liste du dossier (tous déjà en local) : la taille de liste du dossier
+     * augmente et la liste est relue depuis le cache local, sans reconstruire ce qui n'a pas changé.
+     * Paramètres :
+     *   extra_count : nombre de messages de plus, ou 0xFFFFFFFF pour tous */
+    void MainWindow::ShowMoreMessages(unsigned extra_count)
+    {
+        if (m_account.empty() || m_folder.empty() || !m_all_messages)
+            return;
+
+        unsigned base = m_list_max > 0 ? m_list_max : (std::max)(500u, m_all_messages.Size());
+        m_list_max = extra_count >= 0xFFFFFFF0u ? 1000000u : base + extra_count;
+
+        UpdateListFooter(0, 0, 0);
+        SetFolderLoading(true);
+
+        /* l'indicateur doit être affiché avant la reconstruction de la liste, qui occupe l'interface : le travail
+           démarre à priorité basse, après le rendu du bandeau */
+        DispatcherQueue().TryEnqueue(Microsoft::UI::Dispatching::DispatcherQueuePriority::Low, [this]() { RefreshMessageListDelta(); });
+    }
+
+    /* Demande au moteur l'état du dossier affiché (fenêtre de synchronisation, nombre de messages en local, taille de
+     * liste par défaut), puis met à jour le pied de liste. */
+    void MainWindow::RefreshOlderMessagesFooter()
+    {
+        hstring account = m_account;
+        hstring folder = m_folder;
+
+        if (account.empty() || folder.empty() || IsUnifiedView() || !m_core)
+            return;
+
+        m_core->GetFolderSyncInfo(account, folder, [this, account, folder](hstring const& json, hstring const& error)
+        {
+            JsonObject info;
+            if (!error.empty() || account != m_account || folder != m_folder || !JsonObject::TryParse(json, info))
+                return;
+
+            bool window_truncated = info.GetNamedBoolean(L"supported", false) && info.GetNamedBoolean(L"truncated", false);
+            unsigned shown = m_all_messages ? m_all_messages.Size() : 0;
+            unsigned effective = m_list_max > 0 ? m_list_max : static_cast<unsigned>(info.GetNamedNumber(L"default_max", 500));
+            unsigned count = static_cast<unsigned>(info.GetNamedNumber(L"count", 0));
+
+            if (window_truncated)
+                UpdateListFooter(1, static_cast<int>(info.GetNamedNumber(L"limit", 0)), static_cast<int>(count));
+            else if (shown > 0 && shown >= effective && count > shown)
+                UpdateListFooter(2, static_cast<int>(shown), static_cast<int>(count));
+            else
+                UpdateListFooter(0, 0, 0);
+        });
+    }
+
+    /* Clic sur « Charger N messages de plus » : étend la synchronisation du dossier affiché de N messages plus anciens ;
+     * le bandeau de progression reste affiché jusqu'à la fin de la relève.
+     * Paramètres :
+     *   extra_count : nombre de messages de plus, ou 0xFFFFFFFF pour tous */
+    void MainWindow::LoadOlderMessages(unsigned extra_count)
+    {
+        hstring account = m_account;
+        hstring folder = m_folder;
+
+        if (account.empty() || folder.empty() || !m_core)
+            return;
+
+        UpdateListFooter(0, 0, 0);
+        SetFolderSyncing(true);
+
+        m_core->ExtendFolderSync(account, folder, extra_count, [this, account, folder](hstring const&, hstring const& error)
+        {
+            if (error.empty())
+                return;   /* la fin est annoncée par l'événement folder-refreshed */
+
+            SetFolderSyncing(false);
+            ShowStatus(Tr(L"Messages : ") + error, InfoBarSeverity::Warning);
+            if (account == m_account && folder == m_folder)
+                RefreshOlderMessagesFooter();
+        });
     }
 
     /* Planifie la mise à jour de la liste du dossier affiché (après 400 ms : plusieurs
@@ -244,11 +489,15 @@ namespace winrt::EvolutionWin::implementation
     void MainWindow::RefreshMessageListDelta()
     {
         if (m_account.empty() || m_folder.empty() || !m_all_messages)
+        {
+            SetFolderLoading(false);
             return;
+        }
 
         /* vue unifiée : rechargement habituel, qui garde la sélection */
         if (IsUnifiedView())
         {
+            SetFolderLoading(false);
             LoadUnifiedMessages(true);
             return;
         }
@@ -257,16 +506,24 @@ namespace winrt::EvolutionWin::implementation
         hstring folder = m_folder;
         uint64_t request = ++m_list_delta_request;
 
-        m_core->ReloadMessages(account, folder, 500, [this, account, folder, request](hstring const& json, hstring const& error)
+        m_core->ReloadMessages(account, folder, m_list_max, [this, account, folder, request](hstring const& json, hstring const& error)
         {
             if (!error.empty() || request != m_list_delta_request || account != m_account || folder != m_folder || !m_all_messages)
+            {
+                SetFolderLoading(false);
                 return;   /* échec, ou un autre dossier est affiché entre-temps */
+            }
 
             JsonArray fresh{ nullptr };
             if (!JsonArray::TryParse(json, fresh))
+            {
+                SetFolderLoading(false);
                 return;
+            }
 
             ApplyMessageDelta(fresh);
+            SetFolderLoading(false);
+            RefreshOlderMessagesFooter();
         });
     }
 
@@ -716,6 +973,21 @@ namespace winrt::EvolutionWin::implementation
             /* Fond transparent explicite pour que le survol (PointerEntered/PointerExited)
              * soit détecté sur toute la surface de la ligne et pas uniquement sur le texte */
             item.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+            {
+                /* mise en forme conditionnelle : teinte de fond selon les règles (Paramètres > Catégories) */
+                ::EvolutionWin::ConditionalFormat::RuleContext rule_context;
+                rule_context.sender = std::wstring{ message.GetNamedString(L"from", L"") };
+                rule_context.subject = std::wstring{ message.GetNamedString(L"subject", L"") };
+                auto level = ::EvolutionWin::Helpers::ParseMessageImportance(
+                    message.GetNamedString(L"importance", L"normal"), message.GetNamedNumber(L"priority", 3.0));
+                rule_context.importance = level == ::EvolutionWin::Helpers::MessageImportanceLevel::High ? L"high"
+                    : (level == ::EvolutionWin::Helpers::MessageImportanceLevel::Low ? L"low" : L"normal");
+                hstring rule_hex;
+                uint8_t rr = 0, rg = 0, rb = 0;
+                if (::EvolutionWin::CategoryStore::RuleColorHex(rule_context, rule_hex)
+                    && ::EvolutionWin::Categories::ParseHexColor(std::wstring_view{ rule_hex }, rr, rg, rb))
+                    item.Background(SolidColorBrush{ Windows::UI::Color{ 0x38, rr, rg, rb } });
+            }
             item.Tag(box_value(uid));
             if (m_conversations_enabled && !thread_row.header)
                 item.Margin(ThicknessHelper::FromLengths(24, 0, 0, 0));

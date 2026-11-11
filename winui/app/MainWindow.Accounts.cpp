@@ -858,121 +858,7 @@ namespace winrt::EvolutionWin::implementation
     /* Gestionnaire du bouton « Ajouter un compte ». */
     void MainWindow::OnAddAccountClick(IInspectable const&, RoutedEventArgs const&)
     {
-        ShowAccountDetectionDialogAsync();
-    }
-
-    /* Première étape de l'ajout d'un compte : adresse et nom, puis détection
-     * du type de compte et des serveurs par evo-core (fournisseurs connus,
-     * MX, Autodiscover, autoconfig, SRV) pendant que la boîte reste ouverte.
-     * « Configuration manuelle » passe directement au formulaire. */
-    fire_and_forget MainWindow::ShowAccountDetectionDialogAsync()
-    {
-        auto strong = get_strong();
-        if (m_dialog_open || !Content() || !Content().XamlRoot())
-            co_return;
-
-        m_dialog_open = true;
-
-        ContentDialog dialog;
-        dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(Tr(L"Ajouter un compte")));
-        dialog.PrimaryButtonText(Tr(L"Suivant"));
-        dialog.SecondaryButtonText(Tr(L"Configuration manuelle"));
-        dialog.CloseButtonText(Tr(L"Annuler"));
-        dialog.DefaultButton(ContentDialogButton::Primary);
-
-        StackPanel panel;
-        panel.Spacing(8);
-        panel.MinWidth(440);
-
-        TextBlock intro;
-        intro.Text(Tr(L"Le type de compte (Microsoft 365, Exchange, Gmail, IMAP / SMTP) et les serveurs "
-                      L"sont détectés à partir de votre adresse ; vous pourrez les vérifier ensuite."));
-        intro.TextWrapping(TextWrapping::Wrap);
-        panel.Children().Append(intro);
-
-        TextBox email_box;
-        email_box.Header(box_value(Tr(L"Adresse électronique")));
-        email_box.PlaceholderText(L"pierre@exemple.fr");
-        panel.Children().Append(email_box);
-
-        TextBox full_name_box;
-        full_name_box.Header(box_value(Tr(L"Votre nom complet")));
-        full_name_box.PlaceholderText(L"Pierre Dupont");
-        panel.Children().Append(full_name_box);
-
-        TextBlock invalid;
-        invalid.Text(Tr(L"Saisissez une adresse électronique complète (nom@domaine)."));
-        invalid.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Microsoft::UI::Xaml::Media::Brush>());
-        invalid.Visibility(Visibility::Collapsed);
-        panel.Children().Append(invalid);
-
-        StackPanel progress;
-        progress.Orientation(Orientation::Horizontal);
-        progress.Spacing(8);
-        progress.Visibility(Visibility::Collapsed);
-        ProgressRing ring;
-        ring.IsActive(true);
-        ring.Width(16);
-        ring.Height(16);
-        progress.Children().Append(ring);
-        TextBlock progress_text;
-        progress_text.Text(Tr(L"Détection du type de compte…"));
-        progress.Children().Append(progress_text);
-        panel.Children().Append(progress);
-
-        dialog.Content(panel);
-
-        /* détection pendant que la boîte reste ouverte (report du clic) */
-        auto detected = std::make_shared<JsonObject>(nullptr);
-        dialog.PrimaryButtonClick([this, email_box, full_name_box, invalid, progress, detected](
-            ContentDialog const& sender, ContentDialogButtonClickEventArgs const& args)
-        {
-            std::wstring email{ Trim(email_box.Text()) };
-            auto at = email.find(L'@');
-            if (at == std::wstring::npos || at == 0 || email.find(L'.', at) == std::wstring::npos)
-            {
-                invalid.Visibility(Visibility::Visible);
-                email_box.Focus(FocusState::Programmatic);
-                args.Cancel(true);
-                return;
-            }
-
-            invalid.Visibility(Visibility::Collapsed);
-            progress.Visibility(Visibility::Visible);
-            email_box.IsEnabled(false);
-            full_name_box.IsEnabled(false);
-            sender.IsPrimaryButtonEnabled(false);
-            sender.IsSecondaryButtonEnabled(false);
-
-            auto deferral = args.GetDeferral();
-            m_core->DetectAccount(hstring{ email }, [deferral, detected](hstring const& json, hstring const& error)
-            {
-                JsonObject result;
-                if (error.empty() && JsonObject::TryParse(json, result))
-                    *detected = result;
-                /* boîte déjà fermée entre-temps : rien à terminer */
-                try
-                {
-                    deferral.Complete();
-                }
-                catch (...)
-                {
-                    ::EvolutionWin::LogCurrentException(L"détection du compte");
-                }
-            });
-        });
-
-        auto result = co_await dialog.ShowAsync();
-        m_dialog_open = false;
-
-        if (result == ContentDialogResult::None)
-            co_return;
-
-        JsonObject prefill = result == ContentDialogResult::Primary && *detected ? *detected : JsonObject{};
-        prefill.SetNamedValue(L"email", JsonValue::CreateStringValue(hstring{ Trim(email_box.Text()) }));
-        prefill.SetNamedValue(L"full_name", JsonValue::CreateStringValue(full_name_box.Text()));
-        ShowAddAccountDialogAsync(prefill);
+        ShowAddAccountDialogAsync();
     }
 
     /* Libellés de la détection (evo_core_detect_account) */
@@ -1133,13 +1019,14 @@ namespace winrt::EvolutionWin::implementation
         return unbox_value_or<hstring>(item.Tag(), L"");
     }
 
-    /* Formulaire d'ajout d'un compte épuré : masque les serveurs techniques sous
-     * un Expander replié par défaut, propose l'authentification moderne ou mot de passe,
-     * et intègre un test de connectivité préalable avant création effective.
-     * Paramètres :
-     *   prefill : {"email", "full_name"} et le résultat de la détection
-     *             (evo_core_detect_account), vide en configuration manuelle */
-    fire_and_forget MainWindow::ShowAddAccountDialogAsync(JsonObject prefill)
+    /* Formulaire d'ajout d'un compte en un seul écran : adresse, nom complet et nom
+     * du compte en tête ; dès que l'adresse est complète (après une courte
+     * temporisation), le type de compte et les serveurs sont détectés par evo-core
+     * (evo_core_detect_account) et le reste du formulaire se remplit tout seul.
+     * Les serveurs techniques restent sous un Expander replié ; le bouton « Ajouter »
+     * n'est actif que lorsque les champs nécessaires sont utilisables, et un test de
+     * connectivité préalable est fait avant la création effective. */
+    fire_and_forget MainWindow::ShowAddAccountDialogAsync()
     {
         auto strong = get_strong();
         if (m_dialog_open || !Content() || !Content().XamlRoot())
@@ -1158,33 +1045,46 @@ namespace winrt::EvolutionWin::implementation
         panel.Spacing(10);
         panel.MinWidth(440);
 
-        hstring detected_type = prefill.GetNamedString(L"type", L"");
-        if (!detected_type.empty())
-        {
-            hstring source = prefill.GetNamedString(L"source", L"");
-            hstring provider = prefill.GetNamedString(L"provider", L"");
-            InfoBar detection;
-            detection.IsOpen(true);
-            detection.IsClosable(false);
-            if (source == L"guess")
-            {
-                detection.Severity(InfoBarSeverity::Warning);
-                detection.Title(Tr(L"Aucune configuration trouvée"));
-                detection.Message(Tr(L"Ce domaine ne publie pas sa configuration : les serveurs proposés "
-                                     L"sont supposés. Vérifiez-les auprès de votre fournisseur."));
-            }
-            else
-            {
-                detection.Severity(InfoBarSeverity::Success);
-                detection.Title(Fmt(Tr(L"Type détecté : {0}"), { DetectedTypeLabel(detected_type) }));
-                detection.Message(provider.empty()
-                    ? Fmt(Tr(L"D'après : {0}. Vérifiez les paramètres proposés ou choisissez un autre type de compte."),
-                          { DetectedSourceLabel(source) })
-                    : Fmt(Tr(L"Fournisseur : {0} — d'après : {1}. Vérifiez les paramètres proposés ou choisissez un autre type de compte."),
-                          { provider, DetectedSourceLabel(source) }));
-            }
-            panel.Children().Append(detection);
-        }
+        TextBox email_box;
+        email_box.Header(box_value(Tr(L"Adresse électronique")));
+        email_box.PlaceholderText(L"pierre@exemple.fr");
+        panel.Children().Append(email_box);
+
+        TextBox full_name_box;
+        full_name_box.Header(box_value(Tr(L"Votre nom complet")));
+        full_name_box.PlaceholderText(L"Pierre Dupont");
+        panel.Children().Append(full_name_box);
+
+        TextBox display_name_box;
+        display_name_box.Header(box_value(Tr(L"Nom du compte")));
+        display_name_box.PlaceholderText(Tr(L"Personnel, Travail…"));
+        panel.Children().Append(display_name_box);
+
+        /* Zone de détection automatique : progression puis résultat */
+        StackPanel detect_progress;
+        detect_progress.Orientation(Orientation::Horizontal);
+        detect_progress.Spacing(8);
+        detect_progress.Visibility(Visibility::Collapsed);
+        ProgressRing detect_ring;
+        detect_ring.IsActive(true);
+        detect_ring.Width(16);
+        detect_ring.Height(16);
+        detect_progress.Children().Append(detect_ring);
+        TextBlock detect_text;
+        detect_text.Text(Tr(L"Détection du type de compte…"));
+        detect_progress.Children().Append(detect_text);
+        panel.Children().Append(detect_progress);
+
+        InfoBar detection;
+        detection.IsOpen(false);
+        detection.IsClosable(false);
+        panel.Children().Append(detection);
+
+        /* Reste du formulaire : affiché une fois la détection terminée */
+        StackPanel details;
+        details.Spacing(10);
+        details.Visibility(Visibility::Collapsed);
+        panel.Children().Append(details);
 
         ComboBox provider_box;
         provider_box.Header(box_value(Tr(L"Type de compte")));
@@ -1194,29 +1094,12 @@ namespace winrt::EvolutionWin::implementation
         provider_box.Items().Append(box_value(Tr(L"Google / Gmail (courrier, agenda, contacts)")));
         provider_box.Items().Append(box_value(L"Microsoft 365 / Exchange Online (Graph)"));
         provider_box.Items().Append(box_value(Tr(L"Exchange de l'entreprise (EWS, mot de passe)")));
-        panel.Children().Append(provider_box);
-
-        TextBox display_name_box;
-        display_name_box.Header(box_value(Tr(L"Nom du compte")));
-        display_name_box.PlaceholderText(Tr(L"Personnel, Travail…"));
-        panel.Children().Append(display_name_box);
-
-        TextBox full_name_box;
-        full_name_box.Header(box_value(Tr(L"Votre nom complet")));
-        full_name_box.PlaceholderText(L"Pierre Dupont");
-        full_name_box.Text(prefill.GetNamedString(L"full_name", L""));
-        panel.Children().Append(full_name_box);
-
-        TextBox email_box;
-        email_box.Header(box_value(Tr(L"Adresse électronique")));
-        email_box.PlaceholderText(L"pierre@exemple.fr");
-        email_box.Text(prefill.GetNamedString(L"email", L""));
-        panel.Children().Append(email_box);
+        details.Children().Append(provider_box);
 
         PasswordBox password_box;
         password_box.Header(box_value(Tr(L"Mot de passe")));
         password_box.PlaceholderText(Tr(L"Mot de passe du compte"));
-        panel.Children().Append(password_box);
+        details.Children().Append(password_box);
 
         /* Panneau spécifique pour la connexion Google / Gmail */
         StackPanel google_panel;
@@ -1248,7 +1131,7 @@ namespace winrt::EvolutionWin::implementation
         google_app_pwd_panel.Children().Append(google_help_btn);
 
         google_panel.Children().Append(google_app_pwd_panel);
-        panel.Children().Append(google_panel);
+        details.Children().Append(google_panel);
 
         /* Panneau d'information pour Microsoft 365 */
         TextBlock m365_info;
@@ -1256,7 +1139,7 @@ namespace winrt::EvolutionWin::implementation
         m365_info.Text(Tr(L"La fenêtre d'authentification sécurisée Microsoft 365 (OAuth2) s'ouvrira "
                           L"automatiquement après validation."));
         m365_info.Visibility(Visibility::Collapsed);
-        panel.Children().Append(m365_info);
+        details.Children().Append(m365_info);
 
         /* Expander replié par défaut pour masquer les détails techniques des serveurs */
         Expander server_expander;
@@ -1271,14 +1154,12 @@ namespace winrt::EvolutionWin::implementation
         TextBox user_box;
         user_box.Header(box_value(Tr(L"Nom d'utilisateur (si différent de l'adresse)")));
         user_box.PlaceholderText(Tr(L"Adresse électronique par défaut"));
-        user_box.Text(prefill.GetNamedString(L"user", L""));
-        server_panel.Children().Append(user_box);
+                server_panel.Children().Append(user_box);
 
         TextBox ews_url_box;
         ews_url_box.Header(box_value(Tr(L"Adresse du serveur EWS")));
         ews_url_box.PlaceholderText(L"https://mail.exemple.fr/EWS/Exchange.asmx");
-        ews_url_box.Text(prefill.GetNamedString(L"ews_url", L""));
-        ews_url_box.Visibility(Visibility::Collapsed);
+                ews_url_box.Visibility(Visibility::Collapsed);
         server_panel.Children().Append(ews_url_box);
 
         /* Paramètres IMAP */
@@ -1303,7 +1184,7 @@ namespace winrt::EvolutionWin::implementation
         imap_grid.Children().Append(imap_port_box);
         server_panel.Children().Append(imap_grid);
 
-        ComboBox imap_sec_combo = MakeSecurityComboBox(prefill.GetNamedString(L"imap_security", L"tls"));
+        ComboBox imap_sec_combo = MakeSecurityComboBox(L"tls");
         imap_sec_combo.Header(box_value(Tr(L"Sécurité IMAP")));
         server_panel.Children().Append(imap_sec_combo);
 
@@ -1329,7 +1210,7 @@ namespace winrt::EvolutionWin::implementation
         smtp_grid.Children().Append(smtp_port_box);
         server_panel.Children().Append(smtp_grid);
 
-        ComboBox smtp_sec_combo = MakeSecurityComboBox(prefill.GetNamedString(L"smtp_security", L"tls"));
+        ComboBox smtp_sec_combo = MakeSecurityComboBox(L"tls");
         smtp_sec_combo.Header(box_value(Tr(L"Sécurité SMTP")));
         server_panel.Children().Append(smtp_sec_combo);
 
@@ -1388,7 +1269,7 @@ namespace winrt::EvolutionWin::implementation
 
         server_panel.Children().Append(test_area);
         server_expander.Content(server_panel);
-        panel.Children().Append(server_expander);
+        details.Children().Append(server_expander);
 
         /* Fonction locale pour exécuter le test de connectivité */
         auto connection_tested_ok = std::make_shared<bool>(false);
@@ -1572,24 +1453,160 @@ namespace winrt::EvolutionWin::implementation
             }
         };
 
-        provider_box.SelectionChanged([update_provider_ui](IInspectable const&, SelectionChangedEventArgs const&)
+        /* Bouton « Ajouter » : actif seulement si l'adresse est complète, qu'aucune
+         * détection n'est en cours et que les champs du type choisi sont utilisables */
+        auto detecting = std::make_shared<bool>(false);
+        auto is_valid_email = [](hstring const& text)
+        {
+            std::wstring email{ Trim(text) };
+            auto at = email.find(L'@');
+            if (at == std::wstring::npos || at == 0)
+                return false;
+            auto dot = email.find(L'.', at);
+            return dot != std::wstring::npos && dot + 1 < email.size();
+        };
+        auto update_add_enabled = [dialog, email_box, provider_box, google_app_pwd_check, imap_host_box,
+                                   smtp_host_box, ews_url_box, detecting, is_valid_email]()
+        {
+            int idx = provider_box.SelectedIndex();
+            bool usable = true;
+            if (idx == 4)
+                usable = !Trim(ews_url_box.Text()).empty();
+            else if (idx == 0 || idx == 1 || (idx == 2 && google_app_pwd_check.IsChecked().Value()))
+                usable = !Trim(imap_host_box.Text()).empty() && !Trim(smtp_host_box.Text()).empty();
+            dialog.IsPrimaryButtonEnabled(!*detecting && is_valid_email(email_box.Text()) && usable);
+        };
+
+        provider_box.SelectionChanged([update_provider_ui, update_add_enabled](IInspectable const&, SelectionChangedEventArgs const&)
         {
             update_provider_ui();
+            update_add_enabled();
+        });
+        google_app_pwd_check.Click([update_add_enabled](IInspectable const&, RoutedEventArgs const&)
+        {
+            update_add_enabled();
+        });
+        imap_host_box.TextChanged([update_add_enabled](IInspectable const&, TextChangedEventArgs const&) { update_add_enabled(); });
+        smtp_host_box.TextChanged([update_add_enabled](IInspectable const&, TextChangedEventArgs const&) { update_add_enabled(); });
+        ews_url_box.TextChanged([update_add_enabled](IInspectable const&, TextChangedEventArgs const&) { update_add_enabled(); });
+
+        /* Applique le résultat de la détection (evo_core_detect_account) au formulaire */
+        auto apply_detection = [provider_box, imap_host_box, imap_port_box, imap_sec_combo, smtp_host_box,
+                                smtp_port_box, smtp_sec_combo, user_box, ews_url_box, server_expander,
+                                detection, update_provider_ui, connection_tested_ok](JsonObject const& found)
+        {
+            hstring type = found.GetNamedString(L"type", L"");
+            hstring source = found.GetNamedString(L"source", L"");
+            hstring provider = found.GetNamedString(L"provider", L"");
+
+            *connection_tested_ok = false;
+            provider_box.SelectedIndex(type == L"m365" ? 3 : type == L"google" ? 2 : type == L"exchange" ? 4 : 0);
+            user_box.Text(found.GetNamedString(L"user", L""));
+            ews_url_box.Text(found.GetNamedString(L"ews_url", L""));
+            if (!found.GetNamedString(L"imap_host", L"").empty())
+            {
+                imap_host_box.Text(found.GetNamedString(L"imap_host"));
+                imap_port_box.Text(to_hstring(static_cast<int>(found.GetNamedNumber(L"imap_port", 993))));
+                smtp_host_box.Text(found.GetNamedString(L"smtp_host", L""));
+                smtp_port_box.Text(to_hstring(static_cast<int>(found.GetNamedNumber(L"smtp_port", 465))));
+                auto select_security = [](ComboBox const& combo, hstring const& method)
+                {
+                    combo.SelectedIndex(method == L"starttls" ? 1 : method == L"none" ? 2 : 0);
+                };
+                select_security(imap_sec_combo, found.GetNamedString(L"imap_security", L"tls"));
+                select_security(smtp_sec_combo, found.GetNamedString(L"smtp_security", L"tls"));
+            }
+            update_provider_ui();
+
+            detection.IsOpen(true);
+            if (source == L"guess")
+            {
+                detection.Severity(InfoBarSeverity::Warning);
+                detection.Title(Tr(L"Aucune configuration trouvée"));
+                detection.Message(Tr(L"Ce domaine ne publie pas sa configuration : les serveurs proposés "
+                                     L"sont supposés. Vérifiez-les auprès de votre fournisseur."));
+                server_expander.IsExpanded(true);
+            }
+            else
+            {
+                detection.Severity(InfoBarSeverity::Success);
+                detection.Title(Fmt(Tr(L"Type détecté : {0}"), { DetectedTypeLabel(type) }));
+                detection.Message(provider.empty()
+                    ? Fmt(Tr(L"D'après : {0}. Vérifiez les paramètres proposés ou choisissez un autre type de compte."),
+                          { DetectedSourceLabel(source) })
+                    : Fmt(Tr(L"Fournisseur : {0} — d'après : {1}. Vérifiez les paramètres proposés ou choisissez un autre type de compte."),
+                          { provider, DetectedSourceLabel(source) }));
+            }
+        };
+
+        /* Détection automatique : lancée peu après la fin de la saisie de l'adresse ;
+         * un numéro de génération écarte les réponses devenues obsolètes */
+        auto last_detected = std::make_shared<hstring>();
+        auto generation = std::make_shared<int>(0);
+        auto run_detection = [this, email_box, detect_progress, details, detection, server_expander,
+                              detecting, last_detected, generation, apply_detection, update_add_enabled]()
+        {
+            hstring email{ Trim(email_box.Text()) };
+            *last_detected = email;
+            int current = ++*generation;
+            *detecting = true;
+            detection.IsOpen(false);
+            detect_progress.Visibility(Visibility::Visible);
+            update_add_enabled();
+
+            m_core->DetectAccount(email, [current, generation, detecting, detect_progress, details, detection, server_expander,
+                                  apply_detection, update_add_enabled](hstring const& json, hstring const& error)
+            {
+                if (current != *generation)
+                    return;
+                *detecting = false;
+                detect_progress.Visibility(Visibility::Collapsed);
+                details.Visibility(Visibility::Visible);
+
+                JsonObject found;
+                if (error.empty() && JsonObject::TryParse(json, found))
+                {
+                    apply_detection(found);
+                }
+                else
+                {
+                    detection.IsOpen(true);
+                    detection.Severity(InfoBarSeverity::Warning);
+                    detection.Title(Tr(L"Détection impossible"));
+                    detection.Message(Tr(L"Choisissez le type de compte et renseignez les serveurs ci-dessous."));
+                    server_expander.IsExpanded(true);
+                }
+                update_add_enabled();
+            });
+        };
+
+        DispatcherTimer detect_timer;
+        detect_timer.Interval(std::chrono::milliseconds(700));
+        detect_timer.Tick([detect_timer, run_detection](IInspectable const&, IInspectable const&)
+        {
+            detect_timer.Stop();
+            run_detection();
+        });
+        email_box.TextChanged([detect_timer, email_box, last_detected, is_valid_email, update_add_enabled]
+            (IInspectable const&, TextChangedEventArgs const&)
+        {
+            detect_timer.Stop();
+            update_add_enabled();
+            if (is_valid_email(email_box.Text()) && Trim(email_box.Text()) != *last_detected)
+                detect_timer.Start();
+        });
+        email_box.LostFocus([detect_timer, email_box, last_detected, is_valid_email, run_detection]
+            (IInspectable const&, RoutedEventArgs const&)
+        {
+            if (is_valid_email(email_box.Text()) && Trim(email_box.Text()) != *last_detected)
+            {
+                detect_timer.Stop();
+                run_detection();
+            }
         });
 
-        /* Initialisation d'après la détection */
-        provider_box.SelectedIndex(detected_type == L"m365" ? 3
-            : detected_type == L"google" ? 2
-            : detected_type == L"exchange" ? 4 : 0);
-
-        if (!prefill.GetNamedString(L"imap_host", L"").empty())
-        {
-            imap_host_box.Text(prefill.GetNamedString(L"imap_host"));
-            imap_port_box.Text(to_hstring(static_cast<int>(prefill.GetNamedNumber(L"imap_port", 993))));
-            smtp_host_box.Text(prefill.GetNamedString(L"smtp_host", L""));
-            smtp_port_box.Text(to_hstring(static_cast<int>(prefill.GetNamedNumber(L"smtp_port", 465))));
-        }
         update_provider_ui();
+        update_add_enabled();
 
         /* Validation et test préalable avant création effective */
         auto ready_to_commit = std::make_shared<bool>(false);
@@ -1674,6 +1691,8 @@ namespace winrt::EvolutionWin::implementation
 
         auto result = co_await dialog.ShowAsync();
         m_dialog_open = false;
+        detect_timer.Stop();
+        ++*generation; /* ignore une détection encore en cours */
 
         if (result != ContentDialogResult::Primary && !*ready_to_commit)
             co_return;

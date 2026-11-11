@@ -52,6 +52,20 @@ gint		camel_m365_folder_summary_get_version	(CamelM365FolderSummary *m365_summar
 void		camel_m365_folder_summary_set_delta_link(CamelM365FolderSummary *m365_summary,
 							 const gchar *delta_link);
 gchar *		camel_m365_folder_summary_dup_delta_link(CamelM365FolderSummary *m365_summary);
+
+/* Nombre de messages les plus récents synchronisés par défaut (première synchronisation et « Charger plus ») */
+#define CAMEL_M365_DEFAULT_SYNC_LIMIT 1000
+
+void		camel_m365_folder_summary_get_window	(CamelM365FolderSummary *m365_summary,
+							 gint64 *out_window_start,
+							 gboolean *out_truncated,
+							 gint *out_limit);
+void		camel_m365_folder_summary_set_window	(CamelM365FolderSummary *m365_summary,
+							 gint64 window_start,
+							 gboolean truncated,
+							 gint limit);
+void		camel_m365_folder_summary_set_sync_limit(CamelM365FolderSummary *m365_summary,
+							 gint limit);
 void		camel_m365_folder_summary_clear		(CamelFolderSummary *summary);
 gboolean	camel_m365_folder_summary_update_message_info_flags
 							(CamelFolderSummary *summary,

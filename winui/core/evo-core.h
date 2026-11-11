@@ -84,6 +84,32 @@ void		evo_core_list_messages		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Fenêtre de synchronisation d'un dossier ouvert : certains comptes (Microsoft 365) ne synchronisent
+ * que les N messages les plus récents de chaque dossier.
+ * Paramètres :
+ *   core, account_uid, folder_full_name : dossier (déjà ouvert par evo_core_list_messages ())
+ *   func : rappel recevant {"supported": bool, "truncated": bool, "limit": n, "count": n, "default_max": n}
+ *          ("truncated" : le serveur a des messages plus anciens que ceux synchronisés ; "count" : messages
+ *          du dossier en local ; "default_max" : taille de liste par défaut, 500 ou la fenêtre de synchronisation)
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_get_folder_sync_info	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Étend la fenêtre de synchronisation d'un dossier de extra_count messages plus anciens et lance la
+ * relève en fond ; la fin est annoncée par l'événement "folder-refreshed" (membres "truncated", "limit").
+ * Paramètres : voir evo_core_get_folder_sync_info () ; extra_count = G_MAXUINT pour tout charger (plus de limite,
+ * {"limit": 0}) ; func reçoit {"limit": nouvelle limite}, ou une erreur si le compte synchronise déjà tous
+ * les messages. */
+void		evo_core_extend_folder_sync	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 unsigned int extra_count,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Relit la liste des messages d'un dossier depuis le cache local de Camel, sans
  * relève du serveur : sert à mettre à jour la liste affichée quand une relève en
  * fond vient de se terminer (événement "folder-refreshed"). Même format de résultat
@@ -442,8 +468,18 @@ void		evo_core_copy_folder		(EvoCore *core,
 /* Copie ou déplace un dossier, avec ses sous-dossiers et ses messages, vers un
  * dossier ou la racine de n'importe quel compte (copy : TRUE copie, FALSE
  * déplace). dest_parent_name vide = racine du compte ; new_name (facultatif)
- * renomme le dossier à la destination. Le rappel reçoit
- * {"full_name": "<dossier créé>", "count": <messages copiés>}. */
+ * renomme le dossier à la destination.
+ * Les messages sont copiés un à un en arrière-plan avec leurs indicateurs, leurs
+ * étiquettes et leur date de réception (quand le serveur de destination le
+ * permet). Progression : événements « progress » avec "kind": "transfer",
+ * "label", "folder", "done", "total", "percent", "active" ; annulation par
+ * evo_core_cancel_operations. Un message déjà présent à la destination (même
+ * Message-ID) est ignoré : avec merge = TRUE, un transfert interrompu se
+ * reprend dans le dossier de même nom déjà créé. Un déplacement ne supprime
+ * l'original que si tout a été copié sans échec ni annulation.
+ * Le rappel reçoit {"full_name": "<dossier créé>", "count": <messages copiés>,
+ * "skipped": <déjà présents>, "failed": <en échec>, "cancelled": bool,
+ * "error": "<première erreur>"}. */
 void		evo_core_transfer_folder	(EvoCore *core,
 						 const char *src_account_uid,
 						 const char *folder_full_name,
@@ -451,6 +487,7 @@ void		evo_core_transfer_folder	(EvoCore *core,
 						 const char *dest_parent_name,
 						 const char *new_name,
 						 int copy,
+						 int merge,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
@@ -1417,6 +1454,44 @@ void		evo_core_respond_tls_trust	(EvoCore *core,
  *   user_data   : données utilisateur transmises au rappel */
 void		evo_core_get_auto_reply		(EvoCore *core,
 						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Lit les catégories d'un compte : liste principale Outlook de Microsoft 365 / Exchange
+ * Online (Microsoft Graph /me/outlook/masterCategories, portée MailboxSettings.Read) ou
+ * libellés créés par l'utilisateur d'un compte Gmail (API users.labels, accès Gmail complet
+ * déjà accordé pour IMAP). Les autres fournisseurs renvoient une erreur « non pris en charge ».
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   func        : rappel recevant {"categories": [{"name", "color": "#RRGGBB" (vide si
+ *                 inconnue)}]}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_get_mail_categories	(EvoCore *core,
+						 const char *account_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Modifie une catégorie sur un compte Microsoft 365 / Exchange Online (liste principale) ou
+ * Gmail (libellé). Portées OAuth2 : MailboxSettings.ReadWrite (Microsoft 365) ; accès Gmail
+ * complet (déjà accordé pour IMAP). Microsoft 365 ne permettant pas de renommer, un
+ * renommage supprime puis recrée la catégorie. Gmail impose une palette de couleurs de
+ * libellés : la couleur n'y est pas envoyée.
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   action      : "create", "rename", "recolor" ou "delete"
+ *   name        : nom de la catégorie (ancien nom pour "rename")
+ *   new_name    : nouveau nom ("rename" ; ignoré sinon, peut être NULL)
+ *   color_hex   : couleur « #RRGGBB » ("create", "recolor", "rename" ; peut être NULL)
+ *   func        : rappel recevant {"ok": true}
+ *   user_data   : données utilisateur transmises au rappel */
+void		evo_core_edit_mail_category	(EvoCore *core,
+						 const char *account_uid,
+						 const char *action,
+						 const char *name,
+						 const char *new_name,
+						 const char *color_hex,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 

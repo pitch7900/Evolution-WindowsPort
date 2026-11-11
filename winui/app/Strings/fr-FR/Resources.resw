@@ -6903,5 +6903,225 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Synchronisation du dossier en cours…</value>
     <comment>Synchronisation du dossier en cours…</comment>
   </data>
+  <data name="T_E1F0C263" xml:space="preserve">
+    <value>Seuls les {0} messages les plus récents de ce dossier sont synchronisés.</value>
+    <comment>Seuls les {0} messages les plus récents de ce dossier sont synchronisés.</comment>
+  </data>
+  <data name="T_95F2DDA4" xml:space="preserve">
+    <value>Charger {0} messages de plus</value>
+    <comment>Charger {0} messages de plus</comment>
+  </data>
+  <data name="T_673FD122" xml:space="preserve">
+    <value>Acceptée le {0}.</value>
+    <comment>Acceptée le {0}.</comment>
+  </data>
+  <data name="T_13E9D796" xml:space="preserve">
+    <value>Provisoire le {0}.</value>
+    <comment>Provisoire le {0}.</comment>
+  </data>
+  <data name="T_3A6FCFF5" xml:space="preserve">
+    <value>Refusée le {0}.</value>
+    <comment>Refusée le {0}.</comment>
+  </data>
+  <data name="T_37F00D41" xml:space="preserve">
+    <value>Détection impossible</value>
+    <comment>Détection impossible</comment>
+  </data>
+  <data name="T_A69929F8" xml:space="preserve">
+    <value>Choisissez le type de compte et renseignez les serveurs ci-dessous.</value>
+    <comment>Choisissez le type de compte et renseignez les serveurs ci-dessous.</comment>
+  </data>
+  <data name="T_C86D8447" xml:space="preserve">
+    <value>Tout charger</value>
+    <comment>Tout charger</comment>
+  </data>
+  <data name="T_ADD252EE" xml:space="preserve">
+    <value>Tout charger ?</value>
+    <comment>Tout charger ?</comment>
+  </data>
+  <data name="T_04D6244E" xml:space="preserve">
+    <value>Charger tous les messages de ce dossier peut être très long : plusieurs minutes, voire davantage pour un dossier de plusieurs dizaines de milliers de messages, et consomme de la bande passante. EvolutionWin reste utilisable pendant le chargement.</value>
+    <comment>Charger tous les messages de ce dossier peut être très long : plusieurs minutes, voire davantage pour un dossier de plusieurs dizaines de milliers de messages, et consomme de la bande passante. EvolutionWin reste utilisable pendant le chargement.</comment>
+  </data>
+  <data name="T_3A2302D8" xml:space="preserve">
+    <value>Seuls les {0} messages les plus récents de ce dossier sont affichés ({1} au total).</value>
+    <comment>Seuls les {0} messages les plus récents de ce dossier sont affichés ({1} au total).</comment>
+  </data>
+  <data name="T_F159476E" xml:space="preserve">
+    <value>Afficher {0} messages de plus</value>
+    <comment>Afficher {0} messages de plus</comment>
+  </data>
+  <data name="T_BB926001" xml:space="preserve">
+    <value>Tout afficher</value>
+    <comment>Tout afficher</comment>
+  </data>
+  <data name="T_301AEA24" xml:space="preserve">
+    <value>Tout afficher ?</value>
+    <comment>Tout afficher ?</comment>
+  </data>
+  <data name="T_B3993400" xml:space="preserve">
+    <value>Afficher les {0} messages de ce dossier peut ralentir la liste. Continuer ?</value>
+    <comment>Afficher les {0} messages de ce dossier peut ralentir la liste. Continuer ?</comment>
+  </data>
+  <data name="T_5BD83554" xml:space="preserve">
+    <value>Affichage des messages en cours…</value>
+    <comment>Affichage des messages en cours…</comment>
+  </data>
+  <data name="T_01C7B8DE" xml:space="preserve">
+    <value>Toutes les tâches</value>
+    <comment>Toutes les tâches</comment>
+  </data>
+  <data name="T_E6D71139" xml:space="preserve">
+    <value>Mes tâches</value>
+    <comment>Mes tâches</comment>
+  </data>
+  <data name="T_8D811B8F" xml:space="preserve">
+    <value>Messagerie, agenda, contacts et tâches</value>
+    <comment>Messagerie, agenda, contacts et tâches</comment>
+  </data>
+  <data name="T_F3ABB543" xml:space="preserve">
+    <value>Reprendre les catégories des comptes</value>
+    <comment>Reprendre les catégories des comptes</comment>
+  </data>
+  <data name="T_BA98BC7A" xml:space="preserve">
+    <value>Importe la liste des catégories (noms et couleurs) des comptes Microsoft 365 / Exchange Online ; les catégories déjà présentes sont conservées.</value>
+    <comment>Importe la liste des catégories (noms et couleurs) des comptes Microsoft 365 / Exchange Online ; les catégories déjà présentes sont conservées.</comment>
+  </data>
+  <data name="T_A804DADC" xml:space="preserve">
+    <value>Aucun compte à interroger.</value>
+    <comment>Aucun compte à interroger.</comment>
+  </data>
+  <data name="T_3798179B" xml:space="preserve">
+    <value>Aucune catégorie reprise (comptes Microsoft 365 / Exchange Online uniquement) : {0}</value>
+    <comment>Aucune catégorie reprise (comptes Microsoft 365 / Exchange Online uniquement) : {0}</comment>
+  </data>
+  <data name="T_9DD1A05B" xml:space="preserve">
+    <value>{0} catégorie(s) reprise(s) depuis {1} compte(s).</value>
+    <comment>{0} catégorie(s) reprise(s) depuis {1} compte(s).</comment>
+  </data>
+  <data name="T_4B204851" xml:space="preserve">
+    <value>Importe la liste des catégories (noms et couleurs) des comptes Microsoft 365 / Exchange Online (liste de catégories) et Gmail (libellés) ; les catégories déjà présentes sont conservées.</value>
+    <comment>Importe la liste des catégories (noms et couleurs) des comptes Microsoft 365 / Exchange Online (liste de catégories) et Gmail (libellés) ; les catégories déjà présentes sont conservées.</comment>
+  </data>
+  <data name="T_5257FC8E" xml:space="preserve">
+    <value>Aucune catégorie reprise (comptes Microsoft 365 / Exchange Online et Gmail uniquement) : {0}</value>
+    <comment>Aucune catégorie reprise (comptes Microsoft 365 / Exchange Online et Gmail uniquement) : {0}</comment>
+  </data>
+  <data name="T_41CA98FA" xml:space="preserve">
+    <value>Catégories locales</value>
+    <comment>Catégories locales</comment>
+  </data>
+  <data name="T_00455D33" xml:space="preserve">
+    <value>{0} ({1})</value>
+    <comment>{0} ({1})</comment>
+  </data>
+  <data name="T_B40FA0D7" xml:space="preserve">
+    <value>Un dossier « {0} » existe déjà à la destination. « Fusionner » ne copie que les messages qui n'y sont pas encore (reprise d'un transfert interrompu) ; « Renommer » crée un dossier distinct.</value>
+    <comment>Un dossier « {0} » existe déjà à la destination. « Fusionner » ne copie que les messages qui n'y sont pas encore (reprise d'un transfert interrompu) ; « Renommer » crée un dossier distinct.</comment>
+  </data>
+  <data name="T_FC9BF982" xml:space="preserve">
+    <value>Fusionner</value>
+    <comment>Fusionner</comment>
+  </data>
+  <data name="T_AA315C44" xml:space="preserve">
+    <value>Renommer…</value>
+    <comment>Renommer…</comment>
+  </data>
+  <data name="T_C6D3AA2F" xml:space="preserve">
+    <value>Transfert du dossier « {0} » annulé : {1} message(s) copié(s). Relancez-le avec « Fusionner » pour le reprendre.</value>
+    <comment>Transfert du dossier « {0} » annulé : {1} message(s) copié(s). Relancez-le avec « Fusionner » pour le reprendre.</comment>
+  </data>
+  <data name="T_68B44DD2" xml:space="preserve">
+    <value>Dossier « {0} » : {1} message(s) copié(s), {2} en échec ({3}). L'original est conservé.</value>
+    <comment>Dossier « {0} » : {1} message(s) copié(s), {2} en échec ({3}). L'original est conservé.</comment>
+  </data>
+  <data name="T_50A2514D" xml:space="preserve">
+    <value>Dossier « {0} » copié ({1} message(s), {2} déjà présent(s)).</value>
+    <comment>Dossier « {0} » copié ({1} message(s), {2} déjà présent(s)).</comment>
+  </data>
+  <data name="T_7B9CEC73" xml:space="preserve">
+    <value>Dossier « {0} » déplacé ({1} message(s), {2} déjà présent(s)).</value>
+    <comment>Dossier « {0} » déplacé ({1} message(s), {2} déjà présent(s)).</comment>
+  </data>
+  <data name="T_2F4D22DC" xml:space="preserve">
+    <value>Transfert du dossier terminé</value>
+    <comment>Transfert du dossier terminé</comment>
+  </data>
+  <data name="T_E6F99930" xml:space="preserve">
+    <value>Transfert du dossier « {0} » : {1}/{2}</value>
+    <comment>Transfert du dossier « {0} » : {1}/{2}</comment>
+  </data>
+  <data name="T_D10582F8" xml:space="preserve">
+    <value>Transfert du dossier « {0} » : {1} message(s)</value>
+    <comment>Transfert du dossier « {0} » : {1} message(s)</comment>
+  </data>
+  <data name="T_A92171B6" xml:space="preserve">
+    <value>Mise en forme conditionnelle</value>
+    <comment>Mise en forme conditionnelle</comment>
+  </data>
+  <data name="T_34C4A200" xml:space="preserve">
+    <value>Colore automatiquement les messages et les événements selon des règles. La première règle qui correspond s'applique : teinte de fond dans la liste des messages, couleur de l'événement dans le calendrier (si aucune catégorie n'est posée).</value>
+    <comment>Colore automatiquement les messages et les événements selon des règles. La première règle qui correspond s'applique : teinte de fond dans la liste des messages, couleur de l'événement dans le calendrier (si aucune catégorie n'est posée).</comment>
+  </data>
+  <data name="T_94AAE66B" xml:space="preserve">
+    <value>Règle active</value>
+    <comment>Règle active</comment>
+  </data>
+  <data name="T_60FF5DF3" xml:space="preserve">
+    <value>L'expéditeur contient</value>
+    <comment>L'expéditeur contient</comment>
+  </data>
+  <data name="T_C277340C" xml:space="preserve">
+    <value>Le domaine de l'expéditeur est</value>
+    <comment>Le domaine de l'expéditeur est</comment>
+  </data>
+  <data name="T_DDABDC69" xml:space="preserve">
+    <value>L'objet ou le titre contient</value>
+    <comment>L'objet ou le titre contient</comment>
+  </data>
+  <data name="T_5D30AC1E" xml:space="preserve">
+    <value>L'importance est</value>
+    <comment>L'importance est</comment>
+  </data>
+  <data name="T_26124DC4" xml:space="preserve">
+    <value>L'organisateur contient</value>
+    <comment>L'organisateur contient</comment>
+  </data>
+  <data name="T_0EE830E5" xml:space="preserve">
+    <value>exemple.fr</value>
+    <comment>exemple.fr</comment>
+  </data>
+  <data name="T_1751C7FA" xml:space="preserve">
+    <value>Texte à rechercher</value>
+    <comment>Texte à rechercher</comment>
+  </data>
+  <data name="T_F0EFF79C" xml:space="preserve">
+    <value>Donner plus de priorité</value>
+    <comment>Donner plus de priorité</comment>
+  </data>
+  <data name="T_7B49CA2B" xml:space="preserve">
+    <value>Supprimer la règle</value>
+    <comment>Supprimer la règle</comment>
+  </data>
+  <data name="T_4EAB89C7" xml:space="preserve">
+    <value>Ajouter une règle</value>
+    <comment>Ajouter une règle</comment>
+  </data>
+  <data name="T_1AB967D0" xml:space="preserve">
+    <value>Supprimer la catégorie des comptes ?</value>
+    <comment>Supprimer la catégorie des comptes ?</comment>
+  </data>
+  <data name="T_7382BFDF" xml:space="preserve">
+    <value>La catégorie « {0} » sera aussi supprimée de la liste des catégories de ses comptes (Microsoft 365, Gmail). Les messages déjà classés la conservent.</value>
+    <comment>La catégorie « {0} » sera aussi supprimée de la liste des catégories de ses comptes (Microsoft 365, Gmail). Les messages déjà classés la conservent.</comment>
+  </data>
+  <data name="T_F8F10453" xml:space="preserve">
+    <value>Locale (cet ordinateur)</value>
+    <comment>Locale (cet ordinateur)</comment>
+  </data>
+  <data name="T_319D7875" xml:space="preserve">
+    <value>Catégorie non mise à jour sur le compte {0} : {1}</value>
+    <comment>Catégorie non mise à jour sur le compte {0} : {1}</comment>
+  </data>
 </root>
 

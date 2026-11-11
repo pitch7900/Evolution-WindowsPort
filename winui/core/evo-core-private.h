@@ -399,7 +399,26 @@ core_startup_tracing (void);
 void
 core_bg_yield (EvoCore *core);
 
+/* evo-core-gal.c */
+gchar *
+core_graph_invitation_event (EvoCore *core,
+			     const gchar *account_uid,
+			     const gchar *event_uid,
+			     gboolean *out_found);
+
 /* evo-core-folders.c */
+guint
+core_folder_default_list_max (CamelFolder *folder);
+gboolean
+core_folder_sync_window_of (CamelFolder *folder,
+			     gboolean *out_truncated,
+			     gint *out_limit);
+gboolean
+core_folder_sync_window (EvoCore *core,
+			 const gchar *account_uid,
+			 const gchar *folder_name,
+			 gboolean *out_truncated,
+			 gint *out_limit);
 GHashTable *
 core_dup_base_folder_names (EvoCore *core,
 			    CamelStore *store,

@@ -291,6 +291,11 @@
                                 <StackPanel Spacing="8" Margin="0,0,0,12">
                                     <TextBlock x:Name="InviteDetails" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                                     <TextBlock x:Name="InviteState" TextWrapping="Wrap" FontWeight="SemiBold" />
+                                    <!-- mini-grille de la journée autour de la réunion (MainWindow::RenderInvitationDayGrid) -->
+                                    <Border x:Name="InviteDayHost" Visibility="Collapsed" HorizontalAlignment="Left" MaxWidth="560"
+                                            BorderThickness="1" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" CornerRadius="4" Padding="0,6,0,6">
+                                        <Grid x:Name="InviteDayGrid" />
+                                    </Border>
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Button x:Name="InviteAcceptButton" Click="OnInviteAcceptClick" />
                                         <Button x:Name="InviteTentativeButton" Click="OnInviteTentativeClick" />

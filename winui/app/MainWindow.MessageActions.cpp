@@ -1462,12 +1462,12 @@ namespace winrt::EvolutionWin::implementation
         /* Registre unique des catégories (modifiable dans Paramètres > Catégories) */
         auto const& categories = ::EvolutionWin::CategoryStore::Registry().Items();
 
-        size_t cat_index = 0;
-        for (auto const& cat : categories)
+        auto add_category = [&](size_t index)
         {
+            auto const& cat = categories[index];
             ToggleMenuFlyoutItem item;
             item.Text(hstring{ cat.name });
-            std::wstring cat_shortcut = ::EvolutionWin::Categories::CategoryRegistry::ShortcutForIndex(cat_index++);
+            std::wstring cat_shortcut = ::EvolutionWin::Categories::CategoryRegistry::ShortcutForIndex(index);
             if (!cat_shortcut.empty())
                 item.KeyboardAcceleratorTextOverride(hstring{ cat_shortcut });
 
@@ -1487,6 +1487,26 @@ namespace winrt::EvolutionWin::implementation
             });
 
             items.Append(item);
+        };
+
+        auto cat_groups = CategoryGroupsForDisplay();
+        if (cat_groups.empty())
+        {
+            for (size_t i = 0; i < categories.size(); ++i)
+                add_category(i);
+        }
+        else
+        {
+            /* regroupement par comptes : en-tête (inactif) puis catégories du compte */
+            for (auto const& group : cat_groups)
+            {
+                MenuFlyoutItem header;
+                header.Text(group.first);
+                header.IsEnabled(false);
+                items.Append(header);
+                for (size_t i : group.second)
+                    add_category(i);
+            }
         }
 
         items.Append(MenuFlyoutSeparator{});
@@ -1501,6 +1521,19 @@ namespace winrt::EvolutionWin::implementation
             ClearCategoriesForMessages(uids);
         });
         items.Append(clear_item);
+
+        /* Lien vers Paramètres > Catégories */
+        MenuFlyoutItem manage_item;
+        manage_item.Text(Tr(L"Gérer les catégories…"));
+        FontIcon manage_icon;
+        manage_icon.Glyph(L"\xE713");
+        manage_item.Icon(manage_icon);
+        manage_item.Click([this](IInspectable const&, RoutedEventArgs const&)
+        {
+            Navigation().SelectedItem(Navigation().SettingsItem());
+            SelectSettingsCategory(L"categories");
+        });
+        items.Append(manage_item);
     }
 
     /**

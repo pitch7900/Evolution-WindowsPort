@@ -140,7 +140,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] **Notification** de la nouvelle version (bandeau / toast) avec les nouveautés extraites du [CHANGELOG.md](CHANGELOG.md), boutons _Installer maintenant_, _Plus tard_, _Ignorer cette version_
   - [x] **Téléchargement automatique** du MSI joint à la Release GitHub (`Evolution-<version>-x64.msi`) en arrière-plan, avec progression dans la barre d'état (§4), dans `%LOCALAPPDATA%\EvolutionWin\Updates`
   - [x] **Vérification d'intégrité avant installation** : empreinte SHA-256 publiée à côté du MSI (`.sha256`) et signature Authenticode du MSI (`WinVerifyTrust`, éditeur attendu) ; refus d'installer si la vérification échoue
-  - [ ] **Installation** : fermeture propre de l'application (boîte d'envoi vidée, synchronisation terminée), lancement de `msiexec /i … /passive` (élévation UAC, installation par machine), redémarrage automatique d'EvolutionWin à la fin
+  - [ ] **Installation** : fermeture propre de l'application (boîte d'envoi vidée, synchronisation terminée), lancement de `msiexec /i … /passive` (élévation UAC, installation par machine), redémarrage automatique d'EvolutionWin à la fin — _fait : avertissement puis fermeture automatique de l'application au lancement de `msiexec /i` (c2f3832) ; reste : `/passive`, attente de la fin de la synchronisation / de la boîte d'envoi et redémarrage automatique d'EvolutionWin_
   - [ ] Nettoyage des MSI téléchargés après installation réussie
   - [ ] **Paramètres** (§19) : mise à jour automatique / notification seulement / désactivée ; canal (versions stables, préversions)
   - [ ] **Politique d'entreprise** : désactivation par clé de registre machine ou propriété MSI (`AUTOUPDATE=0`) pour les déploiements gérés (GPO / Intune)
@@ -185,7 +185,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 
 ### Fenêtres et lecture
 
-- [ ] 🟡 **Ouvrir un événement ou un dossier dans une nouvelle fenêtre** (pour un message : fenêtre de lecture indépendante, §6) ; [x] 🟢 **Fermer tous les éléments ouverts**
+- [ ] 🟡 **Ouvrir un événement ou un dossier dans une nouvelle fenêtre** (pour un message : fenêtre de lecture indépendante, §6) — _fait : message (§6) et événement (fenêtre dédiée depuis la 1.1.0) ; reste : dossier_ ; [x] 🟢 **Fermer tous les éléments ouverts**
 - [ ] 🟠 **Fenêtre des rappels** : rappels des rendez-vous (alarmes EDS) et des messages en suivi, avec Reporter / Ignorer _(partiel : notification Windows à l'heure du rappel des événements, vérifiée toutes les 30 s, sans répétition ; restent Reporter / Ignorer, les messages en suivi et les tâches)_
 - [ ] 🟡 **Lecteur immersif** : vue de lecture plein écran épurée (taille du texte, espacement)
 - [x] 🟢 **Lecture à voix haute** du message (`Windows.Media.SpeechSynthesis`)
@@ -227,7 +227,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] Nom du compte prérempli avec l'adresse
   - [x] **Test de connexion** avant création (test réseau et TLS IMAP / SMTP avec rapport d'état en direct)
   - [x] Libellés sans jargon et options claires
-  - [ ] Une seule fenêtre à étapes (adresse → connexion → terminé) plutôt que deux boîtes de dialogue successives ; bouton _Précédent_
+  - [x] Une seule fenêtre (adresse → détection automatique → formulaire) plutôt que deux boîtes de dialogue successives — _fait en 1.1.3 : tout dans un seul écran, donc plus de bouton Précédent_
 
 ### Modifier un compte existant
 
@@ -269,7 +269,7 @@ En entreprise (Exchange Online / Microsoft 365, Exchange on-premise), les utilis
     - [ ] Ajout d'un délégué avec sélection dans l'annuaire GAL (recherche par nom ou adresse) et attribution du niveau de privilèges (Relecteur / lecture seule, Auteur, Éditeur, Délégué).
     - [ ] Modification des autorisations d'un délégué existant (ajustement des droits de lecture, modification, suppression).
     - [ ] Révocation et suppression d'un délégué en un clic.
-  - [ ] **Gestion pour Gmail / Google Workspace** :
+  - [x] **Gestion pour Gmail / Google Workspace** :
     - [x] Consultation de la liste des délégués de la boîte via l'API Gmail (`GET /gmail/v1/users/me/settings/delegates`). _(codé ; à valider sur un compte Google Workspace)_
     - [x] Ajout d'un délégué (`POST .../delegates`) avec affichage du statut (en attente de confirmation / accepté). _(codé ; à valider sur un compte Google Workspace)_
     - [x] Suppression / révocation d'un délégué existant (`DELETE .../delegates/{delegateEmail}`). _(codé ; à valider sur un compte Google Workspace)_
@@ -370,7 +370,7 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
 ### Hors connexion et téléchargement
 
 - [x] 🟢 **Démarrage rapide à partir du cache local** — _constat : l'application rame à chaque ouverture ; `core_list_folders_run` attend la connexion au serveur (`core_ensure_connected`) puis interroge le serveur (`camel_store_get_folder_info_sync` sans `CAMEL_STORE_FOLDER_INFO_FAST`) avant d'afficher l'arborescence, alors que Camel conserve déjà sur disque l'arborescence et les résumés de messages_ <a id="demo-cache-demarrage"></a>
-  - [ ] **Mesurer d'abord** : journal horodaté des étapes du démarrage (lancement des services EDS / bus D-Bus, `ESourceRegistry`, connexion de chaque compte, liste des dossiers, première liste de messages, premier rendu) pour cibler les vraies lenteurs
+  - [x] **Mesurer d'abord** : journal horodaté des étapes du démarrage (lancement des services EDS / bus D-Bus, `ESourceRegistry`, connexion de chaque compte, liste des dossiers, première liste de messages, premier rendu) pour cibler les vraies lenteurs
   - [x] **Afficher immédiatement depuis le cache**, sans attendre le réseau :
     - [x] Arborescence des dossiers et compteurs de non-lus lus localement (`CAMEL_STORE_FOLDER_INFO_FAST`, magasin hors ligne), sans connexion préalable
     - [x] Liste des messages du dernier dossier ouvert lue dans le résumé local (`CamelFolderSummary`) ; message sélectionné relu depuis le cache de messages
@@ -495,8 +495,8 @@ Le contenu distant est déjà bloqué par le lecteur WebView2 (`WebResourceReque
   - [ ] **Création du dossier Brouillons** s'il n'existe pas encore sur le serveur (`camel_store_create_folder_sync`), puis inscription dans l'identité du compte (`e_source_mail_composition_set_drafts_folder`) ; repli sur un dossier Brouillons local si le serveur refuse ou si l'on est hors connexion, avec transfert au retour du réseau (§4)
   - [ ] Changement de compte expéditeur pendant la rédaction : brouillon déplacé vers le dossier Brouillons du nouveau compte
   - [ ] À l'envoi : brouillon supprimé du dossier Brouillons ; à la fermeture sans envoi : **pas de question**, le brouillon est déjà enregistré (dernier autosave à la fermeture) ; bouton _Supprimer le brouillon_ dans la fenêtre de rédaction pour abandonner le message
-  - [ ] Reprise d'un brouillon : double-clic dans le dossier Brouillons → fenêtre de rédaction pré-remplie (cf. §6), compte, signature et format (HTML / texte) restaurés
-  - [ ] Indication discrète de l'état de l'autosave dans la fenêtre de rédaction (« Enregistrement… », « Brouillon enregistré à 14:32 », « Non enregistré — nouvelle tentative »)
+  - [x] Reprise d'un brouillon : double-clic dans le dossier Brouillons → fenêtre de rédaction pré-remplie (cf. §6), compte, signature et format (HTML / texte) restaurés
+  - [ ] Indication discrète de l'état de l'autosave dans la fenêtre de rédaction (« Enregistrement… », « Brouillon enregistré à 14:32 », « Non enregistré — nouvelle tentative ») — _fait : « Brouillon enregistré à HH:mm » ; reste : « Enregistrement… » et l'état d'échec (l'échec d'un autosave est aujourd'hui silencieux)_
   - [ ] Récupération après plantage : copie locale écrite à chaque autosave, brouillons non synchronisés retrouvés au redémarrage
 - [ ] 🟡 **Répondre par une réunion** (réunion pré-remplie avec les participants) — dépend de §13
 - [x] 🟢 **Transférer en pièce jointe** pour un message seul (déjà fait en sélection multiple)
@@ -574,10 +574,10 @@ Sécurisation de bout en bout des courriels par signature et chiffrement avec un
 
 - [ ] 🟡 **Copier / déplacer des mails et des dossiers d'un compte à un autre** (ex. d'un compte IMAP vers Microsoft 365, d'un ancien compte vers le nouveau) — _existant : le moteur accepte déjà un compte de destination pour un message (`core_move_message_run`, `camel_folder_transfer_messages_to_sync`) mais l'interface ne propose que les dossiers du même compte ; copie / déplacement de dossier limités au même compte, sans sous-dossiers_
   - [x] 🟢 **Unitairement** : menus _Déplacer vers_ / _Copier vers_ listant les dossiers de **tous** les comptes (regroupés par compte, avec recherche dans la liste), pour un message ou une sélection multiple ; boîte de dialogue complète (Ctrl+Maj+V) avec filtrage instantané ; glisser-déposer de messages sur un dossier d'un autre compte (Ctrl = copier)
-  - [ ] **Dossier complet** : _Copier le dossier vers…_ / _Déplacer le dossier vers…_ un autre compte, avec option **sous-dossiers compris** ; recréation de l'arborescence sur le compte de destination (`camel_store_create_folder_sync`), puis transfert des messages dossier par dossier
-  - [ ] Conservation des indicateurs (lu / non lu, suivi, catégories / mots-clés) et de la date de réception d'origine (`INTERNALDATE` IMAP) quand le serveur de destination le permet
-  - [ ] Transfert par lots en arrière-plan, avec progression et annulation (§4) ; reprise possible après interruption (messages déjà copiés ignorés, repérés par `Message-ID`) ; rapport de fin (nombre de messages copiés, erreurs)
-  - [ ] Déplacement : suppression à la source seulement après copie confirmée sur la destination ; dossiers spéciaux de la source (Boîte de réception, Envoyés…) jamais supprimés, seulement vidés
+  - [x] **Dossier complet** : _Copier le dossier vers…_ / _Déplacer le dossier vers…_ un autre compte, avec option **sous-dossiers compris** ; recréation de l'arborescence sur le compte de destination (`camel_store_create_folder_sync`), puis transfert des messages dossier par dossier
+  - [x] Conservation des indicateurs (lu / non lu, suivi, catégories / mots-clés) et de la date de réception d'origine (`INTERNALDATE` IMAP) quand le serveur de destination le permet
+  - [x] Transfert par lots en arrière-plan, avec progression et annulation (§4) ; reprise possible après interruption (messages déjà copiés ignorés, repérés par `Message-ID`) ; rapport de fin (nombre de messages copiés, erreurs)
+  - [x] Déplacement : suppression à la source seulement après copie confirmée sur la destination ; dossiers spéciaux de la source (Boîte de réception, Envoyés…) jamais supprimés, seulement vidés
   - [ ] Confirmation avant un gros transfert (nombre de messages et taille estimés) ; avertissement si le quota du compte de destination risque d'être dépassé (§3)
 - [ ] 🟡 **Nouveau dossier, Renommer, Copier, Déplacer, Supprimer** (`camel_store_create_folder_sync`, etc.), glisser-déposer dans l'arborescence — _fait : menu contextuel (nouveau, renommer, déplacer, copier, supprimer) ; reste : glisser-déposer_
 - [x] 🟢 **Marquer tout comme lu**
@@ -637,7 +637,7 @@ La recherche dans le dossier courant existe déjà (filtrage instantané + reche
 
 - [ ] 🟡 Accessible depuis le champ de recherche simple ; critères combinables : expéditeur, destinataire, objet, corps, plage de dates, taille, pièces jointes, lu / non lu, indicateur, catégorie
 - [ ] 🟡 Opérateurs ET / OU entre les critères (expressions de recherche Camel, traduites vers la recherche serveur quand elle existe — cf. « Recherche côté serveur » ci-dessus)
-- [ ] 🟠 Enregistrer une recherche comme dossier de recherche — dépend de §9
+- [x] 🟠 Enregistrer une recherche comme dossier de recherche — dépend de §9
 
 ## 11. Vues unifiées multi-comptes — 🟠
 
@@ -728,7 +728,7 @@ Les vues Grille (Jour, Semaine de travail, Semaine avec créneaux et gestion des
   - [ ] 🟡 À partir d'un fichier `.ics`
   - [ ] 🟠 À partir du carnet d'adresses / de l'annuaire : calendrier d'un autre utilisateur Exchange / M365 selon les droits accordés (disponibilités, détails limités, lecture complète, délégué)
   - [ ] 🟠 À partir d'une liste de salles
-- [ ] 🟡 Plusieurs calendriers partagés ouverts simultanément et conservés (groupe « Calendriers partagés »)
+- [x] 🟡 Plusieurs calendriers partagés ouverts simultanément et conservés (groupe « Calendriers partagés »)
 - Rattachement et interaction avec les calendriers délégués Exchange Online : cf. §3
 - [ ] **Partager le calendrier** :
   - [ ] 🟠 Invitation de partage avec niveaux de droits (disponibilités, titres et lieux, tous les détails, édition, délégué) — Exchange / M365
@@ -749,7 +749,7 @@ Constat : sur un compte Exchange Online / Microsoft 365 (ex. EVAM), EvolutionWin
 
 ## 15. Contacts — 🟡
 
-- [ ] 🟡 **Carnet d'adresses global** (GAL) Exchange / M365 : recherche et sélection des destinataires (backend evolution-ews) <a id="demo-gal"></a>
+- [x] 🟡 **Carnet d'adresses global** (GAL) Exchange / M365 : recherche et sélection des destinataires (backend evolution-ews) <a id="demo-gal"></a>
   - [x] Moteur : `evo_core_search_gal` (Microsoft Graph `GET /users?$search=` pour Microsoft 365 / Exchange Online, API People `searchDirectoryPeople` pour Google Workspace) avec le jeton OAuth2 du compte ; _reste à valider sur un tenant réel_ (Microsoft 365 et Google Workspace)
   - [x] Consultation : bouton « Annuaire de l'organisation » dans la vue Contacts (recherche dès 2 caractères, fiche en lecture seule : fonction, service, société, téléphones, bureau, bouton _Écrire un message_)
   - [x] Bouton « Annuaire de l'organisation » placé sous chaque compte concerné (et non en bas de la liste des carnets)
@@ -825,17 +825,17 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 
 ## 17. Catégories et codes couleur — 🟡
 
-- [ ] 🟡 **Catégories communes et classements personnalisés** : nom + code couleur (palette de couleurs configurables par l'utilisateur), gérées dans les Réglages (créer, renommer, choisir la couleur, supprimer) <a id="demo-categories"></a>
+- [x] 🟡 **Catégories communes et classements personnalisés** : nom + code couleur (palette de couleurs configurables par l'utilisateur), gérées dans les Réglages (créer, renommer, choisir la couleur, supprimer) <a id="demo-categories"></a>
   - [x] Stockage : étiquettes Camel pour les mails, propriété `CATEGORIES` pour les contacts (vCard), les événements et les tâches (iCalendar)
-  - [ ] 🟠 **Réutilisation et synchronisation avec Exchange Online / Microsoft 365** : synchronisation bidirectionnelle avec la liste principale des catégories (*Master Category List* via Graph `/me/outlook/masterCategories` ou EWS `GetUserSettings`) ; si des catégories préexistantes sont présentes sur le compte O365, elles sont automatiquement récupérées et réutilisées avec leurs intitulés et codes couleur d'origine.
+  - [x] 🟠 **Réutilisation et synchronisation avec Exchange Online / Microsoft 365** : synchronisation bidirectionnelle avec la liste principale des catégories (*Master Category List* via Graph `/me/outlook/masterCategories` ou EWS `GetUserSettings`) ; si des catégories préexistantes sont présentes sur le compte O365, elles sont automatiquement récupérées et réutilisées avec leurs intitulés et codes couleur d'origine. _(fait : reprise automatique à la première ouverture de Paramètres > Catégories puis bouton « Reprendre les catégories des comptes » ; création, couleur, suppression et renommage renvoyés au compte ; Gmail : libellés, sans couleur envoyée car palette imposée ; regroupement par comptes)_
   - [x] Possibilité pour chaque utilisateur de créer des classements personnalisés supplémentaires et d'adapter les catégories selon ses besoins.
 - [x] 🟡 **Catégoriser** un élément (plusieurs catégories possibles) : menu contextuel, bouton _Catégoriser_ / _Classer_ du ruban (courriels et événements d'agenda), catégories récentes ; raccourci vers une catégorie (Ctrl+F2…F12)
-- [ ] **Affichage des codes couleur sur les courriels et les événements de l'agenda** :
+- [x] **Affichage des codes couleur sur les courriels et les événements de l'agenda** :
   - [x] 🟡 **Mails** : pastilles et badges de couleur dans la liste des messages (`MainWindow.MessageList`) et dans l'en-tête du volet / de la fenêtre de lecture (`MessageWindow`)
   - [x] 🟡 **Événements de l'agenda** : affichage de la couleur de la catégorie dans la grille du calendrier (Jour / Semaine / Mois : bande latérale ou bloc d'événement coloré) et dans la vue Liste
-  - [ ] 🟡 **Contacts** : pastilles dans la liste et sur la fiche
+  - [x] 🟡 **Contacts** : pastilles dans la liste et sur la fiche
   - [x] 🟡 **Tâches** : pastilles dans la liste des tâches
-- [ ] 🟠 **Mise en forme conditionnelle** : couleur automatique selon des règles (expéditeur, domaine, mots de l'objet, importance, organisateur…), pour la liste des messages (§5) comme pour le calendrier (§12)
+- [x] 🟠 **Mise en forme conditionnelle** : couleur automatique selon des règles (expéditeur, domaine, mots de l'objet, importance, organisateur…), pour la liste des messages (§5) comme pour le calendrier (§12)
 - [x] 🟢 **Filtrer / trier / regrouper par catégorie** dans toutes les vues ; recherche par catégorie (§10)
 
 ## 18. Import / Export — 🟡
@@ -905,7 +905,7 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 
 - [x] 🟢 Thème (clair / sombre / système)
 - [x] 🟢 Taille du texte de lecture (Petite / Normale / Grande / Très grande, appliquée comme zoom du lecteur)
-- [ ] 🟢 Langue de l'interface (cf. §20) ; taille du texte du reste de l'interface
+- [x] 🟢 Langue de l'interface (cf. §20) ; taille du texte du reste de l'interface
 - [x] 🟢 Démarrage avec Windows (via Registre HKCU\...\Run), réduction dans la zone de notification à la fermeture
   - Arrêt complet des modules et processus d'arrière-plan à la fermeture : cf. §1
 - [x] 🟢 Module affiché au démarrage (Mail, Calendrier, Contacts, Tâches)
@@ -942,8 +942,8 @@ Les textes d'EvolutionWin sont aujourd'hui écrits en dur en français dans le c
 
 ### Internationalisation de l'application
 
-- [ ] 🟠 **Extraire tous les textes** du XAML et du C++ dans des fichiers de ressources (`Resources.resw` par langue, `x:Uid` dans le XAML, `ResourceLoader` / MRT Core dans le code) — infrastructure .resw et loader MRT Core en place (`I18n.h`), premiers modules raccordés
-- [ ] 🟡 Textes construits dynamiquement : pluriels (« 1 message » / « 3 messages »), paramètres insérés dans les phrases (« Compte {0} : {1} non lus »)
+- [x] 🟠 **Extraire tous les textes** du XAML et du C++ dans des fichiers de ressources (`Resources.resw` par langue, `x:Uid` dans le XAML, `ResourceLoader` / MRT Core dans le code) — infrastructure .resw et loader MRT Core en place (`I18n.h`), premiers modules raccordés
+- [x] 🟡 Textes construits dynamiquement : pluriels (« 1 message » / « 3 messages »), paramètres insérés dans les phrases (« Compte {0} : {1} non lus »)
 - [x] 🟢 Dates, heures, nombres et tailles formatés selon la langue (`Windows.Globalization` et `StrFormatByteSizeW`)
 - [ ] 🟡 Messages d'erreur d'`evo-core` traduits (chaînes C passées par gettext avec un domaine `evo-core`, ou codes d'erreur traduits côté interface)
 - [x] 🟢 Préfixes de réponse / transfert selon la langue (« RE: » / « TR: », « AW: » / « WG: », « R: » / « I: »…) et en-tête de citation traduit

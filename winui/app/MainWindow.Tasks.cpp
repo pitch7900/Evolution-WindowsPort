@@ -20,6 +20,8 @@
 #include <chrono>
 #include <cmath>
 #include <cwctype>
+#include <map>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -33,6 +35,37 @@ using namespace Windows::Data::Json;
 using namespace Windows::Foundation;
 
 using namespace ::EvolutionWin::Helpers;
+
+namespace
+{
+    /* Compte choisi dans le volet des listes de tâches ("" = tous les comptes). */
+    std::wstring s_task_account_key;
+    /* Groupes de comptes repliés dans la liste (clés de compte). */
+    std::set<std::wstring> s_task_collapsed_groups;
+    /* Signature du contenu du volet des listes : évite de le reconstruire (et de
+     * perdre la sélection) quand rien n'a changé. */
+    std::wstring s_task_pane_signature;
+
+    /**
+     * @brief Clé de regroupement par compte d'une tâche ou d'une liste de tâches.
+     * @param obj Objet JSON d'evo-core (tâche ou liste) avec account_uid / account_name / account.
+     * @return L'UID du compte, à défaut son nom, à défaut « local ».
+     */
+    std::wstring TaskAccountKey(Windows::Data::Json::JsonObject const& obj)
+    {
+        std::wstring key{ obj.GetNamedString(L"account_uid", L"") };
+        if (key.empty())
+            key = std::wstring{ obj.GetNamedString(L"account_name", obj.GetNamedString(L"account", L"")) };
+        return key.empty() ? std::wstring{ L"local" } : key;
+    }
+
+    /** @brief Tâche ouverte (ni terminée ni annulée) ? */
+    bool IsOpenTask(Windows::Data::Json::JsonObject const& task)
+    {
+        auto status = task.GetNamedString(L"status", L"");
+        return status != L"completed" && status != L"cancelled";
+    }
+}
 
 namespace winrt::EvolutionWin::implementation
 {
@@ -170,24 +203,15 @@ namespace winrt::EvolutionWin::implementation
                 return;
 
             m_task_lists = lists;
-            m_updating_task_view = true;
 
-            auto items = TaskListChoice().Items();
-            items.Clear();
-            items.Append(box_value(Tr(L"Toutes les listes")));
-            int selected = 0;
-            for (uint32_t i = 0; i < lists.Size(); i++)
-            {
-                auto list = lists.GetObjectAt(i);
-                items.Append(box_value(list.GetNamedString(L"name", L"")));
-                if (list.GetNamedString(L"uid", L"") == m_task_list_uid)
-                    selected = static_cast<int>(i) + 1;
-            }
-            if (selected == 0)
+            /* la liste mémorisée a pu disparaître */
+            bool found = m_task_list_uid.empty();
+            for (uint32_t i = 0; i < lists.Size() && !found; i++)
+                found = lists.GetObjectAt(i).GetNamedString(L"uid", L"") == m_task_list_uid;
+            if (!found)
                 m_task_list_uid = L"";
-            TaskListChoice().SelectedIndex(selected);
+            s_task_pane_signature.clear();
 
-            m_updating_task_view = false;
             ShowTasks();
             UpdateTodoBar();
         });
@@ -351,6 +375,138 @@ namespace winrt::EvolutionWin::implementation
         if (!m_all_tasks)
             return;
 
+        auto resources = Application::Current().Resources();
+        auto secondary_brush = resources.Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>();
+
+        /* ---- volet gauche : comptes et listes, avec le nombre de tâches ouvertes ---- */
+        struct PaneList { std::wstring uid, name; int open = 0; };
+        struct PaneGroup { std::wstring key, name, email; int open = 0; std::vector<PaneList> lists; };
+        std::vector<PaneGroup> groups;
+        std::map<std::wstring, size_t> group_index;
+        int total_open = 0;
+
+        auto group_of = [&](std::wstring const& key, std::wstring const& name, std::wstring const& email) -> PaneGroup&
+        {
+            auto it = group_index.find(key);
+            if (it == group_index.end())
+            {
+                group_index[key] = groups.size();
+                groups.push_back(PaneGroup{ key, name, email });
+                return groups.back();
+            }
+            if (groups[it->second].email.empty())
+                groups[it->second].email = email;
+            return groups[it->second];
+        };
+
+        if (m_task_lists)
+        {
+            for (auto const& value : m_task_lists)
+            {
+                auto list = value.GetObject();
+                auto& group = group_of(TaskAccountKey(list), std::wstring{ list.GetNamedString(L"account", Tr(L"Compte local")) },
+                    std::wstring{ list.GetNamedString(L"account_email", L"") });
+                group.lists.push_back(PaneList{ std::wstring{ list.GetNamedString(L"uid", L"") }, std::wstring{ list.GetNamedString(L"name", L"") } });
+            }
+        }
+        for (auto const& value : m_all_tasks)
+        {
+            auto task = value.GetObject();
+            hstring account_name, account_email;
+            GetTaskAccountInfo(task, account_name, account_email);
+            auto& group = group_of(TaskAccountKey(task), std::wstring{ account_name }, std::wstring{ account_email });
+            if (!IsOpenTask(task))
+                continue;
+            ++group.open;
+            ++total_open;
+            std::wstring list_uid{ task.GetNamedString(L"list_uid", L"") };
+            for (auto& list : group.lists)
+                if (list.uid == list_uid)
+                    ++list.open;
+        }
+
+        std::wstring selected_tag = !m_task_list_uid.empty() ? L"list:" + std::wstring{ m_task_list_uid }
+            : !s_task_account_key.empty() ? L"account:" + s_task_account_key : L"all";
+        std::wstring signature = selected_tag + L"|" + std::to_wstring(total_open);
+        for (auto const& group : groups)
+        {
+            signature += L"|" + group.key + L"/" + group.name + L"/" + std::to_wstring(group.open);
+            for (auto const& list : group.lists)
+                signature += L"," + list.uid + L":" + list.name + L":" + std::to_wstring(list.open);
+        }
+
+        if (signature != s_task_pane_signature)
+        {
+            s_task_pane_signature = signature;
+            m_updating_task_view = true;
+            auto pane = TaskListChoice().Items();
+            pane.Clear();
+            hstring selected_title = Tr(L"Toutes les tâches");
+
+            /* élément de volet : nom, adresse éventuelle et nombre de tâches ouvertes */
+            auto make_item = [&](std::wstring const& tag, std::wstring const& name, std::wstring const& caption,
+                                 int open, bool is_account, double indent)
+            {
+                ListViewItem item;
+                item.Tag(box_value(hstring{ tag }));
+                Grid line;
+                line.ColumnSpacing(8);
+                line.Margin(ThicknessHelper::FromLengths(indent, 0, 0, 0));
+                ColumnDefinition text_col;
+                ColumnDefinition count_col;
+                count_col.Width(GridLengthHelper::Auto());
+                line.ColumnDefinitions().Append(text_col);
+                line.ColumnDefinitions().Append(count_col);
+
+                StackPanel text;
+                text.VerticalAlignment(VerticalAlignment::Center);
+                TextBlock title;
+                title.Text(hstring{ name });
+                title.TextTrimming(TextTrimming::CharacterEllipsis);
+                if (is_account)
+                    title.Style(resources.Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>());
+                text.Children().Append(title);
+                if (!caption.empty())
+                {
+                    TextBlock sub;
+                    sub.Text(hstring{ caption });
+                    sub.Style(resources.Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+                    sub.Foreground(secondary_brush);
+                    sub.TextTrimming(TextTrimming::CharacterEllipsis);
+                    text.Children().Append(sub);
+                }
+                line.Children().Append(text);
+
+                if (open > 0)
+                {
+                    TextBlock count;
+                    count.Text(to_hstring(open));
+                    count.Style(resources.Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
+                    count.Foreground(secondary_brush);
+                    count.VerticalAlignment(VerticalAlignment::Center);
+                    Grid::SetColumn(count, 1);
+                    line.Children().Append(count);
+                }
+                item.Content(line);
+                pane.Append(item);
+                if (tag == selected_tag)
+                {
+                    TaskListChoice().SelectedItem(item);
+                    selected_title = hstring{ name };
+                }
+            };
+
+            make_item(L"all", std::wstring{ Tr(L"Toutes les tâches") }, L"", total_open, false, 0);
+            for (auto const& group : groups)
+            {
+                make_item(L"account:" + group.key, group.name, group.email, group.open, true, 0);
+                for (auto const& list : group.lists)
+                    make_item(L"list:" + list.uid, list.name, L"", list.open, false, 12);
+            }
+            TaskViewTitle().Text(selected_title);
+            m_updating_task_view = false;
+        }
+
         hstring filter = L"all";
         if (auto item = TaskFilterBar().SelectedItem())
             filter = unbox_value_or<hstring>(item.Tag(), L"all");
@@ -362,6 +518,8 @@ namespace winrt::EvolutionWin::implementation
         {
             auto task = value.GetObject();
             if (!m_task_list_uid.empty() && task.GetNamedString(L"list_uid", L"") != m_task_list_uid)
+                continue;
+            if (!s_task_account_key.empty() && TaskAccountKey(task) != s_task_account_key)
                 continue;
             if (!show_completed && task.GetNamedString(L"status", L"") == L"completed")
                 continue;
@@ -396,8 +554,63 @@ namespace winrt::EvolutionWin::implementation
         });
 
         bool show_list = m_task_list_uid.empty() && m_task_lists && m_task_lists.Size() > 1;
-        for (auto const& task : tasks)
-            items.Append(BuildTaskRow(task, show_list));
+
+        /* Vue « toutes les tâches » avec plusieurs comptes : un groupe repliable par compte */
+        bool grouped = m_task_list_uid.empty() && s_task_account_key.empty() && groups.size() > 1;
+        if (!grouped)
+        {
+            for (auto const& task : tasks)
+                items.Append(BuildTaskRow(task, show_list, groups.size() > 1));
+        }
+        else
+        {
+            for (auto const& group : groups)
+            {
+                std::vector<JsonObject> in_group;
+                for (auto const& task : tasks)
+                    if (TaskAccountKey(task) == group.key)
+                        in_group.push_back(task);
+                if (in_group.empty())
+                    continue;
+
+                bool collapsed = s_task_collapsed_groups.count(group.key) > 0;
+                Grid header;
+                header.Tag(box_value(hstring{ L"group:" + group.key }));
+                header.ColumnSpacing(8);
+                header.Padding(ThicknessHelper::FromLengths(8, 8, 8, 8));
+                header.Margin(ThicknessHelper::FromLengths(0, 8, 0, 0));
+                header.Background(resources.Lookup(box_value(L"CardBackgroundFillColorDefaultBrush")).as<Brush>());
+                header.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));
+                ColumnDefinition chevron_col;
+                chevron_col.Width(GridLengthHelper::Auto());
+                header.ColumnDefinitions().Append(chevron_col);
+                header.ColumnDefinitions().Append(ColumnDefinition{});
+
+                FontIcon chevron;
+                chevron.Glyph(collapsed ? L"\xE76C" : L"\xE70D");
+                chevron.FontSize(12);
+                chevron.VerticalAlignment(VerticalAlignment::Center);
+                header.Children().Append(chevron);
+
+                TextBlock label;
+                label.VerticalAlignment(VerticalAlignment::Center);
+                label.Style(resources.Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>());
+                label.TextTrimming(TextTrimming::CharacterEllipsis);
+                std::wstring text = group.name;
+                if (!group.email.empty())
+                    text += L"  \u2022  " + group.email;
+                text += L"  (" + std::to_wstring(in_group.size()) + L")";
+                label.Text(hstring{ text });
+                Grid::SetColumn(label, 1);
+                header.Children().Append(label);
+                items.Append(header);
+
+                if (collapsed)
+                    continue;
+                for (auto const& task : in_group)
+                    items.Append(BuildTaskRow(task, show_list, false));
+            }
+        }
 
         if (tasks.empty())
         {
@@ -481,7 +694,7 @@ namespace winrt::EvolutionWin::implementation
         }
     }
 
-    UIElement MainWindow::BuildTaskRow(JsonObject const& task, bool show_list)
+    UIElement MainWindow::BuildTaskRow(JsonObject const& task, bool show_list, bool show_account)
     {
         auto resources = Application::Current().Resources();
         auto caption_style = resources.Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>();
@@ -531,38 +744,42 @@ namespace winrt::EvolutionWin::implementation
         }
         details.Children().Append(title);
 
-        /* Compte source de la tâche (nom du compte et adresse email associée) */
-        hstring account_name, account_email;
-        GetTaskAccountInfo(task, account_name, account_email);
+        /* Compte source de la tâche : inutile sous un en-tête de compte */
+        if (show_account)
+        {
+            hstring account_name, account_email;
+            GetTaskAccountInfo(task, account_name, account_email);
 
-        Border account_badge;
-        account_badge.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));
-        account_badge.Padding(ThicknessHelper::FromLengths(6, 2, 6, 2));
-        account_badge.Background(resources.Lookup(box_value(L"CardBackgroundFillColorDefaultBrush")).as<Brush>());
-        account_badge.BorderBrush(resources.Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>());
-        account_badge.BorderThickness(ThicknessHelper::FromUniformLength(1));
-        account_badge.HorizontalAlignment(HorizontalAlignment::Left);
-        account_badge.Margin(ThicknessHelper::FromLengths(0, 1, 0, 2));
+            Border account_badge;
+            account_badge.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));
+            account_badge.Padding(ThicknessHelper::FromLengths(6, 2, 6, 2));
+            account_badge.Background(resources.Lookup(box_value(L"CardBackgroundFillColorDefaultBrush")).as<Brush>());
+            account_badge.BorderBrush(resources.Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>());
+            account_badge.BorderThickness(ThicknessHelper::FromUniformLength(1));
+            account_badge.HorizontalAlignment(HorizontalAlignment::Left);
+            account_badge.Margin(ThicknessHelper::FromLengths(0, 1, 0, 2));
 
-        StackPanel badge_panel;
-        badge_panel.Orientation(Orientation::Horizontal);
-        badge_panel.Spacing(5);
+            StackPanel badge_panel;
+            badge_panel.Orientation(Orientation::Horizontal);
+            badge_panel.Spacing(5);
 
-        FontIcon badge_icon;
-        badge_icon.FontSize(11);
-        badge_icon.Glyph(account_email.empty() ? L"\xE977" : L"\xE715");
-        badge_icon.Foreground(secondary_brush);
-        badge_panel.Children().Append(badge_icon);
+            FontIcon badge_icon;
+            badge_icon.FontSize(11);
+            badge_icon.Glyph(account_email.empty() ? L"\xE977" : L"\xE715");
+            badge_icon.Foreground(secondary_brush);
+            badge_panel.Children().Append(badge_icon);
 
-        TextBlock badge_text;
-        badge_text.Style(caption_style);
-        if (!account_email.empty())
-            badge_text.Text(account_name + L" • " + account_email);
-        else
-            badge_text.Text(account_name);
-        badge_panel.Children().Append(badge_text);
-        account_badge.Child(badge_panel);
-        details.Children().Append(account_badge);
+            TextBlock badge_text;
+            badge_text.Style(caption_style);
+            if (!account_email.empty())
+                badge_text.Text(account_name + L" • " + account_email);
+            else
+                badge_text.Text(account_name);
+            badge_panel.Children().Append(badge_text);
+            account_badge.Child(badge_panel);
+            details.Children().Append(account_badge);
+
+        }
 
         StackPanel line;
         line.Orientation(Orientation::Horizontal);
@@ -717,16 +934,25 @@ namespace winrt::EvolutionWin::implementation
         LoadTasks();
     }
 
-    /* Choix de la liste de tâches affichée (« Toutes les listes » en tête). */
+    /* Choix dans le volet gauche : « Toutes les tâches », un compte (toutes ses
+     * listes) ou une liste. L'étiquette de l'élément vaut "all", "account:<clé>"
+     * ou "list:<uid>". */
     void MainWindow::OnTaskListChanged(IInspectable const&, SelectionChangedEventArgs const&)
     {
         if (m_updating_task_view)
             return;
 
-        int index = TaskListChoice().SelectedIndex();
-        m_task_list_uid = (index > 0 && m_task_lists && static_cast<uint32_t>(index) <= m_task_lists.Size())
-            ? m_task_lists.GetObjectAt(static_cast<uint32_t>(index - 1)).GetNamedString(L"uid", L"")
-            : hstring{};
+        auto item = TaskListChoice().SelectedItem().try_as<ListViewItem>();
+        if (!item)
+            return;
+
+        std::wstring tag{ unbox_value_or<hstring>(item.Tag(), L"all") };
+        m_task_list_uid = L"";
+        s_task_account_key.clear();
+        if (tag.rfind(L"list:", 0) == 0)
+            m_task_list_uid = hstring{ tag.substr(5) };
+        else if (tag.rfind(L"account:", 0) == 0)
+            s_task_account_key = tag.substr(8);
         ShowTasks();
     }
 
@@ -767,8 +993,22 @@ namespace winrt::EvolutionWin::implementation
     void MainWindow::OnTaskItemClick(IInspectable const&, ItemClickEventArgs const& args)
     {
         auto row = args.ClickedItem().try_as<Grid>();
+        if (!row)
+            return;
+
+        /* en-tête de groupe de compte : replier / déplier */
+        std::wstring tag{ unbox_value_or<hstring>(row.Tag(), L"") };
+        if (tag.rfind(L"group:", 0) == 0)
+        {
+            std::wstring key = tag.substr(6);
+            if (!s_task_collapsed_groups.erase(key))
+                s_task_collapsed_groups.insert(key);
+            ShowTasks();
+            return;
+        }
+
         JsonObject task;
-        if (row && JsonObject::TryParse(unbox_value_or<hstring>(row.Tag(), L""), task))
+        if (JsonObject::TryParse(hstring{ tag }, task))
             ShowTaskEditorAsync(task);
     }
 

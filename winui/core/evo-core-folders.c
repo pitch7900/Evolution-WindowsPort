@@ -597,6 +597,181 @@ core_ref_folder_cached (EvoCore *core,
 	return tracked;
 }
 
+/* Fenêtre de synchronisation d'un dossier : certains fournisseurs (Microsoft 365) ne synchronisent
+ * que les N messages les plus récents (propriétés "sync-limit" et "sync-truncated" du dossier).
+ * Paramètres :
+ *   folder        : dossier
+ *   out_truncated : TRUE si le serveur a des messages plus anciens que ceux synchronisés
+ *   out_limit     : nombre de messages les plus récents synchronisés (0 : tous)
+ * Retourne : FALSE si le fournisseur n'a pas de fenêtre (tous les messages sont synchronisés). */
+gboolean
+core_folder_sync_window_of (CamelFolder *folder,
+			    gboolean *out_truncated,
+			    gint *out_limit)
+{
+	GObjectClass *klass = G_OBJECT_GET_CLASS (folder);
+	gboolean truncated = FALSE;
+	gint limit = 0;
+
+	if (!g_object_class_find_property (klass, "sync-limit") || !g_object_class_find_property (klass, "sync-truncated"))
+		return FALSE;
+
+	g_object_get (folder, "sync-truncated", &truncated, "sync-limit", &limit, NULL);
+
+	if (out_truncated)
+		*out_truncated = truncated;
+	if (out_limit)
+		*out_limit = limit;
+
+	return TRUE;
+}
+
+/* Nombre de messages affichés par défaut dans la liste d'un dossier : la fenêtre de synchronisation
+ * s'il y en a une (Microsoft 365), sinon 500. */
+guint
+core_folder_default_list_max (CamelFolder *folder)
+{
+	gint limit = 0;
+
+	if (core_folder_sync_window_of (folder, NULL, &limit))
+		return limit > 0 ? (guint) limit : 5000;
+
+	return 500;
+}
+
+/* Comme core_folder_sync_window_of (), pour un dossier suivi (déjà ouvert) désigné par son nom. */
+gboolean
+core_folder_sync_window (EvoCore *core,
+			 const gchar *account_uid,
+			 const gchar *folder_name,
+			 gboolean *out_truncated,
+			 gint *out_limit)
+{
+	gchar *key = folder_key (account_uid, folder_name);
+	CamelFolder *folder;
+	gboolean supported = FALSE;
+
+	g_mutex_lock (&core->folders_lock);
+	folder = g_hash_table_lookup (core->folders, key);
+	if (folder)
+		g_object_ref (folder);
+	g_mutex_unlock (&core->folders_lock);
+	g_free (key);
+
+	if (folder) {
+		supported = core_folder_sync_window_of (folder, out_truncated, out_limit);
+		g_object_unref (folder);
+	}
+
+	return supported;
+}
+
+/* État de la fenêtre de synchronisation d'un dossier.
+ * Paramètres : args = [compte, dossier]
+ * Retourne : {"supported": bool, "truncated": bool, "limit": n}. */
+static gchar *
+core_folder_sync_info_run (EvoCore *core,
+			   gchar **args,
+			   GError **error)
+{
+	gchar *key = folder_key (args[0], args[1]);
+	CamelFolder *folder;
+	gboolean truncated = FALSE, supported = FALSE;
+	gint limit = 0;
+	guint count = 0, default_max = 500;
+
+	g_mutex_lock (&core->folders_lock);
+	folder = g_hash_table_lookup (core->folders, key);
+	if (folder)
+		g_object_ref (folder);
+	g_mutex_unlock (&core->folders_lock);
+	g_free (key);
+
+	if (folder) {
+		CamelFolderSummary *summary = camel_folder_get_folder_summary (folder);
+
+		supported = core_folder_sync_window_of (folder, &truncated, &limit);
+		default_max = core_folder_default_list_max (folder);
+		count = summary ? camel_folder_summary_count (summary) : 0;
+		g_object_unref (folder);
+	}
+
+	return g_strdup_printf ("{\"supported\": %s, \"truncated\": %s, \"limit\": %d, \"count\": %u, \"default_max\": %u}",
+		supported ? "true" : "false", supported && truncated ? "true" : "false", supported ? limit : 0, count, default_max);
+}
+
+/* Étend la fenêtre de synchronisation d'un dossier de « extra » messages plus anciens et lance la
+ * relève en fond (la fin est annoncée par "folder-refreshed").
+ * Paramètres : args = [compte, dossier, nombre de messages à ajouter]
+ * Retourne : {"limit": nouvelle limite}. */
+static gchar *
+core_extend_folder_sync_run (EvoCore *core,
+			     gchar **args,
+			     GError **error)
+{
+	CamelFolder *folder = core_ref_folder_cached (core, args[0], args[1], NULL, error);
+	gint64 extra = g_ascii_strtoll (args[2] ? args[2] : "0", NULL, 10);
+	gint limit = 0;
+	gchar **bg_args;
+
+	if (!folder)
+		return NULL;
+
+	if (!core_folder_sync_window_of (folder, NULL, &limit)) {
+		g_object_unref (folder);
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			"Ce compte synchronise déjà tous les messages du dossier");
+		return NULL;
+	}
+
+	if (limit > 0 && extra > 0) {
+		/* extra_count très grand (G_MAXUINT) : tout charger, plus de limite */
+		limit = extra >= G_MAXINT / 2 ? 0 : limit + (gint) extra;
+		g_object_set (folder, "sync-limit", limit, NULL);
+	}
+	g_object_unref (folder);
+
+	bg_args = g_new0 (gchar *, 3);
+	bg_args[0] = g_strdup (args[0]);
+	bg_args[1] = g_strdup (args[1]);
+	core_submit_background (core, core_folder_background_refresh_run, bg_args, core_ignore_result, NULL);
+
+	return g_strdup_printf ("{\"limit\": %d}", limit);
+}
+
+void
+evo_core_get_folder_sync_info (EvoCore *core,
+			       const char *account_uid,
+			       const char *folder_full_name,
+			       EvoCoreResultFunc func,
+			       void *user_data)
+{
+	gchar *args[] = { (gchar *) account_uid, (gchar *) folder_full_name, NULL };
+
+	g_return_if_fail (core != NULL);
+	g_return_if_fail (account_uid != NULL && folder_full_name != NULL);
+
+	core_submit (core, core_folder_sync_info_run, g_strdupv (args), func, user_data);
+}
+
+void
+evo_core_extend_folder_sync (EvoCore *core,
+			     const char *account_uid,
+			     const char *folder_full_name,
+			     unsigned int extra_count,
+			     EvoCoreResultFunc func,
+			     void *user_data)
+{
+	gchar count[16];
+	gchar *args[] = { (gchar *) account_uid, (gchar *) folder_full_name, count, NULL };
+
+	g_return_if_fail (core != NULL);
+	g_return_if_fail (account_uid != NULL && folder_full_name != NULL);
+
+	g_snprintf (count, sizeof (count), "%u", extra_count);
+	core_submit (core, core_extend_folder_sync_run, g_strdupv (args), func, user_data);
+}
+
 void
 evo_core_list_folders (EvoCore *core,
 		       const char *account_uid,

@@ -39,8 +39,17 @@ core_emit_folder_refreshed (EvoCore *core,
 {
 	JsonBuilder *builder = core_event_builder ();
 
+	gboolean truncated = FALSE;
+	gint limit = 0;
+
 	builder_add_string (builder, "account", account_uid);
 	builder_add_string (builder, "folder", folder_name);
+	/* fenêtre de synchronisation (Microsoft 365) : le serveur a-t-il des messages plus anciens ? */
+	if (core_folder_sync_window (core, account_uid, folder_name, &truncated, &limit)) {
+		builder_add_boolean (builder, "window", TRUE);
+		builder_add_boolean (builder, "truncated", truncated);
+		builder_add_int (builder, "limit", limit);
+	}
 	core_emit_builder (core, "folder-refreshed", builder);
 }
 

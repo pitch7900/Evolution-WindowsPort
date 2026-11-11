@@ -69,7 +69,9 @@ struct _CamelM365FolderPrivate {
 enum {
 	PROP_0,
 	PROP_APPLY_FILTERS,
-	PROP_CHECK_FOLDER
+	PROP_CHECK_FOLDER,
+	PROP_SYNC_LIMIT,
+	PROP_SYNC_TRUNCATED
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (CamelM365Folder, camel_m365_folder, CAMEL_TYPE_OFFLINE_FOLDER)
@@ -877,6 +879,70 @@ m365_folder_got_summary_messages_cb (EM365Connection *cnc,
 	return TRUE;
 }
 
+/* Filtre de la première énumération : seuls les 'limit' messages les plus récents du dossier sont
+ * synchronisés (« receivedDateTime ge <date du plus ancien> »). La date limite est calculée une fois
+ * (message de rang limit-1 du plus récent au plus ancien) puis conservée dans le résumé ; un dossier de
+ * moins de 'limit' messages n'a pas de fenêtre (tout est synchronisé).
+ * Paramètres :
+ *   summary : résumé du dossier
+ *   cnc, folder_id, cancellable, error : connexion et dossier
+ *   out_filter : reçoit le filtre (g_free) ou NULL s'il n'y a pas de fenêtre
+ * Retourne : FALSE si la date limite n'a pas pu être calculée (la relève échoue : on ne synchronise pas tout) */
+static gboolean
+m365_folder_window_filter (CamelM365FolderSummary *summary,
+			   EM365Connection *cnc,
+			   const gchar *folder_id,
+			   GCancellable *cancellable,
+			   gchar **out_filter,
+			   GError **error)
+{
+	gint64 window_start = 0;
+	gboolean truncated = FALSE;
+	gint limit = CAMEL_M365_DEFAULT_SYNC_LIMIT;
+
+	*out_filter = NULL;
+
+	camel_m365_folder_summary_get_window (summary, &window_start, &truncated, &limit);
+
+	/* « Tout charger » : plus de fenêtre, le serveur n'a plus de messages hors de la synchronisation */
+	if (limit == 0 && (truncated || window_start != 0)) {
+		window_start = 0;
+		truncated = FALSE;
+		camel_m365_folder_summary_set_window (summary, 0, FALSE, 0);
+	}
+
+	if (limit > 0 && window_start == 0) {
+		time_t received = 0;
+
+		if (!e_m365_connection_get_mail_window_start_sync (cnc, NULL, folder_id, (guint) limit - 1, &received, cancellable, error))
+			return FALSE;
+
+		if (received > 0) {
+			window_start = (gint64) received;
+			truncated = TRUE;
+		} else {
+			window_start = 0;
+			truncated = FALSE;
+		}
+
+		camel_m365_folder_summary_set_window (summary, window_start, truncated, limit);
+	}
+
+	if (window_start > 0) {
+		GDateTime *when = g_date_time_new_from_unix_utc (window_start);
+
+		if (when) {
+			gchar *iso = g_date_time_format (when, "%Y-%m-%dT%H:%M:%SZ");
+
+			*out_filter = g_strdup_printf ("receivedDateTime ge %s", iso);
+			g_free (iso);
+			g_date_time_unref (when);
+		}
+	}
+
+	return TRUE;
+}
+
 /* Taille de page demandée au serveur pour la synchronisation des messages (« Prefer: odata.maxpagesize »).
  * Sans préférence, Graph renvoie 10 messages par page : une première synchronisation de 8 000 messages
  * demande plus de dix minutes, et comme le jeton de synchronisation n'est enregistré qu'à la fin (et les
@@ -898,8 +964,8 @@ m365_folder_refresh_info_sync_real (CamelFolder *folder,
 	SummaryDeltaData sdd;
 	GError *local_error = NULL;
 	const gchar *folder_id;
-	gchar *curr_delta_link, *new_delta_link = NULL;
-	gboolean success;
+	gchar *curr_delta_link, *new_delta_link = NULL, *filter = NULL;
+	gboolean success = TRUE;
 
 	g_return_val_if_fail (CAMEL_IS_M365_FOLDER (folder), FALSE);
 
@@ -928,25 +994,37 @@ m365_folder_refresh_info_sync_real (CamelFolder *folder,
 	sdd.removed_uids = NULL;
 	sdd.known_uids = NULL;
 
-	if (!curr_delta_link)
+	if (!curr_delta_link) {
 		sdd.known_uids = camel_folder_summary_get_hash (folder_summary);
+		/* première énumération : limitée aux messages les plus récents (fenêtre de synchronisation) */
+		success = m365_folder_window_filter (m365_folder_summary, cnc, folder_id, cancellable, &filter, &local_error);
+	}
 
-	success = e_m365_connection_get_objects_delta_sync (cnc, NULL, E_M365_FOLDER_KIND_MAIL, folder_id, M365_FETCH_SUMMARY_PROPERTIES,
-		curr_delta_link, M365_MAIL_DELTA_MAX_PAGE_SIZE, m365_folder_got_summary_messages_cb, &sdd,
-		&new_delta_link, cancellable, &local_error);
+	if (success)
+		success = e_m365_connection_get_objects_delta_filtered_sync (cnc, NULL, E_M365_FOLDER_KIND_MAIL, folder_id, M365_FETCH_SUMMARY_PROPERTIES,
+			filter, curr_delta_link, M365_MAIL_DELTA_MAX_PAGE_SIZE, m365_folder_got_summary_messages_cb, &sdd,
+			&new_delta_link, cancellable, &local_error);
 
 	if (curr_delta_link && e_m365_connection_util_delta_token_failed (local_error)) {
+		gint limit = CAMEL_M365_DEFAULT_SYNC_LIMIT;
+
 		g_clear_error (&local_error);
 		g_clear_pointer (&curr_delta_link, g_free);
 
 		camel_m365_folder_summary_set_delta_link (m365_folder_summary, NULL);
+		/* la fenêtre est recalculée avec le même nombre de messages */
+		camel_m365_folder_summary_get_window (m365_folder_summary, NULL, NULL, &limit);
+		camel_m365_folder_summary_set_window (m365_folder_summary, 0, FALSE, limit);
 
 		g_warn_if_fail (sdd.known_uids == NULL);
 		sdd.known_uids = camel_folder_summary_get_hash (folder_summary);
 
-		success = e_m365_connection_get_objects_delta_sync (cnc, NULL, E_M365_FOLDER_KIND_MAIL, folder_id, M365_FETCH_SUMMARY_PROPERTIES,
-			NULL, M365_MAIL_DELTA_MAX_PAGE_SIZE, m365_folder_got_summary_messages_cb, &sdd,
-			&new_delta_link, cancellable, &local_error);
+		success = m365_folder_window_filter (m365_folder_summary, cnc, folder_id, cancellable, &filter, &local_error);
+
+		if (success)
+			success = e_m365_connection_get_objects_delta_filtered_sync (cnc, NULL, E_M365_FOLDER_KIND_MAIL, folder_id, M365_FETCH_SUMMARY_PROPERTIES,
+				filter, NULL, M365_MAIL_DELTA_MAX_PAGE_SIZE, m365_folder_got_summary_messages_cb, &sdd,
+				&new_delta_link, cancellable, &local_error);
 	}
 
 	if (success && new_delta_link)
@@ -999,6 +1077,7 @@ m365_folder_refresh_info_sync_real (CamelFolder *folder,
 	g_clear_object (&cnc);
 	g_free (curr_delta_link);
 	g_free (new_delta_link);
+	g_free (filter);
 
 	return success;
 }
@@ -1711,6 +1790,15 @@ m365_folder_set_property (GObject *object,
 				CAMEL_M365_FOLDER (object),
 				g_value_get_boolean (value));
 			return;
+
+		case PROP_SYNC_LIMIT: {
+			CamelFolderSummary *summary = camel_folder_get_folder_summary (CAMEL_FOLDER (object));
+
+			/* nombre de messages les plus récents synchronisés : la prochaine relève recalcule la fenêtre */
+			if (summary)
+				camel_m365_folder_summary_set_sync_limit (CAMEL_M365_FOLDER_SUMMARY (summary), g_value_get_int (value));
+			return;
+		}
 	}
 
 	G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -1736,6 +1824,22 @@ m365_folder_get_property (GObject *object,
 				camel_m365_folder_get_check_folder (
 				CAMEL_M365_FOLDER (object)));
 			return;
+
+		case PROP_SYNC_LIMIT:
+		case PROP_SYNC_TRUNCATED: {
+			CamelFolderSummary *summary = camel_folder_get_folder_summary (CAMEL_FOLDER (object));
+			gboolean truncated = FALSE;
+			gint limit = CAMEL_M365_DEFAULT_SYNC_LIMIT;
+
+			if (summary)
+				camel_m365_folder_summary_get_window (CAMEL_M365_FOLDER_SUMMARY (summary), NULL, &truncated, &limit);
+
+			if (property_id == PROP_SYNC_LIMIT)
+				g_value_set_int (value, limit);
+			else
+				g_value_set_boolean (value, truncated);
+			return;
+		}
 	}
 
 	G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -1858,6 +1962,30 @@ camel_m365_folder_class_init (CamelM365FolderClass *klass)
 			G_PARAM_READWRITE |
 			G_PARAM_EXPLICIT_NOTIFY |
 			CAMEL_FOLDER_PARAM_PERSISTENT));
+
+	/* Fenêtre de synchronisation (EvolutionWin) : lue et modifiée par le moteur (g_object_get / g_object_set),
+	   conservée dans l'en-tête du résumé du dossier. */
+	g_object_class_install_property (
+		object_class,
+		PROP_SYNC_LIMIT,
+		g_param_spec_int (
+			"sync-limit",
+			"Sync Limit",
+			"Number of most recent messages kept in sync (0: all)",
+			0, G_MAXINT, CAMEL_M365_DEFAULT_SYNC_LIMIT,
+			G_PARAM_READWRITE |
+			G_PARAM_EXPLICIT_NOTIFY));
+
+	g_object_class_install_property (
+		object_class,
+		PROP_SYNC_TRUNCATED,
+		g_param_spec_boolean (
+			"sync-truncated",
+			"Sync Truncated",
+			"The server has older messages than the synchronized ones",
+			FALSE,
+			G_PARAM_READABLE |
+			G_PARAM_EXPLICIT_NOTIFY));
 }
 
 static void

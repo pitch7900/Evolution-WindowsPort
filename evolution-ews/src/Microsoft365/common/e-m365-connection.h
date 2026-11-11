@@ -250,6 +250,32 @@ gboolean	e_m365_connection_list_messages_sync
 						 GSList **out_messages, /* EM365MailMessage * - the returned objects */
 						 GCancellable *cancellable,
 						 GError **error);
+/* Date de réception du message de rang 'skip' (0 : le plus récent) d'un dossier, du plus récent au plus ancien.
+   *out_received_time vaut 0 si le dossier compte au plus 'skip' messages. */
+gboolean	e_m365_connection_get_mail_window_start_sync
+						(EM365Connection *cnc,
+						 const gchar *user_override, /* for which user, NULL to use the account user */
+						 const gchar *folder_id,
+						 guint skip,
+						 time_t *out_received_time,
+						 GCancellable *cancellable,
+						 GError **error);
+/* Comme e_m365_connection_get_objects_delta_sync (), avec un filtre ("receivedDateTime ge ..." pour les messages)
+   appliqué à la première énumération ; le jeton de synchronisation renvoyé le conserve. */
+gboolean	e_m365_connection_get_objects_delta_filtered_sync
+						(EM365Connection *cnc,
+						 const gchar *user_override, /* for which user, NULL to use the account user */
+						 EM365FolderKind kind,
+						 const gchar *folder_id, /* folder ID to get delta messages in */
+						 const gchar *select, /* nullable - properties to select */
+						 const gchar *filter, /* nullable - filter of the first enumeration */
+						 const gchar *delta_link, /* previous delta link */
+						 guint max_page_size, /* 0 for default by the server */
+						 EM365ConnectionJsonFunc func, /* function to call with each result set */
+						 gpointer func_user_data, /* user data passed into the 'func' */
+						 gchar **out_delta_link,
+						 GCancellable *cancellable,
+						 GError **error);
 gboolean	e_m365_connection_get_objects_delta_sync
 						(EM365Connection *cnc,
 						 const gchar *user_override, /* for which user, NULL to use the account user */

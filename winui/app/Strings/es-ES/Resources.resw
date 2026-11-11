@@ -6903,5 +6903,225 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Sincronizando la carpeta…</value>
     <comment>Synchronisation du dossier en cours…</comment>
   </data>
+  <data name="T_E1F0C263" xml:space="preserve">
+    <value>Solo se sincronizan los {0} mensajes más recientes de esta carpeta.</value>
+    <comment>Seuls les {0} messages les plus récents de ce dossier sont synchronisés.</comment>
+  </data>
+  <data name="T_95F2DDA4" xml:space="preserve">
+    <value>Cargar {0} mensajes más</value>
+    <comment>Charger {0} messages de plus</comment>
+  </data>
+  <data name="T_673FD122" xml:space="preserve">
+    <value>Aceptada el {0}.</value>
+    <comment>Acceptée le {0}.</comment>
+  </data>
+  <data name="T_13E9D796" xml:space="preserve">
+    <value>Aceptada provisionalmente el {0}.</value>
+    <comment>Provisoire le {0}.</comment>
+  </data>
+  <data name="T_3A6FCFF5" xml:space="preserve">
+    <value>Rechazada el {0}.</value>
+    <comment>Refusée le {0}.</comment>
+  </data>
+  <data name="T_37F00D41" xml:space="preserve">
+    <value>No se pudo detectar</value>
+    <comment>Détection impossible</comment>
+  </data>
+  <data name="T_A69929F8" xml:space="preserve">
+    <value>Elija el tipo de cuenta e introduzca los servidores a continuación.</value>
+    <comment>Choisissez le type de compte et renseignez les serveurs ci-dessous.</comment>
+  </data>
+  <data name="T_C86D8447" xml:space="preserve">
+    <value>Cargar todo</value>
+    <comment>Tout charger</comment>
+  </data>
+  <data name="T_ADD252EE" xml:space="preserve">
+    <value>¿Cargar todo?</value>
+    <comment>Tout charger ?</comment>
+  </data>
+  <data name="T_04D6244E" xml:space="preserve">
+    <value>Cargar todos los mensajes de esta carpeta puede tardar mucho: varios minutos, o más en una carpeta con decenas de miles de mensajes, y consume ancho de banda. EvolutionWin sigue siendo utilizable durante la carga.</value>
+    <comment>Charger tous les messages de ce dossier peut être très long : plusieurs minutes, voire davantage pour un dossier de plusieurs dizaines de milliers de messages, et consomme de la bande passante. EvolutionWin reste utilisable pendant le chargement.</comment>
+  </data>
+  <data name="T_3A2302D8" xml:space="preserve">
+    <value>Solo se muestran los {0} mensajes más recientes de esta carpeta ({1} en total).</value>
+    <comment>Seuls les {0} messages les plus récents de ce dossier sont affichés ({1} au total).</comment>
+  </data>
+  <data name="T_F159476E" xml:space="preserve">
+    <value>Mostrar {0} mensajes más</value>
+    <comment>Afficher {0} messages de plus</comment>
+  </data>
+  <data name="T_BB926001" xml:space="preserve">
+    <value>Mostrar todo</value>
+    <comment>Tout afficher</comment>
+  </data>
+  <data name="T_301AEA24" xml:space="preserve">
+    <value>¿Mostrar todo?</value>
+    <comment>Tout afficher ?</comment>
+  </data>
+  <data name="T_B3993400" xml:space="preserve">
+    <value>Mostrar los {0} mensajes de esta carpeta puede ralentizar la lista. ¿Continuar?</value>
+    <comment>Afficher les {0} messages de ce dossier peut ralentir la liste. Continuer ?</comment>
+  </data>
+  <data name="T_5BD83554" xml:space="preserve">
+    <value>Mostrando los mensajes…</value>
+    <comment>Affichage des messages en cours…</comment>
+  </data>
+  <data name="T_01C7B8DE" xml:space="preserve">
+    <value>Todas las tareas</value>
+    <comment>Toutes les tâches</comment>
+  </data>
+  <data name="T_E6D71139" xml:space="preserve">
+    <value>Mis tareas</value>
+    <comment>Mes tâches</comment>
+  </data>
+  <data name="T_8D811B8F" xml:space="preserve">
+    <value>Correo, calendario, contactos y tareas</value>
+    <comment>Messagerie, agenda, contacts et tâches</comment>
+  </data>
+  <data name="T_F3ABB543" xml:space="preserve">
+    <value>Importar categorías de las cuentas</value>
+    <comment>Reprendre les catégories des comptes</comment>
+  </data>
+  <data name="T_BA98BC7A" xml:space="preserve">
+    <value>Importa la lista de categorías (nombres y colores) de las cuentas de Microsoft 365 / Exchange Online; se conservan las categorías existentes.</value>
+    <comment>Importe la liste des catégories (noms et couleurs) des comptes Microsoft 365 / Exchange Online ; les catégories déjà présentes sont conservées.</comment>
+  </data>
+  <data name="T_A804DADC" xml:space="preserve">
+    <value>Ninguna cuenta que consultar.</value>
+    <comment>Aucun compte à interroger.</comment>
+  </data>
+  <data name="T_3798179B" xml:space="preserve">
+    <value>No se importó ninguna categoría (solo cuentas de Microsoft 365 / Exchange Online): {0}</value>
+    <comment>Aucune catégorie reprise (comptes Microsoft 365 / Exchange Online uniquement) : {0}</comment>
+  </data>
+  <data name="T_9DD1A05B" xml:space="preserve">
+    <value>{0} categoría(s) importada(s) de {1} cuenta(s).</value>
+    <comment>{0} catégorie(s) reprise(s) depuis {1} compte(s).</comment>
+  </data>
+  <data name="T_4B204851" xml:space="preserve">
+    <value>Importa las categorías (nombres y colores) de las cuentas de Microsoft 365 / Exchange Online (lista de categorías) y Gmail (etiquetas); se conservan las categorías existentes.</value>
+    <comment>Importe la liste des catégories (noms et couleurs) des comptes Microsoft 365 / Exchange Online (liste de catégories) et Gmail (libellés) ; les catégories déjà présentes sont conservées.</comment>
+  </data>
+  <data name="T_5257FC8E" xml:space="preserve">
+    <value>No se importó ninguna categoría (solo cuentas de Microsoft 365 / Exchange Online y Gmail): {0}</value>
+    <comment>Aucune catégorie reprise (comptes Microsoft 365 / Exchange Online et Gmail uniquement) : {0}</comment>
+  </data>
+  <data name="T_41CA98FA" xml:space="preserve">
+    <value>Categorías locales</value>
+    <comment>Catégories locales</comment>
+  </data>
+  <data name="T_00455D33" xml:space="preserve">
+    <value>{0} ({1})</value>
+    <comment>{0} ({1})</comment>
+  </data>
+  <data name="T_B40FA0D7" xml:space="preserve">
+    <value>Ya existe una carpeta "{0}" en el destino. "Combinar" solo copia los mensajes que aún no están (reanudación de una transferencia interrumpida); "Cambiar nombre" crea una carpeta distinta.</value>
+    <comment>Un dossier « {0} » existe déjà à la destination. « Fusionner » ne copie que les messages qui n'y sont pas encore (reprise d'un transfert interrompu) ; « Renommer » crée un dossier distinct.</comment>
+  </data>
+  <data name="T_FC9BF982" xml:space="preserve">
+    <value>Combinar</value>
+    <comment>Fusionner</comment>
+  </data>
+  <data name="T_AA315C44" xml:space="preserve">
+    <value>Cambiar nombre…</value>
+    <comment>Renommer…</comment>
+  </data>
+  <data name="T_C6D3AA2F" xml:space="preserve">
+    <value>Transferencia de la carpeta "{0}" cancelada: {1} mensaje(s) copiado(s). Vuelva a lanzarla con "Combinar" para reanudarla.</value>
+    <comment>Transfert du dossier « {0} » annulé : {1} message(s) copié(s). Relancez-le avec « Fusionner » pour le reprendre.</comment>
+  </data>
+  <data name="T_68B44DD2" xml:space="preserve">
+    <value>Carpeta "{0}": {1} mensaje(s) copiado(s), {2} con error ({3}). Se conserva el original.</value>
+    <comment>Dossier « {0} » : {1} message(s) copié(s), {2} en échec ({3}). L'original est conservé.</comment>
+  </data>
+  <data name="T_50A2514D" xml:space="preserve">
+    <value>Carpeta "{0}" copiada ({1} mensaje(s), {2} ya presente(s)).</value>
+    <comment>Dossier « {0} » copié ({1} message(s), {2} déjà présent(s)).</comment>
+  </data>
+  <data name="T_7B9CEC73" xml:space="preserve">
+    <value>Carpeta "{0}" movida ({1} mensaje(s), {2} ya presente(s)).</value>
+    <comment>Dossier « {0} » déplacé ({1} message(s), {2} déjà présent(s)).</comment>
+  </data>
+  <data name="T_2F4D22DC" xml:space="preserve">
+    <value>Transferencia de la carpeta terminada</value>
+    <comment>Transfert du dossier terminé</comment>
+  </data>
+  <data name="T_E6F99930" xml:space="preserve">
+    <value>Transfiriendo la carpeta "{0}": {1}/{2}</value>
+    <comment>Transfert du dossier « {0} » : {1}/{2}</comment>
+  </data>
+  <data name="T_D10582F8" xml:space="preserve">
+    <value>Transfiriendo la carpeta "{0}": {1} mensaje(s)</value>
+    <comment>Transfert du dossier « {0} » : {1} message(s)</comment>
+  </data>
+  <data name="T_A92171B6" xml:space="preserve">
+    <value>Formato condicional</value>
+    <comment>Mise en forme conditionnelle</comment>
+  </data>
+  <data name="T_34C4A200" xml:space="preserve">
+    <value>Colorea automáticamente los mensajes y los eventos según reglas. Se aplica la primera regla que coincide: tinte de fondo en la lista de mensajes, color del evento en el calendario (si no hay categoría).</value>
+    <comment>Colore automatiquement les messages et les événements selon des règles. La première règle qui correspond s'applique : teinte de fond dans la liste des messages, couleur de l'événement dans le calendrier (si aucune catégorie n'est posée).</comment>
+  </data>
+  <data name="T_94AAE66B" xml:space="preserve">
+    <value>Regla activa</value>
+    <comment>Règle active</comment>
+  </data>
+  <data name="T_60FF5DF3" xml:space="preserve">
+    <value>El remitente contiene</value>
+    <comment>L'expéditeur contient</comment>
+  </data>
+  <data name="T_C277340C" xml:space="preserve">
+    <value>El dominio del remitente es</value>
+    <comment>Le domaine de l'expéditeur est</comment>
+  </data>
+  <data name="T_DDABDC69" xml:space="preserve">
+    <value>El asunto o el título contiene</value>
+    <comment>L'objet ou le titre contient</comment>
+  </data>
+  <data name="T_5D30AC1E" xml:space="preserve">
+    <value>La importancia es</value>
+    <comment>L'importance est</comment>
+  </data>
+  <data name="T_26124DC4" xml:space="preserve">
+    <value>El organizador contiene</value>
+    <comment>L'organisateur contient</comment>
+  </data>
+  <data name="T_0EE830E5" xml:space="preserve">
+    <value>ejemplo.es</value>
+    <comment>exemple.fr</comment>
+  </data>
+  <data name="T_1751C7FA" xml:space="preserve">
+    <value>Texto que buscar</value>
+    <comment>Texte à rechercher</comment>
+  </data>
+  <data name="T_F0EFF79C" xml:space="preserve">
+    <value>Dar más prioridad</value>
+    <comment>Donner plus de priorité</comment>
+  </data>
+  <data name="T_7B49CA2B" xml:space="preserve">
+    <value>Eliminar la regla</value>
+    <comment>Supprimer la règle</comment>
+  </data>
+  <data name="T_4EAB89C7" xml:space="preserve">
+    <value>Añadir una regla</value>
+    <comment>Ajouter une règle</comment>
+  </data>
+  <data name="T_1AB967D0" xml:space="preserve">
+    <value>¿Eliminar la categoría de las cuentas?</value>
+    <comment>Supprimer la catégorie des comptes ?</comment>
+  </data>
+  <data name="T_7382BFDF" xml:space="preserve">
+    <value>La categoría «{0}» también se eliminará de la lista de categorías de sus cuentas (Microsoft 365, Gmail). Los mensajes ya clasificados la conservan.</value>
+    <comment>La catégorie « {0} » sera aussi supprimée de la liste des catégories de ses comptes (Microsoft 365, Gmail). Les messages déjà classés la conservent.</comment>
+  </data>
+  <data name="T_F8F10453" xml:space="preserve">
+    <value>Local (este equipo)</value>
+    <comment>Locale (cet ordinateur)</comment>
+  </data>
+  <data name="T_319D7875" xml:space="preserve">
+    <value>Categoría no actualizada en la cuenta {0}: {1}</value>
+    <comment>Catégorie non mise à jour sur le compte {0} : {1}</comment>
+  </data>
 </root>
 

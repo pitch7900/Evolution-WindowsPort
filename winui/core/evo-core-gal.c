@@ -103,12 +103,13 @@ gal_get_token (EvoCore *core,
  *   error      : emplacement pour une erreur réseau
  * Retourne : le corps de la réponse (même en cas d'erreur HTTP), NULL si injoignable. */
 static GBytes *
-gal_http_get (EvoCore *core,
-	      GalProvider provider,
-	      const gchar *uri,
-	      const gchar *token,
-	      guint *out_status,
-	      GError **error)
+gal_http_get_prefer (EvoCore *core,
+		     GalProvider provider,
+		     const gchar *uri,
+		     const gchar *token,
+		     const gchar *prefer,
+		     guint *out_status,
+		     GError **error)
 {
 	SoupSession *soup;
 	SoupMessage *msg;
@@ -123,6 +124,8 @@ gal_http_get (EvoCore *core,
 	soup_message_headers_replace (soup_message_get_request_headers (msg), "Accept", "application/json");
 	if (provider == GAL_PROVIDER_MICROSOFT365)
 		soup_message_headers_replace (soup_message_get_request_headers (msg), "ConsistencyLevel", "eventual");
+	if (prefer)
+		soup_message_headers_replace (soup_message_get_request_headers (msg), "Prefer", prefer);
 	g_free (authorization);
 
 	bytes = soup_session_send_and_read (soup, msg, core->cancellable, &local_error);
@@ -136,6 +139,17 @@ gal_http_get (EvoCore *core,
 	g_object_unref (soup);
 
 	return bytes;
+}
+
+static GBytes *
+gal_http_get (EvoCore *core,
+	      GalProvider provider,
+	      const gchar *uri,
+	      const gchar *token,
+	      guint *out_status,
+	      GError **error)
+{
+	return gal_http_get_prefer (core, provider, uri, token, NULL, out_status, error);
 }
 
 /* Message d'erreur d'une réponse Graph ou Google ({"error": {"message": ...}}). */
@@ -3123,4 +3137,216 @@ evo_core_set_message_classification (EvoCore *core,
 	g_return_if_fail (account_uid != NULL && message_id != NULL);
 
 	core_submit (core, core_set_classification_run, g_strdupv (args), func, user_data);
+}
+
+/* --- état d'une invitation et événements du jour (Microsoft Graph) --- */
+
+/* Date ISO 8601 d'une réponse (« 2026-11-11T08:16:09.0000000Z ») en secondes Unix ; 0 si absente ou
+ * invalide (Exchange renvoie l'an 1 pour « pas de réponse »). */
+static gint64
+gal_iso_to_unix (const gchar *text)
+{
+	gchar buffer[32];
+	GTimeZone *utc;
+	GDateTime *date;
+	gint64 result = 0;
+
+	if (!text || strlen (text) < 19)
+		return 0;
+
+	g_strlcpy (buffer, text, 20);
+	g_strlcat (buffer, "Z", sizeof (buffer));
+
+	utc = g_time_zone_new_utc ();
+	date = g_date_time_new_from_iso8601 (buffer, utc);
+	if (date) {
+		result = g_date_time_to_unix (date);
+		g_date_time_unref (date);
+	}
+	g_time_zone_unref (utc);
+
+	return result > 631152000 ? result : 0;	/* avant 1990 : « pas de date » */
+}
+
+/* Texte d'un membre de type objet (NULL si absent). */
+static JsonObject *
+gal_object_member (JsonObject *object,
+		   const gchar *name)
+{
+	return object && json_object_has_member (object, name) &&
+		JSON_NODE_HOLDS_OBJECT (json_object_get_member (object, name)) ?
+		json_object_get_object_member (object, name) : NULL;
+}
+
+/* État d'une invitation de réunion dans l'agenda Microsoft 365 du compte, par Microsoft Graph : réponse
+ * donnée (et sa date), et événements de l'agenda autour de la réunion (mini-grille de la journée).
+ * Bien plus rapide que d'ouvrir les agendas EDS (plus d'une minute pour un agenda Microsoft 365).
+ * Paramètres :
+ *   core        : moteur
+ *   account_uid : compte qui a reçu le message
+ *   event_uid   : UID iCalendar de l'événement (iCalUId)
+ *   out_found   : reçoit TRUE si l'événement est dans l'agenda
+ * Retourne : {"found", "my_status", "response_time", "sequence", "start", "end", "events": [{"subject",
+ *   "start", "end", "all_day", "show_as", "self"}]} (g_free), NULL si le compte n'est pas un compte
+ *   Microsoft 365 ou si Graph est injoignable (l'appelant se rabat alors sur les agendas EDS). */
+gchar *
+core_graph_invitation_event (EvoCore *core,
+			     const gchar *account_uid,
+			     const gchar *event_uid,
+			     gboolean *out_found)
+{
+	ESource *source;
+	GalProvider provider;
+	gchar *token = NULL, *escaped, *uri, *json = NULL;
+	GBytes *bytes;
+	guint status = 0;
+	JsonNode *root = NULL;
+	JsonObject *object, *self_event = NULL;
+	JsonBuilder *builder;
+	const gchar *prefer = "outlook.timezone=\"UTC\"";
+	const gchar *my_status = "needs-action";
+	gint64 response_time = 0, start = 0, end = 0;
+	gboolean found = FALSE;
+
+	*out_found = FALSE;
+
+	if (!event_uid || !*event_uid)
+		return NULL;
+
+	source = core_ref_credentials_source (core, account_uid, NULL);
+	if (!source)
+		return NULL;
+	if (!gal_collection_provider (source, &provider) || provider != GAL_PROVIDER_MICROSOFT365 ||
+	    !gal_get_token (core, source, &token, NULL)) {
+		g_object_unref (source);
+		return NULL;
+	}
+	g_object_unref (source);
+
+	/* 1. l'événement lui-même : réponse donnée et sa date */
+	{
+		gchar *quoted = g_strdup (event_uid), *cursor;
+		GString *doubled = g_string_new (NULL);
+
+		for (cursor = quoted; *cursor; cursor++) {
+			if (*cursor == '\'')
+				g_string_append_c (doubled, '\'');
+			g_string_append_c (doubled, *cursor);
+		}
+		escaped = g_uri_escape_string (doubled->str, NULL, TRUE);
+		g_string_free (doubled, TRUE);
+		g_free (quoted);
+	}
+	uri = g_strconcat ("https://graph.microsoft.com/v1.0/me/events?$filter=iCalUId%20eq%20%27", escaped,
+		"%27&$select=id,subject,start,end,isAllDay,showAs,responseStatus,isCancelled,iCalUId&$top=5", NULL);
+	g_free (escaped);
+
+	bytes = gal_http_get_prefer (core, GAL_PROVIDER_MICROSOFT365, uri, token, prefer, &status, NULL);
+	g_free (uri);
+	if (!bytes || status < 200 || status >= 300) {
+		g_message ("invitation Graph : HTTP %u pour l'événement", status);
+		g_clear_pointer (&bytes, g_bytes_unref);
+		e_util_safe_free_string (token);
+		return NULL;
+	}
+
+	object = gal_parse_response (bytes, &root, NULL);
+	g_bytes_unref (bytes);
+	if (object && json_object_has_member (object, "value") && JSON_NODE_HOLDS_ARRAY (json_object_get_member (object, "value"))) {
+		JsonArray *array = json_object_get_array_member (object, "value");
+
+		if (json_array_get_length (array) > 0 && JSON_NODE_HOLDS_OBJECT (json_array_get_element (array, 0))) {
+			JsonObject *event = json_array_get_object_element (array, 0);
+			JsonObject *rs = gal_object_member (event, "responseStatus");
+			const gchar *response = rs ? gal_string_member (rs, "response") : "";
+
+			found = !json_object_get_boolean_member_with_default (event, "isCancelled", FALSE);
+			if (g_strcmp0 (response, "accepted") == 0)
+				my_status = "accepted";
+			else if (g_strcmp0 (response, "tentativelyAccepted") == 0)
+				my_status = "tentative";
+			else if (g_strcmp0 (response, "declined") == 0)
+				my_status = "declined";
+			response_time = rs ? gal_iso_to_unix (gal_string_member (rs, "time")) : 0;
+			start = gal_graph_time (event, "start");
+			end = gal_graph_time (event, "end");
+			self_event = event;
+			(void) self_event;
+		}
+	}
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	builder_add_boolean (builder, "found", found);
+	builder_add_string (builder, "my_status", my_status);
+	builder_add_int (builder, "response_time", response_time);
+	builder_add_int (builder, "sequence", 0);
+	builder_add_int (builder, "start", start);
+	builder_add_int (builder, "end", end);
+
+	/* 2. les événements de l'agenda autour de la réunion (mini-grille) */
+	json_builder_set_member_name (builder, "events");
+	json_builder_begin_array (builder);
+	if (found && start > 0 && end > start) {
+		GDateTime *from = g_date_time_new_from_unix_utc (start - 3 * 3600);
+		GDateTime *to = g_date_time_new_from_unix_utc (end + 3 * 3600);
+		gchar *from_iso = from ? g_date_time_format (from, "%Y-%m-%dT%H:%M:%SZ") : NULL;
+		gchar *to_iso = to ? g_date_time_format (to, "%Y-%m-%dT%H:%M:%SZ") : NULL;
+
+		if (from_iso && to_iso) {
+			JsonNode *root2 = NULL;
+			JsonObject *window;
+
+			uri = g_strconcat ("https://graph.microsoft.com/v1.0/me/calendarView?startDateTime=", from_iso,
+				"&endDateTime=", to_iso, "&$select=subject,start,end,isAllDay,showAs,isCancelled,iCalUId&$orderby=start/dateTime&$top=50", NULL);
+			bytes = gal_http_get_prefer (core, GAL_PROVIDER_MICROSOFT365, uri, token, prefer, &status, NULL);
+			g_free (uri);
+
+			window = bytes && status >= 200 && status < 300 ? gal_parse_response (bytes, &root2, NULL) : NULL;
+			if (window && json_object_has_member (window, "value") && JSON_NODE_HOLDS_ARRAY (json_object_get_member (window, "value"))) {
+				JsonArray *array = json_object_get_array_member (window, "value");
+				guint ii;
+
+				for (ii = 0; ii < json_array_get_length (array); ii++) {
+					JsonObject *item;
+
+					if (!JSON_NODE_HOLDS_OBJECT (json_array_get_element (array, ii)))
+						continue;
+					item = json_array_get_object_element (array, ii);
+					if (json_object_get_boolean_member_with_default (item, "isCancelled", FALSE))
+						continue;
+
+					json_builder_begin_object (builder);
+					builder_add_string (builder, "subject", gal_string_member (item, "subject"));
+					builder_add_int (builder, "start", gal_graph_time (item, "start"));
+					builder_add_int (builder, "end", gal_graph_time (item, "end"));
+					builder_add_boolean (builder, "all_day", json_object_get_boolean_member_with_default (item, "isAllDay", FALSE));
+					builder_add_string (builder, "show_as", gal_string_member (item, "showAs"));
+					builder_add_boolean (builder, "self", g_strcmp0 (gal_string_member (item, "iCalUId"), event_uid) == 0);
+					json_builder_end_object (builder);
+				}
+			}
+			if (root2)
+				json_node_unref (root2);
+			g_clear_pointer (&bytes, g_bytes_unref);
+		}
+		g_free (from_iso);
+		g_free (to_iso);
+		if (from)
+			g_date_time_unref (from);
+		if (to)
+			g_date_time_unref (to);
+	}
+	json_builder_end_array (builder);
+	json_builder_end_object (builder);
+
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+	if (root)
+		json_node_unref (root);
+	e_util_safe_free_string (token);
+
+	*out_found = found;
+
+	return json;
 }

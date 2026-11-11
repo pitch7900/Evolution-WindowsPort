@@ -73,6 +73,20 @@ namespace EvolutionWin
                 max_count, &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Fenêtre de synchronisation d'un dossier ouvert : {"supported", "truncated", "limit"}. */
+        void GetFolderSyncInfo(winrt::hstring const& account, winrt::hstring const& folder, CoreHandler handler)
+        {
+            evo_core_get_folder_sync_info(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Étend la synchronisation d'un dossier de extra_count messages plus anciens : {"limit"} ou erreur. */
+        void ExtendFolderSync(winrt::hstring const& account, winrt::hstring const& folder, unsigned extra_count, CoreHandler handler)
+        {
+            evo_core_extend_folder_sync(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                extra_count, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* not GetMessage: a Win32 macro */
         void FetchMessage(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& uid, CoreHandler handler)
         {
@@ -231,6 +245,32 @@ namespace EvolutionWin
         void GetAutoReply(winrt::hstring const& account, CoreHandler handler)
         {
             evo_core_get_auto_reply(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Lit les catégories (liste principale) d'un compte Microsoft 365.
+         * Paramètres :
+         *   account : identifiant du compte
+         *   handler : rappel recevant {"categories": [{"name", "color"}]} */
+        void GetMailCategories(winrt::hstring const& account, CoreHandler handler)
+        {
+            evo_core_get_mail_categories(m_core, winrt::to_string(account).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Modifie une catégorie d'un compte Microsoft 365 / Gmail.
+         * Paramètres :
+         *   account   : identifiant du compte
+         *   action    : "create", "rename", "recolor" ou "delete"
+         *   name      : nom de la catégorie (ancien nom pour "rename")
+         *   new_name  : nouveau nom ("rename"), sinon vide
+         *   color_hex : couleur « #RRGGBB » (ignorée pour "delete" et "rename" sous Gmail)
+         *   handler   : rappel recevant {"ok": true} */
+        void EditMailCategory(winrt::hstring const& account, winrt::hstring const& action, winrt::hstring const& name,
+            winrt::hstring const& new_name, winrt::hstring const& color_hex, CoreHandler handler)
+        {
+            evo_core_edit_mail_category(m_core, winrt::to_string(account).c_str(), winrt::to_string(action).c_str(),
+                winrt::to_string(name).c_str(), winrt::to_string(new_name).c_str(), winrt::to_string(color_hex).c_str(),
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
@@ -412,13 +452,14 @@ namespace EvolutionWin
          *   dest_parent    : chemin complet du parent de destination ("" : racine du compte)
          *   new_name       : nouveau nom à la destination ("" : nom d'origine)
          *   copy           : copier (l'original reste) au lieu de déplacer
-         *   handler        : rappel recevant {"full_name": "<créé>", "count": n} */
+         *   merge          : fusionner avec le dossier de même nom déjà présent (reprise d'un transfert interrompu)
+         *   handler        : rappel recevant {"full_name", "count", "skipped", "failed", "cancelled", "error"} */
         void TransferFolder(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& dest_account,
-                            winrt::hstring const& dest_parent, winrt::hstring const& new_name, bool copy, CoreHandler handler)
+                            winrt::hstring const& dest_parent, winrt::hstring const& new_name, bool copy, bool merge, CoreHandler handler)
         {
             evo_core_transfer_folder(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
                 winrt::to_string(dest_account).c_str(), winrt::to_string(dest_parent).c_str(), winrt::to_string(new_name).c_str(), copy ? 1 : 0,
-                &CoreBridge::OnResult, NewCall(std::move(handler)));
+                merge ? 1 : 0, &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
         /* Supprime un dossier sans sous-dossiers, et définitivement ses messages.

@@ -203,6 +203,14 @@ namespace winrt::EvolutionWin::implementation
         void ScheduleListRefresh();
         void RefreshMessageListDelta();
         void SetFolderSyncing(bool syncing);
+        void SetFolderLoading(bool loading);
+        void UpdateFolderBanner();
+        void UpdateListFooter(int mode, int shown, int total);
+        void ShowMoreMessages(unsigned extra_count);
+        fire_and_forget ConfirmShowAllMessages();
+        void RefreshOlderMessagesFooter();
+        void LoadOlderMessages(unsigned extra_count);
+        fire_and_forget ConfirmLoadAllMessages();
         void ApplyMessageDelta(Windows::Data::Json::JsonArray const& fresh);
         void UpdateFolderStatusText();
         void RestoreSessionFolder();
@@ -551,6 +559,13 @@ namespace winrt::EvolutionWin::implementation
         /* Catégories unifiées (MainWindow.Categories.cpp) */
         void RefreshCategoriesView();
         void OnCategoriesRegistryChanged();
+        void PushCategoryChange(std::wstring const& action, std::wstring const& name, std::wstring const& new_name,
+            std::wstring const& color_source, std::vector<std::wstring> const* accounts = nullptr);
+        bool m_categories_auto_imported{ false };
+        void RefreshFormatRulesView();
+        void OnFormatRulesChanged();
+        std::vector<std::pair<winrt::hstring, std::vector<size_t>>> CategoryGroupsForDisplay();
+        void ImportAccountCategories(Microsoft::UI::Xaml::Controls::Button const& button);
         void PopulateItemCategoryMenu(
             Windows::Foundation::Collections::IVector<Microsoft::UI::Xaml::Controls::MenuFlyoutItemBase> const& items,
             std::vector<std::wstring> const& current,
@@ -602,6 +617,7 @@ namespace winrt::EvolutionWin::implementation
         void RefreshPrivacyView();
         void UpdateInvitationBar(Windows::Data::Json::JsonObject const& message);
         void CheckInvitationInCalendar();
+        void RenderInvitationDayGrid(Windows::Data::Json::JsonObject const& inv);
         void HideInvitationBar();
         void RespondToInvitation(hstring const& response);
         void UpdateReceiptBars(Windows::Data::Json::JsonObject const& message);
@@ -645,8 +661,7 @@ namespace winrt::EvolutionWin::implementation
         Windows::Foundation::IAsyncOperation<hstring> StartOAuth2SignInAsync(
             int provider_index, hstring client_id, hstring tenant_id, hstring login_hint);
         void RefreshAccountsView();
-        fire_and_forget ShowAccountDetectionDialogAsync();
-        fire_and_forget ShowAddAccountDialogAsync(Windows::Data::Json::JsonObject prefill);
+        fire_and_forget ShowAddAccountDialogAsync();
         fire_and_forget ShowEditAccountDialogAsync(hstring account_uid);
         fire_and_forget SignInGoogleOAuth2BrowserAsync(hstring source_uid, hstring name);
         void PopulateAboutSettingsView(bool force_check = false);
@@ -704,7 +719,7 @@ namespace winrt::EvolutionWin::implementation
         void ShowTasks();
         bool MatchesTaskFilter(Windows::Data::Json::JsonObject const& task, hstring const& filter);
         bool MatchesTaskSearch(Windows::Data::Json::JsonObject const& task, hstring const& query);
-        Microsoft::UI::Xaml::UIElement BuildTaskRow(Windows::Data::Json::JsonObject const& task, bool show_list);
+        Microsoft::UI::Xaml::UIElement BuildTaskRow(Windows::Data::Json::JsonObject const& task, bool show_list, bool show_account = true);
         void GetTaskAccountInfo(Windows::Data::Json::JsonObject const& task, hstring& out_name, hstring& out_email);
         void CreateTaskFromMessage(hstring const& message_uid);
         void CreateTaskFromEvent(Windows::Data::Json::JsonObject const& event_data);
@@ -985,6 +1000,16 @@ namespace winrt::EvolutionWin::implementation
         Microsoft::UI::Xaml::DispatcherTimer m_reader_loading_timer{ nullptr };
         Microsoft::UI::Xaml::DispatcherTimer m_list_refresh_timer{ nullptr };
         Microsoft::UI::Xaml::DispatcherTimer m_folder_sync_timer{ nullptr };
+        bool m_folder_syncing{ false };		///< synchronisation du dossier avec le serveur en cours (bandeau)
+        bool m_folder_loading{ false };		///< construction d'une grosse liste en cours (bandeau)
+        Microsoft::UI::Xaml::Controls::StackPanel m_older_footer{ nullptr };
+        Microsoft::UI::Xaml::Controls::TextBlock m_older_footer_text{ nullptr };
+        Microsoft::UI::Xaml::Controls::HyperlinkButton m_older_footer_button{ nullptr };
+        Microsoft::UI::Xaml::Controls::HyperlinkButton m_older_footer_all_button{ nullptr };
+        int m_list_footer_mode{ 0 };		///< 0 : masqué, 1 : fenêtre de synchronisation (M365), 2 : liste plafonnée
+        int m_list_footer_total{ 0 };		///< nombre de messages du dossier en local (mode 2)
+        unsigned m_list_max{ 0 };		///< taille de liste demandée pour le dossier affiché (0 : par défaut)
+        std::wstring m_list_max_key;		///< dossier auquel s'applique m_list_max
         uint64_t m_list_delta_request{ 0 };
         bool m_reader_loading_pending_nav{ false };
         winrt::com_ptr<ITaskbarList3> m_taskbar_list{ nullptr };
