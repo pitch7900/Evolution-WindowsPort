@@ -48,6 +48,7 @@ struct _EvoCore {
 	/* requêtes de l'interface (pool principal) en cours d'exécution : la synchronisation en
 	 * fond (core_bg_yield ()) leur cède la place (accès atomique) */
 	gint user_requests;
+	gpointer user_activity_ms;	/* début de la dernière requête de l'interface (ms depuis le démarrage du moteur) */
 
 	ESourceRegistry *registry;
 	CamelSession *session;

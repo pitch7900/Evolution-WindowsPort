@@ -211,7 +211,21 @@ m365_folder_get_message_cached (CamelFolder *folder,
 				const gchar *message_uid,
 				GCancellable *cancellable)
 {
-	return m365_folder_get_message_from_cache (CAMEL_M365_FOLDER (folder), message_uid, cancellable, NULL);
+	CamelM365Folder *m365_folder = CAMEL_M365_FOLDER (folder);
+	gboolean downloading;
+
+	/* camel_folder_get_message_sync () consulte d'abord ce cache : si le même message est en
+	   cours de téléchargement par un autre thread (affichage et préchargement du glisser-déposer
+	   le demandent ensemble), le fichier du cache est incomplet et donnerait un message tronqué.
+	   On répond « pas en cache » : get_message_sync () attend alors la fin du téléchargement. */
+	g_mutex_lock (&m365_folder->priv->get_message_lock);
+	downloading = g_hash_table_contains (m365_folder->priv->get_message_hash, message_uid);
+	g_mutex_unlock (&m365_folder->priv->get_message_lock);
+
+	if (downloading)
+		return NULL;
+
+	return m365_folder_get_message_from_cache (m365_folder, message_uid, cancellable, NULL);
 }
 
 static gint

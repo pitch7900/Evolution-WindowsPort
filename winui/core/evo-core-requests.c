@@ -18,6 +18,10 @@ typedef struct {
 /* attente maximale de la synchronisation en fond devant une action de l'utilisateur (ms) */
 #define CORE_BG_YIELD_MAX_MS 3000
 
+/* une requête de l'interface ne fait patienter la synchronisation que pendant cette durée (ms)
+ * après son début ; au-delà, elle est considérée comme lente et la synchronisation reprend */
+#define CORE_BG_YIELD_ACTIVITY_MS 4000
+
 /* Cède la place aux actions de l'utilisateur : tant qu'une requête de l'interface (lecture
  * d'un message, liste d'un dossier...) s'exécute, la synchronisation en fond attend, pour ne
  * pas se disputer avec elle le serveur et la base de Camel. À appeler entre deux étapes d'une
@@ -29,7 +33,10 @@ core_bg_yield (EvoCore *core)
 {
 	gint64 started_at = g_get_monotonic_time ();
 
+	/* seule une activité récente compte : une requête restée bloquée longtemps (serveur qui ne
+	 * répond plus) ne doit pas freiner toute la synchronisation */
 	while (g_atomic_int_get (&core->user_requests) > 0 &&
+	       g_get_monotonic_time () / 1000 - (gint64) GPOINTER_TO_SIZE (g_atomic_pointer_get (&core->user_activity_ms)) < CORE_BG_YIELD_ACTIVITY_MS &&
 	       !g_cancellable_is_cancelled (core->cancellable) &&
 	       (g_get_monotonic_time () - started_at) / 1000 < CORE_BG_YIELD_MAX_MS)
 		g_usleep (50 * 1000);
@@ -62,6 +69,7 @@ core_request_run (gpointer data,
 		SetThreadPriority (GetCurrentThread (), THREAD_PRIORITY_BELOW_NORMAL);
 	} else {
 		g_atomic_int_inc (&core->user_requests);
+		g_atomic_pointer_set (&core->user_activity_ms, GSIZE_TO_POINTER ((gsize) (g_get_monotonic_time () / 1000)));
 	}
 
 	if (!core_wait_started (core, &start_error)) {
