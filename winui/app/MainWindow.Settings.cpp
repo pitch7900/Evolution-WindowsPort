@@ -1231,6 +1231,7 @@ namespace winrt::EvolutionWin::implementation
                       L"Settings for receiving, reading, composing messages and managing signatures.");
             if (auto s = SettingsCategoryMail()) s.Visibility(Visibility::Visible);
             RefreshSignaturesView();
+            RefreshRulesView();
         }
         else if (category_tag == L"calendar")
         {

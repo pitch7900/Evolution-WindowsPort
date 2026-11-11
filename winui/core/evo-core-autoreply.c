@@ -941,6 +941,56 @@ evo_core_remove_delegate (EvoCore *core,
 	core_submit (core, core_remove_delegate_run, g_strdupv (args), func, user_data);
 }
 
+/* Requête Microsoft Graph authentifiée pour un compte Microsoft 365 / Exchange Online,
+ * utilisée par les règles côté serveur (evo-core-rules.c).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   account_uid : identifiant du compte
+ *   method      : "GET", "POST", "PATCH" ou "DELETE"
+ *   uri         : adresse complète de l'API Graph
+ *   body        : corps JSON, NULL sans corps
+ *   error       : emplacement pour une éventuelle erreur
+ * Retourne : le corps de la réponse (« {} » s'il est vide), à libérer avec g_free ; NULL en cas d'erreur. */
+gchar *
+core_graph_request (EvoCore *core,
+		    const gchar *account_uid,
+		    const gchar *method,
+		    const gchar *uri,
+		    const gchar *body,
+		    GError **error)
+{
+	AutoReplyProvider provider;
+	gchar *token = NULL, *text;
+	GBytes *bytes;
+	const gchar *data;
+	gsize size = 0;
+
+	if (!autoreply_get_token (core, account_uid, &provider, &token, error)) {
+		if (error && *error && g_error_matches (*error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED)) {
+			g_clear_error (error);
+			g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+				"Les règles côté serveur par Microsoft Graph ne sont disponibles que pour les comptes Microsoft 365 / Exchange Online.");
+		}
+		return NULL;
+	}
+	if (provider != AUTOREPLY_PROVIDER_MICROSOFT365) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			"Les règles côté serveur par Microsoft Graph ne sont disponibles que pour les comptes Microsoft 365 / Exchange Online.");
+		e_util_safe_free_string (token);
+		return NULL;
+	}
+
+	bytes = autoreply_http (core, AUTOREPLY_PROVIDER_MICROSOFT365, method, uri, token, body, error);
+	e_util_safe_free_string (token);
+	if (!bytes)
+		return NULL;
+
+	data = g_bytes_get_data (bytes, &size);
+	text = size ? g_strndup (data, size) : g_strdup ("{}");
+	g_bytes_unref (bytes);
+	return text;
+}
+
 /* ---- Catégories d'un compte : liste principale Outlook (Microsoft 365) ou libellés Gmail ---- */
 
 #define CATEGORIES_GRAPH_URI "https://graph.microsoft.com/v1.0/me/outlook/masterCategories"

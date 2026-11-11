@@ -562,10 +562,10 @@ Sécurisation de bout en bout des courriels par signature et chiffrement avec un
 
 ## 8. Mail – Règles et courrier indésirable — 🔴
 
-- [ ] 🔴 **Règles côté client** : éditeur de règles (conditions / actions), exécution à la réception (`CamelFilterDriver`)
-  - [ ] 🟡 Créer une règle à partir du message sélectionné (une fois l'éditeur en place)
-  - [ ] 🟡 Exécuter les règles maintenant sur un dossier
-- [ ] 🔴 **Règles côté serveur** : Exchange (EWS / Graph `messageRules`), Sieve (ManageSieve)
+- [x] 🔴 **Règles côté client** : éditeur de règles (conditions / actions), exécution à la réception _(fait : éditeur Paramètres > Courrier, critères expéditeur / domaine / objet / destinataires / en-tête / pièce jointe, actions déplacer / copier / lu / drapeau / catégorie / supprimer ; exécution côté application à l'arrivée dans la boîte de réception, sans `CamelFilterDriver`)_
+  - [x] 🟡 Créer une règle à partir du message sélectionné _(clic droit > Créer une règle…, éditeur rapide préremplie)_
+  - [x] 🟡 Exécuter les règles maintenant sur un dossier _(Paramètres > Courrier et menu contextuel du dossier)_
+- [x] 🔴 **Règles côté serveur** : Exchange (Graph `messageRules`), Sieve (ManageSieve) _(fait ; reste à valider sur un compte Microsoft 365 et sur un serveur Sieve réels ; EWS sur site non pris en charge)_
 - [x] 🟡 **Courrier indésirable** : marquer comme indésirable / non indésirable (déplacement vers / depuis le dossier Indésirables) — _bouton du ruban et menu contextuel_
 - [x] 🟡 **Filtre anti-spam local (bayésien)** : classement automatique des nouveaux messages de la boîte de réception vers Indésirables, apprentissage par « Indésirable » / « Non indésirable » et depuis les dossiers, seuil réglable, désactivation et réinitialisation dans Paramètres > Courrier
 - [ ] 🟡 **Listes d'expéditeurs** bloqués / approuvés (expéditeur ou domaine), options du filtre ; 🟠 synchronisées avec Exchange

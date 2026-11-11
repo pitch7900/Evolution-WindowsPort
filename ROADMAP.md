@@ -88,9 +88,9 @@ flowchart LR
 > **Objectif :** Automatiser le tri des flux de messages volumineux et garantir un fonctionnement nomade déconnecté sans perte de données.
 
 ### 1. Règles & Courrier indésirable (§8)
-- [ ] **Éditeur graphique de règles** : création de filtres sur critères multiples (expéditeur, objet, destinataires, en-têtes) et actions (déplacement, copie, marquage).
-- [ ] **Éditeur de règles rapides** : Création rapide de règles depuis un click droit sur un mail.
-- [ ] **Règles côté serveur** : synchronisation des règles vers Exchange Online / EWS et support du protocole ManageSieve pour les serveurs IMAP compatibles.
+- [x] **Éditeur graphique de règles** : création de filtres sur critères multiples (expéditeur, objet, destinataires, en-têtes) et actions (déplacement, copie, marquage).
+- [x] **Éditeur de règles rapides** : Création rapide de règles depuis un click droit sur un mail.
+- [x] **Règles côté serveur** : synchronisation des règles vers Exchange Online (Graph) et support du protocole ManageSieve pour les serveurs IMAP compatibles. _(reste à valider sur comptes réels ; EWS sur site non pris en charge)_
 - [x] **Filtrage anti-spam** : intégration locale de moteurs de classification (Bogofilter, SpamAssassin ou analyse bayésienne). _(analyse bayésienne locale autonome ; reste à valider sur des comptes réels)_
 
 ### 2. Mode hors-connexion et synchronisation fine (§4)

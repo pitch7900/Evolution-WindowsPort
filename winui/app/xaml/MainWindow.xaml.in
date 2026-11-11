@@ -507,6 +507,8 @@
 
 <!--#include xaml/Settings.Advanced.Storage.xamlpart-->
 
+<!--#include xaml/Settings.Advanced.Index.xamlpart-->
+
 
 
 <!--#include xaml/Settings.Advanced.Diagnostics.xamlpart-->
