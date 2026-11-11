@@ -1146,5 +1146,6 @@ evo_core_export_messages_eml (EvoCore *core,
 
 	g_return_if_fail (request_json != NULL);
 
-	core_submit (core, core_export_messages_eml_run, g_strdupv (args), func, user_data);
+	/* préparation du glisser-déposer : tâche de fond, elle ne doit pas occuper les threads de l'affichage */
+	core_submit_background (core, core_export_messages_eml_run, g_strdupv (args), func, user_data);
 }

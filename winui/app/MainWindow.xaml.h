@@ -467,6 +467,7 @@ namespace winrt::EvolutionWin::implementation
         Microsoft::UI::Xaml::Controls::TreeViewItem FolderContainerAt(Windows::Foundation::IInspectable const& source, EvolutionWin::FolderItem& item);
         void SetFolderDropHighlight(Microsoft::UI::Xaml::Controls::TreeViewItem const& container);
         void PrepareDragDropCache();
+        void SchedulePrepareDragDropCache();
 
     private:
         using ReplyKind = ::EvolutionWin::ReplyKind;
@@ -484,6 +485,7 @@ namespace winrt::EvolutionWin::implementation
         void StyleFollowUpIcon(Microsoft::UI::Xaml::Controls::FontIcon const& icon, MessageState const& state);
 
         std::vector<std::wstring> m_drag_cached_files;
+        Microsoft::UI::Xaml::DispatcherTimer m_drag_cache_timer{ nullptr };
         /* messages en cours de glisser vers un dossier de l'arborescence (vide hors glisser interne) */
         std::vector<hstring> m_drag_move_uids;
         /* conteneurs de la liste dont le visuel de glisser est déjà neutralisé */

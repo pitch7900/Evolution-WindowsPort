@@ -1472,7 +1472,7 @@ namespace winrt::EvolutionWin::implementation
         /* sélection automatique après suppression / déplacement : le message voisin reste non lu */
         if (!m_keep_unread_on_select)
             ScheduleMarkAsRead(uid);
-        PrepareDragDropCache();
+        SchedulePrepareDragDropCache();
 
         /* Si le volet de lecture est désactivé, conserver la sélection et les boutons sans charger le WebView2 */
         if (::EvolutionWin::Settings::Instance().GetString(L"layout.reading-pane", L"right") == L"off")
@@ -2038,6 +2038,33 @@ namespace winrt::EvolutionWin::implementation
 
         window.Activate();
     }
+    /**
+     * @brief Planifie le préchargement des fichiers .eml du glisser-déposer 2,5 s après la dernière
+     *        sélection. Le lancer à chaque clic téléchargeait le message une seconde fois, en même
+     *        temps que son affichage, et occupait les threads du moteur.
+     */
+    void MainWindow::SchedulePrepareDragDropCache()
+    {
+        /* les fichiers préparés pour la sélection précédente ne correspondent plus */
+        m_drag_cached_files.clear();
+
+        if (m_drag_cache_timer)
+        {
+            m_drag_cache_timer.Stop();
+        }
+        else
+        {
+            m_drag_cache_timer = DispatcherTimer();
+            m_drag_cache_timer.Interval(std::chrono::milliseconds(2500));
+            m_drag_cache_timer.Tick([this](IInspectable const&, IInspectable const&)
+            {
+                m_drag_cache_timer.Stop();
+                PrepareDragDropCache();
+            });
+        }
+        m_drag_cache_timer.Start();
+    }
+
     /**
      * @brief Pré-génère en tâche de fond les fichiers .eml des messages sélectionnés pour le glisser-déposer.
      */
