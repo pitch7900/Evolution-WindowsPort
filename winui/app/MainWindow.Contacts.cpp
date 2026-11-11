@@ -209,6 +209,19 @@ namespace winrt::EvolutionWin::implementation
         ContactAddressRow().Visibility(address.empty() ? Visibility::Collapsed : Visibility::Visible);
         ShowDirectoryPhoto(contact);
 
+        /* pastilles de couleur des catégories sur la fiche */
+        auto card_categories = ::EvolutionWin::CategoryStore::CategoriesOf(contact);
+        if (card_categories.empty())
+        {
+            ContactCategoriesHost().Content(nullptr);
+            ContactCategoriesHost().Visibility(Visibility::Collapsed);
+        }
+        else
+        {
+            ContactCategoriesHost().Content(BuildCategoryChips(card_categories));
+            ContactCategoriesHost().Visibility(Visibility::Visible);
+        }
+
         ContactPlaceholder().Visibility(Visibility::Collapsed);
         ContactDetailPane().Visibility(Visibility::Visible);
     }
