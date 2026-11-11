@@ -101,10 +101,14 @@ core_request_run (gpointer data,
 			}
 		}
 
-		if (json)
+		if (json) {
 			request->result_func (json, NULL, request->user_data);
-		else
+		} else {
+			/* échec d'une requête de l'interface : trace pour le diagnostic (les erreurs n'étaient pas journalisées) */
+			if (!request->background)
+				g_message ("requête %s en échec : %s", request->name ? request->name : "?", error ? error->message : "Unknown error");
 			request->result_func (NULL, error ? error->message : "Unknown error", request->user_data);
+		}
 	}
 
 	g_clear_error (&error);

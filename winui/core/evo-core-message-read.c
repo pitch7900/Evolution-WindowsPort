@@ -687,6 +687,13 @@ core_get_message_run (EvoCore *core,
 			(opened_at - started_at) / 1000, (g_get_monotonic_time () - opened_at) / 1000);
 
 	if (!message) {
+		/* message absent du serveur (déplacé ou supprimé depuis l'affichage de la liste, par exemple
+		 * invitation traitée ailleurs) : texte stable, l'interface met alors la liste à jour */
+		if (error && *error && g_error_matches (*error, CAMEL_FOLDER_ERROR, CAMEL_FOLDER_ERROR_INVALID_UID)) {
+			g_clear_error (error);
+			g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+				"Ce message n'existe plus sur le serveur (déplacé ou supprimé)");
+		}
 		g_object_unref (folder);
 		return NULL;
 	}

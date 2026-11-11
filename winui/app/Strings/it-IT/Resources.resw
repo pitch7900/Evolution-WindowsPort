@@ -6891,5 +6891,9 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Installa e chiudi</value>
     <comment>Installer et fermer</comment>
   </data>
+  <data name="T_B384AD70" xml:space="preserve">
+    <value>Questo messaggio non esiste più sul server: l'elenco viene aggiornato.</value>
+    <comment>Ce message n'existe plus sur le serveur : la liste est mise à jour.</comment>
+  </data>
 </root>
 

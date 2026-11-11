@@ -1496,6 +1496,18 @@ namespace winrt::EvolutionWin::implementation
             if (!error.empty())
             {
                 SetReaderLoading(false);
+
+                /* le message a disparu du serveur (déplacé, supprimé, invitation traitée ailleurs) alors que la liste,
+                   affichée depuis le cache local, le montre encore : relève du dossier, la liste applique la différence */
+                constexpr std::wstring_view gone_prefix = L"Ce message n'existe plus";
+                if (std::wstring_view{ error }.substr(0, gone_prefix.size()) == gone_prefix)
+                {
+                    ShowStatus(Tr(L"Ce message n'existe plus sur le serveur : la liste est mise à jour.",
+                        L"This message no longer exists on the server: the list is being updated."), InfoBarSeverity::Warning);
+                    LoadMessages(true);
+                    return;
+                }
+
                 ShowStatus(Tr(L"Message : ") + error, InfoBarSeverity::Error);
                 return;
             }
