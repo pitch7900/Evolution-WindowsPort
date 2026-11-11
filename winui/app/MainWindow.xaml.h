@@ -197,6 +197,7 @@ namespace winrt::EvolutionWin::implementation
         void UpdateConnectionStatus(winrt::hstring const& account, winrt::hstring const& status, winrt::hstring const& message);
         void RefreshConnectionAccountsList();
         void RefreshConnectionIndicator();
+        void UpdateSenderPhoto(winrt::hstring const& from);
         void UpdateFolderStatusText();
         void RestoreSessionFolder();
         void UpdateOutOfOfficeBanner();
@@ -909,6 +910,7 @@ namespace winrt::EvolutionWin::implementation
         hstring m_folder;
         /* only the latest message request is shown */
         uint64_t m_message_request{ 0 };
+        uint64_t m_sender_photo_request{ 0 };
         uint64_t m_search_request{ 0 };
         /* the list was reloaded and its selection restored: keep the reader */
         bool m_reselecting{ false };

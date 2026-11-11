@@ -258,11 +258,19 @@
 
                         <TextBlock x:Name="MessageSubject" Style="{StaticResource SubtitleTextBlockStyle}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
 
-                        <TextBlock x:Name="MessageFrom" Style="{StaticResource BodyStrongTextBlockStyle}" IsTextSelectionEnabled="True" />
-
-                        <TextBlock x:Name="MessageTo" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-
-                        <TextBlock x:Name="MessageDate" Style="{StaticResource CaptionTextBlockStyle}" />
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <!-- photo de l'expéditeur, ou ses initiales (MainWindow.Reader.cpp, UpdateSenderPhoto) -->
+                            <PersonPicture x:Name="SenderPhoto" Grid.Column="0" Width="48" Height="48" VerticalAlignment="Top" Visibility="Collapsed" />
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock x:Name="MessageFrom" Style="{StaticResource BodyStrongTextBlockStyle}" IsTextSelectionEnabled="True" />
+                                <TextBlock x:Name="MessageTo" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                <TextBlock x:Name="MessageDate" Style="{StaticResource CaptionTextBlockStyle}" />
+                            </StackPanel>
+                        </Grid>
 
                         <InfoBar x:Name="SecurityBar" IsOpen="False" IsClosable="True" Margin="0,4,0,0" />
 

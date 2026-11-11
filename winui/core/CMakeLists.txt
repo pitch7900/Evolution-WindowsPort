@@ -73,6 +73,7 @@ add_library(evo-core SHARED
 	evo-core-message-read.c
 	evo-core-messages.c
 	evo-core-oauth2.c
+	evo-core-photos.c
 	evo-core-refresh.c
 	evo-core-requests.c
 	evo-core-search.c

@@ -5,6 +5,7 @@
 #include "ComposeWindow.xaml.h"
 
 #include "MainWindow.Helpers.h"
+#include "SenderPhoto.h"
 #include "UiTranslate.h"
 
 #include "WindowIcon.h"
@@ -370,6 +371,34 @@ namespace winrt::EvolutionWin::implementation
 
     /* Charge et affiche le message courant via evo-core */
 
+    /* Affiche la pastille de l'expéditeur dans l'en-tête : initiales tout de suite, puis
+     * photo (annuaire du domaine, contacts personnels ; cache disque d'une semaine).
+     * Paramètres :
+     *   from : champ From du message affiché */
+    void MessageWindow::UpdateSenderPhoto(hstring const& from)
+    {
+        auto request = ++m_sender_photo_request;
+
+        SenderPhoto().ProfilePicture(nullptr);
+        SenderPhoto().DisplayName(SenderName(from));
+        SenderPhoto().Visibility(Visibility::Visible);
+
+        auto address = ::EvolutionWin::SenderPhoto::AddressOf(from);
+        auto core = m_core.lock();
+        if (address.empty() || !core)
+            return;
+
+        core->GetSenderPhoto(hstring{ address }, [weak = get_weak(), request](hstring const& json, hstring const& error)
+        {
+            auto strong = weak.get();
+            JsonObject result;
+            if (!strong || !error.empty() || request != strong->m_sender_photo_request || !JsonObject::TryParse(json, result))
+                return;
+
+            ::EvolutionWin::SenderPhoto::Apply(strong->SenderPhoto(), result.GetNamedString(L"photo", L""));
+        });
+    }
+
     void MessageWindow::LoadCurrentMessage()
 
     {
@@ -459,6 +488,7 @@ namespace winrt::EvolutionWin::implementation
             strong->Title(subject);
 
             strong->FromText().Text(SenderName(msg.GetNamedString(L"from", L"")));
+            strong->UpdateSenderPhoto(msg.GetNamedString(L"from", L""));
 
             strong->DateText().Text(FormatDate(msg.GetNamedNumber(L"date", 0)));
 

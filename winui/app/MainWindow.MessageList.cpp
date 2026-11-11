@@ -1327,6 +1327,7 @@ namespace winrt::EvolutionWin::implementation
 
             MessageSubject().Text(message.GetNamedString(L"subject", L""));
             MessageFrom().Text(message.GetNamedString(L"from", L""));
+            UpdateSenderPhoto(message.GetNamedString(L"from", L""));
             MessageTo().Text(Tr(L"À : ") + to + (cc.empty() ? hstring{} : L"   " + Tr(L"Cc : ") + cc));
             MessageDate().Text(FormatDate(message.GetNamedNumber(L"date", 0)));
             UpdateSecurityBanner(message.GetNamedObject(L"security", JsonObject{}));

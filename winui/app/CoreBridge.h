@@ -858,6 +858,14 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Photo d'un correspondant (annuaire du domaine, puis contacts, avec cache disque) :
+         * {"photo": "data:image/...;base64,..."} ("photo" vide si aucune). */
+        void GetSenderPhoto(winrt::hstring const& email, CoreHandler handler)
+        {
+            evo_core_get_sender_photo(m_core, winrt::to_string(email).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Contacts des seuls carnets book_uids (séparés par des virgules). */
         void ListBookContacts(winrt::hstring const& query, winrt::hstring const& book_uids, CoreHandler handler)
         {

@@ -577,6 +577,58 @@ core_ref_book_client (EvoCore *core,
 	return E_BOOK_CLIENT (client);
 }
 
+/* Photo d'un contact des carnets d'adresses personnels, retrouvé par son adresse.
+ * Seules les photos incluses dans la fiche (vCard) sont lues.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   email : adresse électronique du contact
+ * Retourne : URI de données de la photo (g_free), NULL si aucun contact n'en a. */
+gchar *
+core_contact_photo_by_email (EvoCore *core,
+			     const gchar *email)
+{
+	GList *sources, *slink;
+	EBookQuery *query;
+	gchar *sexp, *photo = NULL;
+
+	if (!email || !*email)
+		return NULL;
+
+	query = e_book_query_field_test (E_CONTACT_EMAIL, E_BOOK_QUERY_IS, email);
+	sexp = e_book_query_to_string (query);
+	e_book_query_unref (query);
+
+	sources = e_source_registry_list_enabled (core->registry, E_SOURCE_EXTENSION_ADDRESS_BOOK);
+	for (slink = sources; slink && !photo; slink = g_list_next (slink)) {
+		EBookClient *client = core_ref_book_client (core, slink->data);
+		GSList *contacts = NULL, *clink;
+
+		if (!client)
+			continue;
+
+		if (e_book_client_get_contacts_sync (client, sexp, &contacts, core->cancellable, NULL)) {
+			for (clink = contacts; clink && !photo; clink = g_slist_next (clink)) {
+				EContactPhoto *contact_photo = e_contact_get (clink->data, E_CONTACT_PHOTO);
+
+				if (contact_photo && contact_photo->type == E_CONTACT_PHOTO_TYPE_INLINED &&
+				    contact_photo->data.inlined.data && contact_photo->data.inlined.length > 0)
+					photo = core_photo_data_uri (contact_photo->data.inlined.data,
+						contact_photo->data.inlined.length);
+				if (contact_photo)
+					e_contact_photo_free (contact_photo);
+			}
+			g_slist_free_full (contacts, g_object_unref);
+		}
+
+		g_object_unref (client);
+	}
+
+	g_list_free_full (sources, g_object_unref);
+	g_free (sexp);
+
+	return photo;
+}
+
 /* Destinataires dont le nom, le prénom, le nom de famille, le surnom ou
  * l'adresse commence par la saisie, dans tous les carnets activés (GAL
  * comprise) ; une entrée par adresse, sans doublon.

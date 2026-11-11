@@ -985,6 +985,22 @@ void		evo_core_get_gal_photo		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Photo d'un expéditeur ou d'un correspondant, retrouvée par son adresse :
+ * annuaire du compte (Microsoft 365 ou Google Workspace) si le domaine de
+ * l'adresse est celui d'un compte, puis carnets d'adresses personnels. Le
+ * résultat (photo ou absence de photo) est conservé dans un cache disque
+ * (%LOCALAPPDATA%\\EvolutionWin\\photos) : une semaine au plus pour une photo.
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   email     : adresse de la personne
+ *   func      : rappel recevant {"photo": "data:image/jpeg;base64,..."},
+ *               "photo" vide s'il n'y en a aucune
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_get_sender_photo	(EvoCore *core,
+						 const char *email,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Événements du calendrier d'une personne (Microsoft 365, Graph
  * /users/{adresse}/calendarView, lecture seule) : la personne doit avoir partagé
  * son calendrier. Même format que evo_core_list_events (), avec

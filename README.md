@@ -160,5 +160,6 @@ Ce projet est distribué sous la **GNU Lesser General Public License, version 2.
 - **Evolution** : LGPL v2 ou (à votre choix) LGPL v3, voir [`evolution/COPYING`](./evolution/COPYING). Quelques fichiers relèvent d'autres licences (OpenLDAP, MPL/GPL/LGPL), qui y sont listées.
 - **Evolution Data Server** : LGPL v2 ou ultérieure, voir [`evolution-data-server/COPYING`](./evolution-data-server/COPYING).
 - **evolution-ews** : LGPL v2.1 ou ultérieure, voir [`evolution-ews/COPYING`](./evolution-ews/COPYING).
+- **SQLite** : domaine public (aucune restriction ni obligation d'attribution), voir [sqlite.org/copyright.html](https://www.sqlite.org/copyright.html). Evolution Data Server et Camel l'utilisent déjà pour leurs caches (index des messages, carnets d'adresses, agendas) ; la bibliothèque `sqlite3.dll` est livrée avec l'application.
 
 Les fichiers repris de ces projets conservent leur licence et leurs mentions de copyright d'origine (en-têtes `SPDX-License-Identifier`).

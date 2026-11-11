@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
 #include "MainWindow.Helpers.h"
+#include "SenderPhoto.h"
 #include "WindowIcon.h"
 #include "Settings.h"
 
@@ -159,6 +160,33 @@ namespace
 
 namespace winrt::EvolutionWin::implementation
 {
+    /* Affiche la pastille de l'expéditeur dans l'en-tête du message : initiales
+     * tout de suite, puis photo (annuaire du domaine, contacts personnels ; cache
+     * disque d'une semaine) dès qu'elle est trouvée.
+     * Paramètres :
+     *   from : champ From du message affiché */
+    void MainWindow::UpdateSenderPhoto(hstring const& from)
+    {
+        auto request = ++m_sender_photo_request;
+
+        SenderPhoto().ProfilePicture(nullptr);
+        SenderPhoto().DisplayName(SenderName(from));
+        SenderPhoto().Visibility(Visibility::Visible);
+
+        auto address = ::EvolutionWin::SenderPhoto::AddressOf(from);
+        if (address.empty() || !m_core)
+            return;
+
+        m_core->GetSenderPhoto(hstring{ address }, [this, request](hstring const& json, hstring const& error)
+        {
+            JsonObject result;
+            if (!error.empty() || request != m_sender_photo_request || !JsonObject::TryParse(json, result))
+                return;   /* échec, ou un autre message est affiché entre-temps */
+
+            ::EvolutionWin::SenderPhoto::Apply(SenderPhoto(), result.GetNamedString(L"photo", L""));
+        });
+    }
+
     fire_and_forget MainWindow::InitializeReaderAsync()
     {
         auto strong = get_strong();

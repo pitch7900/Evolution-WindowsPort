@@ -351,6 +351,18 @@ core_crypto_info_clear (CoreCryptoInfo *info);
 void
 core_log_m365_identity (EvoCore *core,
 			const gchar *display_name);
+gchar *
+core_photo_data_uri (gconstpointer data,
+		     gsize size);
+gchar *
+core_gal_photo_by_domain (EvoCore *core,
+			  const gchar *email,
+			  gboolean *uncertain);
+
+/* evo-core-contacts.c */
+gchar *
+core_contact_photo_by_email (EvoCore *core,
+			     const gchar *email);
 
 /* evo-core-send.c */
 ESource *

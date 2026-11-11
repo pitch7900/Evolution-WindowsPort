@@ -806,6 +806,93 @@ gal_resolve_user_id (EvoCore *core,
 	return id;
 }
 
+/* Image en URI de données (type reconnu à la signature des premiers octets).
+ * Paramètres :
+ *   data : contenu de l'image
+ *   size : taille en octets
+ * Retourne : "data:image/...;base64,..." (g_free). */
+gchar *
+core_photo_data_uri (gconstpointer data,
+		     gsize size)
+{
+	const guchar *bytes = data;
+	const gchar *mime = "image/jpeg";
+	gchar *base64, *uri;
+
+	if (size > 8 && bytes[0] == 0x89 && bytes[1] == 'P' && bytes[2] == 'N' && bytes[3] == 'G')
+		mime = "image/png";
+	else if (size > 6 && bytes[0] == 'G' && bytes[1] == 'I' && bytes[2] == 'F')
+		mime = "image/gif";
+	else if (size > 12 && bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F' &&
+		 bytes[8] == 'W' && bytes[9] == 'E' && bytes[10] == 'B' && bytes[11] == 'P')
+		mime = "image/webp";
+
+	base64 = g_base64_encode (data, size);
+	uri = g_strconcat ("data:", mime, ";base64,", base64, NULL);
+	g_free (base64);
+
+	return uri;
+}
+
+/* TRUE si un code HTTP ne permet pas de conclure « pas de photo » (réseau, droits,
+ * limitation de débit, erreur serveur) : le résultat ne doit pas être mis en cache. */
+static gboolean
+gal_status_is_uncertain (guint status)
+{
+	return status == 0 || status == 401 || status == 403 || status == 429 || status >= 500;
+}
+
+/* Photo d'une personne de l'annuaire Microsoft 365 : lecture par l'identifiant du
+ * profil (l'adresse peut différer de l'UPN), puis par l'adresse.
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   token     : jeton d'accès Graph
+ *   email     : adresse de la personne
+ *   uncertain : mis à TRUE si l'absence de photo n'est pas certaine (peut être NULL)
+ * Retourne : URI de données de la photo (g_free), NULL si aucune. */
+static gchar *
+gal_m365_photo (EvoCore *core,
+		const gchar *token,
+		const gchar *email,
+		gboolean *uncertain)
+{
+	gchar *photo = NULL, *identifiers[2] = { NULL, NULL };
+	guint ii;
+
+	identifiers[0] = gal_resolve_user_id (core, GAL_PROVIDER_MICROSOFT365, token, email);
+	identifiers[1] = g_uri_escape_string (email ? email : "", NULL, TRUE);
+
+	for (ii = 0; ii < G_N_ELEMENTS (identifiers) && !photo; ii++) {
+		gchar *uri;
+		guint status = 0;
+		GBytes *bytes;
+
+		if (!identifiers[ii])
+			continue;
+
+		uri = g_strconcat ("https://graph.microsoft.com/v1.0/users/", identifiers[ii], "/photo/$value", NULL);
+		bytes = gal_http_get (core, GAL_PROVIDER_MICROSOFT365, uri, token, &status, NULL);
+		g_message ("photo annuaire Graph : HTTP %u pour %s via %s (%.200s)", status, email,
+			ii == 0 ? "identifiant" : "adresse",
+			bytes && status >= 300 && g_bytes_get_data (bytes, NULL) ? (const gchar *) g_bytes_get_data (bytes, NULL) : "");
+		if (bytes && status >= 200 && status < 300) {
+			gsize size = 0;
+			gconstpointer data = g_bytes_get_data (bytes, &size);
+
+			if (data && size > 0)
+				photo = core_photo_data_uri (data, size);
+		} else if (uncertain && gal_status_is_uncertain (status)) {
+			*uncertain = TRUE;
+		}
+		g_clear_pointer (&bytes, g_bytes_unref);
+		g_free (uri);
+	}
+	g_free (identifiers[0]);
+	g_free (identifiers[1]);
+
+	return photo;
+}
+
 /* Photo de profil d'une personne de l'annuaire Microsoft 365 (Graph
  * GET /users/{identifiant}/photo/$value).
  * Paramètres :
@@ -821,16 +908,14 @@ core_gal_photo_run (EvoCore *core,
 {
 	GList *sources, *slink;
 	JsonBuilder *builder;
-	gchar *json, *photo = NULL, *escaped;
+	gchar *json, *photo = NULL;
 
-	escaped = g_uri_escape_string (args[1] ? args[1] : "", NULL, TRUE);
 	sources = e_source_registry_list_enabled (core->registry, E_SOURCE_EXTENSION_COLLECTION);
 
 	for (slink = sources; slink && !photo; slink = g_list_next (slink)) {
 		ESource *source = slink->data;
 		GalProvider provider;
-		gchar *token = NULL, *identifiers[2] = { NULL, NULL };
-		guint ii;
+		gchar *token = NULL;
 
 		if (!gal_collection_provider (source, &provider) || provider != GAL_PROVIDER_MICROSOFT365)
 			continue;
@@ -840,43 +925,10 @@ core_gal_photo_run (EvoCore *core,
 		if (!gal_get_token (core, source, &token, NULL))
 			continue;
 
-		/* identifiant Entra d'abord, puis l'adresse telle quelle (UPN identique à l'adresse) */
-		identifiers[0] = gal_resolve_user_id (core, provider, token, args[1]);
-		identifiers[1] = g_strdup (escaped);
-
-		for (ii = 0; ii < G_N_ELEMENTS (identifiers) && !photo; ii++) {
-			gchar *uri;
-			guint status = 0;
-			GBytes *bytes;
-
-			if (!identifiers[ii])
-				continue;
-
-			uri = g_strconcat ("https://graph.microsoft.com/v1.0/users/", identifiers[ii], "/photo/$value", NULL);
-			bytes = gal_http_get (core, provider, uri, token, &status, NULL);
-			g_message ("photo annuaire Graph : HTTP %u pour %s via %s (%.200s)", status, args[1],
-				ii == 0 ? "identifiant" : "adresse",
-				bytes && status >= 300 && g_bytes_get_data (bytes, NULL) ? (const gchar *) g_bytes_get_data (bytes, NULL) : "");
-			if (bytes && status >= 200 && status < 300) {
-				gsize size = 0;
-				gconstpointer data = g_bytes_get_data (bytes, &size);
-
-				if (data && size > 0) {
-					gchar *base64 = g_base64_encode (data, size);
-
-					photo = g_strconcat ("data:image/jpeg;base64,", base64, NULL);
-					g_free (base64);
-				}
-			}
-			g_clear_pointer (&bytes, g_bytes_unref);
-			g_free (uri);
-		}
-		g_free (identifiers[0]);
-		g_free (identifiers[1]);
+		photo = gal_m365_photo (core, token, args[1], NULL);
 		e_util_safe_free_string (token);
 	}
 	g_list_free_full (sources, g_object_unref);
-	g_free (escaped);
 
 	builder = json_builder_new ();
 	json_builder_begin_object (builder);
@@ -887,6 +939,120 @@ core_gal_photo_run (EvoCore *core,
 	g_free (photo);
 
 	return json;
+}
+
+/* Domaine (en minuscules) de l'identité d'une collection ; NULL si inconnu. */
+static gchar *
+gal_collection_domain (ESource *source)
+{
+	ESourceCollection *collection;
+	gchar *identity, *domain = NULL;
+	const gchar *at;
+
+	if (!e_source_has_extension (source, E_SOURCE_EXTENSION_COLLECTION))
+		return NULL;
+
+	collection = e_source_get_extension (source, E_SOURCE_EXTENSION_COLLECTION);
+	identity = e_source_collection_dup_identity (collection);
+	at = identity ? strrchr (identity, '@') : NULL;
+	if (at && at[1])
+		domain = g_ascii_strdown (at + 1, -1);
+	g_free (identity);
+
+	return domain;
+}
+
+/* Photo d'une personne de l'annuaire d'un compte Microsoft 365 ou Google Workspace
+ * dont le domaine est celui de l'adresse. Les domaines grand public (gmail.com)
+ * n'ont pas d'annuaire.
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   email     : adresse de la personne
+ *   uncertain : mis à TRUE si l'absence de photo n'est pas certaine (peut être NULL)
+ * Retourne : URI de données de la photo (g_free), NULL si aucune. */
+gchar *
+core_gal_photo_by_domain (EvoCore *core,
+			  const gchar *email,
+			  gboolean *uncertain)
+{
+	GList *sources, *slink;
+	const gchar *at = email ? strrchr (email, '@') : NULL;
+	gchar *photo = NULL, *domain;
+
+	if (!at || !at[1])
+		return NULL;
+	domain = g_ascii_strdown (at + 1, -1);
+
+	sources = e_source_registry_list_enabled (core->registry, E_SOURCE_EXTENSION_COLLECTION);
+	for (slink = sources; slink && !photo; slink = g_list_next (slink)) {
+		ESource *source = slink->data;
+		GalProvider provider;
+		gchar *source_domain, *token = NULL;
+
+		if (!gal_collection_provider (source, &provider))
+			continue;
+		source_domain = gal_collection_domain (source);
+		if (g_strcmp0 (source_domain, domain) != 0 ||
+		    (provider == GAL_PROVIDER_GOOGLE &&
+		     (g_strcmp0 (domain, "gmail.com") == 0 || g_strcmp0 (domain, "googlemail.com") == 0))) {
+			g_free (source_domain);
+			continue;
+		}
+		g_free (source_domain);
+
+		if (!gal_get_token (core, source, &token, NULL)) {
+			if (uncertain)
+				*uncertain = TRUE;
+			continue;
+		}
+
+		if (provider == GAL_PROVIDER_MICROSOFT365) {
+			photo = gal_m365_photo (core, token, email, uncertain);
+		} else {
+			GPtrArray *people = g_ptr_array_new_with_free_func (gal_person_free);
+			GError *local_error = NULL;
+			guint ii;
+
+			if (gal_search_google (core, e_source_get_display_name (source), token, email, 5, people, &local_error)) {
+				for (ii = 0; ii < people->len && !photo; ii++) {
+					const GalPerson *person = people->pdata[ii];
+					SoupSession *soup;
+					SoupMessage *msg;
+					GBytes *bytes;
+
+					if (g_ascii_strcasecmp (person->email ? person->email : "", email) != 0 ||
+					    !person->photo_url || !g_str_has_prefix (person->photo_url, "https://"))
+						continue;
+
+					/* URL publique : aucun jeton n'est envoyé */
+					soup = soup_session_new_with_options ("timeout", 15, "user-agent", "Evolution (Windows)", NULL);
+					msg = soup_message_new ("GET", person->photo_url);
+					bytes = soup_session_send_and_read (soup, msg, core->cancellable, NULL);
+					if (bytes && soup_message_get_status (msg) >= 200 && soup_message_get_status (msg) < 300) {
+						gsize size = 0;
+						gconstpointer data = g_bytes_get_data (bytes, &size);
+
+						if (data && size > 0)
+							photo = core_photo_data_uri (data, size);
+					} else if (uncertain && (!bytes || gal_status_is_uncertain (soup_message_get_status (msg)))) {
+						*uncertain = TRUE;
+					}
+					g_clear_pointer (&bytes, g_bytes_unref);
+					g_object_unref (msg);
+					g_object_unref (soup);
+				}
+			} else if (uncertain) {
+				*uncertain = TRUE;
+			}
+			g_clear_error (&local_error);
+			g_ptr_array_unref (people);
+		}
+		e_util_safe_free_string (token);
+	}
+	g_list_free_full (sources, g_object_unref);
+	g_free (domain);
+
+	return photo;
 }
 
 /* Soumet la lecture de la photo de profil d'une personne de l'annuaire.

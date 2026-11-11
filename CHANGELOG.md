@@ -12,6 +12,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.1.2] — en cours
 
+### Ajouté
+
+- **Photo de l'expéditeur dans l'en-tête du message** : pastille ronde à gauche de l'expéditeur, comme dans Outlook, dans le volet de lecture et dans la fenêtre de message. La photo est cherchée dans l'annuaire du compte dont le domaine est celui de l'adresse (Microsoft 365 via Graph, Google Workspace via l'API People ; pas pour gmail.com), puis dans les contacts personnels ; sans photo, la pastille affiche les initiales du nom. Les résultats sont conservés dans un cache disque (`%LOCALAPPDATA%\EvolutionWin\photos`) : une photo une semaine au plus, l'absence de photo un jour ; un échec réseau ou de droits n'est jamais mémorisé. Nouvelle fonction `evo_core_get_sender_photo` (`evo-core-photos.c`), assistant `SenderPhoto.h`. Reste à valider sur Microsoft 365, Google Workspace et IMAP.
+
 ### Corrigé
 
 - **Photo de l'annuaire Microsoft 365 : lecture par l'identifiant du profil** : la photo était demandée avec `/users/{adresse e-mail}/photo/$value`. Quand l'adresse diffère du nom d'utilisateur principal (ex. adresse `prenom.nom@…`, UPN `abc@…`), Graph consulte alors la boîte Exchange, sans photo (404 `ImageNotFound`), au lieu du profil Entra. L'identifiant est désormais résolu d'abord (`/users?$filter=mail eq '…'`) et la photo lue par `/users/{id}/photo/$value`, l'adresse restant en secours. Chaque étape est journalisée. Validé sur le tenant EVAM : photos et fiches complètes affichées.
