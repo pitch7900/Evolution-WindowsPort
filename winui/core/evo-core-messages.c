@@ -132,11 +132,13 @@ core_folder_background_refresh_run (EvoCore *core,
 	folder = core_ref_folder (core, args[0], args[1], error);
 	if (folder) {
 		core_bg_yield (core);
-		if (camel_folder_refresh_info_sync (folder, core->cancellable, NULL))
-			core_emit_folder_refreshed (core, args[0], args[1]);
+		camel_folder_refresh_info_sync (folder, core->cancellable, NULL);
 		g_object_set_data (G_OBJECT (folder), "evo-initial-sync-done", GINT_TO_POINTER (1));
 		g_object_unref (folder);
 	}
+
+	/* fin de relève, réussie ou non : l'interface retire l'indicateur de synchronisation du dossier */
+	core_emit_folder_refreshed (core, args[0], args[1]);
 
 	return g_strdup ("{}");
 }
@@ -196,6 +198,9 @@ core_list_messages_run (EvoCore *core,
 		if (uids)
 			g_ptr_array_unref (uids);
 		uids = camel_folder_dup_uids (folder);
+
+		/* première relève sans cache : terminée, l'indicateur de synchronisation peut disparaître */
+		core_emit_folder_refreshed (core, args[0], args[1]);
 	} else if (!cache_only) {
 		/* Cache local présent : on renvoie immédiatement les messages locaux,
 		 * et on lance la synchronisation distante en tâche de fond */

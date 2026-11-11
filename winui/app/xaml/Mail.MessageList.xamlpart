@@ -116,6 +116,17 @@
 
                         </StackPanel>
 
+                    <!-- synchronisation du dossier affiché en cours (MainWindow::SetFolderSyncing) -->
+                        <Grid x:Name="FolderSyncBanner" Visibility="Collapsed" Margin="0,6,0,0" RowSpacing="3">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="Synchronisation du dossier en cours…" Opacity="0.8"
+                                       Style="{StaticResource CaptionTextBlockStyle}" />
+                            <ProgressBar Grid.Row="1" IsIndeterminate="True" Height="3" />
+                        </Grid>
+
                     </StackPanel>
 
                     <ListView x:Name="MessageList" Grid.Row="1" SelectionMode="Extended"

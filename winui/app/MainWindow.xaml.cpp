@@ -374,6 +374,10 @@ namespace winrt::EvolutionWin::implementation
 
             if ((account == m_account && folder == m_folder) || UnifiedFolderMatches(account, folder))
                 ScheduleListRefresh();
+
+            /* synchronisation du dossier affiché terminée : le bandeau de progression disparaît */
+            if (account == m_account && folder == m_folder)
+                SetFolderSyncing(false);
         }
         else if (event == L"folders-updated")
         {

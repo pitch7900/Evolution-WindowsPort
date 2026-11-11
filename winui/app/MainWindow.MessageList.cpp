@@ -121,6 +121,7 @@ namespace winrt::EvolutionWin::implementation
             ListProgress().IsActive(true);
         }
         evo_core_trace("interface : demande de la liste des messages");
+        SetFolderSyncing(true);
         m_core->ListMessages(account, folder, 500, [this, account, folder, selected, scroll_offset](hstring const& json, hstring const& error)
         {
             /* another folder was chosen meanwhile */
@@ -131,6 +132,7 @@ namespace winrt::EvolutionWin::implementation
 
             if (!error.empty())
             {
+                SetFolderSyncing(false);
                 ShowStatus(Tr(L"Messages : ") + error, InfoBarSeverity::Error);
                 RevealMainWindow(L"erreur de la liste des messages");
                 return;
@@ -189,6 +191,30 @@ namespace winrt::EvolutionWin::implementation
                 right.Remove(name);
         }
         return left.Stringify() == right.Stringify();
+    }
+
+    /* Bandeau « Synchronisation du dossier en cours » avec indicateur de progression linéaire :
+     * affiché à l'ouverture d'un dossier (la liste vient du cache, la relève du serveur se fait en
+     * fond), retiré à la fin de la relève (événement folder-refreshed du moteur, réussie ou non).
+     * Une sécurité le retire au bout de 2 minutes.
+     * Paramètres :
+     *   syncing : TRUE au début de la synchronisation, FALSE à sa fin */
+    void MainWindow::SetFolderSyncing(bool syncing)
+    {
+        if (m_folder_sync_timer)
+        {
+            m_folder_sync_timer.Stop();
+            m_folder_sync_timer = nullptr;
+        }
+
+        FolderSyncBanner().Visibility(syncing ? Visibility::Visible : Visibility::Collapsed);
+        if (!syncing)
+            return;
+
+        m_folder_sync_timer = DispatcherTimer();
+        m_folder_sync_timer.Interval(std::chrono::seconds(120));
+        m_folder_sync_timer.Tick([this](IInspectable const&, IInspectable const&) { SetFolderSyncing(false); });
+        m_folder_sync_timer.Start();
     }
 
     /* Planifie la mise à jour de la liste du dossier affiché (après 400 ms : plusieurs
