@@ -6911,5 +6911,13 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Nog {0} berichten laden</value>
     <comment>Charger {0} messages de plus</comment>
   </data>
+  <data name="T_37F00D41" xml:space="preserve">
+    <value>Detectie mislukt</value>
+    <comment>Détection impossible</comment>
+  </data>
+  <data name="T_A69929F8" xml:space="preserve">
+    <value>Kies het accounttype en vul hieronder de servers in.</value>
+    <comment>Choisissez le type de compte et renseignez les serveurs ci-dessous.</comment>
+  </data>
 </root>
 
