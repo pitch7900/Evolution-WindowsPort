@@ -690,9 +690,23 @@ core_get_message_run (EvoCore *core,
 		/* message absent du serveur (déplacé ou supprimé depuis l'affichage de la liste, par exemple
 		 * invitation traitée ailleurs) : texte stable, l'interface met alors la liste à jour */
 		if (error && *error && g_error_matches (*error, CAMEL_FOLDER_ERROR, CAMEL_FOLDER_ERROR_INVALID_UID)) {
+			CamelFolderSummary *summary = camel_folder_get_folder_summary (folder);
+
 			g_clear_error (error);
 			g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
 				"Ce message n'existe plus sur le serveur (déplacé ou supprimé)");
+
+			/* le serveur n'a plus ce message : on le retire tout de suite du cache local. La synchronisation
+			 * complète d'un gros dossier peut durer de longues minutes (et ne retire les messages disparus
+			 * qu'à sa fin) : sans cela, il resterait dans la liste jusque-là */
+			if (summary && camel_folder_summary_remove_uid (summary, args[2])) {
+				CamelFolderChangeInfo *changes = camel_folder_change_info_new ();
+
+				camel_folder_change_info_remove_uid (changes, args[2]);
+				camel_folder_changed (folder, changes);
+				camel_folder_change_info_free (changes);
+				g_message ("message %s absent du serveur : retiré du cache local de « %s »", args[2], args[1]);
+			}
 		}
 		g_object_unref (folder);
 		return NULL;
