@@ -6975,5 +6975,9 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Mes tâches</value>
     <comment>Mes tâches</comment>
   </data>
+  <data name="T_8D811B8F" xml:space="preserve">
+    <value>Messagerie, agenda, contacts et tâches</value>
+    <comment>Messagerie, agenda, contacts et tâches</comment>
+  </data>
 </root>
 
