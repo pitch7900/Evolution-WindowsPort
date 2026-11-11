@@ -93,50 +93,6 @@ gal_get_token (EvoCore *core,
 	return ok;
 }
 
-/* Diagnostic : journalise les portées (claim « scp ») d'un jeton d'accès JWT.
- * Seule la liste des portées est écrite, jamais le jeton lui-même.
- * Paramètres :
- *   label : texte identifiant le compte dans le journal
- *   token : jeton d'accès (JWT) */
-static void
-gal_log_token_scopes (const gchar *label,
-		      const gchar *token)
-{
-	gchar **parts = token ? g_strsplit (token, ".", 3) : NULL;
-	gchar *payload = NULL;
-	gsize length = 0;
-	JsonParser *parser;
-
-	if (parts && parts[0] && parts[1] && *parts[1]) {
-		gchar *padded = g_strdup (parts[1]);
-		gsize ii, len = strlen (padded);
-
-		for (ii = 0; ii < len; ii++) {
-			if (padded[ii] == '-')
-				padded[ii] = '+';
-			else if (padded[ii] == '_')
-				padded[ii] = '/';
-		}
-		payload = (gchar *) g_base64_decode (padded, &length);
-		g_free (padded);
-	}
-
-	parser = json_parser_new ();
-	if (payload && json_parser_load_from_data (parser, payload, (gssize) length, NULL) &&
-	    JSON_NODE_HOLDS_OBJECT (json_parser_get_root (parser))) {
-		JsonObject *object = json_node_get_object (json_parser_get_root (parser));
-
-		g_message ("jeton « %s » : portées = %s", label,
-			json_object_get_string_member_with_default (object, "scp", "(aucune claim scp)"));
-	} else {
-		g_message ("jeton « %s » : portées illisibles (jeton non JWT)", label);
-	}
-
-	g_object_unref (parser);
-	g_free (payload);
-	g_strfreev (parts);
-}
-
 /* Requête GET authentifiée (Bearer) sur une API d'annuaire.
  * Paramètres :
  *   core       : instance du moteur evo-core
@@ -794,8 +750,64 @@ evo_core_search_gal_account (EvoCore *core,
 	core_submit (core, core_search_gal_run, g_strdupv (args), func, user_data);
 }
 
+/* Identifiant (objet Entra) d'un utilisateur à partir de son adresse électronique.
+ * L'adresse de messagerie peut différer du nom d'utilisateur principal (UPN) :
+ * /users/{adresse} passe alors par la boîte Exchange, souvent sans photo, alors
+ * que /users/{id} lit la photo du profil Entra.
+ * Paramètres :
+ *   core     : instance du moteur evo-core
+ *   provider : fournisseur (Microsoft 365)
+ *   token    : jeton d'accès
+ *   email    : adresse de la personne
+ * Retourne : l'identifiant (g_free), NULL si introuvable. */
+static gchar *
+gal_resolve_user_id (EvoCore *core,
+		     GalProvider provider,
+		     const gchar *token,
+		     const gchar *email)
+{
+	gchar *escaped, *uri, *id = NULL;
+	GBytes *bytes;
+	guint status = 0;
+
+	if (!email || !*email || strchr (email, '\''))
+		return NULL;
+
+	escaped = g_uri_escape_string (email, NULL, TRUE);
+	uri = g_strconcat ("https://graph.microsoft.com/v1.0/users?$filter=mail%20eq%20%27", escaped,
+		"%27&$select=id,userPrincipalName&$top=1", NULL);
+	bytes = gal_http_get (core, provider, uri, token, &status, NULL);
+
+	if (bytes && status >= 200 && status < 300) {
+		JsonNode *root = NULL;
+		JsonObject *object = gal_parse_response (bytes, &root, NULL);
+		JsonNode *value = object && json_object_has_member (object, "value") ?
+			json_object_get_member (object, "value") : NULL;
+
+		if (value && JSON_NODE_HOLDS_ARRAY (value) && json_array_get_length (json_node_get_array (value)) > 0) {
+			JsonNode *first = json_array_get_element (json_node_get_array (value), 0);
+
+			if (JSON_NODE_HOLDS_OBJECT (first)) {
+				const gchar *text = gal_string_member (json_node_get_object (first), "id");
+
+				if (text && *text)
+					id = g_strdup (text);
+			}
+		}
+		if (root)
+			json_node_unref (root);
+	}
+	g_message ("photo annuaire Graph : identifiant de %s -> HTTP %u, %s", email, status, id ? id : "introuvable");
+
+	g_clear_pointer (&bytes, g_bytes_unref);
+	g_free (uri);
+	g_free (escaped);
+
+	return id;
+}
+
 /* Photo de profil d'une personne de l'annuaire Microsoft 365 (Graph
- * GET /users/{adresse}/photo/$value).
+ * GET /users/{identifiant}/photo/$value).
  * Paramètres :
  *   core  : instance du moteur evo-core
  *   args  : [0] = compte (identifiant ou nom, vide = tous), [1] = adresse
@@ -817,11 +829,7 @@ core_gal_photo_run (EvoCore *core,
 	for (slink = sources; slink && !photo; slink = g_list_next (slink)) {
 		ESource *source = slink->data;
 		GalProvider provider;
-		/* /photo/$value d'abord ; certaines photos (synchronisées depuis l'annuaire
-		 * local, par exemple) ne sont servies que par les tailles fixes */
-		const gchar *suffixes[] = { "v1.0/users/%s/photo/$value", "beta/users/%s/photo/$value",
-			"v1.0/users/%s/photos/240x240/$value", "v1.0/users/%s/photos/48x48/$value", NULL };
-		gchar *token = NULL;
+		gchar *token = NULL, *identifiers[2] = { NULL, NULL };
 		guint ii;
 
 		if (!gal_collection_provider (source, &provider) || provider != GAL_PROVIDER_MICROSOFT365)
@@ -832,17 +840,22 @@ core_gal_photo_run (EvoCore *core,
 		if (!gal_get_token (core, source, &token, NULL))
 			continue;
 
-		gal_log_token_scopes (e_source_get_display_name (source), token);
+		/* identifiant Entra d'abord, puis l'adresse telle quelle (UPN identique à l'adresse) */
+		identifiers[0] = gal_resolve_user_id (core, provider, token, args[1]);
+		identifiers[1] = g_strdup (escaped);
 
-		for (ii = 0; suffixes[ii] && !photo; ii++) {
-			gchar *path = g_strdup_printf (suffixes[ii], escaped);
-			gchar *uri = g_strconcat ("https://graph.microsoft.com/", path, NULL);
-
-			g_free (path);
+		for (ii = 0; ii < G_N_ELEMENTS (identifiers) && !photo; ii++) {
+			gchar *uri;
 			guint status = 0;
-			GBytes *bytes = gal_http_get (core, provider, uri, token, &status, NULL);
+			GBytes *bytes;
 
-			g_message ("photo annuaire Graph : HTTP %u pour %s (%.200s)", status, uri + strlen ("https://graph.microsoft.com/"),
+			if (!identifiers[ii])
+				continue;
+
+			uri = g_strconcat ("https://graph.microsoft.com/v1.0/users/", identifiers[ii], "/photo/$value", NULL);
+			bytes = gal_http_get (core, provider, uri, token, &status, NULL);
+			g_message ("photo annuaire Graph : HTTP %u pour %s via %s (%.200s)", status, args[1],
+				ii == 0 ? "identifiant" : "adresse",
 				bytes && status >= 300 && g_bytes_get_data (bytes, NULL) ? (const gchar *) g_bytes_get_data (bytes, NULL) : "");
 			if (bytes && status >= 200 && status < 300) {
 				gsize size = 0;
@@ -857,10 +870,9 @@ core_gal_photo_run (EvoCore *core,
 			}
 			g_clear_pointer (&bytes, g_bytes_unref);
 			g_free (uri);
-			/* 401/403 : inutile d'insister avec les autres tailles */
-			if (!photo && (status == 401 || status == 403))
-				break;
 		}
+		g_free (identifiers[0]);
+		g_free (identifiers[1]);
 		e_util_safe_free_string (token);
 	}
 	g_list_free_full (sources, g_object_unref);
