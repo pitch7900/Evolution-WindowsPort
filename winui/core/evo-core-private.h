@@ -407,6 +407,8 @@ core_graph_invitation_event (EvoCore *core,
 			     gboolean *out_found);
 
 /* evo-core-folders.c */
+guint
+core_folder_default_list_max (CamelFolder *folder);
 gboolean
 core_folder_sync_window_of (CamelFolder *folder,
 			     gboolean *out_truncated,

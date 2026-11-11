@@ -380,9 +380,8 @@ namespace winrt::EvolutionWin::implementation
             {
                 SetFolderSyncing(false);
 
-                /* Microsoft 365 : le serveur a-t-il des messages plus anciens que les 1 000 synchronisés ? */
-                if (object.GetNamedBoolean(L"window", false))
-                    UpdateOlderMessagesFooter(object.GetNamedBoolean(L"truncated", false), static_cast<int>(object.GetNamedNumber(L"limit", 0)));
+                /* messages plus anciens sur le serveur (M365) ou liste plafonnée : état du pied de liste */
+                RefreshOlderMessagesFooter();
             }
         }
         else if (event == L"folders-updated")

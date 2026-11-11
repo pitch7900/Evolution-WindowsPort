@@ -88,8 +88,9 @@ void		evo_core_list_messages		(EvoCore *core,
  * que les N messages les plus récents de chaque dossier.
  * Paramètres :
  *   core, account_uid, folder_full_name : dossier (déjà ouvert par evo_core_list_messages ())
- *   func : rappel recevant {"supported": bool, "truncated": bool, "limit": n} ("truncated" : le serveur
- *          a des messages plus anciens que ceux synchronisés)
+ *   func : rappel recevant {"supported": bool, "truncated": bool, "limit": n, "count": n, "default_max": n}
+ *          ("truncated" : le serveur a des messages plus anciens que ceux synchronisés ; "count" : messages
+ *          du dossier en local ; "default_max" : taille de liste par défaut, 500 ou la fenêtre de synchronisation)
  *   user_data : données utilisateur transmises au rappel */
 void		evo_core_get_folder_sync_info	(EvoCore *core,
 						 const char *account_uid,

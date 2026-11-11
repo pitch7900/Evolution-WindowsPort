@@ -6943,5 +6943,25 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Loading all the messages of this folder can take a very long time: several minutes, or even more for a folder of tens of thousands of messages, and uses bandwidth. EvolutionWin remains usable while loading.</value>
     <comment>Charger tous les messages de ce dossier peut être très long : plusieurs minutes, voire davantage pour un dossier de plusieurs dizaines de milliers de messages, et consomme de la bande passante. EvolutionWin reste utilisable pendant le chargement.</comment>
   </data>
+  <data name="T_3A2302D8" xml:space="preserve">
+    <value>Only the {0} most recent messages of this folder are displayed ({1} in total).</value>
+    <comment>Seuls les {0} messages les plus récents de ce dossier sont affichés ({1} au total).</comment>
+  </data>
+  <data name="T_F159476E" xml:space="preserve">
+    <value>Show {0} more messages</value>
+    <comment>Afficher {0} messages de plus</comment>
+  </data>
+  <data name="T_BB926001" xml:space="preserve">
+    <value>Show everything</value>
+    <comment>Tout afficher</comment>
+  </data>
+  <data name="T_301AEA24" xml:space="preserve">
+    <value>Show everything?</value>
+    <comment>Tout afficher ?</comment>
+  </data>
+  <data name="T_B3993400" xml:space="preserve">
+    <value>Showing all {0} messages of this folder can slow down the list. Continue?</value>
+    <comment>Afficher les {0} messages de ce dossier peut ralentir la liste. Continuer ?</comment>
+  </data>
 </root>
 

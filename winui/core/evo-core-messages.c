@@ -179,11 +179,8 @@ core_list_messages_run (EvoCore *core,
 	max_count = (guint) g_ascii_strtoull (args[2], NULL, 10);
 
 	/* 0 : taille adaptée au compte, la fenêtre de synchronisation s'il y en a une (Microsoft 365), sinon 500 */
-	if (max_count == 0) {
-		gint window_limit = 0;
-
-		max_count = core_folder_sync_window_of (folder, NULL, &window_limit) ? (window_limit > 0 ? (guint) window_limit : 5000) : 500;
-	}
+	if (max_count == 0)
+		max_count = core_folder_default_list_max (folder);
 
 	/* Vérifie si le résumé local Camel contient déjà des messages */
 	uids = camel_folder_dup_uids (folder);

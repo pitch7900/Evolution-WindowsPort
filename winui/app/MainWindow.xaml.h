@@ -203,7 +203,9 @@ namespace winrt::EvolutionWin::implementation
         void ScheduleListRefresh();
         void RefreshMessageListDelta();
         void SetFolderSyncing(bool syncing);
-        void UpdateOlderMessagesFooter(bool visible, int limit);
+        void UpdateListFooter(int mode, int shown, int total);
+        void ShowMoreMessages(unsigned extra_count);
+        fire_and_forget ConfirmShowAllMessages();
         void RefreshOlderMessagesFooter();
         void LoadOlderMessages(unsigned extra_count);
         fire_and_forget ConfirmLoadAllMessages();
@@ -993,6 +995,10 @@ namespace winrt::EvolutionWin::implementation
         Microsoft::UI::Xaml::Controls::TextBlock m_older_footer_text{ nullptr };
         Microsoft::UI::Xaml::Controls::HyperlinkButton m_older_footer_button{ nullptr };
         Microsoft::UI::Xaml::Controls::HyperlinkButton m_older_footer_all_button{ nullptr };
+        int m_list_footer_mode{ 0 };		///< 0 : masqué, 1 : fenêtre de synchronisation (M365), 2 : liste plafonnée
+        int m_list_footer_total{ 0 };		///< nombre de messages du dossier en local (mode 2)
+        unsigned m_list_max{ 0 };		///< taille de liste demandée pour le dossier affiché (0 : par défaut)
+        std::wstring m_list_max_key;		///< dossier auquel s'applique m_list_max
         uint64_t m_list_delta_request{ 0 };
         bool m_reader_loading_pending_nav{ false };
         winrt::com_ptr<ITaskbarList3> m_taskbar_list{ nullptr };

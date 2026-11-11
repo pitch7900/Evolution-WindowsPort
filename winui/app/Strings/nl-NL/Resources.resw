@@ -6943,5 +6943,25 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Het laden van alle berichten van deze map kan zeer lang duren: enkele minuten, of langer voor een map met tienduizenden berichten, en gebruikt bandbreedte. EvolutionWin blijft tijdens het laden bruikbaar.</value>
     <comment>Charger tous les messages de ce dossier peut être très long : plusieurs minutes, voire davantage pour un dossier de plusieurs dizaines de milliers de messages, et consomme de la bande passante. EvolutionWin reste utilisable pendant le chargement.</comment>
   </data>
+  <data name="T_3A2302D8" xml:space="preserve">
+    <value>Alleen de {0} meest recente berichten van deze map worden weergegeven ({1} in totaal).</value>
+    <comment>Seuls les {0} messages les plus récents de ce dossier sont affichés ({1} au total).</comment>
+  </data>
+  <data name="T_F159476E" xml:space="preserve">
+    <value>Nog {0} berichten tonen</value>
+    <comment>Afficher {0} messages de plus</comment>
+  </data>
+  <data name="T_BB926001" xml:space="preserve">
+    <value>Alles tonen</value>
+    <comment>Tout afficher</comment>
+  </data>
+  <data name="T_301AEA24" xml:space="preserve">
+    <value>Alles tonen?</value>
+    <comment>Tout afficher ?</comment>
+  </data>
+  <data name="T_B3993400" xml:space="preserve">
+    <value>Het tonen van alle {0} berichten van deze map kan de lijst vertragen. Doorgaan?</value>
+    <comment>Afficher les {0} messages de ce dossier peut ralentir la liste. Continuer ?</comment>
+  </data>
 </root>
 

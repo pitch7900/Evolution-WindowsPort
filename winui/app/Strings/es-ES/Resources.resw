@@ -6943,5 +6943,25 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Cargar todos los mensajes de esta carpeta puede tardar mucho: varios minutos, o más en una carpeta con decenas de miles de mensajes, y consume ancho de banda. EvolutionWin sigue siendo utilizable durante la carga.</value>
     <comment>Charger tous les messages de ce dossier peut être très long : plusieurs minutes, voire davantage pour un dossier de plusieurs dizaines de milliers de messages, et consomme de la bande passante. EvolutionWin reste utilisable pendant le chargement.</comment>
   </data>
+  <data name="T_3A2302D8" xml:space="preserve">
+    <value>Solo se muestran los {0} mensajes más recientes de esta carpeta ({1} en total).</value>
+    <comment>Seuls les {0} messages les plus récents de ce dossier sont affichés ({1} au total).</comment>
+  </data>
+  <data name="T_F159476E" xml:space="preserve">
+    <value>Mostrar {0} mensajes más</value>
+    <comment>Afficher {0} messages de plus</comment>
+  </data>
+  <data name="T_BB926001" xml:space="preserve">
+    <value>Mostrar todo</value>
+    <comment>Tout afficher</comment>
+  </data>
+  <data name="T_301AEA24" xml:space="preserve">
+    <value>¿Mostrar todo?</value>
+    <comment>Tout afficher ?</comment>
+  </data>
+  <data name="T_B3993400" xml:space="preserve">
+    <value>Mostrar los {0} mensajes de esta carpeta puede ralentizar la lista. ¿Continuar?</value>
+    <comment>Afficher les {0} messages de ce dossier peut ralentir la liste. Continuer ?</comment>
+  </data>
 </root>
 

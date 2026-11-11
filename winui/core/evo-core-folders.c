@@ -626,6 +626,19 @@ core_folder_sync_window_of (CamelFolder *folder,
 	return TRUE;
 }
 
+/* Nombre de messages affichés par défaut dans la liste d'un dossier : la fenêtre de synchronisation
+ * s'il y en a une (Microsoft 365), sinon 500. */
+guint
+core_folder_default_list_max (CamelFolder *folder)
+{
+	gint limit = 0;
+
+	if (core_folder_sync_window_of (folder, NULL, &limit))
+		return limit > 0 ? (guint) limit : 5000;
+
+	return 500;
+}
+
 /* Comme core_folder_sync_window_of (), pour un dossier suivi (déjà ouvert) désigné par son nom. */
 gboolean
 core_folder_sync_window (EvoCore *core,
@@ -661,12 +674,30 @@ core_folder_sync_info_run (EvoCore *core,
 			   gchar **args,
 			   GError **error)
 {
-	gboolean truncated = FALSE;
+	gchar *key = folder_key (args[0], args[1]);
+	CamelFolder *folder;
+	gboolean truncated = FALSE, supported = FALSE;
 	gint limit = 0;
-	gboolean supported = core_folder_sync_window (core, args[0], args[1], &truncated, &limit);
+	guint count = 0, default_max = 500;
 
-	return g_strdup_printf ("{\"supported\": %s, \"truncated\": %s, \"limit\": %d}",
-		supported ? "true" : "false", supported && truncated ? "true" : "false", supported ? limit : 0);
+	g_mutex_lock (&core->folders_lock);
+	folder = g_hash_table_lookup (core->folders, key);
+	if (folder)
+		g_object_ref (folder);
+	g_mutex_unlock (&core->folders_lock);
+	g_free (key);
+
+	if (folder) {
+		CamelFolderSummary *summary = camel_folder_get_folder_summary (folder);
+
+		supported = core_folder_sync_window_of (folder, &truncated, &limit);
+		default_max = core_folder_default_list_max (folder);
+		count = summary ? camel_folder_summary_count (summary) : 0;
+		g_object_unref (folder);
+	}
+
+	return g_strdup_printf ("{\"supported\": %s, \"truncated\": %s, \"limit\": %d, \"count\": %u, \"default_max\": %u}",
+		supported ? "true" : "false", supported && truncated ? "true" : "false", supported ? limit : 0, count, default_max);
 }
 
 /* Étend la fenêtre de synchronisation d'un dossier de « extra » messages plus anciens et lance la
