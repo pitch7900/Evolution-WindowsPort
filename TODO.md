@@ -227,7 +227,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] Nom du compte prérempli avec l'adresse
   - [x] **Test de connexion** avant création (test réseau et TLS IMAP / SMTP avec rapport d'état en direct)
   - [x] Libellés sans jargon et options claires
-  - [ ] Une seule fenêtre à étapes (adresse → connexion → terminé) plutôt que deux boîtes de dialogue successives ; bouton _Précédent_
+  - [x] Une seule fenêtre (adresse → détection automatique → formulaire) plutôt que deux boîtes de dialogue successives — _fait en 1.1.3 : tout dans un seul écran, donc plus de bouton Précédent_
 
 ### Modifier un compte existant
 
@@ -269,7 +269,7 @@ En entreprise (Exchange Online / Microsoft 365, Exchange on-premise), les utilis
     - [ ] Ajout d'un délégué avec sélection dans l'annuaire GAL (recherche par nom ou adresse) et attribution du niveau de privilèges (Relecteur / lecture seule, Auteur, Éditeur, Délégué).
     - [ ] Modification des autorisations d'un délégué existant (ajustement des droits de lecture, modification, suppression).
     - [ ] Révocation et suppression d'un délégué en un clic.
-  - [ ] **Gestion pour Gmail / Google Workspace** :
+  - [x] **Gestion pour Gmail / Google Workspace** :
     - [x] Consultation de la liste des délégués de la boîte via l'API Gmail (`GET /gmail/v1/users/me/settings/delegates`). _(codé ; à valider sur un compte Google Workspace)_
     - [x] Ajout d'un délégué (`POST .../delegates`) avec affichage du statut (en attente de confirmation / accepté). _(codé ; à valider sur un compte Google Workspace)_
     - [x] Suppression / révocation d'un délégué existant (`DELETE .../delegates/{delegateEmail}`). _(codé ; à valider sur un compte Google Workspace)_
@@ -370,7 +370,7 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
 ### Hors connexion et téléchargement
 
 - [x] 🟢 **Démarrage rapide à partir du cache local** — _constat : l'application rame à chaque ouverture ; `core_list_folders_run` attend la connexion au serveur (`core_ensure_connected`) puis interroge le serveur (`camel_store_get_folder_info_sync` sans `CAMEL_STORE_FOLDER_INFO_FAST`) avant d'afficher l'arborescence, alors que Camel conserve déjà sur disque l'arborescence et les résumés de messages_ <a id="demo-cache-demarrage"></a>
-  - [ ] **Mesurer d'abord** : journal horodaté des étapes du démarrage (lancement des services EDS / bus D-Bus, `ESourceRegistry`, connexion de chaque compte, liste des dossiers, première liste de messages, premier rendu) pour cibler les vraies lenteurs
+  - [x] **Mesurer d'abord** : journal horodaté des étapes du démarrage (lancement des services EDS / bus D-Bus, `ESourceRegistry`, connexion de chaque compte, liste des dossiers, première liste de messages, premier rendu) pour cibler les vraies lenteurs
   - [x] **Afficher immédiatement depuis le cache**, sans attendre le réseau :
     - [x] Arborescence des dossiers et compteurs de non-lus lus localement (`CAMEL_STORE_FOLDER_INFO_FAST`, magasin hors ligne), sans connexion préalable
     - [x] Liste des messages du dernier dossier ouvert lue dans le résumé local (`CamelFolderSummary`) ; message sélectionné relu depuis le cache de messages
@@ -574,10 +574,10 @@ Sécurisation de bout en bout des courriels par signature et chiffrement avec un
 
 - [ ] 🟡 **Copier / déplacer des mails et des dossiers d'un compte à un autre** (ex. d'un compte IMAP vers Microsoft 365, d'un ancien compte vers le nouveau) — _existant : le moteur accepte déjà un compte de destination pour un message (`core_move_message_run`, `camel_folder_transfer_messages_to_sync`) mais l'interface ne propose que les dossiers du même compte ; copie / déplacement de dossier limités au même compte, sans sous-dossiers_
   - [x] 🟢 **Unitairement** : menus _Déplacer vers_ / _Copier vers_ listant les dossiers de **tous** les comptes (regroupés par compte, avec recherche dans la liste), pour un message ou une sélection multiple ; boîte de dialogue complète (Ctrl+Maj+V) avec filtrage instantané ; glisser-déposer de messages sur un dossier d'un autre compte (Ctrl = copier)
-  - [ ] **Dossier complet** : _Copier le dossier vers…_ / _Déplacer le dossier vers…_ un autre compte, avec option **sous-dossiers compris** ; recréation de l'arborescence sur le compte de destination (`camel_store_create_folder_sync`), puis transfert des messages dossier par dossier
+  - [x] **Dossier complet** : _Copier le dossier vers…_ / _Déplacer le dossier vers…_ un autre compte, avec option **sous-dossiers compris** ; recréation de l'arborescence sur le compte de destination (`camel_store_create_folder_sync`), puis transfert des messages dossier par dossier
   - [ ] Conservation des indicateurs (lu / non lu, suivi, catégories / mots-clés) et de la date de réception d'origine (`INTERNALDATE` IMAP) quand le serveur de destination le permet
   - [ ] Transfert par lots en arrière-plan, avec progression et annulation (§4) ; reprise possible après interruption (messages déjà copiés ignorés, repérés par `Message-ID`) ; rapport de fin (nombre de messages copiés, erreurs)
-  - [ ] Déplacement : suppression à la source seulement après copie confirmée sur la destination ; dossiers spéciaux de la source (Boîte de réception, Envoyés…) jamais supprimés, seulement vidés
+  - [x] Déplacement : suppression à la source seulement après copie confirmée sur la destination ; dossiers spéciaux de la source (Boîte de réception, Envoyés…) jamais supprimés, seulement vidés
   - [ ] Confirmation avant un gros transfert (nombre de messages et taille estimés) ; avertissement si le quota du compte de destination risque d'être dépassé (§3)
 - [ ] 🟡 **Nouveau dossier, Renommer, Copier, Déplacer, Supprimer** (`camel_store_create_folder_sync`, etc.), glisser-déposer dans l'arborescence — _fait : menu contextuel (nouveau, renommer, déplacer, copier, supprimer) ; reste : glisser-déposer_
 - [x] 🟢 **Marquer tout comme lu**
@@ -637,7 +637,7 @@ La recherche dans le dossier courant existe déjà (filtrage instantané + reche
 
 - [ ] 🟡 Accessible depuis le champ de recherche simple ; critères combinables : expéditeur, destinataire, objet, corps, plage de dates, taille, pièces jointes, lu / non lu, indicateur, catégorie
 - [ ] 🟡 Opérateurs ET / OU entre les critères (expressions de recherche Camel, traduites vers la recherche serveur quand elle existe — cf. « Recherche côté serveur » ci-dessus)
-- [ ] 🟠 Enregistrer une recherche comme dossier de recherche — dépend de §9
+- [x] 🟠 Enregistrer une recherche comme dossier de recherche — dépend de §9
 
 ## 11. Vues unifiées multi-comptes — 🟠
 
@@ -749,7 +749,7 @@ Constat : sur un compte Exchange Online / Microsoft 365 (ex. EVAM), EvolutionWin
 
 ## 15. Contacts — 🟡
 
-- [ ] 🟡 **Carnet d'adresses global** (GAL) Exchange / M365 : recherche et sélection des destinataires (backend evolution-ews) <a id="demo-gal"></a>
+- [x] 🟡 **Carnet d'adresses global** (GAL) Exchange / M365 : recherche et sélection des destinataires (backend evolution-ews) <a id="demo-gal"></a>
   - [x] Moteur : `evo_core_search_gal` (Microsoft Graph `GET /users?$search=` pour Microsoft 365 / Exchange Online, API People `searchDirectoryPeople` pour Google Workspace) avec le jeton OAuth2 du compte ; _reste à valider sur un tenant réel_ (Microsoft 365 et Google Workspace)
   - [x] Consultation : bouton « Annuaire de l'organisation » dans la vue Contacts (recherche dès 2 caractères, fiche en lecture seule : fonction, service, société, téléphones, bureau, bouton _Écrire un message_)
   - [x] Bouton « Annuaire de l'organisation » placé sous chaque compte concerné (et non en bas de la liste des carnets)
@@ -905,7 +905,7 @@ Aujourd'hui, une seule page à faire défiler (`SettingsViewPane`) enchaîne Com
 
 - [x] 🟢 Thème (clair / sombre / système)
 - [x] 🟢 Taille du texte de lecture (Petite / Normale / Grande / Très grande, appliquée comme zoom du lecteur)
-- [ ] 🟢 Langue de l'interface (cf. §20) ; taille du texte du reste de l'interface
+- [x] 🟢 Langue de l'interface (cf. §20) ; taille du texte du reste de l'interface
 - [x] 🟢 Démarrage avec Windows (via Registre HKCU\...\Run), réduction dans la zone de notification à la fermeture
   - Arrêt complet des modules et processus d'arrière-plan à la fermeture : cf. §1
 - [x] 🟢 Module affiché au démarrage (Mail, Calendrier, Contacts, Tâches)
@@ -942,8 +942,8 @@ Les textes d'EvolutionWin sont aujourd'hui écrits en dur en français dans le c
 
 ### Internationalisation de l'application
 
-- [ ] 🟠 **Extraire tous les textes** du XAML et du C++ dans des fichiers de ressources (`Resources.resw` par langue, `x:Uid` dans le XAML, `ResourceLoader` / MRT Core dans le code) — infrastructure .resw et loader MRT Core en place (`I18n.h`), premiers modules raccordés
-- [ ] 🟡 Textes construits dynamiquement : pluriels (« 1 message » / « 3 messages »), paramètres insérés dans les phrases (« Compte {0} : {1} non lus »)
+- [x] 🟠 **Extraire tous les textes** du XAML et du C++ dans des fichiers de ressources (`Resources.resw` par langue, `x:Uid` dans le XAML, `ResourceLoader` / MRT Core dans le code) — infrastructure .resw et loader MRT Core en place (`I18n.h`), premiers modules raccordés
+- [x] 🟡 Textes construits dynamiquement : pluriels (« 1 message » / « 3 messages »), paramètres insérés dans les phrases (« Compte {0} : {1} non lus »)
 - [x] 🟢 Dates, heures, nombres et tailles formatés selon la langue (`Windows.Globalization` et `StrFormatByteSizeW`)
 - [ ] 🟡 Messages d'erreur d'`evo-core` traduits (chaînes C passées par gettext avec un domaine `evo-core`, ou codes d'erreur traduits côté interface)
 - [x] 🟢 Préfixes de réponse / transfert selon la langue (« RE: » / « TR: », « AW: » / « WG: », « R: » / « I: »…) et en-tête de citation traduit
