@@ -6879,5 +6879,17 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Ya existe una carpeta «{0}» en el destino. Introduzca otro nombre para «{1}»:</value>
     <comment>Un dossier « {0} » existe déjà à la destination. Saisissez un autre nom pour « {1} » :</comment>
   </data>
+  <data name="T_74FF8600" xml:space="preserve">
+    <value>Instalar la actualización</value>
+    <comment>Installer la mise à jour</comment>
+  </data>
+  <data name="T_02BE2675" xml:space="preserve">
+    <value>La aplicación se cerrará para instalar {0}. Guarde su trabajo en curso: los mensajes en redacción sin guardar se perderán.</value>
+    <comment>L'application va se fermer pour installer {0}. Enregistrez votre travail en cours : les messages en cours de rédaction non enregistrés seront perdus.</comment>
+  </data>
+  <data name="T_A59081C3" xml:space="preserve">
+    <value>Instalar y cerrar</value>
+    <comment>Installer et fermer</comment>
+  </data>
 </root>
 

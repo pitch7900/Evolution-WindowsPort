@@ -12,6 +12,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.1.2] — en cours
 
+### Corrigé
+
+- **Mise à jour automatique : l'application se ferme pour installer** : après le téléchargement et le contrôle de l'installeur, l'application laissait tourner le client pendant l'installation (fichiers verrouillés). Un avertissement s'affiche désormais (« Installer et fermer » / « Annuler » : les messages en cours de rédaction non enregistrés seront perdus), puis l'application se ferme normalement dès que l'installeur est lancé.
+
 ## [1.1.1] — 2026-11-11
 
 Version corrective : glisser-déposer des messages, fenêtre de choix du dossier, copie de dossiers entre comptes et fiabilité de la liste des messages.

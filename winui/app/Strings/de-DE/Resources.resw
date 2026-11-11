@@ -6879,5 +6879,17 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Am Ziel existiert bereits ein Ordner „{0}“. Geben Sie einen anderen Namen für „{1}“ ein:</value>
     <comment>Un dossier « {0} » existe déjà à la destination. Saisissez un autre nom pour « {1} » :</comment>
   </data>
+  <data name="T_74FF8600" xml:space="preserve">
+    <value>Update installieren</value>
+    <comment>Installer la mise à jour</comment>
+  </data>
+  <data name="T_02BE2675" xml:space="preserve">
+    <value>Die Anwendung wird geschlossen, um {0} zu installieren. Speichern Sie Ihre laufende Arbeit: nicht gespeicherte Nachrichten im Entwurf gehen verloren.</value>
+    <comment>L'application va se fermer pour installer {0}. Enregistrez votre travail en cours : les messages en cours de rédaction non enregistrés seront perdus.</comment>
+  </data>
+  <data name="T_A59081C3" xml:space="preserve">
+    <value>Installieren und schließen</value>
+    <comment>Installer et fermer</comment>
+  </data>
 </root>
 
