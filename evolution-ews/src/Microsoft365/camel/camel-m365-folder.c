@@ -877,6 +877,13 @@ m365_folder_got_summary_messages_cb (EM365Connection *cnc,
 	return TRUE;
 }
 
+/* Taille de page demandée au serveur pour la synchronisation des messages (« Prefer: odata.maxpagesize »).
+ * Sans préférence, Graph renvoie 10 messages par page : une première synchronisation de 8 000 messages
+ * demande plus de dix minutes, et comme le jeton de synchronisation n'est enregistré qu'à la fin (et les
+ * suppressions traitées à ce moment), une application fermée avant ne finissait jamais. Le serveur
+ * ramène la valeur à son maximum si elle est trop grande (50 pour les événements). */
+#define M365_MAIL_DELTA_MAX_PAGE_SIZE 100
+
 static gboolean
 m365_folder_refresh_info_sync_real (CamelFolder *folder,
 				    GCancellable *cancellable,
@@ -925,7 +932,7 @@ m365_folder_refresh_info_sync_real (CamelFolder *folder,
 		sdd.known_uids = camel_folder_summary_get_hash (folder_summary);
 
 	success = e_m365_connection_get_objects_delta_sync (cnc, NULL, E_M365_FOLDER_KIND_MAIL, folder_id, M365_FETCH_SUMMARY_PROPERTIES,
-		curr_delta_link, 0, m365_folder_got_summary_messages_cb, &sdd,
+		curr_delta_link, M365_MAIL_DELTA_MAX_PAGE_SIZE, m365_folder_got_summary_messages_cb, &sdd,
 		&new_delta_link, cancellable, &local_error);
 
 	if (curr_delta_link && e_m365_connection_util_delta_token_failed (local_error)) {
@@ -938,7 +945,7 @@ m365_folder_refresh_info_sync_real (CamelFolder *folder,
 		sdd.known_uids = camel_folder_summary_get_hash (folder_summary);
 
 		success = e_m365_connection_get_objects_delta_sync (cnc, NULL, E_M365_FOLDER_KIND_MAIL, folder_id, M365_FETCH_SUMMARY_PROPERTIES,
-			NULL, 0, m365_folder_got_summary_messages_cb, &sdd,
+			NULL, M365_MAIL_DELTA_MAX_PAGE_SIZE, m365_folder_got_summary_messages_cb, &sdd,
 			&new_delta_link, cancellable, &local_error);
 	}
 

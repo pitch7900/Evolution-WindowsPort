@@ -65,6 +65,12 @@ struct _EvoCore {
 	GMutex connect_lock;
 	GHashTable *connect_locks;
 
+	/* relèves en cours par dossier ("compte\x1Fdossier" -> nombre d'appels), protégées par refreshing_lock :
+	 * le fournisseur répond tout de suite quand une relève du même dossier est déjà en cours, la fin
+	 * n'est donc annoncée (folder-refreshed) que quand la dernière relève du dossier est terminée */
+	GMutex refreshing_lock;
+	GHashTable *refreshing;
+
 	/* startup state, protected by lock */
 	GMutex lock;
 	GCond cond;
@@ -400,6 +406,14 @@ core_dup_base_folder_names (EvoCore *core,
 			    CamelFolderInfo *fi);
 
 /* evo-core-refresh.c */
+void
+core_folder_refresh_begin (EvoCore *core,
+			   const gchar *account_uid,
+			   const gchar *folder_name);
+void
+core_folder_refresh_end (EvoCore *core,
+			 const gchar *account_uid,
+			 const gchar *folder_name);
 void
 core_emit_folder_refreshed (EvoCore *core,
 			    const gchar *account_uid,

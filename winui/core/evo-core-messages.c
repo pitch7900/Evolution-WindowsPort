@@ -129,6 +129,9 @@ core_folder_background_refresh_run (EvoCore *core,
 		g_object_unref (store);
 	}
 
+	/* la relève compte dès la demande (connexion comprise) : l'indicateur de l'interface la suit */
+	core_folder_refresh_begin (core, args[0], args[1]);
+
 	folder = core_ref_folder (core, args[0], args[1], error);
 	if (folder) {
 		core_bg_yield (core);
@@ -137,8 +140,8 @@ core_folder_background_refresh_run (EvoCore *core,
 		g_object_unref (folder);
 	}
 
-	/* fin de relève, réussie ou non : l'interface retire l'indicateur de synchronisation du dossier */
-	core_emit_folder_refreshed (core, args[0], args[1]);
+	/* fin de relève, réussie ou non (annoncée quand la dernière relève du dossier se termine) */
+	core_folder_refresh_end (core, args[0], args[1]);
 
 	return g_strdup ("{}");
 }
@@ -186,6 +189,8 @@ core_list_messages_run (EvoCore *core,
 		 * d'abord (le dossier a pu être ouvert hors connexion) */
 		CamelStore *store = core_ref_store (core, args[0], NULL);
 
+		core_folder_refresh_begin (core, args[0], args[1]);
+
 		if (store) {
 			core_ensure_connected (core, store, NULL);
 			g_object_unref (store);
@@ -200,7 +205,7 @@ core_list_messages_run (EvoCore *core,
 		uids = camel_folder_dup_uids (folder);
 
 		/* première relève sans cache : terminée, l'indicateur de synchronisation peut disparaître */
-		core_emit_folder_refreshed (core, args[0], args[1]);
+		core_folder_refresh_end (core, args[0], args[1]);
 	} else if (!cache_only) {
 		/* Cache local présent : on renvoie immédiatement les messages locaux,
 		 * et on lance la synchronisation distante en tâche de fond */

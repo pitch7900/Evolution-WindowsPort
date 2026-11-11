@@ -328,6 +328,8 @@ evo_core_new (EvoCoreEventFunc event_func,
 	g_cond_init (&core->cond);
 	g_mutex_init (&core->folders_lock);
 	g_mutex_init (&core->connect_lock);
+	g_mutex_init (&core->refreshing_lock);
+	core->refreshing = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
 	core->connect_locks = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, core_connect_lock_free);
 	core->folders =g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 	core->oauth2_pending = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, core_oauth2_pending_free);
@@ -400,6 +402,8 @@ evo_core_free (EvoCore *core)
 	g_hash_table_destroy (core->folders);
 	g_mutex_clear (&core->folders_lock);
 	g_hash_table_destroy (core->connect_locks);
+	g_hash_table_destroy (core->refreshing);
+	g_mutex_clear (&core->refreshing_lock);
 	g_mutex_clear (&core->connect_lock);
 
 	g_clear_object (&core->session);

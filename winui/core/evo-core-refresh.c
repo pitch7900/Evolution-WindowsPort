@@ -44,6 +44,61 @@ core_emit_folder_refreshed (EvoCore *core,
 	core_emit_builder (core, "folder-refreshed", builder);
 }
 
+/* Clé d'un dossier dans la table des relèves en cours. */
+static gchar *
+refresh_key (const gchar *account_uid,
+	     const gchar *folder_name)
+{
+	return g_strconcat (account_uid ? account_uid : "", "\x1F", folder_name ? folder_name : "", NULL);
+}
+
+/* Une relève du dossier commence (ou une demande de relève, même si le fournisseur la regroupe avec
+ * une relève déjà en cours).
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   account_uid  : identifiant du compte
+ *   folder_name  : nom complet du dossier */
+void
+core_folder_refresh_begin (EvoCore *core,
+			   const gchar *account_uid,
+			   const gchar *folder_name)
+{
+	gchar *key = refresh_key (account_uid, folder_name);
+	gint count;
+
+	g_mutex_lock (&core->refreshing_lock);
+	count = GPOINTER_TO_INT (g_hash_table_lookup (core->refreshing, key));
+	g_hash_table_insert (core->refreshing, key, GINT_TO_POINTER (count + 1));
+	g_mutex_unlock (&core->refreshing_lock);
+}
+
+/* Fin d'une relève du dossier : quand c'est la dernière, "folder-refreshed" est émis (réussie ou
+ * non), l'interface retire alors l'indicateur de synchronisation du dossier.
+ * Paramètres : voir core_folder_refresh_begin () */
+void
+core_folder_refresh_end (EvoCore *core,
+			 const gchar *account_uid,
+			 const gchar *folder_name)
+{
+	gchar *key = refresh_key (account_uid, folder_name);
+	gint count;
+	gboolean last = FALSE;
+
+	g_mutex_lock (&core->refreshing_lock);
+	count = GPOINTER_TO_INT (g_hash_table_lookup (core->refreshing, key));
+	if (count <= 1) {
+		g_hash_table_remove (core->refreshing, key);
+		last = TRUE;
+	} else {
+		g_hash_table_insert (core->refreshing, g_strdup (key), GINT_TO_POINTER (count - 1));
+	}
+	g_mutex_unlock (&core->refreshing_lock);
+	g_free (key);
+
+	if (last)
+		core_emit_folder_refreshed (core, account_uid, folder_name);
+}
+
 /* F9: every folder of the store besides the opened ones (already
  * refreshed), each opened for its refresh only, so that later periodic
  * refreshes stay limited to the inbox and the folders shown */
@@ -78,8 +133,14 @@ core_refresh_folder_infos (EvoCore *core,
 			g_free (status);
 
 			folder = camel_store_get_folder_sync (store, fi->full_name, 0, core->cancellable, &local_error);
-			if (folder && camel_folder_refresh_info_sync (folder, core->cancellable, &local_error))
-				g_message ("  “%s” refreshed: %d messages", fi->full_name, camel_folder_get_message_count (folder));
+			if (folder) {
+				const gchar *store_uid = camel_service_get_uid (CAMEL_SERVICE (store));
+
+				core_folder_refresh_begin (core, store_uid, fi->full_name);
+				if (camel_folder_refresh_info_sync (folder, core->cancellable, &local_error))
+					g_message ("  “%s” refreshed: %d messages", fi->full_name, camel_folder_get_message_count (folder));
+				core_folder_refresh_end (core, store_uid, fi->full_name);
+			}
 			if (local_error) {
 				g_warning ("Cannot refresh “%s”: %s", fi->full_name, local_error->message);
 				g_clear_error (&local_error);
@@ -184,6 +245,7 @@ core_refresh_run (EvoCore *core,
 
 			core_bg_yield (core);
 
+			core_folder_refresh_begin (core, uid, camel_folder_get_full_name (folder));
 			if (!camel_folder_refresh_info_sync (folder, core->cancellable, &local_error)) {
 				g_warning ("Cannot refresh “%s”: %s", camel_folder_get_full_name (folder),
 					local_error ? local_error->message : "?");
@@ -191,8 +253,8 @@ core_refresh_run (EvoCore *core,
 			} else {
 				g_message ("  “%s” refreshed: %d messages", camel_folder_get_full_name (folder),
 					camel_folder_get_message_count (folder));
-				core_emit_folder_refreshed (core, uid, camel_folder_get_full_name (folder));
 			}
+			core_folder_refresh_end (core, uid, camel_folder_get_full_name (folder));
 			g_object_set_data (G_OBJECT (folder), "evo-initial-sync-done", GINT_TO_POINTER (1));
 		}
 
