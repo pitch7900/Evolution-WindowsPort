@@ -10,6 +10,7 @@
  */
 
 #include "Categories.h"
+#include "ConditionalFormat.h"
 #include "Settings.h"
 #include <winrt/Windows.UI.h>
 
@@ -41,6 +42,42 @@ namespace EvolutionWin
         static void Save()
         {
             Settings::Instance().SetString(L"categories.registry", winrt::hstring{ Registry().Serialize() });
+        }
+
+        /**
+         * @brief Règles de mise en forme conditionnelle, chargées depuis les réglages au premier accès.
+         * @return Référence modifiable ; appeler SaveRules() après toute modification.
+         */
+        static std::vector<ConditionalFormat::FormatRule>& Rules()
+        {
+            auto& state = State();
+            if (!state.rules_loaded)
+            {
+                state.rules_loaded = true;
+                state.rules = ConditionalFormat::Deserialize(std::wstring{ Settings::Instance().GetString(L"categories.format_rules", L"") });
+            }
+            return state.rules;
+        }
+
+        /** @brief Enregistre les règles de mise en forme conditionnelle dans settings.json. */
+        static void SaveRules()
+        {
+            Settings::Instance().SetString(L"categories.format_rules", winrt::hstring{ ConditionalFormat::Serialize(Rules()) });
+        }
+
+        /**
+         * @brief Couleur automatique d'un élément d'après les règles de mise en forme conditionnelle.
+         * @param context Données de l'élément (expéditeur, objet, importance, organisateur).
+         * @param hex Reçoit « #RRGGBB » si une règle correspond.
+         * @return true si une règle correspond.
+         */
+        static bool RuleColorHex(ConditionalFormat::RuleContext const& context, winrt::hstring& hex)
+        {
+            uint8_t r = 0, g = 0, b = 0;
+            if (!ConditionalFormat::FindRuleColor(Rules(), context, r, g, b))
+                return false;
+            hex = winrt::hstring{ Categories::FormatHexColor(r, g, b) };
+            return true;
         }
 
         /**
@@ -104,6 +141,17 @@ namespace EvolutionWin
                 Registry().ColorOf(names.front(), r, g, b);
                 return winrt::hstring{ Categories::FormatHexColor(r, g, b) };
             }
+            /* sans catégorie : règle de mise en forme conditionnelle, sinon couleur de l'agenda */
+            ConditionalFormat::RuleContext context;
+            context.subject = std::wstring{ event.GetNamedString(L"summary", L"") };
+            if (event.HasKey(L"organizer") && event.GetNamedValue(L"organizer").ValueType() == winrt::Windows::Data::Json::JsonValueType::Object)
+            {
+                auto organizer = event.GetNamedObject(L"organizer");
+                context.organizer = std::wstring{ organizer.GetNamedString(L"name", L"") } + L" " + std::wstring{ organizer.GetNamedString(L"email", L"") };
+            }
+            winrt::hstring rule_hex;
+            if (RuleColorHex(context, rule_hex))
+                return rule_hex;
             return event.GetNamedString(L"calendar_color", L"");
         }
 
@@ -125,6 +173,8 @@ namespace EvolutionWin
         {
             bool loaded{ false };
             Categories::CategoryRegistry registry;
+            bool rules_loaded{ false };
+            std::vector<ConditionalFormat::FormatRule> rules;
         };
 
         static StateData& State()

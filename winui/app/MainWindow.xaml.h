@@ -559,6 +559,8 @@ namespace winrt::EvolutionWin::implementation
         /* Catégories unifiées (MainWindow.Categories.cpp) */
         void RefreshCategoriesView();
         void OnCategoriesRegistryChanged();
+        void RefreshFormatRulesView();
+        void OnFormatRulesChanged();
         std::vector<std::pair<winrt::hstring, std::vector<size_t>>> CategoryGroupsForDisplay();
         void ImportAccountCategories(Microsoft::UI::Xaml::Controls::Button const& button);
         void PopulateItemCategoryMenu(

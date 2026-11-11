@@ -359,6 +359,223 @@ namespace winrt::EvolutionWin::implementation
         note.Style(caption_style);
         note.Foreground(secondary_brush);
         host.Children().Append(note);
+
+        RefreshFormatRulesView();
+    }
+
+    /**
+     * @brief Enregistre les règles de mise en forme conditionnelle et rafraîchit les listes
+     *        déjà chargées (messages, calendrier).
+     */
+    void MainWindow::OnFormatRulesChanged()
+    {
+        ::EvolutionWin::CategoryStore::SaveRules();
+        if (m_all_messages)
+            ShowMessages(m_all_messages);
+        if (m_all_calendar_events)
+            FilterAndRenderCalendarEvents();
+    }
+
+    /**
+     * @brief Construit l'éditeur des règles de mise en forme conditionnelle (Paramètres > Catégories).
+     *
+     * Une ligne par règle : activation, critère, valeur (texte ou importance), couleur,
+     * montée en priorité et suppression ; puis le bouton d'ajout.
+     */
+    void MainWindow::RefreshFormatRulesView()
+    {
+        namespace CF = ::EvolutionWin::ConditionalFormat;
+        auto host = FormatRulesHost();
+        if (!host)
+            return;
+        host.Children().Clear();
+
+        auto resources = Application::Current().Resources();
+        auto card_brush = resources.Lookup(box_value(L"CardBackgroundFillColorDefaultBrush")).as<Brush>();
+        auto stroke_brush = resources.Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>();
+
+        auto& rules = ::EvolutionWin::CategoryStore::Rules();
+        for (size_t index = 0; index < rules.size(); ++index)
+        {
+            auto const rule = rules[index];
+
+            Border card;
+            card.Background(card_brush);
+            card.BorderBrush(stroke_brush);
+            card.BorderThickness(ThicknessHelper::FromUniformLength(1));
+            card.CornerRadius(CornerRadiusHelper::FromUniformRadius(6));
+            card.Padding(ThicknessHelper::FromLengths(12, 8, 12, 8));
+
+            Grid row;
+            row.ColumnSpacing(8);
+            for (int i = 0; i < 6; ++i)
+            {
+                ColumnDefinition column;
+                if (i == 2)
+                    column.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+                else
+                    column.Width(GridLengthHelper::Auto());
+                row.ColumnDefinitions().Append(column);
+            }
+
+            CheckBox enabled;
+            enabled.IsChecked(rule.enabled);
+            enabled.MinWidth(0);
+            enabled.VerticalAlignment(VerticalAlignment::Center);
+            Controls::ToolTipService::SetToolTip(enabled, box_value(Tr(L"Règle active")));
+            enabled.Click([this, index](IInspectable const& sender, RoutedEventArgs const&)
+            {
+                auto& all = ::EvolutionWin::CategoryStore::Rules();
+                if (index < all.size())
+                    all[index].enabled = sender.as<CheckBox>().IsChecked().Value();
+                OnFormatRulesChanged();
+            });
+            row.Children().Append(enabled);
+
+            ComboBox field_box;
+            field_box.Width(240);
+            field_box.VerticalAlignment(VerticalAlignment::Center);
+            for (auto const& label : {
+                     Tr(L"L'expéditeur contient"), Tr(L"Le domaine de l'expéditeur est"), Tr(L"L'objet ou le titre contient"),
+                     Tr(L"L'importance est"), Tr(L"L'organisateur contient") })
+                field_box.Items().Append(box_value(label));
+            field_box.SelectedIndex(static_cast<int>(rule.field));
+            field_box.SelectionChanged([this, index](IInspectable const& sender, SelectionChangedEventArgs const&)
+            {
+                auto& all = ::EvolutionWin::CategoryStore::Rules();
+                int selected = sender.as<ComboBox>().SelectedIndex();
+                if (index >= all.size() || selected < 0 || selected == static_cast<int>(all[index].field))
+                    return;
+                all[index].field = static_cast<CF::RuleField>(selected);
+                if (all[index].field == CF::RuleField::Importance && all[index].text != L"high" && all[index].text != L"low")
+                    all[index].text = L"high";
+                OnFormatRulesChanged();
+                /* la zone de valeur change selon le critère : on reconstruit */
+                DispatcherQueue().TryEnqueue([this]() { RefreshFormatRulesView(); });
+            });
+            Grid::SetColumn(field_box, 1);
+            row.Children().Append(field_box);
+
+            if (rule.field == CF::RuleField::Importance)
+            {
+                ComboBox level_box;
+                level_box.HorizontalAlignment(HorizontalAlignment::Stretch);
+                level_box.VerticalAlignment(VerticalAlignment::Center);
+                level_box.Items().Append(box_value(Tr(L"Haute")));
+                level_box.Items().Append(box_value(Tr(L"Basse")));
+                level_box.SelectedIndex(rule.text == L"low" ? 1 : 0);
+                level_box.SelectionChanged([this, index](IInspectable const& sender, SelectionChangedEventArgs const&)
+                {
+                    auto& all = ::EvolutionWin::CategoryStore::Rules();
+                    if (index < all.size())
+                        all[index].text = sender.as<ComboBox>().SelectedIndex() == 1 ? L"low" : L"high";
+                    OnFormatRulesChanged();
+                });
+                Grid::SetColumn(level_box, 2);
+                row.Children().Append(level_box);
+            }
+            else
+            {
+                TextBox value_box;
+                value_box.Text(hstring{ rule.text });
+                value_box.MaxLength(200);
+                value_box.VerticalAlignment(VerticalAlignment::Center);
+                value_box.PlaceholderText(rule.field == CF::RuleField::SenderDomain ? Tr(L"exemple.fr") : Tr(L"Texte à rechercher"));
+                value_box.LostFocus([this, index](IInspectable const& sender, RoutedEventArgs const&)
+                {
+                    auto& all = ::EvolutionWin::CategoryStore::Rules();
+                    std::wstring text{ sender.as<TextBox>().Text() };
+                    if (index < all.size() && all[index].text != text)
+                    {
+                        all[index].text = text;
+                        OnFormatRulesChanged();
+                    }
+                });
+                Grid::SetColumn(value_box, 2);
+                row.Children().Append(value_box);
+            }
+
+            Button swatch;
+            swatch.Width(36);
+            swatch.Height(32);
+            swatch.Padding(ThicknessHelper::FromUniformLength(0));
+            swatch.Background(SolidColorBrush{ Windows::UI::Color{ 255, rule.r, rule.g, rule.b } });
+            Controls::ToolTipService::SetToolTip(swatch, box_value(Tr(L"Choisir la couleur")));
+            ColorPicker picker;
+            picker.IsAlphaEnabled(false);
+            picker.IsHexInputVisible(true);
+            picker.Color(Windows::UI::Color{ 255, rule.r, rule.g, rule.b });
+            picker.ColorChanged([index, swatch](ColorPicker const&, ColorChangedEventArgs const& args)
+            {
+                auto color = args.NewColor();
+                swatch.Background(SolidColorBrush{ color });
+                auto& all = ::EvolutionWin::CategoryStore::Rules();
+                if (index < all.size())
+                {
+                    all[index].r = color.R;
+                    all[index].g = color.G;
+                    all[index].b = color.B;
+                }
+            });
+            Flyout picker_flyout;
+            picker_flyout.Content(picker);
+            picker_flyout.Closed([this](IInspectable const&, IInspectable const&) { OnFormatRulesChanged(); });
+            swatch.Flyout(picker_flyout);
+            Grid::SetColumn(swatch, 3);
+            row.Children().Append(swatch);
+
+            Button up_button;
+            FontIcon up_icon;
+            up_icon.Glyph(L"\xE70E");
+            up_icon.FontSize(14);
+            up_button.Content(up_icon);
+            up_button.IsEnabled(index > 0);
+            Controls::ToolTipService::SetToolTip(up_button, box_value(Tr(L"Donner plus de priorité")));
+            up_button.Click([this, index](IInspectable const&, RoutedEventArgs const&)
+            {
+                auto& all = ::EvolutionWin::CategoryStore::Rules();
+                if (index > 0 && index < all.size())
+                {
+                    std::swap(all[index], all[index - 1]);
+                    OnFormatRulesChanged();
+                    RefreshFormatRulesView();
+                }
+            });
+            Grid::SetColumn(up_button, 4);
+            row.Children().Append(up_button);
+
+            Button delete_button;
+            FontIcon delete_icon;
+            delete_icon.Glyph(L"\xE74D");
+            delete_icon.FontSize(14);
+            delete_button.Content(delete_icon);
+            Controls::ToolTipService::SetToolTip(delete_button, box_value(Tr(L"Supprimer la règle")));
+            delete_button.Click([this, index](IInspectable const&, RoutedEventArgs const&)
+            {
+                auto& all = ::EvolutionWin::CategoryStore::Rules();
+                if (index < all.size())
+                {
+                    all.erase(all.begin() + index);
+                    OnFormatRulesChanged();
+                    RefreshFormatRulesView();
+                }
+            });
+            Grid::SetColumn(delete_button, 5);
+            row.Children().Append(delete_button);
+
+            card.Child(row);
+            host.Children().Append(card);
+        }
+
+        Button add_button;
+        add_button.Content(box_value(Tr(L"Ajouter une règle")));
+        add_button.Click([this](IInspectable const&, RoutedEventArgs const&)
+        {
+            ::EvolutionWin::CategoryStore::Rules().push_back(CF::FormatRule{});
+            OnFormatRulesChanged();
+            RefreshFormatRulesView();
+        });
+        host.Children().Append(add_button);
     }
 
     /**

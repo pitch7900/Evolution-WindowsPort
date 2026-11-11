@@ -12,6 +12,7 @@
 
 #include "../include/test_framework.h"
 #include "../../winui/app/Categories.h"
+#include "../../winui/app/ConditionalFormat.h"
 
 using namespace EvolutionWin::Categories;
 
@@ -262,6 +263,61 @@ static void test_group_by_account(void)
     TEST_CASE_END();
 }
 
+static void test_conditional_format(void)
+{
+    TEST_CASE("Mise en forme conditionnelle: regles, domaine, importance, serialisation");
+    {
+        using namespace EvolutionWin::ConditionalFormat;
+        ASSERT_TRUE(DomainOf(L"Jean Dupont <Jean@Exemple.FR>") == L"exemple.fr");
+        ASSERT_TRUE(DomainOf(L"jean@exemple.fr") == L"exemple.fr");
+        ASSERT_TRUE(DomainOf(L"sans adresse").empty());
+
+        RuleContext mail;
+        mail.sender = L"Jean Dupont <jean@mail.exemple.fr>";
+        mail.subject = L"Facture de Mars";
+        mail.importance = L"high";
+
+        FormatRule r;
+        r.field = RuleField::Sender;     r.text = L"dupont";
+        ASSERT_TRUE(RuleMatches(r, mail));
+        r.text = L"  ";                  ASSERT_FALSE(RuleMatches(r, mail));          /* texte vide */
+        r.field = RuleField::SenderDomain; r.text = L"@exemple.fr";
+        ASSERT_TRUE(RuleMatches(r, mail));                                              /* sous-domaine */
+        r.text = L"emple.fr";            ASSERT_FALSE(RuleMatches(r, mail));          /* pas une frontiere */
+        r.field = RuleField::Subject;    r.text = L"FACTURE";
+        ASSERT_TRUE(RuleMatches(r, mail));                                              /* casse ignoree */
+        r.field = RuleField::Importance; r.text = L"high";
+        ASSERT_TRUE(RuleMatches(r, mail));
+        r.text = L"low";                 ASSERT_FALSE(RuleMatches(r, mail));
+        r.field = RuleField::Organizer;  r.text = L"jean";
+        ASSERT_FALSE(RuleMatches(r, mail));                                             /* organisateur absent */
+        r.field = RuleField::Subject;    r.text = L"mars"; r.enabled = false;
+        ASSERT_FALSE(RuleMatches(r, mail));                                             /* regle inactive */
+
+        /* la premiere regle active qui correspond fixe la couleur */
+        std::vector<FormatRule> rules;
+        FormatRule a; a.field = RuleField::Subject; a.text = L"absent"; a.r = 1; a.g = 1; a.b = 1;
+        FormatRule b; b.field = RuleField::Subject; b.text = L"facture"; b.r = 10; b.g = 20; b.b = 30;
+        FormatRule c; c.field = RuleField::Sender;  c.text = L"jean";    c.r = 99; c.g = 99; c.b = 99;
+        rules = { a, b, c };
+        uint8_t cr = 0, cg = 0, cb = 0;
+        ASSERT_TRUE(FindRuleColor(rules, mail, cr, cg, cb));
+        ASSERT_EQ_INT(10, cr);
+        ASSERT_EQ_INT(30, cb);
+        ASSERT_FALSE(FindRuleColor({}, mail, cr, cg, cb));
+
+        /* serialisation : aller-retour, tabulations neutralisees, lignes illisibles ignorees */
+        b.text = L"a\tb";
+        std::wstring text = Serialize({ a, b });
+        auto loaded = Deserialize(text + L"n'importe quoi\n9\t9\t#000000\tx\n");
+        ASSERT_EQ_INT(2, loaded.size());
+        ASSERT_TRUE(loaded[1].text == L"a b");
+        ASSERT_EQ_INT(20, loaded[1].g);
+        ASSERT_TRUE(loaded[0].field == RuleField::Subject);
+    }
+    TEST_CASE_END();
+}
+
 int main(void)
 {
     TEST_SUITE_BEGIN("Categories unifiees (Categories.h)");
@@ -273,6 +329,7 @@ int main(void)
     test_category_lists();
     test_category_filter();
     test_group_by_account();
+    test_conditional_format();
 
     return test_suite_summary();
 }

@@ -7,6 +7,7 @@
 #include "Settings.h"
 #include "ConversationThreads.h"
 #include "UnifiedViews.h"
+#include "CategoryStore.h"
 
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
@@ -972,6 +973,21 @@ namespace winrt::EvolutionWin::implementation
             /* Fond transparent explicite pour que le survol (PointerEntered/PointerExited)
              * soit détecté sur toute la surface de la ligne et pas uniquement sur le texte */
             item.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+            {
+                /* mise en forme conditionnelle : teinte de fond selon les règles (Paramètres > Catégories) */
+                ::EvolutionWin::ConditionalFormat::RuleContext rule_context;
+                rule_context.sender = std::wstring{ message.GetNamedString(L"from", L"") };
+                rule_context.subject = std::wstring{ message.GetNamedString(L"subject", L"") };
+                auto level = ::EvolutionWin::Helpers::ParseMessageImportance(
+                    message.GetNamedString(L"importance", L"normal"), message.GetNamedNumber(L"priority", 3.0));
+                rule_context.importance = level == ::EvolutionWin::Helpers::MessageImportanceLevel::High ? L"high"
+                    : (level == ::EvolutionWin::Helpers::MessageImportanceLevel::Low ? L"low" : L"normal");
+                hstring rule_hex;
+                uint8_t rr = 0, rg = 0, rb = 0;
+                if (::EvolutionWin::CategoryStore::RuleColorHex(rule_context, rule_hex)
+                    && ::EvolutionWin::Categories::ParseHexColor(std::wstring_view{ rule_hex }, rr, rg, rb))
+                    item.Background(SolidColorBrush{ Windows::UI::Color{ 0x38, rr, rg, rb } });
+            }
             item.Tag(box_value(uid));
             if (m_conversations_enabled && !thread_row.header)
                 item.Margin(ThicknessHelper::FromLengths(24, 0, 0, 0));

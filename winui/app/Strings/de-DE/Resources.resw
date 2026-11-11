@@ -7055,5 +7055,57 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Übertragung des Ordners „{0}“: {1} Nachricht(en)</value>
     <comment>Transfert du dossier « {0} » : {1} message(s)</comment>
   </data>
+  <data name="T_A92171B6" xml:space="preserve">
+    <value>Bedingte Formatierung</value>
+    <comment>Mise en forme conditionnelle</comment>
+  </data>
+  <data name="T_34C4A200" xml:space="preserve">
+    <value>Färbt Nachrichten und Termine automatisch nach Regeln. Die erste passende Regel gilt: Hintergrundtönung in der Nachrichtenliste, Terminfarbe im Kalender (wenn keine Kategorie gesetzt ist).</value>
+    <comment>Colore automatiquement les messages et les événements selon des règles. La première règle qui correspond s'applique : teinte de fond dans la liste des messages, couleur de l'événement dans le calendrier (si aucune catégorie n'est posée).</comment>
+  </data>
+  <data name="T_94AAE66B" xml:space="preserve">
+    <value>Regel aktiv</value>
+    <comment>Règle active</comment>
+  </data>
+  <data name="T_60FF5DF3" xml:space="preserve">
+    <value>Der Absender enthält</value>
+    <comment>L'expéditeur contient</comment>
+  </data>
+  <data name="T_C277340C" xml:space="preserve">
+    <value>Die Domäne des Absenders ist</value>
+    <comment>Le domaine de l'expéditeur est</comment>
+  </data>
+  <data name="T_DDABDC69" xml:space="preserve">
+    <value>Der Betreff oder Titel enthält</value>
+    <comment>L'objet ou le titre contient</comment>
+  </data>
+  <data name="T_5D30AC1E" xml:space="preserve">
+    <value>Die Wichtigkeit ist</value>
+    <comment>L'importance est</comment>
+  </data>
+  <data name="T_26124DC4" xml:space="preserve">
+    <value>Der Organisator enthält</value>
+    <comment>L'organisateur contient</comment>
+  </data>
+  <data name="T_0EE830E5" xml:space="preserve">
+    <value>beispiel.de</value>
+    <comment>exemple.fr</comment>
+  </data>
+  <data name="T_1751C7FA" xml:space="preserve">
+    <value>Suchtext</value>
+    <comment>Texte à rechercher</comment>
+  </data>
+  <data name="T_F0EFF79C" xml:space="preserve">
+    <value>Höhere Priorität geben</value>
+    <comment>Donner plus de priorité</comment>
+  </data>
+  <data name="T_7B49CA2B" xml:space="preserve">
+    <value>Regel löschen</value>
+    <comment>Supprimer la règle</comment>
+  </data>
+  <data name="T_4EAB89C7" xml:space="preserve">
+    <value>Regel hinzufügen</value>
+    <comment>Ajouter une règle</comment>
+  </data>
 </root>
 

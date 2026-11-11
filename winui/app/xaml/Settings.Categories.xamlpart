@@ -2,4 +2,7 @@
                                 <TextBlock Text="Catégories et codes couleur" Style="{StaticResource SubtitleTextBlockStyle}" />
                                 <TextBlock TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Les mêmes catégories et les mêmes couleurs servent pour les courriels, les contacts, les tâches et les événements du calendrier. Les premières portent les raccourcis Ctrl+F2 à Ctrl+F12 (courriels)." />
                                 <StackPanel x:Name="CategoriesEditorHost" Spacing="8" />
+                                <TextBlock Text="Mise en forme conditionnelle" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,12,0,0" />
+                                <TextBlock TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Colore automatiquement les messages et les événements selon des règles. La première règle qui correspond s'applique : teinte de fond dans la liste des messages, couleur de l'événement dans le calendrier (si aucune catégorie n'est posée)." />
+                                <StackPanel x:Name="FormatRulesHost" Spacing="8" />
                             </StackPanel>
