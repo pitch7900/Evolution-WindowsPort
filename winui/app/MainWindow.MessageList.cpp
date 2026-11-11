@@ -132,6 +132,7 @@ namespace winrt::EvolutionWin::implementation
             if (!error.empty())
             {
                 ShowStatus(Tr(L"Messages : ") + error, InfoBarSeverity::Error);
+                RevealMainWindow(L"erreur de la liste des messages");
                 return;
             }
 
@@ -148,6 +149,7 @@ namespace winrt::EvolutionWin::implementation
                 traced_list = true;
                 evo_core_trace("interface : première liste de messages affichée");
             }
+            RevealMainWindow(L"première liste de messages");
 
             /* the reader keeps its message: reselect it silently */
             if (!selected.empty())
@@ -205,6 +207,7 @@ namespace winrt::EvolutionWin::implementation
             if (!error.empty())
             {
                 ShowStatus(Tr(L"Vue unifiée : ", L"Unified view: ") + error, InfoBarSeverity::Error);
+                RevealMainWindow(L"erreur de la vue unifiée");
                 return;
             }
 
@@ -214,6 +217,7 @@ namespace winrt::EvolutionWin::implementation
                 FilterLocalMessages(SearchBox().Text());
             else
                 ShowMessages(m_all_messages);
+            RevealMainWindow(L"première vue unifiée");
 
             if (!selected.empty())
             {

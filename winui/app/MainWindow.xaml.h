@@ -198,6 +198,7 @@ namespace winrt::EvolutionWin::implementation
         void RefreshConnectionAccountsList();
         void RefreshConnectionIndicator();
         void UpdateSenderPhoto(winrt::hstring const& from);
+        void RevealMainWindow(wchar_t const* reason);
         void UpdateFolderStatusText();
         void RestoreSessionFolder();
         void UpdateOutOfOfficeBanner();
@@ -972,6 +973,7 @@ namespace winrt::EvolutionWin::implementation
         /* Splash screen et progression barre des tâches */
         winrt::EvolutionWin::SplashWindow m_splash{ nullptr };
         Microsoft::UI::Xaml::DispatcherTimer m_splash_timer{ nullptr };
+        Microsoft::UI::Xaml::DispatcherTimer m_reveal_timer{ nullptr };
         winrt::com_ptr<ITaskbarList3> m_taskbar_list{ nullptr };
 
         /* État de la page Paramètres */
