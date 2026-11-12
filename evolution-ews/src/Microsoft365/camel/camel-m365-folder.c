@@ -999,32 +999,32 @@ m365_folder_refresh_info_sync_real (CamelFolder *folder,
 
 	if (!curr_delta_link) {
 		sdd.known_uids = camel_folder_summary_get_hash (folder_summary);
+		/* les messages les plus récents d'abord, publiés sans attendre le calcul de la fenêtre ni la fin de
+		   l'énumération complète (qui peuvent durer plusieurs minutes pour un grand dossier et être
+		   interrompus à la fermeture) */
+		if (!e_m365_connection_list_recent_mail_sync (cnc, NULL, folder_id, M365_FETCH_SUMMARY_PROPERTIES,
+			M365_MAIL_RECENT_FIRST_COUNT, m365_folder_got_summary_messages_cb, &sdd, cancellable, &recent_error)) {
+			g_message ("m365 : « %s » messages récents : échec : %s", camel_folder_get_full_name (folder),
+				recent_error ? recent_error->message : "?");
+			g_clear_error (&recent_error);
+		} else if (sdd.changes) {
+			g_message ("m365 : « %s » messages récents lus", camel_folder_get_full_name (folder));
+			m365_folder_save_summary (m365_folder);
+			if (camel_folder_change_info_changed (sdd.changes))
+				camel_folder_changed (folder, sdd.changes);
+			camel_folder_change_info_free (sdd.changes);
+			sdd.changes = NULL;
+		}
+
 		/* première énumération : limitée aux messages les plus récents (fenêtre de synchronisation) */
 		success = m365_folder_window_filter (m365_folder_summary, cnc, folder_id, cancellable, &filter, &local_error);
-		g_message ("m365 : « %s » sans jeton de synchronisation, fenêtre %s%s%s", camel_folder_get_full_name (folder),
+		g_message ("m365 : « %s » sans jeton de synchronisation, fenêtre %s%s", camel_folder_get_full_name (folder),
 			success ? (filter ? filter : "aucune (dossier entier)") : "ÉCHEC : ",
-			success ? "" : (local_error ? local_error->message : "?"), "");
+			success ? "" : (local_error ? local_error->message : "?"));
 
-		if (success) {
-			/* la fenêtre est conservée tout de suite : une relève interrompue ne la recalcule pas */
+		/* la fenêtre est conservée tout de suite : une relève interrompue ne la recalcule pas */
+		if (success)
 			m365_folder_save_summary (m365_folder);
-
-			/* les messages les plus récents d'abord, publiés sans attendre la fin de l'énumération complète
-			   (qui peut durer plusieurs minutes pour un grand dossier et être interrompue à la fermeture) */
-			if (!e_m365_connection_list_recent_mail_sync (cnc, NULL, folder_id, M365_FETCH_SUMMARY_PROPERTIES,
-				M365_MAIL_RECENT_FIRST_COUNT, m365_folder_got_summary_messages_cb, &sdd, cancellable, &recent_error)) {
-				g_message ("m365 : « %s » messages récents : échec : %s", camel_folder_get_full_name (folder),
-					recent_error ? recent_error->message : "?");
-				g_clear_error (&recent_error);
-			} else if (sdd.changes) {
-				g_message ("m365 : « %s » messages récents lus", camel_folder_get_full_name (folder));
-				m365_folder_save_summary (m365_folder);
-				if (camel_folder_change_info_changed (sdd.changes))
-					camel_folder_changed (folder, sdd.changes);
-				camel_folder_change_info_free (sdd.changes);
-				sdd.changes = NULL;
-			}
-		}
 	}
 
 	if (success)

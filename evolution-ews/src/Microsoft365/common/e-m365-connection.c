@@ -2900,16 +2900,31 @@ e_m365_connection_get_mail_window_start_sync (EM365Connection *cnc,
 
 	*out_received_time = 0;
 
-	skip_str = g_strdup_printf ("%u", skip);
-	uri = e_m365_connection_construct_uri (cnc, TRUE, user_override, E_M365_API_V1_0, NULL,
-		"mailFolders",
-		folder_id,
-		"messages",
-		"$select", "receivedDateTime",
-		"$orderby", "receivedDateTime desc",
-		"$top", "1",
-		"$skip", skip_str,
-		NULL);
+	/* « $skip » est très lent sur un grand dossier (plus d'une minute pour 1000 sur 17 000 messages) : jusqu'à
+	   1000 messages (maximum d'une page Graph), on lit plutôt la première page « $top=skip+1 » et on garde le
+	   dernier élément. */
+	if (skip < 1000) {
+		skip_str = g_strdup_printf ("%u", skip + 1);
+		uri = e_m365_connection_construct_uri (cnc, TRUE, user_override, E_M365_API_V1_0, NULL,
+			"mailFolders",
+			folder_id,
+			"messages",
+			"$select", "receivedDateTime",
+			"$orderby", "receivedDateTime desc",
+			"$top", skip_str,
+			NULL);
+	} else {
+		skip_str = g_strdup_printf ("%u", skip);
+		uri = e_m365_connection_construct_uri (cnc, TRUE, user_override, E_M365_API_V1_0, NULL,
+			"mailFolders",
+			folder_id,
+			"messages",
+			"$select", "receivedDateTime",
+			"$orderby", "receivedDateTime desc",
+			"$top", "1",
+			"$skip", skip_str,
+			NULL);
+	}
 	g_free (skip_str);
 
 	message = m365_connection_new_soup_message (SOUP_METHOD_GET, uri, CSM_DEFAULT, error);
@@ -2921,11 +2936,16 @@ e_m365_connection_get_mail_window_start_sync (EM365Connection *cnc,
 	memset (&rd, 0, sizeof (EM365ResponseData));
 
 	rd.out_items = &items;
+	rd.read_only_once = TRUE; /* une seule page */
 
 	success = m365_connection_send_request_sync (cnc, message, e_m365_read_valued_response_cb, NULL, &rd, cancellable, error);
 
-	if (success && items)
-		*out_received_time = e_m365_mail_message_get_received_date_time (items->data);
+	if (success && items) {
+		/* la liste est construite par « prepend » : le message le plus ancien reçu en est la tête */
+		/* si le dossier a moins de messages que demandé, la fenêtre ne doit pas être bornée */
+		if (skip >= 1000 || g_slist_length (items) == skip + 1)
+			*out_received_time = e_m365_mail_message_get_received_date_time (items->data);
+	}
 
 	g_slist_free_full (items, (GDestroyNotify) json_object_unref);
 	g_clear_object (&message);
