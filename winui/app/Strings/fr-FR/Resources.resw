@@ -8047,5 +8047,13 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Impossible de glisser l'élément : {0}</value>
     <comment>Impossible de glisser l'élément : {0}</comment>
   </data>
+  <data name="T_110712C1" xml:space="preserve">
+    <value>Messages en mode sombre</value>
+    <comment>Messages en mode sombre</comment>
+  </data>
+  <data name="T_8C87ABE6" xml:space="preserve">
+    <value>En thème sombre, affiche le contenu des messages avec un fond sombre et un texte clair (les images gardent leurs couleurs).</value>
+    <comment>En thème sombre, affiche le contenu des messages avec un fond sombre et un texte clair (les images gardent leurs couleurs).</comment>
+  </data>
 </root>
 
