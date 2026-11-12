@@ -14,6 +14,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Corrigé
 
+- **Catégories de courrier envoyées au serveur (Microsoft 365, IMAP).** Une catégorie posée sur un message n'était enregistrée qu'en local : le moteur appelait seulement `camel_folder_synchronize_message_sync`, qui télécharge le message sans envoyer les modifications. Le dossier est maintenant synchronisé après chaque changement de catégorie, ce qui envoie `categories` à Exchange Online (Outlook).
+
 - **Reconnexion des comptes Microsoft 365 / Exchange Online sans jeton** : quand le jeton OAuth2 d'un compte est introuvable ou révoqué (« Secret OAuth2 non trouvé »), la connexion échouait en silence et aucune fenêtre ne s'ouvrait (seul Gmail redemandait une connexion). Tout échec de connexion d'un compte OAuth2 (hors erreur réseau ou annulation) émet désormais l'événement `oauth2-required` : la fenêtre de connexion Microsoft s'ouvre (authentification multifacteur comprise), avec le bandeau « Se connecter » si elle est annulée. (`core_session_report_connect_failure`, appelée par `core_ensure_connected`)
 
 - **Vue « Non lus » : le message en cours de lecture ne disparaît plus.** Un message passé en lu (délai de lecture, sélection, menu) reste dans la liste filtrée « Non lus » jusqu'à un rafraîchissement (F5, F9, Maj+F9, bouton Relever), un changement de filtre ou de dossier, au lieu d'en être retiré à la première reconstruction de la liste, ce qui interrompait la lecture.

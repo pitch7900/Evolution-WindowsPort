@@ -49,6 +49,12 @@ core_set_message_flags_run (EvoCore *core,
 	 * en cas d'erreur réseau temporaire (le cache local le conserve) */
 	camel_folder_synchronize_message_sync (folder, args[2], core->cancellable, NULL);
 
+	/* « synchronize_message_sync » ne fait que télécharger le message : les catégories (indicateurs
+	 * utilisateur) ne partaient donc jamais vers le serveur (Exchange Online, IMAP). La synchronisation du
+	 * dossier envoie les modifications locales en attente. */
+	if (mask == 0)
+		camel_folder_synchronize_sync (folder, FALSE, core->cancellable, NULL);
+
 	flags = camel_folder_get_message_flags (folder, args[2]);
 
 	builder = json_builder_new ();
