@@ -12,6 +12,14 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.3.0] — en cours
 
+### MSI : propriétés AUTOUPDATE et REGISTERMAILTO
+
+- **`AUTOUPDATE=0`** : le MSI écrit la stratégie `HKLM\SOFTWARE\Policies\EvolutionWin\DisableAutoUpdate = 1` (composant conditionnel, retiré à la désinstallation).
+- **`REGISTERMAILTO=1`** : le MSI déclare EvolutionWin comme application de messagerie de la machine (mêmes clés que `Mailto.h`, côté HKLM) ; l'utilisateur la choisit ensuite dans les Applications par défaut.
+- **Journal MSI** : `PURGELOG` (chemin du journal de purge) apparaît dans le journal `/l*v` quand la purge est demandée.
+- **Pas de boîte « Fermer Evolution ? » ni de case de purge** : une interface MSI personnalisée exige le jeu complet de dialogues standard (ICE20 / ICE31) et la désinstallation depuis Paramètres n'affiche aucune interface ; raisons détaillées dans `deploy/DEPLOIEMENT.md`.
+- MSI validé par ICE ; rien installé ni testé sur VM.
+
 ### Lecteur immersif et liens mailto:
 
 - **Lecteur immersif** (`ImmersiveReader.h`, `MainWindow.Immersive.cpp`) : bouton « Lecteur immersif » du ruban Affichage du courrier ; le message s'affiche en plein écran, texte seul dans une colonne étroite, avec boutons A− / A+ (taille du texte), espacement des lignes et thème (clair, sépia, sombre), réglages mémorisés (`immersive.*`). Échap quitte ; les touches + - T L fonctionnent aussi. Document généré sans contenu distant, texte échappé et politique de sécurité de contenu.

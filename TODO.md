@@ -143,7 +143,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [ ] **Installation** : fermeture propre de l'application (boîte d'envoi vidée, synchronisation terminée), lancement de `msiexec /i … /passive` (élévation UAC, installation par machine), redémarrage automatique d'EvolutionWin à la fin — _fait : avertissement puis fermeture automatique de l'application au lancement de `msiexec /i` (c2f3832) ; reste : `/passive`, attente de la fin de la synchronisation / de la boîte d'envoi et redémarrage automatique d'EvolutionWin_
   - [ ] Nettoyage des MSI téléchargés après installation réussie
   - [ ] **Paramètres** (§19) : mise à jour automatique / notification seulement / désactivée ; canal (versions stables, préversions)
-  - [x] **Politique d'entreprise** : désactivation par clé de registre machine ou propriété MSI (`AUTOUPDATE=0`) pour les déploiements gérés (GPO / Intune) — _fait en 1.3.0 : `DisableAutoUpdate` (HKLM puis HKCU `Software\Policies\EvolutionWin`, modèle ADMX/ADML fr + en) ; la propriété MSI `AUTOUPDATE=0` n'est pas faite_
+  - [x] **Politique d'entreprise** : désactivation par clé de registre machine ou propriété MSI (`AUTOUPDATE=0`) pour les déploiements gérés (GPO / Intune) — _fait en 1.3.0 : `DisableAutoUpdate` (HKLM puis HKCU `Software\Policies\EvolutionWin`, modèle ADMX/ADML fr + en) et propriété MSI `AUTOUPDATE=0` (écrit la même stratégie dans HKLM) ; à valider sur une VM_
   - [x] Évolution : passer aux _Releases_ GitHub (cf. point suivant) plutôt que `dist/` dans le dépôt
 - [x] 🟡 **Publication des versions par les Releases GitHub** (au lieu de versionner les MSI dans `dist/`, ce qui alourdit l'historique Git à chaque version)
   - [x] Une _Release_ par version, avec l'étiquette Git `v<version>` (ex. `v0.9.3`) créée à partir du fichier [VERSION](VERSION)
@@ -291,7 +291,7 @@ Dans Microsoft 365 / Exchange Online, les utilisateurs disposent souvent d'une b
 - [x] 🟢 **Désigner le compte par défaut** dans la liste des comptes, avec indication visuelle (`e_source_registry_set_default_mail_account`)
 - [x] 🟢 Utilisé pour les nouveaux messages ; pour une réponse / un transfert, compte ayant reçu le message (repli sur le compte par défaut)
 - [x] 🟢 Calendrier et carnet d'adresses par défaut pour les nouveaux événements et contacts — _les nouveaux éléments vont déjà dans le calendrier / carnet par défaut d'EDS ; reste : les choisir dans l'interface_
-- [x] 🟡 Gestionnaire des liens `mailto:` (inscription d'EvolutionWin comme application de messagerie Windows). Facultatif au moment de l'installation MSI et dans les menus de configuration de l'application par la suite. — _fait en 1.3.0 dans les Paramètres (Courrier › Liens de messagerie) ; l'option d'enregistrement dans le MSI reste à faire_
+- [x] 🟡 Gestionnaire des liens `mailto:` (inscription d'EvolutionWin comme application de messagerie Windows). Facultatif au moment de l'installation MSI et dans les menus de configuration de l'application par la suite. — _fait en 1.3.0 dans les Paramètres (Courrier › Liens de messagerie) et dans le MSI par la propriété `REGISTERMAILTO=1` (clés HKLM) ; à valider sur une VM_
 
 ### Signatures — 🟡
 

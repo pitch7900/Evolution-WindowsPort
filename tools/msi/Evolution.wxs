@@ -47,12 +47,13 @@
     <util:CloseApplication Id="CloseSessionBus" Target="gdbus.exe" Condition="FORCECLOSE &lt;&gt; &quot;0&quot;"
                            TerminateProcess="1" RebootPrompt="no" />
 
-    <!-- Propriété publique FORCECLOSE (défaut « 1 » : comportement historique) :
+    <!-- Propriété publique FORCECLOSE (non déclarée : vide = « 1 », comportement historique) :
            msiexec /i Evolution-<version>-x64.msi /qn FORCECLOSE=1
          ferme EvolutionWin, les services EDS et leurs dépendances avant de remplacer
          les fichiers ; FORCECLOSE=0 désactive toute fermeture (fichiers verrouillés :
-         remplacement au redémarrage, code de sortie 3010). -->
-    <Property Id="FORCECLOSE" Value="1" />
+         remplacement au redémarrage, code de sortie 3010). Pas de boîte de
+         confirmation « Fermer Evolution ? » : le MSI n'a volontairement aucune interface
+         personnalisée (voir deploy\DEPLOIEMENT.md). -->
 
     <!-- Fermeture, dans TOUTES les sessions, des dépendances que CloseApplication ne sait
          pas viser : camel-index-control, gspawn-win64-helper et les processus
@@ -68,6 +69,16 @@
     <Property Id="PURGEUSERDATA" Value="0" />
     <CustomAction Id="PurgeUserData" Directory="SystemFolder" Return="ignore"
                   ExeCommand="&quot;[SystemFolder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $(var.PurgeUserDataB64)" />
+    <!-- Chemin du journal de purge : posé en propriété pour apparaître dans le journal MSI (/l*v)
+         (« PROPERTY CHANGE: Adding PURGELOG property ») quand la purge est demandée. -->
+    <SetProperty Id="PURGELOG" Value="[TempFolder]EvolutionWin-purge.log" Before="PurgeUserData" Sequence="execute"
+                 Condition='REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE AND PURGEUSERDATA="1"' />
+
+    <!-- Propriétés facultatives (déploiement) :
+           AUTOUPDATE=0       écrit la stratégie HKLM\SOFTWARE\Policies\EvolutionWin\DisableAutoUpdate = 1
+           REGISTERMAILTO=1   enregistre EvolutionWin comme application de messagerie (mailto:) pour la machine -->
+    <Property Id="REGISTERMAILTO" Value="0" />
+
     <InstallExecuteSequence>
       <Custom Action="CloseDependencies" Before="InstallValidate" Condition='FORCECLOSE &lt;&gt; "0"' />
       <Custom Action="PurgeUserData" After="InstallInitialize"
@@ -123,6 +134,8 @@
       <ComponentGroupRef Id="ApplicationFiles" />
       <ComponentRef Id="EvolutionWinExe" />
       <ComponentRef Id="RegistryUILanguage" />
+      <ComponentRef Id="RegistryDisableAutoUpdate" />
+      <ComponentRef Id="RegistryMailto" />
     </Feature>
   </Package>
 
@@ -132,6 +145,50 @@
       <Component Id="RegistryUILanguage" Guid="D2A6B347-49F1-4F98-8DE2-482EEB96A889">
         <RegistryKey Root="HKLM" Key="Software\Evolution-WindowsPort">
           <RegistryValue Type="string" Name="UILanguage" Value="[UILANGUAGE]" KeyPath="yes" />
+        </RegistryKey>
+      </Component>
+    </DirectoryRef>
+  </Fragment>
+
+  <Fragment>
+    <!-- AUTOUPDATE=0 : stratégie « mises à jour désactivées » (lue par Policy.h) -->
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="RegistryDisableAutoUpdate" Guid="7B1E5C0A-3D52-4E0B-9A6F-5C2D8E41B7A3" Condition='AUTOUPDATE = "0"'>
+        <RegistryKey Root="HKLM" Key="SOFTWARE\Policies\EvolutionWin">
+          <RegistryValue Type="integer" Name="DisableAutoUpdate" Value="1" KeyPath="yes" />
+        </RegistryKey>
+      </Component>
+
+      <!-- REGISTERMAILTO=1 : mêmes clés que winui/app/Mailto.h (HKCU de l'application), côté machine.
+           L'utilisateur choisit ensuite EvolutionWin dans « Applications par défaut ». -->
+      <Component Id="RegistryMailto" Guid="E4C8A1F2-6B97-4D35-8F0C-1A9B3D7E5C60" Condition='REGISTERMAILTO = "1"'>
+        <RegistryKey Root="HKLM" Key="SOFTWARE\Clients\Mail\EvolutionWin">
+          <RegistryValue Type="string" Value="Evolution" KeyPath="yes" />
+          <RegistryKey Key="Capabilities">
+            <RegistryValue Type="string" Name="ApplicationName" Value="Evolution" />
+            <RegistryValue Type="string" Name="ApplicationDescription" Value="Courrier, calendrier et contacts" />
+            <RegistryKey Key="URLAssociations">
+              <RegistryValue Type="string" Name="mailto" Value="EvolutionWin.Url.mailto" />
+            </RegistryKey>
+          </RegistryKey>
+          <RegistryKey Key="DefaultIcon">
+            <RegistryValue Type="string" Value="[BINFOLDER]EvolutionWin.exe,0" />
+          </RegistryKey>
+          <RegistryKey Key="shell\open\command">
+            <RegistryValue Type="string" Value="&quot;[BINFOLDER]EvolutionWin.exe&quot;" />
+          </RegistryKey>
+        </RegistryKey>
+        <RegistryValue Root="HKLM" Key="SOFTWARE\RegisteredApplications" Name="EvolutionWin"
+                       Type="string" Value="SOFTWARE\Clients\Mail\EvolutionWin\Capabilities" />
+        <RegistryKey Root="HKLM" Key="SOFTWARE\Classes\EvolutionWin.Url.mailto">
+          <RegistryValue Type="string" Value="URL:MailTo Protocol" />
+          <RegistryValue Type="string" Name="URL Protocol" Value="" />
+          <RegistryKey Key="DefaultIcon">
+            <RegistryValue Type="string" Value="[BINFOLDER]EvolutionWin.exe,0" />
+          </RegistryKey>
+          <RegistryKey Key="shell\open\command">
+            <RegistryValue Type="string" Value="&quot;[BINFOLDER]EvolutionWin.exe&quot; &quot;%1&quot;" />
+          </RegistryKey>
         </RegistryKey>
       </Component>
     </DirectoryRef>
