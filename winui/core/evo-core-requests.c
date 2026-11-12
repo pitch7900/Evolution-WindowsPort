@@ -275,6 +275,10 @@ core_ensure_connected (EvoCore *core,
 
 	g_mutex_unlock (store_lock);
 
+	/* jeton OAuth2 absent ou révoqué : demande une nouvelle connexion */
+	if (!success && error && *error)
+		core_session_report_connect_failure (core->session, CAMEL_SERVICE (store), *error);
+
 	return success;
 }
 

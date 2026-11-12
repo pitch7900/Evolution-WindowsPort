@@ -10,7 +10,13 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
-## [1.3.0] — en cours
+## [1.3.1] — en cours
+
+### Corrigé
+
+- **Reconnexion des comptes Microsoft 365 / Exchange Online sans jeton** : quand le jeton OAuth2 d'un compte est introuvable ou révoqué (« Secret OAuth2 non trouvé »), la connexion échouait en silence et aucune fenêtre ne s'ouvrait (seul Gmail redemandait une connexion). Tout échec de connexion d'un compte OAuth2 (hors erreur réseau ou annulation) émet désormais l'événement `oauth2-required` : la fenêtre de connexion Microsoft s'ouvre (authentification multifacteur comprise), avec le bandeau « Se connecter » si elle est annulée. (`core_session_report_connect_failure`, appelée par `core_ensure_connected`)
+
+## [1.3.0] — 2026-11-12
 
 ### Glisser-déposer sortant d'événements et de contacts, recréation d'un dossier local
 

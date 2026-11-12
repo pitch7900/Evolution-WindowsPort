@@ -264,6 +264,55 @@ evo_core_session_emit_oauth2_required (EvoCoreSession *self,
 	g_clear_object (&source);
 }
 
+/**
+ * core_session_report_connect_failure:
+ * @session: session Camel du moteur
+ * @service: service dont la connexion vient d'échouer
+ * @error: erreur renvoyée par Camel (peut être NULL)
+ *
+ * @brief Demande une nouvelle connexion OAuth2 quand un compte (Microsoft 365,
+ * Exchange Online, Google...) ne peut plus se connecter faute de jeton
+ * (« Secret OAuth2 non trouvé », jeton révoqué ou expiré). Émet l'événement
+ * "oauth2-required" : l'interface ouvre alors la page de connexion du
+ * fournisseur (avec l'authentification multifacteur éventuelle). Les erreurs
+ * réseau et les annulations sont ignorées.
+ */
+void
+core_session_report_connect_failure (CamelSession *session,
+				     CamelService *service,
+				     const GError *error)
+{
+	EvoCoreSession *self;
+	CamelNetworkSettings *network;
+	CamelSettings *settings;
+	gchar *mechanism = NULL;
+	gboolean oauth2;
+
+	if (!error || !EVO_IS_CORE_SESSION (session) || !CAMEL_IS_SERVICE (service))
+		return;
+
+	if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED) ||
+	    g_error_matches (error, G_IO_ERROR, G_IO_ERROR_HOST_NOT_FOUND) ||
+	    g_error_matches (error, G_IO_ERROR, G_IO_ERROR_NETWORK_UNREACHABLE) ||
+	    g_error_matches (error, G_IO_ERROR, G_IO_ERROR_TIMED_OUT))
+		return;
+
+	self = EVO_CORE_SESSION (session);
+
+	settings = camel_service_ref_settings (service);
+	network = settings && CAMEL_IS_NETWORK_SETTINGS (settings) ? CAMEL_NETWORK_SETTINGS (settings) : NULL;
+	if (network)
+		mechanism = camel_network_settings_dup_auth_mechanism (network);
+	g_clear_object (&settings);
+
+	oauth2 = evo_core_session_is_oauth2_method (self, mechanism) ||
+		(error->message && (strstr (error->message, "OAuth2") || strstr (error->message, "OAUTH2")));
+	g_free (mechanism);
+
+	if (oauth2)
+		evo_core_session_emit_oauth2_required (self, service);
+}
+
 static gchar *
 evo_core_session_get_password (CamelSession *session,
 			       CamelService *service,

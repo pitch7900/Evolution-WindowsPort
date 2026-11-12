@@ -169,6 +169,11 @@ CamelSession *
 evo_core_session_new (EvoCore *core,
 		      ESourceRegistry *registry);
 
+void
+core_session_report_connect_failure (CamelSession *session,
+				     CamelService *service,
+				     const GError *error);
+
 /* evo-core.c */
 gchar *
 json_from_builder (JsonBuilder *builder);
