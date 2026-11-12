@@ -81,6 +81,48 @@ namespace EvolutionWin::Helpers
         title_bar.ButtonPressedBackgroundColor(pressed);
     }
 
+    /* Le thème affiché est-il sombre ? (choix de l'application, sinon thème de Windows au démarrage) */
+    inline bool IsDarkThemeEffective()
+    {
+        return AppElementTheme() == ElementTheme::Dark ||
+            (AppElementTheme() == ElementTheme::Default && Application::Current().RequestedTheme() == ApplicationTheme::Dark);
+    }
+
+    /**
+     * @brief Mode sombre « intelligent » du lecteur de messages.
+     *
+     * Les messages HTML sont écrits pour un fond blanc (le moteur force d'ailleurs « color-scheme: light only »).
+     * En thème sombre, le document est inversé en luminosité tout en gardant les teintes
+     * (filter: invert + hue-rotate 180°) : fond blanc → gris très foncé, texte sombre → clair, bleu des liens et
+     * des signatures → bleu clair. Les images, vidéos et dessins sont remis dans leur état d'origine par un
+     * second filtre identique (deux inversions s'annulent), sinon les photos seraient en négatif. Comme les
+     * scripts sont désactivés dans le lecteur, tout passe par CSS.
+     * @param html Document HTML du message.
+     * @return Le document avec la feuille de style, ou tel quel si le mode est désactivé / le thème clair.
+     */
+    inline hstring WithSmartDark(hstring const& html)
+    {
+        if (!IsDarkThemeEffective() || !::EvolutionWin::Settings::Instance().GetBoolean(L"mail.smart-dark", true))
+            return html;
+
+        static constexpr wchar_t const* kStyle =
+            L"<style id=\"evo-smart-dark\">"
+            L"html { background-color: #ffffff !important; filter: invert(0.92) hue-rotate(180deg) !important; }"
+            L"img, picture, video, canvas, svg, iframe, object, embed "
+            L"{ filter: invert(1) hue-rotate(180deg) !important; }"
+            L"</style>";
+
+        std::wstring document{ html };
+        size_t at = document.rfind(L"</body>");
+        if (at == std::wstring::npos)
+            at = document.rfind(L"</html>");
+        if (at == std::wstring::npos)
+            document += kStyle;
+        else
+            document.insert(at, kStyle);
+        return hstring{ document };
+    }
+
     /* Recherche récursive d'une ressource dans le dictionnaire de thème « theme_key » (Default = sombre, Light). */
     inline Windows::Foundation::IInspectable FindThemedResource(ResourceDictionary const& dictionary,
         hstring const& theme_key, Windows::Foundation::IInspectable const& key)

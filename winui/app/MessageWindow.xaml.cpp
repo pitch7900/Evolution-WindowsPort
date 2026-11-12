@@ -1185,7 +1185,7 @@ namespace winrt::EvolutionWin::implementation
 
             std::to_wstring(GetCurrentProcessId()) + L"-" + std::to_wstring(m_reader_generation) };
 
-        m_reader_html = html;
+        m_reader_html = ::EvolutionWin::Helpers::WithSmartDark(html);
 
         m_reader_pending_allow = allow_remote;
 

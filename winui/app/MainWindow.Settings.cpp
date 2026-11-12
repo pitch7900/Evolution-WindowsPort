@@ -369,6 +369,9 @@ namespace winrt::EvolutionWin::implementation
         if (auto sw = MailConfirmPermanentDeleteSwitch())
             sw.IsOn(settings.GetBoolean(L"mail.confirm-permanent-delete", true));
 
+        if (auto sw = MailSmartDarkSwitch())
+            sw.IsOn(settings.GetBoolean(L"mail.smart-dark", true));
+
         if (auto sw = MailRequestReadReceiptSwitch())
             sw.IsOn(settings.GetBoolean(L"mail.request-read-receipt", false));
 
@@ -1790,6 +1793,8 @@ namespace winrt::EvolutionWin::implementation
                 }
                 if (self->m_last_shown_messages)
                     self->ShowMessages(self->m_last_shown_messages);
+                if (self->m_current_message)
+                    self->ShowCurrentMessageInReader(false);   /* le mode sombre du lecteur suit le thème */
             }
         });
 
@@ -1851,6 +1856,10 @@ namespace winrt::EvolutionWin::implementation
                 else if (key == L"general.auto-startup")
                 {
                     ::EvolutionWin::Helpers::SetAutoStartupEnabled(toggle.IsOn());
+                }
+                else if (key == L"mail.smart-dark")
+                {
+                    ShowCurrentMessageInReader(false);
                 }
                 else if (key == L"privacy.hide-snippets")
                 {
@@ -2209,6 +2218,8 @@ namespace winrt::EvolutionWin::implementation
             s.SetBoolean(L"mail.warn-empty-subject", true);
 
             s.SetBoolean(L"mail.confirm-permanent-delete", true);
+
+            s.SetBoolean(L"mail.smart-dark", true);
 
             s.SetString(L"calendar.first-day", L"0");
 
