@@ -1,129 +1,128 @@
-# Feuille de route (Roadmap) - Evolution Windows Port
+# Roadmap - Evolution Windows Port
 
-Ce document définit la trajectoire de développement pour implémenter 100 % des fonctionnalités restantes du fichier [TODO.md](TODO.md), à partir de la version courante **1.1.4** (en cours, définie dans [VERSION](VERSION)).
+This document defines the development path to implement 100% of the remaining features of [TODO.md](TODO.md), starting from the current version **1.1.4** (in progress, defined in [VERSION](VERSION)).
 
-Le plan est articulé autour de 5 versions jalons progressives :
-- **v0.9.8** : Synchronisation en ligne et cycle de vie des données (Microsoft 365 et Gmail)
-- **v1.0.0** : Parité démo « Remplaçant d'Outlook » (milestone majeure)
-- **v1.1.0** : Collaboration d'entreprise, boîtes déléguées et catégories
-- **v1.2.0** : Règles, traitement automatique et mode hors-connexion robuste
-- **v1.3.0** : Couverture à 100 % du TODO (déploiement d'entreprise, import/export, i18n)
+The plan is built around 5 progressive milestone versions:
+- **v0.9.8**: Online synchronization and data lifecycle (Microsoft 365 and Gmail)
+- **v1.0.0**: "Outlook replacement" demo parity (major milestone)
+- **v1.1.0**: Enterprise collaboration, delegated mailboxes and categories
+- **v1.2.0**: Rules, automatic processing and robust offline mode
+- **v1.3.0**: 100% TODO coverage (enterprise deployment, import/export, i18n)
 
 ```mermaid
 flowchart LR
-    v098["v0.9.8<br/><b>Comptes en ligne &<br/>Calendrier/Contacts</b>"] --> v100["v1.0.0<br/><b>Parité Démo Outlook<br/>(Milestone 1.0)</b>"]
-    v100 --> v110["v1.1.0<br/><b>Collaboration Entreprise &<br/>Boîtes Déléguées</b>"]
-    v110 --> v120["v1.2.0<br/><b>Règles, Tri &<br/>Hors-Connexion Robuste</b>"]
-    v120 --> v130["v1.3.0<br/><b>100% TODO<br/>(Finition, i18n, Déploiement)</b>"]
+    v098["v0.9.8<br/><b>Online Accounts &<br/>Calendar/Contacts</b>"] --> v100["v1.0.0<br/><b>Outlook Demo Parity<br/>(Milestone 1.0)</b>"]
+    v100 --> v110["v1.1.0<br/><b>Enterprise Collaboration &<br/>Delegated Mailboxes</b>"]
+    v110 --> v120["v1.2.0<br/><b>Rules, Sorting &<br/>Robust Offline</b>"]
+    v120 --> v130["v1.3.0<br/><b>100% TODO<br/>(Polish, i18n, Deployment)</b>"]
 ```
 
 ---
 
-## Version 0.9.8 — Synchronisation en ligne & cycle de vie des données (M365 & Gmail)
+## Version 0.9.8 — Online synchronization & data lifecycle (M365 & Gmail)
 
-> **Objectif :** Raccorder de bout en bout les calendriers et carnets d'adresses distants pour les comptes Microsoft 365 et Google, et compléter l'édition directe.
+> **Goal:** Wire up remote calendars and address books end to end for Microsoft 365 and Google accounts, and complete direct editing.
 
-### 1. Comptes & Services distants (§3)
-- [ ] **Microsoft 365 / Exchange Online** : validation de bout en bout de la collection `microsoft365` (Microsoft Graph) pour synchroniser calendriers et contacts (`#demo-cal-contacts-m365`). _(reste à valider sur un tenant réel : code et paramètres en place)_
-- [x] **Gmail / Google Workspace** : création automatique de la collection Google (CalDAV, CardDAV / Google People API) avec réutilisation du jeton OAuth2 existant (`#demo-cal-contacts-gmail`).
-- [x] **Bouton d'activation a posteriori** : option « Activer le calendrier et les contacts » pour les comptes Gmail déjà configurés sans ces portées.
-- [x] **Gestion des contacts en ligne** : modification et synchronisation bidirectionnelle des fiches contacts distantes (`#demo-gestion-contacts`).
+### 1. Remote accounts & services (§3)
+- [ ] **Microsoft 365 / Exchange Online**: end-to-end validation of the `microsoft365` collection (Microsoft Graph) to synchronize calendars and contacts (`#demo-cal-contacts-m365`). _(still to be validated on a real tenant: code and settings in place)_
+- [x] **Gmail / Google Workspace**: automatic creation of the Google collection (CalDAV, CardDAV / Google People API) reusing the existing OAuth2 token (`#demo-cal-contacts-gmail`).
+- [x] **After-the-fact activation button**: "Activer le calendrier et les contacts" option for Gmail accounts already configured without these scopes.
+- [x] **Online contact management**: editing and two-way synchronization of remote contact cards (`#demo-gestion-contacts`).
 
-### 2. Calendrier (§13)
-- [x] **Fenêtre d'édition d'événement** : fenêtre modifiable complète pour créer, modifier et supprimer des événements (dates, participants, lieu, description).
-- [x] **Prise en charge des fuseaux horaires et alertes** : enregistrement des rappels d'événements et prise en compte propre des fuseaux horaires.
-- [x] **Actualisation manuelle et automatique** : bouton d'actualisation et intégration des modifications effectuées sur d'autres clients (Outlook Web, Google Agenda).
+### 2. Calendar (§13)
+- [x] **Event editing window**: full editable window to create, modify and delete events (dates, attendees, location, description).
+- [x] **Time zone and alert support**: saving of event reminders and clean handling of time zones.
+- [x] **Manual and automatic refresh**: refresh button and integration of changes made from other clients (Outlook Web, Google Calendar).
 
-### 3. Application, installation & mises à jour (§1)
-- [x] **Téléchargement automatique des mises à jour** : rapatriement en tâche de fond du MSI depuis GitHub Releases avec barre de progression.
-- [x] **Contrôle d'intégrité** : vérification de l'empreinte SHA-256 et validation de la signature Authenticode avant installation.
-
----
-
-## Version 1.0.0 — Jalon Démo « Remplaçant d'Outlook »
-
-> **Objectif :** Finaliser tous les points indispensables de la liste de priorités Démo et offrir une expérience utilisateur fluide au quotidien.
-
-### 1. Mail & Lecture (§5, §6, §7)
-- [x] **Regroupement par discussion** : affichage hiérarchique sous forme de conversations / fils de discussion (`#demo-conversations`).
-- [x]**Gestion des dossiers** : réorganisation ordonnée des dossiers spéciaux en tête (Boîte de réception, Envoyés, Brouillons) avec icônes distinctives (`#demo-dossiers`).
-- [x] **Pièces jointes** : prévisualisation intégrée (images, texte, PDF, HTML), enregistrement groupé et glisser-déposer sortant. _(aperçu Office reporté : cf. TODO §6)_
-- [x] **Suivi des messages** : options de marquage d'importance, drapeaux avec date d'échéance et rappels associés.
-- [x] **Accusés de lecture et de réception** : gestion de l'émission et du traitement des notifications d'état de distribution.
-
-### 2. Invitations & Réunions (§13, §15)
-- [x] **Traitement des invitations iCalendar** : bandeau d'action dans le volet de lecture (Accepter, Refuser, Provisoire) avec mise à jour du calendrier de l'utilisateur (`#demo-invitations`).
-- [ ] **Carnet d'adresses global (GAL)** : recherche et consultation de l'annuaire d'entreprise pour Exchange Online et Microsoft 365 (`#demo-gal`). _Implémenté (moteur Microsoft Graph et Google, autocomplétion des destinataires, consultation depuis la vue Contacts, tests) ; reste à valider sur un tenant réel (Microsoft 365) avant de cocher._
-- [x] **Réunion en ligne Microsoft Teams** (compte Exchange Online / Microsoft 365) : bouton « Réunion Teams » du ruban Calendrier, création via Microsoft Graph (`isOnlineMeeting: true`, `teamsForBusiness`) et lien de visio inséré dans l'invitation. _(codé : case « Réunion en ligne Microsoft Teams » dans la fenêtre d'événement et bouton du ruban ; reste à valider sur un tenant réel)_
-
-### 3. Gestion des absences (§3)
-- [x] **Réponses automatiques (Out of Office)** : interface de configuration des messages d'absence pour Microsoft 365 et Gmail (`#demo-reponses-auto`). _Implémenté (moteur, boîte de dialogue, tests) ; reste à valider sur un compte réel (tenant M365, compte Gmail) avant de cocher._
+### 3. Application, installation & updates (§1)
+- [x] **Automatic update download**: background retrieval of the MSI from GitHub Releases with a progress bar.
+- [x] **Integrity check**: SHA-256 hash verification and Authenticode signature validation before installation.
 
 ---
 
-## Version 1.1.0 — Collaboration d'entreprise, boîtes déléguées & catégories
+## Version 1.0.0 — "Outlook replacement" demo milestone
 
-> **Objectif :** Couvrir les besoins avancés des organisations (secrétariat, équipes d'assistance, boîtes partagées et classement transverse).
+> **Goal:** Finalize every essential item on the demo priority list and deliver a smooth day-to-day user experience.
 
-### 1. Boîtes partagées & Délégations (§3)
-- [x] **Ouverture dynamique de boîtes déléguées** : ajout d'une boîte ou d'un calendrier partagé via clic droit sur un compte Exchange / M365. _(fait en 1.1.0 : courrier, agenda et contacts partagés ; « Fermer la boîte partagée » ; validé sur un tenant réel pour le courrier)_
-- [x] **Envoi délégué** : prise en charge des modes « En tant que » (*Send As*) et « De la part de » (*Send on Behalf*). _(« En tant que » fait et validé ; « De la part de » codé (From = boîte partagée, Sender = utilisateur, par le compte d'origine), reste à valider sur un tenant réel)_
-- [x] **Éléments récupérables (*Recoverable Items*)** : restauration en libre-service des éléments supprimés sur Exchange Online. _(fait en 1.1.0 : fenêtre redimensionnable, restauration ou suppression définitive ; validé)_
+### 1. Mail & Reading (§5, §6, §7)
+- [x] **Conversation grouping**: hierarchical display as conversations / threads (`#demo-conversations`).
+- [x] **Folder management**: ordered reorganization of special folders at the top (Inbox, Sent, Drafts) with distinctive icons (`#demo-dossiers`).
+- [x] **Attachments**: built-in preview (images, text, PDF, HTML), grouped saving and outgoing drag and drop. _(Office preview postponed: see TODO §6)_
+- [x] **Message tracking**: importance flagging options, flags with due date and associated reminders.
+- [x] **Read and delivery receipts**: handling of sending and processing delivery status notifications.
 
-- [x] **Boîte de réception prioritaire (*Focused Inbox*)** : onglets Prioritaire / Autres avec compteurs, déplacement par clic droit et règle par expéditeur, réglage par compte. _(fait en 1.1.0 ; à valider sur un tenant réel)_
-- [x] **Favoris du courrier** : section Favoris en tête du volet des dossiers, réordonnable. _(fait en 1.1.0)_
+### 2. Invitations & Meetings (§13, §15)
+- [x] **iCalendar invitation handling**: action banner in the reading pane (Accept, Decline, Tentative) with update of the user's calendar (`#demo-invitations`).
+- [ ] **Global Address List (GAL)**: search and browsing of the corporate directory for Exchange Online and Microsoft 365 (`#demo-gal`). _Implemented (Microsoft Graph and Google engine, recipient autocompletion, browsing from the Contacts view, tests); still to be validated on a real tenant (Microsoft 365) before checking._
+- [x] **Microsoft Teams online meeting** (Exchange Online / Microsoft 365 account): "Réunion Teams" button in the Calendar ribbon, creation through Microsoft Graph (`isOnlineMeeting: true`, `teamsForBusiness`) and video link inserted in the invitation. _(coded: "Réunion en ligne Microsoft Teams" checkbox in the event window and ribbon button; still to be validated on a real tenant)_
 
-### 2. Catégorisation transverse (§17)
-- [x] **Système de catégories unifiées** : palette de codes couleur et libellés partagés entre e-mails, contacts, tâches et événements de calendrier (`#demo-categories`).
-- [x] **Filtres par catégorie** : filtrage rapide dans les listes selon les catégories attribuées.
-
-### 3. Vues unifiées multi-comptes (§11)
-- [x] **Boîte de réception unifiée** : vue agrégée virtuelle (`CamelVeeFolder`) regroupant les messages reçus de l'ensemble des comptes.
-- [x] **Dossiers virtuels globaux** : regroupement des éléments envoyés, de la corbeille et des brouillons sur tous les comptes.
-
----
-
-## Version 1.2.0 — Règles, traitement automatique & hors-connexion robuste
-
-> **Objectif :** Automatiser le tri des flux de messages volumineux et garantir un fonctionnement nomade déconnecté sans perte de données.
-
-### 1. Règles & Courrier indésirable (§8)
-- [x] **Éditeur graphique de règles** : création de filtres sur critères multiples (expéditeur, objet, destinataires, en-têtes) et actions (déplacement, copie, marquage).
-- [x] **Éditeur de règles rapides** : Création rapide de règles depuis un click droit sur un mail.
-- [x] **Règles côté serveur** : synchronisation des règles vers Exchange Online (Graph) et support du protocole ManageSieve pour les serveurs IMAP compatibles. _(reste à valider sur comptes réels ; EWS sur site non pris en charge)_
-- [x] **Filtrage anti-spam** : intégration locale de moteurs de classification (Bogofilter, SpamAssassin ou analyse bayésienne). _(analyse bayésienne locale autonome ; reste à valider sur des comptes réels)_
-
-### 2. Mode hors-connexion et synchronisation fine (§4)
-- [x] **Plages de synchronisation par dossier** : réglage de la rétention locale (ex. 1 mois, 6 mois, 1 an, tout l'historique). _(codé : clic droit sur un compte ou un dossier › « Synchronisation hors connexion… » ; reste à valider sur un compte IMAP réel)_
-- [x] **File d'attente d'actions hors-ligne** : exécution différée des suppressions, déplacements et envois avec réconciliation automatique à la reconnexion. _(codé : journal sur disque, rejeu, réconciliation, liste et annulation dans la barre d'état ; reste à valider sur un compte réel)_
-- [x] **Résolution des conflits** : détection et arbitrage des modifications concurrentes sur les calendriers et contacts. _(codé : révision / ETag et boîte « Garder la version locale / distante / les deux » ; reste à valider sur CalDAV, CardDAV et EWS réels)_
-
-### 3. Moteur de recherche avancé (§10)
-- [x] **Indexation plein texte locale** : recherche instantanée dans le corps des messages et le contenu des pièces jointes indexables. _(index inversé maison ; pièces jointes texte seulement, PDF/Office non extraits ; messages non téléchargés et Microsoft 365 : recherche Camel ; reste à valider sur un compte IMAP réel)_
-- [x] **Dossiers de recherche enregistrés** : création de dossiers dynamiques basés sur des requêtes de recherche persistantes. _(fait en 1.1.0 : modèles et opérateurs `is:unread`, `has:attachment`, `larger:`, `from:` ; devancé depuis ce jalon)_
-
-### 4. Boîtes partagées & délégations (reporté de la 1.1.0, §3)
-
-- [ ] **Boîte d'archivage en ligne (*In-Place Archive*)** : détection et affichage d'un nœud d'archives distant séparé. _(bloqué : Microsoft Graph n'expose pas l'archive en ligne, aucun backend EWS/Graph d'evolution-ews ne la gère)_
-- [ ] **Gestion des autorisations déléguées** : consultation et révocation des droits accordés depuis l'interface d'EvolutionWin. _(Exchange Online : pas d'API Graph pour FullAccess / SendAs / SendOnBehalf ; Gmail : codé, clic droit sur le compte › « Délégations et autorisations… », reste à valider sur un compte Google Workspace)_
+### 3. Absence management (§3)
+- [x] **Automatic replies (Out of Office)**: configuration interface for out-of-office messages for Microsoft 365 and Gmail (`#demo-reponses-auto`). _Implemented (engine, dialog, tests); still to be validated on a real account (M365 tenant, Gmail account) before checking._
 
 ---
 
-## Version 1.3.0 — Couverture à 100 % du TODO (déploiement, import/export, i18n)
+## Version 1.1.0 — Enterprise collaboration, delegated mailboxes & categories
 
-> **Objectif :** Clôturer l'ensemble des points restants de [TODO.md](TODO.md), peaufiner l'administration et finaliser l'internationalisation.
+> **Goal:** Cover the advanced needs of organizations (secretarial work, support teams, shared mailboxes and cross-cutting classification).
 
-### 1. Déploiement & Administration d'entreprise (§1)
-- [x] **Installation silencieuse avancée du MSI** : support complet des propriétés `FORCECLOSE=1`, `PURGEUSERDATA=1` et arrêt propre multi-sessions. _(codé : à valider sur une VM, y compris multi-sessions)_
-- [x] **Stratégies de groupe (GPO / Registre)** : verrouillage centralisé de paramètres (désactivation des mises à jour automatiques, configuration imposée). _(codé : `Policy.h`, modèle ADMX/ADML, `DisableAutoUpdate` et réglages imposés ; à valider avec une GPO réelle)_
+### 1. Shared mailboxes & Delegations (§3)
+- [x] **Dynamic opening of delegated mailboxes**: adding a shared mailbox or calendar through right-click on an Exchange / M365 account. _(done in 1.1.0: shared mail, calendar and contacts; "Fermer la boîte partagée"; validated on a real tenant for mail)_
+- [x] **Delegated sending**: support for "En tant que" (*Send As*) and "De la part de" (*Send on Behalf*) modes. _("En tant que" done and validated; "De la part de" coded (From = shared mailbox, Sender = user, through the originating account), still to be validated on a real tenant)_
+- [x] **Recoverable Items**: self-service restoration of deleted items on Exchange Online. _(done in 1.1.0: resizable window, restore or permanent deletion; validated)_
 
-### 2. Importation & Exportation (§18)
-- [ ] **Assistant d'importation** : prise en charge des conteneurs Outlook (fichiers `.pst` et `.ost`) et des profils tiers (Thunderbird MBOX / Maildir). _(fait : mbox, EML, Maildir, profil Thunderbird (détection du profil et arborescence de dossiers), vCard, iCalendar ; non fait : `.pst` / `.ost`, format propriétaire sans bibliothèque disponible (libpst absente de la pile) — l'assistant détecte le cas et explique la conversion en mbox avec `readpst`)_
-- [x] **Exportation de données** : export complet de dossiers ou de sélections aux formats standard (`.eml`, `.mbox`, `.ics`, `.vcf`). _(codé : assistant Fichier › Exporter des données…, mbox / EML avec période, `.ics` / `.vcf` par les assistants existants ; reste à valider à la main : voir VALIDATION.md)_
+- [x] **Focused Inbox**: Focused / Other tabs with counters, move by right-click and per-sender rule, per-account setting. _(done in 1.1.0; to be validated on a real tenant)_
+- [x] **Mail favorites**: Favorites section at the top of the folder pane, reorderable. _(done in 1.1.0)_
 
-### 3. Ergonomie avancée, protocoles & Traductions (§2, §6, §19, §20)
-- [x] **Lecteur immersif** : vue plein écran épurée dédiée à la lecture concentrée. _(fait : ruban Affichage, texte seul, taille / espacement / thème réglables, Échap pour quitter ; à valider à la main)_
-- [x] **Enregistrement système `mailto:`** : enregistrement en tant que client de messagerie par défaut auprès de Windows 11. _(fait : Paramètres > Courrier, ouverture d'une rédaction depuis un lien, transmission à l'instance ouverte ; option dans le MSI non faite ; à valider à la main)_
-- [x] **Traduction et internationalisation** : infrastructure de ressources `.resw` / MRT Core opérationnelle (`I18n.h`, `TRANSLATIONS.md`), catalogues multilingues complets (`fr-FR`, `en-US`, `de-DE`, `it-IT`, `es-ES`, `pt-PT`, `nl-NL`) et support de déploiement MSI (`UILANGUAGE`).
-- [ ] **Revue finale des critères de conformité** : validation croisée de toutes les cases de [TODO.md](TODO.md).
+### 2. Cross-cutting categorization (§17)
+- [x] **Unified category system**: palette of color codes and labels shared between e-mails, contacts, tasks and calendar events (`#demo-categories`).
+- [x] **Category filters**: quick filtering in lists according to the assigned categories.
 
+### 3. Unified multi-account views (§11)
+- [x] **Unified inbox**: virtual aggregated view (`CamelVeeFolder`) gathering the messages received across all accounts.
+- [x] **Global virtual folders**: grouping of sent items, trash and drafts across all accounts.
+
+---
+
+## Version 1.2.0 — Rules, automatic processing & robust offline
+
+> **Goal:** Automate the sorting of high-volume message flows and guarantee disconnected nomadic operation without data loss.
+
+### 1. Rules & Junk mail (§8)
+- [x] **Graphical rule editor**: creation of filters on multiple criteria (sender, subject, recipients, headers) and actions (move, copy, flag).
+- [x] **Quick rule editor**: quick creation of rules from a right-click on a mail.
+- [x] **Server-side rules**: synchronization of rules to Exchange Online (Graph) and support of the ManageSieve protocol for compatible IMAP servers. _(still to be validated on real accounts; on-premises EWS not supported)_
+- [x] **Anti-spam filtering**: local integration of classification engines (Bogofilter, SpamAssassin or Bayesian analysis). _(standalone local Bayesian analysis; still to be validated on real accounts)_
+
+### 2. Offline mode and fine-grained synchronization (§4)
+- [x] **Per-folder synchronization ranges**: local retention setting (e.g. 1 month, 6 months, 1 year, entire history). _(coded: right-click on an account or folder › "Synchronisation hors connexion…"; still to be validated on a real IMAP account)_
+- [x] **Offline action queue**: deferred execution of deletions, moves and sends with automatic reconciliation on reconnection. _(coded: on-disk journal, replay, reconciliation, list and cancellation in the status bar; still to be validated on a real account)_
+- [x] **Conflict resolution**: detection and arbitration of concurrent modifications on calendars and contacts. _(coded: revision / ETag and "Garder la version locale / distante / les deux" dialog; still to be validated on real CalDAV, CardDAV and EWS)_
+
+### 3. Advanced search engine (§10)
+- [x] **Local full-text indexing**: instant search in message bodies and the content of indexable attachments. _(in-house inverted index; text attachments only, PDF/Office not extracted; non-downloaded messages and Microsoft 365: Camel search; still to be validated on a real IMAP account)_
+- [x] **Saved search folders**: creation of dynamic folders based on persistent search queries. _(done in 1.1.0: templates and operators `is:unread`, `has:attachment`, `larger:`, `from:`; brought forward from this milestone)_
+
+### 4. Shared mailboxes & delegations (postponed from 1.1.0, §3)
+
+- [ ] **Online archive mailbox (*In-Place Archive*)**: detection and display of a separate remote archive node. _(blocked: Microsoft Graph does not expose the online archive, no EWS/Graph backend of evolution-ews handles it)_
+- [ ] **Delegated permission management**: viewing and revoking granted rights from the EvolutionWin interface. _(Exchange Online: no Graph API for FullAccess / SendAs / SendOnBehalf; Gmail: coded, right-click on the account › "Délégations et autorisations…", still to be validated on a Google Workspace account)_
+
+---
+
+## Version 1.3.0 — 100% TODO coverage (deployment, import/export, i18n)
+
+> **Goal:** Close all remaining items of [TODO.md](TODO.md), polish administration and finalize internationalization.
+
+### 1. Enterprise deployment & administration (§1)
+- [x] **Advanced silent MSI installation**: full support for the `FORCECLOSE=1`, `PURGEUSERDATA=1` properties and clean multi-session shutdown. _(coded: to be validated on a VM, including multi-session)_
+- [x] **Group Policy (GPO / Registry)**: centralized locking of settings (disabling automatic updates, enforced configuration). _(coded: `Policy.h`, ADMX/ADML template, `DisableAutoUpdate` and enforced settings; to be validated with a real GPO)_
+
+### 2. Import & Export (§18)
+- [ ] **Import wizard**: support for Outlook containers (`.pst` and `.ost` files) and third-party profiles (Thunderbird MBOX / Maildir). _(done: mbox, EML, Maildir, Thunderbird profile (profile detection and folder tree), vCard, iCalendar; not done: `.pst` / `.ost`, proprietary format with no available library (libpst absent from the stack) — the wizard detects the case and explains the conversion to mbox with `readpst`)_
+- [x] **Data export**: full export of folders or selections in standard formats (`.eml`, `.mbox`, `.ics`, `.vcf`). _(coded: File › Export data… wizard, mbox / EML with date range, `.ics` / `.vcf` through the existing wizards; still to be validated by hand: see VALIDATION.md)_
+
+### 3. Advanced ergonomics, protocols & Translations (§2, §6, §19, §20)
+- [x] **Immersive reader**: clean full-screen view dedicated to focused reading. _(done: View ribbon, text only, adjustable size / spacing / theme, Esc to exit; to be validated by hand)_
+- [x] **System `mailto:` registration**: registration as the default mail client with Windows 11. _(done: Settings > Mail, opening a compose window from a link, forwarding to the running instance; MSI option not done; to be validated by hand)_
+- [x] **Translation and internationalization**: working `.resw` / MRT Core resource infrastructure (`I18n.h`, `TRANSLATIONS.md`), complete multilingual catalogs (`fr-FR`, `en-US`, `de-DE`, `it-IT`, `es-ES`, `pt-PT`, `nl-NL`) and MSI deployment support (`UILANGUAGE`).
+- [ ] **Final review of compliance criteria**: cross-validation of all boxes in [TODO.md](TODO.md).
