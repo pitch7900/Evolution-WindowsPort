@@ -98,8 +98,15 @@ namespace winrt::EvolutionWin::implementation
         auto& state = m_message_states[std::wstring{ uid }];
 
         if (flag == L"seen")
-
+        {
             state.seen = value;
+
+            /* vue « Non lus » : le message lu reste affiché jusqu'au rafraîchissement ou au changement de filtre */
+            if (value && IsUnreadFilterActive())
+                m_unread_view_kept_uids.insert(std::wstring{ uid });
+            else if (!value)
+                m_unread_view_kept_uids.erase(std::wstring{ uid });
+        }
 
         else if (flag == L"flagged")
 

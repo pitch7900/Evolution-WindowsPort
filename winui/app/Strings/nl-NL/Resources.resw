@@ -8047,5 +8047,13 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Het item kan niet worden gesleept: {0}</value>
     <comment>Impossible de glisser l'élément : {0}</comment>
   </data>
+  <data name="T_110712C1" xml:space="preserve">
+    <value>Berichten in donkere modus</value>
+    <comment>Messages en mode sombre</comment>
+  </data>
+  <data name="T_8C87ABE6" xml:space="preserve">
+    <value>In het donkere thema wordt de berichtinhoud met een donkere achtergrond en lichte tekst weergegeven (afbeeldingen behouden hun kleuren).</value>
+    <comment>En thème sombre, affiche le contenu des messages avec un fond sombre et un texte clair (les images gardent leurs couleurs).</comment>
+  </data>
 </root>
 

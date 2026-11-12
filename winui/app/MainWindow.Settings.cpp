@@ -369,6 +369,9 @@ namespace winrt::EvolutionWin::implementation
         if (auto sw = MailConfirmPermanentDeleteSwitch())
             sw.IsOn(settings.GetBoolean(L"mail.confirm-permanent-delete", true));
 
+        if (auto sw = MailSmartDarkSwitch())
+            sw.IsOn(settings.GetBoolean(L"mail.smart-dark", true));
+
         if (auto sw = MailRequestReadReceiptSwitch())
             sw.IsOn(settings.GetBoolean(L"mail.request-read-receipt", false));
 
@@ -1751,6 +1754,11 @@ namespace winrt::EvolutionWin::implementation
 
     {
 
+        /* mémorisé pour ThemedBrush (pinceaux construits en code, selon le thème affiché) */
+        ::EvolutionWin::Helpers::AppElementTheme() = theme_name == L"light" ? ElementTheme::Light
+            : theme_name == L"dark" ? ElementTheme::Dark : ElementTheme::Default;
+        ::EvolutionWin::Helpers::ApplyCaptionButtonTheme(AppWindow().TitleBar(), ::EvolutionWin::Helpers::AppElementTheme());
+
         if (auto root = this->Content().try_as<FrameworkElement>())
 
         {
@@ -1768,6 +1776,27 @@ namespace winrt::EvolutionWin::implementation
                 root.RequestedTheme(ElementTheme::Default);
 
         }
+
+        /* les volets construits en code (couleurs choisies selon le thème) sont refaits une fois le thème appliqué */
+        DispatcherQueue().TryEnqueue([weak = get_weak()]()
+        {
+            if (auto self = weak.get())
+            {
+                if (self->m_calendar_sources)
+                    self->RebuildCalendarSourcesPanel();
+                if (self->m_contact_books)
+                    self->RebuildContactBooksPanel();
+                if (self->m_all_tasks)
+                {
+                    self->ShowTasks();
+                    self->UpdateTodoBar();
+                }
+                if (self->m_last_shown_messages)
+                    self->ShowMessages(self->m_last_shown_messages);
+                if (self->m_current_message)
+                    self->ShowCurrentMessageInReader(false);   /* le mode sombre du lecteur suit le thème */
+            }
+        });
 
     }
 
@@ -1827,6 +1856,10 @@ namespace winrt::EvolutionWin::implementation
                 else if (key == L"general.auto-startup")
                 {
                     ::EvolutionWin::Helpers::SetAutoStartupEnabled(toggle.IsOn());
+                }
+                else if (key == L"mail.smart-dark")
+                {
+                    ShowCurrentMessageInReader(false);
                 }
                 else if (key == L"privacy.hide-snippets")
                 {
@@ -2185,6 +2218,8 @@ namespace winrt::EvolutionWin::implementation
             s.SetBoolean(L"mail.warn-empty-subject", true);
 
             s.SetBoolean(L"mail.confirm-permanent-delete", true);
+
+            s.SetBoolean(L"mail.smart-dark", true);
 
             s.SetString(L"calendar.first-day", L"0");
 

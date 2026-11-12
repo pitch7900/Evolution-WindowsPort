@@ -260,6 +260,19 @@ gboolean	e_m365_connection_get_mail_window_start_sync
 						 time_t *out_received_time,
 						 GCancellable *cancellable,
 						 GError **error);
+/* Les 'top' messages les plus récents d'un dossier (une seule page, du plus récent au plus ancien) : permet
+   d'afficher le courrier du jour sans attendre la fin d'une longue première énumération. 'select' accepte le
+   préfixe "|mailsummary|" comme e_m365_connection_get_objects_delta_sync (). */
+gboolean	e_m365_connection_list_recent_mail_sync
+						(EM365Connection *cnc,
+						 const gchar *user_override, /* for which user, NULL to use the account user */
+						 const gchar *folder_id,
+						 const gchar *select, /* nullable - properties to select */
+						 guint top,
+						 EM365ConnectionJsonFunc func, /* function to call with the result set */
+						 gpointer func_user_data, /* user data passed into the 'func' */
+						 GCancellable *cancellable,
+						 GError **error);
 /* Comme e_m365_connection_get_objects_delta_sync (), avec un filtre ("receivedDateTime ge ..." pour les messages)
    appliqué à la première énumération ; le jeton de synchronisation renvoyé le conserve. */
 gboolean	e_m365_connection_get_objects_delta_filtered_sync

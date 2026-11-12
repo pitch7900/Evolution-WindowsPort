@@ -377,3 +377,25 @@
                                     </Grid>
 
                                 </Border>
+                                <!-- Mode sombre intelligent du lecteur de messages -->
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE708;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Messages en mode sombre" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="En thème sombre, affiche le contenu des messages avec un fond sombre et un texte clair (les images gardent leurs couleurs)."
+                                                       TextWrapping="Wrap"
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="MailSmartDarkSwitch" Tag="mail.smart-dark"
+                                                      Toggled="OnSettingToggleChanged" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>

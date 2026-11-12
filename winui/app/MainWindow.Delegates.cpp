@@ -56,7 +56,7 @@ namespace winrt::EvolutionWin::implementation
         dialog.Title(box_value(Fmt(Tr(L"Délégations et autorisations - {0}"), { name })));
         dialog.CloseButtonText(Tr(L"Fermer", L"Close", L"Common_Close"));
 
-        auto secondary_brush = Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Media::Brush>();
+        auto secondary_brush = ::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush");
 
         StackPanel panel;
         panel.Spacing(12);
@@ -96,7 +96,7 @@ namespace winrt::EvolutionWin::implementation
         auto show_error = [status](hstring const& error)
         {
             status.Text(error);
-            status.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Media::Brush>());
+            status.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"SystemFillColorCriticalBrush"));
         };
 
         *refresh = [this, strong, account, status, list, add_button, show_error, refresh, secondary_brush]()

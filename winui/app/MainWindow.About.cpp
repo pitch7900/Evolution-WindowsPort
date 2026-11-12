@@ -481,7 +481,7 @@ namespace winrt::EvolutionWin::implementation
                 TextBlock label;
                 label.Text(name);
                 label.Style(LookupAboutStyle(L"BodyStrongTextBlockStyle"));
-                label.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+                label.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush"));
                 label.VerticalAlignment(VerticalAlignment::Center);
                 Grid::SetRow(label, row);
                 Grid::SetColumn(label, 0);
@@ -896,7 +896,7 @@ namespace winrt::EvolutionWin::implementation
                 empty_txt.Text(Tr(L"Aucun raccourci ne correspond à votre recherche."));
                 empty_txt.Margin(ThicknessHelper::FromLengths(0, 24, 0, 24));
                 empty_txt.HorizontalAlignment(HorizontalAlignment::Center);
-                empty_txt.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+                empty_txt.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush"));
                 list_panel.Children().Append(empty_txt);
                 return;
             }
@@ -911,13 +911,13 @@ namespace winrt::EvolutionWin::implementation
                     cat_hdr.Text(current_cat);
                     cat_hdr.Style(Application::Current().Resources().Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>());
                     cat_hdr.Margin(ThicknessHelper::FromLengths(0, list_panel.Children().Size() == 0 ? 0 : 8, 0, 4));
-                    cat_hdr.Foreground(Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
+                    cat_hdr.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"AccentFillColorDefaultBrush"));
                     list_panel.Children().Append(cat_hdr);
                 }
 
                 Border row_card;
-                row_card.Background(Application::Current().Resources().Lookup(box_value(L"CardBackgroundFillColorDefaultBrush")).as<Brush>());
-                row_card.BorderBrush(Application::Current().Resources().Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>());
+                row_card.Background(::EvolutionWin::Helpers::ThemedBrush(L"CardBackgroundFillColorDefaultBrush"));
+                row_card.BorderBrush(::EvolutionWin::Helpers::ThemedBrush(L"CardStrokeColorDefaultBrush"));
                 row_card.BorderThickness(ThicknessHelper::FromLengths(1, 1, 1, 1));
                 row_card.CornerRadius(CornerRadiusHelper::FromRadii(4, 4, 4, 4));
                 row_card.Padding(ThicknessHelper::FromLengths(12, 8, 12, 8));
@@ -935,8 +935,8 @@ namespace winrt::EvolutionWin::implementation
                 Grid::SetColumn(action_txt, 0);
 
                 Border key_badge;
-                key_badge.Background(Application::Current().Resources().Lookup(box_value(L"SubtleFillColorSecondaryBrush")).as<Brush>());
-                key_badge.BorderBrush(Application::Current().Resources().Lookup(box_value(L"ControlStrokeColorDefaultBrush")).as<Brush>());
+                key_badge.Background(::EvolutionWin::Helpers::ThemedBrush(L"SubtleFillColorSecondaryBrush"));
+                key_badge.BorderBrush(::EvolutionWin::Helpers::ThemedBrush(L"ControlStrokeColorDefaultBrush"));
                 key_badge.BorderThickness(ThicknessHelper::FromLengths(1, 1, 1, 1));
                 key_badge.CornerRadius(CornerRadiusHelper::FromRadii(4, 4, 4, 4));
                 key_badge.Padding(ThicknessHelper::FromLengths(8, 2, 8, 2));

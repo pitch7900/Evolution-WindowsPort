@@ -902,6 +902,11 @@ namespace winrt::EvolutionWin::implementation
         /* conversation repliée : uid de l'en-tête -> uid de tous les messages du fil (glisser-déposer) */
         std::map<std::wstring, std::vector<std::wstring>> m_thread_members;
         Windows::Data::Json::JsonArray m_last_shown_messages{ nullptr };
+        /* vue « Non lus » : messages passés en lu depuis son affichage, maintenus dans la liste jusqu'à un
+           rafraîchissement ou un changement de filtre (la lecture n'est pas interrompue) */
+        std::set<std::wstring> m_unread_view_kept_uids;
+        bool IsUnreadFilterActive();
+        void ReleaseUnreadViewKept();
         void LoadFolderConversations();
         void SaveFolderConversations(bool enabled);
         void UpdateSortHeader();

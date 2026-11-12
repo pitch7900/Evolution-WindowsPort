@@ -172,6 +172,26 @@ namespace winrt::EvolutionWin::implementation
         RebuildQuickAccess();
         SyncConfidentialControls();
         AppTitleBar().SizeChanged([this](IInspectable const&, SizeChangedEventArgs const&) { UpdateTitleBarPassthrough(); });
+
+        /* En-tête de la liste des messages : onglets Prioritaire / Autres et filtres rapides sur une même ligne ;
+           quand le volet est trop étroit pour les deux, les filtres passent sur leur propre ligne. */
+        auto layout_mail_header = [this]()
+        {
+            bool focused = FocusedBar().Visibility() == Visibility::Visible;
+            bool side_by_side = !focused || MailHeaderRow().ActualWidth() >= 520;
+            FocusedBarSeparator().Visibility(focused && side_by_side ? Visibility::Visible : Visibility::Collapsed);
+            Controls::Grid::SetRow(MailFiltersGroup(), side_by_side ? 0 : 1);
+            Controls::Grid::SetColumn(MailFiltersGroup(), side_by_side ? 2 : 0);
+            Controls::Grid::SetColumnSpan(MailFiltersGroup(), side_by_side ? 1 : 3);
+
+            /* très étroit : les libellés « Trier par » / « Grouper par » laissent la place aux boutons */
+            Visibility labels = MailHeaderRow().ActualWidth() >= 400 ? Visibility::Visible : Visibility::Collapsed;
+            SortLabel().Visibility(labels);
+            GroupLabel().Visibility(labels);
+        };
+        MailHeaderRow().SizeChanged([layout_mail_header](IInspectable const&, SizeChangedEventArgs const&) { layout_mail_header(); });
+        FocusedBar().RegisterPropertyChangedCallback(UIElement::VisibilityProperty(),
+            [layout_mail_header](DependencyObject const&, DependencyProperty const&) { layout_mail_header(); });
         ApplyTheme(::EvolutionWin::Settings::Instance().GetString(L"appearance.theme", L"system"));
 
         /* Accélérateurs clavier globaux (Ctrl+, pour Paramètres, Alt+F2 pour To-Do bar, navigation Ctrl+1..4 et Ctrl+Alt+1..5) */
@@ -600,7 +620,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         StatusMessageIcon().Glyph(glyph);
-        StatusMessageIcon().Foreground(resources.Lookup(box_value(brush)).as<Microsoft::UI::Xaml::Media::Brush>());
+        StatusMessageIcon().Foreground(::EvolutionWin::Helpers::ThemedBrush(brush.c_str()));
         StatusMessageText().Text(message);
         ToolTipService::SetToolTip(StatusMessageText(), box_value(message));
         StatusMessagePanel().Visibility(Visibility::Visible);

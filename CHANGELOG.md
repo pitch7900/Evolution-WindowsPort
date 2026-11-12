@@ -10,11 +10,26 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
-## [1.3.1] — en cours
+## [1.3.1] — 2026-11-12
+
+### Modifié
+
+- **Mode sombre « intelligent » pour le contenu des messages** : en thème sombre, le message s'affiche avec un fond gris très foncé et un texte clair au lieu d'un rectangle blanc (comme Outlook sur iPhone). Le document est inversé en luminosité en gardant les teintes (liens et signatures bleus restent bleus, en plus clair) ; les images, vidéos et dessins sont remis dans leur état d'origine. Tout passe par CSS (les scripts restent désactivés dans le lecteur). S'applique à la fenêtre principale et à la fenêtre de lecture, suit le thème choisi en direct, et se désactive dans Paramètres › Courrier (« Messages en mode sombre »). Limite connue : un message déjà conçu en sombre est inversé en clair. À valider sur des messages réels.
+- **En-tête de la liste des messages plus aéré** : boutons de filtre (catégorie, indicateur, pièces jointes, cette semaine) et de tri / regroupement sans cadre (le fond n'apparaît qu'au survol ou quand le filtre est actif), rangées plus resserrées, trait fin entre l'en-tête et la liste. Mêmes contrôles et mêmes fonctions. Dans la Boîte de réception prioritaire, les onglets « Prioritaire / Autres » et les filtres rapides (Tous / Non lus / Lus et icônes) sont sur une même ligne, séparés par un trait ; « Trier par / Grouper par » passe en dessous. Si le volet est trop étroit (moins de 520 pixels), les filtres passent sur leur propre ligne.
+- **Calendrier : textures « Afficher comme » comme dans Outlook**, sur les blocs horaires et les bandeaux « journée entière » (vues Jour, Semaine, Mois) : *Disponible* (fond presque transparent, contour fin), *Travaille ailleurs* (points sur tout le bloc), *Provisoire* (fond atténué, barre latérale à hachures obliques), *Absent(e)* (barre latérale violette à hachures croisées), *Occupé(e)* inchangé. À valider à l'œil sur un vrai calendrier.
+- **Liste des messages : la corbeille de suppression rapide au survol est rouge** (E81123), pour la distinguer des autres actions.
 
 ### Corrigé
 
+- **Boutons de la barre de titre (réduire, agrandir, fermer) illisibles quand le thème choisi diffère de celui de Windows** : icônes presque invisibles et survol noir en thème clair sur un système sombre. Leurs couleurs suivent maintenant le thème choisi dans Paramètres › Affichage (fenêtre principale).
+- **Passage du thème sombre au thème clair (ou l'inverse) : textes et fonds illisibles dans certains volets.** Les couleurs posées en code (titres de groupes des volets Calendriers et Carnets d'adresses, vue Tâches et barre des tâches, vue Courrier, annuaires, cartes des paramètres…) étaient lues dans les ressources de l'application, qui renvoient toujours le thème du démarrage : gris clair sur fond blanc après le passage au thème clair. Nouvelle fonction `ThemedBrush` (dictionnaire du thème réellement affiché) utilisée partout à la place, et les volets Calendriers, Contacts, Tâches et la liste des messages sont reconstruits au changement de thème. Les titres de groupes des volets de sources suivent le thème par simple opacité.
+
+- **Catégories de courrier envoyées au serveur (Microsoft 365, IMAP).** Une catégorie posée sur un message n'était enregistrée qu'en local : le moteur appelait seulement `camel_folder_synchronize_message_sync`, qui télécharge le message sans envoyer les modifications. Le dossier est maintenant synchronisé après chaque changement de catégorie, ce qui envoie `categories` à Exchange Online (Outlook).
+
 - **Reconnexion des comptes Microsoft 365 / Exchange Online sans jeton** : quand le jeton OAuth2 d'un compte est introuvable ou révoqué (« Secret OAuth2 non trouvé »), la connexion échouait en silence et aucune fenêtre ne s'ouvrait (seul Gmail redemandait une connexion). Tout échec de connexion d'un compte OAuth2 (hors erreur réseau ou annulation) émet désormais l'événement `oauth2-required` : la fenêtre de connexion Microsoft s'ouvre (authentification multifacteur comprise), avec le bandeau « Se connecter » si elle est annulée. (`core_session_report_connect_failure`, appelée par `core_ensure_connected`)
+
+- **Vue « Non lus » : le message en cours de lecture ne disparaît plus.** Un message passé en lu (délai de lecture, sélection, menu) reste dans la liste filtrée « Non lus » jusqu'à un rafraîchissement (F5, F9, Maj+F9, bouton Relever), un changement de filtre ou de dossier, au lieu d'en être retiré à la première reconstruction de la liste, ce qui interrompait la lecture.
+- **Microsoft 365 : le courrier du jour s'affiche même quand la première synchronisation d'un grand dossier est longue.** Un dossier sans jeton de synchronisation (boîte de réception de 16 800 messages après la migration du résumé en 1.3.0) était énuméré en entier, plusieurs minutes, et l'énumération interrompue à la fermeture de l'application recommençait à chaque lancement sans jamais atteindre les messages récents. Les 100 messages les plus récents sont maintenant lus et publiés en premier (avant même le calcul de la fenêtre, dont la requête « $skip » dépassait la minute sur 17 000 messages et est remplacée par une page « $top » de 1 000 messages), la fenêtre de synchronisation est enregistrée dès qu'elle est calculée, et le journal du moteur indique la fenêtre, les échecs de relève et les erreurs de la relève de fond (jusqu'ici ignorées).
 
 ## [1.3.0] — 2026-11-12
 

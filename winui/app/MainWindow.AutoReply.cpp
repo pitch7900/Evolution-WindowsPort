@@ -249,7 +249,7 @@ namespace winrt::EvolutionWin::implementation
         /* fenêtre plus large que par défaut (une boîte de dialogue n'est pas redimensionnable) */
         dialog.Resources().Insert(box_value(L"ContentDialogMaxWidth"), box_value(1000.0));
 
-        auto secondary_brush = Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Media::Brush>();
+        auto secondary_brush = ::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush");
         auto caption_style = Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>();
 
         StackPanel panel;
@@ -351,8 +351,8 @@ namespace winrt::EvolutionWin::implementation
             box.HorizontalAlignment(HorizontalAlignment::Stretch);
             box.VerticalAlignment(VerticalAlignment::Stretch);
             box.MinHeight(110);
-            box.Foreground(resources.Lookup(box_value(L"TextFillColorPrimaryBrush")).as<Media::Brush>());
-            box.Background(resources.Lookup(box_value(L"ControlFillColorDefaultBrush")).as<Media::Brush>());
+            box.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorPrimaryBrush"));
+            box.Background(::EvolutionWin::Helpers::ThemedBrush(L"ControlFillColorDefaultBrush"));
             return box;
         };
         TextBox internal_box = make_message_box(ARText(AR::Str::InternalMessage));
@@ -415,7 +415,7 @@ namespace winrt::EvolutionWin::implementation
             ring.IsActive(false);
             ring.Visibility(Visibility::Collapsed);
             status_text.Text(text);
-            status_text.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Media::Brush>());
+            status_text.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"SystemFillColorCriticalBrush"));
         };
 
         m_core->GetAutoReply(account, [=](hstring const& json, hstring const& error)

@@ -180,9 +180,9 @@ namespace winrt::EvolutionWin::implementation
 
         auto resources = Application::Current().Resources();
         auto caption_style = resources.Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>();
-        auto secondary_brush = resources.Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>();
-        auto card_brush = resources.Lookup(box_value(L"CardBackgroundFillColorDefaultBrush")).as<Brush>();
-        auto stroke_brush = resources.Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>();
+        auto secondary_brush = ::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush");
+        auto card_brush = ::EvolutionWin::Helpers::ThemedBrush(L"CardBackgroundFillColorDefaultBrush");
+        auto stroke_brush = ::EvolutionWin::Helpers::ThemedBrush(L"CardStrokeColorDefaultBrush");
 
         auto& registry = ::EvolutionWin::CategoryStore::Registry();
         /* une carte d'édition par catégorie ; index = position dans le registre (raccourci) */
@@ -500,8 +500,8 @@ namespace winrt::EvolutionWin::implementation
         host.Children().Clear();
 
         auto resources = Application::Current().Resources();
-        auto card_brush = resources.Lookup(box_value(L"CardBackgroundFillColorDefaultBrush")).as<Brush>();
-        auto stroke_brush = resources.Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>();
+        auto card_brush = ::EvolutionWin::Helpers::ThemedBrush(L"CardBackgroundFillColorDefaultBrush");
+        auto stroke_brush = ::EvolutionWin::Helpers::ThemedBrush(L"CardStrokeColorDefaultBrush");
 
         auto& rules = ::EvolutionWin::CategoryStore::Rules();
         for (size_t index = 0; index < rules.size(); ++index)
@@ -1191,7 +1191,7 @@ namespace winrt::EvolutionWin::implementation
             icon.Glyph(L"\xE8EC");
             icon.FontSize(13);
             if (!filter.IsEmpty())
-                icon.Foreground(Application::Current().Resources().Lookup(box_value(L"AccentTextFillColorPrimaryBrush")).as<Brush>());
+                icon.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"AccentTextFillColorPrimaryBrush"));
 
             hstring tip = Tr(L"Filtrer par catégorie", L"Filter by category");
             if (!filter.IsEmpty())

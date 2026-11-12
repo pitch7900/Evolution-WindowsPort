@@ -483,7 +483,7 @@ namespace winrt::EvolutionWin::implementation
             }
             else
             {
-                color_bar.Background(Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
+                color_bar.Background(::EvolutionWin::Helpers::ThemedBrush(L"AccentFillColorDefaultBrush"));
             }
             ToolTipService::SetToolTip(color_bar, box_value(ev.GetNamedString(L"calendar_name", L"")));
             row.Children().Append(color_bar);
@@ -873,7 +873,7 @@ namespace winrt::EvolutionWin::implementation
             block.Text(text);
             block.TextWrapping(TextWrapping::Wrap);
             block.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
-            block.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+            block.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush"));
             return block;
         };
 
@@ -1600,7 +1600,7 @@ namespace winrt::EvolutionWin::implementation
                 text.Text(label);
                 text.VerticalAlignment(stretch_height ? VerticalAlignment::Top : VerticalAlignment::Center);
                 text.Margin(ThicknessHelper::FromLengths(0, stretch_height ? 8 : 0, 0, 0));
-                text.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+                text.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush"));
                 Grid::SetRow(text, form_row);
                 form.Children().Append(text);
             }
@@ -1647,7 +1647,7 @@ namespace winrt::EvolutionWin::implementation
                     {
                         TextBlock sender_label;
                         sender_label.Text(Tr(L"Envoyer les invitations depuis", L"Send invitations from"));
-                        sender_label.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+                        sender_label.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush"));
                         extras.Children().Append(sender_label);
                     }
                     extras.Children().Append(candidate);

@@ -117,6 +117,7 @@ namespace winrt::EvolutionWin::implementation
         {
             CancelMarkAsReadTimer();
             m_previous_selected_uid = L"";
+            m_unread_view_kept_uids.clear();
             MessageList().Items().Clear();
             m_message_states.clear();
             ListProgress().IsActive(true);
@@ -639,6 +640,7 @@ namespace winrt::EvolutionWin::implementation
         {
             CancelMarkAsReadTimer();
             m_previous_selected_uid = L"";
+            m_unread_view_kept_uids.clear();
             MessageList().Items().Clear();
             m_message_states.clear();
             m_message_locations.clear();
@@ -928,7 +930,7 @@ namespace winrt::EvolutionWin::implementation
                     header.Padding(ThicknessHelper::FromLengths(12, 5, 12, 5));
                     header.ColumnSpacing(8);
                     header.HorizontalAlignment(HorizontalAlignment::Stretch);
-                    header.Background(Application::Current().Resources().Lookup(box_value(L"SubtleFillColorSecondaryBrush")).as<Brush>());
+                    header.Background(::EvolutionWin::Helpers::ThemedBrush(L"SubtleFillColorSecondaryBrush"));
                     header.Tag(box_value(L""));
                     ColumnDefinition chevron_column, label_column;
                     chevron_column.Width(GridLengthHelper::Auto());
@@ -964,7 +966,7 @@ namespace winrt::EvolutionWin::implementation
             Grid item;
             /* trait fin entre deux messages et un peu d'espace autour */
             item.BorderThickness(ThicknessHelper::FromLengths(0, 0, 0, 1));
-            item.BorderBrush(Application::Current().Resources().Lookup(box_value(L"DividerStrokeColorDefaultBrush")).as<Brush>());
+            item.BorderBrush(::EvolutionWin::Helpers::ThemedBrush(L"DividerStrokeColorDefaultBrush"));
             if (m_compact_density)
                 item.Padding(ThicknessHelper::FromLengths(8, 5, 8, 5));
             else
@@ -1218,6 +1220,8 @@ namespace winrt::EvolutionWin::implementation
             FontIcon trash_icon;
             trash_icon.Glyph(L"\xE74D");
             trash_icon.FontSize(14);
+            /* rouge (E81123, rouge « fermer/supprimer » de Windows) : lisible en thème clair et sombre */
+            trash_icon.Foreground(SolidColorBrush{ Windows::UI::ColorHelper::FromArgb(255, 0xE8, 0x11, 0x23) });
             delete_button.Content(trash_icon);
             delete_button.Width(m_compact_density ? 26 : 32);
             delete_button.Height(m_compact_density ? 26 : 32);
@@ -1266,8 +1270,7 @@ namespace winrt::EvolutionWin::implementation
                 bool is_seen = it == m_message_states.end() || it->second.seen;
                 read_mark.Width(6);
                 if (is_seen)
-                    read_mark.Background(Application::Current().Resources()
-                        .Lookup(box_value(L"ControlStrongStrokeColorDefaultBrush")).as<Brush>());
+                    read_mark.Background(::EvolutionWin::Helpers::ThemedBrush(L"ControlStrongStrokeColorDefaultBrush"));
             });
             read_bar.PointerExited([this, uid, read_mark](IInspectable const&, Input::PointerRoutedEventArgs const&)
             {
@@ -1856,8 +1859,33 @@ namespace winrt::EvolutionWin::implementation
         });
     }
 
+    /* Rafraîchissement demandé par l'utilisateur : les messages lus pendant l'affichage de la vue « Non lus »
+     * en sont retirés, la liste est réaffichée en conservant la sélection du lecteur. */
+    void MainWindow::ReleaseUnreadViewKept()
+    {
+        if (m_unread_view_kept_uids.empty())
+            return;
+        m_unread_view_kept_uids.clear();
+        if (!IsUnreadFilterActive() || !m_all_messages)
+            return;
+        hstring selected = SelectedMessageUid();
+        double scroll_offset = ListScrollOffset(MessageList());
+        ReapplyMessageFilters();
+        if (!selected.empty())
+        {
+            if (auto grid = FindMessageItem(selected))
+            {
+                m_reselecting = true;
+                MessageList().SelectedItem(grid);
+                m_reselecting = false;
+            }
+        }
+        RestoreListScroll(MessageList(), scroll_offset);
+    }
+
     void MainWindow::OnRefreshClick(IInspectable const&, RoutedEventArgs const&)
     {
+        ReleaseUnreadViewKept();   /* rafraîchissement demandé : la vue « Non lus » se met à jour */
         UpdateStatusBarProgress(true, Tr(L"Relève du courrier…"), -1);
         ShowStatus(Tr(L"Relève du courrier…"), InfoBarSeverity::Informational);
         m_core->Refresh();
@@ -1871,6 +1899,7 @@ namespace winrt::EvolutionWin::implementation
     /* F9 : tous les dossiers de tous les comptes (progression dans la barre d'état) */
     void MainWindow::OnRefreshAllClick(IInspectable const&, RoutedEventArgs const&)
     {
+        ReleaseUnreadViewKept();
         UpdateStatusBarProgress(true, Tr(L"Relève de tous les dossiers…"), -1);
         ShowStatus(Tr(L"Relève de tous les dossiers…"), InfoBarSeverity::Informational);
         m_core->RefreshAll();
@@ -1881,6 +1910,7 @@ namespace winrt::EvolutionWin::implementation
     {
         if (m_folder.empty())
             return;
+        ReleaseUnreadViewKept();
         hstring updating = Fmt(Tr(L"Mise à jour de « {0} »…"), { FolderTitle().Text() });
         UpdateStatusBarProgress(true, updating, -1);
         ShowStatus(updating, InfoBarSeverity::Informational);
@@ -1979,7 +2009,7 @@ namespace winrt::EvolutionWin::implementation
                 if (auto mark = bar.Children().GetAt(0).try_as<Border>())
                     mark.Background(seen
                         ? Brush{ SolidColorBrush{ Microsoft::UI::Colors::Transparent() } }
-                        : Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
+                        : ::EvolutionWin::Helpers::ThemedBrush(L"AccentFillColorDefaultBrush"));
                 ToolTipService::SetToolTip(bar, box_value(seen ? Tr(L"Marquer comme non lu") : Tr(L"Marquer comme lu")));
             }
             else if (auto text = child.try_as<TextBlock>(); text && Grid::GetColumn(text) == 0 && Grid::GetRow(text) < 2)

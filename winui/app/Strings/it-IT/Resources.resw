@@ -8047,5 +8047,13 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Impossibile trascinare l'elemento: {0}</value>
     <comment>Impossible de glisser l'élément : {0}</comment>
   </data>
+  <data name="T_110712C1" xml:space="preserve">
+    <value>Messaggi in modalità scura</value>
+    <comment>Messages en mode sombre</comment>
+  </data>
+  <data name="T_8C87ABE6" xml:space="preserve">
+    <value>Con il tema scuro, mostra il contenuto dei messaggi con sfondo scuro e testo chiaro (le immagini mantengono i colori).</value>
+    <comment>En thème sombre, affiche le contenu des messages avec un fond sombre et un texte clair (les images gardent leurs couleurs).</comment>
+  </data>
 </root>
 

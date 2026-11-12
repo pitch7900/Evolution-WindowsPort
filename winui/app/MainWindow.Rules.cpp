@@ -1150,9 +1150,9 @@ namespace winrt::EvolutionWin::implementation
         host.Children().Clear();
 
         auto resources = Application::Current().Resources();
-        auto card_brush = resources.Lookup(box_value(L"CardBackgroundFillColorDefaultBrush")).as<Microsoft::UI::Xaml::Media::Brush>();
-        auto stroke_brush = resources.Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Microsoft::UI::Xaml::Media::Brush>();
-        auto secondary_brush = resources.Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Microsoft::UI::Xaml::Media::Brush>();
+        auto card_brush = ::EvolutionWin::Helpers::ThemedBrush(L"CardBackgroundFillColorDefaultBrush");
+        auto stroke_brush = ::EvolutionWin::Helpers::ThemedBrush(L"CardStrokeColorDefaultBrush");
+        auto secondary_brush = ::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush");
         auto caption_style = resources.Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>();
 
         auto& rules = ::EvolutionWin::RuleStore::Rules();

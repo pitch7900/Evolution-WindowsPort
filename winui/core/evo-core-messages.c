@@ -135,7 +135,11 @@ core_folder_background_refresh_run (EvoCore *core,
 	folder = core_ref_folder (core, args[0], args[1], error);
 	if (folder) {
 		core_bg_yield (core);
-		camel_folder_refresh_info_sync (folder, core->cancellable, NULL);
+		GError *refresh_error = NULL;
+
+		if (!camel_folder_refresh_info_sync (folder, core->cancellable, &refresh_error))
+			g_warning ("Cannot refresh “%s”: %s", args[1], refresh_error ? refresh_error->message : "?");
+		g_clear_error (&refresh_error);
 		g_object_set_data (G_OBJECT (folder), "evo-initial-sync-done", GINT_TO_POINTER (1));
 		g_object_unref (folder);
 	}

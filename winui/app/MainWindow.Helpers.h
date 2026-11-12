@@ -32,6 +32,146 @@ namespace EvolutionWin::Helpers
     using namespace Windows::Data::Json;
     using namespace Windows::Foundation;
 
+    /* Thème choisi dans Paramètres › Affichage (mémorisé par MainWindow::ApplyTheme). */
+    inline ElementTheme& AppElementTheme()
+    {
+        static ElementTheme theme = ElementTheme::Default;
+        return theme;
+    }
+
+    /**
+     * @brief Couleurs des boutons de la barre de titre (réduire, agrandir, fermer) selon le thème choisi.
+     *
+     * Avec ExtendsContentIntoTitleBar, ces boutons suivent le thème du système, pas celui de l'application
+     * (RequestedTheme du contenu) : en thème clair choisi sur un système sombre, les icônes étaient presque
+     * invisibles et le survol noir. « Default » rend les couleurs au système.
+     * @param title_bar Barre de titre de l'AppWindow.
+     * @param theme Thème de l'application.
+     */
+    inline void ApplyCaptionButtonTheme(Microsoft::UI::Windowing::AppWindowTitleBar const& title_bar, ElementTheme theme)
+    {
+        using Color = Windows::UI::Color;
+        using Ref = Windows::Foundation::IReference<Color>;
+        if (!title_bar)
+            return;
+
+        if (theme == ElementTheme::Default)
+        {
+            title_bar.ButtonForegroundColor(Ref{ nullptr });
+            title_bar.ButtonHoverForegroundColor(Ref{ nullptr });
+            title_bar.ButtonPressedForegroundColor(Ref{ nullptr });
+            title_bar.ButtonInactiveForegroundColor(Ref{ nullptr });
+            title_bar.ButtonHoverBackgroundColor(Ref{ nullptr });
+            title_bar.ButtonPressedBackgroundColor(Ref{ nullptr });
+            return;
+        }
+
+        bool dark = theme == ElementTheme::Dark;
+        Color text = dark ? Color{ 0xFF, 0xFF, 0xFF, 0xFF } : Color{ 0xFF, 0x1A, 0x1A, 0x1A };
+        Color inactive = dark ? Color{ 0xFF, 0x8A, 0x8A, 0x8A } : Color{ 0xFF, 0x9A, 0x9A, 0x9A };
+        Color hover = dark ? Color{ 0x1A, 0xFF, 0xFF, 0xFF } : Color{ 0x14, 0x00, 0x00, 0x00 };
+        Color pressed = dark ? Color{ 0x0F, 0xFF, 0xFF, 0xFF } : Color{ 0x0C, 0x00, 0x00, 0x00 };
+        title_bar.ButtonBackgroundColor(Color{ 0, 0, 0, 0 });
+        title_bar.ButtonInactiveBackgroundColor(Color{ 0, 0, 0, 0 });
+        title_bar.ButtonForegroundColor(text);
+        title_bar.ButtonHoverForegroundColor(text);
+        title_bar.ButtonPressedForegroundColor(text);
+        title_bar.ButtonInactiveForegroundColor(inactive);
+        title_bar.ButtonHoverBackgroundColor(hover);
+        title_bar.ButtonPressedBackgroundColor(pressed);
+    }
+
+    /* Le thème affiché est-il sombre ? (choix de l'application, sinon thème de Windows au démarrage) */
+    inline bool IsDarkThemeEffective()
+    {
+        return AppElementTheme() == ElementTheme::Dark ||
+            (AppElementTheme() == ElementTheme::Default && Application::Current().RequestedTheme() == ApplicationTheme::Dark);
+    }
+
+    /**
+     * @brief Mode sombre « intelligent » du lecteur de messages.
+     *
+     * Les messages HTML sont écrits pour un fond blanc (le moteur force d'ailleurs « color-scheme: light only »).
+     * En thème sombre, le document est inversé en luminosité tout en gardant les teintes
+     * (filter: invert + hue-rotate 180°) : fond blanc → gris très foncé, texte sombre → clair, bleu des liens et
+     * des signatures → bleu clair. Les images, vidéos et dessins sont remis dans leur état d'origine par un
+     * second filtre identique (deux inversions s'annulent), sinon les photos seraient en négatif. Comme les
+     * scripts sont désactivés dans le lecteur, tout passe par CSS.
+     * @param html Document HTML du message.
+     * @return Le document avec la feuille de style, ou tel quel si le mode est désactivé / le thème clair.
+     */
+    inline hstring WithSmartDark(hstring const& html)
+    {
+        if (!IsDarkThemeEffective() || !::EvolutionWin::Settings::Instance().GetBoolean(L"mail.smart-dark", true))
+            return html;
+
+        static constexpr wchar_t const* kStyle =
+            L"<style id=\"evo-smart-dark\">"
+            L"html { background-color: #ffffff !important; filter: invert(0.92) hue-rotate(180deg) !important; }"
+            L"img, picture, video, canvas, svg, iframe, object, embed "
+            L"{ filter: invert(1) hue-rotate(180deg) !important; }"
+            /* image bloquée ou introuvable : son texte alternatif passe par les deux inversions comme l'image, il
+               doit donc être écrit en clair pour rester lisible une fois les deux inversions appliquées */
+            L"img { color: #f0f0f0 !important; }"
+            L"</style>";
+
+        std::wstring document{ html };
+        size_t at = document.rfind(L"</body>");
+        if (at == std::wstring::npos)
+            at = document.rfind(L"</html>");
+        if (at == std::wstring::npos)
+            document += kStyle;
+        else
+            document.insert(at, kStyle);
+        return hstring{ document };
+    }
+
+    /* Recherche récursive d'une ressource dans le dictionnaire de thème « theme_key » (Default = sombre, Light). */
+    inline Windows::Foundation::IInspectable FindThemedResource(ResourceDictionary const& dictionary,
+        hstring const& theme_key, Windows::Foundation::IInspectable const& key)
+    {
+        auto themes = dictionary.ThemeDictionaries();
+        if (themes.HasKey(box_value(theme_key)))
+        {
+            if (auto themed = themes.Lookup(box_value(theme_key)).try_as<ResourceDictionary>())
+            {
+                if (themed.HasKey(key))
+                    return themed.Lookup(key);
+            }
+        }
+        for (auto const& merged : dictionary.MergedDictionaries())
+        {
+            if (auto found = FindThemedResource(merged, theme_key, key))
+                return found;
+        }
+        return nullptr;
+    }
+
+    /**
+     * @brief Pinceau du thème réellement affiché (clair ou sombre).
+     *
+     * Application::Resources().Lookup() renvoie toujours la valeur du thème du démarrage : un pinceau lu ainsi
+     * et posé en code reste gris clair sur fond blanc après un passage au thème clair (et inversement). Cette
+     * fonction lit le dictionnaire du thème choisi ; sans résultat, elle retombe sur la lecture habituelle.
+     * @param key Clé de la ressource (ex. L"TextFillColorSecondaryBrush").
+     */
+    inline Microsoft::UI::Xaml::Media::Brush ThemedBrush(wchar_t const* key)
+    {
+        auto resources = Application::Current().Resources();
+        bool dark = AppElementTheme() == ElementTheme::Dark ||
+            (AppElementTheme() == ElementTheme::Default && Application::Current().RequestedTheme() == ApplicationTheme::Dark);
+        try
+        {
+            if (auto found = FindThemedResource(resources, dark ? L"Default" : L"Light", box_value(key)))
+            {
+                if (auto brush = found.try_as<Microsoft::UI::Xaml::Media::Brush>())
+                    return brush;
+            }
+        }
+        catch (...) {}
+        return resources.Lookup(box_value(key)).as<Microsoft::UI::Xaml::Media::Brush>();
+    }
+
     /**
      * @brief Exécute une lambda-coroutine en gardant ses captures vivantes.
      *

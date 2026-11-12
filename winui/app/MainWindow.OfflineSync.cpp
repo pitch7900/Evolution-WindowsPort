@@ -111,7 +111,7 @@ namespace winrt::EvolutionWin::implementation
         dialog.DefaultButton(ContentDialogButton::Primary);
         dialog.IsPrimaryButtonEnabled(supported);
 
-        auto secondary_brush = Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Media::Brush>();
+        auto secondary_brush = ::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush");
 
         StackPanel panel;
         panel.Spacing(12);
