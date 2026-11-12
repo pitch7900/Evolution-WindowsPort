@@ -28,13 +28,29 @@
 
                         <!-- Boîte de réception prioritaire (Microsoft 365) : visible seulement dans la Boîte de réception de ces comptes -->
 
-                        <SelectorBar x:Name="FocusedBar" Visibility="Collapsed" SelectionChanged="OnFocusedBarChanged">
+                        <!-- rangée d'en-tête : onglets Prioritaire / Autres, trait, filtres rapides ; les filtres passent sur
+                             leur propre ligne quand le volet est étroit (voir le constructeur de MainWindow) -->
+                        <Grid x:Name="MailHeaderRow" ColumnSpacing="8" RowSpacing="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                        <SelectorBar x:Name="FocusedBar" Grid.Column="0" Visibility="Collapsed" SelectionChanged="OnFocusedBarChanged">
                             <SelectorBarItem x:Name="FocusedBarItemFocused" Text="Prioritaire" Tag="focused" IsSelected="True" />
                             <SelectorBarItem x:Name="FocusedBarItemOther" Text="Autres" Tag="other" />
                         </SelectorBar>
 
+                        <Rectangle x:Name="FocusedBarSeparator" Grid.Column="1" Width="1" Height="22" Visibility="Collapsed"
+                                   VerticalAlignment="Center" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
                         <!-- filtres rapides, combinés avec la recherche (appliqués par ShowMessages) -->
-                        <Grid>
+                        <Grid x:Name="MailFiltersGroup" Grid.Column="2">
                             <SelectorBar x:Name="ReadFilterBar" SelectionChanged="OnQuickFilterChanged">
                                 <SelectorBarItem x:Name="ReadFilterAll" Text="Tous" Tag="all" IsSelected="True" />
                                 <SelectorBarItem x:Name="ReadFilterUnread" Text="Non lus" Tag="unread" />
@@ -42,6 +58,9 @@
                             </SelectorBar>
 
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4">
+
+                                <Rectangle Width="1" Height="22" Margin="0,0,4,0" VerticalAlignment="Center"
+                                           Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
                                 <Button x:Name="MailCategoryFilterButton" Click="OnMailCategoryFilterClick" Padding="8,4" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Filtrer par catégorie">
     <FontIcon Glyph="&#xE8EC;" FontSize="13" />
@@ -71,6 +90,8 @@
                                 </ToggleButton>
 
                             </StackPanel>
+
+                        </Grid>
 
                         </Grid>
 
