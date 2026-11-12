@@ -51,23 +51,27 @@
 
                         <!-- filtres rapides, combinés avec la recherche (appliqués par ShowMessages) -->
                         <Grid x:Name="MailFiltersGroup" Grid.Column="2">
-                            <SelectorBar x:Name="ReadFilterBar" SelectionChanged="OnQuickFilterChanged">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <SelectorBar x:Name="ReadFilterBar" Grid.Column="0" SelectionChanged="OnQuickFilterChanged">
                                 <SelectorBarItem x:Name="ReadFilterAll" Text="Tous" Tag="all" IsSelected="True" />
                                 <SelectorBarItem x:Name="ReadFilterUnread" Text="Non lus" Tag="unread" />
                                 <SelectorBarItem x:Name="ReadFilterRead" Text="Lus" Tag="read" />
                             </SelectorBar>
 
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4">
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="0">
 
                                 <Rectangle Width="1" Height="22" Margin="0,0,4,0" VerticalAlignment="Center"
                                            Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
-                                <Button x:Name="MailCategoryFilterButton" Click="OnMailCategoryFilterClick" Padding="8,4" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Filtrer par catégorie">
+                                <Button x:Name="MailCategoryFilterButton" Click="OnMailCategoryFilterClick" Padding="7,4" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Filtrer par catégorie">
     <FontIcon Glyph="&#xE8EC;" FontSize="13" />
 </Button>
                                 <ToggleButton x:Name="FlaggedFilterButton" Click="OnQuickFilterToggled"
 
-                                              Padding="8,4" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Avec indicateur">
+                                              Padding="7,4" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Avec indicateur">
 
                                     <FontIcon Glyph="&#xE7C1;" FontSize="13" />
 
@@ -75,7 +79,7 @@
 
                                 <ToggleButton x:Name="AttachmentFilterButton" Click="OnQuickFilterToggled"
 
-                                              Padding="8,4" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Avec pièces jointes">
+                                              Padding="7,4" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Avec pièces jointes">
 
                                     <FontIcon Glyph="&#xE723;" FontSize="13" />
 
@@ -83,7 +87,7 @@
 
                                 <ToggleButton x:Name="ThisWeekFilterButton" Click="OnQuickFilterToggled"
 
-                                              Padding="8,4" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Cette semaine">
+                                              Padding="7,4" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Cette semaine">
 
                                     <FontIcon Glyph="&#xE787;" FontSize="13" />
 
@@ -99,7 +103,7 @@
 
                         <StackPanel Orientation="Horizontal" Spacing="2" Margin="0,2,0,0">
 
-                            <TextBlock Text="Trier par :" VerticalAlignment="Center" Opacity="0.7"
+                            <TextBlock x:Name="SortLabel" Text="Trier par :" VerticalAlignment="Center" Opacity="0.7"
 
                                        Style="{StaticResource CaptionTextBlockStyle}" />
 
@@ -125,7 +129,7 @@
 
                             <!-- regroupement (mémorisé par dossier) : MainWindow::OnGroupMenuOpening -->
 
-                            <TextBlock Text="Grouper par :" VerticalAlignment="Center" Opacity="0.7" Margin="10,0,0,0"
+                            <TextBlock x:Name="GroupLabel" Text="Grouper par :" VerticalAlignment="Center" Opacity="0.7" Margin="10,0,0,0"
                                        Style="{StaticResource CaptionTextBlockStyle}" />
 
                             <DropDownButton x:Name="GroupButton" Content="Aucun" Padding="6,2" FontSize="12" Background="Transparent" BorderThickness="0"

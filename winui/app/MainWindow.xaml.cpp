@@ -183,6 +183,11 @@ namespace winrt::EvolutionWin::implementation
             Controls::Grid::SetRow(MailFiltersGroup(), side_by_side ? 0 : 1);
             Controls::Grid::SetColumn(MailFiltersGroup(), side_by_side ? 2 : 0);
             Controls::Grid::SetColumnSpan(MailFiltersGroup(), side_by_side ? 1 : 3);
+
+            /* très étroit : les libellés « Trier par » / « Grouper par » laissent la place aux boutons */
+            Visibility labels = MailHeaderRow().ActualWidth() >= 400 ? Visibility::Visible : Visibility::Collapsed;
+            SortLabel().Visibility(labels);
+            GroupLabel().Visibility(labels);
         };
         MailHeaderRow().SizeChanged([layout_mail_header](IInspectable const&, SizeChangedEventArgs const&) { layout_mail_header(); });
         FocusedBar().RegisterPropertyChangedCallback(UIElement::VisibilityProperty(),
