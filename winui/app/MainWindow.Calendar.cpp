@@ -6,6 +6,7 @@
 
 #include <winrt/Microsoft.UI.Input.h>
 #include <winrt/Microsoft.UI.Xaml.Input.h>
+#include <winrt/Microsoft.UI.Xaml.Shapes.h>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -64,6 +65,7 @@ namespace
     }
     constexpr double GutterWidth = 56;	/* colonne des heures */
     constexpr int MonthChips = 3;	/* événements affichés par jour en vue Mois */
+    constexpr double BarWidth = 6;	/* barre latérale à motif des blocs « Afficher comme » */
 
     Brush ThemeBrush(wchar_t const* key)
     {
@@ -135,6 +137,143 @@ namespace
         int64_t start = static_cast<int64_t>(ev.GetNamedNumber(L"start", 0));
         int64_t end = static_cast<int64_t>(ev.GetNamedNumber(L"end", 0));
         return ev.GetNamedBoolean(L"all_day", false) || end - start >= 24 * 3600;
+    }
+
+    /* Texture « Afficher comme » à la manière d'Outlook, sur un bloc d'événement (Border) ou un bandeau
+     * « journée entière » :
+     *   free      : fond presque transparent, contour fin de la couleur du calendrier
+     *   working   : points sur tout le bloc (travaille ailleurs)
+     *   tentative : fond atténué, barre latérale à hachures obliques (provisoire)
+     *   oof       : barre latérale violette à hachures croisées (absent)
+     *   busy      : bloc plein, inchangé
+     * WinUI ne sait pas répéter une image en motif : les motifs sont tracés en formes (lignes pointillées,
+     * hachures) dans un Canvas recalculé et rogné à la taille du bloc.
+     * Paramètres :
+     *   block : bloc dont le fond et le contenu sont déjà définis (le contenu est conservé)
+     *   ev    : événement (membre "show_as")
+     *   color : couleur du calendrier ("#rrggbb") */
+    void ApplyShowAsTexture(Border const& block, JsonObject const& ev, hstring const& color)
+    {
+        using namespace Microsoft::UI::Xaml::Shapes;
+
+        std::wstring show_as{ ev.GetNamedString(L"show_as", L"busy") };
+        if (show_as == L"free")
+        {
+            block.Background(CalendarBrush(color, 0x14));
+            block.BorderBrush(CalendarBrush(color, 0xFF));
+            block.BorderThickness(ThicknessHelper::FromLengths(3, 1, 1, 1));
+            return;
+        }
+
+        enum class Kind { Dots, Stripes, Cross };
+        Kind kind;
+        if (show_as == L"working")
+            kind = Kind::Dots;
+        else if (show_as == L"tentative")
+            kind = Kind::Stripes;
+        else if (show_as == L"oof")
+            kind = Kind::Cross;
+        else
+            return;
+
+        Thickness padding = block.Padding();
+        if (kind != Kind::Dots)
+        {
+            /* la barre latérale à motif remplace le liseré uni de 3 pixels */
+            block.BorderThickness(ThicknessHelper::FromUniformLength(0));
+            padding.Left += BarWidth;
+            block.Padding(padding);
+        }
+        if (kind == Kind::Stripes)
+            block.Background(CalendarBrush(color, 0x30));
+
+        auto content = block.Child();
+        block.Child(nullptr);
+
+        Canvas texture;
+        texture.IsHitTestVisible(false);
+        texture.HorizontalAlignment(HorizontalAlignment::Stretch);
+        texture.VerticalAlignment(VerticalAlignment::Stretch);
+        texture.Margin(ThicknessHelper::FromLengths(-padding.Left, -padding.Top, -padding.Right, -padding.Bottom));
+
+        Windows::UI::Color line_color = kind == Kind::Cross ? Windows::UI::Color{ 255, 0xB4, 0x00, 0x9E } : CalendarColor(color);
+        texture.SizeChanged([kind, line_color](IInspectable const& sender, SizeChangedEventArgs const& args)
+        {
+            auto canvas = sender.as<Canvas>();
+            double w = args.NewSize().Width;
+            double h = args.NewSize().Height;
+            RectangleGeometry clip;
+            clip.Rect(Rect{ 0, 0, static_cast<float>(w), static_cast<float>(h) });
+            canvas.Clip(clip);
+            canvas.Children().Clear();
+            if (w <= 0 || h <= 0)
+                return;
+
+            if (kind == Kind::Dots)
+            {
+                /* deux séries de lignes pointillées décalées d'une demi-période */
+                for (int parity = 0; parity < 2; parity++)
+                {
+                    GeometryGroup rows;
+                    for (double y = 2.5 + parity * 5; y < h; y += 10)
+                    {
+                        LineGeometry row;
+                        row.StartPoint(Point{ 0, static_cast<float>(y) });
+                        row.EndPoint(Point{ static_cast<float>(w), static_cast<float>(y) });
+                        rows.Children().Append(row);
+                    }
+                    Path dots;
+                    dots.Data(rows);
+                    dots.Stroke(SolidColorBrush{ Windows::UI::Color{ 0xA0, line_color.R, line_color.G, line_color.B } });
+                    dots.StrokeThickness(1.6);
+                    DoubleCollection dashes;
+                    dashes.Append(0.01);
+                    dashes.Append(2.1);
+                    dots.StrokeDashArray(dashes);
+                    dots.StrokeDashCap(PenLineCap::Round);
+                    dots.StrokeDashOffset(parity ? 1.5 : 0.0);
+                    canvas.Children().Append(dots);
+                }
+                return;
+            }
+
+            /* barre latérale : fond clair + hachures obliques (croisées pour « absent ») */
+            Microsoft::UI::Xaml::Shapes::Rectangle bar;
+            bar.Width(BarWidth);
+            bar.Height(h);
+            bar.Fill(SolidColorBrush{ Windows::UI::Color{ static_cast<uint8_t>(kind == Kind::Cross ? 0x50 : 0x28), line_color.R, line_color.G, line_color.B } });
+            canvas.Children().Append(bar);
+
+            GeometryGroup hatches;
+            for (double y = -BarWidth; y < h + BarWidth; y += 4.5)
+            {
+                LineGeometry rising;
+                rising.StartPoint(Point{ 0, static_cast<float>(y + BarWidth) });
+                rising.EndPoint(Point{ static_cast<float>(BarWidth), static_cast<float>(y) });
+                hatches.Children().Append(rising);
+                if (kind == Kind::Cross)
+                {
+                    LineGeometry falling;
+                    falling.StartPoint(Point{ 0, static_cast<float>(y) });
+                    falling.EndPoint(Point{ static_cast<float>(BarWidth), static_cast<float>(y + BarWidth) });
+                    hatches.Children().Append(falling);
+                }
+            }
+            RectangleGeometry bar_clip;
+            bar_clip.Rect(Rect{ 0, 0, static_cast<float>(BarWidth), static_cast<float>(h) });
+            Path stripes;
+            stripes.Data(hatches);
+            stripes.Clip(bar_clip);
+            stripes.Stroke(SolidColorBrush{ line_color });
+            stripes.StrokeThickness(1.4);
+            canvas.Children().Append(stripes);
+        });
+
+        Grid root;
+        root.Children().Append(texture);
+        if (content)
+            root.Children().Append(content);
+        block.Child(root);
     }
 
     /* une occurrence placée dans un jour de la grille */
@@ -319,6 +458,7 @@ namespace winrt::EvolutionWin::implementation
                     title.FontSize(12);
                     title.TextTrimming(TextTrimming::CharacterEllipsis);
                     chip.Child(title);
+                    ApplyShowAsTexture(chip, ev, ::EvolutionWin::CategoryStore::EventColorHex(ev));
                     ToolTipService::SetToolTip(chip, box_value(ev.GetNamedString(L"summary", L"") + L"\n" +
                         ev.GetNamedString(L"calendar_name", L"")));
                     open_on_tap(chip, ev);
@@ -605,6 +745,7 @@ namespace winrt::EvolutionWin::implementation
                     details.TextTrimming(TextTrimming::CharacterEllipsis);
                     content.Children().Append(details);
                     block.Child(content);
+                    ApplyShowAsTexture(block, ev, color);
 
                     ToolTipService::SetToolTip(block, box_value(ev.GetNamedString(L"summary", L"") + L"\n" + when +
                         (location.empty() ? hstring{} : L"\n" + location) + L"\n" + ev.GetNamedString(L"calendar_name", L"")));
@@ -763,6 +904,8 @@ namespace winrt::EvolutionWin::implementation
                 title.TextTrimming(TextTrimming::CharacterEllipsis);
                 line.Children().Append(title);
                 chip.Child(line);
+                if (all_day)
+                    ApplyShowAsTexture(chip, ev, color);
 
                 ToolTipService::SetToolTip(chip, box_value(ev.GetNamedString(L"summary", L"") + L"\n" +
                     ev.GetNamedString(L"calendar_name", L"")));

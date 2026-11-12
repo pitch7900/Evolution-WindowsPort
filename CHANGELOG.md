@@ -14,6 +14,7 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Modifié
 
+- **Calendrier : textures « Afficher comme » comme dans Outlook**, sur les blocs horaires et les bandeaux « journée entière » (vues Jour, Semaine, Mois) : *Disponible* (fond presque transparent, contour fin), *Travaille ailleurs* (points sur tout le bloc), *Provisoire* (fond atténué, barre latérale à hachures obliques), *Absent(e)* (barre latérale violette à hachures croisées), *Occupé(e)* inchangé. À valider à l'œil sur un vrai calendrier.
 - **Liste des messages : la corbeille de suppression rapide au survol est rouge** (E81123), pour la distinguer des autres actions.
 
 ### Corrigé
