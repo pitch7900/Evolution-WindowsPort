@@ -14,6 +14,7 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Modifié
 
+- **En-tête de la liste des messages plus aéré** : boutons de filtre (catégorie, indicateur, pièces jointes, cette semaine) et de tri / regroupement sans cadre (le fond n'apparaît qu'au survol ou quand le filtre est actif), rangées plus resserrées, trait fin entre l'en-tête et la liste. Mêmes contrôles et mêmes fonctions.
 - **Calendrier : textures « Afficher comme » comme dans Outlook**, sur les blocs horaires et les bandeaux « journée entière » (vues Jour, Semaine, Mois) : *Disponible* (fond presque transparent, contour fin), *Travaille ailleurs* (points sur tout le bloc), *Provisoire* (fond atténué, barre latérale à hachures obliques), *Absent(e)* (barre latérale violette à hachures croisées), *Occupé(e)* inchangé. À valider à l'œil sur un vrai calendrier.
 - **Liste des messages : la corbeille de suppression rapide au survol est rouge** (E81123), pour la distinguer des autres actions.
 

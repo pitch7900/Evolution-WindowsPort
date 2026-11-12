@@ -20,7 +20,7 @@
 
                     </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0" Padding="16,0,16,8" Spacing="4">
+                    <StackPanel Grid.Row="0" Padding="16,0,16,0" Spacing="2">
 
                         <!-- titre du dossier masqué (redondant avec le volet des dossiers) ; Envoyer/Recevoir : bouton du ruban -->
 
@@ -43,12 +43,12 @@
 
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4">
 
-                                <Button x:Name="MailCategoryFilterButton" Click="OnMailCategoryFilterClick" Padding="8,4" ToolTipService.ToolTip="Filtrer par catégorie">
+                                <Button x:Name="MailCategoryFilterButton" Click="OnMailCategoryFilterClick" Padding="8,4" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Filtrer par catégorie">
     <FontIcon Glyph="&#xE8EC;" FontSize="13" />
 </Button>
                                 <ToggleButton x:Name="FlaggedFilterButton" Click="OnQuickFilterToggled"
 
-                                              Padding="8,4" ToolTipService.ToolTip="Avec indicateur">
+                                              Padding="8,4" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Avec indicateur">
 
                                     <FontIcon Glyph="&#xE7C1;" FontSize="13" />
 
@@ -56,7 +56,7 @@
 
                                 <ToggleButton x:Name="AttachmentFilterButton" Click="OnQuickFilterToggled"
 
-                                              Padding="8,4" ToolTipService.ToolTip="Avec pièces jointes">
+                                              Padding="8,4" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Avec pièces jointes">
 
                                     <FontIcon Glyph="&#xE723;" FontSize="13" />
 
@@ -64,7 +64,7 @@
 
                                 <ToggleButton x:Name="ThisWeekFilterButton" Click="OnQuickFilterToggled"
 
-                                              Padding="8,4" ToolTipService.ToolTip="Cette semaine">
+                                              Padding="8,4" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Cette semaine">
 
                                     <FontIcon Glyph="&#xE787;" FontSize="13" />
 
@@ -76,13 +76,13 @@
 
                         <!-- tri de la liste (mémorisé par dossier) : MainWindow::SortMessages -->
 
-                        <StackPanel Orientation="Horizontal" Spacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="2" Margin="0,2,0,0">
 
                             <TextBlock Text="Trier par :" VerticalAlignment="Center" Opacity="0.7"
 
                                        Style="{StaticResource CaptionTextBlockStyle}" />
 
-                            <DropDownButton x:Name="SortButton" Content="Date" Padding="8,2" FontSize="12"
+                            <DropDownButton x:Name="SortButton" Content="Date" Padding="6,2" FontSize="12" Background="Transparent" BorderThickness="0"
 
                                             ToolTipService.ToolTip="Critère de tri">
 
@@ -94,7 +94,7 @@
 
                             </DropDownButton>
 
-                            <Button x:Name="SortDirectionButton" Click="OnSortDirectionClick" Padding="6,4"
+                            <Button x:Name="SortDirectionButton" Click="OnSortDirectionClick" Padding="6,4" Background="Transparent" BorderThickness="0"
 
                                     ToolTipService.ToolTip="Inverser l'ordre du tri">
 
@@ -104,10 +104,10 @@
 
                             <!-- regroupement (mémorisé par dossier) : MainWindow::OnGroupMenuOpening -->
 
-                            <TextBlock Text="Grouper par :" VerticalAlignment="Center" Opacity="0.7" Margin="12,0,0,0"
+                            <TextBlock Text="Grouper par :" VerticalAlignment="Center" Opacity="0.7" Margin="10,0,0,0"
                                        Style="{StaticResource CaptionTextBlockStyle}" />
 
-                            <DropDownButton x:Name="GroupButton" Content="Aucun" Padding="8,2" FontSize="12"
+                            <DropDownButton x:Name="GroupButton" Content="Aucun" Padding="6,2" FontSize="12" Background="Transparent" BorderThickness="0"
                                             ToolTipService.ToolTip="Regrouper les messages (Conversation ou Aucun)">
                                 <DropDownButton.Flyout>
                                     <MenuFlyout Opening="OnGroupMenuOpening" />
@@ -129,7 +129,10 @@
 
                     </StackPanel>
 
-                    <ListView x:Name="MessageList" Grid.Row="1" SelectionMode="Extended"
+                    <Rectangle Grid.Row="1" Height="1" VerticalAlignment="Top" Margin="16,0,16,0"
+                               Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                    <ListView x:Name="MessageList" Grid.Row="1" Margin="0,4,0,0" SelectionMode="Extended"
 
                               SelectionChanged="OnMessageSelectionChanged"
 
