@@ -83,7 +83,10 @@ namespace winrt::EvolutionWin::implementation
         if (auto item = ReadFilterBar().SelectedItem())
         {
             hstring read_filter = unbox_value_or<hstring>(item.Tag(), L"all");
-            if ((read_filter == L"unread" && seen) || (read_filter == L"read" && !seen))
+            /* « Non lus » : un message lu pendant l'affichage de la vue y reste jusqu'au rafraîchissement */
+            bool kept = read_filter == L"unread" && seen
+                && m_unread_view_kept_uids.count(std::wstring{ message.GetNamedString(L"uid", L"") }) != 0;
+            if ((read_filter == L"unread" && seen && !kept) || (read_filter == L"read" && !seen))
                 return false;
         }
 
@@ -132,8 +135,16 @@ namespace winrt::EvolutionWin::implementation
             ShowMessages(m_all_messages);
     }
 
+    /* Indique si le filtre rapide « Non lus » est actif. */
+    bool MainWindow::IsUnreadFilterActive()
+    {
+        auto item = ReadFilterBar().SelectedItem();
+        return item && unbox_value_or<hstring>(item.Tag(), L"all") == L"unread";
+    }
+
     void MainWindow::OnQuickFilterChanged(SelectorBar const&, SelectorBarSelectionChangedEventArgs const&)
     {
+        m_unread_view_kept_uids.clear();   /* changement de filtre : les messages lus quittent la vue « Non lus » */
         ReapplyMessageFilters();
     }
 

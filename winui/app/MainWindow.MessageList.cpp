@@ -117,6 +117,7 @@ namespace winrt::EvolutionWin::implementation
         {
             CancelMarkAsReadTimer();
             m_previous_selected_uid = L"";
+            m_unread_view_kept_uids.clear();
             MessageList().Items().Clear();
             m_message_states.clear();
             ListProgress().IsActive(true);
@@ -639,6 +640,7 @@ namespace winrt::EvolutionWin::implementation
         {
             CancelMarkAsReadTimer();
             m_previous_selected_uid = L"";
+            m_unread_view_kept_uids.clear();
             MessageList().Items().Clear();
             m_message_states.clear();
             m_message_locations.clear();
@@ -1856,8 +1858,33 @@ namespace winrt::EvolutionWin::implementation
         });
     }
 
+    /* Rafraîchissement demandé par l'utilisateur : les messages lus pendant l'affichage de la vue « Non lus »
+     * en sont retirés, la liste est réaffichée en conservant la sélection du lecteur. */
+    void MainWindow::ReleaseUnreadViewKept()
+    {
+        if (m_unread_view_kept_uids.empty())
+            return;
+        m_unread_view_kept_uids.clear();
+        if (!IsUnreadFilterActive() || !m_all_messages)
+            return;
+        hstring selected = SelectedMessageUid();
+        double scroll_offset = ListScrollOffset(MessageList());
+        ReapplyMessageFilters();
+        if (!selected.empty())
+        {
+            if (auto grid = FindMessageItem(selected))
+            {
+                m_reselecting = true;
+                MessageList().SelectedItem(grid);
+                m_reselecting = false;
+            }
+        }
+        RestoreListScroll(MessageList(), scroll_offset);
+    }
+
     void MainWindow::OnRefreshClick(IInspectable const&, RoutedEventArgs const&)
     {
+        ReleaseUnreadViewKept();   /* rafraîchissement demandé : la vue « Non lus » se met à jour */
         UpdateStatusBarProgress(true, Tr(L"Relève du courrier…"), -1);
         ShowStatus(Tr(L"Relève du courrier…"), InfoBarSeverity::Informational);
         m_core->Refresh();
@@ -1871,6 +1898,7 @@ namespace winrt::EvolutionWin::implementation
     /* F9 : tous les dossiers de tous les comptes (progression dans la barre d'état) */
     void MainWindow::OnRefreshAllClick(IInspectable const&, RoutedEventArgs const&)
     {
+        ReleaseUnreadViewKept();
         UpdateStatusBarProgress(true, Tr(L"Relève de tous les dossiers…"), -1);
         ShowStatus(Tr(L"Relève de tous les dossiers…"), InfoBarSeverity::Informational);
         m_core->RefreshAll();
@@ -1881,6 +1909,7 @@ namespace winrt::EvolutionWin::implementation
     {
         if (m_folder.empty())
             return;
+        ReleaseUnreadViewKept();
         hstring updating = Fmt(Tr(L"Mise à jour de « {0} »…"), { FolderTitle().Text() });
         UpdateStatusBarProgress(true, updating, -1);
         ShowStatus(updating, InfoBarSeverity::Informational);
