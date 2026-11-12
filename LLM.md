@@ -1,266 +1,266 @@
-# Guide de Référence pour Agent IA — EvolutionWin (Evolution Windows Port)
+# AI Agent Reference Guide — EvolutionWin (Evolution Windows Port)
 
-Ce document constitue le manuel de référence complet destiné à tout agent IA ou développeur reprenant le développement d'**EvolutionWin**. Il résume l'architecture, l'environnement, les règles de contribution, les commandes de compilation et de test, ainsi que l'état d'avancement du projet.
-
----
-
-## 1. Vue d'Ensemble & Identité du Projet
-
-**EvolutionWin** est un portage natif et moderne sous **Windows 11** de la suite collaborative Evolution (Client de messagerie, Calendrier, Contacts et Gestionnaire de tâches de GNOME).
-
-- **Moteur sous-jacent** : `evolution-data-server` (EDS), Camel (pile protocolaire IMAP, SMTP, POP3, EWS), GLib/GObject, libxml2, libsoup-3.0, libical.
-- **Pont natif (C)** : `winui/core/evo-core.dll` encapsule les types et boucles d'événements GLib/EDS pour exposer une API C propre basée sur des échanges JSON et des rappels asynchrones.
-- **Interface graphique** : **WinUI 3** (Windows App SDK 1.7) en C++/WinRT, respectant fidèlement le style visuel Windows 11 (Fluent Design, Mica, mode sombre/clair, contrôles modernes).
-- **Utilisateur & Propriétaire** : **Pierre** (le tutoyer, communiquer en français).
+This document is the complete reference manual for any AI agent or developer taking over the development of **EvolutionWin**. It summarizes the architecture, the environment, the contribution rules, the build and test commands, and the project's progress status.
 
 ---
 
-## 2. Environnement de Développement & Prérequis
+## 1. Overview & Project Identity
 
-- **Système d'exploitation** : Windows 11 x64 (22H2 ou ultérieur).
-  > **Note impérative** : Il s'agit d'une machine Windows 11. Ne jamais exécuter de commandes de type Linux/Bash (utiliser PowerShell `pwsh` ou des scripts `.bat`).
-- **Compilateur & Outils** :
+**EvolutionWin** is a native, modern port to **Windows 11** of the Evolution collaborative suite (GNOME's mail client, Calendar, Contacts and Task manager).
+
+- **Underlying engine**: `evolution-data-server` (EDS), Camel (IMAP, SMTP, POP3, EWS protocol stack), GLib/GObject, libxml2, libsoup-3.0, libical.
+- **Native bridge (C)**: `winui/core/evo-core.dll` wraps the GLib/EDS types and event loops to expose a clean C API based on JSON exchanges and asynchronous callbacks.
+- **User interface**: **WinUI 3** (Windows App SDK 1.7) in C++/WinRT, faithfully following the Windows 11 visual style (Fluent Design, Mica, dark/light mode, modern controls).
+- **User & Owner**: **Pierre** (address him informally, communicate in French).
+
+---
+
+## 2. Development Environment & Prerequisites
+
+- **Operating system**: Windows 11 x64 (22H2 or later).
+  > **Mandatory note**: This is a Windows 11 machine. Never run Linux/Bash-style commands (use PowerShell `pwsh` or `.bat` scripts).
+- **Compiler & Tools**:
   - Visual Studio 2026 Community (MSVC v180, C++20 / C++latest).
   - CMake 3.25+ & Ninja.
-  - Windows App SDK 1.7 (packages NuGet natifs intégrés dans `winui/packages/`).
-  - WiX Toolset v3.14 (pour la génération des installeurs MSI).
-  - Python 3.10+ (pour les scripts de maintenance et tests).
+  - Windows App SDK 1.7 (native NuGet packages embedded in `winui/packages/`).
+  - WiX Toolset v3.14 (for generating MSI installers).
+  - Python 3.10+ (for maintenance and test scripts).
 
 ---
 
-## 3. Arborescence du Dépôt
+## 3. Repository Layout
 
 ```
 c:\Users\chris\VSCode\Evolution-WindowsPort\
-├── VERSION                       # Numéro de version SemVer courante (ex: 0.9.8)
-├── ROADMAP.md                    # Feuille de route par jalons de versions (v0.9.8, v1.0.0...)
-├── CHANGELOG.md                  # Historique des modifications (Keep a Changelog)
-├── TODO.md                       # Référentiel exhaustif des spécifications et tâches
-├── QUICKWINS.md                  # Tâches prioritaires à fort impact (évolutif)
-├── TESTS.md                      # Guide et spécification de la suite de tests
-├── locks/                        # Verrous locaux JSON anti-collision multi-agents (ignoré Git)
+├── VERSION                       # Current SemVer version number (e.g. 0.9.8)
+├── ROADMAP.md                    # Roadmap by version milestones (v0.9.8, v1.0.0...)
+├── CHANGELOG.md                  # Change history (Keep a Changelog)
+├── TODO.md                       # Exhaustive reference of specifications and tasks
+├── QUICKWINS.md                  # High-impact priority tasks (evolving)
+├── TESTS.md                      # Guide and specification of the test suite
+├── locks/                        # Local JSON locks against multi-agent collisions (git-ignored)
 │
 ├── winui/
-│   ├── core/                     # Moteur C (evo-core.dll), découpé par domaine fonctionnel
-│   │   ├── evo-core.h            # API publique (déclarations et exports ABI)
-│   │   ├── evo-core-private.h    # En-tête privé : includes, struct EvoCore, types et prototypes partagés
-│   │   ├── evo-core.c            # Cycle de vie : journal, modules EDS, fil GLib, new/free, hors connexion
-│   │   ├── evo-core-session.c    # CamelSession : authentification, certificats TLS
-│   │   ├── evo-core-events.c     # Constructeurs JSON et émission des événements
-│   │   ├── evo-core-requests.c   # File des requêtes asynchrones (core_submit), magasins, connexion
-│   │   ├── evo-core-accounts.c   # Liste, compte par défaut, suppression
-│   │   ├── evo-core-account-setup.c  # Ajout, test, lecture, modification IMAP/POP3/SMTP, mots de passe
-│   │   ├── evo-core-account-cloud.c  # Comptes Microsoft 365 / Exchange (EWS) et Google
-│   │   ├── evo-core-detect.c     # Détection automatique (ISPDB, DNS, Autodiscover)
-│   │   ├── evo-core-oauth2.c     # Connexion OAuth2 et demandes d'identifiants
-│   │   ├── evo-core-folders.c    # Arborescence, rôles, suivi des dossiers ouverts
-│   │   ├── evo-core-folder-ops.c # Création, renommage, déplacement, copie, suppression, quota
-│   │   ├── evo-core-messages.c   # Liste des messages d'un dossier
-│   │   ├── evo-core-search.c     # Recherche (dossier, sous-dossiers, compte, tous) et vues unifiées multi-comptes
-│   │   ├── evo-core-message-read.c    # Lecture, pièces jointes, export .eml
-│   │   ├── evo-core-message-actions.c # Indicateurs, suivi, déplacement, copie, suppression
-│   │   ├── evo-core-refresh.c    # Relève, synchronisation périodique, reconnexion
-│   │   ├── evo-core-send.c       # Envoi MIME et Boîte d'envoi
-│   │   ├── evo-core-drafts.c     # Brouillons
+│   ├── core/                     # C engine (evo-core.dll), split by functional domain
+│   │   ├── evo-core.h            # Public API (declarations and ABI exports)
+│   │   ├── evo-core-private.h    # Private header: includes, struct EvoCore, shared types and prototypes
+│   │   ├── evo-core.c            # Lifecycle: log, EDS modules, GLib thread, new/free, offline mode
+│   │   ├── evo-core-session.c    # CamelSession: authentication, TLS certificates
+│   │   ├── evo-core-events.c     # JSON builders and event emission
+│   │   ├── evo-core-requests.c   # Asynchronous request queue (core_submit), stores, connection
+│   │   ├── evo-core-accounts.c   # List, default account, deletion
+│   │   ├── evo-core-account-setup.c  # IMAP/POP3/SMTP add, test, read, edit, passwords
+│   │   ├── evo-core-account-cloud.c  # Microsoft 365 / Exchange (EWS) and Google accounts
+│   │   ├── evo-core-detect.c     # Automatic detection (ISPDB, DNS, Autodiscover)
+│   │   ├── evo-core-oauth2.c     # OAuth2 sign-in and credential requests
+│   │   ├── evo-core-folders.c    # Tree, roles, tracking of open folders
+│   │   ├── evo-core-folder-ops.c # Create, rename, move, copy, delete, quota
+│   │   ├── evo-core-messages.c   # List of a folder's messages
+│   │   ├── evo-core-search.c     # Search (folder, subfolders, account, all) and unified multi-account views
+│   │   ├── evo-core-message-read.c    # Reading, attachments, .eml export
+│   │   ├── evo-core-message-actions.c # Flags, follow-up, move, copy, delete
+│   │   ├── evo-core-refresh.c    # Polling, periodic synchronization, reconnection
+│   │   ├── evo-core-send.c       # MIME sending and Outbox
+│   │   ├── evo-core-drafts.c     # Drafts
 │   │   ├── evo-core-signatures.c # Signatures
-│   │   ├── evo-core-calendar.c   # Événements d'agenda
-│   │   ├── evo-core-tasks.c      # Tâches (VTODO)
-│   │   ├── evo-core-contacts.c   # Contacts et autocomplétion des destinataires
-│   │   ├── evo-core-sources.c    # Sources EDS et création d'agendas
-│   │   ├── evo-core-export.c     # Export vCard / iCalendar
-│   │   └── CMakeLists.txt        # Configuration CMake du moteur
-│   └── app/                      # Interface WinUI 3 (C++/WinRT)
+│   │   ├── evo-core-calendar.c   # Calendar events
+│   │   ├── evo-core-tasks.c      # Tasks (VTODO)
+│   │   ├── evo-core-contacts.c   # Contacts and recipient autocompletion
+│   │   ├── evo-core-sources.c    # EDS sources and calendar creation
+│   │   ├── evo-core-export.c     # vCard / iCalendar export
+│   │   └── CMakeLists.txt        # Engine CMake configuration
+│   └── app/                      # WinUI 3 interface (C++/WinRT)
 │       ├── App.xaml / App.xaml.cpp
-│       ├── MainWindow.xaml      # GÉNÉRÉ (ignoré par git) par tools\assemble-xaml.ps1 : ne jamais le modifier
-│       ├── MainWindow.xaml.h    # Fenêtre principale et vue d'ensemble
-│       ├── xaml/                # Sources du XAML de la fenêtre principale :
-│       │   ├── MainWindow.xaml.in            # Gabarit (coque : fenêtre, navigation, zones) avec lignes <!--#include xaml/X.xamlpart-->
+│       ├── MainWindow.xaml      # GENERATED (git-ignored) by tools\assemble-xaml.ps1: never edit it
+│       ├── MainWindow.xaml.h    # Main window and overview
+│       ├── xaml/                # Sources of the main window XAML:
+│       │   ├── MainWindow.xaml.in            # Template (shell: window, navigation, areas) with <!--#include xaml/X.xamlpart--> lines
 │       │   ├── TitleBar / NavigationMenuItems / StatusBar / TodoBar .xamlpart
-│       │   ├── Ribbon.Mail / .Calendar / .Contacts / .Tasks .xamlpart    # Rubans par module
+│       │   ├── Ribbon.Mail / .Calendar / .Contacts / .Tasks .xamlpart    # Ribbons per module
 │       │   ├── Mail.Folders / .Splitters / .MessageList / .Reader .xamlpart
 │       │   ├── CalendarView / ContactsView / TasksView .xamlpart
-│       │   └── Settings.Navigation + Settings.<Catégorie>[.<Section>] .xamlpart   # Un fichier par catégorie ou section des Paramètres
-│       ├── MainWindow.*.cpp      # Découpage modulaire du code-behind :
-│       │   ├── MainWindow.Accounts.cpp       # Comptes, synchronisation, quota
-│       │   ├── MainWindow.Attachments.cpp    # Pièces jointes, aperçu, export EML
-│       │   ├── MainWindow.Calendar.cpp       # Grilles Jour/Semaine/Mois, filtres
-│       │   ├── MainWindow.Compose.cpp        # Commandes d'ouverture de rédaction
-│       │   ├── MainWindow.Contacts.cpp       # Carnets d'adresses et cartes
-│       │   ├── MainWindow.Events.cpp         # Événements et rappels de calendrier
-│       │   ├── MainWindow.Folders.cpp        # Arborescence des dossiers et actions
-│       │   ├── MainWindow.Layout.cpp         # Volets, séparateurs, disposition
-│       │   ├── MainWindow.MessageActions.cpp # Répondre, transférer, archiver, indésirables
-│       │   ├── MainWindow.MessageFilter.cpp  # Filtres de lecture, recherche rapide
-│       │   ├── MainWindow.MessageList.cpp    # Grille des messages, conversations
-│       │   ├── MainWindow.Reader.cpp         # Volet de lecture WebView2, zoom
-│       │   ├── MainWindow.Ribbon.cpp         # Ruban Fluent et onglets contextuels
-│       │   ├── MainWindow.Settings.cpp       # Panneau des paramètres applicatifs
-│       │   ├── MainWindow.Signatures.cpp     # Gestionnaire des signatures HTML/texte
-│       │   ├── MainWindow.Sources.cpp        # Sources EDS de calendriers/contacts
-│       │   ├── MainWindow.StatusBar.cpp      # Barre d'état, progression, annulation
-│       │   └── MainWindow.Tasks.cpp          # Listes de tâches et mémos
-│       ├── MainWindow.Helpers.h  # Algorithmes autonomes, parsing MIME, localisation
-│       ├── CoreBridge.h          # Passerelle C++/WinRT encapsulant evo-core.dll
-│       ├── Settings.h            # Persistance JSON des réglages et préférences
-│       ├── UnifiedViews.h        # Vues unifiées multi-comptes : fonctions pures (uid composite, comptes inclus)
-│       ├── ComposeWindow.xaml / .cpp / .h # Fenêtre de rédaction de courriel
-│       ├── MessageWindow.xaml / .cpp / .h # Fenêtre autonome de visualisation de message
-│       └── EvolutionWin.vcxproj  # Projet MSBuild pour l'application WinUI
+│       │   └── Settings.Navigation + Settings.<Category>[.<Section>] .xamlpart   # One file per Settings category or section
+│       ├── MainWindow.*.cpp      # Modular split of the code-behind:
+│       │   ├── MainWindow.Accounts.cpp       # Accounts, synchronization, quota
+│       │   ├── MainWindow.Attachments.cpp    # Attachments, preview, EML export
+│       │   ├── MainWindow.Calendar.cpp       # Day/Week/Month grids, filters
+│       │   ├── MainWindow.Compose.cpp        # Compose-opening commands
+│       │   ├── MainWindow.Contacts.cpp       # Address books and cards
+│       │   ├── MainWindow.Events.cpp         # Calendar events and reminders
+│       │   ├── MainWindow.Folders.cpp        # Folder tree and actions
+│       │   ├── MainWindow.Layout.cpp         # Panes, splitters, layout
+│       │   ├── MainWindow.MessageActions.cpp # Reply, forward, archive, junk
+│       │   ├── MainWindow.MessageFilter.cpp  # Reading filters, quick search
+│       │   ├── MainWindow.MessageList.cpp    # Message grid, conversations
+│       │   ├── MainWindow.Reader.cpp         # WebView2 reading pane, zoom
+│       │   ├── MainWindow.Ribbon.cpp         # Fluent ribbon and contextual tabs
+│       │   ├── MainWindow.Settings.cpp       # Application settings panel
+│       │   ├── MainWindow.Signatures.cpp     # HTML/text signature manager
+│       │   ├── MainWindow.Sources.cpp        # EDS calendar/contact sources
+│       │   ├── MainWindow.StatusBar.cpp      # Status bar, progress, cancellation
+│       │   └── MainWindow.Tasks.cpp          # Task lists and memos
+│       ├── MainWindow.Helpers.h  # Standalone algorithms, MIME parsing, localization
+│       ├── CoreBridge.h          # C++/WinRT gateway wrapping evo-core.dll
+│       ├── Settings.h            # JSON persistence of settings and preferences
+│       ├── UnifiedViews.h        # Unified multi-account views: pure functions (composite uid, included accounts)
+│       ├── ComposeWindow.xaml / .cpp / .h # Email compose window
+│       ├── MessageWindow.xaml / .cpp / .h # Standalone message viewing window
+│       └── EvolutionWin.vcxproj  # MSBuild project for the WinUI application
 │
 ├── tests/
 │   ├── unit/
-│   │   ├── test_helpers.cpp             # Tests unitaires WinUI & Helpers (54 tests)
-│   │   ├── test_evo_core_contracts.c    # Tests contrats JSON & robustesse C (12 tests)
-│   │   └── test_settings.cpp            # Tests persistance des préférences (5 tests)
+│   │   ├── test_helpers.cpp             # WinUI & Helpers unit tests (54 tests)
+│   │   ├── test_evo_core_contracts.c    # JSON contract & C robustness tests (12 tests)
+│   │   └── test_settings.cpp            # Preferences persistence tests (5 tests)
 │   └── abi/
-│       └── test_abi_exports.ps1         # Validation dynamique de l'ABI d'evo-core.dll (67 exports)
+│       └── test_abi_exports.ps1         # Dynamic validation of the evo-core.dll ABI (67 exports)
 │
 ├── tools/
-│   ├── build-winui-core.bat      # Compilation de evo-core.dll (CMake/Ninja)
-│   ├── build-winui-app.bat       # Compilation de EvolutionWin.exe (MSBuild)
-│   ├── run-tests.bat             # Exécution complète de la suite de tests (100% SUCCÈS exigé)
-│   ├── build-msi.ps1             # Génération du package d'installation MSI (WiX)
-│   ├── publish-release.ps1       # Publication des artefacts MSI sur GitHub Releases
-│   └── run-winui.bat             # Lancement rapide de l'application compilée
+│   ├── build-winui-core.bat      # Build evo-core.dll (CMake/Ninja)
+│   ├── build-winui-app.bat       # Build EvolutionWin.exe (MSBuild)
+│   ├── run-tests.bat             # Full run of the test suite (100% SUCCESS required)
+│   ├── build-msi.ps1             # Generate the MSI installation package (WiX)
+│   ├── publish-release.ps1       # Publish MSI artifacts to GitHub Releases
+│   └── run-winui.bat             # Quick launch of the built application
 │
-└── gtk-build/ / evolution-data-server/ # Binaires de support et sources sous-jacentes
+└── gtk-build/ / evolution-data-server/ # Supporting binaries and underlying sources
 ```
 
 ---
 
-## 4. Commandes Essentielles (Cycle de Développement)
+## 4. Essential Commands (Development Cycle)
 
-Chaque commande doit être exécutée depuis la racine du dépôt :
+Each command must be run from the repository root:
 
-### 4.1. Compiler le moteur C (`evo-core.dll`)
+### 4.1. Build the C engine (`evo-core.dll`)
 ```powershell
 .\tools\build-winui-core.bat
 ```
-- Génère `build\evo-core.dll` et `build\evo-core.lib` via CMake et Ninja en quelques secondes.
+- Produces `build\evo-core.dll` and `build\evo-core.lib` via CMake and Ninja in a few seconds.
 
-### 4.2. Compiler l'application WinUI (`EvolutionWin.exe`)
+### 4.2. Build the WinUI application (`EvolutionWin.exe`)
 ```powershell
 .\tools\build-winui-app.bat
 ```
-- Compile l'application WinUI 3 en Release x64 via `MSBuild`.
+- Builds the WinUI 3 application in Release x64 via `MSBuild`.
 
-### 4.3. Exécuter l'intégralité des tests unitaires
+### 4.3. Run the entire unit test suite
 ```powershell
 .\tools\run-tests.bat
 ```
-- Compile et lance successivement :
-  1. `test_helpers.exe` (54 tests algorithmiques).
-  2. `test_evo_core_contracts.exe` (12 tests C de robustesse et contrats JSON).
-  3. `test_settings.exe` (5 tests de sérialisation et résilience).
-  4. `test_abi_exports.ps1` (contrôle strict des fonctions exportées par la DLL).
-- **Règle absolue** : 100% des tests doivent être au vert avant tout commit.
+- Builds and successively runs:
+  1. `test_helpers.exe` (54 algorithmic tests).
+  2. `test_evo_core_contracts.exe` (12 C robustness and JSON contract tests).
+  3. `test_settings.exe` (5 serialization and resilience tests).
+  4. `test_abi_exports.ps1` (strict check of the functions exported by the DLL).
+- **Absolute rule**: 100% of the tests must be green before any commit.
 
-### 4.4. Lancer l'application
+### 4.4. Launch the application
 ```powershell
 .\tools\run-winui.bat
 ```
 
-### 4.5. Construire le MSI d'installation
+### 4.5. Build the installation MSI
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\build-msi.ps1
 ```
-- Génère `build\Evolution-Setup-<version>.msi`.
+- Produces `build\Evolution-Setup-<version>.msi`.
 
 ---
 
-## 5. Règles Strictes de Développement & Contribution
+## 5. Strict Development & Contribution Rules
 
-Les règles suivantes ont été définies par Pierre et doivent être respectées à la lettre :
+The following rules were defined by Pierre and must be followed to the letter:
 
-1. **Langue française obligatoire** :
-   - Tous les échanges, documentations, interfaces graphiques, messages de commit et commentaires de code doivent être en **français**.
-   - Le code doit être systématiquement commenté (doxygen `@brief`, `@param`, `@return`).
-   - Penser à déspécialiser les apostrophes dans les sorties console si nécessaire.
+1. **French language mandatory**:
+   - All exchanges, documentation, graphical interfaces, commit messages and code comments must be in **French**.
+   - Code must be systematically commented (doxygen `@brief`, `@param`, `@return`).
+   - Remember to unescape apostrophes in console output if necessary.
 
-2. **Stratégie de Git & Commits** :
-   - Travailler sur la branche active de la version en cours (actuellement `0.9.8`).
-   - Réaliser **un commit atomique après chaque tâche traitée**.
-   - Format de commit conventionnel : `feat(<scope>): <description en français>` ou `fix(<scope>): <description>`.
-   - Toujours pousser (`git push origin <branche>`) après avoir validé un ensemble de tâches.
+2. **Git & Commit strategy**:
+   - Work on the active branch of the current version (currently `0.9.8`).
+   - Make **one atomic commit after each completed task**.
+   - Conventional commit format: `feat(<scope>): <description in French>` or `fix(<scope>): <description>`.
+   - Always push (`git push origin <branch>`) after committing a set of tasks.
 
-3. **Mise à jour documentaire continue** :
-   - Dès qu'une tâche est achevée, cocher sa case dans `TODO.md` (`- [x]`).
-   - Ajouter un paragraphe explicatif sous la section `## [<version>] — en cours` dans `CHANGELOG.md`.
+3. **Continuous documentation updates**:
+   - As soon as a task is completed, tick its box in `TODO.md` (`- [x]`).
+   - Add an explanatory paragraph under the `## [<version>] — en cours` section in `CHANGELOG.md`.
 
 ---
 
-## 6. Architecture & Modèles de Conception
+## 6. Architecture & Design Patterns
 
-### 6.1. Le Pont `evo-core` (C) <-> `CoreBridge` (C++/WinRT)
-- Toutes les opérations d'E/S (réseau, disque, protocoles IMAP/SMTP) s'exécutent sur des threads d'arrière-plan via `core_submit()` (`evo-core-requests.c`).
-- Le moteur est découpé en un fichier par domaine (`evo-core-<domaine>.c`) : chaque fonction publique `evo_core_xxx` est définie à côté de son exécutant `core_xxx_run`. Les fonctions internes partagées entre fichiers (préfixe `core_`) sont déclarées dans `evo-core-private.h` ; toute nouvelle fonction partagée y est ajoutée, et tout nouveau fichier `.c` est ajouté à `winui/core/CMakeLists.txt`. `evo-core.h` reste la seule interface publique.
-- La communication repose sur du **JSON** :
-  - Entrée : chaîne JSON sérialisée ou paramètres typés C.
-  - Sortie : fonction de rappel `EvoCoreResultFunc` de type `void (const char *json_result, const char *error_message, void *user_data)`.
-- `CoreBridge` (`winui/app/CoreBridge.h`) reçoit le résultat et ré-aiguille automatiquement l'exécution sur le **thread d'interface WinUI** via `DispatcherQueue::TryEnqueue()`.
+### 6.1. The `evo-core` (C) <-> `CoreBridge` (C++/WinRT) Bridge
+- All I/O operations (network, disk, IMAP/SMTP protocols) run on background threads via `core_submit()` (`evo-core-requests.c`).
+- The engine is split into one file per domain (`evo-core-<domain>.c`): each public `evo_core_xxx` function is defined next to its executor `core_xxx_run`. Internal functions shared between files (prefix `core_`) are declared in `evo-core-private.h`; any new shared function is added there, and any new `.c` file is added to `winui/core/CMakeLists.txt`. `evo-core.h` remains the only public interface.
+- Communication relies on **JSON**:
+  - Input: serialized JSON string or typed C parameters.
+  - Output: `EvoCoreResultFunc` callback of type `void (const char *json_result, const char *error_message, void *user_data)`.
+- `CoreBridge` (`winui/app/CoreBridge.h`) receives the result and automatically re-routes execution onto the **WinUI UI thread** via `DispatcherQueue::TryEnqueue()`.
 
-### 6.2. Préférences et Paramètres (`Settings.h`)
-- Les réglages sont stockés au format JSON dans `%LOCALAPPDATA%\EvolutionWin\settings.json`.
-- Accès singleton via `EvolutionWin::Settings::Instance()`.
-- Méthodes typées : `GetBoolean()`, `SetBoolean()`, `GetString()`, `SetString()`, `GetInt()`, `SetInt()`, `GetArray()`, etc.
-- Toujours fournir une valeur de repli par défaut lors de la lecture.
+### 6.2. Preferences and Settings (`Settings.h`)
+- Settings are stored in JSON format in `%LOCALAPPDATA%\EvolutionWin\settings.json`.
+- Singleton access via `EvolutionWin::Settings::Instance()`.
+- Typed methods: `GetBoolean()`, `SetBoolean()`, `GetString()`, `SetString()`, `GetInt()`, `SetInt()`, `GetArray()`, etc.
+- Always provide a default fallback value when reading.
 
-### 6.2 bis. XAML de la fenêtre principale (fragments)
-- `winui/app/MainWindow.xaml` dépassait 5 800 lignes : il est **généré** à chaque build (cible MSBuild `AssembleMainWindowXaml`, `InitialTargets` de `EvolutionWin.vcxproj`) par `tools\assemble-xaml.ps1`, à partir du gabarit `winui/app/xaml/MainWindow.xaml.in` et des fragments `winui/app/xaml/*.xamlpart`. Le fichier généré est ignoré par git.
-- **Toujours modifier le gabarit ou un fragment, jamais `MainWindow.xaml`** (il serait écrasé). Une ligne `<!--#include xaml/Nom.xamlpart-->` du gabarit est remplacée telle quelle par le contenu du fragment ; un fragment est un sous-arbre XML bien formé (un ou plusieurs éléments voisins), sans en-tête XML ni déclaration d'espaces de noms (`local:`, `x:`, `controls:` viennent de la fenêtre).
-- Pour ajouter une section : créer `xaml/<Nom>.xamlpart`, y mettre l'élément, ajouter la ligne d'inclusion au bon endroit du gabarit. Pas de modification du code C++ : tous les éléments nommés (`x:Name`) restent des membres de `MainWindow` (c'est la raison de ce découpage plutôt que des `UserControl`).
-- Les erreurs du compilateur XAML citent `MainWindow.xaml` (généré) : ouvrir ce fichier à la ligne indiquée pour repérer l'élément fautif, puis le corriger dans le fragment correspondant.
+### 6.2 bis. Main window XAML (fragments)
+- `winui/app/MainWindow.xaml` exceeded 5,800 lines: it is **generated** at each build (MSBuild target `AssembleMainWindowXaml`, `InitialTargets` of `EvolutionWin.vcxproj`) by `tools\assemble-xaml.ps1`, from the template `winui/app/xaml/MainWindow.xaml.in` and the fragments `winui/app/xaml/*.xamlpart`. The generated file is ignored by git.
+- **Always edit the template or a fragment, never `MainWindow.xaml`** (it would be overwritten). A `<!--#include xaml/Name.xamlpart-->` line in the template is replaced verbatim by the fragment's content; a fragment is a well-formed XML subtree (one or more sibling elements), with no XML header or namespace declarations (`local:`, `x:`, `controls:` come from the window).
+- To add a section: create `xaml/<Name>.xamlpart`, put the element in it, add the include line at the right place in the template. No C++ code change: all named elements (`x:Name`) remain members of `MainWindow` (this is the reason for this split rather than `UserControl`s).
+- XAML compiler errors cite `MainWindow.xaml` (generated): open that file at the indicated line to locate the faulty element, then fix it in the corresponding fragment.
 
-### 6.3. Localisation, Traductions et Unicode sous Windows MSVC
-- **Attention au pliage de casse Unicode (accents)** : `std::towlower` en C++ sous Windows n'applique pas la casse française par défaut. Toujours utiliser `::CharLowerBuffW(str.data(), len)` (provenant de `user32.lib`) pour les recherches insensibles à la casse et aux accents.
-- **Formatage des tailles de fichiers** : Utiliser l'API système `::StrFormatByteSizeW` (via `shlwapi.lib`) pour respecter les unités localisées par Windows (ex: "1,42 Mo" en français, "1.42 MB" en anglais).
-- **Mise à jour obligatoire des traductions de l'interface** :
-  L'application dispose d'une infrastructure de traduction externe (`.resw` / MRT Core) documentée dans [`TRANSLATIONS.md`](TRANSLATIONS.md).
+### 6.3. Localization, Translations and Unicode on Windows MSVC
+- **Beware of Unicode case folding (accents)**: `std::towlower` in C++ on Windows does not apply French casing by default. Always use `::CharLowerBuffW(str.data(), len)` (from `user32.lib`) for case- and accent-insensitive searches.
+- **File size formatting**: Use the system API `::StrFormatByteSizeW` (via `shlwapi.lib`) to respect the units localized by Windows (e.g. "1,42 Mo" in French, "1.42 MB" in English).
+- **Mandatory update of interface translations**:
+  The application has an external translation infrastructure (`.resw` / MRT Core) documented in [`TRANSLATIONS.md`](TRANSLATIONS.md).
   > [!IMPORTANT]
-  > **Règle impérative pour l'interface graphique** :
-  > Dès qu'un texte, libellé, bouton, titre de dialogue, menu ou infobulle est **créé ou modifié** dans l'interface (XAML ou C++), l'agent **doit impérativement** :
-  > 1. Écrire le texte en français : `Tr(L"Texte FR")` ou `Fmt(Tr(L"… {0} …"), { valeur })` en C++ (jamais de fragments concaténés autour d'une valeur), texte brut dans le XAML (traduit au chargement par `UiTranslate.h`). **Aucun texte français en dur** dans un setter d'interface (`box_value(L"…")`, `Text(L"…")`, `Content`, `Title`, `ShowStatus`…).
-  > 2. Fournir les traductions `en`, `de`, `it`, `es`, `pt`, `nl` dans un JSON et les fusionner : `python tools\i18n-sync.py merge fichier.json` (la clé `T_<hash>` est déduite du libellé français ; terminologie officielle d'Evolution : `evolution/po/*.po`).
-  > 3. Vérifier avec `python tools\i18n-sync.py check` (exécuté aussi par `tools\run-tests.bat`).
+  > **Mandatory rule for the graphical interface**:
+  > As soon as a text, label, button, dialog title, menu or tooltip is **created or modified** in the interface (XAML or C++), the agent **must**:
+  > 1. Write the text in French: `Tr(L"Texte FR")` or `Fmt(Tr(L"… {0} …"), { value })` in C++ (never concatenated fragments around a value), plain text in the XAML (translated at load time by `UiTranslate.h`). **No hard-coded French text** in an interface setter (`box_value(L"…")`, `Text(L"…")`, `Content`, `Title`, `ShowStatus`…).
+  > 2. Provide the `en`, `de`, `it`, `es`, `pt`, `nl` translations in a JSON file and merge them: `python tools\i18n-sync.py merge file.json` (the `T_<hash>` key is derived from the French label; official Evolution terminology: `evolution/po/*.po`).
+  > 3. Verify with `python tools\i18n-sync.py check` (also run by `tools\run-tests.bat`).
 
 ---
 
-## 7. Pilotage Dynamique des Tâches & Source de Vérité
+## 7. Dynamic Task Management & Source of Truth
 
-Ce fichier `LLM.md` ne contient volontairement **aucun listing statique de tâches faites ou à faire** afin d'éviter toute désynchronisation. L'état du projet et les fonctionnalités sont pilotés dynamiquement par quatre fichiers clés que l'agent IA doit obligatoirement consulter à chaque prise en main :
+This `LLM.md` file deliberately contains **no static listing of done or to-do tasks**, to avoid any desynchronization. The project's status and features are driven dynamically by four key files that the AI agent must consult every time it takes over:
 
 > [!IMPORTANT]
-> **Nature vivante et évolutive des fichiers de tâches** :
-> Les fichiers [`TODO.md`](TODO.md) et [`QUICKWINS.md`](QUICKWINS.md) **ne sont jamais statiques ni figés**. Pierre peut les modifier ou y injecter régulièrement de nouvelles tâches, exigences ou priorités au fil de l'eau. L'agent IA doit toujours relire l'état réel et à jour de ces fichiers plutôt que de se baser sur un souvenir ou une supposition.
+> **Living and evolving nature of the task files**:
+> The files [`TODO.md`](TODO.md) and [`QUICKWINS.md`](QUICKWINS.md) **are never static or frozen**. Pierre may modify them or inject new tasks, requirements or priorities into them regularly as things progress. The AI agent must always re-read the real, up-to-date state of these files rather than rely on a recollection or an assumption.
 
-### 7.1. Fichiers sources à lire obligatoirement :
-1. **[`VERSION`](VERSION)** : Indique la version SemVer courante du projet (ainsi que le nom de la branche de développement active, ex. `0.9.8`).
-2. **[`ROADMAP.md`](ROADMAP.md)** : **Feuille de route stratégique par jalons de version** (v0.9.8, v1.0.0, v1.1.0, etc.). Elle indique à l'agent IA **quelles tâches de `TODO.md` traiter en priorité** pour la version cible en cours.
-3. **[`CHANGELOG.md`](CHANGELOG.md)** : Registre historique officiel listant l'ensemble des fonctionnalités déjà réalisées, testées et validées, regroupées par version.
-4. **[`QUICKWINS.md`](QUICKWINS.md)** : Liste des tâches prioritaires à fort impact utilisateur et faible coût d'implémentation. Ce fichier évolue régulièrement avec de nouveaux ajouts de Pierre ; l'agent doit toujours y traiter en priorité absolue les tâches ouvertes (`- [ ]`).
-5. **[`TODO.md`](TODO.md)** : Référentiel global et exhaustif du projet, détaillant les spécifications complètes, les contraintes métier et l'état d'avancement de chaque module. Pierre y ajoute régulièrement de nouvelles fonctionnalités à développer.
+### 7.1. Source files that must be read:
+1. **[`VERSION`](VERSION)**: Indicates the project's current SemVer version (as well as the name of the active development branch, e.g. `0.9.8`).
+2. **[`ROADMAP.md`](ROADMAP.md)**: **Strategic roadmap by version milestones** (v0.9.8, v1.0.0, v1.1.0, etc.). It tells the AI agent **which `TODO.md` tasks to handle first** for the current target version.
+3. **[`CHANGELOG.md`](CHANGELOG.md)**: Official historical register listing all the features already completed, tested and validated, grouped by version.
+4. **[`QUICKWINS.md`](QUICKWINS.md)**: List of priority tasks with high user impact and low implementation cost. This file evolves regularly with new additions from Pierre; the agent must always handle the open tasks (`- [ ]`) there with absolute priority.
+5. **[`TODO.md`](TODO.md)**: Global, exhaustive reference of the project, detailing the full specifications, business constraints and progress status of each module. Pierre regularly adds new features to develop there.
 
-### 7.2. Règles de traitement des tâches pour l'agent IA :
-- **Identification des besoins** : L'agent consulte d'abord [`ROADMAP.md`](ROADMAP.md) pour identifier les objectifs du jalon de version actif, puis recherche les tâches **non cochées** (`- [ ]`) correspondantes dans [`QUICKWINS.md`](QUICKWINS.md) et [`TODO.md`](TODO.md).
-- **Mise à jour obligatoire lors de la complétion** :
-  - Dès qu'une tâche est développée et validée par la suite de tests (`tools\run-tests.bat`), elle doit **obligatoirement être cochée** (`- [x]`) dans les fichiers sources concernés ([`ROADMAP.md`](ROADMAP.md), [`QUICKWINS.md`](QUICKWINS.md) et/ou [`TODO.md`](TODO.md)).
-  - L'entrée correspondante doit **obligatoirement être consignée dans [`CHANGELOG.md`](CHANGELOG.md)** sous la section `## [<version>] — en cours` avec une description claire de l'apport fonctionnel et technique.
-  - La tâche fait l'objet d'un **commit atomique dédié** avant de passer à la tâche suivante.
+### 7.2. Task handling rules for the AI agent:
+- **Identifying needs**: The agent first consults [`ROADMAP.md`](ROADMAP.md) to identify the objectives of the active version milestone, then looks for the corresponding **unticked** tasks (`- [ ]`) in [`QUICKWINS.md`](QUICKWINS.md) and [`TODO.md`](TODO.md).
+- **Mandatory update on completion**:
+  - As soon as a task is developed and validated by the test suite (`tools\run-tests.bat`), it **must be ticked** (`- [x]`) in the relevant source files ([`ROADMAP.md`](ROADMAP.md), [`QUICKWINS.md`](QUICKWINS.md) and/or [`TODO.md`](TODO.md)).
+  - The corresponding entry **must be recorded in [`CHANGELOG.md`](CHANGELOG.md)** under the `## [<version>] — en cours` section with a clear description of the functional and technical contribution.
+  - The task gets a **dedicated atomic commit** before moving on to the next task.
 
 ---
 
-## 8. Travail Multi-Agents en Parallèle & Stratégie Anti-Collision (Verrous Locaux)
+## 8. Parallel Multi-Agent Work & Anti-Collision Strategy (Local Locks)
 
-Plusieurs agents IA indépendants peuvent travailler **en parallèle sur la machine locale dans ce même espace de travail**. Afin d'éviter les collisions de code, les régressions et les modifications concurrentes sur les mêmes fichiers, chaque agent applique un protocole de verrouillage local léger via le dossier [`locks/`](locks/).
+Several independent AI agents may work **in parallel on the local machine in this same workspace**. To avoid code collisions, regressions and concurrent modifications of the same files, each agent applies a lightweight local locking protocol via the [`locks/`](locks/) folder.
 
 > [!NOTE]
-> Les fichiers `locks/*.json` sont exclus du versionnement via [`.gitignore`](.gitignore). Ils vivent uniquement sur le disque local pour coordonner les agents en temps réel sans polluer l'historique Git.
+> The `locks/*.json` files are excluded from versioning via [`.gitignore`](.gitignore). They live only on the local disk to coordinate agents in real time without polluting the Git history.
 
-### 8.1. Registre local des verrous (`locks/`)
-Chaque agent actif signale sa tâche en créant directement sur disque un fichier JSON :
-`locks/<agent_id>_<identifiant_tache>.json`
+### 8.1. Local lock registry (`locks/`)
+Each active agent signals its task by directly creating a JSON file on disk:
+`locks/<agent_id>_<task_id>.json`
 
-**Format JSON standardisé obligatoire pour tout verrou :**
+**Mandatory standardized JSON format for any lock:**
 ```json
 {
   "agent_id": "Agent-Alpha",
@@ -276,33 +276,33 @@ Chaque agent actif signale sa tâche en créant directement sur disque un fichie
 }
 ```
 
-**Description des champs JSON :**
-- `agent_id` *(chaîne)* : identifiant unique de l'agent qui travaille.
-- `task_ref` *(chaîne)* : référence explicite à la tâche dans `ROADMAP.md`, `TODO.md` ou `QUICKWINS.md`.
-- `description` *(chaîne)* : court résumé en français de l'objectif fonctionnel.
-- `files` *(tableau de chaînes)* : liste exhaustive des fichiers du dépôt que l'agent s'apprête à modifier.
-- `functions_or_sections` *(chaîne)* : noms des méthodes, classes ou portions de code affectées pour alerter les autres agents sur le périmètre précis.
-- `started_at` *(chaîne ISO 8601)* : horodatage UTC de début de la prise en charge.
+**Description of the JSON fields:**
+- `agent_id` *(string)*: unique identifier of the working agent.
+- `task_ref` *(string)*: explicit reference to the task in `ROADMAP.md`, `TODO.md` or `QUICKWINS.md`.
+- `description` *(string)*: short summary, in French, of the functional goal.
+- `files` *(array of strings)*: exhaustive list of the repository files the agent is about to modify.
+- `functions_or_sections` *(string)*: names of the methods, classes or portions of code affected, to alert the other agents to the precise scope.
+- `started_at` *(ISO 8601 string)*: UTC timestamp of when the task was taken on.
 
-### 8.2. Protocole obligatoire à chaque tâche (Cycle en 5 étapes) :
+### 8.2. Mandatory protocol for each task (5-step cycle):
 
-1. **Vérification de l'espace de travail** :
-   S'assurer que le dépôt local est propre via `git status` et que la branche est à jour.
-2. **Vérification de non-collision** :
-   Lire tous les fichiers `.json` présents dans le répertoire `locks/` :
-   - Si un autre agent a réservé les mêmes fichiers (ou des fichiers directement dépendants), **choisir une autre tâche indépendante** dans [`QUICKWINS.md`](QUICKWINS.md) ou [`TODO.md`](TODO.md).
-   - Si un fichier de verrou date de plus de 4 heures sans activité, il peut être considéré comme orphelin et nettoyé.
-3. **Pose immédiate du verrou local** :
-   - Créer le fichier `locks/<agent_id>_<task_id>.json` avec la liste exacte des fichiers ciblés. Pas besoin de commit Git (le fichier est ignoré).
-4. **Développement, Compilation & Tests** :
-   - Réaliser les modifications de code sur le périmètre réservé.
-   - Compiler le moteur C (`.\tools\build-winui-core.bat`) et l'application (`.\tools\build-winui-app.bat`).
-   - Valider l'intégralité de la suite de tests (`.\tools\run-tests.bat`). **100% de réussite exigé**.
-5. **Libération du verrou, Documentation & Commit** :
-   - **Supprimer son fichier de verrou** dans `locks/`.
-   - Cocher la tâche dans [`QUICKWINS.md`](QUICKWINS.md) ou [`TODO.md`](TODO.md) (`- [x]`).
-   - Ajouter l'entrée descriptive dans [`CHANGELOG.md`](CHANGELOG.md).
-   - Commiter la fonctionnalité (`git add ... && git commit -m "feat(...): ..."`).
-   - Pousser le commit vers `origin/<branche_active>`.
+1. **Workspace check**:
+   Make sure the local repository is clean via `git status` and that the branch is up to date.
+2. **Non-collision check**:
+   Read all the `.json` files present in the `locks/` directory:
+   - If another agent has reserved the same files (or directly dependent files), **choose another independent task** in [`QUICKWINS.md`](QUICKWINS.md) or [`TODO.md`](TODO.md).
+   - If a lock file is more than 4 hours old with no activity, it may be considered orphaned and cleaned up.
+3. **Immediate placement of the local lock**:
+   - Create the file `locks/<agent_id>_<task_id>.json` with the exact list of targeted files. No Git commit needed (the file is ignored).
+4. **Development, Build & Tests**:
+   - Make the code changes within the reserved scope.
+   - Build the C engine (`.\tools\build-winui-core.bat`) and the application (`.\tools\build-winui-app.bat`).
+   - Validate the entire test suite (`.\tools\run-tests.bat`). **100% success required**.
+5. **Lock release, Documentation & Commit**:
+   - **Delete your lock file** in `locks/`.
+   - Tick the task in [`QUICKWINS.md`](QUICKWINS.md) or [`TODO.md`](TODO.md) (`- [x]`).
+   - Add the descriptive entry in [`CHANGELOG.md`](CHANGELOG.md).
+   - Commit the feature (`git add ... && git commit -m "feat(...): ..."`).
+   - Push the commit to `origin/<active_branch>`.
 
 

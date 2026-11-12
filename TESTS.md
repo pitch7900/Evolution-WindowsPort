@@ -1,105 +1,105 @@
 <!-- cspell:disable -->
-# Guide des tests unitaires et de non-régression
+# Unit and regression testing guide
 
-Ce document détaille l'organisation, l'exécution et l'extension du jeu de tests unitaires d'**Evolution-WindowsPort**, destiné à valider la non-régression entre chaque version sous Windows 11 avec MSVC.
-
----
-
-## 1. Philosophie et bonnes pratiques
-
-Le jeu de tests a été conçu selon les règles de l'art pour les projets natifs C / C++ sous Windows :
-
-1. **Autonomie et zéro dépendance externe** : aucun téléchargement lourd (GoogleTest, Boost) n'est nécessaire. Un micro-cadre d'en-tête léger ([`tests/include/test_framework.h`](./tests/include/test_framework.h)) fournit des assertions claires (`ASSERT_TRUE`, `ASSERT_EQ_STR`, etc.) et compile instantanément avec le compilateur MSVC natif (`cl.exe`).
-2. **Déterminisme et isolation** : les tests unitaires s'exécutent entièrement en local, sans connexion réseau, sans nécessiter de serveur de messagerie externe ni de modifier les données utilisateur (`%LOCALAPPDATA%`).
-3. **Automatisation CI/CD et pré-publication** : le script de test retourne un code de sortie standardisé (`0` en cas de succès, `1` en cas d'échec), facilitant son intégration dans GitHub Actions, les hooks de pré-commit ou avant la publication d'une Release (`tools\publish-release.bat`).
-4. **Vérification de l'ABI binaire** : un test d'export dynamique vérifie avec `dumpbin` qu'aucun symbole public de la bibliothèque partagée `evo-core.dll` n'a été omis ou cassé lors de la compilation.
+This document details the organization, execution and extension of the unit test suite of **Evolution-WindowsPort**, intended to validate non-regression between each version on Windows 11 with MSVC.
 
 ---
 
-## 2. Organisation de l'arborescence des tests
+## 1. Philosophy and best practices
+
+The test suite was designed following best practices for native C / C++ projects on Windows:
+
+1. **Autonomy and zero external dependencies**: no heavy download (GoogleTest, Boost) is needed. A lightweight header-only micro-framework ([`tests/include/test_framework.h`](./tests/include/test_framework.h)) provides clear assertions (`ASSERT_TRUE`, `ASSERT_EQ_STR`, etc.) and compiles instantly with the native MSVC compiler (`cl.exe`).
+2. **Determinism and isolation**: unit tests run entirely locally, with no network connection, without requiring an external mail server or modifying user data (`%LOCALAPPDATA%`).
+3. **CI/CD automation and pre-release**: the test script returns a standardized exit code (`0` on success, `1` on failure), making it easy to integrate into GitHub Actions, pre-commit hooks or before publishing a Release (`tools\publish-release.bat`).
+4. **Binary ABI verification**: a dynamic export test uses `dumpbin` to verify that no public symbol of the `evo-core.dll` shared library was omitted or broken during compilation.
+
+---
+
+## 2. Test tree layout
 
 ```text
 Evolution-WindowsPort/
 ├── tests/
 │   ├── include/
-│   │   └── test_framework.h           # Micro-framework d'assertions et de synthèse C/C++
+│   │   └── test_framework.h           # Assertion and summary micro-framework for C/C++
 │   ├── unit/
-│   │   ├── test_helpers.cpp           # Tests unitaires des algorithmes et utilitaires WinUI
-│   │   ├── test_evo_core_contracts.c  # Tests des contrats d'interface JSON et robustesse evo-core
-│   │   └── test_settings.cpp          # Tests du gestionnaire de préférences et résilience JSON
+│   │   ├── test_helpers.cpp           # Unit tests of WinUI algorithms and utilities
+│   │   ├── test_evo_core_contracts.c  # Tests of JSON interface contracts and evo-core robustness
+│   │   └── test_settings.cpp          # Tests of the preferences manager and JSON resilience
 │   ├── abi/
-│   │   └── test_abi_exports.ps1       # Validation d'export des symboles de evo-core.dll
-│   └── CMakeLists.txt                 # Configuration CMake / CTest optionnelle
+│   │   └── test_abi_exports.ps1       # Symbol export validation of evo-core.dll
+│   └── CMakeLists.txt                 # Optional CMake / CTest configuration
 └── tools/
-    └── run-tests.bat                  # Script de compilation et d'exécution unifiée
+    └── run-tests.bat                  # Unified build and execution script
 ```
 
 ---
 
-## 3. Détail des suites de tests
+## 3. Test suite details
 
-### Suite 1 : Algorithmes et utilitaires WinUI (`test_helpers.cpp`)
-Valide les fonctions pures issues de `MainWindow.Helpers.h` :
-- **Extraction des expéditeurs (`SenderName`)** : prise en charge des formats RFC 822 / 5322 (`"Nom <email>"`, `"\"Nom, Prénom\" <email>"`, adresses nues, chaînes vides).
-- **Assainissement des noms de fichiers (`SanitizeFileName`)** : remplacement strict des caractères interdits sous Windows (`\ / : * ? " < > |`) et des caractères de contrôle ASCII (< 32), avec repli de secours.
-- **Répondre à tous (`WithoutAddress`)** : exclusion de l'adresse de l'utilisateur de la liste des destinataires, insensibilité à la casse, gestion des espaces et des listes multi-adresses.
-- **Sécurité HTML (`EscapeHtml`)** : échappement des caractères spéciaux (`&`, `<`, `>`, `"`) et conversion des sauts de ligne CRLF en `<br>` pour prévenir toute corruption ou injection lors des citations.
-- **Citations de courriel (`Quote`)** : formatage des blocs de texte avec préfixe `> ` et gestion des fins de ligne CRLF.
-- **Comparaison sémantique de versions (`SemVer`)** : garantit une comparaison numérique stricte (`x.y.z`) pour le mécanisme de recherche de mise à jour GitHub, évitant le piège textuel où `"0.9.10"` serait considéré inférieur à `"0.9.9"`.
-- **Détection lexicale de pièce jointe manquante (`HasAttachmentKeywords`)** : analyse multilingue (français, anglais) et insensible à la casse des mentions explicites de pièces jointes ("pièce jointe", "ci-joint", "en pj", "attachment", etc.) pour alerter l'utilisateur avant l'envoi.
-- **Génération HTML autonome pour navigateur (`BuildStandaloneHtmlMessage`)** : construction d'un document complet (en-têtes RFC, métadonnées, corps HTML ou texte brut échappé dans `<pre>`) pour l'affichage dans le navigateur système.
-- **Extraction et nettoyage de texte pour synthèse vocale (`ExtractPlainTextForSpeech`)** : extraction ordonnée (expéditeur, objet, corps), filtrage des balises HTML et décodage des entités courantes pour une lecture vocale fluide.
-- **Classification d'aperçu sécurisé de pièce jointe (`DetectAttachmentPreviewKind`)** : typage strict des extensions de fichiers (images décodables WIC, fichiers texte et code brut non interprétés, types exécutables ou à risque protégés sans aperçu).
-- **Formatage des suggestions de contacts (`FormatContactSuggestion`)** : présentation élégante des contacts ("Nom <email>" ou repli sur le champ disponible) pour la recherche rapide dans l'AutoSuggestBox du ruban.
-- **Hauteur des créneaux de calendrier (`GetCalendarHourHeight`)** : validation des calculs de hauteur d'affichage selon le pas horaire (60 min = 48px, 30 min = 72px, 15 min = 120px).
-- **Nettoyage de fichiers temporaires (`PurgeDirectoryFiles`)** : validation de la purge des répertoires de cache et calcul de l'espace libéré.
-- **Gestion du second fuseau horaire (`GetTimezoneUtcOffsetHours`, `GetTimezoneShortLabel`, `CalculateEquivalentHour`)** : décalages UTC, abréviations courtes et conversion d'heures avec gestion du passage de minuit.
-- **Recherche multicritère et par catégorie (`MatchesMessageSearch`)** : prise en charge des syntaxes `cat:`, `category:` et détection de mots-clés d'étiquettes en recherche locale et transversale.
-- **Taille de texte de lecture (`FontSizePresetToZoom`)** : correspondance des choix _Petite / Normale / Grande / Très grande_ avec le facteur de zoom du lecteur (0,85 / 1,0 / 1,25 / 1,5), repli à 1,0 pour une valeur inconnue.
+### Suite 1: WinUI algorithms and utilities (`test_helpers.cpp`)
+Validates the pure functions from `MainWindow.Helpers.h`:
+- **Sender extraction (`SenderName`)**: support for RFC 822 / 5322 formats (`"Name <email>"`, `"\"Name, First\" <email>"`, bare addresses, empty strings).
+- **File name sanitization (`SanitizeFileName`)**: strict replacement of characters forbidden on Windows (`\ / : * ? " < > |`) and ASCII control characters (< 32), with a fallback.
+- **Reply all (`WithoutAddress`)**: exclusion of the user's address from the recipient list, case insensitivity, handling of whitespace and multi-address lists.
+- **HTML safety (`EscapeHtml`)**: escaping of special characters (`&`, `<`, `>`, `"`) and conversion of CRLF line breaks to `<br>` to prevent any corruption or injection when quoting.
+- **Email quotes (`Quote`)**: formatting of text blocks with the `> ` prefix and handling of CRLF line endings.
+- **Semantic version comparison (`SemVer`)**: guarantees a strict numeric comparison (`x.y.z`) for the GitHub update lookup mechanism, avoiding the textual pitfall where `"0.9.10"` would be considered lower than `"0.9.9"`.
+- **Lexical detection of a missing attachment (`HasAttachmentKeywords`)**: multilingual (French, English) and case-insensitive analysis of explicit attachment mentions ("pièce jointe", "ci-joint", "en pj", "attachment", etc.) to alert the user before sending.
+- **Standalone HTML generation for the browser (`BuildStandaloneHtmlMessage`)**: construction of a complete document (RFC headers, metadata, HTML body or escaped plain text in `<pre>`) for display in the system browser.
+- **Text extraction and cleanup for speech synthesis (`ExtractPlainTextForSpeech`)**: ordered extraction (sender, subject, body), filtering of HTML tags and decoding of common entities for smooth speech reading.
+- **Secure attachment preview classification (`DetectAttachmentPreviewKind`)**: strict typing of file extensions (WIC-decodable images, plain text and code files not interpreted, executable or risky types protected without preview).
+- **Contact suggestion formatting (`FormatContactSuggestion`)**: elegant presentation of contacts ("Name <email>" or fallback to the available field) for quick search in the ribbon's AutoSuggestBox.
+- **Calendar slot height (`GetCalendarHourHeight`)**: validation of display height calculations according to the time step (60 min = 48px, 30 min = 72px, 15 min = 120px).
+- **Temporary file cleanup (`PurgeDirectoryFiles`)**: validation of cache directory purging and computation of the space freed.
+- **Second time zone handling (`GetTimezoneUtcOffsetHours`, `GetTimezoneShortLabel`, `CalculateEquivalentHour`)**: UTC offsets, short abbreviations and hour conversion with midnight rollover handling.
+- **Multi-criteria and category search (`MatchesMessageSearch`)**: support for the `cat:` and `category:` syntaxes and detection of label keywords in local and cross-folder search.
+- **Reading text size (`FontSizePresetToZoom`)**: mapping of the _Small / Normal / Large / Very large_ choices to the reader zoom factor (0.85 / 1.0 / 1.25 / 1.5), falling back to 1.0 for an unknown value.
 
-### Suite 2 : Contrats d'interface et robustesse `evo-core` (`test_evo_core_contracts.c`)
-Vérifie la robustesse du moteur C et ses échanges avec l'interface :
-- **Découpage des secrets Windows Credential Manager** : validation de l'algorithme de partitionnement et de réassemblage des jetons OAuth2 volumineux (> 2 560 octets), éliminant l'erreur `CredWrite` survenue en v0.9.4 avec Entra ID.
-- **Validation syntaxique des adresses** : contrôle du format avant interrogation des résolveurs DNS et Autodiscover.
-- **Priorité des dossiers spéciaux** : respect de la classification et de l'ordre d'affichage standardisé d'Outlook (Boîte de réception, Brouillons, Éléments envoyés, Éléments supprimés, Archive, Courrier indésirable, Boîte d'envoi locale).
-- **Schémas JSON des événements** : vérification de la présence des champs obligatoires pour les événements `progress`, `connection-status`, `folder-changed` et `new-mail`.
-- **Adresses de calendriers web** : classification des adresses saisies pour `evo_core_create_calendar` (`http(s)://`, `webcal://`, vide = calendrier local, autres schémas refusés).
+### Suite 2: `evo-core` interface contracts and robustness (`test_evo_core_contracts.c`)
+Verifies the robustness of the C engine and its exchanges with the interface:
+- **Splitting of Windows Credential Manager secrets**: validation of the partitioning and reassembly algorithm for large OAuth2 tokens (> 2,560 bytes), eliminating the `CredWrite` error that occurred in v0.9.4 with Entra ID.
+- **Syntactic validation of addresses**: format check before querying the DNS and Autodiscover resolvers.
+- **Special folder priority**: compliance with Outlook's standardized classification and display order (Inbox, Drafts, Sent Items, Deleted Items, Archive, Junk Email, local Outbox).
+- **JSON event schemas**: verification of the presence of required fields for the `progress`, `connection-status`, `folder-changed` and `new-mail` events.
+- **Web calendar addresses**: classification of addresses entered for `evo_core_create_calendar` (`http(s)://`, `webcal://`, empty = local calendar, other schemes rejected).
 
-### Suite 3 : Préférences de l'application (`test_settings.cpp`)
-Teste la persistance du fichier `settings.json` :
-- Relecture avec valeurs par défaut garanties (fallback).
-- Modification et persistance des nombres, booléens et chaînes.
-- Gestion des tableaux JSON (liste des expéditeurs et domaines de confiance pour le blocage de contenu externe).
-- Résilience face aux corruptions syntaxiques d'un fichier JSON mal formé.
-- **Options de courriel et de sécurité (Quickwins)** : validation des modes de marquage comme lu (`immediate`, `delayed`, `on-selection-change`, `never`), purge de la corbeille à la sortie (`mail.empty-trash-on-exit`), confirmations de suppression définitive, modes du volet des dossiers (`layout.folder-pane` : `normal`, `minimized`, `off`) et tri des dossiers (`mail.folder-sort` : `special-first`, `alphabetical`).
+### Suite 3: Application preferences (`test_settings.cpp`)
+Tests the persistence of the `settings.json` file:
+- Reading back with guaranteed default values (fallback).
+- Modification and persistence of numbers, booleans and strings.
+- Handling of JSON arrays (list of trusted senders and domains for external content blocking).
+- Resilience against syntactic corruption of a malformed JSON file.
+- **Mail and security options (Quickwins)**: validation of the mark-as-read modes (`immediate`, `delayed`, `on-selection-change`, `never`), trash purge on exit (`mail.empty-trash-on-exit`), permanent deletion confirmations, folder pane modes (`layout.folder-pane`: `normal`, `minimized`, `off`) and folder sorting (`mail.folder-sort`: `special-first`, `alphabetical`).
 
-### Suite 4 : Intégrité binaire et export ABI (`test_abi_exports.ps1`)
-- Extrait dynamiquement toutes les déclarations de fonctions publiques de [`winui/core/evo-core.h`](./winui/core/evo-core.h) (`evo_core_*`).
-- Interroge les exports de [`build/evo-core.dll`](./build/evo-core.dll) via `dumpbin /exports`.
-- Signale immédiatement toute fonction manquante ou non exportée sous MSVC.
+### Suite 4: Binary integrity and ABI export (`test_abi_exports.ps1`)
+- Dynamically extracts all public function declarations from [`winui/core/evo-core.h`](./winui/core/evo-core.h) (`evo_core_*`).
+- Queries the exports of [`build/evo-core.dll`](./build/evo-core.dll) via `dumpbin /exports`.
+- Immediately reports any function that is missing or not exported under MSVC.
 
 ---
 
-## 4. Exécution des tests
+## 4. Running the tests
 
-### En une commande (recommandé)
+### In one command (recommended)
 
-Ouvrez une invite de commandes Windows (`cmd.exe`) à la racine du projet et lancez :
+Open a Windows command prompt (`cmd.exe`) at the project root and run:
 
 ```bat
 tools\run-tests.bat
 ```
 
-Ce script :
-1. Charge l'environnement du compilateur MSVC via `tools\env.bat`.
-2. Compile les exécutables de test dans `build\tests\`.
-3. Lance successivement chaque suite de tests avec affichage détaillé.
-4. Valide l'export des symboles de la DLL.
-5. Retourne `0` si tous les tests ont réussi, ou `1` en cas d'anomalie.
+This script:
+1. Loads the MSVC compiler environment via `tools\env.bat`.
+2. Compiles the test executables into `build\tests\`.
+3. Runs each test suite in turn with detailed output.
+4. Validates the DLL symbol export.
+5. Returns `0` if all tests passed, or `1` in case of failure.
 
-### Via CMake / CTest (optionnel)
+### Via CMake / CTest (optional)
 
-Si vous utilisez CMake pour orchestrer vos builds :
+If you use CMake to orchestrate your builds:
 
 ```bat
 call tools\env.bat
@@ -110,19 +110,19 @@ ctest --test-dir build\intermediate\tests --output-on-failure
 
 ---
 
-## 5. Comment ajouter un nouveau test
+## 5. How to add a new test
 
-Pour ajouter un test de non-régression lors du développement d'une nouvelle fonctionnalité :
+To add a regression test while developing a new feature:
 
-1. Ouvrez la suite concernée dans `tests/unit/` (ou créez-en une nouvelle).
-2. Utilisez les macros du framework :
+1. Open the relevant suite in `tests/unit/` (or create a new one).
+2. Use the framework macros:
    ```cpp
-   TEST_CASE("Nom explicite de la fonctionnalite a valider");
+   TEST_CASE("Explicit name of the feature to validate");
    {
-       int resultat = MaFonction(param1, param2);
-       ASSERT_EQ_INT(42, resultat);
-       ASSERT_TRUE(ConditionVerifiee());
+       int result = MyFunction(param1, param2);
+       ASSERT_EQ_INT(42, result);
+       ASSERT_TRUE(CheckedCondition());
    }
    TEST_CASE_END();
    ```
-3. Exécutez `tools\run-tests.bat` pour vérifier que le test passe immédiatement.
+3. Run `tools\run-tests.bat` to check that the test passes right away.

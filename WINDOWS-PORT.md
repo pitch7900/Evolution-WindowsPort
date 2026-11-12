@@ -1,1237 +1,1234 @@
 <!-- cspell:disable -->
-# Portage natif Windows 11 (MSVC) d'Evolution
+# Native Windows 11 (MSVC) port of Evolution
 
-Journal de travail du fork `windows-native` (`Evolution-WindowsPort`). Objectif : compiler et faire
-tourner Evolution **nativement** sous Windows 11 avec le compilateur Microsoft
-Visual C++ (pas de MinGW, pas de WSL, pas de Cygwin) et proposer une interface
-native **WinUI 3** (`EvolutionWin`).
+Working log of the `windows-native` fork (`Evolution-WindowsPort`). Goal: build and
+run Evolution **natively** on Windows 11 with the Microsoft
+Visual C++ compiler (no MinGW, no WSL, no Cygwin) and provide a
+native **WinUI 3** interface (`EvolutionWin`).
 
-## Démarrage rapide
+## Quick start
 
-### 1. Récupérer les sources
+### 1. Get the sources
 
-Ce dépôt regroupe à sa racine le code source d'**Evolution** (`evolution/`) et
-d'**evolution-data-server (EDS)** (`evolution-data-server/`), ainsi que le
-client natif WinUI 3 (`winui/`) et les outils de portage (`tools/`).
+At its root, this repository groups the source code of **Evolution** (`evolution/`) and
+of **evolution-data-server (EDS)** (`evolution-data-server/`), as well as the
+native WinUI 3 client (`winui/`) and the porting tools (`tools/`).
 
-Les sources amont sont versionnées directement dans ce dépôt (monodépôt) :
-un premier commit importe Evolution (commit amont `be33fb6204`) et EDS
-(commit amont `ea6b0124d`) tels quels, le suivant applique les modifications
-Windows. `git diff <import>..<commit Windows> -- evolution` donne donc le
-correctif complet. evolution-ews (commit amont `19cb82b3`) est importé de la
-même façon (`evolution-ews\.git-upstream` en local).
+The upstream sources are versioned directly in this repository (monorepo):
+a first commit imports Evolution (upstream commit `be33fb6204`) and EDS
+(upstream commit `ea6b0124d`) as-is, and the next one applies the Windows
+changes. `git diff <import>..<Windows commit> -- evolution` therefore gives the
+complete patch. evolution-ews (upstream commit `19cb82b3`) is imported the
+same way (`evolution-ews\.git-upstream` locally).
 
-Sur le poste de développement, l'historique amont (GNOME) des deux projets
-est conservé localement dans `evolution\.git-upstream` et
-`evolution-data-server\.git-upstream` (ignorés par Git, branche
-`windows-native`), pour suivre l'amont :
+On the development machine, the upstream (GNOME) history of both projects
+is kept locally in `evolution\.git-upstream` and
+`evolution-data-server\.git-upstream` (ignored by Git, branch
+`windows-native`), to track upstream:
 
 ```bat
 git --git-dir=evolution-data-server\.git-upstream --work-tree=evolution-data-server fetch origin
 ```
 
-Les modifications Windows d'EDS sont également conservées sous forme de
-patch (`tools/patches/evolution-data-server.patch`, établi sur le
-commit EDS `ea6b0124d`). Si EDS doit être recloné depuis l'amont,
-`tools\check-prereqs.bat -Install` le clone et applique ce patch.
+The Windows changes to EDS are also kept as a
+patch (`tools/patches/evolution-data-server.patch`, based on EDS commit
+`ea6b0124d`). If EDS has to be re-cloned from upstream,
+`tools\check-prereqs.bat -Install` clones it and applies this patch.
 
-### 2. Vérifier les prérequis
+### 2. Check the prerequisites
 
 ```bat
-tools\check-prereqs.bat            :: rapport seulement
-tools\check-prereqs.bat -Install   :: installe/télécharge ce qui manque
+tools\check-prereqs.bat            :: report only
+tools\check-prereqs.bat -Install   :: installs/downloads what is missing
 ```
 
-Le script contrôle les outils (Visual Studio 2022 + C++, SDK Windows, Git,
-CMake, Python et les paquets `gvsbuild`/`meson`/`ninja`/`gyp-next`, MSYS2 avec
-`make`/`patch` et `intltool`/`perl`, runtime WebView2), les sources (EDS, NSS, NSPR, libical, SDK
-WebView2) et l'état des compilations. Avec `-Install`, les outils manquants
-sont installés via `winget`/`pip` (Visual Studio Build Tools demande une
-élévation UAC) et les sources sont clonées/téléchargées. Il ne lance aucune
-compilation. Code de retour : 0 si tous les prérequis obligatoires sont
-présents, 1 sinon.
+The script checks the tools (Visual Studio 2022 + C++, Windows SDK, Git,
+CMake, Python and the `gvsbuild`/`meson`/`ninja`/`gyp-next` packages, MSYS2 with
+`make`/`patch` and `intltool`/`perl`, WebView2 runtime), the sources (EDS, NSS, NSPR, libical, WebView2
+SDK) and the state of the builds. With `-Install`, missing tools
+are installed via `winget`/`pip` (Visual Studio Build Tools asks for
+UAC elevation) and the sources are cloned/downloaded. It does not start any
+build. Exit code: 0 if all mandatory prerequisites are
+present, 1 otherwise.
 
-### 3. Compiler, dans cet ordre
+### 3. Build, in this order
 
 ```bat
-tools\build-gtk.bat         :: pile GTK3 via gvsbuild (1 à 2 h la première fois)
+tools\build-gtk.bat         :: GTK3 stack via gvsbuild (1 to 2 h the first time)
 tools\build-nss.bat         :: NSPR + NSS
 tools\build-libical.bat     :: libical + libical-glib
 tools\build-eds.bat         :: evolution-data-server
-tools\build-ews.bat         :: evolution-ews (Microsoft 365 / Exchange, parties EDS)
-tools\build-webkit-shim.bat :: API WebKitGTK sur WebView2 (phase 3)
-tools\build-evolution.bat   :: Evolution (version GTK transitoire)
-tools\build-winui-core.bat  :: evo-core.dll (moteur C pour le client WinUI 3)
-tools\build-winui-app.bat   :: EvolutionWin.exe (client natif WinUI 3, généré dans .\build)
-tools\run-winui.bat         :: lance .\build\EvolutionWin.exe avec le bon PATH
-tools\build-msi.bat         :: installeur dist\Evolution-<version>-x64.msi (phase 5)
+tools\build-ews.bat         :: evolution-ews (Microsoft 365 / Exchange, EDS parts)
+tools\build-webkit-shim.bat :: WebKitGTK API on WebView2 (phase 3)
+tools\build-evolution.bat   :: Evolution (transitional GTK version)
+tools\build-winui-core.bat  :: evo-core.dll (C engine for the WinUI 3 client)
+tools\build-winui-app.bat   :: EvolutionWin.exe (native WinUI 3 client, generated in .\build)
+tools\run-winui.bat         :: launches .\build\EvolutionWin.exe with the right PATH
+tools\build-msi.bat         :: installer dist\Evolution-<version>-x64.msi (phase 5)
 ```
 
-## Arborescence
+## Directory layout
 
-Tous les scripts déduisent leurs chemins de leur propre emplacement
-(`tools\env.bat`) ; aucun chemin propre à une machine n'y est codé.
+All scripts derive their paths from their own location
+(`tools\env.bat`); no machine-specific path is hard-coded in them.
 
-| Chemin | Rôle | Variable (surchargeable) |
+| Path | Role | Variable (overridable) |
 | --- | --- | --- |
-| `<workspace>` | racine de ce dépôt (`Evolution-WindowsPort`) | `EVO_WORKSPACE` |
-| `<workspace>\winui` | client natif Windows 11 (`winui\core` : `evo-core.dll`, `winui\app` : `EvolutionWin.exe`) | `WINUI_SRC` |
-| `<workspace>\tools` | scripts et outils de portage MSVC (`build-*.bat`, `env.bat`, `check-prereqs.ps1`, `cmake/`, `compat/`, `patches/`, `pkgconfig/`, `webkit-shim/`, `tools/nuget.exe`) | `MSVC_SCRIPTS` |
-| `<workspace>\build` | exécutables finaux prêts à l'emploi (`EvolutionWin.exe`, `evo-core.dll`, `evo-core-test.exe`, `evolution.exe`, `libexec\*.exe`) et sous-dossier `build\intermediate` (fichiers d'objets CMake/MSBuild, ignoré par Git) | `BUILD_DIR` / `BUILD_INTERMEDIATE` |
-| `<workspace>\evolution` | code source d'Evolution, branche `windows-native` | `EVO_SRC` |
-| `<workspace>\evolution-data-server` | code source d'EDS, branche `windows-native` | `EDS_SRC` |
-| `<workspace>\evolution-ews` | code source d'evolution-ews (Microsoft 365 / Exchange), branche `windows-native` | `EWS_SRC` |
-| `<workspace>\deps` | sources tierces (NSS, NSPR, libical, SDK WebView2) | `DEPS` |
-| `<workspace>\gtk-build` | dossier de la pile GTK compilée par gvsbuild (ignoré par Git) | `GTK_BUILD` |
-| `<workspace>\gtk-build\gtk\x64\release` | préfixe d'installation commun de toutes les dépendances | `PREFIX` (dérivé de `GTK_BUILD`) |
-| `C:\msys64` | MSYS2, utilisé **uniquement comme fournisseur d'outils** (patch, make, bash) par gvsbuild et le build de NSPR. Aucun binaire produit ne dépend de MSYS2. | `MSYS2_ROOT` |
+| `<workspace>` | root of this repository (`Evolution-WindowsPort`) | `EVO_WORKSPACE` |
+| `<workspace>\winui` | native Windows 11 client (`winui\core`: `evo-core.dll`, `winui\app`: `EvolutionWin.exe`) | `WINUI_SRC` |
+| `<workspace>\tools` | MSVC porting scripts and tools (`build-*.bat`, `env.bat`, `check-prereqs.ps1`, `cmake/`, `compat/`, `patches/`, `pkgconfig/`, `webkit-shim/`, `tools/nuget.exe`) | `MSVC_SCRIPTS` |
+| `<workspace>\build` | ready-to-use final executables (`EvolutionWin.exe`, `evo-core.dll`, `evo-core-test.exe`, `evolution.exe`, `libexec\*.exe`) and `build\intermediate` subfolder (CMake/MSBuild object files, ignored by Git) | `BUILD_DIR` / `BUILD_INTERMEDIATE` |
+| `<workspace>\evolution` | Evolution source code, `windows-native` branch | `EVO_SRC` |
+| `<workspace>\evolution-data-server` | EDS source code, `windows-native` branch | `EDS_SRC` |
+| `<workspace>\evolution-ews` | evolution-ews source code (Microsoft 365 / Exchange), `windows-native` branch | `EWS_SRC` |
+| `<workspace>\deps` | third-party sources (NSS, NSPR, libical, WebView2 SDK) | `DEPS` |
+| `<workspace>\gtk-build` | folder of the GTK stack built by gvsbuild (ignored by Git) | `GTK_BUILD` |
+| `<workspace>\gtk-build\gtk\x64\release` | common installation prefix of all dependencies | `PREFIX` (derived from `GTK_BUILD`) |
+| `C:\msys64` | MSYS2, used **only as a tool provider** (patch, make, bash) by gvsbuild and the NSPR build. No produced binary depends on MSYS2. | `MSYS2_ROOT` |
 
-Visual Studio (2026 ou 2022) est localisé automatiquement avec `vswhere` (toutes éditions).
-La variable `VS_VERSION` permet de choisir la version souhaitée (`set VS_VERSION=2026` ou `set VS_VERSION=2022`) ; par défaut, la version la plus récente installée est utilisée. Il est également possible de surcharger directement le chemin via `VS_INSTALL`.
+Visual Studio (2026 or 2022) is located automatically with `vswhere` (all editions).
+The `VS_VERSION` variable selects the desired version (`set VS_VERSION=2026` or `set VS_VERSION=2022`); by default, the most recent installed version is used. The path can also be overridden directly via `VS_INSTALL`.
 
-## Choix d'architecture
+## Architecture choices
 
-| Composant Linux | Remplacement Windows |
+| Linux component | Windows replacement |
 | --- | --- |
-| WebKitGTK (`webkit2gtk-4.1`) — affichage des mails, éditeur, aperçus | **Microsoft WebView2** (Edge/Chromium) intégré dans WinUI 3 (`EvolutionWin`) et dans un widget GTK (phase 3) |
+| WebKitGTK (`webkit2gtk-4.1`) — mail display, editor, previews | **Microsoft WebView2** (Edge/Chromium) embedded in WinUI 3 (`EvolutionWin`) and in a GTK widget (phase 3) |
 | libsecret (Secret Service D-Bus) | **Windows Credential Manager** (`CredWriteW`/`CredReadW`/`CredDeleteW`) |
-| libuuid | `g_uuid_string_random()` de GLib |
-| D-Bus session bus (services EDS) | bus de session intégré à GLib sous Windows (adresse `autolaunch:`, démarré par `gdbus.exe`). Il ne gère pas l'activation par fichiers `.service` : EDS démarre lui-même `evolution-source-registry` et les fabriques. |
+| libuuid | GLib's `g_uuid_string_random()` |
+| D-Bus session bus (EDS services) | session bus built into GLib on Windows (`autolaunch:` address, started by `gdbus.exe`). It does not handle activation through `.service` files: EDS itself starts `evolution-source-registry` and the factories. |
 
-## Outillage
+## Tooling
 
-| Outil | Version testée | Installation (`check-prereqs -Install`) |
+| Tool | Tested version | Installation (`check-prereqs -Install`) |
 | --- | --- | --- |
-| Visual Studio 2026 / 2022, charge « Développement Desktop en C++ » | MSVC 19.51 (VS 2026) / 14.44 (VS 2022) | `winget install Microsoft.VisualStudio.2022.BuildTools` ou Visual Studio 2026 Community + charge VCTools |
-| Windows SDK | 10.0.26100.0 | avec Visual Studio |
+| Visual Studio 2026 / 2022, "Desktop development with C++" workload | MSVC 19.51 (VS 2026) / 14.44 (VS 2022) | `winget install Microsoft.VisualStudio.2022.BuildTools` or Visual Studio 2026 Community + VCTools workload |
+| Windows SDK | 10.0.26100.0 | with Visual Studio |
 | Git | 2.56 | `winget install Git.Git` |
 | CMake (≥ 3.15) | 4.4.5 | `winget install Kitware.CMake` |
 | Python (≥ 3.9) | 3.13.7 | `winget install Python.Python.3.13` |
 | gvsbuild, meson, ninja, gyp-next | 2026.10.0, 1.12.1, 1.13.2 | `python -m pip install --user ...` |
 | MSYS2 (+ `make`, `patch`) | 2026-09-27 | `winget install MSYS2.MSYS2` |
-| Runtime Edge WebView2 | 156.0.4314.50 | fourni avec Windows 11 (`winget install Microsoft.EdgeWebView2Runtime` sinon) |
+| Edge WebView2 runtime | 156.0.4314.50 | shipped with Windows 11 (otherwise `winget install Microsoft.EdgeWebView2Runtime`) |
 
-## Phase 0 — Pile GTK3 compilée avec MSVC
+## Phase 0 — GTK3 stack built with MSVC
 
-Script : `tools\build-gtk.bat` (appelle
-`gvsbuild build --fast-build --vs-ver vs2022 --configuration release` avec la
-liste des projets : gtk3, libsoup3, glib-networking, libxml2, sqlite, enchant,
+Script: `tools\build-gtk.bat` (calls
+`gvsbuild build --fast-build --vs-ver vs2022 --configuration release` with the
+project list: gtk3, libsoup3, glib-networking, libxml2, sqlite, enchant,
 json-glib, gsettings-desktop-schemas, adwaita-icon-theme, hicolor-icon-theme,
 librsvg, pkgconf, icu, libarchive, openssl).
 
-### Problèmes rencontrés
+### Problems encountered
 
-1. **`'create-lists.bat' n'est pas reconnu`** pendant le build de gettext.
-   Cause : la variable d'environnement `NoDefaultCurrentDirectoryInExePath=1`
-   empêche `cmd.exe` d'exécuter un script du répertoire courant, ce dont
-   dépendent les Makefile nmake de gettext. Solution : `env.bat` vide cette
-   variable pour tous les scripts de build.
+1. **`'create-lists.bat' is not recognized`** during the gettext build.
+   Cause: the environment variable `NoDefaultCurrentDirectoryInExePath=1`
+   prevents `cmd.exe` from running a script from the current directory, which the
+   gettext nmake Makefiles rely on. Solution: `env.bat` clears this
+   variable for all build scripts.
 
-## Organisation des scripts (`tools/`)
+## Script organization (`tools/`)
 
-Tout ce qui concerne l'outillage et le portage MSVC est regroupé dans `tools/` à
-la racine du dépôt. Le dossier `evolution/win32/` contenait un ancien portage
-**MinGW** (2014), abandonné faute de WebKit2 sous Windows (voir
-`evolution/win32/readme.txt`) ; il n'est pas utilisé.
+Everything related to MSVC tooling and porting is grouped in `tools/` at
+the root of the repository. The `evolution/win32/` folder contained an old
+**MinGW** port (2014), abandoned for lack of WebKit2 on Windows (see
+`evolution/win32/readme.txt`); it is not used.
 
-| Fichier | Rôle |
+| File | Role |
 | --- | --- |
-| `env.bat` | Environnement commun : chemins relatifs, Visual Studio (vswhere), PATH, pkg-config |
-| `check-prereqs.bat` / `check-prereqs.ps1` | Vérification des prérequis, installation automatique avec `-Install` |
-| `build-gtk.bat` | Pile GTK3 et dépendances via gvsbuild |
-| `build-nss.bat` + `build-nss.sh` | NSPR + NSS (installe aussi `nss.pc`/`nspr.pc`) |
+| `env.bat` | Common environment: relative paths, Visual Studio (vswhere), PATH, pkg-config |
+| `check-prereqs.bat` / `check-prereqs.ps1` | Prerequisite check, automatic installation with `-Install` |
+| `build-gtk.bat` | GTK3 stack and dependencies via gvsbuild |
+| `build-nss.bat` + `build-nss.sh` | NSPR + NSS (also installs `nss.pc`/`nspr.pc`) |
 | `build-libical.bat` | libical + libical-glib |
 | `build-eds.bat` | evolution-data-server |
-| `build-ews.bat` | evolution-ews (Microsoft 365 / Exchange), parties EDS seulement |
-| `build-webkit-shim.bat` | Shim WebKitGTK 4.1 sur WebView2 |
-| `build-evolution.bat` | Evolution (version GTK transitoire) |
+| `build-ews.bat` | evolution-ews (Microsoft 365 / Exchange), EDS parts only |
+| `build-webkit-shim.bat` | WebKitGTK 4.1 shim on WebView2 |
+| `build-evolution.bat` | Evolution (transitional GTK version) |
 | `build-winui-core.bat` | `evo-core.dll` + `evo-core-test.exe` |
-| `build-winui-app.bat` | `EvolutionWin.exe` (client natif WinUI 3 dans `.\build`) |
-| `run-winui.bat` / `run-winui-debug.bat` | Lancement de `.\build\EvolutionWin.exe` (normal ou avec traces de débogage) |
-| `build-msi.bat` + `build-msi.ps1`, `msi/Evolution.wxs` | Installeur MSI autonome dans `dist\` (WiX v5) |
-| `cmake/msvc-compat.cmake` | Couche CMake injectée dans tous les projets |
-| `patches/evolution-data-server.patch` | Modifications Windows d'EDS |
-| `pkgconfig/*.pc.in` | Modèles pkg-config pour NSS/NSPR/ICU/sqlite3 (`@PREFIX@` remplacé à l'installation) |
-| `nspr-config.site`, `tools/nsinstall`, `tools/patch-nspr.py`, `tools/nuget.exe` | Aides au build de NSPR et restauration NuGet |
-| `webkit-api-usage.txt` | Inventaire des appels WebKit/JSC utilisés par Evolution (phase 3) |
+| `build-winui-app.bat` | `EvolutionWin.exe` (native WinUI 3 client in `.\build`) |
+| `run-winui.bat` / `run-winui-debug.bat` | Launching `.\build\EvolutionWin.exe` (normal or with debug traces) |
+| `build-msi.bat` + `build-msi.ps1`, `msi/Evolution.wxs` | Standalone MSI installer in `dist\` (WiX v5) |
+| `cmake/msvc-compat.cmake` | CMake layer injected into all projects |
+| `patches/evolution-data-server.patch` | Windows changes to EDS |
+| `pkgconfig/*.pc.in` | pkg-config templates for NSS/NSPR/ICU/sqlite3 (`@PREFIX@` replaced at installation) |
+| `nspr-config.site`, `tools/nsinstall`, `tools/patch-nspr.py`, `tools/nuget.exe` | Helpers for the NSPR build and NuGet restore |
+| `webkit-api-usage.txt` | Inventory of the WebKit/JSC calls used by Evolution (phase 3) |
 
-### Copies de travail en parallèle (worktrees Git)
+### Parallel working copies (Git worktrees)
 
-Plusieurs copies du dépôt peuvent compiler le client WinUI en même temps
-(`git worktree add`, branches de travail en parallèle) :
+Several copies of the repository can build the WinUI client at the same time
+(`git worktree add`, parallel working branches):
 
-- `evo-core` n'est plus installé dans le préfixe commun : il est compilé dans
-  `build\intermediate\evo-core` de chaque copie, et `EvolutionWin` s'y lie
-  (`EvoCoreLibDir`) ; `evo-core.dll` est copié dans `build\` ;
-- dans un worktree secondaire, `env.bat` reprend la pile GTK (`gtk-build`)
-  et les paquets NuGet (`WINUI_PACKAGES`) du dépôt principal
-  (`git rev-parse --git-common-dir`), volumineux et hors Git ;
-- les préférences de l'interface sont dans
+- `evo-core` is no longer installed in the common prefix: it is built in
+  `build\intermediate\evo-core` of each copy, and `EvolutionWin` links against it
+  (`EvoCoreLibDir`); `evo-core.dll` is copied to `build\`;
+- in a secondary worktree, `env.bat` reuses the GTK stack (`gtk-build`)
+  and the NuGet packages (`WINUI_PACKAGES`) of the main repository
+  (`git rev-parse --git-common-dir`), which are large and outside Git;
+- the interface preferences are in
   `%LOCALAPPDATA%\EvolutionWin\settings.json` (`winui\app\Settings.h`).
 
-Pour tester le moteur depuis plusieurs copies à la fois sans partager le
-cache Camel du compte, définir `XDG_DATA_HOME` et `XDG_CACHE_HOME` vers des
-dossiers propres à chaque copie.
+To test the engine from several copies at once without sharing the
+account's Camel cache, set `XDG_DATA_HOME` and `XDG_CACHE_HOME` to
+folders specific to each copy.
 
-### Couche de compatibilité CMake
+### CMake compatibility layer
 
-Les projets GNOME passent les `*_LDFLAGS` bruts de pkg-config
-(`-L/dir -lglib-2.0`) à `target_link_libraries()`. Avec MSVC, CMake les
-transmet tels quels à `link.exe`, qui les ignore (`LNK4044`), d'où des
-symboles non résolus. `msvc-compat.cmake` redéfinit `target_link_libraries()`
-pour traduire `-L<dir>` en `-LIBPATH:<dir>` et `-l<nom>` en `<nom>.lib`.
-Il est chargé avec `-DCMAKE_PROJECT_INCLUDE=...` : aucun CMakeLists n'est
-modifié pour cela.
+GNOME projects pass the raw pkg-config `*_LDFLAGS`
+(`-L/dir -lglib-2.0`) to `target_link_libraries()`. With MSVC, CMake
+forwards them as-is to `link.exe`, which ignores them (`LNK4044`), hence unresolved
+symbols. `msvc-compat.cmake` redefines `target_link_libraries()`
+to translate `-L<dir>` into `-LIBPATH:<dir>` and `-l<name>` into `<name>.lib`.
+It is loaded with `-DCMAKE_PROJECT_INCLUDE=...`: no CMakeLists is
+modified for this.
 
 ## Phase 1 — evolution-data-server
 
-### Modifications des sources EDS (branche `windows-native`)
+### Changes to the EDS sources (`windows-native` branch)
 
-Elles sont exportées dans `tools/patches/evolution-data-server.patch`.
-Après chaque modification d'EDS, régénérer le patch depuis la racine du dépôt :
-`git diff --relative=evolution-data-server <commit d'import> -- evolution-data-server > tools\patches\evolution-data-server.patch`
-(`<commit d'import>` : commit d'import des sources amont, voir « Démarrage rapide »).
+They are exported to `tools/patches/evolution-data-server.patch`.
+After each change to EDS, regenerate the patch from the repository root:
+`git diff --relative=evolution-data-server <import commit> -- evolution-data-server > tools\patches\evolution-data-server.patch`
+(`<import commit>`: the import commit of the upstream sources, see "Quick start").
 
-- `src/libedataserver/e-secret-store.c` : la mise en œuvre Win32 historique
-  stockait les mots de passe encodés en base64 (donc en clair) dans
-  `%LOCALAPPDATA%\evolution\secrets`. Elle est remplacée par le Gestionnaire
-  d'identifiants Windows (cibles `Evolution-Data-Server:<uid>`, type
-  `CRED_TYPE_GENERIC`, persistance `CRED_PERSIST_LOCAL_MACHINE`, protection
-  DPAPI liée à l'utilisateur). Les secrets de session restent en mémoire.
-  L'ancien fichier est lu en repli puis migré automatiquement.
-- `src/libedataserver/e-ms-oapxbc.c` : libuuid remplacée par
-  `g_uuid_string_random()` sous `G_OS_WIN32`.
-- `CMakeLists.txt` : `uuid` et `libsecret-1` ne sont plus requis sous `WIN32`.
+- `src/libedataserver/e-secret-store.c`: the historical Win32 implementation
+  stored passwords base64-encoded (hence in clear text) in
+  `%LOCALAPPDATA%\evolution\secrets`. It is replaced by the Windows
+  Credential Manager (targets `Evolution-Data-Server:<uid>`, type
+  `CRED_TYPE_GENERIC`, persistence `CRED_PERSIST_LOCAL_MACHINE`, DPAPI
+  protection tied to the user). Session secrets stay in memory.
+  The old file is read as a fallback, then migrated automatically.
+- `src/libedataserver/e-ms-oapxbc.c`: libuuid replaced by
+  `g_uuid_string_random()` under `G_OS_WIN32`.
+- `CMakeLists.txt`: `uuid` and `libsecret-1` are no longer required under `WIN32`.
 
-### Problèmes de configuration CMake (EDS, et les mêmes dans Evolution)
+### CMake configuration problems (EDS, and the same in Evolution)
 
-| Erreur | Cause | Correctif |
+| Error | Cause | Fix |
 | --- | --- | --- |
-| `zlib.h not found` | les tests `check_include_file`/`check_library_exists` ne voient pas le préfixe | `env.bat` ajoute le préfixe aux variables `INCLUDE` et `LIB` lues par `cl`/`link` |
-| `zlib doesn't provide deflateEnd` | gvsbuild nomme la bibliothèque `zlib1.lib`, EDS cherche `z` | `build-gtk.bat` crée `z.lib` |
-| `Failed to find icui18n…` | gvsbuild n'installe pas `icu-*.pc` ; sous Windows les bibliothèques s'appellent `icuin`/`icudt` | modèles `icu-uc.pc.in`, `icu-i18n.pc.in` |
-| `sqlite3>=3.7.17 not found` (et `enchant-2`, `gsettings-desktop-schemas`, `libicalvcal`) | `.pc` absents | modèles correspondants, installés par `install-pc.bat` |
-| `You need to install a working iconv` | `CMAKE_REQUIRED_LIBRARIES "-liconv"` passé tel quel à `link.exe` | nom nu `iconv` (CMake le traduit en `-liconv` ou `iconv.lib`), portable |
-| `Invalid character escape '\U'` dans `CHECK_C_SOURCE_RUNS` | `file(TO_NATIVE_PATH)` produit des `\` insérés dans une chaîne C | chemins au format CMake (`/`), valides aussi en C sous Windows |
-| Fenêtre « Debug Assertion Failed » pendant la configuration | les programmes de test sont compilés en Debug (CRT de débogage) ; `strftime("%lx%k")` déclenche une assertion modale | `CMAKE_TRY_COMPILE_CONFIGURATION=Release` dans `msvc-compat.cmake` |
-| `Unable to find a way to determine timezone` | MSVC n'a ni `tm_gmtoff` ni la variable POSIX `timezone` | nouvelle détection `HAVE__TIMEZONE` ; `camel-mime-utils.c` et `e-time-utils.c` utilisent `_get_timezone()`/`_get_dstbias()` (gère aussi un décalage d'heure d'été ≠ 1 h) |
-| `System doesn't support necessary interfaces for IPv6` | test écrit pour les en-têtes POSIX (`sys/socket.h`, `netdb.h`) | test avec `winsock2.h`/`ws2tcpip.h` + `ws2_32` sous Windows ; IPv6 reste activé |
+| `zlib.h not found` | the `check_include_file`/`check_library_exists` tests do not see the prefix | `env.bat` adds the prefix to the `INCLUDE` and `LIB` variables read by `cl`/`link` |
+| `zlib doesn't provide deflateEnd` | gvsbuild names the library `zlib1.lib`, EDS looks for `z` | `build-gtk.bat` creates `z.lib` |
+| `Failed to find icui18n…` | gvsbuild does not install `icu-*.pc`; on Windows the libraries are called `icuin`/`icudt` | templates `icu-uc.pc.in`, `icu-i18n.pc.in` |
+| `sqlite3>=3.7.17 not found` (and `enchant-2`, `gsettings-desktop-schemas`, `libicalvcal`) | `.pc` files missing | corresponding templates, installed by `install-pc.bat` |
+| `You need to install a working iconv` | `CMAKE_REQUIRED_LIBRARIES "-liconv"` passed as-is to `link.exe` | bare name `iconv` (CMake translates it to `-liconv` or `iconv.lib`), portable |
+| `Invalid character escape '\U'` in `CHECK_C_SOURCE_RUNS` | `file(TO_NATIVE_PATH)` produces `\` inserted in a C string | paths in CMake format (`/`), also valid in C on Windows |
+| "Debug Assertion Failed" window during configuration | the test programs are built in Debug (debug CRT); `strftime("%lx%k")` triggers a modal assertion | `CMAKE_TRY_COMPILE_CONFIGURATION=Release` in `msvc-compat.cmake` |
+| `Unable to find a way to determine timezone` | MSVC has neither `tm_gmtoff` nor the POSIX `timezone` variable | new `HAVE__TIMEZONE` detection; `camel-mime-utils.c` and `e-time-utils.c` use `_get_timezone()`/`_get_dstbias()` (also handles a daylight saving offset ≠ 1 h) |
+| `System doesn't support necessary interfaces for IPv6` | test written for POSIX headers (`sys/socket.h`, `netdb.h`) | test with `winsock2.h`/`ws2tcpip.h` + `ws2_32` on Windows; IPv6 stays enabled |
 
-### Problèmes de compilation et d'édition de liens (EDS)
+### Compilation and linking problems (EDS)
 
-Correctifs généraux dans `tools/cmake/msvc-compat.cmake` (valables aussi
-pour Evolution) :
+General fixes in `tools/cmake/msvc-compat.cmake` (also valid
+for Evolution):
 
-| Problème | Correctif |
+| Problem | Fix |
 | --- | --- |
-| `gdbus-codegen`, `glib-mkenums`, `glib-genmarshal` « non reconnu » | ce sont des scripts Python sans extension : variables de cache préréglées à `python;<script>` (`find_program()` les conserve) |
-| ICU 78 : `nested-namespace-definition exige /std:c++17` | `CMAKE_CXX_STANDARD 17` |
-| Littéraux non ASCII mal lus (page de code ANSI) | `/utf-8` |
-| `unistd.h`, `dirent.h`, `regex.h`, `utime.h`, `sys/time.h`, `sys/param.h` absents | en-têtes minimaux dans `tools/compat/include` : fonctions CRT sous leur nom POSIX, `dirent` sur `FindFirstFileW` (UTF-8), `regex` sur PCRE2-POSIX, `ftruncate` → `_chsize_s` |
-| `mode_t`, `pid_t`, `ssize_t`, `S_IRWXU`, `S_ISDIR`, `O_ACCMODE`, `localtime_r`, `gmtime_r` | en-tête préliminaire `msvc-prelude.h` injecté partout (`/FI`) |
-| C2011 « redéfinition de struct » (`winsock.h` contre `winsock2.h`) | `msvc-prelude.h` définit `_WINSOCKAPI_` : `windows.h` n'inclut plus l'ancien `winsock.h` |
-| DLL sans bibliothèque d'import (`edbus-private.lib` introuvable) | `CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON` (MSVC n'exporte rien par défaut, contrairement à ELF) |
-| Plugins chargés mais « aucun code d'initialisation dans le module » | l'export automatique ne s'applique pas aux bibliothèques `MODULE` : `add_library(... MODULE ...)` est redirigé vers `SHARED` avec préfixe `lib` (noms identiques à Linux, attendus par les chargeurs) |
+| `gdbus-codegen`, `glib-mkenums`, `glib-genmarshal` "not recognized" | these are Python scripts without an extension: cache variables preset to `python;<script>` (`find_program()` keeps them) |
+| ICU 78: `nested-namespace-definition requires /std:c++17` | `CMAKE_CXX_STANDARD 17` |
+| Non-ASCII literals misread (ANSI code page) | `/utf-8` |
+| `unistd.h`, `dirent.h`, `regex.h`, `utime.h`, `sys/time.h`, `sys/param.h` missing | minimal headers in `tools/compat/include`: CRT functions under their POSIX name, `dirent` on `FindFirstFileW` (UTF-8), `regex` on PCRE2-POSIX, `ftruncate` → `_chsize_s` |
+| `mode_t`, `pid_t`, `ssize_t`, `S_IRWXU`, `S_ISDIR`, `O_ACCMODE`, `localtime_r`, `gmtime_r` | preliminary header `msvc-prelude.h` injected everywhere (`/FI`) |
+| C2011 "struct redefinition" (`winsock.h` versus `winsock2.h`) | `msvc-prelude.h` defines `_WINSOCKAPI_`: `windows.h` no longer includes the old `winsock.h` |
+| DLL without an import library (`edbus-private.lib` not found) | `CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON` (MSVC exports nothing by default, unlike ELF) |
+| Plugins loaded but "no initialization code in the module" | automatic export does not apply to `MODULE` libraries: `add_library(... MODULE ...)` is redirected to `SHARED` with the `lib` prefix (names identical to Linux, expected by the loaders) |
 
-Correctifs dans les sources EDS (dans le patch) :
+Fixes in the EDS sources (in the patch):
 
-| Fichier | Problème | Correctif |
+| File | Problem | Fix |
 | --- | --- | --- |
-| 61 fichiers de modules (EDS + Evolution) | C2375 : prototype de `e_module_load` sans `G_MODULE_EXPORT`, définition avec | `G_MODULE_EXPORT` ajouté au prototype (`tools/tools/fix-module-export-prototypes.py`, sans effet sous GCC) |
-| `camel-enums.h`, `camel.h`, `camel-mime-utils.h`, `camel-provider.h`, `camel-debug.h` | variables globales partagées entre DLL (`camel_application_is_exiting`, …) : MSVC exige `__declspec(dllimport)` côté utilisateur | macro `CAMEL_VAR` ; `camel_verbose_debug` déclarée publiquement dans `camel-debug.h` et initialisée (un symbole *common* n'est pas exporté) |
-| `camel-msgport.c` | `#ifdef G_OS_WIN32` avant l'inclusion de glib : `winsock2.h` jamais inclus | `#ifdef _WIN32` |
-| `camel-mime-utils.c`, `e-data-server-util.c` | `getgid()`/`getppid()` (aléa du Message-ID / UID) | exclus sous Windows |
-| `camel-gpg-context.c` | `local_error` non déclarée dans la branche Windows | déclarée (portage OpenPGP : phase 4c) |
-| `e-book-sqlite.c` | macro variadique GNU `args...` | syntaxe C99 `...` / `__VA_ARGS__` |
-| `gen-western-table.c` | entrée CRLF : `\r` dans les identifiants générés | suppression du `\r` final |
-| `evolution-alarm-notify/CMakeLists.txt` (et `src/shell` d'Evolution) | icône compilée par `windres` (MinGW) | sous MSVC, le `.rc` est ajouté aux sources (compilé par `rc.exe`) |
-| `e-data-server-util.c` | `system ("dbus-launch.exe")` hérité de MinGW (fenêtre console) | supprimé : GLib démarre son propre bus de session |
+| 61 module files (EDS + Evolution) | C2375: `e_module_load` prototype without `G_MODULE_EXPORT`, definition with | `G_MODULE_EXPORT` added to the prototype (`tools/tools/fix-module-export-prototypes.py`, no effect under GCC) |
+| `camel-enums.h`, `camel.h`, `camel-mime-utils.h`, `camel-provider.h`, `camel-debug.h` | global variables shared between DLLs (`camel_application_is_exiting`, …): MSVC requires `__declspec(dllimport)` on the user side | `CAMEL_VAR` macro; `camel_verbose_debug` declared publicly in `camel-debug.h` and initialized (a *common* symbol is not exported) |
+| `camel-msgport.c` | `#ifdef G_OS_WIN32` before including glib: `winsock2.h` never included | `#ifdef _WIN32` |
+| `camel-mime-utils.c`, `e-data-server-util.c` | `getgid()`/`getppid()` (Message-ID / UID randomness) | excluded under Windows |
+| `camel-gpg-context.c` | `local_error` not declared in the Windows branch | declared (OpenPGP port: phase 4c) |
+| `e-book-sqlite.c` | GNU variadic macro `args...` | C99 syntax `...` / `__VA_ARGS__` |
+| `gen-western-table.c` | CRLF input: `\r` in generated identifiers | trailing `\r` removed |
+| `evolution-alarm-notify/CMakeLists.txt` (and `src/shell` of Evolution) | icon built by `windres` (MinGW) | under MSVC, the `.rc` is added to the sources (compiled by `rc.exe`) |
+| `e-data-server-util.c` | `system ("dbus-launch.exe")` inherited from MinGW (console window) | removed: GLib starts its own session bus |
 
-### Exécution
+### Execution
 
-- `build-eds.bat` déplace les DLL d'EDS de `lib\` vers `bin\` (EDS les
-  installe à la manière Unix ; Windows les cherche à côté de l'exécutable ou
-  dans le PATH), compile les schémas GSettings (`glib-compile-schemas`) et
-  copie les exécutables de `libexec\` dans `.\build\libexec\`.
-- **Test réussi (2026-10-31)** : `libexec\evolution-source-registry.exe`
-  démarre, le bus de session GLib (`gdbus.exe`) est lancé automatiquement,
-  `list-sources.exe` liste les sources via D-Bus, et Camel charge ses cinq
-  fournisseurs (IMAP, POP3, SMTP, local, NNTP), sans erreur ni avertissement.
+- `build-eds.bat` moves the EDS DLLs from `lib\` to `bin\` (EDS
+  installs them the Unix way; Windows looks for them next to the executable or
+  in the PATH), compiles the GSettings schemas (`glib-compile-schemas`) and
+  copies the executables from `libexec\` to `.\build\libexec\`.
+- **Test passed (2026-10-31)**: `libexec\evolution-source-registry.exe`
+  starts, the GLib session bus (`gdbus.exe`) is launched automatically,
+  `list-sources.exe` lists the sources via D-Bus, and Camel loads its five
+  providers (IMAP, POP3, SMTP, local, NNTP), without errors or warnings.
 
-### Dépendances supplémentaires à compiler (hors gvsbuild)
+### Additional dependencies to build (outside gvsbuild)
 
-Sources dans `<workspace>\deps` (téléchargées par `tools\check-prereqs.bat -Install`) :
+Sources in `<workspace>\deps` (downloaded by `tools\check-prereqs.bat -Install`):
 
-| Projet | Origine | Build |
+| Project | Origin | Build |
 | --- | --- | --- |
 | NSS (3.133 beta) | `git clone --depth 1 https://github.com/nss-dev/nss.git` | `tools\build-nss.bat` (gyp-next + ninja, MSVC) |
-| NSPR 4.38 | `https://ftp.mozilla.org/pub/nspr/releases/v4.38/src/nspr-4.38.tar.gz` | construit par `nss/build.sh` (autoconf, cl.exe) |
+| NSPR 4.38 | `https://ftp.mozilla.org/pub/nspr/releases/v4.38/src/nspr-4.38.tar.gz` | built by `nss/build.sh` (autoconf, cl.exe) |
 | libical 3.0.20 | `git clone --branch v3.0.20 https://github.com/libical/libical.git` | `tools\build-libical.bat` (CMake + Ninja) |
 
-`gyp-next` est installé via `python -m pip install --user gyp-next`.
+`gyp-next` is installed via `python -m pip install --user gyp-next`.
 
-#### Problèmes rencontrés avec NSS/NSPR
+#### Problems encountered with NSS/NSPR
 
-1. **`Can't find vswhere on the path`** : `nss/build.sh` localise MSVC lui-même ;
-   `C:\Program Files (x86)\Microsoft Visual Studio\Installer` est ajouté au PATH.
-2. **`configure: error: Could not determine MSC version`** : le `cl.exe`
-   français affiche `version<0xFF>19.44…` (espace insécable CP850). Le filtre
-   sed de `nspr/configure` exigeait un espace ; il accepte désormais tout
-   séparateur non numérique. Le correctif est appliqué automatiquement (et de
-   façon idempotente) par `tools\tools\patch-nspr.py`, lancé depuis
-   `build-nss.sh`. La locale
-   est forcée à `C` (`LC_ALL=C`) car l'octet 0xFF n'est pas de l'UTF-8 valide.
-   `VSLANG=1033` est sans effet si le pack de langue anglais n'est pas installé.
-3. **MSYS2 se déclare `x86_64-pc-cygwin`** : NSPR doit voir une cible mingw
-   pour choisir ses chemins WINNT/WIN95 avec cl.exe. `tools\nspr-config.site`
-   fixe `ac_cv_build/host/target=x86_64-pc-mingw32` ; `CONFIG_SITE` est
-   réexporté *dans* le shell bash car le profil MSYS2 le redéfinit
+1. **`Can't find vswhere on the path`**: `nss/build.sh` locates MSVC itself;
+   `C:\Program Files (x86)\Microsoft Visual Studio\Installer` is added to the PATH.
+2. **`configure: error: Could not determine MSC version`**: the French
+   `cl.exe` prints `version<0xFF>19.44…` (CP850 non-breaking space). The sed
+   filter of `nspr/configure` required a space; it now accepts any non-numeric
+   separator. The fix is applied automatically (and
+   idempotently) by `tools\tools\patch-nspr.py`, launched from
+   `build-nss.sh`. The locale
+   is forced to `C` (`LC_ALL=C`) because the 0xFF byte is not valid UTF-8.
+   `VSLANG=1033` has no effect if the English language pack is not installed.
+3. **MSYS2 declares itself `x86_64-pc-cygwin`**: NSPR must see a mingw
+   target to choose its WINNT/WIN95 paths with cl.exe. `tools\nspr-config.site`
+   sets `ac_cv_build/host/target=x86_64-pc-mingw32`; `CONFIG_SITE` is
+   re-exported *inside* the bash shell because the MSYS2 profile redefines it
    (`tools\build-nss.sh`).
-4. **`nsinstall: not found`** : outil fourni par MozillaBuild ;
-   remplacé par un script minimal `tools\tools\nsinstall`.
-5. **`link: unknown option -- n`** : le `/usr/bin/link` de coreutils (MSYS2)
-   masquait `link.exe` de MSVC ; le dossier de `cl.exe` est placé en tête du PATH.
-6. **`certdata.py` → `FileNotFoundError`** : la génération de `certdata.c`
-   lance `perl` depuis Python (donc hors MSYS2). On utilise le Perl natif
-   téléchargé par gvsbuild (`%GTK_BUILD%\tools\perl-5.20.0\x64\bin\perl.exe`),
-   transmis par la variable `PERL` définie dans `env.bat`.
+4. **`nsinstall: not found`**: tool provided by MozillaBuild;
+   replaced by a minimal script `tools\tools\nsinstall`.
+5. **`link: unknown option -- n`**: the coreutils `/usr/bin/link` (MSYS2)
+   shadowed MSVC's `link.exe`; the `cl.exe` folder is placed at the front of the PATH.
+6. **`certdata.py` → `FileNotFoundError`**: generating `certdata.c`
+   launches `perl` from Python (hence outside MSYS2). We use the native Perl
+   downloaded by gvsbuild (`%GTK_BUILD%\tools\perl-5.20.0\x64\bin\perl.exe`),
+   passed through the `PERL` variable defined in `env.bat`.
 
-Résultat : `nspr4`, `plc4`, `plds4`, `nss3`, `nssutil3`, `smime3`, `ssl3`,
-`softokn3`, `freebl3`, `nssckbi` (DLL) installées dans
-`%GTK_BUILD%\gtk\x64\release\bin`. NSS nomme ses bibliothèques d'import
-`nss3.dll.lib` : des copies `nss3.lib`, `nssutil3.lib`, `smime3.lib`,
-`ssl3.lib` sont créées par `build-nss.bat` pour que `-lnss3` fonctionne. Les
-fichiers `nss.pc`/`nspr.pc`, absents sous Windows, sont générés par
-`build-nss.bat` à partir des modèles `tools\pkgconfig\*.pc.in`.
+Result: `nspr4`, `plc4`, `plds4`, `nss3`, `nssutil3`, `smime3`, `ssl3`,
+`softokn3`, `freebl3`, `nssckbi` (DLLs) installed in
+`%GTK_BUILD%\gtk\x64\release\bin`. NSS names its import libraries
+`nss3.dll.lib`: copies `nss3.lib`, `nssutil3.lib`, `smime3.lib`,
+`ssl3.lib` are created by `build-nss.bat` so that `-lnss3` works. The
+`nss.pc`/`nspr.pc` files, absent on Windows, are generated by
+`build-nss.bat` from the templates `tools\pkgconfig\*.pc.in`.
 
-#### Problèmes rencontrés avec libical
+#### Problems encountered with libical
 
-1. **`LNK4044: option '/lglib-2.0' non reconnue`** : résolu par
-   `msvc-compat.cmake` (voir « Couche de compatibilité CMake »).
-2. **`error C2143` dans les en-têtes générés `i-cal-*.h`** : le dépôt avait
-   été cloné avec `core.autocrlf=true`. Les templates du générateur étaient en
-   CRLF et le générateur, qui écrit en mode texte, produisait `\` suivi de
-   `\r\r\n` : les continuations de ligne des macros étaient cassées.
-   Correctif : sources libical remises en LF (`git config core.autocrlf false`
-   puis `git rm --cached -r . && git reset --hard`).
-3. Windows n'ayant pas de base `zoneinfo`, libical est compilée avec
-   `USE_BUILTIN_TZDATA=ON` (fuseaux installés dans `share\libical\zoneinfo`).
+1. **`LNK4044: unrecognized option '/lglib-2.0'`**: solved by
+   `msvc-compat.cmake` (see "CMake compatibility layer").
+2. **`error C2143` in the generated `i-cal-*.h` headers**: the repository had
+   been cloned with `core.autocrlf=true`. The generator templates were in
+   CRLF and the generator, which writes in text mode, produced `\` followed by
+   `\r\r\n`: the macros' line continuations were broken.
+   Fix: libical sources reset to LF (`git config core.autocrlf false`
+   then `git rm --cached -r . && git reset --hard`).
+3. Since Windows has no `zoneinfo` database, libical is built with
+   `USE_BUILTIN_TZDATA=ON` (time zones installed in `share\libical\zoneinfo`).
 
 ## Phase 2 — Evolution
 
-Script : `tools\build-evolution.bat`. Fonctions optionnelles
-désactivées (dépendances de bureau Linux) : gnome-desktop, canberra,
-libnotify, gweather, autoar, ytnef, import PST, markdown (cmark),
-coloration syntaxique (highlight), aide yelp, LDAP. Pour LDAP, Windows
-fournit `wldap32` : piste pour les annuaires d'entreprise, plus tard.
+Script: `tools\build-evolution.bat`. Optional features
+disabled (Linux desktop dependencies): gnome-desktop, canberra,
+libnotify, gweather, autoar, ytnef, PST import, markdown (cmark),
+syntax highlighting (highlight), yelp help, LDAP. For LDAP, Windows
+provides `wldap32`: a lead for enterprise directories, later.
 
-Configuration :
+Configuration:
 
-| Problème | Correctif |
+| Problem | Fix |
 | --- | --- |
-| `intltool-update not found` | `pacman -S intltool` dans MSYS2 (outil de build uniquement) ; scripts Perl lancés via le `perl.exe` de MSYS2 (variables de cache préréglées dans `msvc-compat.cmake`, `MSYS2_ROOT` défini dans `env.bat`) |
-| `shared-mime-info>=0.22` | modèle `shared-mime-info.pc.in` (données seulement : sous Windows GLib utilise le registre pour les types de contenu) |
-| `webkit2gtk-4.1>=2.40.0` | **bloquant attendu** → shim WebView2 (phase 3) |
+| `intltool-update not found` | `pacman -S intltool` in MSYS2 (build tool only); Perl scripts run through MSYS2's `perl.exe` (cache variables preset in `msvc-compat.cmake`, `MSYS2_ROOT` defined in `env.bat`) |
+| `shared-mime-info>=0.22` | `shared-mime-info.pc.in` template (data only: on Windows GLib uses the registry for content types) |
+| `webkit2gtk-4.1>=2.40.0` | **expected blocker** → WebView2 shim (phase 3) |
 
-Comme pour EDS, `TO_NATIVE_PATH`, le test `iconv` et le test de fuseau
-horaire du `CMakeLists.txt` d'Evolution ont été corrigés de la même façon.
+As for EDS, `TO_NATIVE_PATH`, the `iconv` test and the time zone test
+of Evolution's `CMakeLists.txt` were fixed the same way.
 
-### Édition de liens et premier lancement
+### Linking and first launch
 
-| Symbole non résolu | Cause | Correctif |
+| Unresolved symbol | Cause | Fix |
 | --- | --- | --- |
-| `camel_mime_special_table` | données `const` d'un fichier généré : ignorées par l'export automatique | `#pragma comment(linker, "/EXPORT:camel_mime_special_table,DATA")` dans `camel-mime-utils.c` (EDS) |
-| `camel_header_param_encode_filenames_in_rfc_2047` | déclaré à la main (`extern`) dans `mail-config.c` | déclaration publique `CAMEL_VAR` dans `camel-mime-utils.h` ; l'`extern` local n'est gardé que si `CAMEL_VAR` n'existe pas |
-| `is_any_gettext_catalog_installed` | définie dans `main.c` (exécutable) mais appelée par la DLL du shell | déplacée dans `e-shell.c` |
-| `_e_get_data_server_icondir` | l'en-tête déclarait un nom différent de celui généré par `GETTER(e_data_server_icondir)` | en-tête aligné : `_e_get_e_data_server_icondir` |
-| `context` (dossiers virtuels) | variable globale de `libemail-engine` utilisée par `evolution-mail` | accesseur `mail_vfolder_get_context ()` |
+| `camel_mime_special_table` | `const` data from a generated file: ignored by automatic export | `#pragma comment(linker, "/EXPORT:camel_mime_special_table,DATA")` in `camel-mime-utils.c` (EDS) |
+| `camel_header_param_encode_filenames_in_rfc_2047` | declared by hand (`extern`) in `mail-config.c` | public `CAMEL_VAR` declaration in `camel-mime-utils.h`; the local `extern` is kept only if `CAMEL_VAR` does not exist |
+| `is_any_gettext_catalog_installed` | defined in `main.c` (executable) but called by the shell DLL | moved to `e-shell.c` |
+| `_e_get_data_server_icondir` | the header declared a different name from the one generated by `GETTER(e_data_server_icondir)` | header aligned: `_e_get_e_data_server_icondir` |
+| `context` (virtual folders) | global variable of `libemail-engine` used by `evolution-mail` | accessor `mail_vfolder_get_context ()` |
 
-`build-evolution.bat` déplace les DLL privées d'Evolution (`lib\*.dll`) dans
-`bin\`, compile les schémas GSettings et copie `evolution.exe` ainsi que ses
-DLL dans `.\build\`. La configuration est stockée par GLib dans le registre
-Windows (`HKCU\Software\GSettings`).
+`build-evolution.bat` moves Evolution's private DLLs (`lib\*.dll`) to
+`bin\`, compiles the GSettings schemas and copies `evolution.exe` as well as its
+DLLs to `.\build\`. The configuration is stored by GLib in the Windows
+registry (`HKCU\Software\GSettings`).
 
-**Premier lancement réussi (2026-10-31)** — après démarrage manuel de
-`libexec\evolution-source-registry.exe` : fenêtre principale « Courriel »,
-dossiers locaux, interface en français, sans erreur (seul avertissement
-attendu : pas de fournisseur `sendmail` sous Windows). Capture :
+**First successful launch (2026-10-31)** — after manually starting
+`libexec\evolution-source-registry.exe`: "Mail" main window,
+local folders, French interface, no errors (only expected warning:
+no `sendmail` provider on Windows). Screenshot:
 `tools/screenshots/2026-10-31-first-run.png`.
 
-### Phase 2b — démarrage automatique des services EDS (fait)
+### Phase 2b — automatic start of the EDS services (done)
 
-Le bus de session de GLib sous Windows n'active pas les services à partir
-de fichiers `.service`. Nouvelle fonction publique (Windows uniquement)
-`e_util_win32_ensure_dbus_service (bus_name, cancellable, error)` dans
-`libedataserver` :
+GLib's session bus on Windows does not activate services from
+`.service` files. New public function (Windows only)
+`e_util_win32_ensure_dbus_service (bus_name, cancellable, error)` in
+`libedataserver`:
 
-1. vérifie avec `NameHasOwner` si le nom D-Bus a un propriétaire ;
-2. sinon lance l'exécutable correspondant depuis `libexec\` (chemin
-   relocalisé, `E_DATA_SERVER_LIBEXECDIR`) avec `CreateProcessW` et
-   `CREATE_NO_WINDOW` (pas de console) ;
-3. attend (30 s maximum) que le service possède son nom ; ne fait rien si
-   elle est appelée par le service lui-même.
+1. checks with `NameHasOwner` whether the D-Bus name has an owner;
+2. if not, launches the matching executable from `libexec\` (relocated
+   path, `E_DATA_SERVER_LIBEXECDIR`) with `CreateProcessW` and
+   `CREATE_NO_WINDOW` (no console);
+3. waits (30 s maximum) for the service to own its name; does nothing if
+   called by the service itself.
 
-Correspondances : `Sources5` → `evolution-source-registry.exe`,
+Mappings: `Sources5` → `evolution-source-registry.exe`,
 `AddressBook10` → `evolution-addressbook-factory.exe`, `Calendar8` →
 `evolution-calendar-factory.exe`, `UserPrompter0` →
-`evolution-user-prompter.exe`. Appelée juste avant la création des proxys
-D-Bus dans `e-source-registry.c`, `e-book-client.c`, `e-cal-client.c` et
-`e-user-prompter.c` (déjà exécutés dans des threads).
+`evolution-user-prompter.exe`. Called just before the D-Bus proxies are
+created in `e-source-registry.c`, `e-book-client.c`, `e-cal-client.c` and
+`e-user-prompter.c` (already executed in threads).
 
-La source prédéfinie « Sendmail » n'est plus chargée sous Windows
-(`e-source-registry-server.c`) : pas de sendmail ni de fournisseur Camel.
+The predefined "Sendmail" source is no longer loaded on Windows
+(`e-source-registry-server.c`): no sendmail and no Camel provider.
 
-**Validé (2026-10-31)** : lancer uniquement `evolution.exe` démarre le bus,
-le registre puis la fabrique carnet d'adresses, sans fenêtre console ; un
-compte IMAP réel configuré par l'utilisateur synchronise ses dossiers et
-affiche la liste des messages. L'affichage du contenu HTML attend la phase 3.
+**Validated (2026-10-31)**: launching only `evolution.exe` starts the bus,
+the registry, then the address book factory, with no console window; a
+real IMAP account configured by the user synchronizes its folders and
+displays the message list. Displaying HTML content awaits phase 3.
 
-Les services héritent du `PATH` du client pour trouver leurs DLL. Pour
-EvolutionWin, `evo-core` place lui-même le dossier de `evo-core.dll` (`bin\`)
-en tête du `PATH` au démarrage (phase 5) : aucun réglage système requis.
+The services inherit the client's `PATH` to find their DLLs. For
+EvolutionWin, `evo-core` itself places the folder of `evo-core.dll` (`bin\`)
+at the front of the `PATH` at startup (phase 5): no system setting required.
 
-## Phase 3 — préparation : shim WebKit sur WebView2
+## Phase 3 — preparation: WebKit shim on WebView2
 
-### Stratégie
+### Strategy
 
-`EWebView` hérite de `WebKitWebView` et Evolution utilise l'API WebKit à
-~1500 endroits. Plutôt que de réécrire ces appels, on fournit une
-**bibliothèque de compatibilité** (`webkit2gtk-4.1` côté pkg-config, en-têtes
-`webkit2/webkit2.h`) qui implémente sur WebView2 uniquement le sous-ensemble
-d'API réellement utilisé : environ 110 fonctions/types WebKit et JSC.
-L'inventaire exact (nombre d'occurrences par symbole) est dans
+`EWebView` inherits from `WebKitWebView` and Evolution uses the WebKit API
+in ~1500 places. Rather than rewriting these calls, we provide a
+**compatibility library** (`webkit2gtk-4.1` on the pkg-config side, headers
+`webkit2/webkit2.h`) that implements on WebView2 only the subset of the
+API actually used: about 110 WebKit and JSC functions/types.
+The exact inventory (number of occurrences per symbol) is in
 `tools/webkit-api-usage.txt`.
 
-Correspondances principales :
+Main mappings:
 
 | WebKitGTK | WebView2 |
 | --- | --- |
 | `webkit_web_view_load_html/uri/bytes` | `NavigateToString` / `Navigate` |
-| `webkit_web_view_evaluate_javascript` + `JSCValue` | `ExecuteScript` (résultat JSON → `JSCValue` émulé) |
+| `webkit_web_view_evaluate_javascript` + `JSCValue` | `ExecuteScript` (JSON result → emulated `JSCValue`) |
 | `webkit_user_content_manager_register_script_message_handler` | `window.chrome.webview.postMessage` + `WebMessageReceived` |
 | `webkit_web_context_register_uri_scheme` (`evo-http`, `cid`, `mail`, …) | `AddWebResourceRequestedFilter` + `WebResourceRequested` |
 | `decide-policy` | `NavigationStarting` / `NewWindowRequested` |
 | `WebKitFindController` | `window.find()` via script |
 | `WebKitPrintOperation` | `ICoreWebView2_16::Print*` |
 
-### Étape 1 réalisée : squelette du shim (`tools/webkit-shim`)
+### Step 1 done: shim skeleton (`tools/webkit-shim`)
 
-- Une seule DLL `webkit2gtk-4.1.dll` fournit l'API WebKitGTK 4.1 et l'API
-  JavaScriptCore-GLib ; fichiers `webkit2gtk-4.1.pc` et
-  `javascriptcoregtk-4.1.pc` (version 2.44.0). En-têtes dans
-  `include\webkit2gtk-4.1\{webkit2,jsc}`. Script : `tools\build-webkit-shim.bat`.
-- `WebKitWebView` dérive de `GtkContainer` ; sa structure de classe est
-  publique (`EWebView` et `EWebKitEditor` l'embarquent). Les signaux et
-  propriétés qu'Evolution utilise sont enregistrés avec leurs vraies
+- A single DLL `webkit2gtk-4.1.dll` provides the WebKitGTK 4.1 API and the
+  JavaScriptCore-GLib API; files `webkit2gtk-4.1.pc` and
+  `javascriptcoregtk-4.1.pc` (version 2.44.0). Headers in
+  `include\webkit2gtk-4.1\{webkit2,jsc}`. Script: `tools\build-webkit-shim.bat`.
+- `WebKitWebView` derives from `GtkContainer`; its class structure is
+  public (`EWebView` and `EWebKitEditor` embed it). The signals and
+  properties that Evolution uses are registered with their real
   signatures (`load-changed`, `decide-policy`, `context-menu`,
   `script-message-received::*`, `initialize-web-extensions`, `found-text`,
-  `finished`, propriétés `title`, `editable`, `zoom-level`, 60 propriétés de
-  `WebKitSettings`…).
-- `JSCValue` repose sur un nœud json-glib (WebView2 renvoie du JSON).
-- Implémentation pour l'instant **vide** : chaque point à réaliser est marqué
-  `/* TODO WebView2 */` ; les appels asynchrones échouent avec
+  `finished`, properties `title`, `editable`, `zoom-level`, 60 `WebKitSettings`
+  properties…).
+- `JSCValue` is based on a json-glib node (WebView2 returns JSON).
+- Implementation for now **empty**: each point to be implemented is marked
+  `/* TODO WebView2 */`; asynchronous calls fail with
   `G_IO_ERROR_NOT_SUPPORTED`.
-- Evolution : `src/web-extensions`, `src/modules/webkit-editor/web-extension`
-  et `src/modules/webkit-inspector` ne sont pas compilés sous Windows (pas
-  d'extension dans le processus de rendu avec WebView2).
-- Correctif `cmake/modules/GLibTools.cmake` (Evolution) : un chemin absolu
-  servait de nom de variable (`${C:/…/x.gresource_DEPS}`), erreur de syntaxe
-  CMake sous Windows ; remplacé par un nom fixe.
+- Evolution: `src/web-extensions`, `src/modules/webkit-editor/web-extension`
+  and `src/modules/webkit-inspector` are not built on Windows (no
+  extension in the render process with WebView2).
+- Fix in `cmake/modules/GLibTools.cmake` (Evolution): an absolute path
+  was used as a variable name (`${C:/…/x.gresource_DEPS}`), a CMake syntax
+  error on Windows; replaced with a fixed name.
 
-### Étape 2 réalisée : rendu WebView2 (2026-10-31)
+### Step 2 done: WebView2 rendering (2026-10-31)
 
-`tools/webkit-shim/src/webview2-host.{h,cpp}` (C++/WRL, API C) :
-environnement WebView2 partagé (dossier utilisateur
-`%LOCALAPPDATA%\evolution\webview2` via le cache GLib, chargeur statique
-`WebView2LoaderStatic.lib`), un contrôleur par vue dans une fenêtre native
-enfant (`gdk_window_ensure_native`), file des commandes en attente pendant la
-création asynchrone.
+`tools/webkit-shim/src/webview2-host.{h,cpp}` (C++/WRL, C API):
+shared WebView2 environment (user folder
+`%LOCALAPPDATA%\evolution\webview2` via the GLib cache, static loader
+`WebView2LoaderStatic.lib`), one controller per view in a native child
+window (`gdk_window_ensure_native`), queue of pending commands during
+asynchronous creation.
 
-| WebKitGTK | Implémentation |
+| WebKitGTK | Implementation |
 | --- | --- |
-| `load_html` / `load_bytes` / `load_plain_text` | contenu servi par le schéma interne `webkit-shim-page:` (pas de limite de 2 Mo, contrairement à `NavigateToString`) |
-| schémas d'Evolution (`mail`, `cid`, `evo-file`, `evo-http(s)`, `gtk-stock`) | déclarés à la création de l'environnement (`CustomSchemeRegistration`), requêtes via `WebResourceRequested` → gestionnaires `webkit_web_context_register_uri_scheme()`, réponse lue de façon asynchrone puis `CreateWebResourceResponse` |
-| sous-ressources `http(s)` des pages Evolution | réécrites en `evo-http(s)` comme le faisait l'extension web (politique de contenu distant d'Evolution) |
-| `evaluate_javascript` | `ExecuteScript` d'un `eval` global enveloppé : exceptions → `WEBKIT_JAVASCRIPT_ERROR_SCRIPT_FAILED`, valeur JSON → `JSCValue` |
-| `window.webkit.messageHandlers.<nom>.postMessage` | défini par un « script de page » injecté dans chaque document et frame, relayé par `chrome.webview.postMessage` (événement du frame inclus) |
-| feuilles de style utilisateur | `<style id="webkit-shim-user-styles">` mis à jour à chaque changement |
-| `load-changed`, `decide-policy`, `context-menu`, `mouse-target-changed` | `NavigationStarting`/`ContentLoading`/`NavigationCompleted`, `NewWindowRequested`, `ContextMenuRequested` (événement GDK synthétisé), `StatusBarTextChanged` |
+| `load_html` / `load_bytes` / `load_plain_text` | content served by the internal scheme `webkit-shim-page:` (no 2 MB limit, unlike `NavigateToString`) |
+| Evolution schemes (`mail`, `cid`, `evo-file`, `evo-http(s)`, `gtk-stock`) | declared when the environment is created (`CustomSchemeRegistration`), requests via `WebResourceRequested` → `webkit_web_context_register_uri_scheme()` handlers, response read asynchronously then `CreateWebResourceResponse` |
+| `http(s)` sub-resources of Evolution pages | rewritten to `evo-http(s)` as the web extension did (Evolution's remote content policy) |
+| `evaluate_javascript` | `ExecuteScript` of a wrapped global `eval`: exceptions → `WEBKIT_JAVASCRIPT_ERROR_SCRIPT_FAILED`, JSON value → `JSCValue` |
+| `window.webkit.messageHandlers.<name>.postMessage` | defined by a "page script" injected into every document and frame, relayed by `chrome.webview.postMessage` (including the frame event) |
+| user style sheets | `<style id="webkit-shim-user-styles">` updated on every change |
+| `load-changed`, `decide-policy`, `context-menu`, `mouse-target-changed` | `NavigationStarting`/`ContentLoading`/`NavigationCompleted`, `NewWindowRequested`, `ContextMenuRequested` (synthesized GDK event), `StatusBarTextChanged` |
 
-Côté Evolution (`e-web-view.c`, Windows) : `e-convert.js`, `e-web-view.js` et
-les greffons `preview-plugins` sont ajoutés comme script utilisateur du cadre
-principal (remplace l'extension web) ; `Evo.getUriTooltip` et
-`EvoConvert.linkRequiresReference` sont approximés en JavaScript.
+On the Evolution side (`e-web-view.c`, Windows): `e-convert.js`, `e-web-view.js` and
+the `preview-plugins` plugins are added as a user script of the main
+frame (replaces the web extension); `Evo.getUriTooltip` and
+`EvoConvert.linkRequiresReference` are approximated in JavaScript.
 
-Problèmes rencontrés :
+Problems encountered:
 
-1. **« Ã€ » au lieu de « À »** : texte servi sans `charset` lu en
-   Windows-1252 → `charset=utf-8` ajouté aux types `text/*`.
-2. **Feuille de style ignorée** : GIO sous Windows donne des types de
-   contenu sous forme d'extension (`.css`) ; WebView2 refuse une CSS sans le
-   bon type MIME → conversion `g_content_type_get_mime_type()` (+ table de
-   secours).
-3. **Corps du message invisible (iframe de hauteur nulle)** : le script de
-   la page principale (`webkit-shim-page:`) lit le contenu des iframes
-   `mail:` ; origines différentes pour Chromium. WebKitGTK traite ces schémas
-   locaux comme fiables : l'environnement WebView2 est lancé avec
-   `--disable-web-security --disable-site-isolation-trials`. Compromis
-   assumé pour la version GTK transitoire (le contenu distant reste filtré
-   par Evolution) ; la nouvelle interface WinUI servira tout sous une seule
-   origine.
+1. **"Ã€" instead of "À"**: text served without `charset` read as
+   Windows-1252 → `charset=utf-8` added to `text/*` types.
+2. **Style sheet ignored**: GIO on Windows gives content types as an
+   extension (`.css`); WebView2 refuses a CSS without the
+   right MIME type → `g_content_type_get_mime_type()` conversion (+ fallback
+   table).
+3. **Message body invisible (zero-height iframe)**: the script of
+   the main page (`webkit-shim-page:`) reads the content of the `mail:`
+   iframes; different origins for Chromium. WebKitGTK treats these local
+   schemes as trusted: the WebView2 environment is launched with
+   `--disable-web-security --disable-site-isolation-trials`. Accepted
+   trade-off for the transitional GTK version (remote content is still filtered
+   by Evolution); the new WinUI interface will serve everything under a single
+   origin.
 
-Diagnostic : `WEBKIT_SHIM_DEBUG=1` trace navigations, requêtes, réponses,
-scripts et erreurs JavaScript des pages.
+Diagnostics: `WEBKIT_SHIM_DEBUG=1` traces navigations, requests, responses,
+scripts and JavaScript errors of the pages.
 
-**Validé** : messages texte et HTML (mise en page, polices web, images
-locales) affichés dans le panneau d'aperçu, avec un compte IMAP réel.
+**Validated**: text and HTML messages (layout, web fonts, local
+images) displayed in the preview pane, with a real IMAP account.
 
-Limites connues (version transitoire, non prioritaires) : erreurs
-« Evo is not defined » sur le document vide initial (sans effet),
-raccourcis clavier d'Evolution inactifs quand le focus est dans la page,
-recherche dans la page, impression, éditeur de composition (phase 4 non
-poursuivie pour GTK).
+Known limitations (transitional version, non-priority): "Evo is not defined"
+errors on the initial empty document (harmless),
+Evolution keyboard shortcuts inactive when focus is in the page,
+in-page search, printing, composer editor (phase 4 not
+continued for GTK).
 
-### Autres portages côté Evolution
+### Other ports on the Evolution side
 
-- `src/e-util/e-passwords.c` (ancienne API de mots de passe) : sous Windows,
-  `e_secret_store_*()` d'EDS (Gestionnaire d'identifiants) au lieu de
-  libsecret ; libsecret n'est plus requise sous `WIN32` (Evolution, et
-  `libedataserver-1.2.pc` d'EDS).
-- Filtres antispam bogofilter/spamassassin désactivés (pilotage de programmes
-  externes par `fork()`/`waitpid()`) : à porter.
-- `certificate-manager.c` : tableau de taille variable (non supporté par
-  MSVC) remplacé par `g_newa`. `e-shell.c` : `windows.h` manquant.
-- `msvc-compat.cmake` : `-lm`/`-ldl` ignorés (fournis par le CRT).
+- `src/e-util/e-passwords.c` (old password API): on Windows,
+  EDS's `e_secret_store_*()` (Credential Manager) instead of
+  libsecret; libsecret is no longer required under `WIN32` (Evolution, and
+  EDS's `libedataserver-1.2.pc`).
+- bogofilter/spamassassin spam filters disabled (driving external programs
+  through `fork()`/`waitpid()`): to be ported.
+- `certificate-manager.c`: variable-length array (not supported by
+  MSVC) replaced by `g_newa`. `e-shell.c`: missing `windows.h`.
+- `msvc-compat.cmake`: `-lm`/`-ldl` ignored (provided by the CRT).
 
-### Extension web (processus WebKit)
+### Web extension (WebKit process)
 
-`src/web-extensions/e-web-extension.c` ne fait que :
+`src/web-extensions/e-web-extension.c` only does:
 
-1. charger `e-convert.js`, `e-web-view.js` puis les plugins JS (données dans
-   `data/webkit`) à chaque création du contexte JS ;
-2. exposer deux fonctions natives synchrones (`Evo.getUriTooltip`,
-   `EvoConvert.linkRequiresReference`) ;
-3. réécrire les requêtes `http(s)` en `evo-http(s)` pour les faire passer
-   par Evolution.
+1. load `e-convert.js`, `e-web-view.js` then the JS plugins (data in
+   `data/webkit`) on each creation of the JS context;
+2. expose two synchronous native functions (`Evo.getUriTooltip`,
+   `EvoConvert.linkRequiresReference`);
+3. rewrite `http(s)` requests to `evo-http(s)` so they go
+   through Evolution.
 
-Sous WebView2 : (1) `AddScriptToExecuteOnDocumentCreated`, (2)
-réimplémentation en JavaScript, (3) `WebResourceRequested`. Aucun code natif
-dans le processus de rendu n'est nécessaire.
+Under WebView2: (1) `AddScriptToExecuteOnDocumentCreated`, (2)
+reimplementation in JavaScript, (3) `WebResourceRequested`. No native code
+in the render process is needed.
 
-SDK : `Microsoft.Web.WebView2` 1.0.4314.35 (NuGet) dans
-`<workspace>\deps\webview2\sdk`. Runtime Edge WebView2 156 déjà
-présent sur Windows 11.
+SDK: `Microsoft.Web.WebView2` 1.0.4314.35 (NuGet) in
+`<workspace>\deps\webview2\sdk`. Edge WebView2 runtime 156 already
+present on Windows 11.
 
-## Phase 4b — Exchange Online / Microsoft 365 (objectif : remplacer Outlook)
+## Phase 4b — Exchange Online / Microsoft 365 (goal: replace Outlook)
 
-### Protocole : Microsoft Graph, pas EWS
+### Protocol: Microsoft Graph, not EWS
 
-Microsoft retire EWS d'Exchange Online : blocage automatique des tenants non
-configurés depuis le **1er octobre 2026**, suppression définitive le
-**1er avril 2027**, sans exception. Seul Exchange Server sur site garde EWS.
-La cible est donc l'API **Microsoft Graph**.
+Microsoft is retiring EWS from Exchange Online: automatic blocking of tenants not
+configured since **October 1, 2026**, permanent removal on
+**April 1, 2027**, with no exceptions. Only on-premises Exchange Server keeps EWS.
+The target is therefore the **Microsoft Graph** API.
 
-Le module **evolution-ews** (dépôt séparé,
-`https://gitlab.gnome.org/GNOME/evolution-ews.git`) fournit deux types de
-comptes :
+The **evolution-ews** module (separate repository,
+`https://gitlab.gnome.org/GNOME/evolution-ews.git`) provides two account
+types:
 
-| Type de compte | Protocole | Usage dans ce portage |
+| Account type | Protocol | Use in this port |
 | --- | --- | --- |
-| « Microsoft 365 » | Microsoft Graph | **Exchange Online** (courrier, agenda, contacts) |
-| « Exchange Web Services » | EWS | Exchange sur site uniquement |
+| "Microsoft 365" | Microsoft Graph | **Exchange Online** (mail, calendar, contacts) |
+| "Exchange Web Services" | EWS | On-premises Exchange only |
 
-Limites connues de Graph par rapport à EWS : pas d'accès aux dossiers
-publics, couverture partielle des boîtes d'archive.
+Known limitations of Graph compared with EWS: no access to public
+folders, partial coverage of archive mailboxes.
 
-### Authentification OAuth2 (Entra ID)
+### OAuth2 authentication (Entra ID)
 
-L'authentification de base est désactivée sur Exchange Online : la connexion
-passe par OAuth2. Points à traiter :
+Basic authentication is disabled on Exchange Online: sign-in
+goes through OAuth2. Points to handle:
 
-1. **Fenêtre de connexion** : sous Linux, elle utilise WebKitGTK. Sous
-   Windows, elle passera par WebView2, ce qui supporte aussi
-   l'authentification moderne, MFA, accès conditionnel. Variante possible :
-   navigateur système + redirection loopback (RFC 8252).
-2. **Inscription d'application Entra ID** : evolution-ews fournit un
-   identifiant client par défaut, mais beaucoup de tenants exigent un
-   consentement administrateur. Pour un déploiement en entreprise, prévoir
-   une inscription d'application dans le tenant, avec permissions déléguées
+1. **Sign-in window**: on Linux, it uses WebKitGTK. On
+   Windows, it will go through WebView2, which also supports modern
+   authentication, MFA, conditional access. Possible variant:
+   system browser + loopback redirect (RFC 8252).
+2. **Entra ID application registration**: evolution-ews provides a default
+   client ID, but many tenants require admin
+   consent. For an enterprise deployment, plan for
+   an application registration in the tenant, with delegated permissions
    `Mail.ReadWrite`, `Mail.Send`, `Calendars.ReadWrite`,
-   `Contacts.ReadWrite`, `User.Read`, `offline_access`. L'identifiant client
-   et le tenant seront préconfigurables à l'installation (propriétés MSI,
-   phase 5), pour un déploiement sans saisie utilisateur.
-3. **Jetons** : stockés dans le Gestionnaire d'identifiants Windows (même
-   mécanisme que les mots de passe, voir phase 1).
+   `Contacts.ReadWrite`, `User.Read`, `offline_access`. The client ID
+   and tenant will be pre-configurable at installation (MSI properties,
+   phase 5), for a deployment without user input.
+3. **Tokens**: stored in the Windows Credential Manager (same
+   mechanism as passwords, see phase 1).
 
 ### OpenPGP (GPG)
 
-`camel-gpg-context.c` lance `gpg` avec `fork()`/`pipe()`/`fcntl()` ; la
-branche Windows n'était qu'un `FIXME: Port me`. Elle est désormais portée sur
-`g_spawn_async_with_pipes()` avec Gpg4win (`gpg.exe`) : voir le huitième
-jalon du client natif. S/MIME, qui passe par NSS, n'est pas concerné.
+`camel-gpg-context.c` launches `gpg` with `fork()`/`pipe()`/`fcntl()`; the
+Windows branch was only a `FIXME: Port me`. It is now ported to
+`g_spawn_async_with_pipes()` with Gpg4win (`gpg.exe`): see the eighth
+milestone of the native client. S/MIME, which goes through NSS, is not concerned.
 
-### Étapes
+### Steps
 
-- [x] Compiler evolution-ews avec MSVC (2026-10-31)
-- [x] Fenêtre OAuth2 sur WebView2 dans EvolutionWin (2026-10-31)
-- [ ] Test de bout en bout sur un tenant Exchange Online : courrier, agenda, contacts
+- [x] Build evolution-ews with MSVC (2026-10-31)
+- [x] OAuth2 window on WebView2 in EvolutionWin (2026-10-31)
+- [ ] End-to-end test on an Exchange Online tenant: mail, calendar, contacts
 
-### Compilation d'evolution-ews
+### Building evolution-ews
 
-Sources dans `<workspace>\evolution-ews` (dépôt GNOME, commit amont
-`19cb82b3`, branche `windows-native`). Script : `tools\build-ews.bat`
-(après `build-eds.bat`), avec `WITH_EVOLUTION=OFF` : seules les parties EDS
-sont compilées (fournisseurs Camel `ews` et `microsoft365`, backends carnet
-d'adresses et agenda, modules du registre, bibliothèques privées
+Sources in `<workspace>\evolution-ews` (GNOME repository, upstream commit
+`19cb82b3`, `windows-native` branch). Script: `tools\build-ews.bat`
+(after `build-eds.bat`), with `WITH_EVOLUTION=OFF`: only the EDS parts
+are built (Camel providers `ews` and `microsoft365`, address book
+and calendar backends, registry modules, private libraries
 `evolution-ews.dll`, `evolution-microsoft365.dll`, `camel*-priv.dll`,
-`evolution-ews-common.dll`, déplacées dans `bin\`). Les pages de
-configuration de l'interface GTK ne servent pas à EvolutionWin.
-`WITH_MSPACK=OFF` : pas de libmspack (décompression du carnet d'adresses
-hors ligne OAB d'EWS).
+`evolution-ews-common.dll`, moved to `bin\`). The GTK interface
+configuration pages are not used by EvolutionWin.
+`WITH_MSPACK=OFF`: no libmspack (decompression of the EWS offline
+address book, OAB).
 
-Correctifs : prototypes `G_MODULE_EXPORT` (C2375) par
-`tools\tools\fix-module-export-prototypes.py`, dont le motif confondait
-`x = fonction (...);` avec un prototype (corrigé : pas de `=` avant le nom) ;
-`e-cal-backend-ews-utils.h` déclare avec `G_MODULE_EXPORT` les trois
-fonctions exportées pour les tests.
+Fixes: `G_MODULE_EXPORT` prototypes (C2375) by
+`tools\tools\fix-module-export-prototypes.py`, whose pattern confused
+`x = function (...);` with a prototype (fixed: no `=` before the name);
+`e-cal-backend-ews-utils.h` declares with `G_MODULE_EXPORT` the three
+functions exported for the tests.
 
-### Comptes Microsoft 365 dans EvolutionWin
+### Microsoft 365 accounts in EvolutionWin
 
-Le connecteur Microsoft 365 obtient ses jetons d'accès par
-`e_source_get_oauth2_access_token_sync` : le registre EDS les renouvelle à
-partir du jeton de rafraîchissement stocké (`OAuth2::Microsoft365[<adresse>]`
-dans le magasin de secrets d'EDS, donc le Gestionnaire d'identifiants
-Windows). Seule la **connexion initiale** est interactive ; sous Linux elle
-passe par un dialogue GTK/WebKit d'EDS, remplacé ici par EvolutionWin.
+The Microsoft 365 connector gets its access tokens through
+`e_source_get_oauth2_access_token_sync`: the EDS registry renews them
+from the stored refresh token (`OAuth2::Microsoft365[<address>]`
+in EDS's secret store, hence the Windows Credential
+Manager). Only the **initial sign-in** is interactive; on Linux it
+goes through an EDS GTK/WebKit dialog, replaced here by EvolutionWin.
 
-evo-core :
+evo-core:
 
-- charge au démarrage, avant le registre, les modules OAuth2
+- loads at startup, before the registry, the OAuth2 modules
   (`module-microsoft365-backend`, `module-ews-backend`,
-  `module-oauth2-services`) : `ESourceRegistry` y trouve les services ;
-- `evo_core_add_microsoft365_account` : sources créées comme par l'assistant
-  d'Evolution, une collection (backend `microsoft365`, authentification
-  `Microsoft365`, réglages `CamelM365Settings`) portant compte de courrier,
-  identité et serveur d'envoi ; le module du registre y ajoute les agendas
-  et carnets d'adresses (Graph). Identifiant d'application et tenant
-  facultatifs (application d'Evolution `20460e5d-…` et tenant `common` par
-  défaut) ;
-- `evo_core_oauth2_begin` / `evo_core_oauth2_finish` : même construction que
-  le dialogue d'EDS (paramètres du service, `state` vérifié au retour, refus
-  `error_description` remonté), code échangé et jetons enregistrés par
-  `e_oauth2_service_receive_and_store_token_sync` ;
-- événement `oauth2-required` quand le connecteur refuse l'authentification
-  (jeton absent ou révoqué ; pas sur une erreur réseau) ;
-- suppression : la collection entière (agendas et carnets compris) et le
-  jeton enregistré.
+  `module-oauth2-services`): `ESourceRegistry` finds the services there;
+- `evo_core_add_microsoft365_account`: sources created as by Evolution's
+  wizard, one collection (backend `microsoft365`, authentication
+  `Microsoft365`, settings `CamelM365Settings`) carrying the mail account,
+  identity and submission server; the registry module adds the calendars
+  and address books (Graph) to it. Application ID and tenant
+  optional (Evolution's application `20460e5d-…` and tenant `common` by
+  default);
+- `evo_core_oauth2_begin` / `evo_core_oauth2_finish`: same construction as
+  the EDS dialog (service parameters, `state` checked on return, refusal
+  `error_description` passed up), code exchanged and tokens stored by
+  `e_oauth2_service_receive_and_store_token_sync`;
+- `oauth2-required` event when the connector refuses authentication
+  (missing or revoked token; not on a network error);
+- removal: the whole collection (calendars and address books included) and the
+  stored token.
 
-EvolutionWin : choix « Microsoft 365 / Exchange Online » dans l'assistant
-d'ajout de compte (sans serveurs ni mot de passe), puis fenêtre de connexion
-WebView2 ; la navigation vers l'adresse de redirection
-(`…/oauth2/nativeclient`) est interceptée et transmise au moteur. Même
-fenêtre sur `oauth2-required`.
+EvolutionWin: "Microsoft 365 / Exchange Online" choice in the add-account
+wizard (no servers or password), then a WebView2 sign-in window; navigation to the redirect
+address
+(`…/oauth2/nativeclient`) is intercepted and passed to the engine. Same
+window on `oauth2-required`.
 
-**Testé** (2026-10-31) avec un compte fictif, créé puis supprimé dans le
-registre réel : création, adresse de connexion (point d'accès v2.0, droits
-Graph courrier/agenda/contacts/tâches, `offline_access`), refus de
-l'utilisateur, réponse falsifiée (`state` différent) rejetée, suppression
-sans reste. **Reste à valider** avec un vrai compte Microsoft 365 :
-connexion, relève, envoi, agendas et contacts ; un tenant d'entreprise peut
-exiger le consentement d'un administrateur pour l'application d'Evolution
-ou une inscription propre (identifiant et tenant dans l'assistant).
+**Tested** (2026-10-31) with a fictitious account, created then deleted in the
+real registry: creation, sign-in address (v2.0 endpoint, Graph
+mail/calendar/contacts/tasks permissions, `offline_access`), user
+refusal, forged response (different `state`) rejected, removal
+with nothing left behind. **Still to validate** with a real Microsoft 365 account:
+sign-in, fetch, send, calendars and contacts; an enterprise tenant may
+require administrator consent for the Evolution application
+or its own registration (ID and tenant in the wizard).
 
-Non fait : comptes EWS (Exchange sur site, `ews`) dans l'assistant ; les
-fournisseurs et backends sont compilés et installés.
+Not done: EWS accounts (on-premises Exchange, `ews`) in the wizard; the
+providers and backends are built and installed.
 
-## Phase 5 — Installeur MSI
+## Phase 5 — MSI installer
 
-Objectif : un paquet `.msi` autonome, déployable silencieusement sur un poste
-(`msiexec /i Evolution-x64.msi /qn`), par GPO, Intune ou SCCM, contenant
-EvolutionWin, EDS et **toutes** leurs dépendances. Rien ne doit être requis sur
-le poste en dehors de Windows 11.
+Goal: a standalone `.msi` package, silently deployable on a machine
+(`msiexec /i Evolution-x64.msi /qn`), via GPO, Intune or SCCM, containing
+EvolutionWin, EDS and **all** their dependencies. Nothing must be required on
+the machine apart from Windows 11.
 
-### Réalisation (2026-10-31)
+### Implementation (2026-10-31)
 
 ```bat
-tools\build-msi.bat                    :: recompile EvolutionWin dans l'arborescence, puis le MSI
-tools\build-msi.bat -Version 1.0.0     :: version forcée (défaut : fichier VERSION, ou EVO_MSI_VERSION)
-tools\build-msi.bat -SkipAppBuild      :: reprend .\build\ (sortie de build-winui-app.bat)
+tools\build-msi.bat                    :: rebuilds EvolutionWin in the tree, then the MSI
+tools\build-msi.bat -Version 1.0.0     :: forced version (default: VERSION file, or EVO_MSI_VERSION)
+tools\build-msi.bat -SkipAppBuild      :: reuses .\build\ (output of build-winui-app.bat)
 ```
 
-Résultat : `dist\Evolution-<version>-x64.msi` (≈ 42 Mo, 1 199 fichiers,
-149 Mo installés ; `dist\` est ignoré par Git, les versions sont publiées
-dans les Releases GitHub par `tools\publish-release.bat`). Fichiers : `tools\build-msi.bat` (environnement),
-`tools\build-msi.ps1` (arborescence, dépendances, signature, WiX),
-`tools\msi\Evolution.wxs` (source WiX).
+Result: `dist\Evolution-<version>-x64.msi` (≈ 42 MB, 1,199 files,
+149 MB installed; `dist\` is ignored by Git, versions are published
+to GitHub Releases by `tools\publish-release.bat`). Files: `tools\build-msi.bat` (environment),
+`tools\build-msi.ps1` (tree, dependencies, signing, WiX),
+`tools\msi\Evolution.wxs` (WiX source).
 
-Arborescence installée (`%ProgramFiles%\Evolution`), au format d'un préfixe :
-EDS et Camel calculent leurs chemins depuis leurs DLL, GLib trouve ses modules
-GIO et ses schémas depuis la sienne, libical ses fuseaux depuis l'exécutable.
+Installed tree (`%ProgramFiles%\Evolution`), in prefix layout:
+EDS and Camel compute their paths from their DLLs, GLib finds its GIO modules
+and its schemas from its own, libical its time zones from the executable.
 
-| Dossier | Contenu |
+| Folder | Contents |
 | --- | --- |
-| `bin\` | `EvolutionWin.exe` et le Windows App SDK autonome, `evo-core.dll`, 43 DLL du préfixe (imports PE), NSS chargé dynamiquement (`softokn3`, `freebl3`, `nssckbi`), `gdbus.exe`, `gspawn-win64-helper*.exe`, runtime Visual C++ (copie locale) |
-| `libexec\` | `evolution-source-registry`, fabriques carnet d'adresses et agenda (et leurs sous-processus), `camel-index-control`, `camel-gpg-photo-saver` |
-| `lib\evolution-data-server\` | fournisseurs Camel, backends carnet/agenda, modules du registre |
-| `lib\gio\modules\` | `gioopenssl` (TLS : IMAPS/SMTPS), `giognomeproxy` |
-| `share\` | `gschemas.compiled`, fuseaux libical, traductions (EDS, GLib, glib-networking, libsoup) |
+| `bin\` | `EvolutionWin.exe` and the self-contained Windows App SDK, `evo-core.dll`, 43 prefix DLLs (PE imports), dynamically loaded NSS (`softokn3`, `freebl3`, `nssckbi`), `gdbus.exe`, `gspawn-win64-helper*.exe`, Visual C++ runtime (local copy) |
+| `libexec\` | `evolution-source-registry`, address book and calendar factories (and their subprocesses), `camel-index-control`, `camel-gpg-photo-saver` |
+| `lib\evolution-data-server\` | Camel providers, address book/calendar backends, registry modules |
+| `lib\gio\modules\` | `gioopenssl` (TLS: IMAPS/SMTPS), `giognomeproxy` |
+| `share\` | `gschemas.compiled`, libical time zones, translations (EDS, GLib, glib-networking, libsoup) |
 
-Choix et problèmes rencontrés :
+Choices and problems encountered:
 
-1. **GTK exclu** (65 → 43 DLL, 47 → 42 Mo) : seuls `evolution-user-prompter`
-   et `module-trust-prompt` (dialogues GTK d'EDS) et le fournisseur RSS
-   (greffon d'Evolution) l'importaient. EvolutionWin demande lui-même mots de
-   passe et certificats ; limite : une confirmation demandée par un backend
-   carnet/agenda en ligne (CalDAV, CardDAV) échoue au lieu d'afficher un
-   dialogue. La version GTK transitoire (`evolution.exe`) n'est pas dans le MSI.
-2. **Services EDS sans DLL à côté** : `evo-core` ajoute son dossier en tête du
-   `PATH` au démarrage ; les services lancés depuis `libexec\` en héritent.
-3. **Validation ICE** (`wix msi validate`, exécutée par le script) :
-   - ICE03 : les `.mui` du Windows App SDK portent des langues récentes
-     (1152, 1153, 1169) inconnues des tables ICE ; sans effet, ignorée ;
-   - ICE43/ICE57 : raccourci du menu Démarrer d'un paquet par machine
-     (`ALLUSERS=1`) supposé par utilisateur ; ignorées. Le raccourci est porté
-     par le fichier `EvolutionWin.exe` (supprimé avec lui) ;
-   - ICE61 : réinstallation à version égale autorisée (compilations de test).
-4. **Condition de lancement** : runtime WebView2 présent (clé EdgeUpdate,
-   version différente de `0.0.0.0`).
-5. **Mise à jour pendant qu'Evolution tourne** (0.9.1 sur 0.9.0, VM) : le
-   dialogue « fichiers en cours d'utilisation » restait caché derrière
-   l'Explorateur, et le MSI relancé échouait avec l'erreur 1618 (« une autre
-   installation est en cours »). Depuis la 0.9.2, `util:CloseApplication`
-   (extension `WixToolset.Util.wixext`) ferme EvolutionWin (message de
-   fermeture, puis arrêt après 5 s) et arrête les services EDS et `gdbus.exe`
-   avant le remplacement des fichiers. Sur un poste de développement, cela
-   arrête aussi les services EDS lancés depuis le préfixe (même nom de
-   processus) ; EvolutionWin les relance au besoin.
+1. **GTK excluded** (65 → 43 DLLs, 47 → 42 MB): only `evolution-user-prompter`
+   and `module-trust-prompt` (EDS GTK dialogs) and the RSS provider
+   (Evolution plugin) imported it. EvolutionWin itself asks for passwords and
+   certificates; limitation: a confirmation requested by an online
+   address book/calendar backend (CalDAV, CardDAV) fails instead of showing a
+   dialog. The transitional GTK version (`evolution.exe`) is not in the MSI.
+2. **EDS services without DLLs next to them**: `evo-core` adds its folder at the front of the
+   `PATH` at startup; the services launched from `libexec\` inherit it.
+3. **ICE validation** (`wix msi validate`, run by the script):
+   - ICE03: the Windows App SDK `.mui` files carry recent languages
+     (1152, 1153, 1169) unknown to the ICE tables; harmless, ignored;
+   - ICE43/ICE57: Start menu shortcut of a per-machine package
+     (`ALLUSERS=1`) assumed to be per-user; ignored. The shortcut is
+     carried by the `EvolutionWin.exe` file (removed along with it);
+   - ICE61: reinstall at equal version allowed (test builds).
+4. **Launch condition**: WebView2 runtime present (EdgeUpdate key,
+   version different from `0.0.0.0`).
+5. **Update while Evolution is running** (0.9.1 over 0.9.0, VM): the
+   "files in use" dialog stayed hidden behind
+   Explorer, and the relaunched MSI failed with error 1618 ("another
+   installation is in progress"). Since 0.9.2, `util:CloseApplication`
+   (extension `WixToolset.Util.wixext`) closes EvolutionWin (close
+   message, then stop after 5 s) and stops the EDS services and `gdbus.exe`
+   before the files are replaced. On a development machine, this
+   also stops the EDS services launched from the prefix (same process
+   name); EvolutionWin restarts them as needed.
 
-**Validé** : extraction du MSI (`msiexec /a`) et exécution depuis
-l'arborescence extraite, avec un `PATH` réduit au système : bus D-Bus et
-registre EDS démarrés depuis le paquet, connexion IMAPS, compte, dossiers et
-messages de l'utilisateur listés ; `EvolutionWin.exe` ouvre sa fenêtre et
-démarre les fabriques carnet d'adresses et agenda du paquet. L'installation
-réelle (`msiexec /i`, élévation UAC) reste à faire par l'utilisateur.
+**Validated**: MSI extraction (`msiexec /a`) and execution from the
+extracted tree, with a `PATH` reduced to the system: D-Bus bus and
+EDS registry started from the package, IMAPS connection, the user's account, folders and
+messages listed; `EvolutionWin.exe` opens its window and
+starts the package's address book and calendar factories. The
+actual installation (`msiexec /i`, UAC elevation) remains to be done by the user.
 
-Reste à faire : icône de l'application, enregistrement comme client de
-messagerie et associations `.eml`/`.ics`/`.vcf` (quand EvolutionWin saura
-ouvrir un fichier ou une URL `mailto:` passés en argument), choix des langues,
-Gpg4win en prérequis optionnel.
+Still to do: application icon, registration as a mail client
+and `.eml`/`.ics`/`.vcf` associations (once EvolutionWin can
+open a file or a `mailto:` URL passed as an argument), language choice,
+Gpg4win as an optional prerequisite.
 
-### Outil
+### Tool
 
-**WiX Toolset v5** (outil de référence pour les MSI, sources XML
-versionnables, construction en ligne de commande) :
-`dotnet tool install --global wix --version 5.0.2`, vérifié et installé par
-`check-prereqs.ps1` (prérequis facultatif).
+**WiX Toolset v5** (reference tool for MSIs, versionable XML sources,
+command-line build):
+`dotnet tool install --global wix --version 5.0.2`, checked and installed by
+`check-prereqs.ps1` (optional prerequisite).
 
-### Contenu du paquet
+### Package contents
 
-| Élément | Origine | Remarque |
+| Item | Origin | Note |
 | --- | --- | --- |
 | `EvolutionWin.exe`, `evo-core.dll`, `evolution.exe`, modules, plugins | `./build` | |
-| Services EDS (`evolution-source-registry`, fabriques carnet/agenda, `evolution-alarm-notify`) | build EDS | démarrés par EDS (pas d'activation D-Bus sous Windows) |
-| DLL des dépendances (GLib, GTK3, libsoup, NSS, libical…) | préfixe `%GTK_BUILD%\gtk\x64\release\bin` | **uniquement celles réellement importées**, déterminées en parcourant les imports PE (`dumpbin /dependents`) à partir des exécutables et modules, pour ne pas embarquer tout le préfixe |
-| Modules GIO (`glib-networking` : TLS pour IMAPS/SMTPS) | `lib\gio\modules` | indispensable pour les connexions chiffrées ; cache `giomodule.cache` régénéré au build |
-| Chargeurs gdk-pixbuf (PNG, SVG via librsvg…) | `lib\gdk-pixbuf-2.0` | `loaders.cache` généré au build avec chemins relatifs |
-| Schémas GSettings | `share\glib-2.0\schemas` | `gschemas.compiled` précompilé au build |
-| Thèmes d'icônes Adwaita/hicolor, données Evolution (`share\evolution`), fuseaux libical | `share\…` | |
-| Traductions (`share\locale`) | builds | option « langues » dans l'installeur |
-| Runtime Visual C++ | Visual Studio (`VC\Redist\MSVC`) | copie *app-local* de `vcruntime140*.dll`/`msvcp140.dll` dans le dossier d'installation : aucun prérequis système |
-| Runtime WebView2 | Windows 11 l'inclut | vérification au lancement de l'installeur (condition MSI) ; en option, bundle WiX/Burn avec le bootstrapper Evergreen pour les postes qui ne l'ont pas |
+| EDS services (`evolution-source-registry`, address book/calendar factories, `evolution-alarm-notify`) | EDS build | started by EDS (no D-Bus activation on Windows) |
+| Dependency DLLs (GLib, GTK3, libsoup, NSS, libical…) | prefix `%GTK_BUILD%\gtk\x64\release\bin` | **only those actually imported**, determined by walking the PE imports (`dumpbin /dependents`) starting from the executables and modules, so as not to ship the whole prefix |
+| GIO modules (`glib-networking`: TLS for IMAPS/SMTPS) | `lib\gio\modules` | essential for encrypted connections; `giomodule.cache` regenerated at build |
+| gdk-pixbuf loaders (PNG, SVG via librsvg…) | `lib\gdk-pixbuf-2.0` | `loaders.cache` generated at build with relative paths |
+| GSettings schemas | `share\glib-2.0\schemas` | `gschemas.compiled` precompiled at build |
+| Adwaita/hicolor icon themes, Evolution data (`share\evolution`), libical time zones | `share\…` | |
+| Translations (`share\locale`) | builds | "languages" option in the installer |
+| Visual C++ runtime | Visual Studio (`VC\Redist\MSVC`) | *app-local* copy of `vcruntime140*.dll`/`msvcp140.dll` in the installation folder: no system prerequisite |
+| WebView2 runtime | included in Windows 11 | checked at installer launch (MSI condition); optionally, WiX/Burn bundle with the Evergreen bootstrapper for machines that lack it |
 
-Toute l'application est relocalisable : les chemins de données sont calculés
-au démarrage relativement à l'exécutable (`e-util-private.h`,
-`e_util_win32_initialize()` côté EDS), donc l'installation peut se faire dans
-n'importe quel dossier.
+The whole application is relocatable: data paths are computed
+at startup relative to the executable (`e-util-private.h`,
+`e_util_win32_initialize()` on the EDS side), so installation can be done in
+any folder.
 
-### Intégration Windows
+### Windows integration
 
-- Installation par machine dans `%ProgramFiles%\Evolution`, raccourci menu Démarrer.
-- Enregistrement comme client de messagerie (protocole `mailto:`, « Applications
-  par défaut »), associations `.eml`, `.ics`, `.vcf`.
-- `UpgradeCode` fixe → mises à jour majeures propres (`MajorUpgrade`),
-  désinstallation complète par « Applications installées ».
-- Données utilisateur dans `%LOCALAPPDATA%\evolution` (non supprimées à la
-  désinstallation).
-- Signature Authenticode du MSI et des binaires (`signtool`) : **prévue, faite
-  plus tard** (décision du 2026-10-31). `build-msi.bat` aura une étape de
-  signature optionnelle, activée seulement si un certificat est fourni
-  (variables `SIGN_CERT` / `SIGN_TIMESTAMP_URL`), et produira sinon un MSI non
-  signé utilisable en test.
+- Per-machine installation in `%ProgramFiles%\Evolution`, Start menu shortcut.
+- Registration as a mail client (`mailto:` protocol, "Default
+  apps"), `.eml`, `.ics`, `.vcf` associations.
+- Fixed `UpgradeCode` → clean major upgrades (`MajorUpgrade`),
+  full uninstallation through "Installed apps".
+- User data in `%LOCALAPPDATA%\evolution` (not removed on
+  uninstall).
+- Authenticode signing of the MSI and binaries (`signtool`): **planned, done
+  later** (decision of 2026-10-31). `build-msi.bat` will have an optional
+  signing step, enabled only if a certificate is provided
+  (variables `SIGN_CERT` / `SIGN_TIMESTAMP_URL`), and will otherwise produce an unsigned
+  MSI usable for testing.
 
-## Phase 6 — Apparence et comportement Windows natifs (demandée le 2026-10-31)
+## Phase 6 — Native Windows look and behavior (requested on 2026-10-31)
 
-Objectif : qu'Evolution ressemble à une application Windows et non à un
-portage de GNOME (fenêtres, boutons, listes, menus, dialogues).
+Goal: make Evolution look like a Windows application and not like a
+port of GNOME (windows, buttons, lists, menus, dialogs).
 
-Constat technique : l'interface d'Evolution est écrite en GTK3 (des
-centaines de milliers de lignes : fenêtres, vues de listes, éditeurs,
-préférences). GTK dessine lui-même ses widgets ; ce ne sont pas des
-contrôles Win32. Deux niveaux sont donc possibles :
+Technical observation: Evolution's interface is written in GTK3 (hundreds
+of thousands of lines: windows, list views, editors,
+preferences). GTK draws its widgets itself; they are not Win32
+controls. Two levels are therefore possible:
 
-### 6a — Intégration native de l'interface GTK existante (abandonnée)
+### 6a — Native integration of the existing GTK interface (abandoned)
 
-| Élément | Moyen |
+| Item | Means |
 | --- | --- |
-| Boutons, listes, onglets, barres de défilement, cases | thème GTK **`win32`** intégré à GTK3 : dessin par le moteur de thèmes de Windows (uxtheme), donc rendu identique aux contrôles natifs |
-| Barre de titre, bordures, accrochage (Snap), ombres | décorations **natives** de Windows au lieu des décorations GNOME dessinées par GTK (`GTK_CSD=0`, pas de *header bar* sous Windows) |
-| Police | Segoe UI (police système), tailles de Windows |
-| Ouvrir/Enregistrer un fichier | `GtkFileChooserNative` → dialogue Windows `IFileDialog` |
-| Impression | dialogue d'impression Windows (GTK utilise déjà `PrintDlgEx` sous Windows) + impression WebView2 |
-| Notifications | notifications Windows (toasts) via `GNotification` (backend Windows de GLib) |
-| Icônes | jeu d'icônes Fluent / Segoe Fluent Icons au lieu d'Adwaita |
-| Mode sombre, couleur d'accentuation | lecture des préférences Windows (registre `AppsUseLightTheme`, couleur d'accent) |
-| Barre des tâches | badge de messages non lus (`ITaskbarList3`), liste de raccourcis (*jump list* : Nouveau message, Nouveau rendez-vous) |
-| Client par défaut | `mailto:`, `.eml`, `.ics`, `.vcf` dans « Applications par défaut » (prévu au MSI) |
+| Buttons, lists, tabs, scrollbars, checkboxes | GTK **`win32`** theme built into GTK3: drawing through the Windows theme engine (uxtheme), hence rendering identical to native controls |
+| Title bar, borders, Snap, shadows | **native** Windows decorations instead of GNOME decorations drawn by GTK (`GTK_CSD=0`, no *header bar* on Windows) |
+| Font | Segoe UI (system font), Windows sizes |
+| Open/Save a file | `GtkFileChooserNative` → Windows `IFileDialog` dialog |
+| Printing | Windows print dialog (GTK already uses `PrintDlgEx` on Windows) + WebView2 printing |
+| Notifications | Windows notifications (toasts) via `GNotification` (GLib Windows backend) |
+| Icons | Fluent / Segoe Fluent Icons icon set instead of Adwaita |
+| Dark mode, accent color | reading Windows preferences (`AppsUseLightTheme` registry value, accent color) |
+| Taskbar | unread message badge (`ITaskbarList3`), *jump list* (New message, New appointment) |
+| Default client | `mailto:`, `.eml`, `.ics`, `.vcf` in "Default apps" (planned for the MSI) |
 
-### 6b — Interface réellement native (contrôles Windows)
+### 6b — Truly native interface (Windows controls)
 
-Utiliser les contrôles Windows eux-mêmes (WinUI 3 / Windows App SDK, ou
-Win32/ComCtl) impose de **réécrire toute l'interface** d'Evolution : seuls
-EDS (comptes, courrier via Camel, agenda, contacts), WebView2 et la logique
-non graphique seraient réutilisés. C'est un nouveau client de messagerie
-bâti sur le moteur d'Evolution.
+Using the Windows controls themselves (WinUI 3 / Windows App SDK, or
+Win32/ComCtl) requires **rewriting the entire interface** of Evolution: only
+EDS (accounts, mail via Camel, calendar, contacts), WebView2 and the
+non-graphical logic would be reused. It is a new mail client
+built on the Evolution engine.
 
-**Décision de l'utilisateur (2026-10-31) : interface réécrite avec de vrais
-contrôles Windows (6b).** Le moteur conservé : EDS (comptes, sources,
-carnets d'adresses, agendas, services), Camel (IMAP, SMTP, POP3, local, et
-plus tard Microsoft 365 via evolution-ews), le Gestionnaire d'identifiants,
-NSS/S-MIME. L'interface GTK d'Evolution n'est plus la cible finale.
+**User decision (2026-10-31): interface rewritten with real
+Windows controls (6b).** The engine kept: EDS (accounts, sources,
+address books, calendars, services), Camel (IMAP, SMTP, POP3, local, and
+later Microsoft 365 via evolution-ews), the Credential Manager,
+NSS/S-MIME. Evolution's GTK interface is no longer the final target.
 
-Choix complémentaires (2026-10-31) :
+Additional choices (2026-10-31):
 
-- **Technologie : WinUI 3 (Windows App SDK) en C++/WinRT**, avec Visual
-  Studio 2022. Le C++ appelle directement les bibliothèques C d'EDS/Camel
-  dans le processus ; contrôles natifs (`NavigationView`, `TreeView`, `ListView`,
-  `CalendarView`…), Fluent, mode sombre, WebView2 intégré.
-- **Evolution GTK = version transitoire** : on termine seulement l'affichage
-  des messages dans WebView2 (phase 3, étape 2) pour disposer d'un client
-  utilisable pendant la réécriture, puis la version GTK n'évolue plus. La
-  phase 6a est abandonnée.
+- **Technology: WinUI 3 (Windows App SDK) in C++/WinRT**, with Visual
+  Studio 2022. C++ directly calls the EDS/Camel C libraries
+  in-process; native controls (`NavigationView`, `TreeView`, `ListView`,
+  `CalendarView`…), Fluent, dark mode, embedded WebView2.
+- **GTK Evolution = transitional version**: we only finish displaying
+  messages in WebView2 (phase 3, step 2) to have a usable
+  client during the rewrite, then the GTK version no longer evolves. Phase
+  6a is abandoned.
 
-## Phase 6b — Client natif WinUI 3 (dossier `winui/`)
+## Phase 6b — Native WinUI 3 client (`winui/` folder)
 
 ### Architecture
 
 ```text
 winui/
-  core/   evo-core.dll  (C, GLib) : EDS + Camel, thread GLib dédié, API C + JSON
-  app/    EvolutionWin.exe (C++/WinRT, WinUI 3) : interface native, WebView2
+  core/   evo-core.dll  (C, GLib) : EDS + Camel, dedicated GLib thread, C API + JSON
+  app/    EvolutionWin.exe (C++/WinRT, WinUI 3) : native interface, WebView2
 ```
 
-- **`evo-core`** (C, compilé par CMake comme EDS) possède un **thread GLib**
-  qui exécute le contexte principal par défaut : le registre des sources
-  (`ESourceRegistry`), une `CamelSession` et tous les objets EDS/Camel n'y
-  vivent que là. L'interface lui adresse des requêtes (comptes, dossiers,
-  messages, contenu, agenda, contacts) ; les réponses reviennent par rappel,
-  sérialisées en **JSON** (frontière simple et stable : aucun type GLib côté C++).
-- **`EvolutionWin`** (C++/WinRT, Windows App SDK 1.7, non empaqueté,
-  autonome : `WindowsAppSDKSelfContained`) reçoit les rappels sur le thread
-  GLib et les renvoie sur le thread de l'interface par le `DispatcherQueue`.
-  JSON lu avec `Windows.Data.Json`.
-- Interface : `NavigationView` (Courrier, Calendrier, Contacts, Paramètres) ;
-  courrier en trois volets : `TreeView` des dossiers, `ListView` des messages,
-  contrôle `WebView2` pour la lecture.
+- **`evo-core`** (C, built by CMake like EDS) owns a **GLib thread**
+  that runs the default main context: the source registry
+  (`ESourceRegistry`), a `CamelSession` and all EDS/Camel objects live only there.
+  The interface sends it requests (accounts, folders,
+  messages, content, calendar, contacts); responses come back through callbacks,
+  serialized as **JSON** (a simple and stable boundary: no GLib type on the C++ side).
+- **`EvolutionWin`** (C++/WinRT, Windows App SDK 1.7, unpackaged,
+  self-contained: `WindowsAppSDKSelfContained`) receives the callbacks on the
+  GLib thread and forwards them to the interface thread through the `DispatcherQueue`.
+  JSON read with `Windows.Data.Json`.
+- Interface: `NavigationView` (Mail, Calendar, Contacts, Settings);
+  mail in three panes: `TreeView` of folders, `ListView` of messages,
+  `WebView2` control for reading.
 
-Versions : Microsoft.WindowsAppSDK 1.7.260224002 (dernier paquet monolithique
-avant le découpage de la 1.8), Microsoft.Windows.CppWinRT 2.0.250303.1,
+Versions: Microsoft.WindowsAppSDK 1.7.260224002 (last monolithic package
+before the split of 1.8), Microsoft.Windows.CppWinRT 2.0.250303.1,
 Microsoft.Windows.SDK.BuildTools 10.0.26100.9457, Microsoft.Web.WebView2,
-Microsoft.Windows.ImplementationLibrary. Restaurés par `nuget.exe`
-(`tools\tools\nuget.exe`) ; compilés par MSBuild. Les modèles de
-projet C++ WinUI ne sont pas installés dans Visual Studio : le projet est
-écrit à la main.
+Microsoft.Windows.ImplementationLibrary. Restored by `nuget.exe`
+(`tools\tools\nuget.exe`); built by MSBuild. The C++ WinUI project
+templates are not installed in Visual Studio: the project is
+written by hand.
 
-### Premier jalon — atteint le 2026-10-31
+### First milestone — reached on 2026-10-31
 
-Fenêtre native, comptes et dossiers depuis EDS/Camel, liste des messages,
-lecture d'un message dans WebView2.
+Native window, accounts and folders from EDS/Camel, message list,
+reading a message in WebView2.
 
-Compilation (après `build-eds.bat`) :
+Build (after `build-eds.bat`):
 
 ```bat
 tools\build-winui-core.bat   :: evo-core.dll + evo-core-test.exe -> .\build\
 tools\build-winui-app.bat    :: nuget restore + MSBuild -> .\build\EvolutionWin.exe
-tools\run-winui.bat          :: lance .\build\EvolutionWin.exe avec le préfixe dans PATH
+tools\run-winui.bat          :: launches .\build\EvolutionWin.exe with the prefix in PATH
 ```
 
-Exécution (développement) : ajouter `<workspace>\gtk-build\gtk\x64\release\bin`
-au `PATH` (evo-core, EDS, GLib), puis lancer `.\build\EvolutionWin.exe`
-(ou utiliser `tools\run-winui.bat`). `evo-core-test.exe` vérifie le moteur
-seul en console (lecture seule : `EVO_CORE_READ_ONLY=1`, aucun message n'est
-marqué comme lu).
+Execution (development): add `<workspace>\gtk-build\gtk\x64\release\bin`
+to the `PATH` (evo-core, EDS, GLib), then launch `.\build\EvolutionWin.exe`
+(or use `tools\run-winui.bat`). `evo-core-test.exe` checks the engine
+alone in the console (read-only: `EVO_CORE_READ_ONLY=1`, no message is
+marked as read).
 
 #### evo-core (`winui/core`)
 
-- `EvoCoreSession` (sous-classe de `CamelSession`) : chaque service est
-  configuré depuis sa source EDS (`e_source_camel_configure_service`), le
-  nom affiché en vient aussi ; authentification avec le mot de passe
-  enregistré par EDS (`e_source_credentials_provider_lookup_sync`, donc le
-  Gestionnaire d'identifiants Windows), sans interface ; filtre de réception
-  vide (pas encore de règles) ; certificats invalides refusés (dialogue à
-  venir).
-- Dossiers de données propres (`…\evolution\evolution-windows\mail`) : la
-  version GTK peut tourner en même temps sans partager ses caches.
-- Les comptes IMAP sont des « magasins hors ligne » : ils doivent être mis
-  en ligne (`camel_offline_store_set_online_sync`) avant toute opération,
-  sinon « Vous devez travailler en ligne ».
-- Comptes ignorés : dossiers de recherche (`vfolder`, règles propres à
-  Evolution) et flux RSS (greffon d'Evolution).
-- Rendu d'un message : partie HTML préférée, images `cid:` intégrées en
-  `data:`, texte brut converti (fond blanc).
+- `EvoCoreSession` (subclass of `CamelSession`): each service is
+  configured from its EDS source (`e_source_camel_configure_service`), the
+  display name comes from it too; authentication with the password
+  stored by EDS (`e_source_credentials_provider_lookup_sync`, hence the
+  Windows Credential Manager), without any interface; empty receive filter
+  (no rules yet); invalid certificates refused (dialog
+  to come).
+- Dedicated data folders (`…\evolution\evolution-windows\mail`): the
+  GTK version can run at the same time without sharing its caches.
+- IMAP accounts are "offline stores": they must be brought
+  online (`camel_offline_store_set_online_sync`) before any operation,
+  otherwise "You must work online".
+- Ignored accounts: search folders (`vfolder`, Evolution-specific rules)
+  and RSS feeds (Evolution plugin).
+- Message rendering: HTML part preferred, `cid:` images embedded as
+  `data:`, plain text converted (white background).
 
 #### EvolutionWin (`winui/app`)
 
-- Projet MSBuild écrit à la main (les modèles C++ WinUI ne sont pas
-  installés) : Windows App SDK 1.7 **non empaqueté et autonome**
-  (`WindowsPackageType=None`, `WindowsAppSDKSelfContained=true`) : aucune
-  installation du runtime Windows App SDK n'est nécessaire.
-- `CoreBridge.h` : rappels d'evo-core → `DispatcherQueue` du thread de
-  l'interface (jeton de vie partagé : aucun rappel après la fermeture).
-- `FolderItem` (classe Windows Runtime `[bindable]`) : contenu des nœuds du
-  `TreeView` affiché par un `DataTemplate` (mettre des éléments d'interface
-  dans les nœuds afficherait leur nom de type et casse le recyclage).
-- Lecteur WebView2 : scripts désactivés, contenu distant bloqué
-  (`WebResourceRequested` → 403), liens ouverts dans le navigateur par
-  défaut, dossier de données `%LOCALAPPDATA%\EvolutionWin\WebView2`
-  (`WEBVIEW2_USER_DATA_FOLDER`, le dossier de l'exécutable n'étant pas
-  inscriptible sous Program Files), fond blanc.
-- Contenu externe : chaque message est servi à une adresse unique
-  `http://reader.evolution.invalid/message-<pid>-<n>` (réponse fournie par
-  `WebResourceRequested`, plus de limite de 2 Mo de `NavigateToString`) ;
-  l'autorisation du contenu distant ne s'applique qu'au `ContentLoading` de
-  cette navigation précise, si bien qu'une requête tardive du message
-  précédent ne peut ni charger de contenu ni ouvrir le bandeau. Les requêtes
-  distantes bloquées (http, https, ws, wss, ftp : images, CSS, polices,
-  cadres, pixels de suivi) sont comptées et ouvrent le bandeau « Contenu
-  externe bloqué » (afficher pour ce message, faire confiance à l'expéditeur
-  ou au domaine). Les navigations non demandées par l'utilisateur
-  (`<meta refresh>`) sont annulées. Préférences (`Settings.h`) :
-  `privacy.remote-content` = `never` | `trusted` (défaut) | `always`,
-  `privacy.trusted-senders` et `privacy.trusted-domains` (tableaux JSON en
-  minuscules, correspondance exacte de l'adresse From ou de son domaine).
+- Hand-written MSBuild project (the C++ WinUI templates are not
+  installed): Windows App SDK 1.7 **unpackaged and self-contained**
+  (`WindowsPackageType=None`, `WindowsAppSDKSelfContained=true`): no
+  installation of the Windows App SDK runtime is needed.
+- `CoreBridge.h`: evo-core callbacks → `DispatcherQueue` of the
+  interface thread (shared lifetime token: no callback after closing).
+- `FolderItem` (`[bindable]` Windows Runtime class): contents of the
+  `TreeView` nodes displayed by a `DataTemplate` (putting interface elements
+  in the nodes would display their type name and break recycling).
+- WebView2 reader: scripts disabled, remote content blocked
+  (`WebResourceRequested` → 403), links opened in the default
+  browser, data folder `%LOCALAPPDATA%\EvolutionWin\WebView2`
+  (`WEBVIEW2_USER_DATA_FOLDER`, since the executable's folder is not
+  writable under Program Files), white background.
+- External content: each message is served at a unique address
+  `http://reader.evolution.invalid/message-<pid>-<n>` (response supplied by
+  `WebResourceRequested`, no more 2 MB limit of `NavigateToString`);
+  remote content authorization applies only to the `ContentLoading` of
+  that specific navigation, so that a late request from the
+  previous message can neither load content nor open the banner. Blocked
+  remote requests (http, https, ws, wss, ftp: images, CSS, fonts,
+  frames, tracking pixels) are counted and open the "External content
+  blocked" banner (show for this message, trust the sender
+  or the domain). Navigations not requested by the user
+  (`<meta refresh>`) are cancelled. Preferences (`Settings.h`):
+  `privacy.remote-content` = `never` | `trusted` (default) | `always`,
+  `privacy.trusted-senders` and `privacy.trusted-domains` (JSON arrays in
+  lowercase, exact match of the From address or its domain).
 
-Validé avec le compte IMAP réel de l'utilisateur : arborescence avec
-compteurs de non-lus, liste des messages (non lus en gras), lecture des
-messages texte et HTML.
+Validated with the user's real IMAP account: tree with
+unread counters, message list (unread in bold), reading of
+text and HTML messages.
 
-### Deuxième jalon — rafraîchissement, rédaction et envoi (2026-10-31)
+### Second milestone — refresh, composing and sending (2026-10-31)
 
-evo-core :
+evo-core:
 
-- **Dossiers suivis** : les dossiers ouverts restent en cache ; leur signal
-  `CamelFolder::changed` (émis dans le thread du moteur) devient l'événement
-  `folder-changed` (non-lus, total, ajoutés/supprimés/modifiés).
-- **Relève** : immédiatement après le démarrage, puis toutes les 5 minutes,
-  ou à la demande (`evo_core_refresh`) : connexion, boîte de réception
-  toujours suivie (nouveau courrier), rafraîchissement des dossiers ouverts,
-  puis `folders-updated` (l'interface relit les compteurs).
-- **Envoi** (`evo_core_send_message`) : serveurs d'envoi SMTP ajoutés à la
-  session ; identité (nom, adresse, Reply-To) et serveur d'envoi lus dans la
-  source d'identité EDS du compte ; message MIME texte (UTF-8,
-  quoted-printable), `In-Reply-To`/`References` pour les réponses, Cci hors
-  en-têtes (destinataires du transport seulement) ; copie dans le dossier
-  Envoyés de l'identité (URI `folder://…`), sauf si le serveur l'a déjà
-  enregistrée. Événements `sending` / `sent`.
-- `evo_core_get_message` renvoie aussi le texte brut (à citer ; HTML
-  converti si besoin), `reply_to`, `message_id`, `references`.
+- **Tracked folders**: opened folders stay cached; their
+  `CamelFolder::changed` signal (emitted in the engine thread) becomes the
+  `folder-changed` event (unread, total, added/removed/changed).
+- **Fetch**: immediately after startup, then every 5 minutes,
+  or on demand (`evo_core_refresh`): connection, inbox
+  always tracked (new mail), refresh of opened folders,
+  then `folders-updated` (the interface re-reads the counters).
+- **Sending** (`evo_core_send_message`): SMTP submission servers added to the
+  session; identity (name, address, Reply-To) and submission server read from the
+  account's EDS identity source; plain-text MIME message (UTF-8,
+  quoted-printable), `In-Reply-To`/`References` for replies, Bcc outside the
+  headers (transport recipients only); copy into the identity's Sent
+  folder (`folder://…` URI), unless the server already
+  saved it. Events `sending` / `sent`.
+- `evo_core_get_message` also returns the plain text (to quote; HTML
+  converted if needed), `reply_to`, `message_id`, `references`.
 
-EvolutionWin :
+EvolutionWin:
 
-- Compteurs de non-lus mis à jour en direct (`FolderItem` observable via
-  `INotifyPropertyChanged`), liste rechargée quand des messages arrivent
-  (sélection et lecteur conservés).
-- Bouton Envoyer/Recevoir (F5) ; Nouveau message (Ctrl+N).
-- **Fenêtre de rédaction native** (`ComposeWindow`) : compte d'envoi, À, Cc,
-  Cci, Objet, texte avec correcteur orthographique Windows ; Envoyer
-  (Ctrl+Entrée) ; erreurs affichées dans la fenêtre.
-- Répondre (Ctrl+R), Répondre à tous (Ctrl+Maj+R, sans sa propre adresse),
-  Transférer (Ctrl+F, préfixe « TR: ») : citation `> `, fil de discussion
-  conservé.
-- Noms de méthodes `GetMessage`/`SendMessage` évités : macros Win32.
+- Unread counters updated live (`FolderItem` observable through
+  `INotifyPropertyChanged`), list reloaded when messages arrive
+  (selection and reader preserved).
+- Send/Receive button (F5); New message (Ctrl+N).
+- **Native compose window** (`ComposeWindow`): sending account, To, Cc,
+  Bcc, Subject, text with Windows spell checker; Send
+  (Ctrl+Enter); errors displayed in the window.
+- Reply (Ctrl+R), Reply all (Ctrl+Shift+R, without one's own address),
+  Forward (Ctrl+F, "TR:" prefix — the French forward prefix): `> ` quoting, thread
+  preserved.
+- Method names `GetMessage`/`SendMessage` avoided: Win32 macros.
 
-**Premier essai de l'utilisateur : « Mot de passe non trouvé ».** EDS
-enregistre les identifiants par serveur ; celui du serveur d'envoi SMTP
-n'existait pas (Evolution ne le demande qu'au premier envoi, par un
-dialogue). Correctif : si le serveur d'envoi n'a pas de mot de passe
-enregistré, evo-core reprend celui du compte de réception dont l'identité
-envoie par ce serveur, à condition que le nom d'utilisateur soit le même
-(comportement « mêmes paramètres que le serveur de réception » des autres
+**First user trial: "Password not found".** EDS
+stores credentials per server; the one for the SMTP submission server
+did not exist (Evolution only asks for it on first send, through a
+dialog). Fix: if the submission server has no stored
+password, evo-core reuses that of the receiving account whose identity
+sends through that server, provided the user name is the same
+("same settings as the receiving server" behavior of other
 clients).
 
-### Troisième jalon — actions sur les messages et recherche (2026-10-31)
+### Third milestone — message actions and search (2026-10-31)
 
-evo-core :
+evo-core:
 
-- **Indicateurs** (`evo_core_set_message_flags`) : bascule `seen`
-  (`CAMEL_MESSAGE_SEEN`) ou `flagged` (`CAMEL_MESSAGE_FLAGGED`) sur un message
-  et synchronise avec le serveur (`camel_folder_synchronize_message_sync`).
-- **Suppression** (`evo_core_delete_message`) : recherche le dossier corbeille
-  réel du compte (`CAMEL_FOLDER_TYPE_TRASH`) ; si le message ne s'y trouve pas
-  déjà, l'y déplace (`camel_folder_transfer_messages_to_sync`) et purge le
-  dossier source, sinon le marque `CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_SEEN`
-  et synchronise. Émet `folders-updated`.
-- **Déplacement** (`evo_core_move_message`) : transfère un message vers un
-  autre dossier (`camel_folder_transfer_messages_to_sync`), synchronise source
-  et destination et émet `folders-updated`.
-- **Recherche** (`evo_core_search_messages`) : recherche insensible à la casse
-  et aux accents (`g_str_match_string` + `g_utf8_casefold`) sur Objet, De, À et
-  Cc dans les résumés locaux, combinée à la recherche plein texte Camel sur le
-  corps des messages (`camel_folder_search_sync` avec `body-contains`).
+- **Flags** (`evo_core_set_message_flags`): toggles `seen`
+  (`CAMEL_MESSAGE_SEEN`) or `flagged` (`CAMEL_MESSAGE_FLAGGED`) on a message
+  and synchronizes with the server (`camel_folder_synchronize_message_sync`).
+- **Deletion** (`evo_core_delete_message`): looks up the account's real trash
+  folder (`CAMEL_FOLDER_TYPE_TRASH`); if the message is not already there, moves it
+  there (`camel_folder_transfer_messages_to_sync`) and purges the
+  source folder, otherwise marks it `CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_SEEN`
+  and synchronizes. Emits `folders-updated`.
+- **Move** (`evo_core_move_message`): transfers a message to another
+  folder (`camel_folder_transfer_messages_to_sync`), synchronizes source
+  and destination and emits `folders-updated`.
+- **Search** (`evo_core_search_messages`): case- and accent-insensitive search
+  (`g_str_match_string` + `g_utf8_casefold`) on Subject, From, To and
+  Cc in the local summaries, combined with Camel's full-text search on the
+  message body (`camel_folder_search_sync` with `body-contains`).
 
-EvolutionWin :
+EvolutionWin:
 
-- Barre de commandes du volet de lecture complétée : **Lu / Non lu** (`Ctrl+U`),
-  **Suivi** (drapeau), **Déplacer** (menu déroulant hiérarchique des dossiers
-  du compte), **Supprimer** (`Suppr`).
-- Liste des messages : icônes d'indicateur de suivi (drapeau) et de pièce
-  jointe (trombone) sur chaque ligne ; **menu contextuel** (clic droit) avec
-  Lu/Non lu, Drapeau, Déplacer vers et Supprimer ; sélection automatique du
-  message suivant après suppression ou déplacement.
-- Zone de **recherche** (`SearchBox`) : filtrage instantané en mémoire au fil
-  de la frappe (`TextChanged`) et recherche complète dans le dossier (en-têtes
-  + corps des messages via `evo-core`) à la validation (`Entrée` ou loupe).
+- Completed reading pane command bar: **Read / Unread** (`Ctrl+U`),
+  **Flag** (follow-up flag), **Move** (hierarchical drop-down menu of the account's
+  folders), **Delete** (`Del`).
+- Message list: follow-up flag and attachment (paperclip)
+  icons on each row; **context menu** (right click) with
+  Read/Unread, Flag, Move to and Delete; automatic selection of the next
+  message after deletion or move.
+- **Search** box (`SearchBox`): instant in-memory filtering as you
+  type (`TextChanged`) and full search in the folder (headers
+  + message bodies via `evo-core`) on submit (`Enter` or magnifier).
 
-### Quatrième jalon — notifications Windows et pièces jointes (2026-10-31)
+### Fourth milestone — Windows notifications and attachments (2026-10-31)
 
-evo-core :
+evo-core:
 
-- **Notifications de nouveau courrier** (`new-mail`) : lors de la synchronisation
-  des boîtes de réception (après la première synchronisation initiale au
-  démarrage), `evo-core` détecte les nouveaux UID ajoutés et non lus et émet un
-  événement `new-mail` contenant `account`, `folder`, `count`, `from` et
+- **New mail notifications** (`new-mail`): when synchronizing
+  the inboxes (after the first initial synchronization at
+  startup), `evo-core` detects the new UIDs that were added and are unread and emits a
+  `new-mail` event containing `account`, `folder`, `count`, `from` and
   `subject`.
-- **Liste et téléchargement des pièces jointes** : `evo_core_get_message`
-  retourne désormais un tableau `attachments` (`index`, `filename`,
-  `mime_type`, `size`) pour toutes les parties MIME jointes (ou non-inline hors
-  corps principal). Nouvelle fonction `evo_core_save_attachment` qui décode et
-  écrit la pièce jointe choisie sur le disque via `g_file_set_contents`.
-- **Envoi de pièces jointes** : `evo_core_send_message` accepte un tableau
-  optionnel `attachments` de chemins locaux et construit un message
-  `multipart/mixed` combinant le corps et chaque fichier encodé en Base64
-  (`CamelMimePart` avec nom de fichier et type MIME détecté).
+- **Attachment listing and download**: `evo_core_get_message`
+  now returns an `attachments` array (`index`, `filename`,
+  `mime_type`, `size`) for all attached MIME parts (or non-inline ones outside the
+  main body). New function `evo_core_save_attachment` that decodes and
+  writes the chosen attachment to disk via `g_file_set_contents`.
+- **Sending attachments**: `evo_core_send_message` accepts an
+  optional `attachments` array of local paths and builds a
+  `multipart/mixed` message combining the body and each Base64-encoded file
+  (`CamelMimePart` with file name and detected MIME type).
 
-EvolutionWin :
+EvolutionWin:
 
-- Réception de `new-mail` : notification système Windows (toast via
-  `AppNotificationBuilder` / `AppNotificationManager`) et rappel dans la barre
-  d'état.
-- Volet de lecture : barre horizontale `AttachmentBar` listant chaque pièce
-  jointe avec sa taille ; clic ouvrant un `FileSavePicker` natif (initialisé
-  avec le `HWND` de la fenêtre) pour enregistrer le fichier.
-- Fenêtre de rédaction (`ComposeWindow`) : bouton **Joindre** (`FileOpenPicker`
-  multi-fichiers), barre de jetons permettant de visualiser ou retirer les
-  pièces jointes avant l'envoi.
+- On `new-mail`: Windows system notification (toast via
+  `AppNotificationBuilder` / `AppNotificationManager`) and reminder in the status
+  bar.
+- Reading pane: horizontal `AttachmentBar` listing each
+  attachment with its size; clicking opens a native `FileSavePicker` (initialized
+  with the window's `HWND`) to save the file.
+- Compose window (`ComposeWindow`): **Attach** button (`FileOpenPicker`
+  multi-file), token bar to view or remove
+  attachments before sending.
 
-### Cinquième jalon — gestion des comptes et authentification (2026-10-31)
+### Fifth milestone — account management and authentication (2026-10-31)
 
-evo-core :
+evo-core:
 
-- **Demande de mot de passe** (`auth-required`) : lorsque le Gestionnaire
-  d'identifiants Windows ne possède pas le mot de passe d'une source ou que le
-  serveur le refuse, `evo-core` émet un événement `auth-required` (`source_uid`,
-  `name`, `user`, `rejected`) dédoublonné par session.
-- **Enregistrement du mot de passe** (`evo_core_save_password`) : stocke de
-  façon permanente le secret dans le Gestionnaire d'identifiants Windows via
-  `e_source_credentials_provider_store_sync` et réarme la source pour la
-  prochaine tentative.
-- **Ajout et suppression de compte** (`evo_core_add_account`,
-  `evo_core_remove_account`) : création atomique des 3 sources EDS d'un compte
-  de messagerie (`ESourceMailAccount` + `CamelImapxSettings`,
+- **Password prompt** (`auth-required`): when the Windows Credential
+  Manager does not have the password of a source or the
+  server rejects it, `evo-core` emits an `auth-required` event (`source_uid`,
+  `name`, `user`, `rejected`) deduplicated per session.
+- **Saving the password** (`evo_core_save_password`): permanently stores
+  the secret in the Windows Credential Manager via
+  `e_source_credentials_provider_store_sync` and re-arms the source for the
+  next attempt.
+- **Adding and removing accounts** (`evo_core_add_account`,
+  `evo_core_remove_account`): atomic creation of the 3 EDS sources of a mail
+  account (`ESourceMailAccount` + `CamelImapxSettings`,
   `ESourceMailIdentity` + `ESourceMailSubmission`, `ESourceMailTransport` +
-  `CamelSmtpSettings`) via `e_source_registry_create_sources_sync`, stockage du
-  mot de passe et ajout immédiat des services à la `CamelSession`. Suppression
-  complète des 3 sources et déconnexion des services correspondants.
+  `CamelSmtpSettings`) via `e_source_registry_create_sources_sync`, password
+  storage and immediate addition of the services to the `CamelSession`. Full
+  removal of the 3 sources and disconnection of the corresponding services.
 
-EvolutionWin :
+EvolutionWin:
 
-- Boîte de dialogue modale `ContentDialog` automatique sur l'événement
-  `auth-required` permettant de saisir et d'enregistrer le mot de passe puis de
-  relancer la synchronisation.
-- Vue **Paramètres / Comptes de messagerie** (`SettingsViewPane`) : liste des
-  comptes configurés (adresse, protocole, suppression des comptes non locaux)
-  et assistant **Ajouter un compte IMAP / SMTP** (nom du compte, nom complet,
-  adresse électronique, serveurs et ports IMAP/SMTP, mot de passe).
+- Automatic modal `ContentDialog` on the `auth-required` event allowing
+  entry and saving of the password, then restarting the synchronization.
+- **Settings / Mail accounts** view (`SettingsViewPane`): list of configured
+  accounts (address, protocol, removal of non-local accounts)
+  and **Add an IMAP / SMTP account** wizard (account name, full name,
+  email address, IMAP/SMTP servers and ports, password).
 
-### Sixième jalon — calendrier et contacts EDS (2026-10-31)
+### Sixth milestone — EDS calendar and contacts (2026-10-31)
 
-evo-core (lié à `libecal-2.0` et `libebook-1.2`) :
+evo-core (linked to `libecal-2.0` and `libebook-1.2`):
 
-- **Calendrier** (`evo_core_list_events`, `evo_core_create_event`,
-  `evo_core_delete_event`) : connexion aux sources `E_SOURCE_EXTENSION_CALENDAR`
-  via `e_cal_client_connect_sync` (`E_CAL_CLIENT_SOURCE_TYPE_EVENTS`), requête
-  des composants `ICalComponent` (`VEVENT`) et conversion des dates en
-  timestamps Unix, création et suppression d'événements.
+- **Calendar** (`evo_core_list_events`, `evo_core_create_event`,
+  `evo_core_delete_event`): connection to `E_SOURCE_EXTENSION_CALENDAR` sources
+  via `e_cal_client_connect_sync` (`E_CAL_CLIENT_SOURCE_TYPE_EVENTS`), query
+  of `ICalComponent` components (`VEVENT`) and conversion of dates to
+  Unix timestamps, creation and deletion of events.
 - **Contacts** (`evo_core_list_contacts`, `evo_core_create_contact`,
-  `evo_core_delete_contact`) : connexion aux sources
-  `E_SOURCE_EXTENSION_ADDRESS_BOOK` via `e_book_client_connect_sync`, recherche
-  filtrée (`EBookQuery`) sur le nom et l'adresse électronique, lecture des
-  champs `EContact` (`full_name`, `email`, `phone`, `org`, `note`), ajout et
-  suppression de contacts.
+  `evo_core_delete_contact`): connection to `E_SOURCE_EXTENSION_ADDRESS_BOOK` sources
+  via `e_book_client_connect_sync`, filtered search (`EBookQuery`) on name
+  and email address, reading of `EContact` fields (`full_name`, `email`,
+  `phone`, `org`, `note`), adding and removing contacts.
 
-EvolutionWin :
+EvolutionWin:
 
-- Vue **Calendrier** (`CalendarViewPane`) : `CalendarView` mensuel pour filtrer
-  par jour (ou afficher les 30 prochains jours), liste des événements avec
-  horaires, lieu, description, suppression et boîte de dialogue **Nouvel
-  événement** (`CalendarDatePicker`, `TimePicker`).
-- Vue **Contacts** (`ContactsViewPane`) : recherche instantanée, liste des
-  contacts, fiche détaillée avec actions **Écrire un message** (ouvre
-  `ComposeWindow` pré-remplie avec le destinataire) et **Supprimer le contact**,
-  ainsi qu'une boîte de dialogue **Nouveau contact**.
+- **Calendar** view (`CalendarViewPane`): monthly `CalendarView` to filter
+  by day (or display the next 30 days), event list with
+  times, location, description, deletion and **New
+  event** dialog (`CalendarDatePicker`, `TimePicker`).
+- **Contacts** view (`ContactsViewPane`): instant search, contact
+  list, detail card with **Write a message** actions (opens
+  `ComposeWindow` pre-filled with the recipient) and **Delete contact**,
+  as well as a **New contact** dialog.
 
-### Septième jalon — éditeur HTML (WebView2), impression native et réorganisation du dépôt (2026-10-31)
+### Seventh milestone — HTML editor (WebView2), native printing and repository reorganization (2026-10-31)
 
-Réorganisation du dépôt (`Evolution-WindowsPort`) :
+Repository reorganization (`Evolution-WindowsPort`):
 
-- `WINDOWS-PORT.md`, `README.md` et `.gitignore` placés à la racine du dépôt.
-- Scripts et outils de portage MSVC regroupés dans `./tools` (`build-*.bat`, `env.bat`, `check-prereqs.ps1`, `cmake/`, `compat/`, `patches/`, `pkgconfig/`, `webkit-shim/`, `tools/nuget.exe`).
-- Client natif WinUI 3 déplacé à la racine dans `./winui` (`winui/core` et `winui/app`).
-- Répertoire `./build` contenant tous les exécutables finaux prêts à l'emploi (`EvolutionWin.exe`, `evo-core.dll`, `evo-core-test.exe`, `evolution.exe`, `libexec/*.exe`) et `./build/intermediate` (ignoré par Git) pour les fichiers d'objets CMake/MSBuild.
-- Pile GTK (`./gtk-build`) intégrée à la racine du projet et détectée automatiquement par `tools\env.bat`.
+- `WINDOWS-PORT.md`, `README.md` and `.gitignore` placed at the repository root.
+- MSVC porting scripts and tools grouped in `./tools` (`build-*.bat`, `env.bat`, `check-prereqs.ps1`, `cmake/`, `compat/`, `patches/`, `pkgconfig/`, `webkit-shim/`, `tools/nuget.exe`).
+- Native WinUI 3 client moved to the root in `./winui` (`winui/core` and `winui/app`).
+- `./build` directory containing all ready-to-use final executables (`EvolutionWin.exe`, `evo-core.dll`, `evo-core-test.exe`, `evolution.exe`, `libexec/*.exe`) and `./build/intermediate` (ignored by Git) for CMake/MSBuild object files.
+- GTK stack (`./gtk-build`) integrated at the project root and detected automatically by `tools\env.bat`.
 
-evo-core :
+evo-core:
 
-- **Envoi de messages HTML (`multipart/alternative`)** : `evo_core_send_message` accepte désormais un champ optionnel `"html"` en complément de `"text"`. Lorsque `"html"` est fourni, le moteur construit un conteneur `multipart/alternative` combinant la partie `text/plain; charset=utf-8` (générée automatiquement via `html_to_text` si `"text"` est vide) et la partie `text/html; charset=utf-8` (toutes deux encodées en `quoted-printable`). Si des pièces jointes (`"attachments"`) sont présentes, le `multipart/alternative` constitue la première partie du conteneur `multipart/mixed`.
+- **Sending HTML messages (`multipart/alternative`)**: `evo_core_send_message` now accepts an optional `"html"` field in addition to `"text"`. When `"html"` is provided, the engine builds a `multipart/alternative` container combining the `text/plain; charset=utf-8` part (generated automatically via `html_to_text` if `"text"` is empty) and the `text/html; charset=utf-8` part (both encoded as `quoted-printable`). If attachments (`"attachments"`) are present, the `multipart/alternative` is the first part of the `multipart/mixed` container.
 
-EvolutionWin :
+EvolutionWin:
 
-- **Éditeur HTML riche sur WebView2** (`ComposeWindow`) :
-  - Zone d'édition `contenteditable="true"` propulsée par WebView2 (`HtmlEditor`) avec correcteur orthographique activé, police Segoe UI et transfert du raccourci `Ctrl+Entrée` vers l'envoi du message via `WebMessageReceived`.
-  - Barre d'outils de mise en forme (`FormatToolbar`) : **Gras** (`Ctrl+B`), **Italique** (`Ctrl+I`), **Souligné** (`Ctrl+U`), **Barré**, **Liste à puces**, **Liste numérotée**, **Bloc de citation** (`blockquote`), **Insérer un lien hypertexte** (boîte de dialogue `ContentDialog` demandant l'URL) et **Effacer la mise en forme**.
-  - Bouton à bascule **Format HTML** dans la barre de commandes permettant de passer à tout moment du mode HTML riche au mode Texte brut (`TextBox`) avec conversion automatique du contenu saisi.
-  - Citations HTML structurées (`<blockquote>` stylé pour les réponses, en-tête formaté pour les transferts) préparées par `MainWindow::Reply`.
-- **Impression native des messages** (`MainWindow`) : bouton **Imprimer** (`Ctrl+P`) dans la barre de commandes du volet de lecture ouvrant l'interface d'impression native de WebView2 (`CoreWebView2::ShowPrintUI`).
+- **Rich HTML editor on WebView2** (`ComposeWindow`):
+  - `contenteditable="true"` editing area powered by WebView2 (`HtmlEditor`) with spell checker enabled, Segoe UI font and forwarding of the `Ctrl+Enter` shortcut to message sending via `WebMessageReceived`.
+  - Formatting toolbar (`FormatToolbar`): **Bold** (`Ctrl+B`), **Italic** (`Ctrl+I`), **Underline** (`Ctrl+U`), **Strikethrough**, **Bulleted list**, **Numbered list**, **Block quote** (`blockquote`), **Insert hyperlink** (`ContentDialog` dialog asking for the URL) and **Clear formatting**.
+  - **HTML format** toggle button in the command bar allowing switching at any time from rich HTML mode to Plain text mode (`TextBox`) with automatic conversion of the entered content.
+  - Structured HTML quotes (styled `<blockquote>` for replies, formatted header for forwards) prepared by `MainWindow::Reply`.
+- **Native message printing** (`MainWindow`): **Print** button (`Ctrl+P`) in the reading pane command bar opening WebView2's native print interface (`CoreWebView2::ShowPrintUI`).
 
-### Huitième jalon — certificats TLS, OAuth2, S/MIME, OpenPGP, sélection multiple (2026-10-31)
+### Eighth milestone — TLS certificates, OAuth2, S/MIME, OpenPGP, multiple selection (2026-10-31)
 
-evo-core :
+evo-core:
 
-- **Certificats TLS** : `EvoCoreSession::trust_prompt` émet `tls-trust-required`
-  (hôte, empreinte SHA-256, émetteur, validité, anomalies décrites en français)
-  et attend la réponse (`evo_core_respond_tls_trust` : refuser, accepter pour la
-  session, toujours faire confiance). Les certificats approuvés de façon
-  permanente sont enregistrés dans `…\evolution-windows\mail\trusted-certs.ini`.
-- **OAuth2 (XOAUTH2) pour IMAP/SMTP** : `get_oauth2_access_token_sync` lit le
-  jeton dans le Gestionnaire d'identifiants (JSON `access_token`,
-  `refresh_token`, `expires_at`, `client_id`, `token_endpoint`) et le
-  renouvelle avec le `refresh_token` (libsoup) une minute avant expiration.
-  `evo_core_add_account` accepte `auth_mechanism` (`XOAUTH2`).
-- **S/MIME et OpenPGP à la lecture** : déchiffrement (`multipart/encrypted`,
-  `application/pkcs7-mime`) puis vérification de signature (`multipart/signed`),
-  résultat dans l'objet `security` du message.
-- **S/MIME et OpenPGP à l'envoi** : options `pgp_sign`, `pgp_encrypt`,
-  `smime_sign`, `smime_encrypt` (et `smime_key_id`) de `evo_core_send_message`.
-- **Export `.eml`** (`evo_core_export_messages_eml`) : messages écrits en
-  RFC 822 dans un dossier temporaire, pour un transfert en pièces jointes.
+- **TLS certificates**: `EvoCoreSession::trust_prompt` emits `tls-trust-required`
+  (host, SHA-256 fingerprint, issuer, validity, anomalies described in French)
+  and waits for the answer (`evo_core_respond_tls_trust`: reject, accept for the
+  session, always trust). Permanently approved certificates are saved in `…\evolution-windows\mail\trusted-certs.ini`.
+- **OAuth2 (XOAUTH2) for IMAP/SMTP**: `get_oauth2_access_token_sync` reads the
+  token from the Credential Manager (JSON `access_token`,
+  `refresh_token`, `expires_at`, `client_id`, `token_endpoint`) and
+  renews it with the `refresh_token` (libsoup) one minute before expiry.
+  `evo_core_add_account` accepts `auth_mechanism` (`XOAUTH2`).
+- **S/MIME and OpenPGP on reading**: decryption (`multipart/encrypted`,
+  `application/pkcs7-mime`) then signature verification (`multipart/signed`),
+  result in the message's `security` object.
+- **S/MIME and OpenPGP on sending**: options `pgp_sign`, `pgp_encrypt`,
+  `smime_sign`, `smime_encrypt` (and `smime_key_id`) of `evo_core_send_message`.
+- **`.eml` export** (`evo_core_export_messages_eml`): messages written as
+  RFC 822 in a temporary folder, for forwarding as attachments.
 
-EDS (`camel-gpg-context.c`, phase 4c) :
+EDS (`camel-gpg-context.c`, phase 4c):
 
-- `gpg.exe` recherché dans le PATH puis dans les dossiers d'installation de
-  GnuPG / Gpg4win ; lancé par `g_spawn_async_with_pipes()` (utilitaire
-  `gspawn-win64-helper.exe`), lignes de statut sur `--status-fd=2`, mêlées aux
-  diagnostics de gpg et triées à l'analyse (CRLF retiré).
-- Sorties lues sans blocage (`PeekNamedPipe`). L'entrée standard est écrite par
-  un **thread dédié** : les tubes anonymes Windows n'ont pas d'écriture non
-  bloquante, et écrire depuis la boucle provoquerait un interblocage dès que
-  gpg remplit sa sortie (message de quelques Ko).
-- Phrase secrète : gpg tourne en `--batch`, c'est gpg-agent qui l'obtient par
-  sa fenêtre pinentry (celle de Gpg4win).
-- **Test** (2026-10-31, `gpg` 2.4.9 de Git for Windows, clé de test) :
-  signature, vérification (« bonne signature »), chiffrement et déchiffrement
-  d'un message de 1 Mo en 0,1 à 0,3 s ; contenu identique (Camel met le texte
-  en forme canonique CRLF avant signature/chiffrement, comme sous Linux).
+- `gpg.exe` searched in the PATH then in the GnuPG /
+  Gpg4win installation folders; launched by `g_spawn_async_with_pipes()` (helper
+  `gspawn-win64-helper.exe`), status lines on `--status-fd=2`, mixed with
+  gpg's diagnostics and sorted out on parsing (CRLF removed).
+- Outputs read without blocking (`PeekNamedPipe`). Standard input is written by
+  a **dedicated thread**: Windows anonymous pipes have no non-blocking
+  write, and writing from the loop would cause a deadlock as soon as
+  gpg fills its output (message of a few KB).
+- Passphrase: gpg runs with `--batch`, gpg-agent obtains it through
+  its pinentry window (the Gpg4win one).
+- **Test** (2026-10-31, `gpg` 2.4.9 from Git for Windows, test key):
+  signing, verification ("good signature"), encryption and decryption
+  of a 1 MB message in 0.1 to 0.3 s; identical content (Camel puts the text
+  in canonical CRLF form before signing/encryption, as on Linux).
 
-EvolutionWin :
+EvolutionWin:
 
-- Dialogue **certificat TLS** (`PromptTlsCertificateAsync`) : détails du
-  certificat, Refuser / Accepter pour cette session / Toujours faire confiance.
-- Assistant d'ajout de compte : authentification **OAuth2** Microsoft 365 ou
-  Google (PKCE S256, page de connexion dans un WebView2, redirection
-  `http://localhost/oauth2callback`). Identifiant d'application et tenant
-  préremplis par `EVO_OAUTH2_CLIENT_ID` / `EVO_OAUTH2_TENANT_ID`.
-- **Bandeau de sécurité** du volet de lecture (signature valide ou non,
-  message chiffré) ; boutons **Signer / Chiffrer (PGP)** et **Signer / Chiffrer
-  (S/MIME)** dans la fenêtre de rédaction.
-- **Sélection multiple** dans la liste : lu/non lu, drapeau, déplacement,
-  suppression, réponse et transfert de plusieurs messages (transfert en
-  pièces jointes `.eml`).
+- **TLS certificate** dialog (`PromptTlsCertificateAsync`): certificate
+  details, Reject / Accept for this session / Always trust.
+- Add-account wizard: Microsoft 365 or Google **OAuth2** authentication
+  (PKCE S256, sign-in page in a WebView2, redirect
+  `http://localhost/oauth2callback`). Application ID and tenant
+  pre-filled by `EVO_OAUTH2_CLIENT_ID` / `EVO_OAUTH2_TENANT_ID`.
+- Reading pane **security banner** (valid signature or not,
+  encrypted message); **Sign / Encrypt (PGP)** and **Sign / Encrypt
+  (S/MIME)** buttons in the compose window.
+- **Multiple selection** in the list: read/unread, flag, move,
+  delete, reply and forward of several messages (forwarding as
+  `.eml` attachments).
 
-Problèmes rencontrés :
+Problems encountered:
 
-1. **Scripts `.bat` illisibles par `cmd.exe`** (`'ot' n'est pas reconnu…`) :
-   fichiers en fins de ligne LF. `.gitattributes` impose désormais CRLF aux
-   `.bat`/`.cmd` (et LF aux scripts bash), quel que soit `core.autocrlf`.
-2. **`co_await` dans un bloc `catch`** (C2304, échange du jeton OAuth2) :
-   message d'erreur mémorisé, affiché après le bloc.
-3. **Aucun compte au démarrage** (« No provider available for protocol imapx ») :
-   une ancienne copie de `camel-1.2.dll` dans `build\` était chargée en
-   priorité ; Camel calcule ses chemins depuis l'emplacement de sa DLL et
-   cherchait ses fournisseurs dans `build\lib\…`. **Ne pas copier de DLL d'EDS
-   dans `build\`** : elles doivent être chargées depuis le préfixe (PATH, comme
-   le fait `run-winui.bat`) tant que l'installeur (phase 5) n'a pas construit
-   une arborescence complète. Un ancien `evolution-source-registry` lancé depuis
-   `C:\gtk-build` (avant la réorganisation) occupait aussi le bus D-Bus.
+1. **`.bat` scripts unreadable by `cmd.exe`** (`'ot' is not recognized…`):
+   files with LF line endings. `.gitattributes` now enforces CRLF on
+   `.bat`/`.cmd` (and LF on bash scripts), regardless of `core.autocrlf`.
+2. **`co_await` in a `catch` block** (C2304, OAuth2 token exchange):
+   error message stored, displayed after the block.
+3. **No account at startup** ("No provider available for protocol imapx"):
+   an old copy of `camel-1.2.dll` in `build\` was loaded first; Camel computes its paths from
+   the location of its DLL and
+   was looking for its providers in `build\lib\…`. **Do not copy any EDS DLL into
+   `build\`**: they must be loaded from the prefix (PATH, as
+   `run-winui.bat` does) until the installer (phase 5) has built
+   a complete tree. An old `evolution-source-registry` launched from
+   `C:\gtk-build` (before the reorganization) was also occupying the D-Bus bus.
 
-4. **Boîte de réception vide au premier lancement** (VM Windows 11 neuve,
-   MSI 0.9.0 ; autres dossiers corrects) : la relève de démarrage ouvrait la
-   boîte de réception par `camel_store_get_inbox_folder_sync`, dont
-   l'implémentation par défaut (IMAP) crée un **second `CamelFolder` hors du
-   cache de dossiers du magasin**. evo-core suivait cette instance ; les
-   messages téléchargés par le serveur IMAP allaient dans l'autre (celle du
-   cache) : la liste restait vide, sans erreur. Avec un cache existant, les
-   deux instances relisent le même résumé sur disque, d'où un problème
-   invisible sur le poste de développement. Correctif : nom de la boîte de
-   réception lu dans l'arborescence (`CAMEL_FOLDER_TYPE_INBOX`), dossier
-   ouvert comme les autres (`camel_store_get_folder_sync`). De plus,
-   `core_ensure_connected` sérialise les connexions et vérifie l'état
-   `CONNECTED` : `camel_offline_store_set_online_sync` répond « succès »
-   immédiatement si un autre fil est en train de connecter, et une relève
-   IMAP lancée alors est ignorée sans erreur. Reproduit avec un cache vide
-   (variables `XDG_DATA_HOME` / `XDG_CACHE_HOME`) et une seconde liste
-   déclenchée par `folder-changed`, comme le fait l'interface : 3 échecs
-   sur 10 avant, 0 sur 15 après (MSI 0.9.1).
+4. **Empty inbox on first launch** (fresh Windows 11 VM,
+   MSI 0.9.0; other folders correct): the startup fetch opened the
+   inbox through `camel_store_get_inbox_folder_sync`, whose
+   default (IMAP) implementation creates a **second `CamelFolder` outside the
+   store's folder cache**. evo-core tracked that instance; the
+   messages downloaded by the IMAP server went into the other one (the one in the
+   cache): the list stayed empty, with no error. With an existing cache, the
+   two instances re-read the same summary on disk, hence a problem
+   invisible on the development machine. Fix: inbox name
+   read from the tree (`CAMEL_FOLDER_TYPE_INBOX`), folder
+   opened like the others (`camel_store_get_folder_sync`). In addition,
+   `core_ensure_connected` serializes connections and checks the
+   `CONNECTED` state: `camel_offline_store_set_online_sync` answers "success"
+   immediately if another thread is connecting, and an IMAP fetch
+   started then is ignored without error. Reproduced with an empty cache
+   (`XDG_DATA_HOME` / `XDG_CACHE_HOME` variables) and a second list
+   triggered by `folder-changed`, as the interface does: 3 failures
+   out of 10 before, 0 out of 15 after (MSI 0.9.1).
 
-**Validé** : `evo-core-test` (lecture seule) avec le compte IMAP réel :
-comptes, dossiers, 56 messages, lecture d'un message. Reste à valider dans
-l'interface : dialogue TLS, connexion OAuth2 (inscription d'application
-Entra ID ou Google requise), S/MIME (certificat personnel dans NSS) et
-OpenPGP avec Gpg4win.
+**Validated**: `evo-core-test` (read-only) with the real IMAP account:
+accounts, folders, 56 messages, reading a message. Still to validate in the
+interface: TLS dialog, OAuth2 sign-in (Entra ID or Google
+application registration required), S/MIME (personal certificate in NSS) and
+OpenPGP with Gpg4win.
 
-### Prochaines étapes du client natif
+### Next steps for the native client
 
-1. ~~Rafraîchissement automatique~~ ; ~~rédaction et envoi~~ (texte brut, HTML `multipart/alternative` et pièces jointes).
-2. ~~Actions : supprimer, déplacer, marquer lu/non lu, drapeau ; recherche.~~
-3. ~~Notifications Windows (toasts) pour le nouveau courrier et pièces jointes.~~
-4. ~~Gestion des comptes (assistant d'ajout IMAP/SMTP, mot de passe) et paramètres.~~
-   ~~Configurables directement dans l'application.~~
-5. ~~Calendrier et contacts (EDS) : `CalendarView`, listes et fiches de contacts.~~
-6. ~~Éditeur HTML de composition (WebView2) et impression native des messages (`Ctrl+P`).~~
-7. ~~Dialogue de certificats TLS, OAuth2 IMAP/SMTP, S/MIME, OpenPGP~~ (validation
-   dans l'interface à faire).
-8. ~~Installeur MSI (phase 5).~~
-9. Microsoft 365 par Microsoft Graph (evolution-ews, phase 4b).
+1. ~~Automatic refresh~~; ~~composing and sending~~ (plain text, HTML `multipart/alternative` and attachments).
+2. ~~Actions: delete, move, mark read/unread, flag; search.~~
+3. ~~Windows notifications (toasts) for new mail and attachments.~~
+4. ~~Account management (IMAP/SMTP add wizard, password) and settings.~~
+   ~~Configurable directly in the application.~~
+5. ~~Calendar and contacts (EDS): `CalendarView`, contact lists and cards.~~
+6. ~~HTML compose editor (WebView2) and native message printing (`Ctrl+P`).~~
+7. ~~TLS certificate dialog, IMAP/SMTP OAuth2, S/MIME, OpenPGP~~ (validation
+   in the interface still to do).
+8. ~~MSI installer (phase 5).~~
+9. Microsoft 365 through Microsoft Graph (evolution-ews, phase 4b).
 
-## Suivi des phases
+## Phase tracking
 
-- [x] Phase 0 — pile GTK3 MSVC (terminée le 2026-10-31, ~45 min ; gvsbuild a
-  aussi construit gtk4, requis par adwaita-icon-theme)
-- [x] NSPR / NSS compilés avec MSVC
-- [x] libical / libical-glib compilés avec MSVC
-- [x] Phase 1 — EDS compilé et registre des sources démarré (fabriques
-  carnet d'adresses / agenda : validées avec EvolutionWin)
-- [x] Phase 2 — Evolution compilé (shim WebKit vide) et lancé : fenêtre
-  principale fonctionnelle (2026-10-31)
-- [x] Phase 2b — démarrage automatique des services EDS ; compte IMAP réel
-  synchronisé (envoi SMTP validé)
-- [x] Phase 3 — EWebView sur WebView2 (lecture des mails) : fait pour la
-  version GTK transitoire (2026-10-31)
-- [x] Phase 4 (WinUI 3) — éditeur HTML WebView2 et impression native réalisés dans `EvolutionWin` (S/MIME à venir)
-- [~] Phase 4b — evolution-ews compilé (MSVC), comptes Microsoft 365 (Graph,
-  OAuth2 WebView2) dans EvolutionWin ; test avec un vrai tenant à faire
-- [x] Phase 4c — OpenPGP : `camel-gpg-context.c` porté sur
-  `g_spawn_async_with_pipes()` (testé le 2026-10-31) ; reste à intégrer
-  Gpg4win comme prérequis optionnel de l'installeur MSI
-- [x] Phase 5 — installeur MSI (WiX v5) autonome, validé par extraction
-  (2026-10-31) ; icône, associations et `mailto:` à venir
-- [—] Phase 6a — abandonnée (la version GTK reste transitoire)
-- [x] Phase 6b — **choisie** : interface réécrite en WinUI 3 / C++/WinRT (jalons 1 à 7 réalisés : courrier, lecture WebView2, rédaction HTML/texte et envoi, impression, actions, recherche, notifications toasts, pièces jointes, gestion des comptes et mots de passe, calendrier et contacts EDS)
+- [x] Phase 0 — MSVC GTK3 stack (completed on 2026-10-31, ~45 min; gvsbuild
+  also built gtk4, required by adwaita-icon-theme)
+- [x] NSPR / NSS built with MSVC
+- [x] libical / libical-glib built with MSVC
+- [x] Phase 1 — EDS built and source registry started (address book /
+  calendar factories: validated with EvolutionWin)
+- [x] Phase 2 — Evolution built (empty WebKit shim) and launched: working main
+  window (2026-10-31)
+- [x] Phase 2b — automatic start of the EDS services; real IMAP account
+  synchronized (SMTP sending validated)
+- [x] Phase 3 — EWebView on WebView2 (mail reading): done for the
+  transitional GTK version (2026-10-31)
+- [x] Phase 4 (WinUI 3) — WebView2 HTML editor and native printing done in `EvolutionWin` (S/MIME to come)
+- [~] Phase 4b — evolution-ews built (MSVC), Microsoft 365 accounts (Graph,
+  OAuth2 WebView2) in EvolutionWin; test with a real tenant to do
+- [x] Phase 4c — OpenPGP: `camel-gpg-context.c` ported to
+  `g_spawn_async_with_pipes()` (tested on 2026-10-31); still to integrate
+  Gpg4win as an optional prerequisite of the MSI installer
+- [x] Phase 5 — standalone MSI installer (WiX v5), validated by extraction
+  (2026-10-31); icon, associations and `mailto:` to come
+- [—] Phase 6a — abandoned (the GTK version stays transitional)
+- [x] Phase 6b — **chosen**: interface rewritten in WinUI 3 / C++/WinRT (milestones 1 to 7 done: mail, WebView2 reading, HTML/text composing and sending, printing, actions, search, toast notifications, attachments, account and password management, EDS calendar and contacts)
