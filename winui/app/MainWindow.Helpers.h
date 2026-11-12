@@ -39,6 +39,48 @@ namespace EvolutionWin::Helpers
         return theme;
     }
 
+    /**
+     * @brief Couleurs des boutons de la barre de titre (réduire, agrandir, fermer) selon le thème choisi.
+     *
+     * Avec ExtendsContentIntoTitleBar, ces boutons suivent le thème du système, pas celui de l'application
+     * (RequestedTheme du contenu) : en thème clair choisi sur un système sombre, les icônes étaient presque
+     * invisibles et le survol noir. « Default » rend les couleurs au système.
+     * @param title_bar Barre de titre de l'AppWindow.
+     * @param theme Thème de l'application.
+     */
+    inline void ApplyCaptionButtonTheme(Microsoft::UI::Windowing::AppWindowTitleBar const& title_bar, ElementTheme theme)
+    {
+        using Color = Windows::UI::Color;
+        using Ref = Windows::Foundation::IReference<Color>;
+        if (!title_bar)
+            return;
+
+        if (theme == ElementTheme::Default)
+        {
+            title_bar.ButtonForegroundColor(Ref{ nullptr });
+            title_bar.ButtonHoverForegroundColor(Ref{ nullptr });
+            title_bar.ButtonPressedForegroundColor(Ref{ nullptr });
+            title_bar.ButtonInactiveForegroundColor(Ref{ nullptr });
+            title_bar.ButtonHoverBackgroundColor(Ref{ nullptr });
+            title_bar.ButtonPressedBackgroundColor(Ref{ nullptr });
+            return;
+        }
+
+        bool dark = theme == ElementTheme::Dark;
+        Color text = dark ? Color{ 0xFF, 0xFF, 0xFF, 0xFF } : Color{ 0xFF, 0x1A, 0x1A, 0x1A };
+        Color inactive = dark ? Color{ 0xFF, 0x8A, 0x8A, 0x8A } : Color{ 0xFF, 0x9A, 0x9A, 0x9A };
+        Color hover = dark ? Color{ 0x1A, 0xFF, 0xFF, 0xFF } : Color{ 0x14, 0x00, 0x00, 0x00 };
+        Color pressed = dark ? Color{ 0x0F, 0xFF, 0xFF, 0xFF } : Color{ 0x0C, 0x00, 0x00, 0x00 };
+        title_bar.ButtonBackgroundColor(Color{ 0, 0, 0, 0 });
+        title_bar.ButtonInactiveBackgroundColor(Color{ 0, 0, 0, 0 });
+        title_bar.ButtonForegroundColor(text);
+        title_bar.ButtonHoverForegroundColor(text);
+        title_bar.ButtonPressedForegroundColor(text);
+        title_bar.ButtonInactiveForegroundColor(inactive);
+        title_bar.ButtonHoverBackgroundColor(hover);
+        title_bar.ButtonPressedBackgroundColor(pressed);
+    }
+
     /* Recherche récursive d'une ressource dans le dictionnaire de thème « theme_key » (Default = sombre, Light). */
     inline Windows::Foundation::IInspectable FindThemedResource(ResourceDictionary const& dictionary,
         hstring const& theme_key, Windows::Foundation::IInspectable const& key)

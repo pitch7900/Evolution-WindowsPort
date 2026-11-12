@@ -1754,6 +1754,7 @@ namespace winrt::EvolutionWin::implementation
         /* mémorisé pour ThemedBrush (pinceaux construits en code, selon le thème affiché) */
         ::EvolutionWin::Helpers::AppElementTheme() = theme_name == L"light" ? ElementTheme::Light
             : theme_name == L"dark" ? ElementTheme::Dark : ElementTheme::Default;
+        ::EvolutionWin::Helpers::ApplyCaptionButtonTheme(AppWindow().TitleBar(), ::EvolutionWin::Helpers::AppElementTheme());
 
         if (auto root = this->Content().try_as<FrameworkElement>())
 

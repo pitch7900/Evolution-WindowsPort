@@ -19,6 +19,7 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Corrigé
 
+- **Boutons de la barre de titre (réduire, agrandir, fermer) illisibles quand le thème choisi diffère de celui de Windows** : icônes presque invisibles et survol noir en thème clair sur un système sombre. Leurs couleurs suivent maintenant le thème choisi dans Paramètres › Affichage (fenêtre principale).
 - **Passage du thème sombre au thème clair (ou l'inverse) : textes et fonds illisibles dans certains volets.** Les couleurs posées en code (titres de groupes des volets Calendriers et Carnets d'adresses, vue Tâches et barre des tâches, vue Courrier, annuaires, cartes des paramètres…) étaient lues dans les ressources de l'application, qui renvoient toujours le thème du démarrage : gris clair sur fond blanc après le passage au thème clair. Nouvelle fonction `ThemedBrush` (dictionnaire du thème réellement affiché) utilisée partout à la place, et les volets Calendriers, Contacts, Tâches et la liste des messages sont reconstruits au changement de thème. Les titres de groupes des volets de sources suivent le thème par simple opacité.
 
 - **Catégories de courrier envoyées au serveur (Microsoft 365, IMAP).** Une catégorie posée sur un message n'était enregistrée qu'en local : le moteur appelait seulement `camel_folder_synchronize_message_sync`, qui télécharge le message sans envoyer les modifications. Le dossier est maintenant synchronisé après chaque changement de catégorie, ce qui envoie `categories` à Exchange Online (Outlook).
