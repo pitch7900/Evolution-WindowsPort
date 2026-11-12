@@ -58,8 +58,12 @@ Le MSI se construit avec `tools\build-msi.ps1`.
 - [ ] `/qn AUTOUPDATE=0` : `reg query HKLM\SOFTWARE\Policies\EvolutionWin` donne `DisableAutoUpdate = 1`, plus de recherche de mise à jour ; la clé disparaît à la désinstallation.
 - [ ] `/qn REGISTERMAILTO=1` : EvolutionWin apparaît dans Paramètres › Applications par défaut › Courrier / MAILTO ; après l'avoir choisi, un lien `mailto:` ouvre une rédaction. Sans la propriété, il n'apparaît pas ; l'entrée disparaît à la désinstallation.
 - [ ] Désinstallation avec `/l*v u.log PURGEUSERDATA=1` : `u.log` contient « Adding PURGELOG property » ; absent sans purge.
-- [ ] Installation en `/passive` ou par double-clic : la progression s'affiche (aucune interface personnalisée).
-- [ ] _Non fait_ : boîte « fermer Evolution ? » en interactif et case de purge dans l'interface du MSI (validation ICE impossible sans le jeu complet de dialogues ; aucune interface en désinstallation depuis les Paramètres Windows) ; détail de la purge dans le journal MSI (il reste dans `%TEMP%\EvolutionWin-purge.log`).
+- [ ] Interface : double-clic sur le MSI (VM propre) : Bienvenue › dossier › « Fermeture d'Evolution » (2 choix) › prêt › progression › fin. Aucune page de licence. Textes en français, sans caractères cassés.
+- [ ] Mise à jour interactive avec Evolution ouvert : choix « Fermer automatiquement » : l'application et ses services se ferment ; choix « Ne pas fermer » : pas de fermeture (redémarrage demandé ou fichiers remplacés au redémarrage).
+- [ ] Désinstallation : rouvrir le MSI installé › Supprimer › page « Données d'Evolution » : case décochée au départ ; cochée, `%LOCALAPPDATA%\EvolutionWin`, `%LOCALAPPDATA%\evolution` et les identifiants disparaissent ; décochée, ils restent.
+- [ ] Journal de purge : désinstallation avec `/l*v u.log PURGEUSERDATA=1` : `u.log` contient des lignes « EvolutionWin purge : Dossier supprime : … » ; `%TEMP%\EvolutionWin-purge.log` aussi. Vérifier que les dossiers supprimés sont bien ceux de l'utilisateur qui désinstalle (pas ceux de SYSTEM). _À tester sur un compte jetable : la purge supprime aussi les identifiants du Gestionnaire d'identifiants._
+- [ ] Limite connue à confirmer : Paramètres › Applications installées › Désinstaller : aucune interface, aucune case de purge.
+- [ ] `/qn` et `/passive` : aucune des nouvelles pages ne s'affiche ; FORCECLOSE, AUTOUPDATE, REGISTERMAILTO, LAUNCHAPP fonctionnent comme avant.
 
 ## 6. Stratégies de groupe (GPO)
 

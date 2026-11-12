@@ -200,7 +200,7 @@ if (-not (Test-Path $WixExe)) { throw 'WiX introuvable : dotnet tool install --g
 
 New-Item -ItemType Directory -Force $Dist | Out-Null
 $Msi = Join-Path $Dist "Evolution-$Version-x64.msi"
-& $WixExe build (Join-Path $Tools 'msi\Evolution.wxs') -arch x64 -ext WixToolset.Util.wixext `
+& $WixExe build (Join-Path $Tools 'msi\Evolution.wxs') (Join-Path $Tools 'msi\Evolution.UI.wxs') -arch x64 -ext WixToolset.Util.wixext -ext WixToolset.UI.wixext -culture fr-FR `
 	-d "StageDir=$Stage" -d "Version=$Version" `
 	-d "CloseDepsB64=$CloseDepsB64" -d "PurgeUserDataB64=$PurgeUserDataB64" `
 	-d "IconFile=$(Join-Path $env:WINUI_SRC 'app\Assets\EvolutionWin.ico')" `

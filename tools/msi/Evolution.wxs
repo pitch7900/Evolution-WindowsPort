@@ -7,7 +7,8 @@
   silencieux : msiexec /i Evolution-<version>-x64.msi /qn
 -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
-     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <Package Name="Evolution"
            Manufacturer="Evolution-WindowsPort"
            Version="$(var.Version)"
@@ -22,6 +23,8 @@
          même version autorisée pour réinstaller une compilation de test -->
     <MajorUpgrade AllowSameVersionUpgrades="yes"
                   DowngradeErrorMessage="Une version plus récente d'Evolution est déjà installée." />
+    <!-- interface (dialogues WixUI + pages propres) : toolsmsivolution.UI.wxs -->
+    <UIRef Id="EvolutionUI" />
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
 
     <!-- Mise à jour / désinstallation pendant qu'Evolution tourne : sans cela,
@@ -47,13 +50,14 @@
     <util:CloseApplication Id="CloseSessionBus" Target="gdbus.exe" Condition="FORCECLOSE &lt;&gt; &quot;0&quot;"
                            TerminateProcess="1" RebootPrompt="no" />
 
-    <!-- Propriété publique FORCECLOSE (non déclarée : vide = « 1 », comportement historique) :
+    <!-- Propriété publique FORCECLOSE (défaut « 1 », comportement historique) :
            msiexec /i Evolution-<version>-x64.msi /qn FORCECLOSE=1
          ferme EvolutionWin, les services EDS et leurs dépendances avant de remplacer
          les fichiers ; FORCECLOSE=0 désactive toute fermeture (fichiers verrouillés :
-         remplacement au redémarrage, code de sortie 3010). Pas de boîte de
-         confirmation « Fermer Evolution ? » : le MSI n'a volontairement aucune interface
-         personnalisée (voir deploy\DEPLOIEMENT.md). -->
+         remplacement au redémarrage, code de sortie 3010). En installation interactive,
+         la page « Fermeture d'Evolution » (CloseDlg) propose le choix et pose cette propriété.
+         Secure="yes" : transmise du client (interface) au serveur d'installation. -->
+    <Property Id="FORCECLOSE" Value="1" Secure="yes" />
 
     <!-- Fermeture, dans TOUTES les sessions, des dépendances que CloseApplication ne sait
          pas viser : camel-index-control, gspawn-win64-helper et les processus
@@ -66,9 +70,13 @@
            msiexec /x Evolution-<version>-x64.msi PURGEUSERDATA=1
          Jamais lors d'une mise à jour (UPGRADINGPRODUCTCODE). Journal : %TEMP%\EvolutionWin-purge.log
          (script source : deploy\msi\purge-userdata.ps1). -->
-    <Property Id="PURGEUSERDATA" Value="0" />
-    <CustomAction Id="PurgeUserData" Directory="SystemFolder" Return="ignore"
-                  ExeCommand="&quot;[SystemFolder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $(var.PurgeUserDataB64)" />
+    <Property Id="PURGEUSERDATA" Value="0" Secure="yes" />
+    <!-- Exécution par WixQuietExec : la sortie du script (un élément supprimé par ligne) est
+         recopiée dans le journal MSI (/l*v), en plus de %TEMP%\EvolutionWin-purge.log.
+         Action différée sous l'identité de l'utilisateur qui désinstalle ; son dossier de
+         données [LocalAppDataFolder] et le journal [PURGELOG] sont passés par variables
+         d'environnement (le service Windows Installer a sinon l'environnement de SYSTEM). -->
+    <!-- action PurgeUserData : voir le fragment WixQuietExec en fin de fichier -->
     <!-- Chemin du journal de purge : posé en propriété pour apparaître dans le journal MSI (/l*v)
          (« PROPERTY CHANGE: Adding PURGELOG property ») quand la purge est demandée. -->
     <SetProperty Id="PURGELOG" Value="[TempFolder]EvolutionWin-purge.log" Before="PurgeUserData" Sequence="execute"
@@ -81,7 +89,7 @@
 
     <InstallExecuteSequence>
       <Custom Action="CloseDependencies" Before="InstallValidate" Condition='FORCECLOSE &lt;&gt; "0"' />
-      <Custom Action="PurgeUserData" After="InstallInitialize"
+      <Custom Action="PurgeUserData" Before="InstallFinalize"
               Condition='REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE AND PURGEUSERDATA="1"' />
     </InstallExecuteSequence>
 
@@ -103,7 +111,6 @@
     <Icon Id="EvolutionWin.ico" SourceFile="$(var.IconFile)" />
     <Property Id="ARPPRODUCTICON" Value="EvolutionWin.ico" />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/pitch7900/Evolution-WindowsPort" />
-    <Property Id="ARPNOMODIFY" Value="1" />
     <!-- Désactivation de Restart Manager pour éviter les invites bloquantes lors des mises à jour silencieuses -->
     <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
 
@@ -220,4 +227,15 @@
       </Component>
     </DirectoryRef>
   </Fragment>
+
+  <Fragment>
+    <!-- WixQuietExec64 (extension Util) : exécute la ligne de commande portée par la propriété
+         du même nom que l'action (« PurgeUserData ») et recopie sa sortie dans le journal MSI. -->
+    <CustomAction Id="PurgeUserData" BinaryRef="Wix4UtilCA_X64" DllEntry="WixQuietExec64"
+                  Execute="deferred" Impersonate="yes" Return="ignore" />
+    <SetProperty Id="PurgeUserData" Sequence="execute" Before="PurgeUserData"
+                 Condition="REMOVE=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE AND PURGEUSERDATA=&quot;1&quot;"
+                 Value="[SystemFolder]cmd.exe /c &quot;set EVO_LOCALAPPDATA=[LocalAppDataFolder]&amp;&amp; set EVO_PURGELOG=[TempFolder]EvolutionWin-purge.log&amp;&amp; [SystemFolder]WindowsPowerShell\v1.0\powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $(var.PurgeUserDataB64)&quot;" />
+  </Fragment>
+
 </Wix>

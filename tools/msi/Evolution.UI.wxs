@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Interface de l'installeur MSI d'EvolutionWin (WiX v5, extension WixToolset.UI.wixext).
+
+  Jeu complet des dialogues standard WixUI_InstallDir (progression, erreurs, « fichiers en
+  cours d'utilisation », fin, annulation : règles ICE20 / ICE31 respectées), sans la page de
+  licence, plus deux pages propres à EvolutionWin :
+    - CloseDlg : « Fermeture d'Evolution » (installation interactive), pose FORCECLOSE ;
+    - PurgeDlg : « Supprimer aussi mes comptes et données » (désinstallation interactive),
+      pose PURGEUSERDATA.
+  Aucune de ces pages n'apparaît en mode silencieux (/qn) : FORCECLOSE et PURGEUSERDATA
+  se passent alors sur la ligne de commande (voir deploy\DEPLOIEMENT.md).
+  Limite connue : Paramètres > Applications installées lance la désinstallation sans
+  interface ; la case de purge n'y est pas proposée (utiliser PURGEUSERDATA=1 en ligne de
+  commande, ou désinstaller en rouvrant le MSI).
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Fragment>
+    <UI Id="EvolutionUI">
+      <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+
+      <!-- Pas de page de licence (LGPL : aucune acceptation n'est requise pour utiliser le logiciel) -->
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg"
+               Order="3" Condition="NOT Installed AND NOT PATCH" />
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="3" />
+
+      <!-- Installation : dossier > fermeture d'Evolution > prêt à installer -->
+      <Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="CloseDlg"
+               Order="4" Condition="WIXUI_INSTALLDIR_VALID=&quot;1&quot;" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="CloseDlg"
+               Order="3" Condition="NOT Installed" />
+
+      <!-- Désinstallation : type de maintenance > purge des données > prêt -->
+      <Publish Dialog="MaintenanceTypeDlg" Control="RemoveButton" Event="NewDialog" Value="PurgeDlg" Order="3" />
+      <!-- la case démarre décochée (la propriété vaut « 0 » par défaut, ce qui la cocherait) -->
+      <Publish Dialog="MaintenanceTypeDlg" Control="RemoveButton" Property="PURGEUSERDATA" Value="{}"
+               Order="4" Condition="PURGEUSERDATA=&quot;0&quot;" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="PurgeDlg"
+               Order="3" Condition="Installed AND NOT PATCH AND WixUI_InstallMode=&quot;Remove&quot;" />
+
+      <Dialog Id="CloseDlg" Width="370" Height="270" Title="!(loc.InstallDirDlg_Title)">
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)">
+          <Publish Event="NewDialog" Value="VerifyReadyDlg" />
+        </Control>
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)">
+          <Publish Event="NewDialog" Value="InstallDirDlg" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="!(loc.WixUICancel)">
+          <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="340" Height="15" Transparent="yes" NoPrefix="yes"
+                 Text="{\WixUI_Font_Title}Fermeture d'Evolution" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="340" Height="15" Transparent="yes" NoPrefix="yes"
+                 Text="Evolution doit être fermé pour être mis à jour ou installé." />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="Explication" Type="Text" X="20" Y="58" Width="330" Height="42" Transparent="yes" NoPrefix="yes"
+                 Text="Si Evolution (ou ses services de courrier, d'agenda et de contacts) est ouvert, que doit faire l'installation ?" />
+        <Control Id="ChoixFermeture" Type="RadioButtonGroup" X="20" Y="104" Width="330" Height="70" Property="FORCECLOSE">
+          <RadioButtonGroup Property="FORCECLOSE">
+            <RadioButton Value="1" X="0" Y="0" Width="330" Height="30"
+                         Text="Fermer Evolution automatiquement (recommandé). Un message de fermeture est d'abord envoyé à l'application." />
+            <RadioButton Value="0" X="0" Y="36" Width="330" Height="30"
+                         Text="Ne pas fermer Evolution. Les fichiers utilisés seront remplacés au prochain redémarrage de Windows." />
+          </RadioButtonGroup>
+        </Control>
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+      </Dialog>
+
+      <Dialog Id="PurgeDlg" Width="370" Height="270" Title="!(loc.InstallDirDlg_Title)">
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)">
+          <Publish Event="NewDialog" Value="VerifyReadyDlg" />
+        </Control>
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)">
+          <Publish Event="NewDialog" Value="MaintenanceTypeDlg" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="!(loc.WixUICancel)">
+          <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="340" Height="15" Transparent="yes" NoPrefix="yes"
+                 Text="{\WixUI_Font_Title}Données d'Evolution" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="340" Height="15" Transparent="yes" NoPrefix="yes"
+                 Text="Vos comptes et vos données peuvent être conservés ou supprimés." />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="Explication" Type="Text" X="20" Y="58" Width="330" Height="54" Transparent="yes" NoPrefix="yes"
+                 Text="Par défaut, la désinstallation conserve vos données pour une réinstallation sans perte. Seules les données de l'utilisateur qui désinstalle sont concernées : les autres profils ne sont pas modifiés." />
+        <Control Id="CasePurge" Type="CheckBox" X="20" Y="120" Width="330" Height="40" Property="PURGEUSERDATA" CheckBoxValue="1"
+                 Text="Supprimer aussi mes comptes et données (courrier local, carnets d'adresses, agendas, préférences, identifiants enregistrés)" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+      </Dialog>
+    </UI>
+  </Fragment>
+</Wix>

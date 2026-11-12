@@ -15,9 +15,9 @@ msiexec /i Evolution-<version>-x64.msi /qn [FORCECLOSE=1] [AUTOUPDATE=0] [REGIST
 | `LAUNCHAPP` | `0` | `1` : relance EvolutionWin pour l'utilisateur courant à la fin de l'installation. |
 | `UILANGUAGE` | `fr-FR` | Langue par défaut de l'interface. |
 
-Le journal MSI (`/l*v`) mentionne `PURGELOG` (chemin du journal de purge) quand la purge est demandée ; le détail des éléments supprimés reste dans ce fichier.
+Le journal MSI (`/l*v`) contient, lignes « EvolutionWin purge : … », chaque élément supprimé quand la purge est demandée (sortie de `WixQuietExec`) ; le même détail est dans `%TEMP%\EvolutionWin-purge.log`.
 
-**Pas d'interface personnalisée** : le MSI n'a ni boîte « Fermer Evolution ? » ni case « Supprimer aussi mes données ». Une interface authored oblige à fournir tout le jeu de dialogues standard (progression, erreurs, fin : règles ICE20 / ICE31), sinon l'installation par double-clic n'affiche plus rien ; et _Paramètres › Applications installées_ lance la désinstallation sans interface, la case n'y serait jamais vue. La fermeture est donc toujours automatique (`FORCECLOSE=0` pour l'éviter) et la purge se demande par `PURGEUSERDATA=1`.
+**Interface interactive** (double-clic sur le MSI, `msiexec /i … ` sans `/q`) : dialogues standard WixUI_InstallDir (sans licence), plus la page « Fermeture d'Evolution » (fermer automatiquement, par défaut, ou laisser Evolution ouvert : `FORCECLOSE=0`) et, en rouvrant le MSI déjà installé puis « Supprimer », la page « Données d'Evolution » avec la case « Supprimer aussi mes comptes et données » (`PURGEUSERDATA=1`). **Limite** : _Paramètres › Applications installées_ lance la désinstallation sans interface : la case n'y est pas proposée (utiliser `msiexec /x … PURGEUSERDATA=1`). Mode silencieux (`/qn`) : aucune page, propriétés sur la ligne de commande. Interface en français uniquement.
 
 Redémarrage et Restart Manager sont désactivés (`REBOOT=ReallySuppress`, `MSIRESTARTMANAGERCONTROL=Disable`).
 
