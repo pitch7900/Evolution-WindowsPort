@@ -146,6 +146,9 @@ namespace winrt::EvolutionWin::implementation
                 SetContactCategories(contact, names);
             });
 
+            if (!m_gal_mode)
+                EnableContactExportDrag(row, contact);
+
             items.Append(row);
         }
 

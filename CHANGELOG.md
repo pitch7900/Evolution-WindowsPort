@@ -12,6 +12,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.3.0] — en cours
 
+### Glisser-déposer sortant d'événements et de contacts, recréation d'un dossier local
+
+- **Glisser un événement ou un contact vers l'Explorateur / le Bureau** : un bloc d'événement de la grille Jour / Semaine, une pastille du mois ou une ligne de la liste des contacts se glisse vers l'extérieur ; le fichier `.ics` (événement, avec ses fuseaux horaires) ou `.vcf` (vCard 3.0) est généré au début du glisser, dans le dossier temporaire de glisser-déposer (nettoyé au démarrage et à la fermeture), sous le nom de l'élément. Le moteur gagne un filtre facultatif `"uids"` dans les requêtes `evo_core_export_calendar` et `evo_core_export_contacts` (aucune fonction exportée en plus). (`MainWindow.DragExport.cpp`, `evo-core-export.c`)
+- **Correction : un dossier local supprimé ne pouvait plus être recréé** (« Le dossier X existe déjà ») : la ligne du dossier restait, ou était réécrite par l'enregistrement différé du résumé, dans `folders.db` du magasin local alors que le dossier avait disparu du disque. La suppression garde désormais le dossier ouvert le temps que Camel nettoie ses données (`folder_delete_forgetting`), et la création purge une ligne périmée puis réessaie une fois (répare aussi les dossiers supprimés avant ce correctif). Vérifié par création / suppression / recréation sur le compte local. (`evo-core-folder-ops.c`)
+- **`.pst` / `.ost`** : réévalué, toujours non réalisable (voir ROADMAP).
+
 ### MSI : propriétés AUTOUPDATE et REGISTERMAILTO
 
 - **`AUTOUPDATE=0`** : le MSI écrit la stratégie `HKLM\SOFTWARE\Policies\EvolutionWin\DisableAutoUpdate = 1` (composant conditionnel, retiré à la désinstallation).

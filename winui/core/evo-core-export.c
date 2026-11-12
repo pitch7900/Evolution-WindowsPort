@@ -5,6 +5,38 @@
 
 #include "evo-core-private.h"
 
+/* Construit l'ensemble des identifiants demandés par le membre "uids" d'une
+ * requête d'exportation (filtre facultatif : exporter seulement ces éléments).
+ * Paramètres :
+ *   object : objet JSON de la requête (peut être NULL)
+ * Retourne : table de hachage (clés = uid) à libérer avec g_hash_table_destroy,
+ *            ou NULL si aucun filtre n'est demandé. */
+static GHashTable *
+export_uid_filter_new (JsonObject *object)
+{
+	JsonArray *array;
+	GHashTable *set;
+	guint ii, len;
+
+	if (!object || !json_object_has_member (object, "uids"))
+		return NULL;
+
+	array = json_object_get_array_member (object, "uids");
+	if (!array)
+		return NULL;
+
+	set = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+	len = json_array_get_length (array);
+	for (ii = 0; ii < len; ii++) {
+		const gchar *uid = json_array_get_string_element (array, ii);
+
+		if (uid && *uid)
+			g_hash_table_add (set, g_strdup (uid));
+	}
+
+	return set;
+}
+
 /* Exporte les contacts d'un carnet d'adresses (ou de tous les carnets
  * activés) au format vCard 3.0, dans un seul fichier .vcf ou dans un fichier
  * par contact.
@@ -25,6 +57,7 @@ core_export_contacts_run (EvoCore *core,
 	GList *sources = NULL, *slink;
 	GPtrArray *files;
 	GString *single = NULL;
+	GHashTable *uid_filter;
 	EBookQuery *book_query;
 	gchar *sexp, *json = NULL;
 	JsonBuilder *builder;
@@ -38,9 +71,12 @@ core_export_contacts_run (EvoCore *core,
 	book_uid = object ? json_object_get_string_member_with_default (object, "book_uid", "") : "";
 	path = object ? json_object_get_string_member_with_default (object, "path", "") : "";
 	per_contact = object ? json_object_get_boolean_member_with_default (object, "per_contact", FALSE) : FALSE;
+	uid_filter = export_uid_filter_new (object);
 
 	if (!path || !*path) {
 		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Chemin d'exportation manquant");
+		if (uid_filter)
+			g_hash_table_destroy (uid_filter);
 		json_node_unref (root);
 		return NULL;
 	}
@@ -51,6 +87,8 @@ core_export_contacts_run (EvoCore *core,
 		if (!source || !e_source_has_extension (source, E_SOURCE_EXTENSION_ADDRESS_BOOK)) {
 			g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "Carnet d'adresses introuvable");
 			g_clear_object (&source);
+			if (uid_filter)
+				g_hash_table_destroy (uid_filter);
 			json_node_unref (root);
 			return NULL;
 		}
@@ -62,6 +100,8 @@ core_export_contacts_run (EvoCore *core,
 	if (per_contact && g_mkdir_with_parents (path, 0700) != 0) {
 		g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Impossible de créer le dossier « %s »", path);
 		g_list_free_full (sources, g_object_unref);
+		if (uid_filter)
+			g_hash_table_destroy (uid_filter);
 		json_node_unref (root);
 		return NULL;
 	}
@@ -102,6 +142,10 @@ core_export_contacts_run (EvoCore *core,
 			gchar *vcard;
 
 			if (!E_IS_CONTACT (contact))
+				continue;
+
+			/* filtre facultatif "uids" : seulement les contacts demandés */
+			if (uid_filter && !g_hash_table_contains (uid_filter, e_contact_get_const (contact, E_CONTACT_UID) ? e_contact_get_const (contact, E_CONTACT_UID) : ""))
 				continue;
 
 			vcard = e_vcard_convert_to_string (E_VCARD (contact), E_VCARD_VERSION_30);
@@ -175,6 +219,8 @@ core_export_contacts_run (EvoCore *core,
 	g_ptr_array_unref (files);
 	g_free (sexp);
 	g_list_free_full (sources, g_object_unref);
+	if (uid_filter)
+		g_hash_table_destroy (uid_filter);
 	json_node_unref (root);
 
 	return json;
@@ -246,6 +292,7 @@ core_export_calendar_run (EvoCore *core,
 	ICalComponent *vcalendar = NULL;
 	GSList *objects = NULL, *olink;
 	CalExportTzData tz_data = { NULL, NULL, NULL };
+	GHashTable *uid_filter = NULL;
 	gchar *ical = NULL, *json = NULL;
 	guint count = 0;
 
@@ -256,6 +303,7 @@ core_export_calendar_run (EvoCore *core,
 	object = JSON_NODE_HOLDS_OBJECT (root) ? json_node_get_object (root) : NULL;
 	source_uid = object ? json_object_get_string_member_with_default (object, "source_uid", "") : "";
 	path = object ? json_object_get_string_member_with_default (object, "path", "") : "";
+	uid_filter = export_uid_filter_new (object);
 
 	if (!source_uid || !*source_uid || !path || !*path) {
 		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Agenda ou chemin d'exportation manquant");
@@ -281,6 +329,28 @@ core_export_calendar_run (EvoCore *core,
 	if (!e_cal_client_get_object_list_sync (E_CAL_CLIENT (client), "#t", &objects, core->cancellable, error))
 		goto exit;
 
+	/* filtre facultatif "uids" : seulement les composants demandés (un événement
+	 * récurrent et ses exceptions partagent le même UID) */
+	if (uid_filter) {
+		GSList *kept = NULL;
+
+		for (olink = objects; olink; olink = g_slist_next (olink)) {
+			const gchar *uid = i_cal_component_get_uid (olink->data);
+
+			if (uid && g_hash_table_contains (uid_filter, uid))
+				kept = g_slist_prepend (kept, olink->data);
+			else
+				g_object_unref (olink->data);
+		}
+		g_slist_free (objects);
+		objects = g_slist_reverse (kept);
+
+		if (!objects) {
+			g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "Aucun événement à exporter");
+			goto exit;
+		}
+	}
+
 	/* VERSION:2.0, PRODID et CALSCALE */
 	vcalendar = e_cal_util_new_top_level ();
 
@@ -305,6 +375,8 @@ core_export_calendar_run (EvoCore *core,
 
  exit:
 	g_free (ical);
+	if (uid_filter)
+		g_hash_table_destroy (uid_filter);
 	g_slist_free_full (objects, g_object_unref);
 	g_clear_object (&vcalendar);
 	g_clear_object (&client);

@@ -265,6 +265,9 @@
     <ClCompile Include="MainWindow.Contacts.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="MainWindow.DragExport.cpp">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
     <ClCompile Include="MainWindow.Transfer.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>

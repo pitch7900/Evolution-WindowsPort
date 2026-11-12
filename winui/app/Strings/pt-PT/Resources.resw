@@ -8043,5 +8043,9 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Exportar correio (mbox, EML), contactos (vCard) ou calendários (iCalendar)</value>
     <comment>Exporter du courrier (mbox, EML), des contacts (vCard) ou des agendas (iCalendar)</comment>
   </data>
+  <data name="T_05A96003" xml:space="preserve">
+    <value>Não é possível arrastar o item: {0}</value>
+    <comment>Impossible de glisser l'élément : {0}</comment>
+  </data>
 </root>
 

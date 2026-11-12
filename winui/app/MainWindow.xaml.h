@@ -640,6 +640,8 @@ namespace winrt::EvolutionWin::implementation
         void SetTaskCategories(Windows::Data::Json::JsonObject const& task, std::vector<std::wstring> const& names);
         void SetEventCategories(Windows::Data::Json::JsonObject const& event, std::vector<std::wstring> const& names);
         void AttachEventContextMenu(Microsoft::UI::Xaml::UIElement const& element, Windows::Data::Json::JsonObject const& event);
+        void EnableEventExportDrag(Microsoft::UI::Xaml::UIElement const& element, Windows::Data::Json::JsonObject const& ev);
+        void EnableContactExportDrag(Microsoft::UI::Xaml::UIElement const& element, Windows::Data::Json::JsonObject const& contact);
         void PatchEvent(Windows::Data::Json::JsonObject const& event, Windows::Data::Json::JsonObject const& changes);
         void SetContactCategories(Windows::Data::Json::JsonObject const& contact, std::vector<std::wstring> const& names);
         void ShowContacts();

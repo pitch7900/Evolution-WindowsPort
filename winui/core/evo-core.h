@@ -1352,7 +1352,8 @@ void		evo_core_create_calendar	(EvoCore *core,
  *  "path": "C:\\...\\contacts.vcf", "per_contact": false}
  * Avec "per_contact": true, "path" est un dossier (créé au besoin) qui reçoit
  * un fichier par contact, nommé d'après son nom complet (« Nom (2).vcf » en
- * cas de doublon).
+ * cas de doublon). Le membre facultatif "uids" (tableau d'identifiants de
+ * contacts) limite l'export à ces contacts (glisser-déposer vers l'Explorateur).
  * Paramètres :
  *   core         : instance du moteur evo-core
  *   request_json : requête au format JSON UTF-8
@@ -1367,6 +1368,8 @@ void		evo_core_export_contacts	(EvoCore *core,
  * (VTODO) ou de mémos (VJOURNAL) dans un fichier iCalendar (VCALENDAR 2.0
  * avec les VTIMEZONE des fuseaux horaires référencés). Format attendu pour
  * request_json : {"source_uid": "...", "path": "C:\\...\\agenda.ics"}
+ * Le membre facultatif "uids" (tableau d'UID de composants) limite l'export à
+ * ces composants (glisser-déposer d'un événement vers l'Explorateur).
  * Paramètres :
  *   core         : instance du moteur evo-core
  *   request_json : requête au format JSON UTF-8

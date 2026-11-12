@@ -215,6 +215,7 @@ namespace winrt::EvolutionWin::implementation
                 OpenCalendarEvent(calendar_uid, uid);
             });
             AttachEventContextMenu(element, ev);
+            EnableEventExportDrag(element, ev);
         };
 
         /* en-têtes des jours (« lun. 26 », aujourd'hui en couleur d'accent) */
@@ -774,6 +775,7 @@ namespace winrt::EvolutionWin::implementation
                     OpenCalendarEvent(calendar_uid, uid);
                 });
                 AttachEventContextMenu(chip, ev);
+                EnableEventExportDrag(chip, ev);
                 content.Children().Append(chip);
             }
 
