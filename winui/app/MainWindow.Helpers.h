@@ -110,6 +110,9 @@ namespace EvolutionWin::Helpers
             L"html { background-color: #ffffff !important; filter: invert(0.92) hue-rotate(180deg) !important; }"
             L"img, picture, video, canvas, svg, iframe, object, embed "
             L"{ filter: invert(1) hue-rotate(180deg) !important; }"
+            /* image bloquée ou introuvable : son texte alternatif passe par les deux inversions comme l'image, il
+               doit donc être écrit en clair pour rester lisible une fois les deux inversions appliquées */
+            L"img { color: #f0f0f0 !important; }"
             L"</style>";
 
         std::wstring document{ html };
