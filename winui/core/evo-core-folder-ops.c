@@ -494,6 +494,7 @@ folder_op_create (EvoCore *core,
 		  GError **error)
 {
 	CamelFolderInfo *created;
+	GError *local_error = NULL;
 	gchar *full_name = folder_build_full_name (parent, name);
 
 	if (!folder_check_name (name, error) || !folder_op_check_free (ctx, full_name, error)) {
@@ -518,8 +519,21 @@ folder_op_create (EvoCore *core,
 	}
 
 	created = camel_store_create_folder_sync (ctx->store, parent && *parent ? parent : NULL, name,
-		core->cancellable, error);
+		core->cancellable, &local_error);
+
+	/* Le dossier est absent de l'arborescence (vérifié plus haut) mais Camel le croit
+	 * encore présent : après la suppression d'un dossier local, sa ligne de folders.db
+	 * peut être réécrite par l'enregistrement différé du résumé. Cette ligne périmée
+	 * est effacée, puis la création est retentée une fois. */
+	if (!created && g_error_matches (local_error, G_IO_ERROR, G_IO_ERROR_EXISTS) &&
+	    camel_store_db_delete_folder (camel_store_get_db (ctx->store), full_name, NULL)) {
+		g_clear_error (&local_error);
+		created = camel_store_create_folder_sync (ctx->store, parent && *parent ? parent : NULL, name,
+			core->cancellable, &local_error);
+	}
+
 	if (!created) {
+		g_propagate_error (error, local_error);
 		g_free (full_name);
 		return NULL;
 	}
@@ -789,6 +803,44 @@ core_copy_folder_run (EvoCore *core,
 	return json;
 }
 
+/* Supprime un dossier du magasin après l'avoir désabonné et oublié.
+ * Le dossier est gardé ouvert pendant la suppression : Camel n'efface les
+ * données locales du dossier (ligne de folders.db, messages en cache, dossiers
+ * virtuels Corbeille / Indésirables) que si son objet est encore dans le cache
+ * du magasin. Sans cela, le dossier disparaît du disque mais reste connu de la
+ * base (voir aussi folder_op_create () qui purge une ligne réécrite plus tard).
+ * Paramètres :
+ *   core        : instance du moteur evo-core
+ *   store       : magasin du compte
+ *   account_uid : uid du compte
+ *   full_name   : nom complet du dossier
+ *   error       : emplacement d'erreur GError
+ * Retourne : TRUE en cas de succès. */
+static gboolean
+folder_delete_forgetting (EvoCore *core,
+			  CamelStore *store,
+			  const gchar *account_uid,
+			  const gchar *full_name,
+			  GError **error)
+{
+	CamelFolder *keep;
+	gboolean success;
+
+	/* sans erreur remontée : un dossier non sélectionnable ne s'ouvre pas */
+	keep = camel_store_get_folder_sync (store, full_name, 0, core->cancellable, NULL);
+
+	core_untrack_folder_tree (core, account_uid, full_name);
+
+	if (CAMEL_IS_SUBSCRIBABLE (store) &&
+	    camel_subscribable_folder_is_subscribed (CAMEL_SUBSCRIBABLE (store), full_name))
+		camel_subscribable_unsubscribe_folder_sync (CAMEL_SUBSCRIBABLE (store), full_name, core->cancellable, NULL);
+
+	success = camel_store_delete_folder_sync (store, full_name, core->cancellable, error);
+	g_clear_object (&keep);
+
+	return success;
+}
+
 /* Supprime un dossier. Choix : un dossier qui a des sous-dossiers est
  * refusé (les supprimer d'abord) ; ses messages sont supprimés
  * définitivement avec lui (l'interface demande confirmation en indiquant leur
@@ -868,13 +920,7 @@ core_delete_folder_run (EvoCore *core,
 			goto exit;
 	}
 
-	core_untrack_folder_tree (core, args[0], args[1]);
-
-	if (CAMEL_IS_SUBSCRIBABLE (ctx.store) &&
-	    camel_subscribable_folder_is_subscribed (CAMEL_SUBSCRIBABLE (ctx.store), args[1]))
-		camel_subscribable_unsubscribe_folder_sync (CAMEL_SUBSCRIBABLE (ctx.store), args[1], core->cancellable, NULL);
-
-	if (camel_store_delete_folder_sync (ctx.store, args[1], core->cancellable, error))
+	if (folder_delete_forgetting (core, ctx.store, args[0], args[1], error))
 		json = g_strdup_printf ("{\"count\":%u}", count);
 
 	core_emit_folders_updated (core, args[0]);
@@ -934,13 +980,7 @@ folder_delete_tree (EvoCore *core,
 			return FALSE;
 	}
 
-	core_untrack_folder_tree (core, account_uid, fi->full_name);
-
-	if (CAMEL_IS_SUBSCRIBABLE (ctx->store) &&
-	    camel_subscribable_folder_is_subscribed (CAMEL_SUBSCRIBABLE (ctx->store), fi->full_name))
-		camel_subscribable_unsubscribe_folder_sync (CAMEL_SUBSCRIBABLE (ctx->store), fi->full_name, core->cancellable, NULL);
-
-	return camel_store_delete_folder_sync (ctx->store, fi->full_name, core->cancellable, error);
+	return folder_delete_forgetting (core, ctx->store, account_uid, fi->full_name, error);
 }
 
 /* État d'un transfert de dossier (copie ou déplacement entre comptes) :
