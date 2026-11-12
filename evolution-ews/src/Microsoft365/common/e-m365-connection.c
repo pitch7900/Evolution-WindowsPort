@@ -2820,6 +2820,62 @@ e_m365_connection_get_objects_delta_sync (EM365Connection *cnc,
 		delta_link, max_page_size, func, func_user_data, out_delta_link, cancellable, error);
 }
 
+gboolean
+e_m365_connection_list_recent_mail_sync (EM365Connection *cnc,
+					 const gchar *user_override, /* for which user, NULL to use the account user */
+					 const gchar *folder_id,
+					 const gchar *select, /* nullable - properties to select */
+					 guint top,
+					 EM365ConnectionJsonFunc func, /* function to call with the result set */
+					 gpointer func_user_data, /* user data passed into the 'func' */
+					 GCancellable *cancellable,
+					 GError **error)
+{
+	EM365ResponseData rd;
+	SoupMessage *message;
+	gchar *uri, *top_str;
+	gboolean with_mailsummary, success;
+
+	g_return_val_if_fail (E_IS_M365_CONNECTION (cnc), FALSE);
+	g_return_val_if_fail (folder_id != NULL, FALSE);
+	g_return_val_if_fail (func != NULL, FALSE);
+
+	with_mailsummary = select && g_str_has_prefix (select, "|mailsummary|");
+	if (with_mailsummary)
+		select += strlen ("|mailsummary|");
+
+	top_str = g_strdup_printf ("%u", top > 0 ? top : 100);
+	uri = e_m365_connection_construct_uri (cnc, TRUE, user_override, E_M365_API_V1_0, NULL,
+		"mailFolders",
+		folder_id,
+		"messages",
+		"$select", select,
+		"$orderby", "receivedDateTime desc",
+		"$top", top_str,
+		with_mailsummary ? "expand" : NULL,
+		with_mailsummary ? "singleValueExtendedProperties($filter=id eq '" E_M365_PT_MESSAGE_SIZE_NAME "' or id eq '" E_M365_PT_ICON_INDEX "')" : NULL,
+		NULL);
+	g_free (top_str);
+
+	message = m365_connection_new_soup_message (SOUP_METHOD_GET, uri, CSM_DEFAULT, error);
+	g_free (uri);
+
+	if (!message)
+		return FALSE;
+
+	memset (&rd, 0, sizeof (EM365ResponseData));
+
+	rd.json_func = func;
+	rd.func_user_data = func_user_data;
+	rd.read_only_once = TRUE; /* une seule page : pas de suite (@odata.nextLink) */
+
+	success = m365_connection_send_request_sync (cnc, message, e_m365_read_valued_response_cb, NULL, &rd, cancellable, error);
+
+	g_clear_object (&message);
+
+	return success;
+}
+
 /* Date de réception du message de rang 'skip' d'un dossier (du plus récent au plus ancien) : sert à
    borner la première synchronisation aux N messages les plus récents. Une seule page d'un seul message
    est demandée, donc la réponse est immédiate même pour un dossier de dizaines de milliers de messages. */
