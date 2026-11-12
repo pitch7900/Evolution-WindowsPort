@@ -12,6 +12,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.3.1] — en cours
 
+### Modifié
+
+- **Liste des messages : la corbeille de suppression rapide au survol est rouge** (E81123), pour la distinguer des autres actions.
+
 ### Corrigé
 
 - **Catégories de courrier envoyées au serveur (Microsoft 365, IMAP).** Une catégorie posée sur un message n'était enregistrée qu'en local : le moteur appelait seulement `camel_folder_synchronize_message_sync`, qui télécharge le message sans envoyer les modifications. Le dossier est maintenant synchronisé après chaque changement de catégorie, ce qui envoie `categories` à Exchange Online (Outlook).

@@ -1220,6 +1220,8 @@ namespace winrt::EvolutionWin::implementation
             FontIcon trash_icon;
             trash_icon.Glyph(L"\xE74D");
             trash_icon.FontSize(14);
+            /* rouge (E81123, rouge « fermer/supprimer » de Windows) : lisible en thème clair et sombre */
+            trash_icon.Foreground(SolidColorBrush{ Windows::UI::ColorHelper::FromArgb(255, 0xE8, 0x11, 0x23) });
             delete_button.Content(trash_icon);
             delete_button.Width(m_compact_density ? 26 : 32);
             delete_button.Height(m_compact_density ? 26 : 32);
