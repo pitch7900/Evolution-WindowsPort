@@ -295,7 +295,7 @@ namespace winrt::EvolutionWin::implementation
         grid.Height(total_height);
 
         auto resources = Application::Current().Resources();
-        auto brush = [&](wchar_t const* key) { return resources.Lookup(box_value(key)).as<Microsoft::UI::Xaml::Media::Brush>(); };
+        auto brush = [&](wchar_t const* key) { return ::EvolutionWin::Helpers::ThemedBrush(key); };
 
         /* heures et traits */
         for (double hour = std::ceil(window_start / 3600.0) * 3600.0; hour < window_end; hour += 3600.0)

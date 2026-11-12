@@ -1973,8 +1973,7 @@ namespace winrt::EvolutionWin::implementation
             m_drop_highlight_grid.ClearValue(Controls::Panel::BackgroundProperty());
         m_drop_highlight_grid = target;
         if (m_drop_highlight_grid)
-            m_drop_highlight_grid.Background(Application::Current().Resources()
-                .Lookup(box_value(L"AccentFillColorSecondaryBrush")).as<Media::Brush>());
+            m_drop_highlight_grid.Background(::EvolutionWin::Helpers::ThemedBrush(L"AccentFillColorSecondaryBrush"));
     }
 
     /**

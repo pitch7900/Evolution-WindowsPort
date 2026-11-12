@@ -32,6 +32,59 @@ namespace EvolutionWin::Helpers
     using namespace Windows::Data::Json;
     using namespace Windows::Foundation;
 
+    /* Thème choisi dans Paramètres › Affichage (mémorisé par MainWindow::ApplyTheme). */
+    inline ElementTheme& AppElementTheme()
+    {
+        static ElementTheme theme = ElementTheme::Default;
+        return theme;
+    }
+
+    /* Recherche récursive d'une ressource dans le dictionnaire de thème « theme_key » (Default = sombre, Light). */
+    inline Windows::Foundation::IInspectable FindThemedResource(ResourceDictionary const& dictionary,
+        hstring const& theme_key, Windows::Foundation::IInspectable const& key)
+    {
+        auto themes = dictionary.ThemeDictionaries();
+        if (themes.HasKey(box_value(theme_key)))
+        {
+            if (auto themed = themes.Lookup(box_value(theme_key)).try_as<ResourceDictionary>())
+            {
+                if (themed.HasKey(key))
+                    return themed.Lookup(key);
+            }
+        }
+        for (auto const& merged : dictionary.MergedDictionaries())
+        {
+            if (auto found = FindThemedResource(merged, theme_key, key))
+                return found;
+        }
+        return nullptr;
+    }
+
+    /**
+     * @brief Pinceau du thème réellement affiché (clair ou sombre).
+     *
+     * Application::Resources().Lookup() renvoie toujours la valeur du thème du démarrage : un pinceau lu ainsi
+     * et posé en code reste gris clair sur fond blanc après un passage au thème clair (et inversement). Cette
+     * fonction lit le dictionnaire du thème choisi ; sans résultat, elle retombe sur la lecture habituelle.
+     * @param key Clé de la ressource (ex. L"TextFillColorSecondaryBrush").
+     */
+    inline Microsoft::UI::Xaml::Media::Brush ThemedBrush(wchar_t const* key)
+    {
+        auto resources = Application::Current().Resources();
+        bool dark = AppElementTheme() == ElementTheme::Dark ||
+            (AppElementTheme() == ElementTheme::Default && Application::Current().RequestedTheme() == ApplicationTheme::Dark);
+        try
+        {
+            if (auto found = FindThemedResource(resources, dark ? L"Default" : L"Light", box_value(key)))
+            {
+                if (auto brush = found.try_as<Microsoft::UI::Xaml::Media::Brush>())
+                    return brush;
+            }
+        }
+        catch (...) {}
+        return resources.Lookup(box_value(key)).as<Microsoft::UI::Xaml::Media::Brush>();
+    }
+
     /**
      * @brief Exécute une lambda-coroutine en gardant ses captures vivantes.
      *

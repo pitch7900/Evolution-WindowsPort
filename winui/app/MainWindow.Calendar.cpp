@@ -69,7 +69,7 @@ namespace
 
     Brush ThemeBrush(wchar_t const* key)
     {
-        return Application::Current().Resources().Lookup(box_value(key)).as<Brush>();
+        return ::EvolutionWin::Helpers::ThemedBrush(key);
     }
 
     Style ThemeStyle(wchar_t const* key)

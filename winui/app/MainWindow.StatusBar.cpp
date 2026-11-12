@@ -574,9 +574,9 @@ namespace winrt::EvolutionWin::implementation
         NotificationsPanel().Children().Clear();
 
         auto res = Application::Current().Resources();
-        auto card_bg = res.Lookup(box_value(L"CardBackgroundFillColorDefaultBrush")).as<Brush>();
-        auto card_stroke = res.Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>();
-        auto text_secondary = res.Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>();
+        auto card_bg = ::EvolutionWin::Helpers::ThemedBrush(L"CardBackgroundFillColorDefaultBrush");
+        auto card_stroke = ::EvolutionWin::Helpers::ThemedBrush(L"CardStrokeColorDefaultBrush");
+        auto text_secondary = ::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush");
         auto body_strong_style = res.Lookup(box_value(L"BodyStrongTextBlockStyle")).as<Style>();
         auto caption_style = res.Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>();
         Style subtle_btn_style{ nullptr };

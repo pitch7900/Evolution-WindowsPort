@@ -136,7 +136,7 @@ namespace winrt::EvolutionWin::implementation
 
             auto panel = PendingActionsPanel();
             panel.Children().Clear();
-            auto secondary_brush = Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Media::Brush>();
+            auto secondary_brush = ::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush");
 
             for (auto const& value : actions)
             {
@@ -260,7 +260,7 @@ namespace winrt::EvolutionWin::implementation
         dialog.CloseButtonText(Tr(L"Annuler"));
         dialog.DefaultButton(ContentDialogButton::Primary);
 
-        auto secondary_brush = Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Media::Brush>();
+        auto secondary_brush = ::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush");
 
         StackPanel panel;
         panel.Spacing(10);

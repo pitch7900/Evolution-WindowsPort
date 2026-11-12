@@ -744,11 +744,11 @@ namespace winrt::EvolutionWin::implementation
                 badge.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));
                 badge.Padding(ThicknessHelper::FromLengths(6, 1, 6, 1));
                 badge.VerticalAlignment(VerticalAlignment::Center);
-                badge.Background(Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
+                badge.Background(::EvolutionWin::Helpers::ThemedBrush(L"AccentFillColorDefaultBrush"));
                 TextBlock badge_text;
                 badge_text.Text(Tr(L"Par défaut", L"Default"));
                 badge_text.FontSize(11);
-                badge_text.Foreground(Application::Current().Resources().Lookup(box_value(L"TextOnAccentFillColorPrimaryBrush")).as<Brush>());
+                badge_text.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"TextOnAccentFillColorPrimaryBrush"));
                 badge.Child(badge_text);
                 title_line.Children().Append(badge);
             }
@@ -1282,7 +1282,7 @@ namespace winrt::EvolutionWin::implementation
             if (target_imap_host.empty() && target_smtp_host.empty())
             {
                 test_status.Text(Tr(L"Veuillez renseigner au moins un serveur entrant ou sortant."));
-                test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Brush>());
+                test_status.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"SystemFillColorCriticalBrush"));
                 test_status.Visibility(Visibility::Visible);
                 on_done(false);
                 return;
@@ -1292,7 +1292,7 @@ namespace winrt::EvolutionWin::implementation
             test_ring.IsActive(true);
             test_ring.Visibility(Visibility::Visible);
             test_status.Text(Tr(L"Vérification de la connectivité réseau et TLS en cours…"));
-            test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorPrimaryBrush")).as<Brush>());
+            test_status.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorPrimaryBrush"));
             test_status.Visibility(Visibility::Visible);
 
             JsonObject req;
@@ -1316,7 +1316,7 @@ namespace winrt::EvolutionWin::implementation
                 if (!error.empty())
                 {
                     test_status.Text(Fmt(Tr(L"Erreur de test : {0}"), { error }));
-                    test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Brush>());
+                    test_status.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"SystemFillColorCriticalBrush"));
                     *connection_tested_ok = false;
                     on_done(false);
                     return;
@@ -1339,7 +1339,7 @@ namespace winrt::EvolutionWin::implementation
                 if (imap_ok && smtp_ok)
                 {
                     test_status.Text(Tr(L"✓ Connectivité établie avec succès pour IMAP et SMTP."));
-                    test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorSuccessBrush")).as<Brush>());
+                    test_status.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"SystemFillColorSuccessBrush"));
                     *connection_tested_ok = true;
                     on_done(true);
                 }
@@ -1349,7 +1349,7 @@ namespace winrt::EvolutionWin::implementation
                     if (!imap_ok) msg = Fmt(Tr(L"Échec IMAP : {0}"), { imap_err }) + L"  ";
                     if (!smtp_ok) msg = msg + Fmt(Tr(L"Échec SMTP : {0}"), { smtp_err });
                     test_status.Text(msg);
-                    test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Brush>());
+                    test_status.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"SystemFillColorCriticalBrush"));
                     *connection_tested_ok = false;
                     on_done(false);
                 }
@@ -2056,7 +2056,7 @@ namespace winrt::EvolutionWin::implementation
             test_ring.IsActive(true);
             test_ring.Visibility(Visibility::Visible);
             test_status.Text(Tr(L"Test de connectivité en cours…"));
-            test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorPrimaryBrush")).as<Brush>());
+            test_status.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorPrimaryBrush"));
             test_status.Visibility(Visibility::Visible);
 
             JsonObject req;
@@ -2079,7 +2079,7 @@ namespace winrt::EvolutionWin::implementation
                 if (!error.empty())
                 {
                     test_status.Text(Fmt(Tr(L"Erreur de test : {0}"), { error }));
-                    test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Brush>());
+                    test_status.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"SystemFillColorCriticalBrush"));
                     return;
                 }
 
@@ -2098,7 +2098,7 @@ namespace winrt::EvolutionWin::implementation
                 if (imap_ok && smtp_ok)
                 {
                     test_status.Text(Tr(L"✓ Serveurs IMAP et SMTP connectés avec succès."));
-                    test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorSuccessBrush")).as<Brush>());
+                    test_status.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"SystemFillColorSuccessBrush"));
                 }
                 else
                 {
@@ -2106,7 +2106,7 @@ namespace winrt::EvolutionWin::implementation
                     if (!imap_ok) msg = Fmt(Tr(L"Échec IMAP : {0}"), { imap_err }) + L"  ";
                     if (!smtp_ok) msg = msg + Fmt(Tr(L"Échec SMTP : {0}"), { smtp_err });
                     test_status.Text(msg);
-                    test_status.Foreground(Application::Current().Resources().Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Brush>());
+                    test_status.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"SystemFillColorCriticalBrush"));
                 }
             });
         });
@@ -2308,7 +2308,7 @@ namespace winrt::EvolutionWin::implementation
             hstring used_str = FormatFileSize(used);
             hstring total_str = FormatFileSize(total);
             usage_txt.Text(Fmt(Tr(L"Utilisé : {0} sur {1} ({2} %)"), { used_str, total_str, to_hstring(percent) }));
-            usage_txt.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+            usage_txt.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush"));
             panel.Children().Append(usage_txt);
         }
         else
@@ -2506,7 +2506,7 @@ namespace winrt::EvolutionWin::implementation
         Grid root;
         root.Padding(ThicknessHelper::FromLengths(16, 12, 16, 12));
         root.RowSpacing(8);
-        root.Background(Application::Current().Resources().Lookup(box_value(L"ApplicationPageBackgroundThemeBrush")).as<Media::Brush>());
+        root.Background(::EvolutionWin::Helpers::ThemedBrush(L"ApplicationPageBackgroundThemeBrush"));
         for (int i = 0; i < 5; ++i)
         {
             RowDefinition row;

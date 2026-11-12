@@ -600,7 +600,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         StatusMessageIcon().Glyph(glyph);
-        StatusMessageIcon().Foreground(resources.Lookup(box_value(brush)).as<Microsoft::UI::Xaml::Media::Brush>());
+        StatusMessageIcon().Foreground(::EvolutionWin::Helpers::ThemedBrush(brush.c_str()));
         StatusMessageText().Text(message);
         ToolTipService::SetToolTip(StatusMessageText(), box_value(message));
         StatusMessagePanel().Visibility(Visibility::Visible);

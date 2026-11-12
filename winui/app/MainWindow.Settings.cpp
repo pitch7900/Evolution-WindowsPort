@@ -1751,6 +1751,10 @@ namespace winrt::EvolutionWin::implementation
 
     {
 
+        /* mémorisé pour ThemedBrush (pinceaux construits en code, selon le thème affiché) */
+        ::EvolutionWin::Helpers::AppElementTheme() = theme_name == L"light" ? ElementTheme::Light
+            : theme_name == L"dark" ? ElementTheme::Dark : ElementTheme::Default;
+
         if (auto root = this->Content().try_as<FrameworkElement>())
 
         {
@@ -1768,6 +1772,25 @@ namespace winrt::EvolutionWin::implementation
                 root.RequestedTheme(ElementTheme::Default);
 
         }
+
+        /* les volets construits en code (couleurs choisies selon le thème) sont refaits une fois le thème appliqué */
+        DispatcherQueue().TryEnqueue([weak = get_weak()]()
+        {
+            if (auto self = weak.get())
+            {
+                if (self->m_calendar_sources)
+                    self->RebuildCalendarSourcesPanel();
+                if (self->m_contact_books)
+                    self->RebuildContactBooksPanel();
+                if (self->m_all_tasks)
+                {
+                    self->ShowTasks();
+                    self->UpdateTodoBar();
+                }
+                if (self->m_last_shown_messages)
+                    self->ShowMessages(self->m_last_shown_messages);
+            }
+        });
 
     }
 

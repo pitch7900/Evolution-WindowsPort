@@ -85,8 +85,8 @@ namespace winrt::EvolutionWin::implementation
             bool html = signature.GetNamedString(L"mime_type", L"") == L"text/html";
 
             Border card;
-            card.Background(Application::Current().Resources().Lookup(box_value(L"SubtleFillColorSecondaryBrush")).as<Brush>());
-            card.BorderBrush(Application::Current().Resources().Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>());
+            card.Background(::EvolutionWin::Helpers::ThemedBrush(L"SubtleFillColorSecondaryBrush"));
+            card.BorderBrush(::EvolutionWin::Helpers::ThemedBrush(L"CardStrokeColorDefaultBrush"));
             card.BorderThickness(ThicknessHelper::FromUniformLength(1));
             card.CornerRadius(CornerRadiusHelper::FromUniformRadius(6));
             card.Padding(ThicknessHelper::FromLengths(14, 10, 14, 10));
@@ -105,7 +105,7 @@ namespace winrt::EvolutionWin::implementation
             FontIcon icon;
             icon.Glyph(L"\xE70B");
             icon.FontSize(18);
-            icon.Foreground(Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
+            icon.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"AccentFillColorDefaultBrush"));
             icon.VerticalAlignment(VerticalAlignment::Center);
             Grid::SetColumn(icon, 0);
             row.Children().Append(icon);
@@ -121,7 +121,7 @@ namespace winrt::EvolutionWin::implementation
             TextBlock detail;
             detail.Text((html ? hstring{ L"HTML  •  " } : Tr(L"Texte brut") + L"  •  ") + hstring{ SignaturePreview(signature) });
             detail.Style(LookupStyle(L"CaptionTextBlockStyle"));
-            detail.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+            detail.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush"));
             detail.TextTrimming(TextTrimming::CharacterEllipsis);
             info.Children().Append(detail);
             row.Children().Append(info);
@@ -203,8 +203,8 @@ namespace winrt::EvolutionWin::implementation
             hstring address = account.GetNamedString(L"address", L"");
 
             Border card;
-            card.Background(Application::Current().Resources().Lookup(box_value(L"SubtleFillColorSecondaryBrush")).as<Brush>());
-            card.BorderBrush(Application::Current().Resources().Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>());
+            card.Background(::EvolutionWin::Helpers::ThemedBrush(L"SubtleFillColorSecondaryBrush"));
+            card.BorderBrush(::EvolutionWin::Helpers::ThemedBrush(L"CardStrokeColorDefaultBrush"));
             card.BorderThickness(ThicknessHelper::FromUniformLength(1));
             card.CornerRadius(CornerRadiusHelper::FromUniformRadius(6));
             card.Padding(ThicknessHelper::FromLengths(14, 10, 14, 10));
@@ -226,7 +226,7 @@ namespace winrt::EvolutionWin::implementation
             FontIcon icon;
             icon.Glyph(L"\xE77B");
             icon.FontSize(20);
-            icon.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+            icon.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush"));
             icon.VerticalAlignment(VerticalAlignment::Center);
             Grid::SetColumn(icon, 0);
             row.Children().Append(icon);
@@ -244,7 +244,7 @@ namespace winrt::EvolutionWin::implementation
                 TextBlock subtitle;
                 subtitle.Text(address);
                 subtitle.Style(LookupStyle(L"CaptionTextBlockStyle"));
-                subtitle.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+                subtitle.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush"));
                 info.Children().Append(subtitle);
             }
             row.Children().Append(info);

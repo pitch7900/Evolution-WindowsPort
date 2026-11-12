@@ -172,7 +172,9 @@ namespace winrt::EvolutionWin::implementation
             TextBlock header;
             header.Text(is_sub ? sub_name : (account.empty() ? Tr(L"Autres") : account));
             header.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
-            header.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+            /* pas de pinceau lu dans les ressources de l'application : il est figé au thème du démarrage
+               (gris clair illisible sur fond blanc après un passage au thème clair). L'opacité suit le thème. */
+            header.Opacity(0.7);
             header.VerticalAlignment(VerticalAlignment::Center);
             Grid::SetColumn(header, 2);
             header_row.Children().Append(header);
@@ -210,7 +212,7 @@ namespace winrt::EvolutionWin::implementation
                 empty_hint.Text(Tr(L"Aucun calendrier dans ce groupe. Ajoutez des personnes avec « Personnes et équipes… »."));
                 empty_hint.TextWrapping(TextWrapping::Wrap);
                 empty_hint.Style(Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>());
-                empty_hint.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorTertiaryBrush")).as<Brush>());
+                empty_hint.Opacity(0.55);
                 empty_hint.Margin(ThicknessHelper::FromLengths(4, 0, 4, 4));
                 group_items.Children().Append(empty_hint);
             }
@@ -236,7 +238,12 @@ namespace winrt::EvolutionWin::implementation
                 row.ColumnDefinitions().Append(check_col);
                 row.ColumnDefinitions().Append(ColumnDefinition{});
                 if (is_active)
-                    row.Background(Application::Current().Resources().Lookup(box_value(L"SubtleFillColorSecondaryBrush")).as<Brush>());
+                {
+                    /* léger voile selon le thème réellement affiché (reconstruit au changement de thème) */
+                    bool dark = panel.ActualTheme() == ElementTheme::Dark;
+                    row.Background(SolidColorBrush{ dark ? Windows::UI::Color{ 0x0F, 0xFF, 0xFF, 0xFF }
+                                                         : Windows::UI::Color{ 0x0A, 0x00, 0x00, 0x00 } });
+                }
 
                 CheckBox shown;
                 shown.MinWidth(0);

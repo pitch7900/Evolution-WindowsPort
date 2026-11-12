@@ -930,7 +930,7 @@ namespace winrt::EvolutionWin::implementation
                     header.Padding(ThicknessHelper::FromLengths(12, 5, 12, 5));
                     header.ColumnSpacing(8);
                     header.HorizontalAlignment(HorizontalAlignment::Stretch);
-                    header.Background(Application::Current().Resources().Lookup(box_value(L"SubtleFillColorSecondaryBrush")).as<Brush>());
+                    header.Background(::EvolutionWin::Helpers::ThemedBrush(L"SubtleFillColorSecondaryBrush"));
                     header.Tag(box_value(L""));
                     ColumnDefinition chevron_column, label_column;
                     chevron_column.Width(GridLengthHelper::Auto());
@@ -966,7 +966,7 @@ namespace winrt::EvolutionWin::implementation
             Grid item;
             /* trait fin entre deux messages et un peu d'espace autour */
             item.BorderThickness(ThicknessHelper::FromLengths(0, 0, 0, 1));
-            item.BorderBrush(Application::Current().Resources().Lookup(box_value(L"DividerStrokeColorDefaultBrush")).as<Brush>());
+            item.BorderBrush(::EvolutionWin::Helpers::ThemedBrush(L"DividerStrokeColorDefaultBrush"));
             if (m_compact_density)
                 item.Padding(ThicknessHelper::FromLengths(8, 5, 8, 5));
             else
@@ -1270,8 +1270,7 @@ namespace winrt::EvolutionWin::implementation
                 bool is_seen = it == m_message_states.end() || it->second.seen;
                 read_mark.Width(6);
                 if (is_seen)
-                    read_mark.Background(Application::Current().Resources()
-                        .Lookup(box_value(L"ControlStrongStrokeColorDefaultBrush")).as<Brush>());
+                    read_mark.Background(::EvolutionWin::Helpers::ThemedBrush(L"ControlStrongStrokeColorDefaultBrush"));
             });
             read_bar.PointerExited([this, uid, read_mark](IInspectable const&, Input::PointerRoutedEventArgs const&)
             {
@@ -2010,7 +2009,7 @@ namespace winrt::EvolutionWin::implementation
                 if (auto mark = bar.Children().GetAt(0).try_as<Border>())
                     mark.Background(seen
                         ? Brush{ SolidColorBrush{ Microsoft::UI::Colors::Transparent() } }
-                        : Application::Current().Resources().Lookup(box_value(L"AccentFillColorDefaultBrush")).as<Brush>());
+                        : ::EvolutionWin::Helpers::ThemedBrush(L"AccentFillColorDefaultBrush"));
                 ToolTipService::SetToolTip(bar, box_value(seen ? Tr(L"Marquer comme non lu") : Tr(L"Marquer comme lu")));
             }
             else if (auto text = child.try_as<TextBlock>(); text && Grid::GetColumn(text) == 0 && Grid::GetRow(text) < 2)

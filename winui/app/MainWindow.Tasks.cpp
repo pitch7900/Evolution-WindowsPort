@@ -376,7 +376,7 @@ namespace winrt::EvolutionWin::implementation
             return;
 
         auto resources = Application::Current().Resources();
-        auto secondary_brush = resources.Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>();
+        auto secondary_brush = ::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush");
 
         /* ---- volet gauche : comptes et listes, avec le nombre de tâches ouvertes ---- */
         struct PaneList { std::wstring uid, name; int open = 0; };
@@ -579,7 +579,7 @@ namespace winrt::EvolutionWin::implementation
                 header.ColumnSpacing(8);
                 header.Padding(ThicknessHelper::FromLengths(8, 8, 8, 8));
                 header.Margin(ThicknessHelper::FromLengths(0, 8, 0, 0));
-                header.Background(resources.Lookup(box_value(L"CardBackgroundFillColorDefaultBrush")).as<Brush>());
+                header.Background(::EvolutionWin::Helpers::ThemedBrush(L"CardBackgroundFillColorDefaultBrush"));
                 header.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));
                 ColumnDefinition chevron_col;
                 chevron_col.Width(GridLengthHelper::Auto());
@@ -622,7 +622,7 @@ namespace winrt::EvolutionWin::implementation
             else
                 empty.Text(Tr(L"Aucune tâche ne correspond à ce filtre."));
             empty.Padding(ThicknessHelper::FromLengths(12, 12, 12, 12));
-            empty.Foreground(Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+            empty.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush"));
             items.Append(empty);
         }
     }
@@ -698,7 +698,7 @@ namespace winrt::EvolutionWin::implementation
     {
         auto resources = Application::Current().Resources();
         auto caption_style = resources.Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>();
-        auto secondary_brush = resources.Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>();
+        auto secondary_brush = ::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush");
         hstring status = task.GetNamedString(L"status", L"needs-action");
         bool completed = status == L"completed";
         bool readonly = task.GetNamedBoolean(L"readonly", false);
@@ -753,8 +753,8 @@ namespace winrt::EvolutionWin::implementation
             Border account_badge;
             account_badge.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));
             account_badge.Padding(ThicknessHelper::FromLengths(6, 2, 6, 2));
-            account_badge.Background(resources.Lookup(box_value(L"CardBackgroundFillColorDefaultBrush")).as<Brush>());
-            account_badge.BorderBrush(resources.Lookup(box_value(L"CardStrokeColorDefaultBrush")).as<Brush>());
+            account_badge.Background(::EvolutionWin::Helpers::ThemedBrush(L"CardBackgroundFillColorDefaultBrush"));
+            account_badge.BorderBrush(::EvolutionWin::Helpers::ThemedBrush(L"CardStrokeColorDefaultBrush"));
             account_badge.BorderThickness(ThicknessHelper::FromUniformLength(1));
             account_badge.HorizontalAlignment(HorizontalAlignment::Left);
             account_badge.Margin(ThicknessHelper::FromLengths(0, 1, 0, 2));
@@ -793,7 +793,7 @@ namespace winrt::EvolutionWin::implementation
             due_text.Text(Fmt(overdue ? Tr(L"En retard, échéance : {0}") : Tr(L"Échéance : {0}"),
                 { FormatTaskDate(due, task.GetNamedBoolean(L"due_date_only", true)) }));
             if (overdue)
-                due_text.Foreground(resources.Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Brush>());
+                due_text.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"SystemFillColorCriticalBrush"));
             line.Children().Append(due_text);
         }
 
@@ -1030,7 +1030,7 @@ namespace winrt::EvolutionWin::implementation
         bool is_new = !task || is_preset_new;
         bool readonly = !is_new && task.GetNamedBoolean(L"readonly", false);
         auto caption_style = Application::Current().Resources().Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>();
-        auto secondary_brush = Application::Current().Resources().Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>();
+        auto secondary_brush = ::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush");
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
@@ -1688,7 +1688,7 @@ namespace winrt::EvolutionWin::implementation
     {
         auto resources = Application::Current().Resources();
         auto caption_style = resources.Lookup(box_value(L"CaptionTextBlockStyle")).as<Style>();
-        auto secondary_brush = resources.Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>();
+        auto secondary_brush = ::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush");
 
         Grid row;
         row.Padding(ThicknessHelper::FromLengths(4, 5, 4, 5));
@@ -1736,7 +1736,7 @@ namespace winrt::EvolutionWin::implementation
         due_text.Style(caption_style);
         due_text.Text(relative_due);
         if (is_overdue)
-            due_text.Foreground(resources.Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Brush>());
+            due_text.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"SystemFillColorCriticalBrush"));
         else
             due_text.Foreground(secondary_brush);
         subline.Children().Append(due_text);
@@ -1747,7 +1747,7 @@ namespace winrt::EvolutionWin::implementation
             FontIcon prio_icon;
             prio_icon.Glyph(L"\xE7C1");
             prio_icon.FontSize(10);
-            prio_icon.Foreground(resources.Lookup(box_value(L"SystemFillColorCriticalBrush")).as<Brush>());
+            prio_icon.Foreground(::EvolutionWin::Helpers::ThemedBrush(L"SystemFillColorCriticalBrush"));
             subline.Children().Append(prio_icon);
         }
 
