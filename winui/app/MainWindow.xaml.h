@@ -6,6 +6,7 @@
 #include "MessageWindow.xaml.h"
 #include "SplashWindow.xaml.h"
 #include "Categories.h"
+#include "Rules.h"
 
 #include <map>
 #include <set>
@@ -222,6 +223,29 @@ namespace winrt::EvolutionWin::implementation
         fire_and_forget ShowDelegatesDialogAsync(winrt::hstring account, winrt::hstring name);
         fire_and_forget ShowOfflineSyncDialogAsync(winrt::hstring account, winrt::hstring folder, winrt::hstring name, Windows::Data::Json::JsonObject data);
 
+        /* File d'attente des actions hors ligne et résolution des conflits (MainWindow.OfflineQueue.cpp) */
+        void OnPendingActionsButtonClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void RefreshPendingActions();
+        void OnPendingActionsCancelAllClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnPendingActionsReplayClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void UpdatePendingActionsBadge(int pending, int failed);
+        void OnOfflineReplayEvent(Windows::Data::Json::JsonObject const& report);
+        fire_and_forget ShowConflictDialogAsync(winrt::hstring kind, Windows::Data::Json::JsonObject conflict,
+            Windows::Data::Json::JsonObject request, std::function<void()> on_done);
+
+        /* Lecteur immersif (MainWindow.Immersive.cpp ; logique pure dans ImmersiveReader.h) */
+        void OpenImmersiveReader();
+        void OnImmersiveReaderClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
+        /* Liens mailto: et enregistrement système (MainWindow.Mailto.cpp ; logique pure dans Mailto.h) */
+        void InstallMailtoSupport(winrt::hstring const& pending_url);
+        void HandleMailto(winrt::hstring const& url);
+        void InitMailtoSettingsView();
+        void OnMailtoRegisterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnMailtoUnregisterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnMailtoDefaultAppsClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        static bool ForwardMailtoToRunningInstance(std::wstring const& url);
+
         /* Écran de démarrage (Splash screen) */
         void SetSplashWindow(winrt::EvolutionWin::SplashWindow const& splash);
         void CloseSplash();
@@ -271,6 +295,9 @@ namespace winrt::EvolutionWin::implementation
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
         void OnNewContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnExportContactsClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        /* Assistants d'exportation et d'importation de données (MainWindow.Transfer.cpp ; logique pure dans DataTransfer.h) */
+        void OnExportDataClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnImportDataClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnComposeToContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnDeleteContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnEditContactClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -401,6 +428,16 @@ namespace winrt::EvolutionWin::implementation
         void OnThemeChoiceChanged(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+        /* Index plein texte local (MainWindow.Index.cpp) : gestionnaires de la section des Paramètres */
+        void OnFullTextIndexToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnFullTextIndexRebuildClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
+        /* Filtre anti-spam (MainWindow.Spam.cpp) : gestionnaires de la section des Paramètres */
+        void OnSpamEnabledToggled(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnSpamThresholdChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::Primitives::RangeBaseValueChangedEventArgs const& args);
+        void OnSpamLearnClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnSpamResetClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
         void OnSettingToggleChanged(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -556,8 +593,33 @@ namespace winrt::EvolutionWin::implementation
         void ToggleCategoryForMessages(std::vector<hstring> const& uids, std::wstring const& category_name, bool apply);
         void ClearCategoriesForMessages(std::vector<hstring> const& uids);
 
+        /* Index plein texte local (MainWindow.Index.cpp) */
+        void ApplyFullTextIndexSetting();
+        void InitFullTextIndexSettingsView();
+        void ShowFullTextIndexStatus(Windows::Data::Json::JsonObject const& status);
+
+        /* Filtre anti-spam local (MainWindow.Spam.cpp) */
+        void ApplySpamSettings();
+        void RefreshSpamStats();
+        void InitSpamSettingsView();
+        void TrainSpamThenMove(std::vector<hstring> const& uids, hstring const& account, hstring const& folder, bool is_spam,
+            std::function<void()> const& then);
+        void ShowSpamFilteredNotice(Windows::Data::Json::JsonObject const& object);
+
         /* Catégories unifiées (MainWindow.Categories.cpp) */
         void RefreshCategoriesView();
+
+        /* Règles de messagerie (MainWindow.Rules.cpp ; logique pure dans Rules.h) */
+        void RefreshRulesView();
+        void OnRulesChanged();
+        fire_and_forget EditRuleAsync(::EvolutionWin::Rules::Rule rule, bool is_new);
+        fire_and_forget ShowQuickRuleDialogAsync(hstring uid);
+        Microsoft::UI::Xaml::Controls::MenuFlyoutItem MakeCreateRuleMenuItem(hstring uid);
+        void ApplyRulesToMessages(hstring account, hstring folder, Windows::Data::Json::JsonArray messages, bool at_reception);
+        void ApplyRulesToNewMail(hstring account, hstring folder);
+        void RunRulesOnFolder(hstring account, hstring folder);
+        fire_and_forget SyncServerRulesFor(hstring account);
+        void AppendRuleFolderItem(Microsoft::UI::Xaml::Controls::MenuFlyout const& menu, hstring const& account, hstring const& folder);
         void OnCategoriesRegistryChanged();
         void PushCategoryChange(std::wstring const& action, std::wstring const& name, std::wstring const& new_name,
             std::wstring const& color_source, std::vector<std::wstring> const* accounts = nullptr);
@@ -578,6 +640,8 @@ namespace winrt::EvolutionWin::implementation
         void SetTaskCategories(Windows::Data::Json::JsonObject const& task, std::vector<std::wstring> const& names);
         void SetEventCategories(Windows::Data::Json::JsonObject const& event, std::vector<std::wstring> const& names);
         void AttachEventContextMenu(Microsoft::UI::Xaml::UIElement const& element, Windows::Data::Json::JsonObject const& event);
+        void EnableEventExportDrag(Microsoft::UI::Xaml::UIElement const& element, Windows::Data::Json::JsonObject const& ev);
+        void EnableContactExportDrag(Microsoft::UI::Xaml::UIElement const& element, Windows::Data::Json::JsonObject const& contact);
         void PatchEvent(Windows::Data::Json::JsonObject const& event, Windows::Data::Json::JsonObject const& changes);
         void SetContactCategories(Windows::Data::Json::JsonObject const& contact, std::vector<std::wstring> const& names);
         void ShowContacts();
@@ -712,6 +776,10 @@ namespace winrt::EvolutionWin::implementation
         /* Exportation vCard / iCalendar */
         fire_and_forget ExportCalendarAsync(Windows::Data::Json::JsonArray sources);
         fire_and_forget ExportContactsAsync(Windows::Data::Json::JsonArray books);
+        fire_and_forget ExportDataAsync(Windows::Data::Json::JsonArray accounts);
+        fire_and_forget ImportDataAsync(Windows::Data::Json::JsonArray accounts, Windows::Data::Json::JsonArray books,
+            Windows::Data::Json::JsonArray calendars, hstring preselect);
+        fire_and_forget ShowTransferReportAsync(hstring title, hstring summary, hstring dest);
 
         /* Tâches (VTODO) */
         void LoadTasks();
@@ -794,6 +862,11 @@ namespace winrt::EvolutionWin::implementation
         std::map<std::wstring, winrt::EvolutionWin::MessageWindow> m_open_message_windows;
         /* fenêtres de rédaction ouvertes */
         std::vector<winrt::EvolutionWin::ComposeWindow> m_open_compose_windows;
+        /* fenêtre plein écran du lecteur immersif (nulle si fermée) */
+        Microsoft::UI::Xaml::Window m_immersive_window{ nullptr };
+        /* lien mailto: reçu au lancement ou d'une autre instance, en attente du chargement des comptes */
+        winrt::hstring m_pending_mailto;
+        Microsoft::UI::Xaml::DispatcherTimer m_mailto_timer{ nullptr };
 
         /* Bandeau d'information (vues Courrier et Calendrier) : avis identifiés,
          * le dernier est affiché ; voir ShowBanner */

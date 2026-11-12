@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitionResources revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <displayName>EvolutionWin</displayName>
+  <description>Stratégies de groupe du client de messagerie EvolutionWin.</description>
+  <resources>
+    <stringTable>
+      <string id="EvolutionWin">EvolutionWin</string>
+      <string id="DisableAutoUpdate">Désactiver les mises à jour automatiques</string>
+      <string id="DisableAutoUpdate_Help">Activée : EvolutionWin ne recherche ni ne télécharge plus aucune mise à jour (vérification au démarrage, bouton « Rechercher des mises à jour » grisé). Non configurée ou désactivée : comportement normal.</string>
+      <string id="RemoteContentMode">Contenu distant des messages</string>
+      <string id="RemoteContentMode_Help">Impose le chargement du contenu distant (images) des messages. Le choix est grisé dans Paramètres > Confidentialité.</string>
+      <string id="RemoteNever">Jamais</string>
+      <string id="RemoteTrusted">Seulement pour les expéditeurs de confiance</string>
+      <string id="RemoteAlways">Toujours</string>
+      <string id="ShowCompletedTasks">Afficher les tâches terminées</string>
+      <string id="ShowCompletedTasks_Help">Impose l'affichage (ou le masquage) des tâches terminées. Le réglage est verrouillé dans l'interface.</string>
+    </stringTable>
+    <presentationTable>
+      <presentation id="RemoteContentMode">
+        <dropdownList refId="RemoteContentModeValue" defaultItem="1">$(string.RemoteContentMode)</dropdownList>
+      </presentation>
+    </presentationTable>
+  </resources>
+</policyDefinitionResources>

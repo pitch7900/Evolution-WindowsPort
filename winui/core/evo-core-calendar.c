@@ -4,6 +4,7 @@
  */
 
 #include "evo-core-private.h"
+#include "evo-core-conflict-util.h"
 
 /* Confidentialité d'un événement (propriété CLASS) : applique le membre JSON "private" s'il est
  * présent (true : PRIVATE, false : PUBLIC) ; sans ce membre, ne touche à rien. Exchange Online
@@ -447,6 +448,14 @@ core_get_event_run (EvoCore *core,
 	json_builder_set_member_name (builder, "readonly");
 	json_builder_add_boolean_value (builder, e_client_is_readonly (client));
 
+	/* révision chargée : renvoyée à l'enregistrement pour détecter une modification concurrente */
+	{
+		gchar *revision = core_conflict_event_revision (icomp);
+
+		builder_add_string (builder, "revision", revision);
+		g_free (revision);
+	}
+
 	ical_add_categories (builder, icomp);
 
 	{
@@ -701,8 +710,10 @@ core_modify_event_run (EvoCore *core,
 	EClient *client = NULL;
 	ICalComponent *icomp = NULL;
 	ICalProperty *prop;
-	const gchar *summary, *location, *description;
+	const gchar *summary, *location, *description, *base_revision;
 	gchar *json = NULL;
+	gint resolution;
+	gboolean keep_both = FALSE;
 
 	root = json_from_string (args[0], error);
 	if (!root)
@@ -718,9 +729,54 @@ core_modify_event_run (EvoCore *core,
 	if (!client)
 		goto exit;
 
+	/* modification concurrente : si l'événement a changé depuis son chargement (base_revision),
+	 * le serveur est interrogé d'abord, puis l'enregistrement est refusé avec la liste des champs
+	 * en désaccord tant que l'utilisateur n'a pas choisi (conflict_resolution : local, remote, both) */
+	base_revision = json_object_get_string_member_with_default (object, "base_revision", "");
+	resolution = cf_resolution_from_name (json_object_get_string_member_with_default (object, "conflict_resolution", ""));
+	if (*base_revision && resolution == CF_RESOLVE_NONE && !core_oq_is_offline (core))
+		e_client_refresh_sync (client, core->cancellable, NULL);
+
 	if (!e_cal_client_get_object_sync (E_CAL_CLIENT (client), json_object_get_string_member_with_default (object, "uid", ""),
 		NULL, &icomp, core->cancellable, error))
 		goto exit;
+
+	if (*base_revision) {
+		gchar *current = core_conflict_event_revision (icomp);
+		gboolean blocked = cf_must_block (base_revision, current, resolution);
+		gint differing = 0;
+
+		if (blocked) {
+			json = core_conflict_event_json (object, icomp, current, &differing);
+			if (differing > 0) {
+				g_free (current);
+				goto exit;
+			}
+			/* aucun champ en désaccord : la version distante est identique à ce que l'éditeur écrit */
+			g_free (json);
+			json = NULL;
+		}
+		g_free (current);
+	}
+
+	if (resolution == CF_RESOLVE_REMOTE) {
+		/* garder la version distante : rien n'est écrit */
+		json = g_strdup ("{\"resolved\":\"remote\"}");
+		goto exit;
+	}
+
+	if (resolution == CF_RESOLVE_BOTH) {
+		/* garder les deux : la version locale devient un nouvel événement, l'original distant reste */
+		ICalComponent *original = icomp;
+		gchar *new_uid = e_util_generate_uid ();
+
+		icomp = i_cal_component_clone (original);
+		g_object_unref (original);
+		core_conflict_strip_server_props (icomp);
+		i_cal_component_set_uid (icomp, new_uid);
+		g_free (new_uid);
+		keep_both = TRUE;
+	}
 
 	summary = json_object_get_string_member_with_default (object, "summary", "");
 	location = json_object_get_string_member_with_default (object, "location", "");
@@ -753,7 +809,14 @@ core_modify_event_run (EvoCore *core,
 	if (json_object_has_member (object, "reminder_minutes"))
 		event_set_reminder (icomp, (gint) json_object_get_int_member (object, "reminder_minutes"));
 
-	if (e_cal_client_modify_object_sync (E_CAL_CLIENT (client), icomp, E_CAL_OBJ_MOD_ALL,
+	if (keep_both) {
+		gchar *created_uid = NULL;
+
+		if (e_cal_client_create_object_sync (E_CAL_CLIENT (client), icomp, E_CAL_OPERATION_FLAG_NONE,
+			&created_uid, core->cancellable, error))
+			json = g_strdup_printf ("{\"resolved\":\"both\",\"uid\":\"%s\"}", created_uid ? created_uid : "");
+		g_free (created_uid);
+	} else if (e_cal_client_modify_object_sync (E_CAL_CLIENT (client), icomp, E_CAL_OBJ_MOD_ALL,
 		E_CAL_OPERATION_FLAG_NONE, core->cancellable, error))
 		json = g_strdup ("{}");
 

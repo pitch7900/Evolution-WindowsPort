@@ -88,18 +88,18 @@ flowchart LR
 > **Objectif :** Automatiser le tri des flux de messages volumineux et garantir un fonctionnement nomade déconnecté sans perte de données.
 
 ### 1. Règles & Courrier indésirable (§8)
-- [ ] **Éditeur graphique de règles** : création de filtres sur critères multiples (expéditeur, objet, destinataires, en-têtes) et actions (déplacement, copie, marquage).
-- [ ] **Éditeur de règles rapides** : Création rapide de règles depuis un click droit sur un mail.
-- [ ] **Règles côté serveur** : synchronisation des règles vers Exchange Online / EWS et support du protocole ManageSieve pour les serveurs IMAP compatibles.
-- [ ] **Filtrage anti-spam** : intégration locale de moteurs de classification (Bogofilter, SpamAssassin ou analyse bayésienne).
+- [x] **Éditeur graphique de règles** : création de filtres sur critères multiples (expéditeur, objet, destinataires, en-têtes) et actions (déplacement, copie, marquage).
+- [x] **Éditeur de règles rapides** : Création rapide de règles depuis un click droit sur un mail.
+- [x] **Règles côté serveur** : synchronisation des règles vers Exchange Online (Graph) et support du protocole ManageSieve pour les serveurs IMAP compatibles. _(reste à valider sur comptes réels ; EWS sur site non pris en charge)_
+- [x] **Filtrage anti-spam** : intégration locale de moteurs de classification (Bogofilter, SpamAssassin ou analyse bayésienne). _(analyse bayésienne locale autonome ; reste à valider sur des comptes réels)_
 
 ### 2. Mode hors-connexion et synchronisation fine (§4)
-- [ ] **Plages de synchronisation par dossier** : réglage de la rétention locale (ex. 1 mois, 6 mois, 1 an, tout l'historique). _(codé : clic droit sur un compte ou un dossier › « Synchronisation hors connexion… » ; reste à valider sur un compte IMAP réel)_
-- [ ] **File d'attente d'actions hors-ligne** : exécution différée des suppressions, déplacements et envois avec réconciliation automatique à la reconnexion.
-- [ ] **Résolution des conflits** : détection et arbitrage des modifications concurrentes sur les calendriers et contacts.
+- [x] **Plages de synchronisation par dossier** : réglage de la rétention locale (ex. 1 mois, 6 mois, 1 an, tout l'historique). _(codé : clic droit sur un compte ou un dossier › « Synchronisation hors connexion… » ; reste à valider sur un compte IMAP réel)_
+- [x] **File d'attente d'actions hors-ligne** : exécution différée des suppressions, déplacements et envois avec réconciliation automatique à la reconnexion. _(codé : journal sur disque, rejeu, réconciliation, liste et annulation dans la barre d'état ; reste à valider sur un compte réel)_
+- [x] **Résolution des conflits** : détection et arbitrage des modifications concurrentes sur les calendriers et contacts. _(codé : révision / ETag et boîte « Garder la version locale / distante / les deux » ; reste à valider sur CalDAV, CardDAV et EWS réels)_
 
 ### 3. Moteur de recherche avancé (§10)
-- [ ] **Indexation plein texte locale** : recherche instantanée dans le corps des messages et le contenu des pièces jointes indexables.
+- [x] **Indexation plein texte locale** : recherche instantanée dans le corps des messages et le contenu des pièces jointes indexables. _(index inversé maison ; pièces jointes texte seulement, PDF/Office non extraits ; messages non téléchargés et Microsoft 365 : recherche Camel ; reste à valider sur un compte IMAP réel)_
 - [x] **Dossiers de recherche enregistrés** : création de dossiers dynamiques basés sur des requêtes de recherche persistantes. _(fait en 1.1.0 : modèles et opérateurs `is:unread`, `has:attachment`, `larger:`, `from:` ; devancé depuis ce jalon)_
 
 ### 4. Boîtes partagées & délégations (reporté de la 1.1.0, §3)
@@ -114,16 +114,16 @@ flowchart LR
 > **Objectif :** Clôturer l'ensemble des points restants de [TODO.md](TODO.md), peaufiner l'administration et finaliser l'internationalisation.
 
 ### 1. Déploiement & Administration d'entreprise (§1)
-- [ ] **Installation silencieuse avancée du MSI** : support complet des propriétés `FORCECLOSE=1`, `PURGEUSERDATA=1` et arrêt propre multi-sessions.
-- [ ] **Stratégies de groupe (GPO / Registre)** : verrouillage centralisé de paramètres (désactivation des mises à jour automatiques, configuration imposée).
+- [x] **Installation silencieuse avancée du MSI** : support complet des propriétés `FORCECLOSE=1`, `PURGEUSERDATA=1` et arrêt propre multi-sessions. _(codé : à valider sur une VM, y compris multi-sessions)_
+- [x] **Stratégies de groupe (GPO / Registre)** : verrouillage centralisé de paramètres (désactivation des mises à jour automatiques, configuration imposée). _(codé : `Policy.h`, modèle ADMX/ADML, `DisableAutoUpdate` et réglages imposés ; à valider avec une GPO réelle)_
 
 ### 2. Importation & Exportation (§18)
-- [ ] **Assistant d'importation** : prise en charge des conteneurs Outlook (fichiers `.pst` et `.ost`) et des profils tiers (Thunderbird MBOX / Maildir).
-- [ ] **Exportation de données** : export complet de dossiers ou de sélections aux formats standard (`.eml`, `.mbox`, `.ics`, `.vcf`).
+- [ ] **Assistant d'importation** : prise en charge des conteneurs Outlook (fichiers `.pst` et `.ost`) et des profils tiers (Thunderbird MBOX / Maildir). _(fait : mbox, EML, Maildir, profil Thunderbird (détection du profil et arborescence de dossiers), vCard, iCalendar ; non fait : `.pst` / `.ost`, format propriétaire sans bibliothèque disponible (libpst absente de la pile) — l'assistant détecte le cas et explique la conversion en mbox avec `readpst`)_
+- [x] **Exportation de données** : export complet de dossiers ou de sélections aux formats standard (`.eml`, `.mbox`, `.ics`, `.vcf`). _(codé : assistant Fichier › Exporter des données…, mbox / EML avec période, `.ics` / `.vcf` par les assistants existants ; reste à valider à la main : voir VALIDATION.md)_
 
 ### 3. Ergonomie avancée, protocoles & Traductions (§2, §6, §19, §20)
-- [ ] **Lecteur immersif** : vue plein écran épurée dédiée à la lecture concentrée.
-- [ ] **Enregistrement système `mailto:`** : enregistrement en tant que client de messagerie par défaut auprès de Windows 11.
+- [x] **Lecteur immersif** : vue plein écran épurée dédiée à la lecture concentrée. _(fait : ruban Affichage, texte seul, taille / espacement / thème réglables, Échap pour quitter ; à valider à la main)_
+- [x] **Enregistrement système `mailto:`** : enregistrement en tant que client de messagerie par défaut auprès de Windows 11. _(fait : Paramètres > Courrier, ouverture d'une rédaction depuis un lien, transmission à l'instance ouverte ; option dans le MSI non faite ; à valider à la main)_
 - [x] **Traduction et internationalisation** : infrastructure de ressources `.resw` / MRT Core opérationnelle (`I18n.h`, `TRANSLATIONS.md`), catalogues multilingues complets (`fr-FR`, `en-US`, `de-DE`, `it-IT`, `es-ES`, `pt-PT`, `nl-NL`) et support de déploiement MSI (`UILANGUAGE`).
 - [ ] **Revue finale des critères de conformité** : validation croisée de toutes les cases de [TODO.md](TODO.md).
 

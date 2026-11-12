@@ -63,6 +63,96 @@ cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
         exit /b 1
     )
 
+rem Compilation des tests des strategies de groupe (C++17 ; Policy.h)
+echo [policy] Compilation de test_policy.cpp ...
+cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_policy.cpp" ^
+    /Fe:"%TEST_BIN_DIR%\test_policy.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_policy.obj" advapi32.lib || (
+        echo [ERREUR] Echec de la compilation de test_policy.cpp
+        exit /b 1
+    )
+
+rem Compilation des tests des regles de messagerie (C++17 ; Rules.h et evo-core-rules-util.h)
+echo [regles] Compilation de test_rules.cpp ...
+cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_rules.cpp" ^
+    /Fe:"%TEST_BIN_DIR%\test_rules.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_rules.obj" user32.lib || (
+        echo [ERREUR] Echec de la compilation de test_rules.cpp
+        exit /b 1
+    )
+
+rem Compilation des tests du classificateur bayesien anti-spam (C)
+echo [spam] Compilation de test_spam.c ...
+cl.exe /nologo /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_spam.c" ^
+    /Fe:"%TEST_BIN_DIR%\test_spam.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_spam.obj" || (
+        echo [ERREUR] Echec de la compilation de test_spam.c
+        exit /b 1
+    )
+
+rem Compilation des tests de l'index plein texte local (C)
+echo [index] Compilation de test_fulltext_index.c ...
+cl.exe /nologo /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_fulltext_index.c" ^
+    /Fe:"%TEST_BIN_DIR%\test_fulltext_index.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_fulltext_index.obj" || (
+        echo [ERREUR] Echec de la compilation de test_fulltext_index.c
+        exit /b 1
+    )
+
+rem Compilation des tests de la file hors ligne et des conflits (C)
+echo [hors-ligne] Compilation de test_offline_queue.c ...
+cl.exe /nologo /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_offline_queue.c" ^
+    /Fe:"%TEST_BIN_DIR%\test_offline_queue.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_offline_queue.obj" || (
+        echo [ERREUR] Echec de la compilation de test_offline_queue.c
+        exit /b 1
+    )
+
+rem Compilation des tests du lecteur immersif (C++17 ; ImmersiveReader.h)
+echo [immersif] Compilation de test_immersive.cpp ...
+cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_immersive.cpp" ^
+    /Fe:"%TEST_BIN_DIR%\test_immersive.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_immersive.obj" || (
+        echo [ERREUR] Echec de la compilation de test_immersive.cpp
+        exit /b 1
+    )
+
+rem Compilation des tests des liens mailto: (C++17 ; Mailto.h)
+echo [mailto] Compilation de test_mailto.cpp ...
+cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_mailto.cpp" ^
+    /Fe:"%TEST_BIN_DIR%\test_mailto.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_mailto.obj" || (
+        echo [ERREUR] Echec de la compilation de test_mailto.cpp
+        exit /b 1
+    )
+
+rem Compilation des tests d'export / import du courrier et des contacts (C)
+echo [transfert] Compilation de test_transfer.c ...
+cl.exe /nologo /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_transfer.c" ^
+    /Fe:"%TEST_BIN_DIR%\test_transfer.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_transfer.obj" || (
+        echo [ERREUR] Echec de la compilation de test_transfer.c
+        exit /b 1
+    )
+
+rem Compilation des tests des assistants d'export / import cote interface (C++17)
+echo [assistants] Compilation de test_datatransfer.cpp ...
+cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_datatransfer.cpp" ^
+    /Fe:"%TEST_BIN_DIR%\test_datatransfer.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_datatransfer.obj" || (
+        echo [ERREUR] Echec de la compilation de test_datatransfer.cpp
+        exit /b 1
+    )
+
 echo Compilation achevee avec succes.
 echo.
 
@@ -86,6 +176,42 @@ if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
 rem Execution de la suite 4 : Categories unifiees
 "%TEST_BIN_DIR%\test_categories.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : strategies de groupe
+"%TEST_BIN_DIR%\test_policy.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : regles de messagerie
+"%TEST_BIN_DIR%\test_rules.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : classificateur bayesien anti-spam
+"%TEST_BIN_DIR%\test_spam.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : index plein texte local
+"%TEST_BIN_DIR%\test_fulltext_index.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : file hors ligne et conflits
+"%TEST_BIN_DIR%\test_offline_queue.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : lecteur immersif
+"%TEST_BIN_DIR%\test_immersive.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : liens mailto:
+"%TEST_BIN_DIR%\test_mailto.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : export / import du courrier et des contacts
+"%TEST_BIN_DIR%\test_transfer.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : assistants d'export / import (interface)
+"%TEST_BIN_DIR%\test_datatransfer.exe"
 if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
 rem Execution du test d'assemblage du XAML de la fenetre principale

@@ -116,21 +116,21 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [x] Fermeture automatique et transition fluide vers la fenêtre principale (`MainWindow`) dès que l'interface est prête (événement `ready`)
   - [x] Prise en compte du thème sombre / clair de Windows pour l'arrière-plan du splash screen
 - [x] 🟢 **Mise à jour du MSI : erreur 1618** « Une autre installation est en cours d'exécution » à l'installation de la 0.9.1 par-dessus la 0.9.0 — cause : dialogue « fichiers en cours d'utilisation » caché (EvolutionWin et services EDS ouverts), une seconde installation lancée entre-temps échouait ; le MSI ferme désormais ces programmes (`util:CloseApplication`)
-- [ ] 🟡 **Option « installation silencieuse » du MSI avec fermeture forcée de l'application** — _existant : `util:CloseApplication` ferme déjà EvolutionWin et les services EDS / `gdbus` à chaque installation_
-  - [ ] Propriété publique documentée (ex. `FORCECLOSE=1`), utilisable avec `/qn` ou `/passive` : `msiexec /i Evolution-<version>-x64.msi /qn FORCECLOSE=1` (déploiement GPO / Intune, mise à jour automatique) — _aujourd'hui `/qn` fonctionne déjà sans propriété : la fermeture est toujours forcée (vérifié sur la VM de test)_
-  - [ ] Fermeture de **toutes les instances**, y compris dans les **autres sessions utilisateur** (serveur multi-sessions, session déconnectée) : demande de fermeture propre, puis arrêt forcé après un délai court — _fait pour la session courante (message de fermeture puis arrêt après 5 s) ; autres sessions non testées_
-  - [ ] Fermeture de **toutes les dépendances** lancées par EvolutionWin (_fait : services EDS et `gdbus` ; reste : `camel-index-control`, `gspawn-win64-helper`, `msedgewebview2.exe`_) : services EDS (`evolution-source-registry`, fabriques carnet d'adresses / calendrier et leurs sous-processus), `gdbus`, `camel-index-control`, `gspawn-win64-helper`, processus `msedgewebview2.exe` **dont le dossier de données est celui d'EvolutionWin** (sans toucher à Edge ni aux autres applications WebView2)
+- [ ] 🟡 **Option « installation silencieuse » du MSI avec fermeture forcée de l'application** — _existant : `util:CloseApplication` ferme déjà EvolutionWin et les services EDS / `gdbus` à chaque installation_ — _fait en 1.3.0 sauf la boîte de dialogue interactive ; à valider sur une VM (voir VALIDATION.md)_
+  - [x] Propriété publique documentée (ex. `FORCECLOSE=1`), utilisable avec `/qn` ou `/passive` : `msiexec /i Evolution-<version>-x64.msi /qn FORCECLOSE=1` (déploiement GPO / Intune, mise à jour automatique) — _aujourd'hui `/qn` fonctionne déjà sans propriété : la fermeture est toujours forcée (vérifié sur la VM de test)_ — _fait en 1.3.0 : `FORCECLOSE` (défaut 1 ; 0 = aucune fermeture), documentée dans `deploy/DEPLOIEMENT.md`_
+  - [x] Fermeture de **toutes les instances**, y compris dans les **autres sessions utilisateur** (serveur multi-sessions, session déconnectée) : demande de fermeture propre, puis arrêt forcé après un délai court — _fait pour la session courante (message de fermeture puis arrêt après 5 s) ; autres sessions non testées_ — _fait en 1.3.0 : action `CloseDependencies` (PowerShell, toutes les sessions) ; multi-sessions à valider_
+  - [x] Fermeture de **toutes les dépendances** lancées par EvolutionWin (_fait : services EDS et `gdbus` ; reste : `camel-index-control`, `gspawn-win64-helper`, `msedgewebview2.exe`_) : services EDS (`evolution-source-registry`, fabriques carnet d'adresses / calendrier et leurs sous-processus), `gdbus`, `camel-index-control`, `gspawn-win64-helper`, processus `msedgewebview2.exe` **dont le dossier de données est celui d'EvolutionWin** (sans toucher à Edge ni aux autres applications WebView2) — _fait en 1.3.0 : `camel-index-control`, `gspawn-win64-helper`, `msedgewebview2.exe` du dossier EvolutionWin_
   - [x] Aucune boîte de dialogue « fichiers en cours d'utilisation » ni demande de redémarrage (`MSIRESTARTMANAGERCONTROL=Disable`, `REBOOT=ReallySuppress`) ; si un fichier reste verrouillé malgré tout, remplacement au prochain démarrage et code de sortie 3010 au lieu d'un échec — _fait : `RebootPrompt="no"`, `MSIRESTARTMANAGERCONTROL=Disable`_
-  - [ ] Sans `FORCECLOSE` en mode interactif : boîte de dialogue proposant de fermer Evolution — _aujourd'hui la fermeture est automatique, sans question_
+  - [x] Sans `FORCECLOSE` en mode interactif : page « Fermeture d'Evolution » (choix fermer automatiquement / ne pas fermer, pose `FORCECLOSE`) — _fait en 1.3.0 (`tools/msi/Evolution.UI.wxs`, WixUI_InstallDir) ; à valider sur une VM_
   - [x] Journalisation des processus fermés dans le journal MSI (`/l*v`) — _fait : `Wix4CloseApplications` tracé dans le journal MSI_
   - [x] Optionnel : relancer EvolutionWin pour l'utilisateur courant à la fin d'une installation silencieuse (`LAUNCHAPP=1`, utilisé par la mise à jour automatique) — _fait : CustomAction WiX configurée_
-- [ ] 🟡 **Nettoyage des données utilisateur à la désinstallation** (sur demande) — aujourd'hui la désinstallation ne retire que `C:\Program Files\Evolution` et laisse les données de chaque utilisateur
-  - [ ] Données concernées : `%LOCALAPPDATA%\EvolutionWin\` (préférences, journaux, WebView2), `%LOCALAPPDATA%\evolution\` (comptes `sources\`, courrier local, carnets, agendas), cache du courrier `%LOCALAPPDATA%\Microsoft\Windows\INetCache\evolution\`, identifiants `Evolution-Data-Server:*` du Gestionnaire d'identifiants Windows
-  - [ ] **Conservées par défaut** (réinstallation sans perte, comme Outlook / Thunderbird) ; suppression seulement avec la propriété `PURGEUSERDATA=1` : `msiexec /x Evolution-<version>-x64.msi PURGEUSERDATA=1`
-  - [ ] **Jamais lors d'une mise à jour** : une mise à jour majeure du MSI désinstalle l'ancienne version, le nettoyage doit être exclu dans ce cas (`REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE`)
-  - [ ] Nettoyage du profil de l'utilisateur qui désinstalle (installation par machine : les autres profils ne sont pas accessibles proprement) ; documenter le nettoyage manuel des autres profils
-  - [ ] Optionnel : case « Supprimer aussi mes comptes et données » dans l'interface de désinstallation du MSI (non affichée par _Paramètres › Applications installées_)
-  - [ ] Journalisation des éléments supprimés dans le journal MSI
+- [ ] 🟡 **Nettoyage des données utilisateur à la désinstallation** (sur demande) — aujourd'hui la désinstallation ne retire que `C:\Program Files\Evolution` et laisse les données de chaque utilisateur — _fait en 1.3.0 (`PURGEUSERDATA=1`, journal dans `%TEMP%\EvolutionWin-purge.log`) sauf la case dans l'interface du MSI et le journal MSI ; à valider sur une VM_
+  - [x] Données concernées : `%LOCALAPPDATA%\EvolutionWin\` (préférences, journaux, WebView2), `%LOCALAPPDATA%\evolution\` (comptes `sources\`, courrier local, carnets, agendas), cache du courrier `%LOCALAPPDATA%\Microsoft\Windows\INetCache\evolution\`, identifiants `Evolution-Data-Server:*` du Gestionnaire d'identifiants Windows
+  - [x] **Conservées par défaut** (réinstallation sans perte, comme Outlook / Thunderbird) ; suppression seulement avec la propriété `PURGEUSERDATA=1` : `msiexec /x Evolution-<version>-x64.msi PURGEUSERDATA=1`
+  - [x] **Jamais lors d'une mise à jour** : une mise à jour majeure du MSI désinstalle l'ancienne version, le nettoyage doit être exclu dans ce cas (`REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE`)
+  - [x] Nettoyage du profil de l'utilisateur qui désinstalle (installation par machine : les autres profils ne sont pas accessibles proprement) ; documenter le nettoyage manuel des autres profils — _documenté dans `deploy/DEPLOIEMENT.md`_
+  - [x] Optionnel : case « Supprimer aussi mes comptes et données » dans l'interface de désinstallation du MSI (page `PurgeDlg`, pose `PURGEUSERDATA`) — _fait en 1.3.0 ; non affichée par _Paramètres › Applications installées_ (désinstallation sans interface, limite de Windows) ; à valider sur une VM_
+  - [x] Journalisation des éléments supprimés dans le journal MSI — _fait en 1.3.0 : la purge s'exécute par WixQuietExec, sa sortie est recopiée dans `/l*v` (et dans `%TEMP%\EvolutionWin-purge.log`) ; à valider sur une VM_
 - [x] 🟢 **Menu « À propos »** (menu _Aide_ / _Fichier_, ou entrée en bas de la barre latérale) : boîte de dialogue avec icône, nom, version en cours, licence (LGPL 2.1 ou ultérieure), lien vers le dépôt GitHub et le [CHANGELOG.md](CHANGELOG.md)
   - [x] Version tirée du fichier [VERSION](VERSION) à la compilation (macro / ressource `VERSIONINFO` générée par MSBuild, comme le fait déjà `build-msi.ps1` pour le MSI), pour que l'exécutable, le MSI et la boîte « À propos » affichent toujours la même version
   - [x] Versions des composants (EDS, evolution-ews, Windows App SDK, WebView2) et bouton « Copier les informations » pour les rapports de bug
@@ -143,7 +143,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
   - [ ] **Installation** : fermeture propre de l'application (boîte d'envoi vidée, synchronisation terminée), lancement de `msiexec /i … /passive` (élévation UAC, installation par machine), redémarrage automatique d'EvolutionWin à la fin — _fait : avertissement puis fermeture automatique de l'application au lancement de `msiexec /i` (c2f3832) ; reste : `/passive`, attente de la fin de la synchronisation / de la boîte d'envoi et redémarrage automatique d'EvolutionWin_
   - [ ] Nettoyage des MSI téléchargés après installation réussie
   - [ ] **Paramètres** (§19) : mise à jour automatique / notification seulement / désactivée ; canal (versions stables, préversions)
-  - [ ] **Politique d'entreprise** : désactivation par clé de registre machine ou propriété MSI (`AUTOUPDATE=0`) pour les déploiements gérés (GPO / Intune)
+  - [x] **Politique d'entreprise** : désactivation par clé de registre machine ou propriété MSI (`AUTOUPDATE=0`) pour les déploiements gérés (GPO / Intune) — _fait en 1.3.0 : `DisableAutoUpdate` (HKLM puis HKCU `Software\Policies\EvolutionWin`, modèle ADMX/ADML fr + en) et propriété MSI `AUTOUPDATE=0` (écrit la même stratégie dans HKLM) ; à valider sur une VM_
   - [x] Évolution : passer aux _Releases_ GitHub (cf. point suivant) plutôt que `dist/` dans le dépôt
 - [x] 🟡 **Publication des versions par les Releases GitHub** (au lieu de versionner les MSI dans `dist/`, ce qui alourdit l'historique Git à chaque version)
   - [x] Une _Release_ par version, avec l'étiquette Git `v<version>` (ex. `v0.9.3`) créée à partir du fichier [VERSION](VERSION)
@@ -187,7 +187,7 @@ La difficulté tient compte de l'existant (cf. [WINDOWS-PORT.md](WINDOWS-PORT.md
 
 - [ ] 🟡 **Ouvrir un événement ou un dossier dans une nouvelle fenêtre** (pour un message : fenêtre de lecture indépendante, §6) — _fait : message (§6) et événement (fenêtre dédiée depuis la 1.1.0) ; reste : dossier_ ; [x] 🟢 **Fermer tous les éléments ouverts**
 - [ ] 🟠 **Fenêtre des rappels** : rappels des rendez-vous (alarmes EDS) et des messages en suivi, avec Reporter / Ignorer _(partiel : notification Windows à l'heure du rappel des événements, vérifiée toutes les 30 s, sans répétition ; restent Reporter / Ignorer, les messages en suivi et les tâches)_
-- [ ] 🟡 **Lecteur immersif** : vue de lecture plein écran épurée (taille du texte, espacement)
+- [x] 🟡 **Lecteur immersif** : vue de lecture plein écran épurée (taille du texte, espacement) — _fait en 1.3.0 : bouton du ruban Affichage, texte seul, taille / espacement / thème (clair, sépia, sombre) mémorisés, Échap ou touches + - T L_
 - [x] 🟢 **Lecture à voix haute** du message (`Windows.Media.SpeechSynthesis`)
 
 ## 3. Comptes — 🟠
@@ -291,7 +291,7 @@ Dans Microsoft 365 / Exchange Online, les utilisateurs disposent souvent d'une b
 - [x] 🟢 **Désigner le compte par défaut** dans la liste des comptes, avec indication visuelle (`e_source_registry_set_default_mail_account`)
 - [x] 🟢 Utilisé pour les nouveaux messages ; pour une réponse / un transfert, compte ayant reçu le message (repli sur le compte par défaut)
 - [x] 🟢 Calendrier et carnet d'adresses par défaut pour les nouveaux événements et contacts — _les nouveaux éléments vont déjà dans le calendrier / carnet par défaut d'EDS ; reste : les choisir dans l'interface_
-- [ ] 🟡 Gestionnaire des liens `mailto:` (inscription d'EvolutionWin comme application de messagerie Windows). Facultatif au moment de l'installation MSI et dans les menus de configuration de l'application par la suite.
+- [x] 🟡 Gestionnaire des liens `mailto:` (inscription d'EvolutionWin comme application de messagerie Windows). Facultatif au moment de l'installation MSI et dans les menus de configuration de l'application par la suite. — _fait en 1.3.0 dans les Paramètres (Courrier › Liens de messagerie) et dans le MSI par la propriété `REGISTERMAILTO=1` (clés HKLM) ; à valider sur une VM_
 
 ### Signatures — 🟡
 
@@ -381,10 +381,10 @@ Objectif : retrouver dans EvolutionWin le calendrier et les contacts du compte e
   - [ ] Démarrage des services EDS (`evolution-source-registry`, fabriques) en parallèle de la création de la fenêtre ; fenêtre affichée sans attendre la fin du démarrage du moteur (`core_wait_started`) (cf. écran de démarrage, §1)
   - [ ] Objectif mesurable : fenêtre et contenu du dernier dossier visibles en moins de 2 s avec un cache existant, quel que soit l'état du réseau
 - [ ] 🟠 **Cache local complet pour le mode hors connexion** : messages (en-têtes, corps et pièces jointes), contacts, calendriers et tâches disponibles sans réseau
-  - [ ] Synchronisation hors connexion des dossiers (réglage IMAP `stay-synchronized` / `sync-offline` de Camel), par compte et par dossier, avec limite d'ancienneté (ex. 3 derniers mois) et de taille _(codé : réglages par compte et par dossier, limite d'ancienneté ; reste la limite de taille et la validation du téléchargement sur un compte réel)_
+  - [x] Synchronisation hors connexion des dossiers (réglage IMAP `stay-synchronized` / `sync-offline` de Camel), par compte et par dossier, avec limite d'ancienneté (ex. 3 derniers mois) et de taille _(codé : réglages par compte et par dossier, limite d'ancienneté ; reste la limite de taille et la validation du téléchargement sur un compte réel)_
   - [ ] Caches EDS des carnets d'adresses et calendriers (backends en cache local : EWS, CalDAV, CardDAV) consultables hors ligne
   - [ ] Recherche, lecture, aperçu des pièces jointes et rédaction fonctionnels hors ligne
-  - [ ] Actions faites hors ligne (lu / non lu, drapeau, déplacement, suppression, événements, contacts) journalisées et rejouées au retour du réseau ; résolution des conflits
+  - [x] Actions faites hors ligne (lu / non lu, drapeau, déplacement, suppression, événements, contacts) journalisées et rejouées au retour du réseau ; résolution des conflits _(codé : messages journalisés, rejoués, annulables ; conflits événements / contacts détectés à l'enregistrement ; reste les modifications d'événements et de contacts faites hors ligne et la validation sur compte réel)_
 - [ ] 🟠 **Travailler en mode hors connexion** : bascule manuelle globale (`CamelOfflineStore`) ; envois mis en file d'attente dans la boîte d'envoi
 - [ ] 🟡 **Détection automatique de l'état du réseau** : surveillance de la connectivité (`GNetworkMonitor` / `NetworkInformation.NetworkStatusChanged`) et vérification régulière de l'accès aux serveurs des comptes (ex. toutes les 30 s hors ligne) ; passage automatique hors ligne / en ligne, puis relève et envoi de la boîte d'envoi au retour
 - [x] 🟢 **Indicateur d'état des connexions** dans la barre d'état (en bas), qui sert aussi d'indicateur du mode hors connexion — icône verte : tout est connecté ; orange : connexion en cours / partielle ; rouge : erreur ; grise : hors connexion <a id="demo-etat-connexions"></a>
@@ -562,11 +562,12 @@ Sécurisation de bout en bout des courriels par signature et chiffrement avec un
 
 ## 8. Mail – Règles et courrier indésirable — 🔴
 
-- [ ] 🔴 **Règles côté client** : éditeur de règles (conditions / actions), exécution à la réception (`CamelFilterDriver`)
-  - [ ] 🟡 Créer une règle à partir du message sélectionné (une fois l'éditeur en place)
-  - [ ] 🟡 Exécuter les règles maintenant sur un dossier
-- [ ] 🔴 **Règles côté serveur** : Exchange (EWS / Graph `messageRules`), Sieve (ManageSieve)
+- [x] 🔴 **Règles côté client** : éditeur de règles (conditions / actions), exécution à la réception _(fait : éditeur Paramètres > Courrier, critères expéditeur / domaine / objet / destinataires / en-tête / pièce jointe, actions déplacer / copier / lu / drapeau / catégorie / supprimer ; exécution côté application à l'arrivée dans la boîte de réception, sans `CamelFilterDriver`)_
+  - [x] 🟡 Créer une règle à partir du message sélectionné _(clic droit > Créer une règle…, éditeur rapide préremplie)_
+  - [x] 🟡 Exécuter les règles maintenant sur un dossier _(Paramètres > Courrier et menu contextuel du dossier)_
+- [x] 🔴 **Règles côté serveur** : Exchange (Graph `messageRules`), Sieve (ManageSieve) _(fait ; reste à valider sur un compte Microsoft 365 et sur un serveur Sieve réels ; EWS sur site non pris en charge)_
 - [x] 🟡 **Courrier indésirable** : marquer comme indésirable / non indésirable (déplacement vers / depuis le dossier Indésirables) — _bouton du ruban et menu contextuel_
+- [x] 🟡 **Filtre anti-spam local (bayésien)** : classement automatique des nouveaux messages de la boîte de réception vers Indésirables, apprentissage par « Indésirable » / « Non indésirable » et depuis les dossiers, seuil réglable, désactivation et réinitialisation dans Paramètres > Courrier
 - [ ] 🟡 **Listes d'expéditeurs** bloqués / approuvés (expéditeur ou domaine), options du filtre ; 🟠 synchronisées avec Exchange
 - [ ] 🟡 **Signaler** un message comme hameçonnage / spam (transfert en pièce jointe vers une adresse configurable, ou API du fournisseur)
 
@@ -618,7 +619,7 @@ La recherche dans le dossier courant existe déjà (filtrage instantané + reche
   - [ ] 🟡 **Exchange on-premise** : EWS `FindItem` avec `QueryString` (AQS, index de recherche du serveur) ou `Restriction` ; `ResolveNames` / `FindPeople` pour les contacts
   - [ ] 🟡 **Gmail / Google Workspace** : extension IMAP `X-GM-RAW` (syntaxe de recherche Gmail : `from:`, `has:attachment`, `after:`…) sur le compte IMAP existant, ou API Gmail `users.messages.list?q=` si la portée OAuth2 est accordée ; Calendar / People API pour événements et contacts
   - [ ] 🟢 **IMAP générique** : commande `SEARCH` du serveur (déjà utilisée par Camel IMAPX pour les messages non téléchargés), et extensions `ESEARCH` / `SEARCHRES` si annoncées
-  - [ ] 🟢 **Repli local** (comptes locaux, serveur sans recherche, mode hors connexion) : recherche actuelle dans les résumés et le cache (`camel_folder_search_sync`), éventuellement avec l'index plein texte Camel (`camel-index-control`)
+  - [x] 🟢 **Repli local** (comptes locaux, serveur sans recherche, mode hors connexion) : recherche actuelle dans les résumés et le cache (`camel_folder_search_sync`), éventuellement avec l'index plein texte Camel (`camel-index-control`)
   - [ ] Choix automatique selon les capacités du compte (annonce `CAPABILITY` IMAP, type de collection EDS), sans réglage pour l'utilisateur
   - [ ] Traduction des critères de la recherche simple et avancée vers la syntaxe de chaque serveur (Graph `$search` / KQL, AQS EWS, `X-GM-RAW`, `SEARCH` IMAP) ; critères non pris en charge par le serveur appliqués ensuite en local sur les résultats
   - [ ] Résultats serveur portant sur des messages pas encore téléchargés : affichage des en-têtes reçus, téléchargement du message à l'ouverture
@@ -845,22 +846,22 @@ Les listes de tâches EDS (`E_SOURCE_EXTENSION_TASK_LIST`, composants `VTODO`) n
 - [ ] 🟡 **Export d'un mail, d'un événement ou d'un contact par simple glisser-déposer vers l'extérieur (Explorateur Windows, Bureau)** :
   - Déposer un ou plusieurs éléments depuis l'interface d'EvolutionWin vers l'Explorateur de fichiers Windows, le Bureau ou une autre application pour les exporter directement sous forme de fichiers natifs. Réutilise les fonctions d'export existantes en générant les fichiers dans un dossier temporaire avant de les transférer via le `DataPackage` (`SetStorageItems`).
   - [x] 🟡 **Courriels (format `.eml`)** : glisser un ou plusieurs messages sélectionnés depuis la liste des messages vers l'extérieur ; réutilisation de la fonction d'export EML existante (`evo_core_export_messages_eml` / `ExportMessagesEml`)
-  - [ ] 🟡 **Événements de calendrier (format `.ics`)** : glisser un événement depuis la vue calendrier vers l'extérieur pour générer un fichier iCalendar (`.ics`) ; réutilisation de l'export iCalendar existant
-  - [ ] 🟡 **Contacts (format `.vcf`)** : glisser un contact depuis la vue des contacts vers l'extérieur pour générer un fichier vCard (`.vcf`) ; réutilisation de l'export vCard existant
+  - [x] 🟡 **Événements de calendrier (format `.ics`)** : glisser un événement depuis la vue calendrier vers l'extérieur pour générer un fichier iCalendar (`.ics`) ; réutilisation de l'export iCalendar existant
+  - [x] 🟡 **Contacts (format `.vcf`)** : glisser un contact depuis la vue des contacts vers l'extérieur pour générer un fichier vCard (`.vcf`) ; réutilisation de l'export vCard existant
   - [x] 🟢 **Sélection multiple** : prise en charge du glisser-déposer de plusieurs éléments sélectionnés simultanément (génération par lot)
   - [x] 🟢 **Gestion des fichiers temporaires** : nettoyage automatique des fichiers temporaires créés après confirmation du dépôt ou annulation
 
 ### Assistant et formats d'export
 
-- [ ] 🟡 **Assistant d'export** (_Fichier › Exporter_) : compte, éléments (emails, contacts, calendriers, tâches), dossier de destination
+- [x] 🟡 **Assistant d'export** (_Fichier › Exporter des données…_) : compte, éléments (emails, contacts, calendriers, tâches), dossier de destination _(fait en 1.3.0 : le courrier est exporté par l'assistant lui-même, les contacts et les agendas passent par leurs assistants existants)_
 - [ ] **Emails** :
-  - [ ] 🟡 Format mbox (un fichier par dossier, arborescence conservée)
-  - [ ] 🟢 Format EML (un fichier `.eml` par message, arborescence conservée ; export `.eml` existant dans `evo-core`)
-  - [ ] 🟢 Choix des dossiers (tous / sélection / dossier courant)
+  - [x] 🟡 Format mbox (un fichier par dossier, arborescence conservée) _(fait en 1.3.0 : `<dossier>.mbox`, variante mboxrd)_
+  - [x] 🟢 Format EML (un fichier `.eml` par message, arborescence conservée ; export `.eml` existant dans `evo-core`) _(fait en 1.3.0)_
+  - [x] 🟢 Choix des dossiers (tous / sélection / dossier courant) _(fait en 1.3.0 : sélection multiple dans l'arborescence du compte, « Tout sélectionner », option sous-dossiers)_
 - [x] 🟢 **Contacts** : vCard (`.vcf`, fichier unique ou un par contact) ; 🟡 CSV en option
 - [x] 🟢 **Calendriers et tâches** : iCalendar (`.ics`, un fichier par calendrier)
-- [ ] 🟡 **Options** : filtre par plage de dates, export en arrière-plan avec progression (dépend de §4), rapport de fin
-- [ ] 🟠 **Import** : mbox / EML, vCard, iCalendar (_Fichier › Ouvrir et exporter_)
+- [x] 🟡 **Options** : filtre par plage de dates, export en arrière-plan avec progression (dépend de §4), rapport de fin _(fait en 1.3.0 : période sur la date de réception, progression et annulation dans la barre d'état, rapport avec « Ouvrir le dossier »)_
+- [x] 🟠 **Import** : mbox / EML, vCard, iCalendar (_Fichier › Importer des données…_) _(fait en 1.3.0, avec en plus Maildir et le profil Thunderbird ; les `.pst` / `.ost` d'Outlook ne sont pas lisibles : l'assistant explique la conversion en mbox avec readpst)_
 
 ## 19. Configuration de l'application — 🟡
 

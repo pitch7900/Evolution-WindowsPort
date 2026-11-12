@@ -730,11 +730,19 @@ namespace winrt::EvolutionWin::implementation
                 ShowStatus(Tr(L"Boîte de réception introuvable pour ce compte."), InfoBarSeverity::Warning);
                 return;
             }
-            MoveMessagesByUids(uids, account, inbox);
+            /* le filtre anti-spam apprend ces messages comme légitimes avant leur déplacement */
+            TrainSpamThenMove(uids, account, folder, false, [this, uids, account, inbox]()
+            {
+                MoveMessagesByUids(uids, account, inbox);
+            });
             return;
         }
 
-        MoveMessagesByUids(uids, account, junk);
+        /* le filtre anti-spam apprend ces messages comme indésirables avant leur déplacement */
+        TrainSpamThenMove(uids, account, folder, true, [this, uids, account, junk]()
+        {
+            MoveMessagesByUids(uids, account, junk);
+        });
     }
 
     /**

@@ -55,6 +55,8 @@ add_library(evo-core SHARED
 	evo-core-account-setup.c
 	evo-core-autoreply.c
 	evo-core-offline-sync.c
+	evo-core-offline-queue.c
+	evo-core-conflicts.c
 	evo-core-autoreply-util.h
 	evo-core-accounts.c
 	evo-core-calendar.c
@@ -65,6 +67,8 @@ add_library(evo-core SHARED
 	evo-core-drafts.c
 	evo-core-events.c
 	evo-core-export.c
+	evo-core-mail-transfer.c
+	evo-core-transfer-util.h
 	evo-core-folder-ops.c
 	evo-core-folders.c
 	evo-core-gal.c
@@ -77,9 +81,15 @@ add_library(evo-core SHARED
 	evo-core-refresh.c
 	evo-core-requests.c
 	evo-core-search.c
+	evo-core-index.c
+	evo-core-index-util.h
 	evo-core-send.c
 	evo-core-session.c
+	evo-core-rules.c
+	evo-core-rules-util.h
 	evo-core-signatures.c
+	evo-core-spam.c
+	evo-core-spam-util.h
 	evo-core-sources.c
 	evo-core-tasks.c
 	"${CMAKE_CURRENT_BINARY_DIR}/ispdb-resources.c"

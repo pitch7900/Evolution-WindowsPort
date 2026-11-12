@@ -1,0 +1,63 @@
+                                <TextBlock Text="Courrier indésirable" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,16,0,0" />
+
+                                <!-- Filtre anti-spam local : activation -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE72E;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Filtre anti-spam intelligent" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Classe automatiquement dans le dossier Indésirables les nouveaux messages de la boîte de réception qui ressemblent à ceux que vous avez signalés comme indésirables. L'analyse se fait entièrement sur cet ordinateur."
+                                                       TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" x:Name="SpamEnabledSwitch"
+                                                      Toggled="OnSpamEnabledToggled" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Seuil de classement -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12" MinHeight="64">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE9E9;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Seuil de classement en indésirable" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock Text="Plus le seuil est élevé, moins le filtre se trompe sur des messages légitimes, mais plus il laisse passer de courrier indésirable."
+                                                       TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                                            <Slider x:Name="SpamThresholdSlider" Minimum="50" Maximum="99" StepFrequency="1" Width="180"
+                                                    ValueChanged="OnSpamThresholdChanged" VerticalAlignment="Center" />
+                                            <TextBlock x:Name="SpamThresholdText" MinWidth="40" TextAlignment="Right" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Apprentissage : état, apprentissage depuis les dossiers, réinitialisation -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="16,12,16,12">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock Text="Apprentissage du filtre" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                        <TextBlock x:Name="SpamStatsText" TextWrapping="Wrap"
+                                                   Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Text="Le filtre apprend à chaque fois que vous utilisez « Indésirable » ou « Non indésirable ». Il devient actif dès qu'il a appris au moins 20 messages de chaque sorte."
+                                                   TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Button x:Name="SpamLearnButton" Content="Apprendre à partir de mes dossiers" Click="OnSpamLearnClick" />
+                                            <Button x:Name="SpamResetButton" Content="Réinitialiser l'apprentissage" Click="OnSpamResetClick" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>

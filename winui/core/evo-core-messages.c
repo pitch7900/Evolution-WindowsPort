@@ -226,7 +226,9 @@ core_list_messages_run (EvoCore *core,
 	for (ii = 0; uids && ii < uids->len; ii++) {
 		CamelMessageInfo *info = camel_folder_get_message_info (folder, uids->pdata[ii]);
 
-		if (info && !(camel_message_info_get_flags (info) & CAMEL_MESSAGE_DELETED))
+		/* un message dont la suppression ou le déplacement attend le retour du réseau est masqué (file hors ligne) */
+		if (info && !(camel_message_info_get_flags (info) & CAMEL_MESSAGE_DELETED) &&
+		    !core_oq_is_pending_removal (args[0], args[1], uids->pdata[ii]))
 			g_ptr_array_add (infos, info);
 		else
 			g_clear_object (&info);

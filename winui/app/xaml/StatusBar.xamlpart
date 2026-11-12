@@ -131,6 +131,32 @@
 
                     </Button>
 
+                <!-- Actions en attente de rejeu (mode hors connexion) : visible seulement quand la file n'est pas vide -->
+                <Button x:Name="PendingActionsButton" Visibility="Collapsed" Padding="8,3,8,3" VerticalAlignment="Center"
+                        Click="OnPendingActionsButtonClick" ToolTipService.ToolTip="Actions en attente de synchronisation">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE895;" FontSize="14" VerticalAlignment="Center" />
+                        <TextBlock x:Name="PendingActionsLabel" Text="0 action en attente" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Button.Flyout>
+                        <Flyout x:Name="PendingActionsFlyout">
+                            <StackPanel Width="420" Spacing="10">
+                                <TextBlock Text="Actions en attente de synchronisation" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                <TextBlock Text="Ces actions faites hors connexion seront rejouées dès le retour du réseau." TextWrapping="Wrap"
+                                           Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <ScrollViewer MaxHeight="320" HorizontalScrollBarVisibility="Disabled">
+                                    <StackPanel x:Name="PendingActionsPanel" Spacing="6" />
+                                </ScrollViewer>
+                                <MenuFlyoutSeparator />
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                    <Button x:Name="PendingActionsCancelAllButton" Content="Tout annuler" Click="OnPendingActionsCancelAllClick" />
+                                    <Button x:Name="PendingActionsReplayButton" Content="Rejouer maintenant" Click="OnPendingActionsReplayClick" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+
                 <Button x:Name="ConnectionStatusButton"
 
                         Click="OnConnectionStatusButtonClick"

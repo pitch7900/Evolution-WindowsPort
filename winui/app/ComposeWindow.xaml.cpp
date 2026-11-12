@@ -139,6 +139,7 @@ namespace winrt::EvolutionWin::implementation
 
         ToBox().Text(data.to);
         CcBox().Text(data.cc);
+        BccBox().Text(data.bcc);
 
         // Copie cachée automatique (Cci / Bcc) configurée
         hstring auto_bcc = ::EvolutionWin::Settings::Instance().GetString(L"account." + current_acc + L".auto-bcc",

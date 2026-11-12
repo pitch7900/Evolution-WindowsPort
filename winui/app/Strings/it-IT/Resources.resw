@@ -7123,5 +7123,929 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Categoria non aggiornata sull'account {0}: {1}</value>
     <comment>Catégorie non mise à jour sur le compte {0} : {1}</comment>
   </data>
+  <data name="T_384C69A2" xml:space="preserve">
+    <value>Appresi: {0} indesiderati, {1} legittimi. Il filtro è operativo.</value>
+    <comment>Appris : {0} indésirable(s), {1} légitime(s). Le filtre est opérationnel.</comment>
+  </data>
+  <data name="T_C08CC8BD" xml:space="preserve">
+    <value>Appresi: {0} indesiderati, {1} legittimi. Il filtro non è ancora operativo: servono almeno {2} messaggi di ogni tipo.</value>
+    <comment>Appris : {0} indésirable(s), {1} légitime(s). Le filtre n'est pas encore opérationnel : il lui faut au moins {2} messages de chaque sorte.</comment>
+  </data>
+  <data name="T_CC8FDE62" xml:space="preserve">
+    <value>Nessuna cartella Posta indesiderata o Posta in arrivo da analizzare.</value>
+    <comment>Aucun dossier Indésirables ou Boîte de réception à analyser.</comment>
+  </data>
+  <data name="T_51FB65F1" xml:space="preserve">
+    <value>Addestramento del filtro antispam in corso…</value>
+    <comment>Apprentissage du filtre anti-spam en cours…</comment>
+  </data>
+  <data name="T_35A144F7" xml:space="preserve">
+    <value>Addestramento completato: {0} messaggio/i appreso/i.</value>
+    <comment>Apprentissage terminé : {0} message(s) appris.</comment>
+  </data>
+  <data name="T_81B04DF1" xml:space="preserve">
+    <value>Reimpostare l'addestramento?</value>
+    <comment>Réinitialiser l'apprentissage ?</comment>
+  </data>
+  <data name="T_A662795E" xml:space="preserve">
+    <value>Tutto ciò che il filtro antispam ha appreso verrà cancellato. Non classificherà più nulla automaticamente finché non avrà imparato di nuovo dai tuoi messaggi.</value>
+    <comment>Tout ce que le filtre anti-spam a appris sera effacé. Il ne classera plus rien automatiquement avant d'avoir de nouveau appris sur vos messages.</comment>
+  </data>
+  <data name="T_9995DF1B" xml:space="preserve">
+    <value>Reimpostazione dell'addestramento: </value>
+    <comment>Réinitialisation de l'apprentissage : </comment>
+  </data>
+  <data name="T_152FD0C8" xml:space="preserve">
+    <value>L'addestramento del filtro antispam è stato reimpostato.</value>
+    <comment>L'apprentissage du filtre anti-spam a été réinitialisé.</comment>
+  </data>
+  <data name="T_7BA19B43" xml:space="preserve">
+    <value>{0} messaggio/i spostato/i automaticamente in Posta indesiderata.</value>
+    <comment>{0} message(s) classé(s) automatiquement dans Indésirables.</comment>
+  </data>
+  <data name="T_0280DEE4" xml:space="preserve">
+    <value>Posta indesiderata</value>
+    <comment>Courrier indésirable</comment>
+  </data>
+  <data name="T_4B356A4E" xml:space="preserve">
+    <value>Filtro antispam intelligente</value>
+    <comment>Filtre anti-spam intelligent</comment>
+  </data>
+  <data name="T_7F6E7EC9" xml:space="preserve">
+    <value>Sposta automaticamente nella cartella Posta indesiderata i nuovi messaggi della posta in arrivo simili a quelli che hai segnalato come indesiderati. L'analisi avviene interamente su questo computer.</value>
+    <comment>Classe automatiquement dans le dossier Indésirables les nouveaux messages de la boîte de réception qui ressemblent à ceux que vous avez signalés comme indésirables. L'analyse se fait entièrement sur cet ordinateur.</comment>
+  </data>
+  <data name="T_7E74F024" xml:space="preserve">
+    <value>Soglia di classificazione come indesiderato</value>
+    <comment>Seuil de classement en indésirable</comment>
+  </data>
+  <data name="T_64F38CDC" xml:space="preserve">
+    <value>Più la soglia è alta, meno il filtro sbaglia sui messaggi legittimi, ma più posta indesiderata lascia passare.</value>
+    <comment>Plus le seuil est élevé, moins le filtre se trompe sur des messages légitimes, mais plus il laisse passer de courrier indésirable.</comment>
+  </data>
+  <data name="T_F55BE7EE" xml:space="preserve">
+    <value>Addestramento del filtro</value>
+    <comment>Apprentissage du filtre</comment>
+  </data>
+  <data name="T_B6B1A42D" xml:space="preserve">
+    <value>Il filtro impara ogni volta che usi «Indesiderato» o «Non indesiderato». Diventa attivo non appena ha appreso almeno 20 messaggi di ogni tipo.</value>
+    <comment>Le filtre apprend à chaque fois que vous utilisez « Indésirable » ou « Non indésirable ». Il devient actif dès qu'il a appris au moins 20 messages de chaque sorte.</comment>
+  </data>
+  <data name="T_45A5A04E" xml:space="preserve">
+    <value>Impara dalle mie cartelle</value>
+    <comment>Apprendre à partir de mes dossiers</comment>
+  </data>
+  <data name="T_592D4C7C" xml:space="preserve">
+    <value>Reimposta addestramento</value>
+    <comment>Réinitialiser l'apprentissage</comment>
+  </data>
+  <data name="T_E07CBFFF" xml:space="preserve">
+    <value>Indice di ricerca</value>
+    <comment>Index de recherche</comment>
+  </data>
+  <data name="T_71B98AFB" xml:space="preserve">
+    <value>Indicizza il contenuto dei messaggi</value>
+    <comment>Indexer le contenu des messages</comment>
+  </data>
+  <data name="T_28CE32DF" xml:space="preserve">
+    <value>Crea su questo computer un indice del corpo dei messaggi e degli allegati di testo (TXT, CSV, HTML, JSON, XML…) per una ricerca istantanea. Vengono indicizzati solo i messaggi già scaricati; i PDF e i documenti Office no.</value>
+    <comment>Construit sur cet ordinateur un index du corps des messages et des pièces jointes texte (TXT, CSV, HTML, JSON, XML…) pour une recherche instantanée. Seuls les messages déjà téléchargés sont indexés ; les PDF et documents Office ne le sont pas.</comment>
+  </data>
+  <data name="T_5CAEEDC3" xml:space="preserve">
+    <value>Stato dell'indice</value>
+    <comment>État de l'index</comment>
+  </data>
+  <data name="T_79F50EDB" xml:space="preserve">
+    <value>Ricostruisci indice</value>
+    <comment>Reconstruire l'index</comment>
+  </data>
+  <data name="T_FB32D6C4" xml:space="preserve">
+    <value>L'indice è disattivato: la ricerca nel corpo dei messaggi usa la consueta ricerca più lenta.</value>
+    <comment>L'index est désactivé : la recherche dans le corps des messages utilise la recherche lente habituelle.</comment>
+  </data>
+  <data name="T_09926C84" xml:space="preserve">
+    <value>Indicizzazione in corso: cartella {0} di {1}. {2} messaggio/i indicizzato/i, {3} usati su disco.</value>
+    <comment>Indexation en cours : dossier {0} sur {1}. {2} message(s) indexé(s), {3} utilisés sur le disque.</comment>
+  </data>
+  <data name="T_66F28DAC" xml:space="preserve">
+    <value>Indicizzazione in corso. {0} messaggio/i indicizzato/i, {1} usati su disco.</value>
+    <comment>Indexation en cours. {0} message(s) indexé(s), {1} utilisés sur le disque.</comment>
+  </data>
+  <data name="T_172F7257" xml:space="preserve">
+    <value>Cartella corrente: {0}</value>
+    <comment>Dossier en cours : {0}</comment>
+  </data>
+  <data name="T_9E3AC3C6" xml:space="preserve">
+    <value>Indice aggiornato: {0} messaggio/i su {1} indicizzato/i, {2} usati su disco.</value>
+    <comment>Index à jour : {0} message(s) indexé(s) sur {1}, {2} utilisés sur le disque.</comment>
+  </data>
+  <data name="T_5582AB88" xml:space="preserve">
+    <value>Impossibile ricostruire l'indice: {0}</value>
+    <comment>Reconstruction de l'index impossible : {0}</comment>
+  </data>
+  <data name="T_B4B69F8D" xml:space="preserve">
+    <value>Ricostruzione dell'indice avviata: prosegue in background.</value>
+    <comment>Reconstruction de l'index lancée : elle se poursuit en tâche de fond.</comment>
+  </data>
+  <data name="T_3ABC42F2" xml:space="preserve">
+    <value>Elimina «{0}»</value>
+    <comment>Supprimer « {0} »</comment>
+  </data>
+  <data name="T_04EC7280" xml:space="preserve">
+    <value>Sposta «{0}» in {1}</value>
+    <comment>Déplacer « {0} » vers {1}</comment>
+  </data>
+  <data name="T_FCAB6D32" xml:space="preserve">
+    <value>Copia «{0}» in {1}</value>
+    <comment>Copier « {0} » vers {1}</comment>
+  </data>
+  <data name="T_2B875A59" xml:space="preserve">
+    <value>Invia «{0}»</value>
+    <comment>Envoyer « {0} »</comment>
+  </data>
+  <data name="T_D6A9617A" xml:space="preserve">
+    <value>Segna «{0}» come letto</value>
+    <comment>Marquer « {0} » comme lu</comment>
+  </data>
+  <data name="T_D0A35607" xml:space="preserve">
+    <value>Segna «{0}» come non letto</value>
+    <comment>Marquer « {0} » comme non lu</comment>
+  </data>
+  <data name="T_DF11F14C" xml:space="preserve">
+    <value>Contrassegna «{0}»</value>
+    <comment>Ajouter le drapeau sur « {0} »</comment>
+  </data>
+  <data name="T_D5C2B8C4" xml:space="preserve">
+    <value>Rimuovi il contrassegno da «{0}»</value>
+    <comment>Retirer le drapeau de « {0} »</comment>
+  </data>
+  <data name="T_395D29F1" xml:space="preserve">
+    <value>Aggiungi l'etichetta «{1}» a «{0}»</value>
+    <comment>Ajouter l'étiquette « {1} » sur « {0} »</comment>
+  </data>
+  <data name="T_80654CF5" xml:space="preserve">
+    <value>Rimuovi l'etichetta «{1}» da «{0}»</value>
+    <comment>Retirer l'étiquette « {1} » de « {0} »</comment>
+  </data>
+  <data name="T_D4D846CB" xml:space="preserve">
+    <value>{0} azione in sospeso</value>
+    <comment>{0} action en attente</comment>
+  </data>
+  <data name="T_2C02F5FA" xml:space="preserve">
+    <value>{0} azioni in sospeso</value>
+    <comment>{0} actions en attente</comment>
+  </data>
+  <data name="T_C7D7C949" xml:space="preserve">
+    <value>Abbandonata dopo diversi errori: {0}</value>
+    <comment>Abandonnée après plusieurs échecs : {0}</comment>
+  </data>
+  <data name="T_7B309FE7" xml:space="preserve">
+    <value>Ultimo errore: {0}</value>
+    <comment>Dernière erreur : {0}</comment>
+  </data>
+  <data name="T_B61918EC" xml:space="preserve">
+    <value>Nessuna azione in sospeso</value>
+    <comment>Aucune action en attente</comment>
+  </data>
+  <data name="T_E6656E09" xml:space="preserve">
+    <value>Non in linea: le azioni verranno rieseguite al ritorno della rete.</value>
+    <comment>Hors connexion : les actions seront rejouées au retour du réseau.</comment>
+  </data>
+  <data name="T_7140A418" xml:space="preserve">
+    <value>Azioni offline rieseguite: {0} eseguite, {1} superflue (messaggio scomparso), {2} non riuscite.</value>
+    <comment>Actions hors connexion rejouées : {0} effectuée(s), {1} sans objet (message disparu), {2} en échec.</comment>
+  </data>
+  <data name="T_187AE7DD" xml:space="preserve">
+    <value>Conflitto di modifica</value>
+    <comment>Conflit de modification</comment>
+  </data>
+  <data name="T_E2C36B7A" xml:space="preserve">
+    <value>Applica</value>
+    <comment>Appliquer</comment>
+  </data>
+  <data name="T_36F9B754" xml:space="preserve">
+    <value>Questo evento è stato modificato altrove (sul server o da un altro dispositivo) mentre lo modificavi.</value>
+    <comment>Cet événement a été modifié ailleurs (sur le serveur ou depuis un autre appareil) pendant que vous le modifiiez.</comment>
+  </data>
+  <data name="T_5C69328F" xml:space="preserve">
+    <value>Questo contatto è stato modificato altrove (sul server o da un altro dispositivo) mentre lo modificavi.</value>
+    <comment>Ce contact a été modifié ailleurs (sur le serveur ou depuis un autre appareil) pendant que vous le modifiiez.</comment>
+  </data>
+  <data name="T_CE74A29B" xml:space="preserve">
+    <value>La tua versione: {0}</value>
+    <comment>Votre version : {0}</comment>
+  </data>
+  <data name="T_21132861" xml:space="preserve">
+    <value>Versione remota: {0}</value>
+    <comment>Version distante : {0}</comment>
+  </data>
+  <data name="T_D8F2C6CF" xml:space="preserve">
+    <value>Mantieni la versione locale</value>
+    <comment>Garder la version locale</comment>
+  </data>
+  <data name="T_3B5D180D" xml:space="preserve">
+    <value>Mantieni la versione remota</value>
+    <comment>Garder la version distante</comment>
+  </data>
+  <data name="T_FB5378A6" xml:space="preserve">
+    <value>Mantieni entrambe</value>
+    <comment>Garder les deux</comment>
+  </data>
+  <data name="T_9AABE2FA" xml:space="preserve">
+    <value>«Mantieni entrambe» salva la tua versione come nuovo elemento e conserva l'originale remoto.</value>
+    <comment>« Garder les deux » enregistre votre version comme un nouvel élément et conserve l'original distant.</comment>
+  </data>
+  <data name="T_E74CB465" xml:space="preserve">
+    <value>Risoluzione del conflitto: {0}</value>
+    <comment>Résolution du conflit : {0}</comment>
+  </data>
+  <data name="T_0F2AB9B2" xml:space="preserve">
+    <value>Conflitto risolto.</value>
+    <comment>Conflit résolu.</comment>
+  </data>
+  <data name="T_E6782C86" xml:space="preserve">
+    <value>Azioni in attesa di sincronizzazione</value>
+    <comment>Actions en attente de synchronisation</comment>
+  </data>
+  <data name="T_D65FB415" xml:space="preserve">
+    <value>0 azioni in sospeso</value>
+    <comment>0 action en attente</comment>
+  </data>
+  <data name="T_D467CDC8" xml:space="preserve">
+    <value>Queste azioni eseguite offline verranno rieseguite appena la rete torna disponibile.</value>
+    <comment>Ces actions faites hors connexion seront rejouées dès le retour du réseau.</comment>
+  </data>
+  <data name="T_4068F894" xml:space="preserve">
+    <value>Annulla tutto</value>
+    <comment>Tout annuler</comment>
+  </data>
+  <data name="T_A8F2081E" xml:space="preserve">
+    <value>Riesegui ora</value>
+    <comment>Rejouer maintenant</comment>
+  </data>
+  <data name="T_846E744A" xml:space="preserve">
+    <value> E </value>
+    <comment> ET </comment>
+  </data>
+  <data name="T_E6700D2D" xml:space="preserve">
+    <value> O </value>
+    <comment> OU </comment>
+  </data>
+  <data name="T_E65FB504" xml:space="preserve">
+    <value>Azioni</value>
+    <comment>Actions</comment>
+  </data>
+  <data name="T_4F5CB4FE" xml:space="preserve">
+    <value>Assegna una categoria</value>
+    <comment>Affecter une catégorie</comment>
+  </data>
+  <data name="T_240B64F9" xml:space="preserve">
+    <value>Aggiungi una condizione</value>
+    <comment>Ajouter un critère</comment>
+  </data>
+  <data name="T_8094D16B" xml:space="preserve">
+    <value>Aggiungi un'azione</value>
+    <comment>Ajouter une action</comment>
+  </data>
+  <data name="T_504C3B51" xml:space="preserve">
+    <value>Aggiungi almeno una condizione.</value>
+    <comment>Ajoutez au moins un critère.</comment>
+  </data>
+  <data name="T_B8451E6B" xml:space="preserve">
+    <value>Aggiungi almeno un'azione.</value>
+    <comment>Ajoutez au moins une action.</comment>
+  </data>
+  <data name="T_87784664" xml:space="preserve">
+    <value>Applica ora anche ai messaggi di questa cartella</value>
+    <comment>Appliquer aussi maintenant aux messages de ce dossier</comment>
+  </data>
+  <data name="T_18C0EA2A" xml:space="preserve">
+    <value>Applica la regola quando</value>
+    <comment>Appliquer la règle quand</comment>
+  </data>
+  <data name="T_DE4259BB" xml:space="preserve">
+    <value>Almeno una condizione è vera</value>
+    <comment>Au moins un critère est vrai</comment>
+  </data>
+  <data name="T_D9A1E76E" xml:space="preserve">
+    <value>Nessuna regola attiva si applica a questo account.</value>
+    <comment>Aucune règle active ne s'applique à ce compte.</comment>
+  </data>
+  <data name="T_A026BC33" xml:space="preserve">
+    <value>Nessuna regola «sul server» convertibile in Sieve per questo account.</value>
+    <comment>Aucune règle « sur le serveur » convertible en Sieve pour ce compte.</comment>
+  </data>
+  <data name="T_47E8BA9A" xml:space="preserve">
+    <value>Nessuna regola. Creane una qui o con il clic destro su un messaggio &gt; Crea regola.</value>
+    <comment>Aucune règle. Créez-en une ici, ou par un clic droit sur un message &gt; Créer une règle.</comment>
+  </data>
+  <data name="T_2E7C273D" xml:space="preserve">
+    <value>Ogni condizione deve contenere un testo.</value>
+    <comment>Chaque critère doit comporter un texte.</comment>
+  </data>
+  <data name="T_32DFDEC6" xml:space="preserve">
+    <value>Scegli una cartella</value>
+    <comment>Choisir un dossier</comment>
+  </data>
+  <data name="T_DDAF6D65" xml:space="preserve">
+    <value>Scegli una categoria</value>
+    <comment>Choisir une catégorie</comment>
+  </data>
+  <data name="T_E24E46E1" xml:space="preserve">
+    <value>Scegli la categoria da assegnare.</value>
+    <comment>Choisissez la catégorie à affecter.</comment>
+  </data>
+  <data name="T_2BD9809C" xml:space="preserve">
+    <value>Scegli la cartella di destinazione.</value>
+    <comment>Choisissez le dossier de destination.</comment>
+  </data>
+  <data name="T_394F0CBE" xml:space="preserve">
+    <value>Account interessati</value>
+    <comment>Comptes concernés</comment>
+  </data>
+  <data name="T_D897C967" xml:space="preserve">
+    <value>Copia in una cartella</value>
+    <comment>Copier vers un dossier</comment>
+  </data>
+  <data name="T_D87FC713" xml:space="preserve">
+    <value>Crea regola</value>
+    <comment>Créer la règle</comment>
+  </data>
+  <data name="T_9D4C6CAE" xml:space="preserve">
+    <value>Crea regola</value>
+    <comment>Créer une règle</comment>
+  </data>
+  <data name="T_271C7A18" xml:space="preserve">
+    <value>Crea regola…</value>
+    <comment>Créer une règle…</comment>
+  </data>
+  <data name="T_6EEE5FB7" xml:space="preserve">
+    <value>Assegna un nome alla regola.</value>
+    <comment>Donnez un nom à la règle.</comment>
+  </data>
+  <data name="T_A16A5875" xml:space="preserve">
+    <value>Invio delle regole a Exchange Online…</value>
+    <comment>Envoi des règles à Exchange Online…</comment>
+  </data>
+  <data name="T_7983E2A2" xml:space="preserve">
+    <value>Invio dello script Sieve…</value>
+    <comment>Envoi du script Sieve…</comment>
+  </data>
+  <data name="T_C927ECE4" xml:space="preserve">
+    <value>Invia e attiva</value>
+    <comment>Envoyer et activer</comment>
+  </data>
+  <data name="T_AD6E7A4E" xml:space="preserve">
+    <value>Invia le regole al server</value>
+    <comment>Envoyer les règles au serveur</comment>
+  </data>
+  <data name="T_8BEDD975" xml:space="preserve">
+    <value>Invia le regole al server IMAP</value>
+    <comment>Envoyer les règles au serveur IMAP</comment>
+  </data>
+  <data name="T_C82853AA" xml:space="preserve">
+    <value>Esegui</value>
+    <comment>Exécuter</comment>
+  </data>
+  <data name="T_261DAAD6" xml:space="preserve">
+    <value>Esegui le regole ora…</value>
+    <comment>Exécuter les règles maintenant…</comment>
+  </data>
+  <data name="T_EE8BC0E2" xml:space="preserve">
+    <value>Esegui le regole su questa cartella</value>
+    <comment>Exécuter les règles sur ce dossier</comment>
+  </data>
+  <data name="T_EC0D7159" xml:space="preserve">
+    <value>Esegui le regole su una cartella</value>
+    <comment>Exécuter les règles sur un dossier</comment>
+  </data>
+  <data name="T_33B7B327" xml:space="preserve">
+    <value>Esecuzione delle regole in corso…</value>
+    <comment>Exécution des règles en cours…</comment>
+  </data>
+  <data name="T_3742A8BA" xml:space="preserve">
+    <value>Esegui questa azione</value>
+    <comment>Faire ceci</comment>
+  </data>
+  <data name="T_512556FB" xml:space="preserve">
+    <value>Impossibile leggere la cartella: {0}</value>
+    <comment>Impossible de lire le dossier : {0}</comment>
+  </data>
+  <data name="T_40281DB8" xml:space="preserve">
+    <value>Indica il nome dell'intestazione (ad esempio List-Id).</value>
+    <comment>Indiquez le nom de l'en-tête (par exemple List-Id).</comment>
+  </data>
+  <data name="T_6768A367" xml:space="preserve">
+    <value>L'intestazione</value>
+    <comment>L'en-tête</comment>
+  </data>
+  <data name="T_32326AC5" xml:space="preserve">
+    <value>Il mittente</value>
+    <comment>L'expéditeur</comment>
+  </data>
+  <data name="T_E71F1FC0" xml:space="preserve">
+    <value>L'oggetto</value>
+    <comment>L'objet</comment>
+  </data>
+  <data name="T_9033F4BC" xml:space="preserve">
+    <value>Il dominio del mittente</value>
+    <comment>Le domaine de l'expéditeur</comment>
+  </data>
+  <data name="T_47D88A30" xml:space="preserve">
+    <value>Il messaggio ha un allegato</value>
+    <comment>Le message a une pièce jointe</comment>
+  </data>
+  <data name="T_528117D8" xml:space="preserve">
+    <value>Lo script «evolution» verrà inviato al server (ManageSieve, porta 4190, connessione cifrata) e diventerà lo script attivo: sostituisce lo script Sieve attualmente attivo sul server.</value>
+    <comment>Le script « evolution » sera envoyé au serveur (ManageSieve, port 4190, connexion chiffrée) et deviendra le script actif : il remplace le script Sieve actuellement actif sur le serveur.</comment>
+  </data>
+  <data name="T_D2DDB940" xml:space="preserve">
+    <value>I destinatari (A o Cc)</value>
+    <comment>Les destinataires (À ou Cc)</comment>
+  </data>
+  <data name="T_296910C5" xml:space="preserve">
+    <value>Le regole classificano automaticamente i messaggi appena arrivano nella posta in arrivo: sposta, copia, segna come letto, imposta un contrassegno o una categoria, elimina. Vengono applicate nell'ordine dell'elenco. Una regola «sul server» viene inviata a Exchange Online (Microsoft 365) o a un server IMAP compatibile con Sieve e agisce anche quando l'applicazione è chiusa.</value>
+    <comment>Les règles classent automatiquement les messages dès leur arrivée dans la boîte de réception : déplacer, copier, marquer comme lu, poser un drapeau ou une catégorie, supprimer. Elles sont appliquées dans l'ordre de la liste. Une règle « sur le serveur » est envoyée à Exchange Online (Microsoft 365) ou à un serveur IMAP compatible Sieve et agit même quand l'application est fermée.</comment>
+  </data>
+  <data name="T_F0EA9FD5" xml:space="preserve">
+    <value>Le regole lato server sono disponibili solo per Microsoft 365 / Exchange Online e per i server IMAP compatibili con Sieve.</value>
+    <comment>Les règles côté serveur ne sont disponibles que pour Microsoft 365 / Exchange Online et les serveurs IMAP compatibles Sieve.</comment>
+  </data>
+  <data name="T_7EF51C8F" xml:space="preserve">
+    <value>Le regole impostate «sul server» vengono inviate a Exchange Online (Microsoft Graph: regole della posta in arrivo) o a un server IMAP compatibile con Sieve (ManageSieve). Vengono sostituite solo le regole create da Evolution; le altre regole non vengono toccate.</value>
+    <comment>Les règles réglées « sur le serveur » sont envoyées à Exchange Online (Microsoft Graph : règles de la boîte de réception) ou à un serveur IMAP compatible Sieve (ManageSieve). Seules les règles créées par Evolution sont remplacées ; vos autres règles ne sont pas touchées.</comment>
+  </data>
+  <data name="T_9B15B35B" xml:space="preserve">
+    <value>Modifica regola</value>
+    <comment>Modifier la règle</comment>
+  </data>
+  <data name="T_885711C0" xml:space="preserve">
+    <value>Non applicare le regole successive dopo questa</value>
+    <comment>Ne plus appliquer les règles suivantes après celle-ci</comment>
+  </data>
+  <data name="T_D54B763C" xml:space="preserve">
+    <value>Nome (List-Id…)</value>
+    <comment>Nom (List-Id…)</comment>
+  </data>
+  <data name="T_CABB793F" xml:space="preserve">
+    <value>Nome della regola</value>
+    <comment>Nom de la règle</comment>
+  </data>
+  <data name="T_6BDA0717" xml:space="preserve">
+    <value>Nuova regola</value>
+    <comment>Nouvelle règle</comment>
+  </data>
+  <data name="T_7C175047" xml:space="preserve">
+    <value>Opzioni avanzate…</value>
+    <comment>Options avancées…</comment>
+  </data>
+  <data name="T_ECF3D18F" xml:space="preserve">
+    <value>Dove eseguire la regola</value>
+    <comment>Où exécuter la règle</comment>
+  </data>
+  <data name="T_429C7E0E" xml:space="preserve">
+    <value>Applica le regole di questo computer a tutti i messaggi di una cartella.</value>
+    <comment>Passe tous les messages d'un dossier dans les règles de cet ordinateur.</comment>
+  </data>
+  <data name="T_59CDDFE5" xml:space="preserve">
+    <value>Imposta un contrassegno</value>
+    <comment>Poser un drapeau</comment>
+  </data>
+  <data name="T_3D702EF5" xml:space="preserve">
+    <value>Quando arriva un messaggio in questo account…</value>
+    <comment>Quand un message arrive dans ce compte…</comment>
+  </data>
+  <data name="T_113B4455" xml:space="preserve">
+    <value>Rimuovi questa condizione</value>
+    <comment>Retirer ce critère</comment>
+  </data>
+  <data name="T_87A5005F" xml:space="preserve">
+    <value>Rimuovi questa azione</value>
+    <comment>Retirer cette action</comment>
+  </data>
+  <data name="T_A7E80ACB" xml:space="preserve">
+    <value>Regola «{0}» creata.</value>
+    <comment>Règle « {0} » créée.</comment>
+  </data>
+  <data name="T_CA237E58" xml:space="preserve">
+    <value>Regole lato server</value>
+    <comment>Règles côté serveur</comment>
+  </data>
+  <data name="T_579F3F00" xml:space="preserve">
+    <value>Regole di posta</value>
+    <comment>Règles de messagerie</comment>
+  </data>
+  <data name="T_3FB70A5B" xml:space="preserve">
+    <value>Regole inviate a Exchange Online: {0} create, {1} sostituite.</value>
+    <comment>Règles envoyées à Exchange Online : {0} créée(s), {1} remplacée(s).</comment>
+  </data>
+  <data name="T_EA267506" xml:space="preserve">
+    <value>Regole eseguite: nessun messaggio corrisponde.</value>
+    <comment>Règles exécutées : aucun message ne correspond.</comment>
+  </data>
+  <data name="T_9AF2CBFD" xml:space="preserve">
+    <value>Regole eseguite: {0} messaggio/i elaborato/i.</value>
+    <comment>Règles exécutées : {0} message(s) traité(s).</comment>
+  </data>
+  <data name="T_29D982F2" xml:space="preserve">
+    <value>Script Sieve inviato e attivato sul server.</value>
+    <comment>Script Sieve envoyé et activé sur le serveur.</comment>
+  </data>
+  <data name="T_3E8A98AB" xml:space="preserve">
+    <value>Su questo computer · {0}</value>
+    <comment>Sur cet ordinateur · {0}</comment>
+  </data>
+  <data name="T_B65ABBD2" xml:space="preserve">
+    <value>Su questo computer, alla ricezione dei messaggi</value>
+    <comment>Sur cet ordinateur, à la réception des messages</comment>
+  </data>
+  <data name="T_EBDCA43B" xml:space="preserve">
+    <value>Sul server (sincronizzata, agisce anche ad applicazione chiusa)</value>
+    <comment>Sur le serveur (synchronisée, agit aussi application fermée)</comment>
+  </data>
+  <data name="T_87F61307" xml:space="preserve">
+    <value>Sul server · {0}</value>
+    <comment>Sur le serveur · {0}</comment>
+  </data>
+  <data name="T_8D1BD21D" xml:space="preserve">
+    <value>Tutte le condizioni sono vere</value>
+    <comment>Tous les critères sont vrais</comment>
+  </data>
+  <data name="T_23858705" xml:space="preserve">
+    <value>Una regola eseguita sul server deve riguardare un solo account.</value>
+    <comment>Une règle exécutée sur le serveur doit viser un seul compte.</comment>
+  </data>
+  <data name="T_A3A504C4" xml:space="preserve">
+    <value>Una regola eseguita sul server può classificare solo nelle cartelle del proprio account.</value>
+    <comment>Une règle exécutée sur le serveur ne peut classer que dans les dossiers de son compte.</comment>
+  </data>
+  <data name="T_593AA275" xml:space="preserve">
+    <value>inizia con</value>
+    <comment>commence par</comment>
+  </data>
+  <data name="T_C0929011" xml:space="preserve">
+    <value>contiene</value>
+    <comment>contient</comment>
+  </data>
+  <data name="T_C1D5DB96" xml:space="preserve">
+    <value>dal mittente</value>
+    <comment>de l'expéditeur</comment>
+  </data>
+  <data name="T_C460C213" xml:space="preserve">
+    <value>il cui oggetto contiene</value>
+    <comment>dont l'objet contient</comment>
+  </data>
+  <data name="T_6DBB6AAC" xml:space="preserve">
+    <value>è uguale a</value>
+    <comment>est égal à</comment>
+  </data>
+  <data name="T_D7DF75FC" xml:space="preserve">
+    <value>non contiene</value>
+    <comment>ne contient pas</comment>
+  </data>
+  <data name="T_3984F84E" xml:space="preserve">
+    <value>termina con</value>
+    <comment>se termine par</comment>
+  </data>
+  <data name="T_6FD32821" xml:space="preserve">
+    <value>{0} regola/e non convertibile/i ignorata/e: {1}</value>
+    <comment>{0} règle(s) non convertible(s) ignorée(s) : {1}</comment>
+  </data>
+  <data name="T_CD4F284B" xml:space="preserve">
+    <value>Invio delle regole non riuscito: {0}</value>
+    <comment>Échec de l'envoi des règles : {0}</comment>
+  </data>
+  <data name="T_299232B6" xml:space="preserve">
+    <value>Invio dello script Sieve non riuscito: {0}</value>
+    <comment>Échec de l'envoi du script Sieve : {0}</comment>
+  </data>
+  <data name="T_327AB173" xml:space="preserve">
+    <value>Gli aggiornamenti sono disattivati dall'amministratore.</value>
+    <comment>Les mises à jour sont désactivées par votre administrateur.</comment>
+  </data>
+  <data name="T_E5524EFD" xml:space="preserve">
+    <value>Strumento di lettura immersiva</value>
+    <comment>Lecteur immersif</comment>
+  </data>
+  <data name="T_88997AB4" xml:space="preserve">
+    <value>Riduci il testo (tasto -)</value>
+    <comment>Réduire le texte (touche -)</comment>
+  </data>
+  <data name="T_331A606C" xml:space="preserve">
+    <value>Ingrandisci il testo (tasto +)</value>
+    <comment>Agrandir le texte (touche +)</comment>
+  </data>
+  <data name="T_6BEE659E" xml:space="preserve">
+    <value>Cambia la spaziatura delle righe (tasto L)</value>
+    <comment>Changer l'espacement des lignes (touche L)</comment>
+  </data>
+  <data name="T_84531D22" xml:space="preserve">
+    <value>Cambia tema: chiaro, seppia, scuro (tasto T)</value>
+    <comment>Changer le thème : clair, sépia, sombre (touche T)</comment>
+  </data>
+  <data name="T_03DDE14C" xml:space="preserve">
+    <value>Esci dallo strumento di lettura immersiva (Esc)</value>
+    <comment>Quitter le lecteur immersif (Échap)</comment>
+  </data>
+  <data name="T_3879A62D" xml:space="preserve">
+    <value>Posta, calendario, contatti e attività di Evolution</value>
+    <comment>Messagerie, calendrier, contacts et tâches Evolution</comment>
+  </data>
+  <data name="T_B7AEEEBA" xml:space="preserve">
+    <value>Gli account non sono stati caricati: impossibile aprire il collegamento di posta.</value>
+    <comment>Les comptes ne se sont pas chargés : le lien de messagerie n'a pas pu être ouvert.</comment>
+  </data>
+  <data name="T_78056A0C" xml:space="preserve">
+    <value>EvolutionWin è registrato come applicazione di posta per il tuo account Windows.</value>
+    <comment>EvolutionWin est enregistré comme application de messagerie pour votre compte Windows.</comment>
+  </data>
+  <data name="T_28D40CD8" xml:space="preserve">
+    <value>EvolutionWin non è registrato come applicazione di posta.</value>
+    <comment>EvolutionWin n'est pas enregistré comme application de messagerie.</comment>
+  </data>
+  <data name="T_810A63C1" xml:space="preserve">
+    <value>Registrazione come applicazione di posta non riuscita.</value>
+    <comment>L'enregistrement comme application de messagerie a échoué.</comment>
+  </data>
+  <data name="T_4B52A490" xml:space="preserve">
+    <value>EvolutionWin è registrato. Sceglilo in «App predefinite» per i collegamenti di posta.</value>
+    <comment>EvolutionWin est enregistré. Choisissez-le dans « Applications par défaut » pour les liens de messagerie.</comment>
+  </data>
+  <data name="T_F1FC52E5" xml:space="preserve">
+    <value>La registrazione come applicazione di posta è stata rimossa.</value>
+    <comment>L'enregistrement comme application de messagerie a été retiré.</comment>
+  </data>
+  <data name="T_F988E908" xml:space="preserve">
+    <value>Impossibile aprire le impostazioni di Windows.</value>
+    <comment>Impossible d'ouvrir les paramètres Windows.</comment>
+  </data>
+  <data name="T_D43F4761" xml:space="preserve">
+    <value>Legge il messaggio a schermo intero, solo testo, con dimensione e spaziatura regolabili</value>
+    <comment>Lit le message en plein écran, texte seul, avec taille du texte et espacement réglables</comment>
+  </data>
+  <data name="T_D850FE95" xml:space="preserve">
+    <value>Collegamenti di posta (mailto:)</value>
+    <comment>Liens de messagerie (mailto:)</comment>
+  </data>
+  <data name="T_5BC572A8" xml:space="preserve">
+    <value>Applicazione di posta di Windows</value>
+    <comment>Application de messagerie Windows</comment>
+  </data>
+  <data name="T_68EF8775" xml:space="preserve">
+    <value>Dichiara EvolutionWin come applicazione di posta in modo che i collegamenti di posta (clic su un indirizzo in un browser o in un documento) aprano una nuova finestra di composizione. Windows chiederà poi di confermare la scelta in «App predefinite».</value>
+    <comment>Déclare EvolutionWin comme application de messagerie pour que les liens de messagerie (clic sur une adresse dans un navigateur ou un document) ouvrent une nouvelle fenêtre de rédaction. Windows demande ensuite de confirmer le choix dans « Applications par défaut ».</comment>
+  </data>
+  <data name="T_49E7615C" xml:space="preserve">
+    <value>Registra come applicazione di posta</value>
+    <comment>Enregistrer comme application de messagerie</comment>
+  </data>
+  <data name="T_5367749D" xml:space="preserve">
+    <value>Apri le app predefinite</value>
+    <comment>Ouvrir les applications par défaut</comment>
+  </data>
+  <data name="T_9AE4DC95" xml:space="preserve">
+    <value>Rimuovi la registrazione</value>
+    <comment>Retirer l'enregistrement</comment>
+  </data>
+  <data name="T_A3BFCFDB" xml:space="preserve">
+    <value>{0} messaggio/i esportato/i da {1} cartella/e.</value>
+    <comment>{0} message(s) exporté(s) depuis {1} dossier(s).</comment>
+  </data>
+  <data name="T_81922125" xml:space="preserve">
+    <value>{0} messaggio/i importato/i, {1} cartella/e creata/e.</value>
+    <comment>{0} message(s) importé(s), {1} dossier(s) créé(s).</comment>
+  </data>
+  <data name="T_4BCB1105" xml:space="preserve">
+    <value>{0} elemento/i importato/i.</value>
+    <comment>{0} élément(s) importé(s).</comment>
+  </data>
+  <data name="T_CA6FE46B" xml:space="preserve">
+    <value>{0} elemento/i ignorato/i (eliminati, già presenti o fuori periodo).</value>
+    <comment>{0} élément(s) ignoré(s) (supprimés, déjà présents ou hors période).</comment>
+  </data>
+  <data name="T_76B88D30" xml:space="preserve">
+    <value>{0} elemento/i non riuscito/i. Primo errore: {1}</value>
+    <comment>{0} élément(s) en échec. Première erreur : {1}</comment>
+  </data>
+  <data name="T_BE3C703E" xml:space="preserve">
+    <value>L'operazione è stata annullata prima del termine.</value>
+    <comment>L'opération a été annulée avant la fin.</comment>
+  </data>
+  <data name="T_8CE06495" xml:space="preserve">
+    <value>Importazione: {0}</value>
+    <comment>Importation : {0}</comment>
+  </data>
+  <data name="T_85BEEAF4" xml:space="preserve">
+    <value>Esporta dati</value>
+    <comment>Exporter des données</comment>
+  </data>
+  <data name="T_2C8CC674" xml:space="preserve">
+    <value>Dati da esportare</value>
+    <comment>Données à exporter</comment>
+  </data>
+  <data name="T_E9617582" xml:space="preserve">
+    <value>Posta (mbox o file .eml)</value>
+    <comment>Courrier (mbox ou fichiers .eml)</comment>
+  </data>
+  <data name="T_B47788BB" xml:space="preserve">
+    <value>Contatti (vCard)</value>
+    <comment>Contacts (vCard)</comment>
+  </data>
+  <data name="T_504CA6A5" xml:space="preserve">
+    <value>Calendari ed elenchi attività (iCalendar)</value>
+    <comment>Agendas et listes de tâches (iCalendar)</comment>
+  </data>
+  <data name="T_8002292D" xml:space="preserve">
+    <value>Account</value>
+    <comment>Compte</comment>
+  </data>
+  <data name="T_BF3E8DD4" xml:space="preserve">
+    <value>Cartelle da esportare</value>
+    <comment>Dossiers à exporter</comment>
+  </data>
+  <data name="T_BDF3EDD0" xml:space="preserve">
+    <value>Seleziona tutto</value>
+    <comment>Tout sélectionner</comment>
+  </data>
+  <data name="T_13BC587D" xml:space="preserve">
+    <value>Includi anche le sottocartelle delle cartelle selezionate</value>
+    <comment>Inclure aussi les sous-dossiers des dossiers choisis</comment>
+  </data>
+  <data name="T_FFB0FF72" xml:space="preserve">
+    <value>Formato</value>
+    <comment>Format</comment>
+  </data>
+  <data name="T_13E3F1A2" xml:space="preserve">
+    <value>mbox: un file per cartella</value>
+    <comment>mbox : un fichier par dossier</comment>
+  </data>
+  <data name="T_74E8AFDC" xml:space="preserve">
+    <value>EML: un file per messaggio</value>
+    <comment>EML : un fichier par message</comment>
+  </data>
+  <data name="T_B3840E6C" xml:space="preserve">
+    <value>Limita a un periodo (data di ricezione)</value>
+    <comment>Limiter à une période (date de réception)</comment>
+  </data>
+  <data name="T_4BCE9692" xml:space="preserve">
+    <value>Dal</value>
+    <comment>Du</comment>
+  </data>
+  <data name="T_0A734EB2" xml:space="preserve">
+    <value>Al (incluso)</value>
+    <comment>Au (inclus)</comment>
+  </data>
+  <data name="T_A5EE3A54" xml:space="preserve">
+    <value>Esportazione: scegliere un account e almeno una cartella.</value>
+    <comment>Exportation : choisissez un compte et au moins un dossier.</comment>
+  </data>
+  <data name="T_D378397B" xml:space="preserve">
+    <value>Esportazione della posta in corso…</value>
+    <comment>Exportation du courrier en cours…</comment>
+  </data>
+  <data name="T_C198F2CA" xml:space="preserve">
+    <value>Esportazione della posta: {0}</value>
+    <comment>Exportation du courrier : {0}</comment>
+  </data>
+  <data name="T_38411A73" xml:space="preserve">
+    <value>Esportazione completata</value>
+    <comment>Exportation terminée</comment>
+  </data>
+  <data name="T_75B48483" xml:space="preserve">
+    <value>Importa dati</value>
+    <comment>Importer des données</comment>
+  </data>
+  <data name="T_E29D5323" xml:space="preserve">
+    <value>Importa</value>
+    <comment>Importer</comment>
+  </data>
+  <data name="T_61E2A3F8" xml:space="preserve">
+    <value>Origine</value>
+    <comment>Source</comment>
+  </data>
+  <data name="T_972FA843" xml:space="preserve">
+    <value>Posta: file mbox o messaggio .eml</value>
+    <comment>Courrier : fichier mbox ou message .eml</comment>
+  </data>
+  <data name="T_6827AEE8" xml:space="preserve">
+    <value>Posta: cartella (mbox, .eml o Maildir)</value>
+    <comment>Courrier : dossier (mbox, .eml ou Maildir)</comment>
+  </data>
+  <data name="T_672ECF33" xml:space="preserve">
+    <value>Posta: profilo Thunderbird</value>
+    <comment>Courrier : profil Thunderbird</comment>
+  </data>
+  <data name="T_37A370E4" xml:space="preserve">
+    <value>Contatti: file vCard (.vcf)</value>
+    <comment>Contacts : fichier vCard (.vcf)</comment>
+  </data>
+  <data name="T_382E8BC9" xml:space="preserve">
+    <value>Calendario o attività: file iCalendar (.ics)</value>
+    <comment>Agenda ou tâches : fichier iCalendar (.ics)</comment>
+  </data>
+  <data name="T_2312C9B5" xml:space="preserve">
+    <value>Outlook: file di dati (.pst o .ost)</value>
+    <comment>Outlook : fichier de données (.pst ou .ost)</comment>
+  </data>
+  <data name="T_823D4E1C" xml:space="preserve">
+    <value>Account di destinazione</value>
+    <comment>Compte de destination</comment>
+  </data>
+  <data name="T_2CDE7B99" xml:space="preserve">
+    <value>Cartella di destinazione (creata se non esiste; «/» separa i livelli)</value>
+    <comment>Dossier de destination (créé s'il n'existe pas ; « / » sépare les niveaux)</comment>
+  </data>
+  <data name="T_73A9EBA7" xml:space="preserve">
+    <value>Importato</value>
+    <comment>Importé</comment>
+  </data>
+  <data name="T_AF1026EB" xml:space="preserve">
+    <value>Cartella di posta Thunderbird rilevata</value>
+    <comment>Dossier de courrier Thunderbird détecté</comment>
+  </data>
+  <data name="T_418E8B92" xml:space="preserve">
+    <value>Nessun profilo Thunderbird rilevato: potrai scegliere la cartella manualmente (Mail o ImapMail del profilo).</value>
+    <comment>Aucun profil Thunderbird détecté : vous pourrez choisir le dossier à la main (Mail ou ImapMail du profil).</comment>
+  </data>
+  <data name="T_049BECE3" xml:space="preserve">
+    <value>Le cartelle e sottocartelle di questo account verranno ricreate nella cartella di destinazione.</value>
+    <comment>Les dossiers et sous-dossiers de ce compte seront recréés sous le dossier de destination.</comment>
+  </data>
+  <data name="T_CED096C2" xml:space="preserve">
+    <value>Rubrica di destinazione</value>
+    <comment>Carnet d'adresses de destination</comment>
+  </data>
+  <data name="T_7C7EAC77" xml:space="preserve">
+    <value>Calendario o elenco attività di destinazione</value>
+    <comment>Agenda ou liste de tâches de destination</comment>
+  </data>
+  <data name="T_88B74727" xml:space="preserve">
+    <value>I file .pst e .ost di Outlook usano un formato proprietario che EvolutionWin non può leggere direttamente. Convertire prima il file in cartelle mbox (ad esempio con lo strumento libero readpst di libpst: «readpst -r archive.pst»), quindi importare la cartella ottenuta con «Posta: cartella». Per contatti e calendari, esportarli da Outlook in .vcf / .ics e importarli qui.</value>
+    <comment>Les fichiers .pst et .ost d'Outlook sont un format propriétaire que EvolutionWin ne sait pas lire directement. Convertissez d'abord le fichier en dossiers mbox (par exemple avec l'outil libre readpst, de libpst : « readpst -r archive.pst »), puis importez le dossier obtenu avec « Courrier : dossier ». Pour les contacts et les agendas, exportez-les d'Outlook en .vcf / .ics et importez-les ici.</comment>
+  </data>
+  <data name="T_C8AC80D3" xml:space="preserve">
+    <value>I file .pst e .ost non possono essere letti direttamente: convertirli prima in mbox (readpst).</value>
+    <comment>Les fichiers .pst et .ost ne peuvent pas être lus directement : convertissez-les d'abord en mbox (readpst).</comment>
+  </data>
+  <data name="T_D2F054B8" xml:space="preserve">
+    <value>Importazione: scegliere un account e una cartella di destinazione.</value>
+    <comment>Importation : choisissez un compte et un dossier de destination.</comment>
+  </data>
+  <data name="T_09E7CE4A" xml:space="preserve">
+    <value>Importazione della posta in corso…</value>
+    <comment>Importation du courrier en cours…</comment>
+  </data>
+  <data name="T_F241CF97" xml:space="preserve">
+    <value>Importazione della posta: {0}</value>
+    <comment>Importation du courrier : {0}</comment>
+  </data>
+  <data name="T_BF1AD19C" xml:space="preserve">
+    <value>Importazione completata</value>
+    <comment>Importation terminée</comment>
+  </data>
+  <data name="T_40FB13B8" xml:space="preserve">
+    <value>Nessuna rubrica di destinazione.</value>
+    <comment>Aucun carnet d'adresses de destination.</comment>
+  </data>
+  <data name="T_4CF40F3F" xml:space="preserve">
+    <value>Importazione dei contatti in corso…</value>
+    <comment>Importation des contacts en cours…</comment>
+  </data>
+  <data name="T_2FA2F37A" xml:space="preserve">
+    <value>Nessun calendario di destinazione.</value>
+    <comment>Aucun agenda de destination.</comment>
+  </data>
+  <data name="T_CCC29CE8" xml:space="preserve">
+    <value>Importazione del calendario in corso…</value>
+    <comment>Importation de l'agenda en cours…</comment>
+  </data>
+  <data name="T_5E33AE31" xml:space="preserve">
+    <value>Esportazione della posta: {0} ({1}/{2})</value>
+    <comment>Exportation du courrier : {0} ({1}/{2})</comment>
+  </data>
+  <data name="T_4C266D98" xml:space="preserve">
+    <value>Importazione: {0} ({1} messaggio/i o elemento/i)</value>
+    <comment>Importation : {0} ({1} message(s) ou élément(s))</comment>
+  </data>
+  <data name="T_F05F2FBF" xml:space="preserve">
+    <value>Importa dati…</value>
+    <comment>Importer des données…</comment>
+  </data>
+  <data name="T_1F9C4500" xml:space="preserve">
+    <value>Importa posta (mbox, EML, Maildir, Thunderbird), contatti (vCard) o un calendario (iCalendar)</value>
+    <comment>Importer du courrier (mbox, EML, Maildir, Thunderbird), des contacts (vCard) ou un agenda (iCalendar)</comment>
+  </data>
+  <data name="T_5D594896" xml:space="preserve">
+    <value>Esporta dati…</value>
+    <comment>Exporter des données…</comment>
+  </data>
+  <data name="T_711FE2C6" xml:space="preserve">
+    <value>Esporta posta (mbox, EML), contatti (vCard) o calendari (iCalendar)</value>
+    <comment>Exporter du courrier (mbox, EML), des contacts (vCard) ou des agendas (iCalendar)</comment>
+  </data>
+  <data name="T_05A96003" xml:space="preserve">
+    <value>Impossibile trascinare l'elemento: {0}</value>
+    <comment>Impossible de glisser l'élément : {0}</comment>
+  </data>
 </root>
 

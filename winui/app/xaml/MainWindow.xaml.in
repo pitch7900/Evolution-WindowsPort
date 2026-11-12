@@ -392,6 +392,12 @@
                                 <!-- Signatures de courrier : gestion, éditeur et attribution -->
 <!--#include xaml/Settings.Mail.Signatures.xamlpart-->
 
+<!--#include xaml/Settings.Mail.Rules.xamlpart-->
+
+<!--#include xaml/Settings.Mail.Spam.xamlpart-->
+
+<!--#include xaml/Settings.Mail.Mailto.xamlpart-->
+
                             </StackPanel>
 
                             <!-- ======================================================== -->
@@ -502,6 +508,8 @@
                             <StackPanel x:Name="SettingsCategoryAdvanced" Visibility="Collapsed" Spacing="16">
 
 <!--#include xaml/Settings.Advanced.Storage.xamlpart-->
+
+<!--#include xaml/Settings.Advanced.Index.xamlpart-->
 
 
 

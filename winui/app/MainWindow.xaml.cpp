@@ -310,6 +310,9 @@ namespace winrt::EvolutionWin::implementation
         if (event == L"ready")
         {
             evo_core_trace("interface : événement ready reçu");
+            ApplySpamSettings();
+            ApplyFullTextIndexSetting();
+            RefreshPendingActions();
             if (m_splash)
             {
                 if (!m_initialized)
@@ -433,9 +436,19 @@ namespace winrt::EvolutionWin::implementation
             }
             ShowStatus(display_status, InfoBarSeverity::Informational);
         }
+        else if (event == L"index-progress")
+        {
+            ShowFullTextIndexStatus(object);
+        }
         else if (event == L"new-mail")
         {
             ShowNewMailNotification(object);
+            /* règles de messagerie : classement des messages arrivés (MainWindow.Rules.cpp) */
+            ApplyRulesToNewMail(object.GetNamedString(L"account", L""), object.GetNamedString(L"folder", L""));
+        }
+        else if (event == L"spam-filtered")
+        {
+            ShowSpamFilteredNotice(object);
         }
         else if (event == L"progress")
         {
@@ -464,7 +477,35 @@ namespace winrt::EvolutionWin::implementation
                         ? Fmt(Tr(L"Transfert du dossier « {0} » : {1}/{2}"), { label, to_hstring(done), to_hstring(total) })
                         : Fmt(Tr(L"Transfert du dossier « {0} » : {1} message(s)"), { label, to_hstring(done) });
             }
+            {
+                /* exportation / importation de données (MainWindow.Transfer.cpp) */
+                hstring transfer_kind = object.GetNamedString(L"kind", L"");
+                if (transfer_kind == L"export" || transfer_kind == L"import")
+                {
+                    hstring label = object.GetNamedString(L"label", L"");
+                    int32_t total = static_cast<int32_t>(object.GetNamedNumber(L"total", 0));
+                    int32_t done = static_cast<int32_t>(object.GetNamedNumber(L"done", 0));
+                    int32_t messages = static_cast<int32_t>(object.GetNamedNumber(L"messages", 0));
+                    if (transfer_kind == L"export")
+                        progress_text = !active ? Tr(L"Exportation terminée")
+                            : total > 0
+                                ? Fmt(Tr(L"Exportation du courrier : {0} ({1}/{2})"), { label, to_hstring(done), to_hstring(total) })
+                                : Fmt(Tr(L"Exportation du courrier : {0}"), { label });
+                    else
+                        progress_text = !active ? Tr(L"Importation terminée")
+                            : Fmt(Tr(L"Importation : {0} ({1} message(s) ou élément(s))"), { label, to_hstring(messages) });
+                }
+            }
             UpdateStatusBarProgress(active, progress_text, percent);
+        }
+        else if (event == L"offline-queue")
+        {
+            UpdatePendingActionsBadge(static_cast<int>(object.GetNamedNumber(L"pending", 0)),
+                static_cast<int>(object.GetNamedNumber(L"failed", 0)));
+        }
+        else if (event == L"offline-replay")
+        {
+            OnOfflineReplayEvent(object);
         }
         else if (event == L"connection-status")
         {
@@ -819,6 +860,9 @@ namespace winrt::EvolutionWin::implementation
             TasksViewPane().Visibility(Visibility::Collapsed);
             SettingsViewPane().Visibility(Visibility::Visible);
             InitSettingsView();
+            InitSpamSettingsView();
+            InitMailtoSettingsView();
+            InitFullTextIndexSettingsView();
             SelectSettingsCategory(m_current_settings_category);
             UpdateTodoBarVisibility();
             return;

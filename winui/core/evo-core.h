@@ -1352,7 +1352,8 @@ void		evo_core_create_calendar	(EvoCore *core,
  *  "path": "C:\\...\\contacts.vcf", "per_contact": false}
  * Avec "per_contact": true, "path" est un dossier (créé au besoin) qui reçoit
  * un fichier par contact, nommé d'après son nom complet (« Nom (2).vcf » en
- * cas de doublon).
+ * cas de doublon). Le membre facultatif "uids" (tableau d'identifiants de
+ * contacts) limite l'export à ces contacts (glisser-déposer vers l'Explorateur).
  * Paramètres :
  *   core         : instance du moteur evo-core
  *   request_json : requête au format JSON UTF-8
@@ -1367,12 +1368,76 @@ void		evo_core_export_contacts	(EvoCore *core,
  * (VTODO) ou de mémos (VJOURNAL) dans un fichier iCalendar (VCALENDAR 2.0
  * avec les VTIMEZONE des fuseaux horaires référencés). Format attendu pour
  * request_json : {"source_uid": "...", "path": "C:\\...\\agenda.ics"}
+ * Le membre facultatif "uids" (tableau d'UID de composants) limite l'export à
+ * ces composants (glisser-déposer d'un événement vers l'Explorateur).
  * Paramètres :
  *   core         : instance du moteur evo-core
  *   request_json : requête au format JSON UTF-8
  *   func         : rappel recevant {"count": n}
  *   user_data    : données utilisateur transmises au rappel */
 void		evo_core_export_calendar	(EvoCore *core,
+						 const char *request_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Exporte des dossiers de courrier vers des fichiers mbox ou EML, en arrière-plan,
+ * avec progression (événements « progress » de type « export ») et annulation
+ * (evo_core_cancel_operations ). Format attendu pour request_json :
+ * {"account": "...", "folders": ["INBOX", "INBOX/Projets"], "recursive": true,
+ *  "dest": "C:\\...", "format": "mbox" ou "eml", "date_from": 0, "date_to": 0}
+ * « mbox » écrit un fichier <dossier>.mbox par dossier de courrier, « eml » un
+ * fichier .eml par message dans un dossier par dossier de courrier ; l'arborescence
+ * du compte est conservée. « date_from » et « date_to » (secondes depuis 1970, 0 :
+ * sans borne) limitent l'exportation aux messages reçus pendant la période.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   request_json : requête au format JSON UTF-8
+ *   func         : rappel recevant {"messages", "folders", "skipped", "failed",
+ *                  "cancelled", "dest", "error"}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_export_mail		(EvoCore *core,
+						 const char *request_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Importe du courrier depuis un fichier mbox, un message .eml ou un répertoire
+ * (arborescence de fichiers mbox / .eml, Maildir, dossier de courrier d'un profil
+ * Thunderbird) vers un dossier d'un compte, en arrière-plan, avec progression
+ * (événements « progress » de type « import ») et annulation. Les dossiers
+ * manquants sont créés. Format attendu pour request_json :
+ * {"account": "...", "dest_folder": "Importé", "path": "C:\\..."}
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   request_json : requête au format JSON UTF-8
+ *   func         : rappel recevant {"messages", "folders", "skipped", "failed",
+ *                  "cancelled", "error"}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_import_mail		(EvoCore *core,
+						 const char *request_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Importe des contacts d'un fichier vCard (.vcf) dans un carnet d'adresses.
+ * Format attendu pour request_json : {"book_uid": "...", "path": "C:\\...\\contacts.vcf"}
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   request_json : requête au format JSON UTF-8
+ *   func         : rappel recevant {"count", "skipped", "failed", "cancelled", "error"}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_import_contacts	(EvoCore *core,
+						 const char *request_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Importe les événements, tâches ou mémos d'un fichier iCalendar (.ics) dans un
+ * agenda, une liste de tâches ou une liste de mémos (selon la source).
+ * Format attendu pour request_json : {"source_uid": "...", "path": "C:\\...\\agenda.ics"}
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   request_json : requête au format JSON UTF-8
+ *   func         : rappel recevant {"count", "skipped", "failed", "cancelled", "error"}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_import_calendar	(EvoCore *core,
 						 const char *request_json,
 						 EvoCoreResultFunc func,
 						 void *user_data);
@@ -1560,6 +1625,58 @@ void		evo_core_offline_sync_now	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* File d'attente des actions hors ligne : les suppressions, déplacements, copies et changements
+ * d'indicateurs demandés hors connexion (ou qui échouent faute de réseau) sont journalisés sur
+ * disque (%LOCALAPPDATA%\EvolutionWin\offline-queue.json) et rejoués dans l'ordre au retour du
+ * réseau, avec réconciliation (message disparu du serveur : action abandonnée sans erreur).
+ * Les exécutants habituels (evo_core_delete_message, evo_core_move_message, evo_core_copy_message,
+ * evo_core_set_message_flags) répondent alors {"queued": true, "result": "added"|"merged"|"dropped"|"full"}
+ * et les messages promis à la suppression / au déplacement sont masqués des listes jusqu'au rejeu.
+ * Événements : « offline-queue » {"pending", "failed"} à chaque changement de la file,
+ * « offline-replay » {"done", "gone", "failed", "remaining"} à la fin d'un rejeu qui a agi. */
+
+/* Liste les actions en attente (journal et messages de la Boîte d'envoi).
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   func      : rappel recevant {"pending", "failed", "actions": [{"id", "kind":
+ *               "delete"|"move"|"copy"|"flag"|"send", "account", "folder", "uid", "subject",
+ *               "dest_account", "dest_folder", "flag", "value", "created", "attempts",
+ *               "status" (0 en attente, 1 abandonnée), "error"}]} ("send" : id "send:<uid>")
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_offline_queue_list	(EvoCore *core,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Annule une action en attente (changement d'indicateur rétabli localement, message supprimé
+ * ou déplacé de nouveau visible, envoi retiré de la Boîte d'envoi).
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   action_id : identifiant donné par evo_core_offline_queue_list
+ *   func      : rappel recevant {"cancelled": true|false}
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_offline_queue_cancel	(EvoCore *core,
+						 const char *action_id,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Annule toutes les actions du journal (la Boîte d'envoi n'est pas touchée).
+ * Paramètres : comme evo_core_offline_queue_list ; func reçoit {"cancelled": nombre} */
+void		evo_core_offline_queue_cancel_all	(EvoCore *core,
+							 EvoCoreResultFunc func,
+							 void *user_data);
+
+/* Rejoue la file maintenant (sans attendre un retour du réseau ni les délais de nouvelle tentative).
+ * Paramètres :
+ *   core      : instance du moteur evo-core
+ *   force     : non nul pour relancer aussi les actions abandonnées après trop d'échecs
+ *   func      : rappel recevant {"status": "done"|"offline"|"busy"|"interrupted", "done", "gone",
+ *               "failed", "waiting", "remaining"}
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_offline_queue_replay	(EvoCore *core,
+						 int force,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Liste les délégués de la boîte Gmail d'un compte (API Gmail settings.delegates, portée
  * gmail.settings.sharing, comptes Google Workspace). Erreur explicative pour les autres
  * comptes (Microsoft 365 : droits gérés dans le centre d'administration Exchange).
@@ -1600,12 +1717,149 @@ void		evo_core_remove_delegate	(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Lit le Cc et les en-têtes d'un message SANS le marquer comme lu (règles côté client :
+ * critères sur les destinataires et les en-têtes, absents de la liste des messages).
+ * Paramètres :
+ *   core, account_uid, folder_full_name, message_uid : message visé
+ *   func : rappel recevant {"cc": "...", "headers": {"Nom": "valeur", ...}} (un en-tête répété
+ *          est joint par des virgules ; valeurs tronquées à 2000 caractères)
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_get_message_headers	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *message_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Règles côté serveur, Exchange Online : remplace dans la boîte (dossier Boîte de réception)
+ * les règles dont le nom commence par « [Evolution] » par celles fournies (Microsoft Graph,
+ * messageRules ; autorisation MailboxSettings.ReadWrite). Les règles de l'utilisateur ne sont jamais touchées.
+ * Paramètres :
+ *   core, account_uid : compte Microsoft 365
+ *   rules_json : tableau d'objets messageRule ; les membres actions.moveToFolder et actions.copyToFolder
+ *                contiennent un chemin de dossier Camel (« INBOX/Factures »), remplacé par l'identifiant Graph
+ *   func : rappel recevant {"removed": n, "created": n}
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_sync_server_rules	(EvoCore *core,
+						 const char *account_uid,
+						 const char *rules_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Règles côté serveur, IMAP : envoie un script Sieve par ManageSieve (RFC 5804) avec STARTTLS et
+ * authentification PLAIN (identifiant et mot de passe du compte), puis l'active si demandé
+ * (ce qui remplace le script actif du serveur).
+ * Paramètres :
+ *   core, account_uid : compte IMAP
+ *   script_name : nom du script sur le serveur
+ *   script : texte du script Sieve (UTF-8)
+ *   activate : non nul pour activer le script après l'envoi
+ *   port : port ManageSieve (NULL ou vide : 4190)
+ *   func : rappel recevant {"uploaded": true, "active": bool}
+ *   user_data : données utilisateur transmises au rappel */
+void		evo_core_managesieve_put	(EvoCore *core,
+						 const char *account_uid,
+						 const char *script_name,
+						 const char *script,
+						 int activate,
+						 const char *port,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Versions des composants du moteur, pour la boîte « À propos » et les
  * rapports de bug (sans instance du moteur, appel synchrone) :
  * {"evolution_data_server": "3.63.1", "evolution_ews": "3.63.1" (vide si
  *  non installé), "glib": "2.86.0", "libsoup": "3.6.5"}
  * Retourne : chaîne JSON statique, à ne pas libérer. */
 const char *	evo_core_version_info		(void);
+
+/* ---- Filtrage anti-spam local (classificateur bayésien, evo-core-spam.c) ----
+ * Événement émis : "spam-filtered" {"account", "folder", "junk_folder", "count"}
+ * quand des messages arrivés dans la boîte de réception sont classés
+ * automatiquement dans le dossier Indésirables. */
+
+/* Configure le filtre (appel synchrone, à refaire à chaque changement de réglage).
+ * Paramètres :
+ *   core              : instance du moteur evo-core (peut être NULL)
+ *   db_path           : chemin UTF-8 de la base d'apprentissage (NULL ou "" : %LOCALAPPDATA%\EvolutionWin\spam.db)
+ *   enabled           : non nul pour activer le classement automatique des nouveaux messages
+ *   threshold_percent : score minimal (50 à 99) pour classer un message en indésirable */
+void		evo_core_spam_configure		(EvoCore *core,
+						 const char *db_path,
+						 int enabled,
+						 int threshold_percent);
+
+/* Apprend des messages comme indésirables ou légitimes (à appeler avant leur déplacement).
+ * Paramètres :
+ *   message_uids : identifiants des messages du dossier, séparés par des sauts de ligne
+ *   is_spam      : non nul : indésirables ; 0 : légitimes
+ *   func         : rappel recevant {"trained", "failed", "spam", "ham", "tokens", "ready"} */
+void		evo_core_spam_train		(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *message_uids,
+						 int is_spam,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Apprend en lot les messages les plus récents d'un dossier (tâche de fond).
+ * Paramètres : comme evo_core_spam_train (), plus max_messages (nombre maximal de messages lus).
+ * func reçoit le même JSON que evo_core_spam_train (). */
+void		evo_core_spam_train_folder	(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 int is_spam,
+						 int max_messages,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Score d'indésirabilité d'un message.
+ * func reçoit {"score": 0..1, "junk": bool, "ready": bool, "significant": n}. */
+void		evo_core_spam_score		(EvoCore *core,
+						 const char *account_uid,
+						 const char *folder_full_name,
+						 const char *message_uid,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Compteurs de l'apprentissage : func reçoit
+ * {"spam": n, "ham": n, "tokens": n, "ready": bool, "min_trained": n}. */
+void		evo_core_spam_stats		(EvoCore *core,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Efface tout l'apprentissage (mémoire et fichier) : func reçoit les compteurs remis à zéro. */
+void		evo_core_spam_reset		(EvoCore *core,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* --- Index plein texte local --- */
+
+/* Active ou désactive l'indexation plein texte locale du corps des messages et des pièces
+ * jointes texte (TXT, CSV, HTML, JSON, XML, iCalendar…). L'indexation se fait en tâche de fond, à partir
+ * des seuls messages déjà présents sur le disque (rien n'est téléchargé), et la recherche dans le
+ * corps des messages s'en sert dès qu'un dossier est entièrement indexé. À appeler au démarrage avec
+ * le réglage de l'utilisateur ; sans effet si l'état ne change pas.
+ * Paramètres :
+ *   core    : instance du moteur evo-core
+ *   enabled : 1 pour activer, 0 pour désactiver (les fichiers d'index sont conservés) */
+void		evo_core_index_set_enabled	(EvoCore *core,
+						 int enabled);
+
+/* État de l'index : func reçoit {"enabled", "state": "disabled"|"indexing"|"idle",
+ * "folders", "folders_complete", "messages_indexed", "messages_total", "words", "size_bytes",
+ * "updated" (secondes Unix du dernier passage), "pass_done", "pass_total", "pending",
+ * "current" (dossier en cours)}. Le même objet est émis dans l'événement "index-progress"
+ * pendant l'indexation. */
+void		evo_core_index_status		(EvoCore *core,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
+/* Efface tous les index (mémoire et disque) puis les reconstruit en tâche de fond.
+ * Erreur si l'indexation est désactivée. func reçoit {}. */
+void		evo_core_index_rebuild		(EvoCore *core,
+						 EvoCoreResultFunc func,
+						 void *user_data);
 
 #ifdef __cplusplus
 }

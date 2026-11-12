@@ -746,6 +746,9 @@ namespace winrt::EvolutionWin::implementation
                     CreateFolderAsync(account, L"", L"");
                 });
 
+        if (!is_account && selectable)
+            AppendRuleFolderItem(menu, account, full_name);
+
         add_item(Tr(L"Synchronisation hors connexion…"), L"\xE895", selectable,
             [this, account, full_name, name, is_account](IInspectable const&, RoutedEventArgs const&)
             {

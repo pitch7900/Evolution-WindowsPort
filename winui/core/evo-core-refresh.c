@@ -352,6 +352,7 @@ parse_folder_uri (const gchar *uri,
 void
 evo_core_refresh (EvoCore *core)
 {
+	core_oq_replay (core);
 	core_process_outbox (core);
 	core_submit_background (core, core_refresh_run, g_new0 (gchar *, 1), core_ignore_result, NULL);
 }
@@ -361,6 +362,7 @@ evo_core_refresh_all (EvoCore *core)
 {
 	gchar *args[] = { (gchar *) "all", NULL };
 
+	core_oq_replay (core);
 	core_process_outbox (core);
 	core_submit_background (core, core_refresh_run, g_strdupv (args), core_ignore_result, NULL);
 }

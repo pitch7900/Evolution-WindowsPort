@@ -5,7 +5,7 @@
 
 #include "evo-core-private.h"
 
-static gchar *
+gchar *
 core_delete_message_run (EvoCore *core,
 			 gchar **args,
 			 GError **error)
@@ -102,5 +102,5 @@ evo_core_delete_message (EvoCore *core,
 	g_return_if_fail (folder_full_name != NULL);
 	g_return_if_fail (message_uid != NULL);
 
-	core_submit (core, core_delete_message_run, g_strdupv (args), func, user_data);
+	core_submit (core, core_oq_delete_run, g_strdupv (args), func, user_data);
 }

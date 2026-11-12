@@ -1,0 +1,4 @@
+                                <!-- Règles de messagerie : éditeur, exécution à la réception, règles côté serveur -->
+                                <TextBlock Text="Règles de messagerie" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,12,0,0" />
+                                <TextBlock TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Les règles classent automatiquement les messages dès leur arrivée dans la boîte de réception : déplacer, copier, marquer comme lu, poser un drapeau ou une catégorie, supprimer. Elles sont appliquées dans l'ordre de la liste. Une règle « sur le serveur » est envoyée à Exchange Online (Microsoft 365) ou à un serveur IMAP compatible Sieve et agit même quand l'application est fermée." />
+                                <StackPanel x:Name="RulesHost" Spacing="8" />

@@ -195,6 +195,58 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Configure le filtre anti-spam local (appel synchrone).
+         * Paramètres :
+         *   db_path           : chemin de la base d'apprentissage ("" : %LOCALAPPDATA%\EvolutionWin\spam.db)
+         *   enabled           : classement automatique des nouveaux messages actif
+         *   threshold_percent : score minimal (50 à 99) pour classer en indésirable */
+        void SpamConfigure(winrt::hstring const& db_path, bool enabled, int threshold_percent)
+        {
+            evo_core_spam_configure(m_core, winrt::to_string(db_path).c_str(), enabled ? 1 : 0, threshold_percent);
+        }
+
+        /* Apprend des messages comme indésirables / légitimes.
+         * Paramètres :
+         *   account, folder : emplacement des messages
+         *   uids            : identifiants des messages
+         *   is_spam         : true pour indésirables, false pour légitimes
+         *   handler         : rappel recevant {"trained", "failed", "spam", "ham", "tokens", "ready"} */
+        void SpamTrain(winrt::hstring const& account, winrt::hstring const& folder,
+                       std::vector<winrt::hstring> const& uids, bool is_spam, CoreHandler handler)
+        {
+            std::string joined;
+            for (auto const& uid : uids)
+            {
+                if (!joined.empty())
+                    joined += '\n';
+                joined += CoreUid(uid);
+            }
+            evo_core_spam_train(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                joined.c_str(), is_spam ? 1 : 0, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Apprend en lot les messages les plus récents d'un dossier (tâche de fond).
+         * Paramètres : account, folder, is_spam, max_messages (nombre maximal de messages), handler
+         *              (même JSON que SpamTrain). */
+        void SpamTrainFolder(winrt::hstring const& account, winrt::hstring const& folder, bool is_spam,
+                             int max_messages, CoreHandler handler)
+        {
+            evo_core_spam_train_folder(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                is_spam ? 1 : 0, max_messages, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Compteurs de l'apprentissage : {"spam", "ham", "tokens", "ready", "min_trained"}. */
+        void SpamStats(CoreHandler handler)
+        {
+            evo_core_spam_stats(m_core, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Efface tout l'apprentissage du filtre anti-spam ; le rappel reçoit les compteurs remis à zéro. */
+        void SpamReset(CoreHandler handler)
+        {
+            evo_core_spam_reset(m_core, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Traite la demande d'accusé de lecture d'un message : envoie un MDN
          * (RFC 8098) ou marque seulement le message comme traité ($MDNSent).
          * Paramètres :
@@ -285,6 +337,38 @@ namespace EvolutionWin
                 winrt::to_string(settings_json).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Liste les actions hors ligne en attente (journal et Boîte d'envoi).
+         * Paramètres :
+         *   handler : rappel recevant {"pending", "failed", "actions": [{"id", "kind", "account",
+         *             "folder", "uid", "subject", "dest_folder", "flag", "value", "created",
+         *             "attempts", "status", "error"}]} */
+        void ListOfflineQueue(CoreHandler handler)
+        {
+            evo_core_offline_queue_list(m_core, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Annule une action hors ligne en attente.
+         * Paramètres :
+         *   action_id : identifiant donné par ListOfflineQueue
+         *   handler   : rappel recevant {"cancelled"} */
+        void CancelOfflineAction(winrt::hstring const& action_id, CoreHandler handler)
+        {
+            evo_core_offline_queue_cancel(m_core, winrt::to_string(action_id).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Annule toutes les actions du journal hors ligne. */
+        void CancelAllOfflineActions(CoreHandler handler)
+        {
+            evo_core_offline_queue_cancel_all(m_core, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Rejoue la file hors ligne maintenant (force : relance aussi les actions abandonnées). */
+        void ReplayOfflineQueue(bool force, CoreHandler handler)
+        {
+            evo_core_offline_queue_replay(m_core, force ? 1 : 0, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Lit les réglages de synchronisation hors connexion d'un compte (et d'un dossier).
          * Paramètres :
          *   account : identifiant du compte
@@ -319,6 +403,31 @@ namespace EvolutionWin
                 winrt::to_string(folder).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Active ou désactive l'index plein texte local (corps des messages et pièces jointes texte).
+         * Paramètres :
+         *   enabled : true pour indexer en tâche de fond */
+        void IndexSetEnabled(bool enabled)
+        {
+            evo_core_index_set_enabled(m_core, enabled ? 1 : 0);
+        }
+
+        /* État de l'index plein texte.
+         * Paramètres :
+         *   handler : rappel recevant {"enabled", "state", "messages_indexed", "messages_total",
+         *             "size_bytes", "pass_done", "pass_total", "current"...} */
+        void IndexStatus(CoreHandler handler)
+        {
+            evo_core_index_status(m_core, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Efface puis reconstruit l'index plein texte.
+         * Paramètres :
+         *   handler : rappel recevant {} (ou une erreur si l'index est désactivé) */
+        void IndexRebuild(CoreHandler handler)
+        {
+            evo_core_index_rebuild(m_core, &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Délégués de la boîte Gmail : liste.
          * Paramètres :
          *   account : identifiant du compte
@@ -349,6 +458,33 @@ namespace EvolutionWin
         {
             evo_core_remove_delegate(m_core, winrt::to_string(account).c_str(),
                 winrt::to_string(email).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Règles : lit le Cc et les en-têtes d'un message sans le marquer comme lu.
+         * Paramètres : compte, dossier, uid du message ; handler reçoit {"cc": "...", "headers": {...}} */
+        void GetMessageHeaders(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& uid,
+                               CoreHandler handler)
+        {
+            evo_core_get_message_headers(m_core, winrt::to_string(account).c_str(), winrt::to_string(folder).c_str(),
+                CoreUid(uid).c_str(), &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Règles côté serveur Exchange Online : remplace les règles « [Evolution] » du compte (Microsoft Graph).
+         * Paramètres : compte, tableau JSON de règles ; handler reçoit {"removed": n, "created": n} */
+        void SyncServerRules(winrt::hstring const& account, winrt::hstring const& rules_json, CoreHandler handler)
+        {
+            evo_core_sync_server_rules(m_core, winrt::to_string(account).c_str(), winrt::to_string(rules_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Règles côté serveur IMAP : envoie (et active) un script Sieve par ManageSieve.
+         * Paramètres : compte, nom du script, script, activation, port ("" : 4190) ; handler reçoit {"uploaded": true, "active": bool} */
+        void ManageSievePut(winrt::hstring const& account, winrt::hstring const& script_name, winrt::hstring const& script,
+                            bool activate, winrt::hstring const& port, CoreHandler handler)
+        {
+            evo_core_managesieve_put(m_core, winrt::to_string(account).c_str(), winrt::to_string(script_name).c_str(),
+                winrt::to_string(script).c_str(), activate ? 1 : 0, winrt::to_string(port).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
         /* Supprime un message (vers la corbeille du compte ou définitivement).
@@ -1012,6 +1148,46 @@ namespace EvolutionWin
         void ExportCalendar(winrt::hstring const& request_json, CoreHandler handler)
         {
             evo_core_export_calendar(m_core, winrt::to_string(request_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Exporte des dossiers de courrier vers des fichiers mbox ou EML (progression : événement « progress » de type « export »).
+         * Paramètres :
+         *   request_json : JSON {"account", "folders": [...], "recursive", "dest", "format": "mbox"|"eml", "date_from", "date_to"}
+         *   handler      : rappel recevant {"messages", "folders", "skipped", "failed", "cancelled", "dest", "error"} */
+        void ExportMail(winrt::hstring const& request_json, CoreHandler handler)
+        {
+            evo_core_export_mail(m_core, winrt::to_string(request_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Importe du courrier (fichier mbox ou .eml, dossier, Maildir, profil Thunderbird) dans un dossier d'un compte.
+         * Paramètres :
+         *   request_json : JSON {"account", "dest_folder", "path"}
+         *   handler      : rappel recevant {"messages", "folders", "skipped", "failed", "cancelled", "error"} */
+        void ImportMail(winrt::hstring const& request_json, CoreHandler handler)
+        {
+            evo_core_import_mail(m_core, winrt::to_string(request_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Importe des contacts d'un fichier vCard dans un carnet d'adresses.
+         * Paramètres :
+         *   request_json : JSON {"book_uid", "path"}
+         *   handler      : rappel recevant {"count", "skipped", "failed", "cancelled", "error"} */
+        void ImportContacts(winrt::hstring const& request_json, CoreHandler handler)
+        {
+            evo_core_import_contacts(m_core, winrt::to_string(request_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
+        /* Importe les composants d'un fichier iCalendar dans un agenda ou une liste de tâches.
+         * Paramètres :
+         *   request_json : JSON {"source_uid", "path"}
+         *   handler      : rappel recevant {"count", "skipped", "failed", "cancelled", "error"} */
+        void ImportCalendar(winrt::hstring const& request_json, CoreHandler handler)
+        {
+            evo_core_import_calendar(m_core, winrt::to_string(request_json).c_str(),
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 

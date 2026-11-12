@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Modele d'administration EvolutionWin : a copier dans C:\Windows\PolicyDefinitions
+     (ou le magasin central \domaine\SYSVOL\...\PolicyDefinitions) avec les dossiers de langue. -->
+<policyDefinitions revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <policyNamespaces>
+    <target prefix="evolutionwin" namespace="EvolutionWin.Policies" />
+  </policyNamespaces>
+  <resources minRequiredRevision="1.0" />
+  <categories>
+    <category name="EvolutionWin" displayName="$(string.EvolutionWin)" />
+  </categories>
+  <policies>
+    <policy name="DisableAutoUpdate" class="Both" displayName="$(string.DisableAutoUpdate)"
+            explainText="$(string.DisableAutoUpdate_Help)" key="SOFTWARE\Policies\EvolutionWin" valueName="DisableAutoUpdate">
+      <parentCategory ref="EvolutionWin" />
+      <supportedOn ref="windows:SUPPORTED_Windows10_0" />
+      <enabledValue><decimal value="1" /></enabledValue>
+      <disabledValue><decimal value="0" /></disabledValue>
+    </policy>
+    <policy name="RemoteContentMode" class="Both" displayName="$(string.RemoteContentMode)"
+            explainText="$(string.RemoteContentMode_Help)" presentation="$(presentation.RemoteContentMode)"
+            key="SOFTWARE\Policies\EvolutionWin\Settings">
+      <parentCategory ref="EvolutionWin" />
+      <supportedOn ref="windows:SUPPORTED_Windows10_0" />
+      <elements>
+        <enum id="RemoteContentModeValue" valueName="privacy.remote-content" required="true">
+          <item displayName="$(string.RemoteNever)"><value><string>never</string></value></item>
+          <item displayName="$(string.RemoteTrusted)"><value><string>trusted</string></value></item>
+          <item displayName="$(string.RemoteAlways)"><value><string>always</string></value></item>
+        </enum>
+      </elements>
+    </policy>
+    <policy name="ShowCompletedTasks" class="Both" displayName="$(string.ShowCompletedTasks)"
+            explainText="$(string.ShowCompletedTasks_Help)" key="SOFTWARE\Policies\EvolutionWin\Settings"
+            valueName="tasks.show-completed">
+      <parentCategory ref="EvolutionWin" />
+      <supportedOn ref="windows:SUPPORTED_Windows10_0" />
+      <enabledValue><decimal value="1" /></enabledValue>
+      <disabledValue><decimal value="0" /></disabledValue>
+    </policy>
+  </policies>
+</policyDefinitions>

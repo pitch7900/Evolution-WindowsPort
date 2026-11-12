@@ -13,7 +13,7 @@
  *           [3] flag_name ("seen" ou "flagged"), [4] "1" ou "0"
  *   error : emplacement d'erreur GError
  * Retourne : objet JSON {"seen": ..., "flagged": ...}, ou NULL en cas d'erreur. */
-static gchar *
+gchar *
 core_set_message_flags_run (EvoCore *core,
 			    gchar **args,
 			    GError **error)
@@ -183,5 +183,5 @@ evo_core_set_message_flags (EvoCore *core,
 	g_return_if_fail (message_uid != NULL);
 	g_return_if_fail (flag_name != NULL);
 
-	core_submit (core, core_set_message_flags_run, g_strdupv (args), func, user_data);
+	core_submit (core, core_oq_flags_run, g_strdupv (args), func, user_data);
 }

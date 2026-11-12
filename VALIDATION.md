@@ -1,97 +1,77 @@
-# Points à valider — version 1.0.0
+# Points à valider
 
-Liste des fonctions livrées en 1.0.0 qui ont été codées et testées par les tests unitaires, mais **pas (ou pas entièrement) validées à la main** sur un compte réel. Les corrections issues de ces validations feront l'objet de versions mineures (1.0.x).
+Tests manuels de la version 1.3.0 (le code est livré et la suite `tools\run-tests.bat` est à 100 %, mais rien de ce qui suit n'a été essayé à la main). Cocher chaque point une fois vérifié.
 
-Légende : `[ ]` à valider · `[x]` validé · `[!]` essayé, défaut constaté (voir la note).
-Pour chaque point : compte nécessaire entre parenthèses. « Test » = compte de test (IMAP, jetable) ; « M365 » = Exchange Online / Microsoft 365 ; « Gmail » = compte Google.
+## 1. Lecteur immersif
 
-> Mise à jour : cocher la case, ajouter la date et une note courte. Un défaut devient une ligne dans `TODO.md` (section concernée) et une entrée du `CHANGELOG.md` de la version corrective.
+- [ ] Courrier › sélectionner un message › onglet Affichage › « Lecteur immersif » : plein écran, texte seul, centré.
+- [ ] A−, A+, espacement et thème (clair, sépia, sombre) modifient l'affichage.
+- [ ] Après un clic dans le texte, les touches + - T L ont le même effet.
+- [ ] Échap (y compris après un clic dans le texte) ferme la fenêtre ; la croix aussi.
+- [ ] Rouvrir le lecteur : taille, espacement et thème sont conservés.
+- [ ] Message en HTML seul, puis message sans corps : affichage correct.
 
----
+## 2. Liens `mailto:`
 
-## 1. Courrier
+- [ ] Paramètres › Courrier › « Liens de messagerie (mailto:) » : l'état indique « non enregistré ».
+- [ ] « Enregistrer… » : l'état passe à « enregistré » et les « Applications par défaut » de Windows s'ouvrent ; choisir EvolutionWin pour MAILTO.
+- [ ] « Retirer l'enregistrement » : retour à « non enregistré », l'entrée disparaît de Windows.
+- [ ] EvolutionWin fermé, lancer `build\EvolutionWin.exe "mailto:a@b.fr,c@d.fr?cc=e@f.fr&bcc=g@h.fr&subject=Caf%C3%A9&body=L1%0D%0AL2"` : une rédaction s'ouvre avec À, Cc, Cci, objet « Café » et un corps sur deux lignes.
+- [ ] EvolutionWin déjà ouvert, même commande : nouvelle rédaction dans l'instance existante, pas de second EvolutionWin dans le Gestionnaire des tâches.
+- [ ] Clic sur un lien `mailto:` depuis un navigateur ou un document (EvolutionWin par défaut) : même comportement.
+- [ ] Option d'installation `REGISTERMAILTO=1` : voir section 5.
 
-- [x] Aperçu des pièces jointes : PDF, image, texte (Test) — validé.
-- [x] Glisser-déposer d'une pièce jointe vers le Bureau (Test) — validé.
-- [x] Suivi des messages : drapeau, échéance, terminé, effacer (Test) — validé.
-- [x] Aperçu d'une pièce jointe HTML (WebView2 isolé, scripts désactivés) (Test).
-- [x] Accusé de lecture : bandeau « Envoyer l'accusé / Ignorer », envoi, mémorisation (Test) — validé.
-- [x] Réglage des accusés de lecture Demander / Jamais / Toujours (Paramètres › Confidentialité et sécurité) : présence et conservation après redémarrage.
-- [x] Accusé de lecture hors-ligne : message d'erreur au lieu d'un envoi (Test).
-- [x] Boîte de réception unifiée et dossiers virtuels globaux (Envoyés, Brouillons, Supprimés de tous les comptes) : mélange par date, compte d'origine par ligne, actions (lire, marquer, déplacer, supprimer, répondre) sur le bon compte (au moins deux comptes distants).
-- [x] Messages d'état compacts dans la barre du bas : lisibilité, durée d'affichage (7 s / 12 s / 20 s), bouton de fermeture.
+## 3. Exportation
 
-## 2. Invitations et réunions
+- [ ] Fichier › « Exporter des données… », Courrier, compte réel, 2 dossiers dont un avec sous-dossiers, mbox, dossier cible vide : un `<dossier>.mbox` par dossier, arborescence reprise, progression dans la barre d'état, rapport de fin, bouton « Ouvrir le dossier ».
+- [ ] Ouvrir un des `.mbox` produits avec Thunderbird.
+- [ ] Même chose en EML avec « Limiter à une période » : seuls les messages de la période sortent, un `.eml` par message.
+- [ ] Annulation : export d'un gros dossier IMAP, puis annuler depuis la barre d'état : le rapport indique « annulée ».
+- [ ] Export des contacts et des agendas depuis la même fenêtre (assistants existants).
+- [ ] Glisser un événement (vue Semaine puis pastille de la vue Mois, dont un événement récurrent) sur le Bureau : un `<titre>.ics` apparaît, titre, horaires, fuseau et récurrence corrects à l'ouverture dans Outlook ou Thunderbird.
+- [ ] Glisser un contact (hors annuaire GAL) sur le Bureau : un `<nom>.vcf` apparaît et s'importe dans une autre application.
+- [ ] Non-régression : double-clic sur un événement l'ouvre toujours, le clic droit garde son menu, un clic sur un contact affiche sa fiche.
 
-- [x] Invitation reçue : bandeau Accepter / Provisoire / Refuser, mise à jour de l'agenda, réponse envoyée à l'organisateur (M365 vers Test) — validé.
-- [x] Invitation annulée : bandeau orange et « Retirer de l'agenda » — validé.
-- [x] Invitation reçue : réponse d'un invité visible chez l'organisateur (« X a accepté la réunion »).
-- [x] Création d'un événement avec participants : choix du compte expéditeur et envoi des invitations pour un agenda local, arrivée chez un destinataire Gmail (agenda « Sur cet ordinateur »).
-- [x] Création d'un événement avec participants sur un agenda Exchange Online / Google : le serveur envoie les invitations (pas de doublon envoyé par l'application).
-- [x] Création d'un événement : liste « Calendrier » (calendrier par défaut pré-sélectionné, pas de calendrier de personne) ; un calendrier en lecture seule (partagé) refuse l'écriture avec un message clair puis disparaît de la liste (retour d'un test : « RemoteCalendarAccessDenied » en créant une invitation vers Gmail depuis Exchange Online, à refaire).
-- [x] Événement privé : case « Privé » à la création et à la modification ; contrôle dans Outlook Online (cadenas, détails masqués pour un autre utilisateur).
-- [x] Réunion en ligne Microsoft Teams : case dans la fenêtre d'un nouvel événement (M365) ; lien de visio, identifiant de réunion et numéros d'appel présents dans l'invitation.
-- [ ] Réunion Google Meet : case dans la fenêtre d'un nouvel événement d'un calendrier Gmail (icône Meet, exclusive avec Teams) ; lien `meet.google.com` présent dans l'événement et dans l'invitation reçue.
-- [x] Récupération des éléments supprimés : clic droit sur le compte Microsoft 365 › « Récupérer les éléments supprimés du serveur… », liste (filtre), restauration dans la Boîte de réception (M365 ; prévoir un message supprimé définitivement pour le test).
-- [ ] Bouton « Rejoindre la réunion » dans la fenêtre d'un événement existant avec un lien Teams, Google Meet ou Zoom (M365 / Gmail).
-- [ ] « Afficher comme » (Disponible, Travaille ailleurs, Provisoire, Occupé, Absent) dans la fenêtre d'événement : enregistrement, relecture et affichage dans Outlook Online (M365) ; Libre / Occupé seulement pour Gmail.
-- [ ] Calendrier : un double clic sur un événement (Jour, Semaine, Mois, Liste) ouvre sa fenêtre qui reste au premier plan ; un simple clic n'ouvre rien ; la fenêtre de l'événement reste au-dessus de la fenêtre principale (aussi la fenêtre des éléments supprimés récupérables).
-- [ ] Fenêtre d'événement (création et modification) : bandeau (Enregistrer, Supprimer, Afficher comme, Rappel, Périodicité, Classer, Privé, Importance) ; catégories visibles dans le formulaire ; clic droit sur un événement (Ouvrir, Classer, Afficher comme, Privé, Importance) dans les vues Jour, Semaine, Mois et Liste.
-- [ ] Liens cliquables : adresse web dans un message en texte brut (et en mode texte brut) et dans la description d'un événement (liste sous la description) ; le clic ouvre le navigateur par défaut.
-- [ ] Dossiers de recherche : clic droit sur le groupe « Dossiers de recherche » › modèles (non lus, marqués, pièces jointes, gros messages, d'une personne) et « Personnalisé… » ; ouverture d'un dossier (messages de plusieurs comptes, lecture et actions possibles), modification, suppression ; persistance après redémarrage.
-- [ ] Favoris : clic droit sur un dossier › Ajouter aux favoris ; section « Favoris » en tête du volet (clic = ouvre le dossier, compteur de non lus à jour) ; Monter / Descendre ; Retirer des favoris ; persistance après redémarrage.
-- [ ] Liste des messages : pas de titre de dossier redondant ; en-têtes de dates repliables (Aujourd'hui, Hier, jours de la semaine, Semaine dernière, Il y a deux / trois semaines, Mois dernier, Avant le mois dernier) ; trait fin et espacement entre messages ; interrupteur « Regrouper par date » (menu « Grouper par »), compatible avec le regroupement par conversation ; plus de bouton Envoyer/Recevoir dans la liste (ruban, F5, F9 et Maj+F9 fonctionnent) ; noms des jours avec une majuscule.
-- [ ] Boîte de réception prioritaire (M365) : onglets Prioritaire / Autres dans la Boîte de réception, clic droit › Déplacer vers Autres / Prioritaire (avec et sans « Toujours »), interrupteur par compte (clic droit sur le compte) ; compteurs de non lus dans les onglets.
-- [x] Boîte partagée Microsoft 365 : clic droit sur le compte › « Ouvrir la boîte d'un autre utilisateur… », connexion Microsoft, dossiers de la boîte partagée, envoi avec l'adresse de la boîte partagée (M365 + boîte partagée avec droit FullAccess).
-- [x] Boîte partagée : choix de la boîte dans « De : » à la rédaction, envoi avec l'adresse de la boîte partagée (droit Send As ; attendre la diffusion des droits côté Exchange, jusqu'à environ une heure) et dossiers de la boîte affichés.
-- [x] Boîte partagée : agenda et contacts partagés (cases à l'ouverture) et « Fermer la boîte partagée » (clic droit).
-- [x] Création d'un événement par sélection dans le calendrier : glisser (Jour / Semaine), clic simple (1 h), clic dans une case du mois.
+## 4. Importation
 
-## 3. Annuaire de l'organisation
+- [ ] « Importer des données… » (menu Fichier, aussi dans les rubans Contacts, Calendrier, Tâches) › mbox ou `.eml`, dossier « Importé » : messages lus, date d'origine conservée.
+- [ ] « Courrier : profil Thunderbird » : profils détectés listés ; dossiers et sous-dossiers recréés, non-lus conservés.
+- [ ] « Courrier : dossier » sur un Maildir.
+- [ ] Import d'un `.vcf` multi-contacts, puis d'un `.ics` dans un agenda ; un second import du même fichier ignore tout (pas de doublons).
+- [ ] « Outlook (.pst/.ost) » : le texte explicatif (conversion avec `readpst`) s'affiche, « Importer » est grisé. _(`.pst`/`.ost` non pris en charge : aucune bibliothèque libre disponible)_
+- [ ] Import dans un compte IMAP réel (pas seulement le compte local).
+- [ ] Dossier local : sur « Sur cet ordinateur », créer un dossier, le supprimer, puis en recréer un du même nom : doit réussir (bug corrigé en 1.3.0).
+- [ ] Recréer un dossier local supprimé avant le correctif (par exemple « Importé ») : doit réussir.
 
-- [x] Lien « Annuaire de l'organisation » sous chaque compte, recherche, fiche en lecture seule, écrire un message (M365, Google) — validé.
-- [x] Adresse postale et numéros de téléphone dans la fiche — validé.
-- [x] Photo du profil (M365) : validé le 2026-11-11 en 1.1.2, photos et fiche complète (fonction, service, téléphones, bureau, adresse) affichées. Deux causes corrigées : permissions `User.Read.All` et `ProfilePhoto.Read.All` (consentement administrateur, puis reconnexion du compte) et lecture par l'identifiant du profil, l'adresse de messagerie pouvant différer du nom d'utilisateur principal.
-- [x] Suggestions « Annuaire » dans la rédaction (À:) — validé.
+## 5. MSI : installation silencieuse (VM Windows 11 propre, session administrateur)
 
-## 4. Réponses automatiques (Out of Office)
+Le MSI se construit avec `tools\build-msi.ps1`.
 
-- [x] Exchange Online : lecture des réglages du serveur (état, dates, texte interne, texte externe) affichés **lisibles** dans les deux onglets (« Au sein » / « En dehors »).
-- [x] Exchange Online : modification du texte, de la période et du public externe ; enregistrement ; contrôle dans Outlook Online.
-- [x] Exchange Online : date de fin avant la date de début refusée, fenêtre qui reste ouverte.
-- [x] Bandeau « Réponses automatiques activées » et bouton « Désactiver » (désactivation confirmée côté serveur).
-- [x] Gmail : reconnexion du compte (écran « Google n'a pas validé cette application » : continuer via les paramètres avancés), accès aux réglages Gmail accordé ; lecture, activation et désactivation.
-- [x] Gmail : la réponse automatique est reçue par un expéditeur extérieur.
-- [x] Compte IMAP : message clair « type de compte non pris en charge » — validé.
-- [x] Éditeur HTML des messages (non fait : texte brut seulement) — voir `TODO.md`.
+- [ ] Installation : `msiexec /i dist\Evolution-1.3.0-x64.msi /qn /l*v i.log` : code 0, application dans `C:\Program Files\Evolution`, `CloseDependencies` présent dans `i.log`.
+- [ ] Mise à jour pendant que l'application tourne (avec un compte, donc services EDS et WebView2 actifs) : réinstaller en `/qn`, pas de boîte « fichiers en cours d'utilisation », code 0 ou 3010.
+- [ ] Après cette mise à jour, aucun `camel-index-control`, `gspawn-win64-helper`, `evolution-*` ni `msedgewebview2` d'EvolutionWin ne survit ; un `msedgewebview2` d'Edge ou de Teams n'a pas été tué.
+- [ ] Multi-sessions : avec un autre utilisateur (ou une session déconnectée) qui fait tourner EvolutionWin, refaire la mise à jour : ses instances se ferment.
+- [ ] `FORCECLOSE=0` : aucune fermeture, code 3010 ou remplacement au redémarrage.
+- [ ] Désinstallation sans purge (`msiexec /x … /qn`) : `%LOCALAPPDATA%\EvolutionWin` et `%LOCALAPPDATA%\evolution` restent.
+- [ ] Désinstallation avec `PURGEUSERDATA=1` : les 3 dossiers de données et les identifiants (`cmdkey /list | findstr Evolution-Data-Server`) disparaissent ; lire `%TEMP%\EvolutionWin-purge.log`.
+- [ ] Mise à jour vers une version supérieure avec `PURGEUSERDATA=1` sur la ligne de commande : les données restent intactes.
+- [ ] `/qn AUTOUPDATE=0` : `reg query HKLM\SOFTWARE\Policies\EvolutionWin` donne `DisableAutoUpdate = 1`, plus de recherche de mise à jour ; la clé disparaît à la désinstallation.
+- [ ] `/qn REGISTERMAILTO=1` : EvolutionWin apparaît dans Paramètres › Applications par défaut › Courrier / MAILTO ; après l'avoir choisi, un lien `mailto:` ouvre une rédaction. Sans la propriété, il n'apparaît pas ; l'entrée disparaît à la désinstallation.
+- [ ] Désinstallation avec `/l*v u.log PURGEUSERDATA=1` : `u.log` contient « Adding PURGELOG property » ; absent sans purge.
+- [ ] Interface : double-clic sur le MSI (VM propre) : Bienvenue › dossier › « Fermeture d'Evolution » (2 choix) › prêt › progression › fin. Aucune page de licence. Textes en français, sans caractères cassés.
+- [ ] Mise à jour interactive avec Evolution ouvert : choix « Fermer automatiquement » : l'application et ses services se ferment ; choix « Ne pas fermer » : pas de fermeture (redémarrage demandé ou fichiers remplacés au redémarrage).
+- [ ] Désinstallation : rouvrir le MSI installé › Supprimer › page « Données d'Evolution » : case décochée au départ ; cochée, `%LOCALAPPDATA%\EvolutionWin`, `%LOCALAPPDATA%\evolution` et les identifiants disparaissent ; décochée, ils restent.
+- [ ] Journal de purge : désinstallation avec `/l*v u.log PURGEUSERDATA=1` : `u.log` contient des lignes « EvolutionWin purge : Dossier supprime : … » ; `%TEMP%\EvolutionWin-purge.log` aussi. Vérifier que les dossiers supprimés sont bien ceux de l'utilisateur qui désinstalle (pas ceux de SYSTEM). _À tester sur un compte jetable : la purge supprime aussi les identifiants du Gestionnaire d'identifiants._
+- [ ] Limite connue à confirmer : Paramètres › Applications installées › Désinstaller : aucune interface, aucune case de purge.
+- [ ] `/qn` et `/passive` : aucune des nouvelles pages ne s'affiche ; FORCECLOSE, AUTOUPDATE, REGISTERMAILTO, LAUNCHAPP fonctionnent comme avant.
 
-## 5. Calendrier
+## 6. Stratégies de groupe (GPO)
 
-- [x] Calendriers Exchange Online affichés automatiquement, groupes pliables sous le compte, case de groupe — validé (premiers retours).
-- [x] Groupes d'Outlook lus par EWS (Salles, Team Infra N2 / N3, Mes calendriers, Calendriers des contacts) : bouton « Importer mes groupes Outlook » (autorisation Microsoft la première fois), contenu des groupes, synchronisation automatique à l'ouverture avec l'anneau de progression.
-- [x] Calendriers de personnes et d'équipes (« Personnes et équipes… ») : mon équipe, recherche, rangement par groupe, lecture seule, message clair si le calendrier n'est pas partagé.
-- [x] Catégories unifiées : palette (Paramètres › Catégories), affectation sur courriel / tâche / contact / événement, pastilles, persistance.
-- [x] Filtres par catégorie dans les quatre listes (courriels, tâches, contacts, événements).
-- [x] Colonne des calendriers redimensionnable (séparateur, largeur mémorisée, double-clic : automatique).
-- [x] Barre de commandes du calendrier sur deux lignes sans chevauchement quand la largeur ne suffit pas — validé.
+- [ ] Copier `deploy\policy\EvolutionWin.admx` et les dossiers `fr-FR` / `en-US` dans `C:\Windows\PolicyDefinitions` : `gpedit.msc` affiche la catégorie **EvolutionWin** avec trois stratégies.
+- [ ] `DisableAutoUpdate` activée puis `gpupdate` : aucune fenêtre de mise à jour au démarrage ; Paramètres › À propos : bouton grisé avec « Les mises à jour sont désactivées par votre administrateur. »
+- [ ] « Contenu distant des messages » = Jamais : Paramètres › Confidentialité, liste grisée sur « Jamais » ; désactiver la stratégie, le réglage redevient libre.
+- [ ] Repli HKCU : créer `HKCU\Software\Policies\EvolutionWin\DisableAutoUpdate` (DWORD) = 1 : même effet sans clé HKLM ; avec HKLM = 0, la machine l'emporte.
 
-## 6. Comptes et installation
+## 7. Restes à valider des jalons précédents
 
-- [x] Microsoft 365 : validation de bout en bout de la collection `microsoft365` (calendriers et contacts) sur un tenant réel — voir `ROADMAP.md`.
-- [x] Installation du MSI 1.0.0 sur un poste propre, première exécution, désinstallation (voir « Installation » ci-dessous).
-- [ ] Mise à jour automatique depuis une version précédente (téléchargement, contrôle d'intégrité SHA-256 et signature).
-
-## 7. Interface
-
-- [x] Démarrage de l'application sans plantage après une mise à jour : si l'application plante au lancement après un changement d'interface, supprimer `build\intermediate\winui-app-obj` et relancer `tools\build-winui-app.bat` (build incrémental corrompu, voir `LLM.md`).
-- [ ] Langue : textes de la fenêtre des réponses automatiques et de l'annuaire en anglais (les autres écrans restent en français : traduction complète prévue en 1.3.0).
-- [x] Thème clair et thème sombre : lisibilité des nouvelles fenêtres (réponses automatiques, personnes et équipes, boîte d'autorisation Microsoft).
-
----
-
-## Installation (MSI 1.0.0)
-
-1. Désinstaller toute version précédente d'EvolutionWin.
-2. Lancer `dist\Evolution-1.0.0-x64.msi` (double-clic ou `msiexec /i`), accepter les défauts.
-3. Lancer EvolutionWin depuis le menu Démarrer : l'application s'ouvre, le compte de test se synchronise.
-4. Désinstaller depuis Paramètres Windows › Applications ; vérifier qu'aucun processus `evolution-*.exe` ne reste actif.
+Voir [ROADMAP.md](ROADMAP.md) : Microsoft 365 (calendrier, contacts, GAL, Teams, « De la part de »), réponses automatiques, règles serveur, file hors ligne, conflits, plages de synchronisation, indexation plein texte, anti-spam, délégations Gmail.

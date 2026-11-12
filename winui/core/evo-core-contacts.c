@@ -4,6 +4,7 @@
  */
 
 #include "evo-core-private.h"
+#include "evo-core-conflict-util.h"
 
 /* --- contacts (EBookClient / libebook-1.2) --- */
 
@@ -17,6 +18,7 @@ typedef struct {
 	gchar *book_uid;
 	gchar *book_name;
 	gchar **categories;	/* noms de catégories (NULL-terminé) */
+	gchar *revision;	/* jeton de révision (détection des conflits de modification) */
 } ContactItem;
 
 /* Catégories d'un contact (champ vCard CATEGORIES : valeurs séparées par des
@@ -100,6 +102,7 @@ contact_item_free (gpointer data)
 	g_free (item->book_uid);
 	g_free (item->book_name);
 	g_strfreev (item->categories);
+	g_free (item->revision);
 	g_free (item);
 }
 
@@ -205,6 +208,7 @@ core_list_contacts_run (EvoCore *core,
 				item->book_uid = g_strdup (e_source_get_uid (source));
 				item->book_name = g_strdup (e_source_get_display_name (source));
 				item->categories = contact_dup_categories (contact);
+				item->revision = core_conflict_contact_revision (contact);
 
 				g_ptr_array_add (items, item);
 			}
@@ -235,6 +239,7 @@ core_list_contacts_run (EvoCore *core,
 		builder_add_string (builder, "notes", item->notes);
 		builder_add_string (builder, "book_uid", item->book_uid);
 		builder_add_string (builder, "book_name", item->book_name);
+		builder_add_string (builder, "revision", item->revision);
 		builder_add_categories (builder, (const gchar * const *) item->categories);
 		json_builder_end_object (builder);
 	}
@@ -399,6 +404,9 @@ core_modify_contact_run (EvoCore *core,
 	EClient *client = NULL;
 	EContact *contact = NULL;
 	gboolean ok = FALSE;
+	gchar *result = NULL;
+	const gchar *base_revision;
+	gint resolution;
 
 	root = json_from_string (args[0], error);
 	if (!root)
@@ -418,6 +426,8 @@ core_modify_contact_run (EvoCore *core,
 	phone = json_object_get_string_member_with_default (object, "phone", "");
 	org = json_object_get_string_member_with_default (object, "org", "");
 	notes = json_object_get_string_member_with_default (object, "notes", "");
+	base_revision = json_object_get_string_member_with_default (object, "base_revision", "");
+	resolution = cf_resolution_from_name (json_object_get_string_member_with_default (object, "conflict_resolution", ""));
 
 	if (!uid || !*uid) {
 		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Identifiant de contact obligatoire");
@@ -438,8 +448,60 @@ core_modify_contact_run (EvoCore *core,
 	if (!client)
 		goto exit;
 
+	/* modification concurrente : voir core_modify_event_run () */
+	if (*base_revision && resolution == CF_RESOLVE_NONE && !core_oq_is_offline (core))
+		e_client_refresh_sync (client, core->cancellable, NULL);
+
 	if (!e_book_client_get_contact_sync (E_BOOK_CLIENT (client), uid, &contact, core->cancellable, error))
 		goto exit;
+
+	if (*base_revision) {
+		gchar *current = core_conflict_contact_revision (contact);
+		gint differing = 0;
+
+		if (cf_must_block (base_revision, current, resolution)) {
+			gchar *conflict = core_conflict_contact_json (object, contact, current, &differing);
+
+			if (differing > 0) {
+				g_free (current);
+				result = conflict;
+				ok = TRUE;
+				goto exit;
+			}
+			g_free (conflict);
+		}
+		g_free (current);
+	}
+
+	if (resolution == CF_RESOLVE_REMOTE) {
+		/* garder la version distante : rien n'est écrit */
+		result = g_strdup ("{\"resolved\":\"remote\"}");
+		ok = TRUE;
+		goto exit;
+	}
+
+	if (resolution == CF_RESOLVE_BOTH) {
+		/* garder les deux : la version locale devient un nouveau contact, l'original distant reste */
+		EContact *copy = e_contact_duplicate (contact);
+		gchar *added_uid = NULL;
+
+		e_contact_set (copy, E_CONTACT_UID, NULL);
+		e_contact_set (copy, E_CONTACT_FULL_NAME, (full_name && *full_name) ? full_name : email);
+		e_contact_set (copy, E_CONTACT_EMAIL_1, (email && *email) ? email : NULL);
+		e_contact_set (copy, E_CONTACT_PHONE_MOBILE, (phone && *phone) ? phone : NULL);
+		e_contact_set (copy, E_CONTACT_ORG, (org && *org) ? org : NULL);
+		e_contact_set (copy, E_CONTACT_NOTE, (notes && *notes) ? notes : NULL);
+		e_vcard_remove_attributes (E_VCARD (copy), NULL, "X-EVOLUTION-WEBDAV-ETAG");
+		e_vcard_remove_attributes (E_VCARD (copy), NULL, "X-EVOLUTION-WEBDAV-HREF");
+
+		ok = e_book_client_add_contact_sync (E_BOOK_CLIENT (client), copy, E_BOOK_OPERATION_FLAG_NONE,
+			&added_uid, core->cancellable, error);
+		if (ok)
+			result = g_strdup_printf ("{\"resolved\":\"both\",\"uid\":\"%s\"}", added_uid ? added_uid : "");
+		g_free (added_uid);
+		g_object_unref (copy);
+		goto exit;
+	}
 
 	e_contact_set (contact, E_CONTACT_FULL_NAME, (full_name && *full_name) ? full_name : email);
 	e_contact_set (contact, E_CONTACT_EMAIL_1, (email && *email) ? email : NULL);
@@ -448,6 +510,8 @@ core_modify_contact_run (EvoCore *core,
 	e_contact_set (contact, E_CONTACT_NOTE, (notes && *notes) ? notes : NULL);
 
 	ok = e_book_client_modify_contact_sync (E_BOOK_CLIENT (client), contact, E_BOOK_OPERATION_FLAG_NONE, core->cancellable, error);
+	if (ok)
+		result = g_strdup ("{}");
 
 exit:
 	g_clear_object (&contact);
@@ -455,7 +519,12 @@ exit:
 	g_clear_object (&source);
 	json_node_unref (root);
 
-	return ok ? g_strdup ("{}") : NULL;
+	if (!ok) {
+		g_free (result);
+		return NULL;
+	}
+
+	return result;
 }
 
 /* Remplace les catégories d'un contact existant.

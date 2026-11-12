@@ -1529,6 +1529,9 @@ namespace winrt::EvolutionWin::implementation
                 });
                 menu_items.Append(junk_item);
 
+                if (!multi)
+                    menu_items.Append(MakeCreateRuleMenuItem(uid));
+
                 menu_items.Append(MenuFlyoutSeparator{});
 
                 MenuFlyoutItem delete_item;
