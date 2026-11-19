@@ -244,6 +244,7 @@ namespace winrt::EvolutionWin::implementation
         SetTitleBar(AppTitleBar());
 
         ::EvolutionWin::SetWindowIcon(AppWindow());
+        ::EvolutionWin::Helpers::FollowAppTheme(*this);
 
         RestoreWindowBounds();
 

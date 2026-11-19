@@ -1220,8 +1220,6 @@ namespace winrt::EvolutionWin::implementation
             FontIcon trash_icon;
             trash_icon.Glyph(L"\xE74D");
             trash_icon.FontSize(14);
-            /* rouge (E81123, rouge « fermer/supprimer » de Windows) : lisible en thème clair et sombre */
-            trash_icon.Foreground(SolidColorBrush{ Windows::UI::ColorHelper::FromArgb(255, 0xE8, 0x11, 0x23) });
             delete_button.Content(trash_icon);
             delete_button.Width(m_compact_density ? 26 : 32);
             delete_button.Height(m_compact_density ? 26 : 32);
@@ -1230,6 +1228,16 @@ namespace winrt::EvolutionWin::implementation
             delete_button.VerticalAlignment(VerticalAlignment::Center);
             delete_button.Visibility(Visibility::Collapsed);
             ToolTipService::SetToolTip(delete_button, box_value(Tr(L"Supprimer")));
+            /* icône à la couleur normale du thème, rouge (E81123, comme « fermer » de Windows) seulement quand la souris
+               survole le bouton ; ClearValue rend la couleur héritée du thème */
+            delete_button.PointerEntered([trash_icon](IInspectable const&, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&)
+            {
+                trash_icon.Foreground(SolidColorBrush{ Windows::UI::ColorHelper::FromArgb(255, 0xE8, 0x11, 0x23) });
+            });
+            delete_button.PointerExited([trash_icon](IInspectable const&, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&)
+            {
+                trash_icon.ClearValue(IconElement::ForegroundProperty());
+            });
             Grid::SetColumn(delete_button, 2);
             Grid::SetRow(delete_button, 0);
             Grid::SetRowSpan(delete_button, row_count);

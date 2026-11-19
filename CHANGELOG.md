@@ -10,9 +10,21 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
-## [1.3.2] — en cours
+## [1.3.2] — 2026-11-19
+
+### Modifié
+
+- **Zoom du texte de lecture dans la barre d'état, comme Outlook** : en bas à droite (vue Courrier), boutons « − » et « + », curseur de 50 % à 300 % et pourcentage (un clic le ramène à 100 %). Il pilote le même zoom que les raccourcis existants (réglage mémorisé, appliqué à chaque message) et se met à jour quand le zoom change autrement.
+- **Ruban (Fichier / Accueil / Envoi-réception…) sur le même fond gris que le volet des dossiers**, et titre « Evolution » avec son icône en blanc sur la barre de titre bleue.
+- **Liste des messages : la corbeille de suppression rapide n'est rouge qu'au survol** du bouton ; le reste du temps, elle a la couleur normale du thème (elle était rouge en permanence).
+- **Barre de titre bleue (#0078D4), comme Outlook** : dans les deux thèmes, avec icônes, titre, accès rapide et boutons de fenêtre en blanc, et la zone de recherche claire (fond blanc, texte sombre) au centre.
+- **Courrier : trait de séparation plus marqué entre les panneaux et fond distinct pour le volet comptes + dossiers.** Les séparateurs (dossiers | liste | lecture) sont un trait de 2 pixels, d'une couleur propre à chaque thème, qui passe à l'accent au survol et au glissement. Le volet de gauche a un fond gris différent selon le thème (gris clair en thème clair, gris un peu plus clair que le fond en thème sombre).
 
 ### Corrigé
+
+- **Mode sombre des messages : un message déjà conçu en sombre n'est plus inversé en clair.** Le lecteur lit les premières couleurs de fond déclarées par le message (bgcolor, background-color, background) ; si les fonds sombres dominent, le message garde ses couleurs et seules la marge de la page et la couleur de texte par défaut deviennent sombre / claire. Détection par heuristique (les scripts restent désactivés dans le lecteur) : un message mixte (cadre sombre, carte blanche) est traité selon la majorité de ses premiers fonds. À valider sur des messages réels.
+
+- **Fenêtres secondaires : le thème choisi dans Paramètres › Affichage est appliqué** à la fenêtre de lecture d'un message, à celle de rédaction, à l'éditeur d'événement et à la fenêtre de récupération des éléments supprimés (contenu et boutons de la barre de titre). Elles suivaient seulement le thème de Windows. Le thème est réappliqué à chaque activation de la fenêtre, y compris après un changement de thème fait pendant qu'elle était ouverte.
 
 ## [1.3.1] — 2026-11-12
 

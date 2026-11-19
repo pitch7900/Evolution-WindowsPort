@@ -1,10 +1,11 @@
-        <Grid x:Name="AppTitleBar" Grid.Row="0" Padding="12,0,0,0">
+        <!-- bleu Microsoft #0078D4 dans les deux thèmes ; thème du contenu réglé dans MainWindow::MainWindow -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Padding="12,0,0,0" Background="#FF0078D4">
 
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
 
-                <FontIcon Glyph="&#xE715;" FontSize="14" />
+                <FontIcon Glyph="&#xE715;" FontSize="14" Foreground="White" />
 
-                <TextBlock Text="Evolution" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                <TextBlock Text="Evolution" Style="{StaticResource CaptionTextBlockStyle}" Foreground="White" VerticalAlignment="Center" />
 
                 <!-- barre d'accès rapide, personnalisable (MainWindow::RebuildQuickAccess) ;
 

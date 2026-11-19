@@ -48,12 +48,27 @@ namespace EvolutionWin::Helpers
      * @param title_bar Barre de titre de l'AppWindow.
      * @param theme Thème de l'application.
      */
-    inline void ApplyCaptionButtonTheme(Microsoft::UI::Windowing::AppWindowTitleBar const& title_bar, ElementTheme theme)
+    inline void ApplyCaptionButtonTheme(Microsoft::UI::Windowing::AppWindowTitleBar const& title_bar, ElementTheme theme, bool on_accent = false)
     {
         using Color = Windows::UI::Color;
         using Ref = Windows::Foundation::IReference<Color>;
         if (!title_bar)
             return;
+
+        /* barre de titre bleue (#0078D4) : boutons blancs dans les deux thèmes, survol en voile blanc */
+        if (on_accent)
+        {
+            Color white{ 0xFF, 0xFF, 0xFF, 0xFF };
+            title_bar.ButtonBackgroundColor(Color{ 0, 0, 0, 0 });
+            title_bar.ButtonInactiveBackgroundColor(Color{ 0, 0, 0, 0 });
+            title_bar.ButtonForegroundColor(white);
+            title_bar.ButtonHoverForegroundColor(white);
+            title_bar.ButtonPressedForegroundColor(white);
+            title_bar.ButtonInactiveForegroundColor(Color{ 0xB3, 0xFF, 0xFF, 0xFF });
+            title_bar.ButtonHoverBackgroundColor(Color{ 0x2E, 0xFF, 0xFF, 0xFF });
+            title_bar.ButtonPressedBackgroundColor(Color{ 0x45, 0xFF, 0xFF, 0xFF });
+            return;
+        }
 
         if (theme == ElementTheme::Default)
         {
@@ -81,11 +96,182 @@ namespace EvolutionWin::Helpers
         title_bar.ButtonPressedBackgroundColor(pressed);
     }
 
+    /**
+     * @brief Applique le thème choisi dans Paramètres › Affichage à une fenêtre secondaire (lecture d'un message,
+     *        rédaction, éditeur d'événement…) : thème du contenu et couleurs des boutons de la barre de titre.
+     *
+     * Une fenêtre WinUI ne suit pas le thème de l'application tant qu'on ne le lui donne pas : sans cet appel,
+     * elle suit celui de Windows. L'application est refaite à chaque activation de la fenêtre, ce qui répercute
+     * aussi un changement de thème fait pendant qu'elle est ouverte.
+     * @param window Fenêtre à suivre.
+     */
+    inline void FollowAppTheme(Microsoft::UI::Xaml::Window const& window)
+    {
+        auto apply = [](Microsoft::UI::Xaml::Window const& target)
+        {
+            try
+            {
+                if (auto root = target.Content().try_as<FrameworkElement>())
+                {
+                    if (root.RequestedTheme() != AppElementTheme())
+                        root.RequestedTheme(AppElementTheme());
+                }
+                ApplyCaptionButtonTheme(target.AppWindow().TitleBar(), AppElementTheme());
+            }
+            catch (...) {}
+        };
+        apply(window);
+        window.Activated([apply](IInspectable const& sender, auto const&)
+        {
+            if (auto target = sender.try_as<Microsoft::UI::Xaml::Window>())
+                apply(target);
+        });
+    }
+
     /* Le thème affiché est-il sombre ? (choix de l'application, sinon thème de Windows au démarrage) */
     inline bool IsDarkThemeEffective()
     {
         return AppElementTheme() == ElementTheme::Dark ||
             (AppElementTheme() == ElementTheme::Default && Application::Current().RequestedTheme() == ApplicationTheme::Dark);
+    }
+
+    /* Luminance relative approchée (0 = noir, 1 = blanc) d'une couleur CSS : #rgb, #rrggbb, rgb()/rgba(), black,
+       white. Retourne -1 si la couleur est inconnue ou transparente (elle est alors ignorée). */
+    inline double CssColorLuminance(std::wstring_view value)
+    {
+        auto hex = [](wchar_t c) -> int
+        {
+            if (c >= L'0' && c <= L'9') return c - L'0';
+            if (c >= L'a' && c <= L'f') return c - L'a' + 10;
+            return -1;
+        };
+        double r = -1, g = -1, b = -1;
+        if (value.rfind(L"#", 0) == 0 && (value.size() == 4 || value.size() == 7 || value.size() == 9))
+        {
+            std::wstring_view digits = value.substr(1);
+            int step = digits.size() == 3 ? 1 : 2;
+            double channels[3];
+            for (int i = 0; i < 3; ++i)
+            {
+                int hi = hex(digits[i * step]);
+                int lo = step == 1 ? hi : hex(digits[i * step + 1]);
+                if (hi < 0 || lo < 0)
+                    return -1;
+                channels[i] = hi * 16 + lo;
+            }
+            r = channels[0]; g = channels[1]; b = channels[2];
+        }
+        else if (value.rfind(L"rgb", 0) == 0)
+        {
+            size_t open = value.find(L'(');
+            if (open == std::wstring_view::npos)
+                return -1;
+            std::wstring inner{ value.substr(open + 1) };
+            double channels[3];
+            wchar_t* cursor = inner.data();
+            for (int i = 0; i < 3; ++i)
+            {
+                wchar_t* end = nullptr;
+                channels[i] = std::wcstod(cursor, &end);
+                if (end == cursor)
+                    return -1;
+                cursor = end;
+                while (*cursor == L',' || *cursor == L' ' || *cursor == L'/')
+                    ++cursor;
+            }
+            r = channels[0]; g = channels[1]; b = channels[2];
+        }
+        else if (value == L"black")
+            return 0.0;
+        else if (value == L"white")
+            return 1.0;
+        else
+            return -1;
+        return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0;
+    }
+
+    /**
+     * @brief Le message est-il déjà conçu avec des fonds sombres ?
+     *
+     * Parcourt les premières couleurs de fond déclarées par le message (attribut bgcolor, background-color et
+     * background dans les styles, dans l'ordre du document : d'abord les conteneurs) ; sombre si les fonds
+     * sombres dominent. Seule la partie du message est lue : l'enveloppe ajoutée par le moteur (fond blanc forcé)
+     * est ignorée.
+     * @param document Document HTML complet fourni par le moteur.
+     */
+    inline bool MessageIsAlreadyDark(std::wstring const& document)
+    {
+        std::wstring low = document;
+        for (auto& c : low)
+            c = static_cast<wchar_t>(std::towlower(c));
+
+        size_t begin = 0, end = low.size();
+        size_t base = low.find(L"id=\"evo-base-style\"");
+        if (base != std::wstring::npos)
+        {
+            size_t body = low.find(L"<body", base);
+            size_t body_end = body == std::wstring::npos ? body : low.find(L'>', body);
+            if (body_end != std::wstring::npos)
+                begin = body_end + 1;
+            size_t override_style = low.find(L"id=\"evo-override-style\"", begin);
+            if (override_style != std::wstring::npos)
+                end = override_style;
+        }
+
+        int dark = 0, light = 0, seen = 0;
+        static constexpr wchar_t const* keys[] = { L"bgcolor", L"background-color", L"background" };
+        auto is_separator = [](wchar_t c) { return c == L' ' || c == L'=' || c == L':' || c == L'"' || c == L'\''; };
+        auto ends_value = [](wchar_t c) { return c == L';' || c == L'"' || c == L'\'' || c == L'}' || c == L'>' || c == L' ' || c == L'!'; };
+        size_t at = begin;
+        while (at < end && seen < 8)
+        {
+            size_t found = std::wstring::npos;
+            size_t key_length = 0;
+            for (auto key : keys)
+            {
+                size_t position = low.find(key, at);
+                if (position != std::wstring::npos && position < end && (found == std::wstring::npos || position < found))
+                {
+                    found = position;
+                    key_length = std::wcslen(key);
+                }
+            }
+            if (found == std::wstring::npos)
+                break;
+
+            at = found + key_length;
+            size_t cursor = at;
+            while (cursor < end && is_separator(low[cursor]))
+                ++cursor;
+            if (cursor == at || cursor >= end)
+                continue;   /* « background-position », « background-image »… : pas une couleur */
+
+            size_t stop = cursor;
+            if (low.compare(cursor, 3, L"rgb") == 0)
+            {
+                stop = low.find(L')', cursor);
+                if (stop == std::wstring::npos)
+                    continue;
+                ++stop;
+            }
+            else
+            {
+                while (stop < end && !ends_value(low[stop]))
+                    ++stop;
+            }
+            if (stop <= cursor)
+                continue;
+
+            double luminance = CssColorLuminance(std::wstring_view{ low }.substr(cursor, stop - cursor));
+            if (luminance < 0)
+                continue;
+            ++seen;
+            if (luminance < 0.25)
+                ++dark;
+            else if (luminance > 0.7)
+                ++light;
+        }
+        return dark >= 1 && dark > light;
     }
 
     /**
@@ -105,6 +291,13 @@ namespace EvolutionWin::Helpers
         if (!IsDarkThemeEffective() || !::EvolutionWin::Settings::Instance().GetBoolean(L"mail.smart-dark", true))
             return html;
 
+        /* message déjà conçu en sombre : pas d'inversion (il serait rendu clair) ; seuls la marge de la page et le
+           texte par défaut deviennent sombres / clairs, le reste garde les couleurs de l'expéditeur */
+        static constexpr wchar_t const* kNativeDarkStyle =
+            L"<style id=\"evo-smart-dark\">"
+            L"html, body { background-color: #161616 !important; color: #e6e6e6 !important; color-scheme: dark !important; }"
+            L"</style>";
+
         static constexpr wchar_t const* kStyle =
             L"<style id=\"evo-smart-dark\">"
             L"html { background-color: #ffffff !important; filter: invert(0.92) hue-rotate(180deg) !important; }"
@@ -116,13 +309,14 @@ namespace EvolutionWin::Helpers
             L"</style>";
 
         std::wstring document{ html };
+        wchar_t const* style = MessageIsAlreadyDark(document) ? kNativeDarkStyle : kStyle;
         size_t at = document.rfind(L"</body>");
         if (at == std::wstring::npos)
             at = document.rfind(L"</html>");
         if (at == std::wstring::npos)
-            document += kStyle;
+            document += style;
         else
-            document.insert(at, kStyle);
+            document.insert(at, style);
         return hstring{ document };
     }
 

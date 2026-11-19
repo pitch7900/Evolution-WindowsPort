@@ -1,4 +1,4 @@
-                <Grid Grid.Column="0" Grid.RowSpan="3" Padding="4,8,4,8">
+                <Grid Grid.Column="0" Grid.RowSpan="3" Padding="4,8,4,8" Background="{ThemeResource EvoSidebarBackgroundBrush}">
 
                     <TreeView x:Name="FolderTree" SelectionMode="Single"
                               AllowDrop="True"

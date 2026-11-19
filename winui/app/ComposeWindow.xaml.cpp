@@ -28,6 +28,7 @@ namespace winrt::EvolutionWin::implementation
 {
     ComposeWindow::ComposeWindow()
     {
+        ::EvolutionWin::Helpers::FollowAppTheme(*this);
         Closed([this](auto const&, auto const&)
         {
             StopAutoSaveTimer();

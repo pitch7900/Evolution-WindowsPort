@@ -59,6 +59,26 @@
 
                 <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
 
+                    <!-- zoom du texte de lecture (vue Courrier seulement) : - curseur + pourcentage ; voir le
+                         constructeur de MainWindow et MainWindow::UpdateReaderZoomControls -->
+                    <StackPanel x:Name="ReaderZoomPanel" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" Margin="0,0,10,0">
+                        <Button x:Name="ReaderZoomOutButton" Style="{StaticResource SubtleButtonStyle}" Padding="6,3,6,3"
+                                ToolTipService.ToolTip="Réduire le texte de lecture">
+                            <FontIcon Glyph="&#xE738;" FontSize="12" />
+                        </Button>
+                        <Slider x:Name="ReaderZoomSlider" Width="110" Minimum="50" Maximum="300" StepFrequency="10"
+                                SmallChange="10" LargeChange="25" VerticalAlignment="Center" IsThumbToolTipEnabled="False"
+                                ToolTipService.ToolTip="Zoom du texte de lecture" />
+                        <Button x:Name="ReaderZoomInButton" Style="{StaticResource SubtleButtonStyle}" Padding="6,3,6,3"
+                                ToolTipService.ToolTip="Agrandir le texte de lecture">
+                            <FontIcon Glyph="&#xE710;" FontSize="12" />
+                        </Button>
+                        <Button x:Name="ReaderZoomValueButton" Style="{StaticResource SubtleButtonStyle}" Padding="6,3,6,3" MinWidth="52"
+                                ToolTipService.ToolTip="Rétablir le zoom à 100 %">
+                            <TextBlock x:Name="ReaderZoomValueText" Text="100 %" Style="{StaticResource CaptionTextBlockStyle}" />
+                        </Button>
+                    </StackPanel>
+
                     <!-- Menu déroulant des notifications récentes -->
 
                     <Button x:Name="NotificationsButton"

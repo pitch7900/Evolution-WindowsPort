@@ -41,6 +41,20 @@ namespace winrt::EvolutionWin::implementation
                 {
                     if (auto rect = child.try_as<Microsoft::UI::Xaml::Shapes::Rectangle>())
                     {
+                        /* séparateur à deux formes (trait + surcouche d'accent) : on ne fait que basculer leur
+                           opacité, les pinceaux restent ceux du thème affiché (ThemeResource) */
+                        hstring tag = unbox_value_or<hstring>(rect.Tag(), L"");
+                        if (tag == L"evo-line")
+                        {
+                            rect.Opacity(active ? 0.0 : 1.0);
+                            continue;
+                        }
+                        if (tag == L"evo-hover")
+                        {
+                            rect.Opacity(active ? 1.0 : 0.0);
+                            continue;
+                        }
+
                         if (active)
                         {
                             rect.Width(3);

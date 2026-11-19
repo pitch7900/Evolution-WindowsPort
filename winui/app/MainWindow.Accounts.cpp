@@ -2631,6 +2631,7 @@ namespace winrt::EvolutionWin::implementation
         Grid::SetRow(buttons, 4);
         root.Children().Append(buttons);
         window.Content(root);
+        ::EvolutionWin::Helpers::FollowAppTheme(window);
 
         auto fmt = [](int64_t unix_time) -> std::wstring
         {

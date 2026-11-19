@@ -39,12 +39,14 @@ Evolution-WindowsPort/
 ## 3. Test suite details
 
 ### Suite 1: WinUI algorithms and utilities (`test_helpers.cpp`)
+
 Validates the pure functions from `MainWindow.Helpers.h`:
+
 - **Sender extraction (`SenderName`)**: support for RFC 822 / 5322 formats (`"Name <email>"`, `"\"Name, First\" <email>"`, bare addresses, empty strings).
 - **File name sanitization (`SanitizeFileName`)**: strict replacement of characters forbidden on Windows (`\ / : * ? " < > |`) and ASCII control characters (< 32), with a fallback.
 - **Reply all (`WithoutAddress`)**: exclusion of the user's address from the recipient list, case insensitivity, handling of whitespace and multi-address lists.
 - **HTML safety (`EscapeHtml`)**: escaping of special characters (`&`, `<`, `>`, `"`) and conversion of CRLF line breaks to `<br>` to prevent any corruption or injection when quoting.
-- **Email quotes (`Quote`)**: formatting of text blocks with the `> ` prefix and handling of CRLF line endings.
+- **Email quotes (`Quote`)**: formatting of text blocks with the `>` prefix and handling of CRLF line endings.
 - **Semantic version comparison (`SemVer`)**: guarantees a strict numeric comparison (`x.y.z`) for the GitHub update lookup mechanism, avoiding the textual pitfall where `"0.9.10"` would be considered lower than `"0.9.9"`.
 - **Lexical detection of a missing attachment (`HasAttachmentKeywords`)**: multilingual (French, English) and case-insensitive analysis of explicit attachment mentions ("pièce jointe", "ci-joint", "en pj", "attachment", etc.) to alert the user before sending.
 - **Standalone HTML generation for the browser (`BuildStandaloneHtmlMessage`)**: construction of a complete document (RFC headers, metadata, HTML body or escaped plain text in `<pre>`) for display in the system browser.
@@ -58,7 +60,9 @@ Validates the pure functions from `MainWindow.Helpers.h`:
 - **Reading text size (`FontSizePresetToZoom`)**: mapping of the _Small / Normal / Large / Very large_ choices to the reader zoom factor (0.85 / 1.0 / 1.25 / 1.5), falling back to 1.0 for an unknown value.
 
 ### Suite 2: `evo-core` interface contracts and robustness (`test_evo_core_contracts.c`)
+
 Verifies the robustness of the C engine and its exchanges with the interface:
+
 - **Splitting of Windows Credential Manager secrets**: validation of the partitioning and reassembly algorithm for large OAuth2 tokens (> 2,560 bytes), eliminating the `CredWrite` error that occurred in v0.9.4 with Entra ID.
 - **Syntactic validation of addresses**: format check before querying the DNS and Autodiscover resolvers.
 - **Special folder priority**: compliance with Outlook's standardized classification and display order (Inbox, Drafts, Sent Items, Deleted Items, Archive, Junk Email, local Outbox).
@@ -66,7 +70,9 @@ Verifies the robustness of the C engine and its exchanges with the interface:
 - **Web calendar addresses**: classification of addresses entered for `evo_core_create_calendar` (`http(s)://`, `webcal://`, empty = local calendar, other schemes rejected).
 
 ### Suite 3: Application preferences (`test_settings.cpp`)
+
 Tests the persistence of the `settings.json` file:
+
 - Reading back with guaranteed default values (fallback).
 - Modification and persistence of numbers, booleans and strings.
 - Handling of JSON arrays (list of trusted senders and domains for external content blocking).
@@ -74,6 +80,7 @@ Tests the persistence of the `settings.json` file:
 - **Mail and security options (Quickwins)**: validation of the mark-as-read modes (`immediate`, `delayed`, `on-selection-change`, `never`), trash purge on exit (`mail.empty-trash-on-exit`), permanent deletion confirmations, folder pane modes (`layout.folder-pane`: `normal`, `minimized`, `off`) and folder sorting (`mail.folder-sort`: `special-first`, `alphabetical`).
 
 ### Suite 4: Binary integrity and ABI export (`test_abi_exports.ps1`)
+
 - Dynamically extracts all public function declarations from [`winui/core/evo-core.h`](./winui/core/evo-core.h) (`evo_core_*`).
 - Queries the exports of [`build/evo-core.dll`](./build/evo-core.dll) via `dumpbin /exports`.
 - Immediately reports any function that is missing or not exported under MSVC.
@@ -91,6 +98,7 @@ tools\run-tests.bat
 ```
 
 This script:
+
 1. Loads the MSVC compiler environment via `tools\env.bat`.
 2. Compiles the test executables into `build\tests\`.
 3. Runs each test suite in turn with detailed output.
@@ -116,6 +124,7 @@ To add a regression test while developing a new feature:
 
 1. Open the relevant suite in `tests/unit/` (or create a new one).
 2. Use the framework macros:
+
    ```cpp
    TEST_CASE("Explicit name of the feature to validate");
    {
@@ -125,4 +134,5 @@ To add a regression test while developing a new feature:
    }
    TEST_CASE_END();
    ```
+
 3. Run `tools\run-tests.bat` to check that the test passes right away.
