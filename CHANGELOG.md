@@ -12,6 +12,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.3.2] — en cours
 
+### Modifié
+
+- **Courrier : trait de séparation plus marqué entre les panneaux et fond distinct pour le volet comptes + dossiers.** Les séparateurs (dossiers | liste | lecture) sont un trait de 2 pixels, d'une couleur propre à chaque thème, qui passe à l'accent au survol et au glissement. Le volet de gauche a un fond gris différent selon le thème (gris clair en thème clair, gris un peu plus clair que le fond en thème sombre).
+
 ### Corrigé
 
 ## [1.3.1] — 2026-11-12

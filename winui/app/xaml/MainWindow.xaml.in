@@ -202,6 +202,22 @@
 
                     <Grid x:Name="MailView">
 
+                <!-- couleurs propres au courrier (suivent le thème) : fond du volet comptes + dossiers, trait entre panneaux -->
+                <Grid.Resources>
+                    <ResourceDictionary>
+                        <ResourceDictionary.ThemeDictionaries>
+                            <ResourceDictionary x:Key="Default">
+                                <SolidColorBrush x:Key="EvoSidebarBackgroundBrush" Color="#FF2C2C2C" />
+                                <SolidColorBrush x:Key="EvoPaneDividerBrush" Color="#FF4D4D4D" />
+                            </ResourceDictionary>
+                            <ResourceDictionary x:Key="Light">
+                                <SolidColorBrush x:Key="EvoSidebarBackgroundBrush" Color="#FFE8E9EC" />
+                                <SolidColorBrush x:Key="EvoPaneDividerBrush" Color="#FFC4C7CC" />
+                            </ResourceDictionary>
+                        </ResourceDictionary.ThemeDictionaries>
+                    </ResourceDictionary>
+                </Grid.Resources>
+
                 <!-- largeurs des dossiers et de la liste : réglées par les
 
                      séparateurs et mémorisées (MainWindow::RestorePaneWidths) -->
