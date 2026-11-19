@@ -19,6 +19,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Corrigé
 
+- **Mode sombre des messages : un message déjà conçu en sombre n'est plus inversé en clair.** Le lecteur lit les premières couleurs de fond déclarées par le message (bgcolor, background-color, background) ; si les fonds sombres dominent, le message garde ses couleurs et seules la marge de la page et la couleur de texte par défaut deviennent sombre / claire. Détection par heuristique (les scripts restent désactivés dans le lecteur) : un message mixte (cadre sombre, carte blanche) est traité selon la majorité de ses premiers fonds. À valider sur des messages réels.
+
 - **Fenêtres secondaires : le thème choisi dans Paramètres › Affichage est appliqué** à la fenêtre de lecture d'un message, à celle de rédaction, à l'éditeur d'événement et à la fenêtre de récupération des éléments supprimés (contenu et boutons de la barre de titre). Elles suivaient seulement le thème de Windows. Le thème est réappliqué à chaque activation de la fenêtre, y compris après un changement de thème fait pendant qu'elle était ouverte.
 
 ## [1.3.1] — 2026-11-12
