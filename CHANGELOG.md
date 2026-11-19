@@ -16,6 +16,7 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 - **Zoom du texte de lecture dans la barre d'état, comme Outlook** : en bas à droite (vue Courrier), boutons « − » et « + », curseur de 50 % à 300 % et pourcentage (un clic le ramène à 100 %). Il pilote le même zoom que les raccourcis existants (réglage mémorisé, appliqué à chaque message) et se met à jour quand le zoom change autrement.
 - **Ruban (Fichier / Accueil / Envoi-réception…) sur le même fond gris que le volet des dossiers**, et titre « Evolution » avec son icône en blanc sur la barre de titre bleue.
+- **Liste des messages : la corbeille de suppression rapide n'est rouge qu'au survol** du bouton ; le reste du temps, elle a la couleur normale du thème (elle était rouge en permanence).
 - **Barre de titre bleue (#0078D4), comme Outlook** : dans les deux thèmes, avec icônes, titre, accès rapide et boutons de fenêtre en blanc, et la zone de recherche claire (fond blanc, texte sombre) au centre.
 - **Courrier : trait de séparation plus marqué entre les panneaux et fond distinct pour le volet comptes + dossiers.** Les séparateurs (dossiers | liste | lecture) sont un trait de 2 pixels, d'une couleur propre à chaque thème, qui passe à l'accent au survol et au glissement. Le volet de gauche a un fond gris différent selon le thème (gris clair en thème clair, gris un peu plus clair que le fond en thème sombre).
 
