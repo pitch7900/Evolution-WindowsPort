@@ -1725,6 +1725,7 @@ namespace winrt::EvolutionWin::implementation
         window_root.Children().Append(command_bar);
         window_root.Children().Append(scroll);
         window.Content(window_root);
+        ::EvolutionWin::Helpers::FollowAppTheme(window);
 
         /* enregistrement : retourne true si la fenêtre peut se fermer */
         auto commit = [=]() -> bool

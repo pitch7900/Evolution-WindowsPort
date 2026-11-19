@@ -173,6 +173,11 @@ namespace winrt::EvolutionWin::implementation
         SyncConfidentialControls();
         AppTitleBar().SizeChanged([this](IInspectable const&, SizeChangedEventArgs const&) { UpdateTitleBarPassthrough(); });
 
+        /* Barre de titre bleue (#0078D4, comme Outlook) : icônes, titre et accès rapide en thème sombre (blancs),
+           zone de recherche en thème clair (fond blanc, texte sombre), dans les deux thèmes de l'application. */
+        AppTitleBar().RequestedTheme(ElementTheme::Dark);
+        SearchContainer().RequestedTheme(ElementTheme::Light);
+
         /* En-tête de la liste des messages : onglets Prioritaire / Autres et filtres rapides sur une même ligne ;
            quand le volet est trop étroit pour les deux, les filtres passent sur leur propre ligne. */
         auto layout_mail_header = [this]()

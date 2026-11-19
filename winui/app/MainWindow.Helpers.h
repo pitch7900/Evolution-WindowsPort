@@ -48,12 +48,27 @@ namespace EvolutionWin::Helpers
      * @param title_bar Barre de titre de l'AppWindow.
      * @param theme Thème de l'application.
      */
-    inline void ApplyCaptionButtonTheme(Microsoft::UI::Windowing::AppWindowTitleBar const& title_bar, ElementTheme theme)
+    inline void ApplyCaptionButtonTheme(Microsoft::UI::Windowing::AppWindowTitleBar const& title_bar, ElementTheme theme, bool on_accent = false)
     {
         using Color = Windows::UI::Color;
         using Ref = Windows::Foundation::IReference<Color>;
         if (!title_bar)
             return;
+
+        /* barre de titre bleue (#0078D4) : boutons blancs dans les deux thèmes, survol en voile blanc */
+        if (on_accent)
+        {
+            Color white{ 0xFF, 0xFF, 0xFF, 0xFF };
+            title_bar.ButtonBackgroundColor(Color{ 0, 0, 0, 0 });
+            title_bar.ButtonInactiveBackgroundColor(Color{ 0, 0, 0, 0 });
+            title_bar.ButtonForegroundColor(white);
+            title_bar.ButtonHoverForegroundColor(white);
+            title_bar.ButtonPressedForegroundColor(white);
+            title_bar.ButtonInactiveForegroundColor(Color{ 0xB3, 0xFF, 0xFF, 0xFF });
+            title_bar.ButtonHoverBackgroundColor(Color{ 0x2E, 0xFF, 0xFF, 0xFF });
+            title_bar.ButtonPressedBackgroundColor(Color{ 0x45, 0xFF, 0xFF, 0xFF });
+            return;
+        }
 
         if (theme == ElementTheme::Default)
         {
@@ -79,6 +94,38 @@ namespace EvolutionWin::Helpers
         title_bar.ButtonInactiveForegroundColor(inactive);
         title_bar.ButtonHoverBackgroundColor(hover);
         title_bar.ButtonPressedBackgroundColor(pressed);
+    }
+
+    /**
+     * @brief Applique le thème choisi dans Paramètres › Affichage à une fenêtre secondaire (lecture d'un message,
+     *        rédaction, éditeur d'événement…) : thème du contenu et couleurs des boutons de la barre de titre.
+     *
+     * Une fenêtre WinUI ne suit pas le thème de l'application tant qu'on ne le lui donne pas : sans cet appel,
+     * elle suit celui de Windows. L'application est refaite à chaque activation de la fenêtre, ce qui répercute
+     * aussi un changement de thème fait pendant qu'elle est ouverte.
+     * @param window Fenêtre à suivre.
+     */
+    inline void FollowAppTheme(Microsoft::UI::Xaml::Window const& window)
+    {
+        auto apply = [](Microsoft::UI::Xaml::Window const& target)
+        {
+            try
+            {
+                if (auto root = target.Content().try_as<FrameworkElement>())
+                {
+                    if (root.RequestedTheme() != AppElementTheme())
+                        root.RequestedTheme(AppElementTheme());
+                }
+                ApplyCaptionButtonTheme(target.AppWindow().TitleBar(), AppElementTheme());
+            }
+            catch (...) {}
+        };
+        apply(window);
+        window.Activated([apply](IInspectable const& sender, auto const&)
+        {
+            if (auto target = sender.try_as<Microsoft::UI::Xaml::Window>())
+                apply(target);
+        });
     }
 
     /* Le thème affiché est-il sombre ? (choix de l'application, sinon thème de Windows au démarrage) */

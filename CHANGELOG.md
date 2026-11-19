@@ -14,9 +14,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Modifié
 
+- **Barre de titre bleue (#0078D4), comme Outlook** : dans les deux thèmes, avec icônes, titre, accès rapide et boutons de fenêtre en blanc, et la zone de recherche claire (fond blanc, texte sombre) au centre.
 - **Courrier : trait de séparation plus marqué entre les panneaux et fond distinct pour le volet comptes + dossiers.** Les séparateurs (dossiers | liste | lecture) sont un trait de 2 pixels, d'une couleur propre à chaque thème, qui passe à l'accent au survol et au glissement. Le volet de gauche a un fond gris différent selon le thème (gris clair en thème clair, gris un peu plus clair que le fond en thème sombre).
 
 ### Corrigé
+
+- **Fenêtres secondaires : le thème choisi dans Paramètres › Affichage est appliqué** à la fenêtre de lecture d'un message, à celle de rédaction, à l'éditeur d'événement et à la fenêtre de récupération des éléments supprimés (contenu et boutons de la barre de titre). Elles suivaient seulement le thème de Windows. Le thème est réappliqué à chaque activation de la fenêtre, y compris après un changement de thème fait pendant qu'elle était ouverte.
 
 ## [1.3.1] — 2026-11-12
 
