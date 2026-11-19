@@ -756,12 +756,22 @@ namespace winrt::EvolutionWin::implementation
     {
         m_reader_zoom = ::EvolutionWin::Helpers::ClampZoomFactor(zoom);
         ::EvolutionWin::Settings::Instance().SetDouble(L"mail.reading-zoom", m_reader_zoom);
+        UpdateReaderZoomControls();
 
         if (m_reader_ready && Reader().CoreWebView2())
         {
             std::wstring js = L"if (document.body) { document.body.style.zoom = '" + std::to_wstring(m_reader_zoom) + L"'; }";
             Reader().CoreWebView2().ExecuteScriptAsync(js);
         }
+    }
+
+    /* Met à jour le curseur et le pourcentage de la barre d'état d'après le zoom courant (m_reader_zoom). */
+    void MainWindow::UpdateReaderZoomControls()
+    {
+        m_updating_zoom_ui = true;
+        ReaderZoomSlider().Value(m_reader_zoom * 100.0);
+        ReaderZoomValueText().Text(hstring{ ::EvolutionWin::Helpers::FormatZoomPercentage(m_reader_zoom) });
+        m_updating_zoom_ui = false;
     }
 
     void MainWindow::OnZoomInClick(IInspectable const&, RoutedEventArgs const&)

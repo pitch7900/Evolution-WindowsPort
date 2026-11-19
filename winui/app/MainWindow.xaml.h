@@ -170,6 +170,7 @@ namespace winrt::EvolutionWin::implementation
         };
         fire_and_forget PickFolderAsync(FolderPickOptions options, std::function<void(hstring const&, hstring const&)> on_pick);
         void ApplyReaderZoom(double zoom);
+        void UpdateReaderZoomControls();
         void OnMoveMenuOpening(Windows::Foundation::IInspectable const& sender, Windows::Foundation::IInspectable const& args);
         void OnSearchTextChanged(
             Microsoft::UI::Xaml::Controls::AutoSuggestBox const& sender,
@@ -1095,6 +1096,7 @@ namespace winrt::EvolutionWin::implementation
         /* État de la page Paramètres */
         bool m_settings_initialized{ false };
         bool m_updating_settings_view{ false };
+        bool m_updating_zoom_ui{ false };          /* évite la boucle curseur <-> zoom */
         winrt::hstring m_current_settings_category{ L"accounts" };
 
         /* Synthèse vocale Windows (Lecture à voix haute) */

@@ -39,12 +39,14 @@ Evolution-WindowsPort/
 ## 3. Détail des suites de tests
 
 ### Suite 1 : Algorithmes et utilitaires WinUI (`test_helpers.cpp`)
+
 Valide les fonctions pures issues de `MainWindow.Helpers.h` :
+
 - **Extraction des expéditeurs (`SenderName`)** : prise en charge des formats RFC 822 / 5322 (`"Nom <email>"`, `"\"Nom, Prénom\" <email>"`, adresses nues, chaînes vides).
 - **Assainissement des noms de fichiers (`SanitizeFileName`)** : remplacement strict des caractères interdits sous Windows (`\ / : * ? " < > |`) et des caractères de contrôle ASCII (< 32), avec repli de secours.
 - **Répondre à tous (`WithoutAddress`)** : exclusion de l'adresse de l'utilisateur de la liste des destinataires, insensibilité à la casse, gestion des espaces et des listes multi-adresses.
 - **Sécurité HTML (`EscapeHtml`)** : échappement des caractères spéciaux (`&`, `<`, `>`, `"`) et conversion des sauts de ligne CRLF en `<br>` pour prévenir toute corruption ou injection lors des citations.
-- **Citations de courriel (`Quote`)** : formatage des blocs de texte avec préfixe `> ` et gestion des fins de ligne CRLF.
+- **Citations de courriel (`Quote`)** : formatage des blocs de texte avec préfixe `>` et gestion des fins de ligne CRLF.
 - **Comparaison sémantique de versions (`SemVer`)** : garantit une comparaison numérique stricte (`x.y.z`) pour le mécanisme de recherche de mise à jour GitHub, évitant le piège textuel où `"0.9.10"` serait considéré inférieur à `"0.9.9"`.
 - **Détection lexicale de pièce jointe manquante (`HasAttachmentKeywords`)** : analyse multilingue (français, anglais) et insensible à la casse des mentions explicites de pièces jointes ("pièce jointe", "ci-joint", "en pj", "attachment", etc.) pour alerter l'utilisateur avant l'envoi.
 - **Génération HTML autonome pour navigateur (`BuildStandaloneHtmlMessage`)** : construction d'un document complet (en-têtes RFC, métadonnées, corps HTML ou texte brut échappé dans `<pre>`) pour l'affichage dans le navigateur système.
@@ -58,7 +60,9 @@ Valide les fonctions pures issues de `MainWindow.Helpers.h` :
 - **Taille de texte de lecture (`FontSizePresetToZoom`)** : correspondance des choix _Petite / Normale / Grande / Très grande_ avec le facteur de zoom du lecteur (0,85 / 1,0 / 1,25 / 1,5), repli à 1,0 pour une valeur inconnue.
 
 ### Suite 2 : Contrats d'interface et robustesse `evo-core` (`test_evo_core_contracts.c`)
+
 Vérifie la robustesse du moteur C et ses échanges avec l'interface :
+
 - **Découpage des secrets Windows Credential Manager** : validation de l'algorithme de partitionnement et de réassemblage des jetons OAuth2 volumineux (> 2 560 octets), éliminant l'erreur `CredWrite` survenue en v0.9.4 avec Entra ID.
 - **Validation syntaxique des adresses** : contrôle du format avant interrogation des résolveurs DNS et Autodiscover.
 - **Priorité des dossiers spéciaux** : respect de la classification et de l'ordre d'affichage standardisé d'Outlook (Boîte de réception, Brouillons, Éléments envoyés, Éléments supprimés, Archive, Courrier indésirable, Boîte d'envoi locale).
@@ -66,7 +70,9 @@ Vérifie la robustesse du moteur C et ses échanges avec l'interface :
 - **Adresses de calendriers web** : classification des adresses saisies pour `evo_core_create_calendar` (`http(s)://`, `webcal://`, vide = calendrier local, autres schémas refusés).
 
 ### Suite 3 : Préférences de l'application (`test_settings.cpp`)
+
 Teste la persistance du fichier `settings.json` :
+
 - Relecture avec valeurs par défaut garanties (fallback).
 - Modification et persistance des nombres, booléens et chaînes.
 - Gestion des tableaux JSON (liste des expéditeurs et domaines de confiance pour le blocage de contenu externe).
@@ -74,6 +80,7 @@ Teste la persistance du fichier `settings.json` :
 - **Options de courriel et de sécurité (Quickwins)** : validation des modes de marquage comme lu (`immediate`, `delayed`, `on-selection-change`, `never`), purge de la corbeille à la sortie (`mail.empty-trash-on-exit`), confirmations de suppression définitive, modes du volet des dossiers (`layout.folder-pane` : `normal`, `minimized`, `off`) et tri des dossiers (`mail.folder-sort` : `special-first`, `alphabetical`).
 
 ### Suite 4 : Intégrité binaire et export ABI (`test_abi_exports.ps1`)
+
 - Extrait dynamiquement toutes les déclarations de fonctions publiques de [`winui/core/evo-core.h`](./winui/core/evo-core.h) (`evo_core_*`).
 - Interroge les exports de [`build/evo-core.dll`](./build/evo-core.dll) via `dumpbin /exports`.
 - Signale immédiatement toute fonction manquante ou non exportée sous MSVC.
@@ -91,6 +98,7 @@ tools\run-tests.bat
 ```
 
 Ce script :
+
 1. Charge l'environnement du compilateur MSVC via `tools\env.bat`.
 2. Compile les exécutables de test dans `build\tests\`.
 3. Lance successivement chaque suite de tests avec affichage détaillé.
@@ -116,6 +124,7 @@ Pour ajouter un test de non-régression lors du développement d'une nouvelle fo
 
 1. Ouvrez la suite concernée dans `tests/unit/` (ou créez-en une nouvelle).
 2. Utilisez les macros du framework :
+
    ```cpp
    TEST_CASE("Nom explicite de la fonctionnalite a valider");
    {
@@ -125,4 +134,5 @@ Pour ajouter un test de non-régression lors du développement d'une nouvelle fo
    }
    TEST_CASE_END();
    ```
+
 3. Exécutez `tools\run-tests.bat` pour vérifier que le test passe immédiatement.

@@ -173,6 +173,27 @@ namespace winrt::EvolutionWin::implementation
         SyncConfidentialControls();
         AppTitleBar().SizeChanged([this](IInspectable const&, SizeChangedEventArgs const&) { UpdateTitleBarPassthrough(); });
 
+        /* Zoom du texte de lecture dans la barre d'état (comme Outlook) : -, curseur, +, pourcentage (clic : 100 %) */
+        ReaderZoomSlider().ValueChanged([this](IInspectable const&, Controls::Primitives::RangeBaseValueChangedEventArgs const& args)
+        {
+            if (!m_updating_zoom_ui)
+                ApplyReaderZoom(args.NewValue() / 100.0);
+        });
+        ReaderZoomOutButton().Click([this](IInspectable const&, RoutedEventArgs const&)
+        {
+            ApplyReaderZoom(::EvolutionWin::Helpers::StepZoomOut(m_reader_zoom));
+        });
+        ReaderZoomInButton().Click([this](IInspectable const&, RoutedEventArgs const&)
+        {
+            ApplyReaderZoom(::EvolutionWin::Helpers::StepZoomIn(m_reader_zoom));
+        });
+        ReaderZoomValueButton().Click([this](IInspectable const&, RoutedEventArgs const&)
+        {
+            ApplyReaderZoom(1.0);
+        });
+        m_reader_zoom = ::EvolutionWin::Helpers::ClampZoomFactor(::EvolutionWin::Settings::Instance().GetDouble(L"mail.reading-zoom", 1.0));
+        UpdateReaderZoomControls();
+
         /* Barre de titre bleue (#0078D4, comme Outlook) : icônes, titre et accès rapide en thème sombre (blancs),
            zone de recherche en thème clair (fond blanc, texte sombre), dans les deux thèmes de l'application. */
         AppTitleBar().RequestedTheme(ElementTheme::Dark);
@@ -879,6 +900,7 @@ namespace winrt::EvolutionWin::implementation
             m_view_tag = L"settings";
             RefreshBanner();
             UpdateRibbon();
+            ReaderZoomPanel().Visibility(Visibility::Collapsed);
             MailView().Visibility(Visibility::Collapsed);
             CalendarViewPane().Visibility(Visibility::Collapsed);
             ContactsViewPane().Visibility(Visibility::Collapsed);
@@ -918,6 +940,7 @@ namespace winrt::EvolutionWin::implementation
 
         SearchScopeBox().Visibility(tag == L"mail" ? Visibility::Visible : Visibility::Collapsed);
         MailView().Visibility(tag == L"mail" ? Visibility::Visible : Visibility::Collapsed);
+        ReaderZoomPanel().Visibility(tag == L"mail" ? Visibility::Visible : Visibility::Collapsed);
         CalendarViewPane().Visibility(tag == L"calendar" ? Visibility::Visible : Visibility::Collapsed);
         ContactsViewPane().Visibility(tag == L"contacts" ? Visibility::Visible : Visibility::Collapsed);
         TasksViewPane().Visibility(tag == L"tasks" ? Visibility::Visible : Visibility::Collapsed);
