@@ -3,9 +3,9 @@
 
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
 
-                <FontIcon Glyph="&#xE715;" FontSize="14" />
+                <FontIcon Glyph="&#xE715;" FontSize="14" Foreground="White" />
 
-                <TextBlock Text="Evolution" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                <TextBlock Text="Evolution" Style="{StaticResource CaptionTextBlockStyle}" Foreground="White" VerticalAlignment="Center" />
 
                 <!-- barre d'accès rapide, personnalisable (MainWindow::RebuildQuickAccess) ;
 

@@ -26,6 +26,23 @@
 
     <Grid AllowDrop="True" DragEnter="OnWindowDragOver" DragOver="OnWindowDragOver">
 
+        <!-- couleurs communes (suivent le thème) : fond du ruban et du volet comptes + dossiers, trait entre panneaux -->
+        <Grid.Resources>
+            <ResourceDictionary>
+                <ResourceDictionary.ThemeDictionaries>
+                    <ResourceDictionary x:Key="Default">
+                        <SolidColorBrush x:Key="EvoSidebarBackgroundBrush" Color="#FF2C2C2C" />
+                        <SolidColorBrush x:Key="EvoPaneDividerBrush" Color="#FF4D4D4D" />
+                    </ResourceDictionary>
+                    <ResourceDictionary x:Key="Light">
+                        <SolidColorBrush x:Key="EvoSidebarBackgroundBrush" Color="#FFE8E9EC" />
+                        <SolidColorBrush x:Key="EvoPaneDividerBrush" Color="#FFC4C7CC" />
+                    </ResourceDictionary>
+                </ResourceDictionary.ThemeDictionaries>
+            </ResourceDictionary>
+        </Grid.Resources>
+
+
         <!-- raccourcis actifs dans toute la fenêtre, quelle que soit la vue -->
 
         <Grid.KeyboardAccelerators>
@@ -108,7 +125,7 @@
 
                  barre de commandes de l'onglet choisi ; voir MainWindow::UpdateRibbon -->
 
-            <StackPanel x:Name="Ribbon" Grid.Row="0" Margin="12,4,12,0">
+            <StackPanel x:Name="Ribbon" Grid.Row="0" Padding="12,4,12,0" Background="{ThemeResource EvoSidebarBackgroundBrush}">
 
                 <SelectorBar x:Name="RibbonTabs" SelectionChanged="OnRibbonTabChanged">
 
@@ -202,21 +219,6 @@
 
                     <Grid x:Name="MailView">
 
-                <!-- couleurs propres au courrier (suivent le thème) : fond du volet comptes + dossiers, trait entre panneaux -->
-                <Grid.Resources>
-                    <ResourceDictionary>
-                        <ResourceDictionary.ThemeDictionaries>
-                            <ResourceDictionary x:Key="Default">
-                                <SolidColorBrush x:Key="EvoSidebarBackgroundBrush" Color="#FF2C2C2C" />
-                                <SolidColorBrush x:Key="EvoPaneDividerBrush" Color="#FF4D4D4D" />
-                            </ResourceDictionary>
-                            <ResourceDictionary x:Key="Light">
-                                <SolidColorBrush x:Key="EvoSidebarBackgroundBrush" Color="#FFE8E9EC" />
-                                <SolidColorBrush x:Key="EvoPaneDividerBrush" Color="#FFC4C7CC" />
-                            </ResourceDictionary>
-                        </ResourceDictionary.ThemeDictionaries>
-                    </ResourceDictionary>
-                </Grid.Resources>
 
                 <!-- largeurs des dossiers et de la liste : réglées par les
 
