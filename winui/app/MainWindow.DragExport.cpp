@@ -71,8 +71,12 @@ namespace winrt::EvolutionWin::implementation
         if (calendar_uid.empty() || uid.empty())
             return;
 
+        int64_t start = static_cast<int64_t>(ev.GetNamedNumber(L"start", 0));
+        int64_t end = static_cast<int64_t>(ev.GetNamedNumber(L"end", 0));
+        bool all_day = ev.GetNamedBoolean(L"all_day", false);
+
         element.CanDrag(true);
-        element.DragStarting([this, calendar_uid, uid, summary](UIElement const&, DragStartingEventArgs const& args)
+        element.DragStarting([this, calendar_uid, uid, summary, start, end, all_day](UIElement const& sender, DragStartingEventArgs const& args)
         {
             if (!m_core)
             {
@@ -80,11 +84,16 @@ namespace winrt::EvolutionWin::implementation
                 return;
             }
 
+            /* glisser dans la grille du calendrier : l'événement change d'heure (voir MoveCalendarEvent) ;
+               hors de l'application, c'est la copie du fichier .ics */
+            m_dragged_event = DraggedEvent{ true, calendar_uid, uid, args.GetPosition(sender).Y, start, end, all_day };
+
             std::wstring path = GetDragDropTempDir() +
                 std::wstring{ SanitizeFileName(summary, Tr(L"Événement")) } + L".ics";
             auto deferral = args.GetDeferral();
             auto data = args.Data();
-            data.RequestedOperation(Windows::ApplicationModel::DataTransfer::DataPackageOperation::Copy);
+            data.RequestedOperation(Windows::ApplicationModel::DataTransfer::DataPackageOperation::Copy |
+                                    Windows::ApplicationModel::DataTransfer::DataPackageOperation::Move);
 
             JsonObject request;
             JsonArray uids;
@@ -100,6 +109,7 @@ namespace winrt::EvolutionWin::implementation
                 AttachDragFile(deferral, data, path, error.empty());
             });
         });
+        element.DropCompleted([this](UIElement const&, DropCompletedEventArgs const&) { m_dragged_event.active = false; });
     }
 
     /**

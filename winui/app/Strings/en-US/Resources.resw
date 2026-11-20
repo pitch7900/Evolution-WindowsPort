@@ -8099,5 +8099,53 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Update cancelled: the elevation of rights was refused.</value>
     <comment>Mise à jour annulée : l'élévation des droits a été refusée.</comment>
   </data>
+  <data name="T_DB786584" xml:space="preserve">
+    <value>Click or drag to select a time range; right-click to create an event</value>
+    <comment>Cliquer ou glisser pour sélectionner une plage ; clic droit pour créer un événement</comment>
+  </data>
+  <data name="T_B349B04E" xml:space="preserve">
+    <value>New appointment</value>
+    <comment>Nouveau rendez-vous</comment>
+  </data>
+  <data name="T_B159549F" xml:space="preserve">
+    <value>New all-day event</value>
+    <comment>Nouvel événement d'une journée entière</comment>
+  </data>
+  <data name="T_1FFEFF35" xml:space="preserve">
+    <value>New Teams meeting</value>
+    <comment>Nouvelle réunion Teams</comment>
+  </data>
+  <data name="T_AFF62B9C" xml:space="preserve">
+    <value>Paste</value>
+    <comment>Coller</comment>
+  </data>
+  <data name="T_6BBCD9D8" xml:space="preserve">
+    <value>Event "{0}" copied: right-click a time range in the calendar, then "Paste".</value>
+    <comment>Événement « {0} » copié : clic droit sur une plage du calendrier, puis « Coller ».</comment>
+  </data>
+  <data name="T_EE70597E" xml:space="preserve">
+    <value>Copying the event: {0}</value>
+    <comment>Copie de l'événement : {0}</comment>
+  </data>
+  <data name="T_CF890C9D" xml:space="preserve">
+    <value>Pasting the event: {0}</value>
+    <comment>Collage de l'événement : {0}</comment>
+  </data>
+  <data name="T_BFC4EAB5" xml:space="preserve">
+    <value>Event pasted.</value>
+    <comment>Événement collé.</comment>
+  </data>
+  <data name="T_236FF748" xml:space="preserve">
+    <value>Moving the event: {0}</value>
+    <comment>Déplacement de l'événement : {0}</comment>
+  </data>
+  <data name="T_610D26B1" xml:space="preserve">
+    <value>A recurring event cannot be moved by dragging: open it to change its recurrence.</value>
+    <comment>Un événement périodique ne se déplace pas par glisser : ouvrez-le pour modifier sa récurrence.</comment>
+  </data>
+  <data name="T_8FD41460" xml:space="preserve">
+    <value>This calendar is read-only: the event cannot be moved.</value>
+    <comment>Cet agenda est en lecture seule : l'événement ne peut pas être déplacé.</comment>
+  </data>
 </root>
 

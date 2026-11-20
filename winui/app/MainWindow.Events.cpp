@@ -918,7 +918,9 @@ namespace winrt::EvolutionWin::implementation
 
         bool existing = static_cast<bool>(event);
         bool readonly = existing && event.GetNamedBoolean(L"readonly", false);
-        bool all_day = existing && event.GetNamedBoolean(L"all_day", false);
+        bool all_day = existing ? event.GetNamedBoolean(L"all_day", false) : m_new_event_all_day;
+        if (!existing)
+            m_new_event_all_day = false;
 
         Window window;
         hstring window_title = existing ? (readonly ? Tr(L"Événement (lecture seule)") : Tr(L"Événement")) : (is_focus ? Tr(L"Temps individuel (Focus)") : Tr(L"Nouvel événement"));

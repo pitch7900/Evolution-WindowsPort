@@ -928,6 +928,26 @@ namespace winrt::EvolutionWin::implementation
         int64_t m_new_event_start{ 0 };	/* créneau sélectionné dans la grille (nouvel événement), 0 : aucun */
         int64_t m_new_event_end{ 0 };
         void BeginEventFromSelection(int64_t start_unix, int64_t end_unix);
+        bool m_new_event_all_day{ false };	/* le prochain nouvel événement est une journée entière */
+
+        /* Sélection d'une plage dans la grille (reste affichée tant qu'on n'en choisit pas une autre ;
+           les créations passent par le menu du clic droit, comme Outlook) */
+        struct SlotVisual { Microsoft::UI::Xaml::Controls::Border border{ nullptr }; int64_t day_start{ 0 }; int64_t day_end{ 0 }; double hour_height{ 0 }; };
+        std::vector<SlotVisual> m_slot_visuals;	/* un rectangle de sélection par jour affiché */
+        int64_t m_slot_start{ 0 };	/* plage sélectionnée (secondes Unix), 0 : aucune */
+        int64_t m_slot_end{ 0 };
+        void SelectCalendarSlot(int64_t start_unix, int64_t end_unix);
+        void UpdateSlotSelectionVisuals();
+        void ShowCalendarSlotMenu(Microsoft::UI::Xaml::UIElement const& anchor, Windows::Foundation::Point position);
+
+        /* Copier / coller et déplacement d'un événement (MainWindow.EventMove.cpp) */
+        hstring m_event_clipboard_calendar;	/* événement copié (vide : rien) */
+        hstring m_event_clipboard_uid;
+        struct DraggedEvent { bool active{ false }; hstring calendar_uid; hstring uid; double grab_y{ 0 }; int64_t start{ 0 }; int64_t end{ 0 }; bool all_day{ false }; };
+        DraggedEvent m_dragged_event;	/* événement en cours de glisser depuis la grille */
+        void CopyCalendarEvent(Windows::Data::Json::JsonObject const& event);
+        void PasteCalendarEvent(int64_t start_unix);
+        void MoveCalendarEvent(hstring const& calendar_uid, hstring const& uid, int64_t new_start);
         hstring m_calendar_period{ L"week" };	/* "day", "week" ou "month" (calendar.period) */
         bool m_updating_period{ false };
         void SetCalendarPeriod(hstring const& period);

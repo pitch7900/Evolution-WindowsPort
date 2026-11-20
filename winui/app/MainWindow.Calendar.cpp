@@ -7,6 +7,7 @@
 #include <winrt/Microsoft.UI.Input.h>
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Microsoft.UI.Xaml.Shapes.h>
+#include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -324,6 +325,7 @@ namespace winrt::EvolutionWin::implementation
 
         auto day_starts = DayStarts(start_unix, days);
         int64_t now = static_cast<int64_t>(std::time(nullptr));
+        m_slot_visuals.clear();
 
         /* Configuration du second fuseau horaire dans la grille */
         bool second_tz_enabled = ::EvolutionWin::Settings::Instance().GetBoolean(L"calendar.second-timezone-enabled", false);
@@ -583,7 +585,8 @@ namespace winrt::EvolutionWin::implementation
             Grid::SetColumn(separator, day + 1);
             body.Children().Append(separator);
 
-            /* sélection d'un créneau à la souris (glisser) ou clic simple (1 h) : crée un événement.
+            /* sélection d'une plage à la souris (glisser) ou d'un créneau d'une demi-heure (clic simple) : la plage reste
+               sélectionnée, les créations passent par le menu du clic droit (ou le double clic), comme Outlook.
                Couche ajoutée avant les événements, qui restent cliquables au-dessus. */
             {
                 Grid slot_layer;
@@ -596,9 +599,12 @@ namespace winrt::EvolutionWin::implementation
                 selection.IsHitTestVisible(false);
                 selection.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));
                 selection.Background(ThemeBrush(L"AccentFillColorSecondaryBrush"));
-                selection.Opacity(0.45);
+                selection.BorderBrush(ThemeBrush(L"AccentFillColorDefaultBrush"));
+                selection.BorderThickness(ThicknessHelper::FromLengths(1, 1, 1, 1));
+                selection.Opacity(0.55);
                 selection.Margin(ThicknessHelper::FromLengths(2, 0, 4, 0));
                 slot_layer.Children().Append(selection);
+                m_slot_visuals.push_back(SlotVisual{ selection, day_starts[day], day_starts[day + 1], HourHeight });
 
                 struct Drag { bool active{ false }; double y0{ 0 }; };
                 auto drag = std::make_shared<Drag>();
@@ -611,8 +617,14 @@ namespace winrt::EvolutionWin::implementation
                     int64_t quarters = static_cast<int64_t>(up ? std::ceil(minutes / 15.0) : std::floor(minutes / 15.0));
                     return (std::min<int64_t>)(quarters, 96) * 900;
                 };
+                /* quart d'heure le plus proche (déplacement d'un événement) */
+                auto snap_nearest = [hour_height](double y) -> int64_t
+                {
+                    double minutes = (std::max)(0.0, y) / hour_height * 60.0;
+                    return (std::min<int64_t>)(static_cast<int64_t>(std::llround(minutes / 15.0)), 95) * 900;
+                };
 
-                slot_layer.PointerPressed([drag, slot_layer, selection, snap, hour_height](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+                slot_layer.PointerPressed([this, drag, slot_layer, selection, snap, hour_height](IInspectable const&, Input::PointerRoutedEventArgs const& args)
                 {
                     auto point = args.GetCurrentPoint(slot_layer);
                     if (!point.Properties().IsLeftButtonPressed())
@@ -620,6 +632,10 @@ namespace winrt::EvolutionWin::implementation
                     drag->active = true;
                     drag->y0 = point.Position().Y;
                     slot_layer.CapturePointer(args.Pointer());
+                    /* l'ancienne plage est abandonnée dès qu'on en commence une autre */
+                    m_slot_start = 0;
+                    m_slot_end = 0;
+                    UpdateSlotSelectionVisuals();
                     int64_t from_s = snap(drag->y0, false);
                     selection.Margin(ThicknessHelper::FromLengths(2, from_s * hour_height / 3600, 4, 0));
                     selection.Height(hour_height / 4);
@@ -637,22 +653,20 @@ namespace winrt::EvolutionWin::implementation
                     selection.Margin(ThicknessHelper::FromLengths(2, a * hour_height / 3600, 4, 0));
                     selection.Height((b - a) * hour_height / 3600);
                 });
-                slot_layer.PointerReleased([this, drag, slot_layer, selection, snap, day_start](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+                slot_layer.PointerReleased([this, drag, slot_layer, snap, day_start](IInspectable const&, Input::PointerRoutedEventArgs const& args)
                 {
                     if (!drag->active)
                         return;
                     drag->active = false;
                     slot_layer.ReleasePointerCapture(args.Pointer());
-                    selection.Visibility(Visibility::Collapsed);
 
                     double y1 = args.GetCurrentPoint(slot_layer).Position().Y;
                     int64_t a, b;
                     if (std::abs(y1 - drag->y0) < 6.0)
                     {
-                        /* simple clic : créneau d'une heure à partir de la demi-heure la plus proche */
-                        int64_t half = (snap(drag->y0, false) / 1800) * 1800;
-                        a = half;
-                        b = a + 3600;
+                        /* simple clic : créneau d'une demi-heure */
+                        a = (snap(drag->y0, false) / 1800) * 1800;
+                        b = a + 1800;
                     }
                     else
                     {
@@ -661,14 +675,58 @@ namespace winrt::EvolutionWin::implementation
                         if (b <= a)
                             b = a + 900;
                     }
-                    BeginEventFromSelection(day_start + a, day_start + b);
+                    SelectCalendarSlot(day_start + a, day_start + b);
                 });
-                slot_layer.PointerCanceled([drag, selection](IInspectable const&, Input::PointerRoutedEventArgs const&)
+                slot_layer.PointerCanceled([this, drag](IInspectable const&, Input::PointerRoutedEventArgs const&)
                 {
                     drag->active = false;
-                    selection.Visibility(Visibility::Collapsed);
+                    UpdateSlotSelectionVisuals();
                 });
-                ToolTipService::SetToolTip(slot_layer, box_value(Tr(L"Cliquer ou glisser pour créer un événement")));
+                /* double clic : nouveau rendez-vous sur la plage sélectionnée */
+                slot_layer.DoubleTapped([this](IInspectable const&, Input::DoubleTappedRoutedEventArgs const& args)
+                {
+                    args.Handled(true);
+                    if (m_slot_end > m_slot_start)
+                        BeginEventFromSelection(m_slot_start, m_slot_end);
+                });
+                /* clic droit : menu de création ; hors de la plage sélectionnée, le créneau cliqué est d'abord sélectionné */
+                slot_layer.RightTapped([this, slot_layer, snap, day_start](IInspectable const&, Input::RightTappedRoutedEventArgs const& args)
+                {
+                    args.Handled(true);
+                    Point position = args.GetPosition(slot_layer);
+                    int64_t t = day_start + (snap(position.Y, false) / 1800) * 1800;
+                    if (!(m_slot_end > m_slot_start && t >= m_slot_start && t < m_slot_end))
+                        SelectCalendarSlot(t, t + 1800);
+                    ShowCalendarSlotMenu(slot_layer, position);
+                });
+
+                /* déplacement d'un événement glissé depuis la grille : aperçu au quart d'heure, puis nouvelle heure */
+                slot_layer.AllowDrop(true);
+                slot_layer.DragOver([this, slot_layer, selection, snap_nearest, hour_height](IInspectable const&, DragEventArgs const& args)
+                {
+                    if (!m_dragged_event.active || m_dragged_event.all_day)
+                        return;
+                    args.AcceptedOperation(Windows::ApplicationModel::DataTransfer::DataPackageOperation::Move);
+                    args.DragUIOverride().Caption(Tr(L"Déplacer"));
+                    int64_t a = snap_nearest(args.GetPosition(slot_layer).Y - m_dragged_event.grab_y);
+                    int64_t length = (std::max<int64_t>)(m_dragged_event.end - m_dragged_event.start, 900);
+                    selection.Margin(ThicknessHelper::FromLengths(2, a * hour_height / 3600, 4, 0));
+                    selection.Height((std::max)(4.0, length * hour_height / 3600));
+                    selection.Visibility(Visibility::Visible);
+                });
+                slot_layer.DragLeave([this](IInspectable const&, DragEventArgs const&)
+                {
+                    UpdateSlotSelectionVisuals();
+                });
+                slot_layer.Drop([this, slot_layer, snap_nearest, day_start](IInspectable const&, DragEventArgs const& args)
+                {
+                    UpdateSlotSelectionVisuals();
+                    if (!m_dragged_event.active || m_dragged_event.all_day)
+                        return;
+                    int64_t a = snap_nearest(args.GetPosition(slot_layer).Y - m_dragged_event.grab_y);
+                    MoveCalendarEvent(m_dragged_event.calendar_uid, m_dragged_event.uid, day_start + a);
+                });
+                ToolTipService::SetToolTip(slot_layer, box_value(Tr(L"Cliquer ou glisser pour sélectionner une plage ; clic droit pour créer un événement")));
                 body.Children().Append(slot_layer);
             }
 
@@ -770,6 +828,7 @@ namespace winrt::EvolutionWin::implementation
             }
         }
 
+        UpdateSlotSelectionVisuals();
         scroll.Content(body);
         /* début de journée visible calé sur les heures de travail configurées */
         double work_start = ::EvolutionWin::Settings::Instance().GetNumber(L"calendar.work-start", 8.0);
