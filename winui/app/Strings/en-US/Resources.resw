@@ -8147,5 +8147,9 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>This calendar is read-only: the event cannot be moved.</value>
     <comment>Cet agenda est en lecture seule : l'événement ne peut pas être déplacé.</comment>
   </data>
+  <data name="T_5266A585" xml:space="preserve">
+    <value>First select a time range in the calendar where the event should be pasted.</value>
+    <comment>Sélectionnez d'abord une plage du calendrier où coller l'événement.</comment>
+  </data>
 </root>
 

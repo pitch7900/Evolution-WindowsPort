@@ -326,6 +326,7 @@ namespace winrt::EvolutionWin::implementation
         auto day_starts = DayStarts(start_unix, days);
         int64_t now = static_cast<int64_t>(std::time(nullptr));
         m_slot_visuals.clear();
+        m_event_visuals.clear();
 
         /* Configuration du second fuseau horaire dans la grille */
         bool second_tz_enabled = ::EvolutionWin::Settings::Instance().GetBoolean(L"calendar.second-timezone-enabled", false);
@@ -344,12 +345,12 @@ namespace winrt::EvolutionWin::implementation
                 grid.ColumnDefinitions().Append(ColumnDefinition{});
         };
 
-        auto open_on_tap = [this](UIElement const& element, JsonObject const& ev)
+        auto open_on_tap = [this](UIElement const& element, JsonObject const& ev, UIElement const& top_grip = nullptr, UIElement const& bottom_grip = nullptr)
         {
             hstring calendar_uid = ev.GetNamedString(L"calendar_uid", L"");
             hstring uid = ev.GetNamedString(L"uid", L"");
-            /* simple clic : sans effet (le clic ne crée pas de sélection) ; double clic : ouvre la fenêtre de l'événement */
-            element.Tapped([](IInspectable const&, Input::TappedRoutedEventArgs const& args) { args.Handled(true); });
+            /* simple clic : sélectionne l'événement ; double clic : ouvre la fenêtre de l'événement */
+            RegisterCalendarEvent(element, ev, top_grip, bottom_grip);
             element.DoubleTapped([this, calendar_uid, uid](IInspectable const&, Input::DoubleTappedRoutedEventArgs const& args)
             {
                 args.Handled(true);
@@ -576,6 +577,76 @@ namespace winrt::EvolutionWin::implementation
             }
         }
 
+        /* poignées d'étirement du haut et du bas d'un événement horaire (visibles quand il est sélectionné) :
+           on tire, le bloc suit au quart d'heure, et au relâchement l'heure de début ou de fin change */
+        auto make_event_grip = [this, body, HourHeight](Border const& block, JsonObject const& ev, bool top) -> UIElement
+        {
+            EvolutionWin::ResizeGrip grip;
+            grip.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+            grip.VerticalAlignment(top ? VerticalAlignment::Top : VerticalAlignment::Bottom);
+            grip.Height(8);
+            grip.Visibility(Visibility::Collapsed);
+
+            hstring calendar_uid = ev.GetNamedString(L"calendar_uid", L"");
+            hstring uid = ev.GetNamedString(L"uid", L"");
+            struct State { bool active{ false }; double y0{ 0 }; Thickness margin0{}; double height0{ 0 }; int64_t steps{ 0 }; };
+            auto state = std::make_shared<State>();
+            double quarter = HourHeight / 4.0;
+
+            grip.PointerPressed([state, grip, body, block](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+            {
+                auto point = args.GetCurrentPoint(body);
+                if (!point.Properties().IsLeftButtonPressed())
+                    return;
+                args.Handled(true);
+                state->active = true;
+                state->y0 = point.Position().Y;
+                state->margin0 = block.Margin();
+                state->height0 = block.Height();
+                state->steps = 0;
+                block.CanDrag(false);   /* le glisser d'étirement ne doit pas déclencher le glisser-déposer de l'événement */
+                grip.CapturePointer(args.Pointer());
+            });
+            grip.PointerMoved([state, body, block, top, quarter](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+            {
+                if (!state->active)
+                    return;
+                double dy = args.GetCurrentPoint(body).Position().Y - state->y0;
+                int64_t steps = static_cast<int64_t>(std::llround(dy / quarter));
+                /* durée minimale : un quart d'heure */
+                int64_t quarters_total = static_cast<int64_t>(std::llround((state->height0 + 2) / quarter));
+                int64_t limit = (std::max<int64_t>)(quarters_total - 1, 0);
+                steps = top ? (std::min)(steps, limit) : (std::max)(steps, -limit);
+                state->steps = steps;
+                if (top)
+                {
+                    block.Margin(ThicknessHelper::FromLengths(state->margin0.Left, state->margin0.Top + steps * quarter, state->margin0.Right, state->margin0.Bottom));
+                    block.Height((std::max)(18.0, state->height0 - steps * quarter));
+                }
+                else
+                {
+                    block.Height((std::max)(18.0, state->height0 + steps * quarter));
+                }
+            });
+            auto finish = [this, state, grip, block, top, calendar_uid, uid](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+            {
+                if (!state->active)
+                    return;
+                state->active = false;
+                grip.ReleasePointerCapture(args.Pointer());
+                block.CanDrag(true);
+                if (state->steps != 0)
+                    ResizeCalendarEvent(calendar_uid, uid, top ? state->steps * 900 : 0, top ? 0 : state->steps * 900);
+            };
+            grip.PointerReleased(finish);
+            grip.PointerCanceled([state, block](IInspectable const&, Input::PointerRoutedEventArgs const&)
+            {
+                state->active = false;
+                block.CanDrag(true);
+            });
+            return grip;
+        };
+
         for (int day = 0; day < days; day++)
         {
             /* séparateur des jours */
@@ -604,7 +675,20 @@ namespace winrt::EvolutionWin::implementation
                 selection.Opacity(0.55);
                 selection.Margin(ThicknessHelper::FromLengths(2, 0, 4, 0));
                 slot_layer.Children().Append(selection);
-                m_slot_visuals.push_back(SlotVisual{ selection, day_starts[day], day_starts[day + 1], HourHeight });
+
+                /* poignées des bords haut et bas de la plage : tirer étend ou réduit la plage au quart d'heure */
+                EvolutionWin::ResizeGrip slot_top_grip;
+                EvolutionWin::ResizeGrip slot_bottom_grip;
+                for (auto const& grip : { slot_top_grip, slot_bottom_grip })
+                {
+                    grip.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+                    grip.VerticalAlignment(VerticalAlignment::Top);
+                    grip.Height(8);
+                    grip.Margin(ThicknessHelper::FromLengths(2, 0, 4, 0));
+                    grip.Visibility(Visibility::Collapsed);
+                    slot_layer.Children().Append(grip);
+                }
+                m_slot_visuals.push_back(SlotVisual{ selection, day_starts[day], day_starts[day + 1], HourHeight, slot_top_grip, slot_bottom_grip });
 
                 struct Drag { bool active{ false }; double y0{ 0 }; };
                 auto drag = std::make_shared<Drag>();
@@ -624,6 +708,47 @@ namespace winrt::EvolutionWin::implementation
                     return (std::min<int64_t>)(static_cast<int64_t>(std::llround(minutes / 15.0)), 95) * 900;
                 };
 
+                /* étirement de la plage par un de ses bords */
+                struct EdgeDrag { bool active{ false }; };
+                auto edge_drag = std::make_shared<EdgeDrag>();
+                auto snap_edge = [hour_height](double y) -> int64_t
+                {
+                    double minutes = (std::max)(0.0, y) / hour_height * 60.0;
+                    return (std::min<int64_t>)(static_cast<int64_t>(std::llround(minutes / 15.0)), 96) * 900;
+                };
+                for (bool top : { true, false })
+                {
+                    auto grip = top ? slot_top_grip : slot_bottom_grip;
+                    grip.PointerPressed([edge_drag, grip, slot_layer](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+                    {
+                        if (!args.GetCurrentPoint(slot_layer).Properties().IsLeftButtonPressed())
+                            return;
+                        args.Handled(true);
+                        edge_drag->active = true;
+                        grip.CapturePointer(args.Pointer());
+                    });
+                    grip.PointerMoved([this, edge_drag, slot_layer, snap_edge, day_start, top](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+                    {
+                        if (!edge_drag->active || m_slot_end <= m_slot_start)
+                            return;
+                        int64_t t = day_start + snap_edge(args.GetCurrentPoint(slot_layer).Position().Y);
+                        if (top)
+                            m_slot_start = (std::min)(t, m_slot_end - 900);
+                        else
+                            m_slot_end = (std::max)(t, m_slot_start + 900);
+                        UpdateSlotSelectionVisuals();
+                    });
+                    grip.PointerReleased([edge_drag, grip](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+                    {
+                        edge_drag->active = false;
+                        grip.ReleasePointerCapture(args.Pointer());
+                    });
+                    grip.PointerCanceled([edge_drag](IInspectable const&, Input::PointerRoutedEventArgs const&)
+                    {
+                        edge_drag->active = false;
+                    });
+                }
+
                 slot_layer.PointerPressed([this, drag, slot_layer, selection, snap, hour_height](IInspectable const&, Input::PointerRoutedEventArgs const& args)
                 {
                     auto point = args.GetCurrentPoint(slot_layer);
@@ -632,9 +757,12 @@ namespace winrt::EvolutionWin::implementation
                     drag->active = true;
                     drag->y0 = point.Position().Y;
                     slot_layer.CapturePointer(args.Pointer());
-                    /* l'ancienne plage est abandonnée dès qu'on en commence une autre */
+                    /* l'ancienne plage (ou l'événement sélectionné) est abandonné dès qu'on en commence une autre */
                     m_slot_start = 0;
                     m_slot_end = 0;
+                    m_selected_event_key = L"";
+                    m_selected_event = nullptr;
+                    UpdateEventSelectionVisuals();
                     UpdateSlotSelectionVisuals();
                     int64_t from_s = snap(drag->y0, false);
                     selection.Margin(ThicknessHelper::FromLengths(2, from_s * hour_height / 3600, 4, 0));
@@ -802,12 +930,26 @@ namespace winrt::EvolutionWin::implementation
                     details.FontSize(11);
                     details.TextTrimming(TextTrimming::CharacterEllipsis);
                     content.Children().Append(details);
-                    block.Child(content);
+                    Grid shell;
+                    shell.Children().Append(content);
+                    UIElement top_grip{ nullptr };
+                    UIElement bottom_grip{ nullptr };
+                    if (event_start >= day_starts[day])
+                    {
+                        top_grip = make_event_grip(block, ev, true);
+                        shell.Children().Append(top_grip);
+                    }
+                    if (event_end <= day_starts[day + 1])
+                    {
+                        bottom_grip = make_event_grip(block, ev, false);
+                        shell.Children().Append(bottom_grip);
+                    }
+                    block.Child(shell);
                     ApplyShowAsTexture(block, ev, color);
 
                     ToolTipService::SetToolTip(block, box_value(ev.GetNamedString(L"summary", L"") + L"\n" + when +
                         (location.empty() ? hstring{} : L"\n" + location) + L"\n" + ev.GetNamedString(L"calendar_name", L"")));
-                    open_on_tap(block, ev);
+                    open_on_tap(block, ev, top_grip, bottom_grip);
                     group.Children().Append(block);
                 }
 
@@ -829,6 +971,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         UpdateSlotSelectionVisuals();
+        UpdateEventSelectionVisuals();
         scroll.Content(body);
         /* début de journée visible calé sur les heures de travail configurées */
         double work_start = ::EvolutionWin::Settings::Instance().GetNumber(L"calendar.work-start", 8.0);
@@ -851,6 +994,7 @@ namespace winrt::EvolutionWin::implementation
         host.Children().Clear();
         host.RowDefinitions().Clear();
         host.ColumnDefinitions().Clear();
+        m_event_visuals.clear();
 
         RowDefinition names_row;
         names_row.Height(GridLengthHelper::Auto());
@@ -970,7 +1114,7 @@ namespace winrt::EvolutionWin::implementation
                     ev.GetNamedString(L"calendar_name", L"")));
                 hstring calendar_uid = ev.GetNamedString(L"calendar_uid", L"");
                 hstring uid = ev.GetNamedString(L"uid", L"");
-                chip.Tapped([](IInspectable const&, Input::TappedRoutedEventArgs const& args) { args.Handled(true); });
+                RegisterCalendarEvent(chip, ev, nullptr, nullptr);
                 chip.DoubleTapped([this, calendar_uid, uid](IInspectable const&, Input::DoubleTappedRoutedEventArgs const& args)
                 {
                     args.Handled(true);

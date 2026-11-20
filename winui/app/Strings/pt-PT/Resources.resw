@@ -8147,5 +8147,9 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Este calendário é só de leitura: o evento não pode ser movido.</value>
     <comment>Cet agenda est en lecture seule : l'événement ne peut pas être déplacé.</comment>
   </data>
+  <data name="T_5266A585" xml:space="preserve">
+    <value>Selecione primeiro um intervalo do calendário onde colar o evento.</value>
+    <comment>Sélectionnez d'abord une plage du calendrier où coller l'événement.</comment>
+  </data>
 </root>
 

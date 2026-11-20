@@ -504,6 +504,7 @@ namespace winrt::EvolutionWin::implementation
                 RenderMonthGrid(filtered_events, m_grid_start, m_grid_month);
             else
                 RenderCalendarGrid(filtered_events, m_grid_start, m_grid_days);
+            UpdateEventSelectionVisuals();
             return;
         }
 
