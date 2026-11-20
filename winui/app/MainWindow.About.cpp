@@ -709,11 +709,53 @@ namespace winrt::EvolutionWin::implementation
                 co_return;
         }
 
-        std::wstring arguments = L"/i \"" + outcome->path + L"\"";
-        auto launched = reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr, L"open", L"msiexec.exe", arguments.c_str(), nullptr, SW_SHOWNORMAL));
+        /* ne coupe pas l'application au milieu d'un envoi ou d'une synchronisation : attend (au plus 30 s) que la
+           Boîte d'envoi et le journal hors ligne soient vidés et que le dossier courant ait fini de se synchroniser */
+        {
+            winrt::apartment_context ui_thread;
+            ShowStatus(Tr(L"Fin des envois et de la synchronisation avant la mise à jour…"), InfoBarSeverity::Informational);
+            for (int attempt = 0; attempt < 60 && m_core; ++attempt)
+            {
+                auto remaining = std::make_shared<int>(-1);   /* -1 : réponse du moteur pas encore reçue */
+                m_core->ListOfflineQueue([remaining](hstring const& json, hstring const& error)
+                {
+                    Windows::Data::Json::JsonObject data;
+                    if (!error.empty() || !Windows::Data::Json::JsonObject::TryParse(json, data))
+                    {
+                        *remaining = 0;   /* file illisible : ne bloque pas la mise à jour */
+                        return;
+                    }
+                    int waiting = 0;
+                    for (auto const& value : data.GetNamedArray(L"actions", Windows::Data::Json::JsonArray{}))
+                    {
+                        /* une action abandonnée après plusieurs échecs (status != 0) n'est plus rejouée */
+                        if (value.GetObject().GetNamedNumber(L"status", 0) == 0)
+                            ++waiting;
+                    }
+                    *remaining = waiting;
+                });
+                for (int tick = 0; tick < 20 && *remaining < 0; ++tick)
+                {
+                    co_await winrt::resume_after(std::chrono::milliseconds(50));
+                    co_await ui_thread;
+                }
+                if (*remaining <= 0 && !m_folder_syncing)
+                    break;
+                co_await winrt::resume_after(std::chrono::milliseconds(500));
+                co_await ui_thread;
+            }
+        }
+
+        /* /passive : barre de progression seule, sans question ; « runas » demande l'élévation (installation par machine) ;
+           LAUNCHAPP=1 relance EvolutionWin à la fin de l'installation (pour l'utilisateur courant) */
+        std::wstring arguments = L"/i \"" + outcome->path + L"\" /passive LAUNCHAPP=1";
+        auto launched = reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr, L"runas", L"msiexec.exe", arguments.c_str(), nullptr, SW_SHOWNORMAL));
         if (launched <= 32)
         {
-            ShowStatus(Tr(L"Impossible de lancer l'installeur."), InfoBarSeverity::Error);
+            /* élévation refusée (UAC) ou lancement impossible : l'application reste ouverte */
+            ShowStatus(launched == SE_ERR_ACCESSDENIED
+                ? Tr(L"Mise à jour annulée : l'élévation des droits a été refusée.")
+                : Tr(L"Impossible de lancer l'installeur."), InfoBarSeverity::Error);
             co_return;
         }
 

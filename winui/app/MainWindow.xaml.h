@@ -1088,6 +1088,8 @@ namespace winrt::EvolutionWin::implementation
         int m_list_footer_mode{ 0 };		///< 0 : masqué, 1 : fenêtre de synchronisation (M365), 2 : liste plafonnée
         int m_list_footer_total{ 0 };		///< nombre de messages du dossier en local (mode 2)
         unsigned m_list_max{ 0 };		///< taille de liste demandée pour le dossier affiché (0 : par défaut)
+        uint32_t m_shown_count{ 0 };		///< messages réellement affichés (après recherche et filtres rapides)
+        uint32_t m_folder_total{ 0 };		///< messages du dossier en local quand la liste est plafonnée (0 : liste complète ou inconnu)
         std::wstring m_list_max_key;		///< dossier auquel s'applique m_list_max
         uint64_t m_list_delta_request{ 0 };
         bool m_reader_loading_pending_nav{ false };

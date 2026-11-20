@@ -18,6 +18,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Modifié
 
+- **Compteur de messages de la barre d'état fiable, avec le nombre de messages sélectionnés.** Il comptait la liste chargée, sans tenir compte de la recherche ni des filtres rapides (« Non lus »…), et ne disait rien du plafond de la liste. Il indique maintenant ce que le panneau affiche vraiment : « 12 messages affichés sur 500 chargés » quand un filtre ou une recherche masque des messages, « 500 messages chargés sur 3 214 dans le dossier » quand la liste est plafonnée alors que tout est en local, et « … — N sélectionnés » dès que plusieurs messages sont sélectionnés (les en-têtes de groupe de dates ne comptent pas). Il se met à jour à chaque changement de filtre, de recherche ou de sélection.
+
 ## [1.3.2] — 2026-11-19
 
 ### Modifié

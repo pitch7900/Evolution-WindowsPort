@@ -477,19 +477,41 @@ namespace winrt::EvolutionWin::implementation
             return;
         }
 
-        uint32_t count = m_all_messages ? m_all_messages.Size() : 0;
-        if (count == 0)
+        /* « loaded » : messages chargés dans la liste ; « shown » : ceux qui passent la recherche et les
+           filtres rapides, donc ceux que le panneau affiche vraiment */
+        uint32_t loaded = m_all_messages ? m_all_messages.Size() : 0;
+        uint32_t shown = (std::min)(m_shown_count, loaded);
+        hstring text;
+
+        if (shown != loaded)
         {
-            FolderStatusText().Text(Tr(L"Aucun message"));
+            if (shown == 0)
+                text = Fmt(Tr(L"Aucun message affiché sur {0} chargés"), { to_hstring(loaded) });
+            else if (shown == 1)
+                text = Fmt(Tr(L"1 message affiché sur {0} chargés"), { to_hstring(loaded) });
+            else
+                text = Fmt(Tr(L"{0} messages affichés sur {1} chargés"), { to_hstring(shown), to_hstring(loaded) });
         }
-        else if (count == 1)
-        {
-            FolderStatusText().Text(Tr(L"1 message"));
-        }
+        else if (loaded == 0)
+            text = Tr(L"Aucun message");
+        else if (m_folder_total > loaded)
+            text = Fmt(Tr(L"{0} messages chargés sur {1} dans le dossier"), { to_hstring(loaded), to_hstring(m_folder_total) });
+        else if (loaded == 1)
+            text = Tr(L"1 message");
         else
+            text = Fmt(Tr(L"{0} messages"), { to_hstring(loaded) });
+
+        /* messages sélectionnés (les en-têtes de groupe de dates, sans étiquette, ne comptent pas) */
+        uint32_t selected = 0;
+        for (auto const& object : MessageList().SelectedItems())
         {
-            FolderStatusText().Text(Fmt(Tr(L"{0} messages"), { to_hstring(count) }));
+            if (auto item = object.try_as<Grid>(); item && !unbox_value_or<hstring>(item.Tag(), L"").empty())
+                ++selected;
         }
+        if (selected > 1)
+            text = Fmt(Tr(L"{0} — {1} sélectionnés"), { text, to_hstring(selected) });
+
+        FolderStatusText().Text(text);
     }
 
     /* Ajoute une notification dans l'historique de la barre d'état.
