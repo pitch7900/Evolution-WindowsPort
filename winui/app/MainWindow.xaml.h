@@ -132,6 +132,8 @@ namespace winrt::EvolutionWin::implementation
         void OnRefreshFolderClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnCalendarCopyAccelerator(Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender, Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
         void OnCalendarPasteAccelerator(Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender, Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
+        void OnContactsCopyAccelerator(Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender, Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
+        void OnContactsPasteAccelerator(Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender, Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
         void OnRefreshAccelerator(
             Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender,
             Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
@@ -829,6 +831,16 @@ namespace winrt::EvolutionWin::implementation
         hstring m_current_message_folder;    ///< dossier du message affiché
         /* contact sélectionné dans la vue Contacts */
         Windows::Data::Json::JsonObject m_selected_contact{ nullptr };
+
+        /* Copier / coller et glisser-déposer de contacts entre carnets d'adresses (MainWindow.ContactCopy.cpp) */
+        struct ContactRef { hstring book_uid; hstring uid; hstring name; };
+        std::vector<ContactRef> m_contact_clipboard;	/* contacts copiés */
+        std::vector<ContactRef> m_dragged_contacts;	/* contacts en cours de glisser (vide : aucun) */
+        std::vector<ContactRef> SelectedContactRefs();
+        void CopySelectedContacts();
+        fire_and_forget PasteContactsAsync(hstring target_book);
+        void TransferContacts(std::vector<ContactRef> contacts, hstring const& target_book, bool move, hstring const& rename_suffix);
+        void DecorateContactBookRow(Microsoft::UI::Xaml::Controls::Grid const& row, Windows::Data::Json::JsonObject const& source);
         /* folder tree nodes by NodeKey() */
         std::map<std::wstring, Microsoft::UI::Xaml::Controls::TreeViewNode> m_nodes;
         /* Favoris : nœud « Favoris » en tête de l'arborescence et ses copies de dossiers (hors m_nodes : pas de double compte) */

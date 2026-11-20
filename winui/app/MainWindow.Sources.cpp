@@ -54,7 +54,8 @@ namespace winrt::EvolutionWin::implementation
         std::function<void(hstring const&, bool)> on_toggle, std::function<void(hstring const&)> on_activate,
         std::function<void(StackPanel const&, JsonObject const&)> group_footer = nullptr,
         wchar_t const* collapse_key = L"sources.collapsed",
-        std::function<void(std::vector<hstring> const&, bool)> on_toggle_group = nullptr)
+        std::function<void(std::vector<hstring> const&, bool)> on_toggle_group = nullptr,
+        std::function<void(Grid const&, JsonObject const&)> decorate_row = nullptr)
     {
         auto children = panel.Children();
         children.Clear();
@@ -291,6 +292,8 @@ namespace winrt::EvolutionWin::implementation
                 row.Children().Append(label);
 
                 group_items.Children().Append(row);
+                if (decorate_row)
+                    decorate_row(row, source);
             }
 
             /* pied de groupe (ex. « Annuaire de l'organisation » du compte) */
@@ -645,7 +648,8 @@ namespace winrt::EvolutionWin::implementation
                     SetUidVisible(m_contact_books, L"contacts.visible", uid, shown);
                 RebuildContactBooksPanel();
                 LoadContacts(ContactSearchBox().Text());
-            });
+            },
+            [this](Grid const& row, JsonObject const& source) { DecorateContactBookRow(row, source); });
 
         /* le bouton global ne sert que s'il n'y a aucun compte avec annuaire (message explicatif) */
         GalDirectoryButton().Visibility(directory_accounts > 0 ? Visibility::Collapsed : Visibility::Visible);

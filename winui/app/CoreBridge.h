@@ -1098,6 +1098,14 @@ namespace EvolutionWin
                 &CoreBridge::OnResult, NewCall(std::move(handler)));
         }
 
+        /* Copie ou déplace des contacts d'un carnet vers un autre :
+         * JSON {"source_uid", "target_uid", "uids": [...], "rename_suffix", "move"}. */
+        void CopyContacts(winrt::hstring const& request_json, CoreHandler handler)
+        {
+            evo_core_copy_contacts(m_core, winrt::to_string(request_json).c_str(),
+                &CoreBridge::OnResult, NewCall(std::move(handler)));
+        }
+
         /* Remplace les catégories d'un contact (champ vCard CATEGORIES).
          * Paramètres :
          *   book_uid        : identifiant du carnet d'adresses

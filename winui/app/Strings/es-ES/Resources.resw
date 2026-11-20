@@ -8155,5 +8155,49 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Ocultar este calendario</value>
     <comment>Masquer ce calendrier</comment>
   </data>
+  <data name="T_FF14A831" xml:space="preserve">
+    <value>{0} contacto(s) copiado(s): clic derecho en una libreta de direcciones y luego «Pegar».</value>
+    <comment>{0} contact(s) copié(s) : clic droit sur un carnet d'adresses, puis « Coller ».</comment>
+  </data>
+  <data name="T_37AE8658" xml:space="preserve">
+    <value>(copia)</value>
+    <comment>(copier)</comment>
+  </data>
+  <data name="T_B2ED2120" xml:space="preserve">
+    <value>Pegar en la misma libreta de direcciones</value>
+    <comment>Coller dans le même carnet d'adresses</comment>
+  </data>
+  <data name="T_9533B0FD" xml:space="preserve">
+    <value>Los contactos pegados proceden de esta libreta. ¿Añadir «{0}» al nombre de las copias para distinguirlas?</value>
+    <comment>Les contacts collés viennent de ce carnet. Ajouter « {0} » au nom des copies pour les distinguer ?</comment>
+  </data>
+  <data name="T_5D5D4F2F" xml:space="preserve">
+    <value>Renombrar las copias</value>
+    <comment>Renommer les copies</comment>
+  </data>
+  <data name="T_C2836B25" xml:space="preserve">
+    <value>Mantener los mismos nombres</value>
+    <comment>Garder les mêmes noms</comment>
+  </data>
+  <data name="T_7F78AB9D" xml:space="preserve">
+    <value>Contactos: {0} copiados, {1} con error ({2}).</value>
+    <comment>Contacts : {0} copié(s), {1} en échec ({2}).</comment>
+  </data>
+  <data name="T_A790DED2" xml:space="preserve">
+    <value>{0} contacto(s) movido(s) a «{1}».</value>
+    <comment>{0} contact(s) déplacé(s) vers « {1} ».</comment>
+  </data>
+  <data name="T_C2365BFD" xml:space="preserve">
+    <value>{0} contacto(s) pegado(s) en «{1}».</value>
+    <comment>{0} contact(s) collé(s) dans « {1} ».</comment>
+  </data>
+  <data name="T_FBA56A1B" xml:space="preserve">
+    <value>Mover a «{0}»</value>
+    <comment>Déplacer vers « {0} »</comment>
+  </data>
+  <data name="T_E306FE61" xml:space="preserve">
+    <value>Copiar a «{0}»</value>
+    <comment>Copier vers « {0} »</comment>
+  </data>
 </root>
 

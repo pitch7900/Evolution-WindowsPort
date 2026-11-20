@@ -135,15 +135,31 @@ namespace winrt::EvolutionWin::implementation
                 return;
             }
 
+            /* contacts glissés : toute la sélection si la ligne glissée en fait partie, sinon cette ligne seule ;
+               déposés sur un carnet d'adresses du volet de gauche, ils sont copiés (Maj : déplacés) */
+            m_dragged_contacts.clear();
+            auto selected = SelectedContactRefs();
+            bool in_selection = false;
+            for (auto const& entry : selected)
+                in_selection = in_selection || (entry.book_uid == book_uid && entry.uid == uid);
+            if (in_selection && selected.size() > 1)
+                m_dragged_contacts = selected;
+            else
+                m_dragged_contacts.push_back({ book_uid, uid, full_name });
+
             std::wstring path = GetDragDropTempDir() +
-                std::wstring{ SanitizeFileName(full_name, Tr(L"Contact")) } + L".vcf";
+                std::wstring{ SanitizeFileName(m_dragged_contacts.size() > 1 ? Tr(L"Contacts") : full_name, Tr(L"Contact")) } + L".vcf";
             auto deferral = args.GetDeferral();
             auto data = args.Data();
-            data.RequestedOperation(Windows::ApplicationModel::DataTransfer::DataPackageOperation::Copy);
+            data.RequestedOperation(Windows::ApplicationModel::DataTransfer::DataPackageOperation::Copy |
+                                    Windows::ApplicationModel::DataTransfer::DataPackageOperation::Move);
 
+            /* fichier .vcf pour l'extérieur : les contacts glissés du même carnet que la ligne saisie */
             JsonObject request;
             JsonArray uids;
-            uids.Append(JsonValue::CreateStringValue(uid));
+            for (auto const& entry : m_dragged_contacts)
+                if (entry.book_uid == book_uid)
+                    uids.Append(JsonValue::CreateStringValue(entry.uid));
             request.SetNamedValue(L"book_uid", JsonValue::CreateStringValue(book_uid));
             request.SetNamedValue(L"path", JsonValue::CreateStringValue(hstring{ path }));
             request.SetNamedValue(L"per_contact", JsonValue::CreateBooleanValue(false));
@@ -156,5 +172,6 @@ namespace winrt::EvolutionWin::implementation
                 AttachDragFile(deferral, data, path, error.empty());
             });
         });
+        element.DropCompleted([this](UIElement const&, DropCompletedEventArgs const&) { m_dragged_contacts.clear(); });
     }
 }
