@@ -8199,5 +8199,9 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Copiar para «{0}»</value>
     <comment>Copier vers « {0} »</comment>
   </data>
+  <data name="T_0B6AB6DE" xml:space="preserve">
+    <value>Livro de endereços do contacto</value>
+    <comment>Carnet d'adresses du contact</comment>
+  </data>
 </root>
 

@@ -237,6 +237,22 @@ namespace winrt::EvolutionWin::implementation
         ContactEmailText().Text(contact.GetNamedString(L"email", L"—"));
         ContactPhoneText().Text(contact.GetNamedString(L"phone", L"—"));
         ContactOrgText().Text(contact.GetNamedString(L"org", L"—"));
+
+        /* carnet d'adresses du contact (compte › carnet) */
+        {
+            hstring book_uid = contact.GetNamedString(L"book_uid", L"");
+            std::wstring book_text;
+            for (auto const& value : m_contact_books ? m_contact_books : JsonArray{})
+            {
+                auto book = value.GetObject();
+                if (book_uid.empty() || book.GetNamedString(L"uid", L"") != book_uid)
+                    continue;
+                hstring account = book.GetNamedString(L"account", L"");
+                book_text = (account.empty() ? L"" : std::wstring{ account } + L" › ") + std::wstring{ book.GetNamedString(L"name", book_uid) };
+            }
+            ContactBookText().Text(hstring{ book_text });
+            ContactBookRow().Visibility(book_text.empty() ? Visibility::Collapsed : Visibility::Visible);
+        }
         ContactNotesText().Text(contact.GetNamedString(L"note", L""));
 
         hstring address = contact.GetNamedString(L"address", L"");
