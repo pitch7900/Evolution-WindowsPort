@@ -725,13 +725,6 @@ namespace winrt::EvolutionWin::implementation
                     int64_t quarters = static_cast<int64_t>(up ? std::ceil(minutes / 15.0) : std::floor(minutes / 15.0));
                     return (std::min<int64_t>)(quarters, 96) * 900;
                 };
-                /* quart d'heure le plus proche (déplacement d'un événement) */
-                auto snap_nearest = [hour_height](double y) -> int64_t
-                {
-                    double minutes = (std::max)(0.0, y) / hour_height * 60.0;
-                    return (std::min<int64_t>)(static_cast<int64_t>(std::llround(minutes / 15.0)), 95) * 900;
-                };
-
                 /* étirement de la plage par un de ses bords */
                 struct EdgeDrag { bool active{ false }; };
                 auto edge_drag = std::make_shared<EdgeDrag>();
@@ -852,32 +845,6 @@ namespace winrt::EvolutionWin::implementation
                     ShowCalendarSlotMenu(slot_layer, position);
                 });
 
-                /* déplacement d'un événement glissé depuis la grille : aperçu au quart d'heure, puis nouvelle heure */
-                slot_layer.AllowDrop(true);
-                slot_layer.DragOver([this, slot_layer, selection, snap_nearest, hour_height](IInspectable const&, DragEventArgs const& args)
-                {
-                    if (!m_dragged_event.active || m_dragged_event.all_day)
-                        return;
-                    args.AcceptedOperation(Windows::ApplicationModel::DataTransfer::DataPackageOperation::Move);
-                    args.DragUIOverride().Caption(Tr(L"Déplacer"));
-                    int64_t a = snap_nearest(args.GetPosition(slot_layer).Y - m_dragged_event.grab_y);
-                    int64_t length = (std::max<int64_t>)(m_dragged_event.end - m_dragged_event.start, 900);
-                    selection.Margin(ThicknessHelper::FromLengths(2, a * hour_height / 3600, 4, 0));
-                    selection.Height((std::max)(4.0, length * hour_height / 3600));
-                    selection.Visibility(Visibility::Visible);
-                });
-                slot_layer.DragLeave([this](IInspectable const&, DragEventArgs const&)
-                {
-                    UpdateSlotSelectionVisuals();
-                });
-                slot_layer.Drop([this, slot_layer, snap_nearest, day_start](IInspectable const&, DragEventArgs const& args)
-                {
-                    UpdateSlotSelectionVisuals();
-                    if (!m_dragged_event.active || m_dragged_event.all_day)
-                        return;
-                    int64_t a = snap_nearest(args.GetPosition(slot_layer).Y - m_dragged_event.grab_y);
-                    MoveCalendarEvent(m_dragged_event.calendar_uid, m_dragged_event.uid, day_start + a);
-                });
                 ToolTipService::SetToolTip(slot_layer, box_value(Tr(L"Cliquer ou glisser pour sélectionner une plage ; clic droit pour créer un événement")));
                 body.Children().Append(slot_layer);
             }
@@ -992,6 +959,66 @@ namespace winrt::EvolutionWin::implementation
                 Grid::SetColumn(now_line, day + 1);
                 body.Children().Append(now_line);
             }
+        }
+
+        /* déplacement d'un événement glissé depuis la grille : la cible est toute la grille des jours, y compris au-dessus
+           d'autres événements (sinon le curseur « interdit » apparaît dès qu'on survole un voisin) ; un aperçu au quart
+           d'heure suit la souris, puis l'événement prend la nouvelle heure */
+        {
+            Border preview;
+            preview.VerticalAlignment(VerticalAlignment::Top);
+            preview.Visibility(Visibility::Collapsed);
+            preview.IsHitTestVisible(false);
+            preview.CornerRadius(CornerRadiusHelper::FromUniformRadius(4));
+            preview.Background(ThemeBrush(L"AccentFillColorSecondaryBrush"));
+            preview.BorderBrush(ThemeBrush(L"AccentFillColorDefaultBrush"));
+            preview.BorderThickness(ThicknessHelper::FromUniformLength(1));
+            preview.Opacity(0.6);
+            preview.Margin(ThicknessHelper::FromLengths(2, 0, 4, 0));
+            Canvas::SetZIndex(preview, 100);
+            body.Children().Append(preview);
+
+            /* jour et heure de début visés par la souris (faux hors de la grille des jours ou sans événement glissé) */
+            auto locate = [this, body, days, gutter_width, HourHeight, day_starts](DragEventArgs const& args, int& day, int64_t& start) -> bool
+            {
+                Point point = args.GetPosition(body);
+                double width = body.ActualWidth() - gutter_width;
+                if (!m_dragged_event.active || m_dragged_event.all_day || width <= 0 || point.X < gutter_width)
+                    return false;
+                day = (std::max)(0, (std::min)(days - 1, static_cast<int>((point.X - gutter_width) / (width / days))));
+                double minutes = (std::max)(0.0, point.Y - m_dragged_event.grab_y) / HourHeight * 60.0;
+                int64_t quarters = (std::min<int64_t>)(static_cast<int64_t>(std::llround(minutes / 15.0)), 95);
+                start = day_starts[day] + quarters * 900;
+                return true;
+            };
+
+            body.AllowDrop(true);
+            body.DragOver([this, locate, preview, day_starts, HourHeight](IInspectable const&, DragEventArgs const& args)
+            {
+                int day = 0;
+                int64_t start = 0;
+                if (!locate(args, day, start))
+                    return;
+                args.AcceptedOperation(Windows::ApplicationModel::DataTransfer::DataPackageOperation::Move);
+                args.DragUIOverride().Caption(Tr(L"Déplacer"));
+                int64_t length = (std::max<int64_t>)(m_dragged_event.end - m_dragged_event.start, 900);
+                Grid::SetColumn(preview, day + 1);
+                preview.Margin(ThicknessHelper::FromLengths(2, (start - day_starts[day]) * HourHeight / 3600, 4, 0));
+                preview.Height((std::max)(4.0, length * HourHeight / 3600));
+                preview.Visibility(Visibility::Visible);
+            });
+            body.DragLeave([preview](IInspectable const&, DragEventArgs const&)
+            {
+                preview.Visibility(Visibility::Collapsed);
+            });
+            body.Drop([this, locate, preview](IInspectable const&, DragEventArgs const& args)
+            {
+                preview.Visibility(Visibility::Collapsed);
+                int day = 0;
+                int64_t start = 0;
+                if (locate(args, day, start))
+                    MoveCalendarEvent(m_dragged_event.calendar_uid, m_dragged_event.uid, start);
+            });
         }
 
         UpdateSlotSelectionVisuals();
