@@ -8151,5 +8151,9 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Sélectionnez d'abord une plage du calendrier où coller l'événement.</value>
     <comment>Sélectionnez d'abord une plage du calendrier où coller l'événement.</comment>
   </data>
+  <data name="T_D62A7806" xml:space="preserve">
+    <value>Masquer ce calendrier</value>
+    <comment>Masquer ce calendrier</comment>
+  </data>
 </root>
 

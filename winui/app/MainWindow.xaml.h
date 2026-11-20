@@ -929,17 +929,20 @@ namespace winrt::EvolutionWin::implementation
         int64_t m_selected_day_start{ 0 };	/* jour de référence (0 : aujourd'hui) */
         int64_t m_new_event_start{ 0 };	/* créneau sélectionné dans la grille (nouvel événement), 0 : aucun */
         int64_t m_new_event_end{ 0 };
-        void BeginEventFromSelection(int64_t start_unix, int64_t end_unix);
+        void BeginEventFromSelection(int64_t start_unix, int64_t end_unix, hstring const& calendar = L"");
         bool m_new_event_all_day{ false };	/* le prochain nouvel événement est une journée entière */
 
         /* Sélection d'une plage dans la grille (reste affichée tant qu'on n'en choisit pas une autre ;
            les créations passent par le menu du clic droit, comme Outlook) */
         struct SlotVisual { Microsoft::UI::Xaml::Controls::Border border{ nullptr }; int64_t day_start{ 0 }; int64_t day_end{ 0 }; double hour_height{ 0 };
-                             Microsoft::UI::Xaml::UIElement top_grip{ nullptr }; Microsoft::UI::Xaml::UIElement bottom_grip{ nullptr }; };
+                             Microsoft::UI::Xaml::UIElement top_grip{ nullptr }; Microsoft::UI::Xaml::UIElement bottom_grip{ nullptr };
+                             hstring calendar; /* panneau (calendrier) de la colonne, vide en mode superposé */ };
         std::vector<SlotVisual> m_slot_visuals;	/* un rectangle de sélection par jour affiché */
         int64_t m_slot_start{ 0 };	/* plage sélectionnée (secondes Unix), 0 : aucune */
         int64_t m_slot_end{ 0 };
-        void SelectCalendarSlot(int64_t start_unix, int64_t end_unix);
+        hstring m_slot_calendar;	/* panneau (calendrier) de la plage sélectionnée, vide en mode superposé */
+        hstring m_new_event_calendar;	/* calendrier du panneau où le prochain nouvel événement est créé */
+        void SelectCalendarSlot(int64_t start_unix, int64_t end_unix, hstring const& calendar = L"");
         void UpdateSlotSelectionVisuals();
         void ShowCalendarSlotMenu(Microsoft::UI::Xaml::UIElement const& anchor, Windows::Foundation::Point position);
 
@@ -960,7 +963,7 @@ namespace winrt::EvolutionWin::implementation
         struct DraggedEvent { bool active{ false }; hstring calendar_uid; hstring uid; double grab_y{ 0 }; int64_t start{ 0 }; int64_t end{ 0 }; bool all_day{ false }; };
         DraggedEvent m_dragged_event;	/* événement en cours de glisser depuis la grille */
         void CopyCalendarEvent(Windows::Data::Json::JsonObject const& event);
-        void PasteCalendarEvent(int64_t start_unix);
+        void PasteCalendarEvent(int64_t start_unix, hstring const& calendar = L"");
         void MoveCalendarEvent(hstring const& calendar_uid, hstring const& uid, int64_t new_start);
         void ResizeCalendarEvent(hstring const& calendar_uid, hstring const& uid, int64_t start_delta, int64_t end_delta);
         void ChangeCalendarEventTimes(hstring const& calendar_uid, hstring const& uid, int64_t new_start, int64_t start_delta, int64_t end_delta);
@@ -993,6 +996,7 @@ namespace winrt::EvolutionWin::implementation
         hstring ActiveBookUid();
         void RebuildCalendarSourcesPanel();
         std::vector<hstring> VisibleCalendarUids();
+        void HideCalendar(hstring const& uid);
         hstring ActiveCalendarUid();
         void ShiftCalendarPeriod(int direction);
         /* vue Tâches : listes de tâches [{"uid", "name", "kind"}], toutes les

@@ -845,10 +845,12 @@ namespace winrt::EvolutionWin::implementation
      * @param start_unix Début du créneau (secondes Unix).
      * @param end_unix Fin du créneau (secondes Unix).
      */
-    void MainWindow::BeginEventFromSelection(int64_t start_unix, int64_t end_unix)
+    void MainWindow::BeginEventFromSelection(int64_t start_unix, int64_t end_unix, hstring const& calendar)
     {
         m_new_event_start = start_unix;
         m_new_event_end = end_unix;
+        /* panneau cliqué (côte à côte) : le nouvel événement va dans ce calendrier (pas dans celui d'une personne) */
+        m_new_event_calendar = ::EvolutionWin::People::IsPersonUid(std::wstring_view{ calendar }) ? hstring{} : calendar;
         ShowEventDialogAsync(nullptr);
     }
 
@@ -922,6 +924,10 @@ namespace winrt::EvolutionWin::implementation
         bool all_day = existing ? event.GetNamedBoolean(L"all_day", false) : m_new_event_all_day;
         if (!existing)
             m_new_event_all_day = false;
+        /* calendrier proposé pour un nouvel événement : celui du panneau cliqué, sinon le calendrier actif */
+        hstring preferred_calendar = m_new_event_calendar.empty() ? ActiveCalendarUid() : m_new_event_calendar;
+        if (!existing)
+            m_new_event_calendar = L"";
 
         Window window;
         hstring window_title = existing ? (readonly ? Tr(L"Événement (lecture seule)") : Tr(L"Événement")) : (is_focus ? Tr(L"Temps individuel (Focus)") : Tr(L"Nouvel événement"));
@@ -977,7 +983,7 @@ namespace winrt::EvolutionWin::implementation
         std::vector<hstring> calendar_uids;
         if (!existing && !readonly)
         {
-            hstring active_uid = ActiveCalendarUid();
+            hstring active_uid = preferred_calendar;
             int selected = -1, default_index = -1;
             for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
             {
@@ -1979,7 +1985,7 @@ namespace winrt::EvolutionWin::implementation
             return true;
         }
 
-        hstring chosen_calendar = ActiveCalendarUid();
+        hstring chosen_calendar = preferred_calendar;
         if (calendar_combo.SelectedIndex() >= 0 && static_cast<size_t>(calendar_combo.SelectedIndex()) < calendar_uids.size())
             chosen_calendar = calendar_uids[calendar_combo.SelectedIndex()];
         if (!chosen_calendar.empty())

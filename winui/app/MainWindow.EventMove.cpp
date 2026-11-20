@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
 #include "MainWindow.Helpers.h"
+#include "PeopleCalendars.h"
 
 #include <ctime>
 #include <winrt/Microsoft.UI.Xaml.Input.h>
@@ -64,10 +65,11 @@ namespace winrt::EvolutionWin::implementation
      * @param start_unix Début de la plage (secondes Unix).
      * @param end_unix Fin de la plage (secondes Unix).
      */
-    void MainWindow::SelectCalendarSlot(int64_t start_unix, int64_t end_unix)
+    void MainWindow::SelectCalendarSlot(int64_t start_unix, int64_t end_unix, hstring const& calendar)
     {
         m_slot_start = start_unix;
         m_slot_end = end_unix;
+        m_slot_calendar = calendar;
         m_selected_event_key = L"";
         m_selected_event = nullptr;
         UpdateEventSelectionVisuals();
@@ -82,7 +84,7 @@ namespace winrt::EvolutionWin::implementation
         bool has_selection = m_slot_start > 0 && m_slot_end > m_slot_start;
         for (auto const& visual : m_slot_visuals)
         {
-            if (!has_selection || m_slot_end <= visual.day_start || m_slot_start >= visual.day_end)
+            if (!has_selection || visual.calendar != m_slot_calendar || m_slot_end <= visual.day_start || m_slot_start >= visual.day_end)
             {
                 visual.border.Visibility(Visibility::Collapsed);
                 if (visual.top_grip)
@@ -127,6 +129,7 @@ namespace winrt::EvolutionWin::implementation
         MenuFlyout flyout;
         int64_t start = m_slot_start;
         int64_t end = m_slot_end;
+        hstring pane = m_slot_calendar;   /* calendrier du panneau cliqué (vide : mode superposé) */
 
         auto add_item = [&flyout](hstring const& text, wchar_t const* glyph, bool enabled, auto&& handler)
         {
@@ -143,9 +146,9 @@ namespace winrt::EvolutionWin::implementation
             flyout.Items().Append(item);
         };
 
-        add_item(Tr(L"Nouveau rendez-vous"), L"\xE787", true, [this, start, end]() { BeginEventFromSelection(start, end); });
+        add_item(Tr(L"Nouveau rendez-vous"), L"\xE787", true, [this, start, end, pane]() { BeginEventFromSelection(start, end, pane); });
 
-        add_item(Tr(L"Nouvel événement d'une journée entière"), nullptr, true, [this, start]()
+        add_item(Tr(L"Nouvel événement d'une journée entière"), nullptr, true, [this, start, pane]()
         {
             time_t raw = static_cast<time_t>(start);
             struct tm local{};
@@ -156,7 +159,7 @@ namespace winrt::EvolutionWin::implementation
             local.tm_isdst = -1;
             int64_t midnight = static_cast<int64_t>(mktime(&local));
             m_new_event_all_day = true;
-            BeginEventFromSelection(midnight, midnight + 86400);
+            BeginEventFromSelection(midnight, midnight + 86400, pane);
         });
 
         if (!TeamsCalendarUid().empty())
@@ -170,7 +173,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         flyout.Items().Append(MenuFlyoutSeparator{});
-        add_item(Tr(L"Coller"), L"\xE77F", !m_event_clipboard_uid.empty(), [this, start]() { PasteCalendarEvent(start); });
+        add_item(Tr(L"Coller"), L"\xE77F", !m_event_clipboard_uid.empty(), [this, start, pane]() { PasteCalendarEvent(start, pane); });
 
         flyout.Items().Append(MenuFlyoutSeparator{});
         add_item(Tr(L"Aujourd'hui"), L"\xE787", true, [this]() { OnRibbonTodayClick(nullptr, nullptr); });
@@ -197,12 +200,12 @@ namespace winrt::EvolutionWin::implementation
      *        l'heure donnée. Les participants ne sont pas recopiés (aucune invitation n'est envoyée).
      * @param start_unix Début du nouvel événement (secondes Unix).
      */
-    void MainWindow::PasteCalendarEvent(int64_t start_unix)
+    void MainWindow::PasteCalendarEvent(int64_t start_unix, hstring const& calendar_hint)
     {
         if (m_event_clipboard_uid.empty() || !m_core)
             return;
 
-        m_core->GetEvent(m_event_clipboard_calendar, m_event_clipboard_uid, [this, start_unix](hstring const& json, hstring const& error)
+        m_core->GetEvent(m_event_clipboard_calendar, m_event_clipboard_uid, [this, start_unix, calendar_hint](hstring const& json, hstring const& error)
         {
             JsonObject source;
             if (!error.empty() || !JsonObject::TryParse(json, source))
@@ -240,8 +243,13 @@ namespace winrt::EvolutionWin::implementation
             payload.SetNamedValue(L"start", JsonValue::CreateNumberValue(static_cast<double>(new_start)));
             payload.SetNamedValue(L"end", JsonValue::CreateNumberValue(static_cast<double>(new_start + duration)));
 
-            /* agenda d'origine, sauf s'il est en lecture seule : agenda actif */
-            hstring calendar = source.GetNamedBoolean(L"readonly", false) ? ActiveCalendarUid() : m_event_clipboard_calendar;
+            /* calendrier du panneau où l'on colle (côte à côte), sinon agenda d'origine, sauf s'il est en lecture seule :
+               agenda actif ; un calendrier de personne (lecture seule) n'est jamais une destination */
+            hstring calendar = m_event_clipboard_calendar;
+            if (!calendar_hint.empty() && !::EvolutionWin::People::IsPersonUid(std::wstring_view{ calendar_hint }))
+                calendar = calendar_hint;
+            else if (source.GetNamedBoolean(L"readonly", false))
+                calendar = ActiveCalendarUid();
             if (!calendar.empty())
                 payload.SetNamedValue(L"calendar_uid", JsonValue::CreateStringValue(calendar));
 
@@ -469,7 +477,7 @@ namespace winrt::EvolutionWin::implementation
             return;
         args.Handled(true);
         if (m_slot_end > m_slot_start)
-            PasteCalendarEvent(m_slot_start);
+            PasteCalendarEvent(m_slot_start, m_slot_calendar);
         else
             ShowStatus(Tr(L"Sélectionnez d'abord une plage du calendrier où coller l'événement."), InfoBarSeverity::Informational);
     }

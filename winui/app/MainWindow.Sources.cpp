@@ -519,6 +519,14 @@ namespace winrt::EvolutionWin::implementation
         ShowAddCalendarDialogAsync();
     }
 
+    /* Décoche un calendrier (croix du titre d'un panneau « côte à côte »), puis actualise le volet et la grille. */
+    void MainWindow::HideCalendar(hstring const& uid)
+    {
+        SetUidVisible(m_calendar_sources, L"calendar.visible", uid, false);
+        RebuildCalendarSourcesPanel();
+        LoadEvents();
+    }
+
     hstring MainWindow::ActiveCalendarUid()
     {
         return ActiveUid(m_calendar_sources, L"calendar.active");
