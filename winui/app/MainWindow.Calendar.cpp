@@ -986,7 +986,8 @@ namespace winrt::EvolutionWin::implementation
                 if (!m_dragged_event.active || m_dragged_event.all_day || width <= 0 || point.X < gutter_width)
                     return false;
                 day = (std::max)(0, (std::min)(days - 1, static_cast<int>((point.X - gutter_width) / (width / days))));
-                double minutes = (std::max)(0.0, point.Y - m_dragged_event.grab_y) / HourHeight * 60.0;
+                /* le début de l'événement se place sous le curseur, quel que soit l'endroit du bloc où on l'a saisi */
+                double minutes = (std::max)(0.0, point.Y) / HourHeight * 60.0;
                 int64_t quarters = (std::min<int64_t>)(static_cast<int64_t>(std::llround(minutes / 15.0)), 95);
                 start = day_starts[day] + quarters * 900;
                 return true;
