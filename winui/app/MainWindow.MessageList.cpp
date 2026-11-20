@@ -120,6 +120,7 @@ namespace winrt::EvolutionWin::implementation
             m_unread_view_kept_uids.clear();
             MessageList().Items().Clear();
             m_message_states.clear();
+            m_folder_total = 0;
             ListProgress().IsActive(true);
         }
         evo_core_trace("interface : demande de la liste des messages");
@@ -414,7 +415,10 @@ namespace winrt::EvolutionWin::implementation
         hstring folder = m_folder;
 
         if (account.empty() || folder.empty() || IsUnifiedView() || !m_core)
+        {
+            m_folder_total = 0;
             return;
+        }
 
         m_core->GetFolderSyncInfo(account, folder, [this, account, folder](hstring const& json, hstring const& error)
         {
@@ -427,12 +431,18 @@ namespace winrt::EvolutionWin::implementation
             unsigned effective = m_list_max > 0 ? m_list_max : static_cast<unsigned>(info.GetNamedNumber(L"default_max", 500));
             unsigned count = static_cast<unsigned>(info.GetNamedNumber(L"count", 0));
 
+            /* total du dossier connu seulement quand la liste est plafonnée alors que tout est en local */
+            m_folder_total = 0;
             if (window_truncated)
                 UpdateListFooter(1, static_cast<int>(info.GetNamedNumber(L"limit", 0)), static_cast<int>(count));
             else if (shown > 0 && shown >= effective && count > shown)
+            {
+                m_folder_total = count;
                 UpdateListFooter(2, static_cast<int>(shown), static_cast<int>(count));
+            }
             else
                 UpdateListFooter(0, 0, 0);
+            UpdateFolderStatusText();
         });
     }
 
@@ -495,7 +505,7 @@ namespace winrt::EvolutionWin::implementation
             return;
         }
 
-        /* vue unifiée : rechargement habituel, qui garde la sélection */
+        /* vue unifiée : rechargement qui garde la sélection et n'applique que la différence */
         if (IsUnifiedView())
         {
             SetFolderLoading(false);
@@ -644,11 +654,12 @@ namespace winrt::EvolutionWin::implementation
             MessageList().Items().Clear();
             m_message_states.clear();
             m_message_locations.clear();
+            m_folder_total = 0;
             ListProgress().IsActive(true);
         }
 
         RequestUnifiedMessages(role,
-            [this, account, role, selected, scroll_offset](hstring const& json, hstring const& error)
+            [this, account, role, selected, scroll_offset, keep_selection](hstring const& json, hstring const& error)
         {
             /* une autre vue a été choisie entre-temps */
             if (account != m_account || role != m_folder)
@@ -661,6 +672,18 @@ namespace winrt::EvolutionWin::implementation
                 ShowStatus(Tr(L"Vue unifiée : ", L"Unified view: ") + error, InfoBarSeverity::Error);
                 RevealMainWindow(L"erreur de la vue unifiée");
                 return;
+            }
+
+            /* simple rechargement (relève en fond d'un compte) : seule la différence est appliquée,
+               sinon la liste entière serait reconstruite à chaque événement et clignoterait */
+            if (keep_selection && m_all_messages)
+            {
+                JsonArray fresh{ nullptr };
+                if (JsonArray::TryParse(json, fresh))
+                {
+                    ApplyMessageDelta(fresh);
+                    return;
+                }
             }
 
             m_all_messages = JsonArray::Parse(json);
@@ -774,6 +797,7 @@ namespace winrt::EvolutionWin::implementation
             if (MatchesQuickFilters(message))
                 shown.push_back(message);
         }
+        m_shown_count = static_cast<uint32_t>(shown.size());
         SortMessages(shown);
 
         /* Regroupement par discussion : le premier message (selon le tri) de
@@ -1578,6 +1602,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         UpdateFocusedBarCounts();
+        UpdateFolderStatusText();
     }
 
     /* Renvoie le compte et le dossier associés à un UID de message,
@@ -1722,6 +1747,9 @@ namespace winrt::EvolutionWin::implementation
 
         hstring mode = ::EvolutionWin::Settings::Instance().GetString(L"mail.mark-as-read", L"immediate");
 
+        /* la barre d'état indique le nombre de messages sélectionnés */
+        UpdateFolderStatusText();
+
         auto item = MessageList().SelectedItem().try_as<Grid>();
         if (item && unbox_value_or<hstring>(item.Tag(), L"").empty())
         {
@@ -1729,6 +1757,7 @@ namespace winrt::EvolutionWin::implementation
             m_reselecting = true;
             MessageList().SelectedItem(nullptr);
             m_reselecting = false;
+            UpdateFolderStatusText();
             return;
         }
         if (!item)

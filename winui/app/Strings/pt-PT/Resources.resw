@@ -8071,5 +8071,33 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Repor o zoom para 100 %</value>
     <comment>Rétablir le zoom à 100 %</comment>
   </data>
+  <data name="T_C2FDDC1D" xml:space="preserve">
+    <value>Nenhuma mensagem mostrada em {0} carregadas</value>
+    <comment>Aucun message affiché sur {0} chargés</comment>
+  </data>
+  <data name="T_DCEF7216" xml:space="preserve">
+    <value>1 mensagem mostrada em {0} carregadas</value>
+    <comment>1 message affiché sur {0} chargés</comment>
+  </data>
+  <data name="T_DB16093C" xml:space="preserve">
+    <value>{0} mensagens mostradas em {1} carregadas</value>
+    <comment>{0} messages affichés sur {1} chargés</comment>
+  </data>
+  <data name="T_15FE0B65" xml:space="preserve">
+    <value>{0} mensagens carregadas em {1} na pasta</value>
+    <comment>{0} messages chargés sur {1} dans le dossier</comment>
+  </data>
+  <data name="T_325084EE" xml:space="preserve">
+    <value>{0} — {1} selecionadas</value>
+    <comment>{0} — {1} sélectionnés</comment>
+  </data>
+  <data name="T_17ED06F5" xml:space="preserve">
+    <value>A concluir envios e sincronização antes da atualização…</value>
+    <comment>Fin des envois et de la synchronisation avant la mise à jour…</comment>
+  </data>
+  <data name="T_2AA58674" xml:space="preserve">
+    <value>Atualização cancelada: a elevação de privilégios foi recusada.</value>
+    <comment>Mise à jour annulée : l'élévation des droits a été refusée.</comment>
+  </data>
 </root>
 

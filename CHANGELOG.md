@@ -10,6 +10,18 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
+## [1.3.3] — 2026-11-20
+
+### Corrigé
+
+- **Boîte de réception unifiée : la liste des messages ne clignote plus.** Chaque fin de relève en fond d'un compte reconstruisait entièrement la liste (vidage puis recréation de toutes les lignes), ce qui provoquait un clignotement toutes les secondes environ. La vue unifiée n'applique désormais que la différence, comme un dossier ordinaire : rien ne bouge si rien n'a changé, les indicateurs lu / suivi sont mis à jour en place, et la sélection et le défilement sont conservés.
+
+### Modifié
+
+- **Mise à jour automatique : installation sans interruption.** L'installeur est lancé en `/passive` (simple barre de progression, aucune question) avec l'élévation demandée explicitement (UAC) ; si elle est refusée, l'application reste ouverte. Avant la fermeture, Evolution attend (30 s au plus) que la Boîte d'envoi et le journal hors ligne soient vidés et que la synchronisation du dossier courant soit terminée. À la fin de l'installation, Evolution se relance tout seul (`LAUNCHAPP=1`).
+
+- **Compteur de messages de la barre d'état fiable, avec le nombre de messages sélectionnés.** Il comptait la liste chargée, sans tenir compte de la recherche ni des filtres rapides (« Non lus »…), et ne disait rien du plafond de la liste. Il indique maintenant ce que le panneau affiche vraiment : « 12 messages affichés sur 500 chargés » quand un filtre ou une recherche masque des messages, « 500 messages chargés sur 3 214 dans le dossier » quand la liste est plafonnée alors que tout est en local, et « … — N sélectionnés » dès que plusieurs messages sont sélectionnés (les en-têtes de groupe de dates ne comptent pas). Il se met à jour à chaque changement de filtre, de recherche ou de sélection.
+
 ## [1.3.2] — 2026-11-19
 
 ### Modifié

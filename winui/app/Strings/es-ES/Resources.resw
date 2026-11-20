@@ -8071,5 +8071,33 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Restablecer el zoom al 100 %</value>
     <comment>Rétablir le zoom à 100 %</comment>
   </data>
+  <data name="T_C2FDDC1D" xml:space="preserve">
+    <value>Ningún mensaje mostrado de {0} cargados</value>
+    <comment>Aucun message affiché sur {0} chargés</comment>
+  </data>
+  <data name="T_DCEF7216" xml:space="preserve">
+    <value>1 mensaje mostrado de {0} cargados</value>
+    <comment>1 message affiché sur {0} chargés</comment>
+  </data>
+  <data name="T_DB16093C" xml:space="preserve">
+    <value>{0} mensajes mostrados de {1} cargados</value>
+    <comment>{0} messages affichés sur {1} chargés</comment>
+  </data>
+  <data name="T_15FE0B65" xml:space="preserve">
+    <value>{0} mensajes cargados de {1} en la carpeta</value>
+    <comment>{0} messages chargés sur {1} dans le dossier</comment>
+  </data>
+  <data name="T_325084EE" xml:space="preserve">
+    <value>{0} — {1} seleccionados</value>
+    <comment>{0} — {1} sélectionnés</comment>
+  </data>
+  <data name="T_17ED06F5" xml:space="preserve">
+    <value>Finalizando envíos y sincronización antes de la actualización…</value>
+    <comment>Fin des envois et de la synchronisation avant la mise à jour…</comment>
+  </data>
+  <data name="T_2AA58674" xml:space="preserve">
+    <value>Actualización cancelada: se denegó la elevación de permisos.</value>
+    <comment>Mise à jour annulée : l'élévation des droits a été refusée.</comment>
+  </data>
 </root>
 
