@@ -18,6 +18,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Modifié
 
+- **Fenêtre d'événement : heures choisies dans une liste au quart d'heure, comme Gmail.** Les sélecteurs d'heure à boutons Valider / Annuler sont remplacés par une liste déroulante éditable (00:00 à 23:45 par pas de 15 minutes, sans validation) où l'on peut aussi taper n'importe quelle heure (« 14h07 », « 1407 », « 2pm »…) ; une saisie invalide revient à la dernière heure valide. Le décalage automatique de la fin reste actif.
+
 ## [1.3.3] — 2026-11-20
 
 ### Corrigé

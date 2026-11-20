@@ -6,7 +6,9 @@
 #include "Settings.h"
 #include "CategoryStore.h"
 #include "PeopleCalendars.h"
+#include "TimeOfDay.h"
 
+#include <functional>
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
 #include <winrt/Windows.Storage.Streams.h>
@@ -36,6 +38,69 @@ using namespace Windows::Data::Json;
 using namespace Windows::Foundation;
 
 using namespace ::EvolutionWin::Helpers;
+
+namespace
+{
+    /* Sélecteur d'heure des événements, façon Gmail : liste déroulante éditable au quart d'heure (pas de
+     * boutons Valider / Annuler) où l'on peut aussi taper n'importe quelle heure (« 14h07 », « 1407 »,
+     * « 2pm »…). L'heure validée (minutes depuis minuit) est mémorisée dans la Tag du contrôle ; une
+     * saisie invalide est remplacée par la dernière heure valide. */
+
+    /* Crée le sélecteur à l'heure donnée (minutes depuis minuit). */
+    ComboBox MakeTimeBox(int minutes)
+    {
+        ComboBox box;
+        box.IsEditable(true);
+        box.MinWidth(96);
+        box.Header(box_value(L" "));
+        for (auto const& text : ::EvolutionWin::TimeOfDay::QuickList())
+            box.Items().Append(box_value(hstring{ text }));
+        box.Tag(box_value(minutes));
+        box.Text(hstring{ ::EvolutionWin::TimeOfDay::Format(minutes) });
+        auto index = minutes % ::EvolutionWin::TimeOfDay::kStepMinutes == 0 ? minutes / ::EvolutionWin::TimeOfDay::kStepMinutes : -1;
+        box.SelectedIndex(index);
+        return box;
+    }
+
+    /* Heure du sélecteur en minutes depuis minuit : le texte tapé s'il est valide, sinon la dernière valeur valide. */
+    int TimeBoxMinutes(ComboBox const& box)
+    {
+        int parsed = ::EvolutionWin::TimeOfDay::Parse(std::wstring_view{ box.Text() });
+        return parsed >= 0 ? parsed : unbox_value_or<int>(box.Tag(), 0);
+    }
+
+    /* Affiche une heure dans le sélecteur (sans autre effet que l'affichage et la mémorisation). */
+    void SetTimeBox(ComboBox const& box, int minutes)
+    {
+        box.Tag(box_value(minutes));
+        box.Text(hstring{ ::EvolutionWin::TimeOfDay::Format(minutes) });
+        box.SelectedIndex(minutes % ::EvolutionWin::TimeOfDay::kStepMinutes == 0 ? minutes / ::EvolutionWin::TimeOfDay::kStepMinutes : -1);
+    }
+
+    /* Appelle on_changed quand l'utilisateur valide une heure : choix dans la liste, ou saisie validée par
+     * Entrée / perte du focus (le texte est alors normalisé en « HH:MM »). */
+    void OnTimeBoxChanged(ComboBox const& box, std::function<void()> on_changed)
+    {
+        auto commit = [box, on_changed](hstring const& text)
+        {
+            int parsed = ::EvolutionWin::TimeOfDay::Parse(std::wstring_view{ text });
+            int minutes = parsed >= 0 ? parsed : unbox_value_or<int>(box.Tag(), 0);
+            SetTimeBox(box, minutes);
+            on_changed();
+        };
+        box.SelectionChanged([box, commit](auto&&, SelectionChangedEventArgs const& args)
+        {
+            if (args.AddedItems().Size() > 0)
+                if (auto text = args.AddedItems().GetAt(0).try_as<hstring>())
+                    commit(*text);
+        });
+        box.TextSubmitted([commit](ComboBox const&, ComboBoxTextSubmittedEventArgs const& args)
+        {
+            args.Handled(true);
+            commit(args.Text());
+        });
+    }
+}
 
 namespace winrt::EvolutionWin::implementation
 {
@@ -1019,7 +1084,7 @@ namespace winrt::EvolutionWin::implementation
         {
             struct tm local{};
             localtime_s(&local, &t);
-            return std::chrono::hours(local.tm_hour) + std::chrono::minutes(local.tm_min);
+            return local.tm_hour * 60 + local.tm_min;   /* minutes depuis minuit */
         };
 
         CheckBox all_day_box;
@@ -1036,9 +1101,7 @@ namespace winrt::EvolutionWin::implementation
         start_date.Header(box_value(Tr(L"Début")));
         start_date.Date(winrt::clock::from_time_t(start_t));
         start_date.IsEnabled(!readonly);
-        TimePicker start_time;
-        start_time.Header(box_value(L" "));
-        start_time.Time(time_of_day(start_t));
+        ComboBox start_time = MakeTimeBox(time_of_day(start_t));
         start_time.IsEnabled(!readonly);
         Grid::SetColumn(start_time, 1);
         start_row.Children().Append(start_date);
@@ -1053,9 +1116,7 @@ namespace winrt::EvolutionWin::implementation
         end_date.Header(box_value(Tr(L"Fin")));
         end_date.Date(winrt::clock::from_time_t(end_t));
         end_date.IsEnabled(!readonly);
-        TimePicker end_time;
-        end_time.Header(box_value(L" "));
-        end_time.Time(time_of_day(end_t));
+        ComboBox end_time = MakeTimeBox(time_of_day(end_t));
         end_time.IsEnabled(!readonly);
         Grid::SetColumn(end_time, 1);
         end_row.Children().Append(end_date);
@@ -1066,7 +1127,7 @@ namespace winrt::EvolutionWin::implementation
          *  - décaler le début (date ou heure) décale la fin du même écart, la durée est conservée ;
          *  - une fin antérieure au début est ramenée au début. */
         {
-            auto epoch_of = [](CalendarDatePicker const& date, TimePicker const& time) -> int64_t
+            auto epoch_of = [](CalendarDatePicker const& date, ComboBox const& time) -> int64_t
             {
                 time_t raw = winrt::clock::to_time_t(date.Date().Value());
                 struct tm local{};
@@ -1075,13 +1136,13 @@ namespace winrt::EvolutionWin::implementation
                 local.tm_min = 0;
                 local.tm_sec = 0;
                 local.tm_isdst = -1;
-                return static_cast<int64_t>(mktime(&local)) + std::chrono::duration_cast<std::chrono::seconds>(time.Time()).count();
+                return static_cast<int64_t>(mktime(&local)) + TimeBoxMinutes(time) * 60LL;
             };
-            auto show_epoch = [time_of_day](CalendarDatePicker const& date, TimePicker const& time, int64_t epoch)
+            auto show_epoch = [time_of_day](CalendarDatePicker const& date, ComboBox const& time, int64_t epoch)
             {
                 time_t raw = static_cast<time_t>(epoch);
                 date.Date(winrt::clock::from_time_t(raw));
-                time.Time(time_of_day(raw));
+                SetTimeBox(time, time_of_day(raw));
             };
             auto last_start = std::make_shared<int64_t>(start_date.Date() ? epoch_of(start_date, start_time) : 0);
             auto busy = std::make_shared<bool>(false);
@@ -1100,7 +1161,7 @@ namespace winrt::EvolutionWin::implementation
                 *busy = false;
             };
             start_date.DateChanged(on_start_changed);
-            start_time.TimeChanged(on_start_changed);
+            OnTimeBoxChanged(start_time, [on_start_changed]() { on_start_changed(nullptr, nullptr); });
 
             auto on_end_changed = [=](auto&&, auto&&)
             {
@@ -1114,7 +1175,7 @@ namespace winrt::EvolutionWin::implementation
                 *busy = false;
             };
             end_date.DateChanged(on_end_changed);
-            end_time.TimeChanged(on_end_changed);
+            OnTimeBoxChanged(end_time, [on_end_changed]() { on_end_changed(nullptr, nullptr); });
         }
 
         /* rappel (VALARM) : délai avant le début */
@@ -1796,7 +1857,7 @@ namespace winrt::EvolutionWin::implementation
 
         /* date du sélecteur + heure du sélecteur (minuit en journée entière) */
         bool day = all_day_box.IsChecked() && all_day_box.IsChecked().GetBoolean();
-        auto combine = [day](CalendarDatePicker const& date, TimePicker const& time) -> int64_t
+        auto combine = [day](CalendarDatePicker const& date, ComboBox const& time) -> int64_t
         {
             time_t raw = winrt::clock::to_time_t(date.Date() ? date.Date().Value() : winrt::clock::now());
             struct tm local{};
@@ -1806,7 +1867,7 @@ namespace winrt::EvolutionWin::implementation
             local.tm_sec = 0;
             local.tm_isdst = -1;
             int64_t base = static_cast<int64_t>(mktime(&local));
-            return day ? base : base + std::chrono::duration_cast<std::chrono::seconds>(time.Time()).count();
+            return day ? base : base + TimeBoxMinutes(time) * 60LL;
         };
 
         int64_t start_unix = combine(start_date, start_time);

@@ -6464,6 +6464,61 @@ static void test_update_integrity(void)
 
 #include "../../winui/app/Gal.h"
 
+#include "../../winui/app/TimeOfDay.h"
+
+static void test_time_of_day(void)
+{
+    using namespace EvolutionWin::TimeOfDay;
+
+    TEST_CASE("Heure saisie: formes acceptees");
+    {
+        ASSERT_EQ_INT(14 * 60 + 30, Parse(L"14:30"));
+        ASSERT_EQ_INT(14 * 60 + 30, Parse(L"14h30"));
+        ASSERT_EQ_INT(14 * 60 + 30, Parse(L"14.30"));
+        ASSERT_EQ_INT(14 * 60 + 30, Parse(L"1430"));
+        ASSERT_EQ_INT(9 * 60 + 30, Parse(L"930"));
+        ASSERT_EQ_INT(14 * 60, Parse(L"14h"));
+        ASSERT_EQ_INT(14 * 60, Parse(L"14"));
+        ASSERT_EQ_INT(7 * 60 + 5, Parse(L"  7:05 "));
+        ASSERT_EQ_INT(0, Parse(L"0:00"));
+        ASSERT_EQ_INT(23 * 60 + 59, Parse(L"23:59"));
+        ASSERT_EQ_INT(14 * 60 + 30, Parse(L"2:30 pm"));
+        ASSERT_EQ_INT(14 * 60, Parse(L"2PM"));
+        ASSERT_EQ_INT(0, Parse(L"12am"));
+        ASSERT_EQ_INT(12 * 60, Parse(L"12pm"));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Heure saisie: refus des valeurs invalides");
+    {
+        ASSERT_EQ_INT(-1, Parse(L""));
+        ASSERT_EQ_INT(-1, Parse(L"abc"));
+        ASSERT_EQ_INT(-1, Parse(L"24:00"));
+        ASSERT_EQ_INT(-1, Parse(L"12:60"));
+        ASSERT_EQ_INT(-1, Parse(L"14:30:15"));
+        ASSERT_EQ_INT(-1, Parse(L":30"));
+        ASSERT_EQ_INT(-1, Parse(L"13pm"));
+        ASSERT_EQ_INT(-1, Parse(L"0am"));
+        ASSERT_EQ_INT(-1, Parse(L"12345"));
+    }
+    TEST_CASE_END();
+
+    TEST_CASE("Heure saisie: formatage et liste rapide");
+    {
+        ASSERT_TRUE(Format(0) == L"00:00");
+        ASSERT_TRUE(Format(14 * 60 + 5) == L"14:05");
+        ASSERT_TRUE(Format(24 * 60 + 30) == L"00:30");
+        auto list = QuickList();
+        ASSERT_EQ_INT(96, (long long)list.size());
+        ASSERT_TRUE(list.front() == L"00:00");
+        ASSERT_TRUE(list[58] == L"14:30");
+        ASSERT_TRUE(list.back() == L"23:45");
+        for (auto const& item : list)
+            ASSERT_EQ_INT(Parse(item), Parse(Format(Parse(item))));
+    }
+    TEST_CASE_END();
+}
+
 #include "../../winui/app/UnifiedViews.h"
 
 static void test_unified_views(void)
@@ -6740,6 +6795,7 @@ int main(void)
     test_invitations_banner();
     test_gal();
     test_unified_views();
+    test_time_of_day();
 return test_suite_summary();
 
 
