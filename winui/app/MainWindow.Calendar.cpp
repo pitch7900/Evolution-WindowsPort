@@ -987,7 +987,7 @@ namespace winrt::EvolutionWin::implementation
                     return false;
                 day = (std::max)(0, (std::min)(days - 1, static_cast<int>((point.X - gutter_width) / (width / days))));
                 /* le début de l'événement se place sous le curseur, quel que soit l'endroit du bloc où on l'a saisi */
-                double minutes = (std::max)(0.0, point.Y) / HourHeight * 60.0;
+                double minutes = (std::max)(0.0, static_cast<double>(point.Y)) / HourHeight * 60.0;
                 int64_t quarters = (std::min<int64_t>)(static_cast<int64_t>(std::llround(minutes / 15.0)), 95);
                 start = day_starts[day] + quarters * 900;
                 return true;
