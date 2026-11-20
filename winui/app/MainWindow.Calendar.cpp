@@ -332,7 +332,7 @@ namespace winrt::EvolutionWin::implementation
            sinon (ou avec un seul calendrier) un panneau unique où tous les calendriers sont superposés.
            Les panneaux se suivent dans une même grille (colonne = panneau * jours + jour), donc partagent
            l'échelle des heures et le défilement vertical. */
-        struct Pane { hstring uid; hstring title; };
+        struct Pane { hstring uid; hstring title; hstring color; };
         std::vector<Pane> panes;
         if (::EvolutionWin::Settings::Instance().GetString(L"calendar.layout-mode", L"overlay") == L"side-by-side")
         {
@@ -341,19 +341,23 @@ namespace winrt::EvolutionWin::implementation
                 if (panes.size() >= 4)
                     break;
                 hstring title = uid;
+                hstring color;
                 for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
                 {
                     auto source = value.GetObject();
                     if (source.GetNamedString(L"uid", L"") == uid)
+                    {
                         title = source.GetNamedString(L"name", uid);
+                        color = source.GetNamedString(L"color", L"");
+                    }
                 }
-                panes.push_back({ uid, title });
+                panes.push_back({ uid, title, color });
             }
         }
         if (panes.size() < 2)
         {
             panes.clear();
-            panes.push_back({ L"", L"" });
+            panes.push_back({ L"", L"", L"" });
         }
         const bool side_by_side = panes.size() > 1;
         const int total = static_cast<int>(panes.size()) * days;   /* colonnes de jours, tous panneaux confondus */
@@ -406,9 +410,11 @@ namespace winrt::EvolutionWin::implementation
                 title_box.Margin(ThicknessHelper::FromLengths(index == 0 ? 0 : 3, 0, 0, 0));
                 title_box.Padding(ThicknessHelper::FromLengths(10, 4, 4, 4));
                 title_box.CornerRadius(CornerRadiusHelper::FromUniformRadius(3));
-                title_box.Background(ThemeBrush(L"AccentFillColorSecondaryBrush"));
-                title_box.BorderBrush(ThemeBrush(L"AccentFillColorDefaultBrush"));
-                title_box.BorderThickness(ThicknessHelper::FromLengths(0, 0, 0, 2));
+                /* bandeau à la couleur du calendrier, texte blanc ou noir selon la luminosité du fond */
+                title_box.Background(CalendarBrush(panes[index].color, 0xFF));
+                auto fill = CalendarColor(panes[index].color);
+                bool dark_fill = (0.299 * fill.R + 0.587 * fill.G + 0.114 * fill.B) < 150.0;
+                SolidColorBrush title_foreground{ dark_fill ? Microsoft::UI::Colors::White() : Microsoft::UI::Colors::Black() };
                 Grid::SetColumn(title_box, 1 + static_cast<int>(index) * days);
                 Grid::SetColumnSpan(title_box, days);
 
@@ -420,6 +426,7 @@ namespace winrt::EvolutionWin::implementation
 
                 TextBlock title_text;
                 title_text.Text(panes[index].title);
+                title_text.Foreground(title_foreground);
                 title_text.FontWeight(Microsoft::UI::Text::FontWeights::SemiBold());
                 title_text.TextTrimming(TextTrimming::CharacterEllipsis);
                 title_text.VerticalAlignment(VerticalAlignment::Center);
@@ -429,6 +436,7 @@ namespace winrt::EvolutionWin::implementation
                 FontIcon close_icon;
                 close_icon.Glyph(L"\xE711");
                 close_icon.FontSize(10);
+                close_icon.Foreground(title_foreground);
                 close_button.Content(close_icon);
                 close_button.Padding(ThicknessHelper::FromLengths(6, 4, 6, 4));
                 close_button.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
