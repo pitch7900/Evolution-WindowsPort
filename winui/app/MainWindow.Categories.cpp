@@ -1008,6 +1008,15 @@ namespace winrt::EvolutionWin::implementation
         open_item.Icon(open_icon);
         open_item.Click([this, calendar_uid, uid](IInspectable const&, RoutedEventArgs const&) { OpenCalendarEvent(calendar_uid, uid); });
         flyout.Items().Append(open_item);
+
+        /* Copier : l'événement est collé (dupliqué) à l'endroit de la plage sélectionnée du calendrier */
+        MenuFlyoutItem copy_item;
+        copy_item.Text(Tr(L"Copier"));
+        FontIcon copy_icon;
+        copy_icon.Glyph(L"\xE8C8");
+        copy_item.Icon(copy_icon);
+        copy_item.Click([this, event](IInspectable const&, RoutedEventArgs const&) { CopyCalendarEvent(event); });
+        flyout.Items().Append(copy_item);
         flyout.Items().Append(MenuFlyoutSeparator{});
 
         /* Classer : catégories */

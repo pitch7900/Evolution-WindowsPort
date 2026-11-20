@@ -8099,5 +8099,109 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Update abgebrochen: Die Rechteerhöhung wurde abgelehnt.</value>
     <comment>Mise à jour annulée : l'élévation des droits a été refusée.</comment>
   </data>
+  <data name="T_DB786584" xml:space="preserve">
+    <value>Klicken oder ziehen, um einen Zeitraum auszuwählen; Rechtsklick, um einen Termin zu erstellen</value>
+    <comment>Cliquer ou glisser pour sélectionner une plage ; clic droit pour créer un événement</comment>
+  </data>
+  <data name="T_B349B04E" xml:space="preserve">
+    <value>Neuer Termin</value>
+    <comment>Nouveau rendez-vous</comment>
+  </data>
+  <data name="T_B159549F" xml:space="preserve">
+    <value>Neuer ganztägiger Termin</value>
+    <comment>Nouvel événement d'une journée entière</comment>
+  </data>
+  <data name="T_1FFEFF35" xml:space="preserve">
+    <value>Neue Teams-Besprechung</value>
+    <comment>Nouvelle réunion Teams</comment>
+  </data>
+  <data name="T_AFF62B9C" xml:space="preserve">
+    <value>Einfügen</value>
+    <comment>Coller</comment>
+  </data>
+  <data name="T_6BBCD9D8" xml:space="preserve">
+    <value>Termin „{0}“ kopiert: Rechtsklick auf einen Zeitraum im Kalender, dann „Einfügen“.</value>
+    <comment>Événement « {0} » copié : clic droit sur une plage du calendrier, puis « Coller ».</comment>
+  </data>
+  <data name="T_EE70597E" xml:space="preserve">
+    <value>Kopieren des Termins: {0}</value>
+    <comment>Copie de l'événement : {0}</comment>
+  </data>
+  <data name="T_CF890C9D" xml:space="preserve">
+    <value>Einfügen des Termins: {0}</value>
+    <comment>Collage de l'événement : {0}</comment>
+  </data>
+  <data name="T_BFC4EAB5" xml:space="preserve">
+    <value>Termin eingefügt.</value>
+    <comment>Événement collé.</comment>
+  </data>
+  <data name="T_236FF748" xml:space="preserve">
+    <value>Verschieben des Termins: {0}</value>
+    <comment>Déplacement de l'événement : {0}</comment>
+  </data>
+  <data name="T_610D26B1" xml:space="preserve">
+    <value>Ein Serientermin kann nicht per Ziehen verschoben werden: Öffnen Sie ihn, um die Wiederholung zu ändern.</value>
+    <comment>Un événement périodique ne se déplace pas par glisser : ouvrez-le pour modifier sa récurrence.</comment>
+  </data>
+  <data name="T_8FD41460" xml:space="preserve">
+    <value>Dieser Kalender ist schreibgeschützt: Der Termin kann nicht verschoben werden.</value>
+    <comment>Cet agenda est en lecture seule : l'événement ne peut pas être déplacé.</comment>
+  </data>
+  <data name="T_5266A585" xml:space="preserve">
+    <value>Wählen Sie zuerst einen Zeitraum im Kalender aus, in den der Termin eingefügt werden soll.</value>
+    <comment>Sélectionnez d'abord une plage du calendrier où coller l'événement.</comment>
+  </data>
+  <data name="T_D62A7806" xml:space="preserve">
+    <value>Diesen Kalender ausblenden</value>
+    <comment>Masquer ce calendrier</comment>
+  </data>
+  <data name="T_FF14A831" xml:space="preserve">
+    <value>{0} Kontakt(e) kopiert: Rechtsklick auf ein Adressbuch, dann „Einfügen“.</value>
+    <comment>{0} contact(s) copié(s) : clic droit sur un carnet d'adresses, puis « Coller ».</comment>
+  </data>
+  <data name="T_37AE8658" xml:space="preserve">
+    <value>(Kopie)</value>
+    <comment>(copier)</comment>
+  </data>
+  <data name="T_B2ED2120" xml:space="preserve">
+    <value>In dasselbe Adressbuch einfügen</value>
+    <comment>Coller dans le même carnet d'adresses</comment>
+  </data>
+  <data name="T_9533B0FD" xml:space="preserve">
+    <value>Die eingefügten Kontakte stammen aus diesem Adressbuch. „{0}“ an den Namen der Kopien anhängen, um sie zu unterscheiden?</value>
+    <comment>Les contacts collés viennent de ce carnet. Ajouter « {0} » au nom des copies pour les distinguer ?</comment>
+  </data>
+  <data name="T_5D5D4F2F" xml:space="preserve">
+    <value>Kopien umbenennen</value>
+    <comment>Renommer les copies</comment>
+  </data>
+  <data name="T_C2836B25" xml:space="preserve">
+    <value>Gleiche Namen behalten</value>
+    <comment>Garder les mêmes noms</comment>
+  </data>
+  <data name="T_7F78AB9D" xml:space="preserve">
+    <value>Kontakte: {0} kopiert, {1} fehlgeschlagen ({2}).</value>
+    <comment>Contacts : {0} copié(s), {1} en échec ({2}).</comment>
+  </data>
+  <data name="T_A790DED2" xml:space="preserve">
+    <value>{0} Kontakt(e) nach „{1}“ verschoben.</value>
+    <comment>{0} contact(s) déplacé(s) vers « {1} ».</comment>
+  </data>
+  <data name="T_C2365BFD" xml:space="preserve">
+    <value>{0} Kontakt(e) in „{1}“ eingefügt.</value>
+    <comment>{0} contact(s) collé(s) dans « {1} ».</comment>
+  </data>
+  <data name="T_FBA56A1B" xml:space="preserve">
+    <value>Nach „{0}“ verschieben</value>
+    <comment>Déplacer vers « {0} »</comment>
+  </data>
+  <data name="T_E306FE61" xml:space="preserve">
+    <value>Nach „{0}“ kopieren</value>
+    <comment>Copier vers « {0} »</comment>
+  </data>
+  <data name="T_0B6AB6DE" xml:space="preserve">
+    <value>Adressbuch des Kontakts</value>
+    <comment>Carnet d'adresses du contact</comment>
+  </data>
 </root>
 

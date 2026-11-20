@@ -147,7 +147,39 @@ namespace winrt::EvolutionWin::implementation
             });
 
             if (!m_gal_mode)
+            {
                 EnableContactExportDrag(row, contact);
+
+                /* clic droit : Copier (les contacts sélectionnés) et Coller (dans le carnet de ce contact) */
+                if (auto flyout = row.ContextFlyout().try_as<MenuFlyout>())
+                {
+                    hstring book_uid = contact.GetNamedString(L"book_uid", L"");
+                    MenuFlyoutItem copy_item;
+                    copy_item.Text(Tr(L"Copier"));
+                    FontIcon copy_icon;
+                    copy_icon.Glyph(L"\xE8C8");
+                    copy_item.Icon(copy_icon);
+                    copy_item.Click([this](IInspectable const&, RoutedEventArgs const&) { CopySelectedContacts(); });
+                    MenuFlyoutItem paste_item;
+                    paste_item.Text(Tr(L"Coller"));
+                    FontIcon paste_icon;
+                    paste_icon.Glyph(L"\xE77F");
+                    paste_item.Icon(paste_icon);
+                    paste_item.Click([this, book_uid](IInspectable const&, RoutedEventArgs const&) { PasteContactsAsync(book_uid); });
+                    flyout.Items().InsertAt(0, copy_item);
+                    flyout.Items().InsertAt(1, paste_item);
+                    flyout.Items().InsertAt(2, MenuFlyoutSeparator{});
+                    flyout.Opening([this, paste_item](IInspectable const&, IInspectable const&) { paste_item.IsEnabled(!m_contact_clipboard.empty()); });
+                }
+                /* un clic droit hors de la sélection sélectionne d'abord la ligne cliquée */
+                row.RightTapped([this, row](IInspectable const&, Input::RightTappedRoutedEventArgs const&)
+                {
+                    for (auto const& selected : ContactList().SelectedItems())
+                        if (selected == row)
+                            return;
+                    ContactList().SelectedItem(row);
+                });
+            }
 
             items.Append(row);
         }
@@ -205,6 +237,22 @@ namespace winrt::EvolutionWin::implementation
         ContactEmailText().Text(contact.GetNamedString(L"email", L"—"));
         ContactPhoneText().Text(contact.GetNamedString(L"phone", L"—"));
         ContactOrgText().Text(contact.GetNamedString(L"org", L"—"));
+
+        /* carnet d'adresses du contact (compte › carnet) */
+        {
+            hstring book_uid = contact.GetNamedString(L"book_uid", L"");
+            std::wstring book_text;
+            for (auto const& value : m_contact_books ? m_contact_books : JsonArray{})
+            {
+                auto book = value.GetObject();
+                if (book_uid.empty() || book.GetNamedString(L"uid", L"") != book_uid)
+                    continue;
+                hstring account = book.GetNamedString(L"account", L"");
+                book_text = (account.empty() ? L"" : std::wstring{ account } + L" › ") + std::wstring{ book.GetNamedString(L"name", book_uid) };
+            }
+            ContactBookText().Text(hstring{ book_text });
+            ContactBookRow().Visibility(book_text.empty() ? Visibility::Collapsed : Visibility::Visible);
+        }
         ContactNotesText().Text(contact.GetNamedString(L"note", L""));
 
         hstring address = contact.GetNamedString(L"address", L"");

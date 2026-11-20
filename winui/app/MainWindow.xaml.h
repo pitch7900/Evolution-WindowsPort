@@ -130,6 +130,10 @@ namespace winrt::EvolutionWin::implementation
         void CloseAttachmentPreview();
         void OnRefreshAllClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         void OnRefreshFolderClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void OnCalendarCopyAccelerator(Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender, Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
+        void OnCalendarPasteAccelerator(Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender, Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
+        void OnContactsCopyAccelerator(Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender, Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
+        void OnContactsPasteAccelerator(Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender, Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
         void OnRefreshAccelerator(
             Microsoft::UI::Xaml::Input::KeyboardAccelerator const& sender,
             Microsoft::UI::Xaml::Input::KeyboardAcceleratorInvokedEventArgs const& args);
@@ -827,6 +831,16 @@ namespace winrt::EvolutionWin::implementation
         hstring m_current_message_folder;    ///< dossier du message affiché
         /* contact sélectionné dans la vue Contacts */
         Windows::Data::Json::JsonObject m_selected_contact{ nullptr };
+
+        /* Copier / coller et glisser-déposer de contacts entre carnets d'adresses (MainWindow.ContactCopy.cpp) */
+        struct ContactRef { hstring book_uid; hstring uid; hstring name; };
+        std::vector<ContactRef> m_contact_clipboard;	/* contacts copiés */
+        std::vector<ContactRef> m_dragged_contacts;	/* contacts en cours de glisser (vide : aucun) */
+        std::vector<ContactRef> SelectedContactRefs();
+        void CopySelectedContacts();
+        fire_and_forget PasteContactsAsync(hstring target_book);
+        void TransferContacts(std::vector<ContactRef> contacts, hstring const& target_book, bool move, hstring const& rename_suffix);
+        void DecorateContactBookRow(Microsoft::UI::Xaml::Controls::Grid const& row, Windows::Data::Json::JsonObject const& source);
         /* folder tree nodes by NodeKey() */
         std::map<std::wstring, Microsoft::UI::Xaml::Controls::TreeViewNode> m_nodes;
         /* Favoris : nœud « Favoris » en tête de l'arborescence et ses copies de dossiers (hors m_nodes : pas de double compte) */
@@ -927,7 +941,44 @@ namespace winrt::EvolutionWin::implementation
         int64_t m_selected_day_start{ 0 };	/* jour de référence (0 : aujourd'hui) */
         int64_t m_new_event_start{ 0 };	/* créneau sélectionné dans la grille (nouvel événement), 0 : aucun */
         int64_t m_new_event_end{ 0 };
-        void BeginEventFromSelection(int64_t start_unix, int64_t end_unix);
+        void BeginEventFromSelection(int64_t start_unix, int64_t end_unix, hstring const& calendar = L"");
+        bool m_new_event_all_day{ false };	/* le prochain nouvel événement est une journée entière */
+
+        /* Sélection d'une plage dans la grille (reste affichée tant qu'on n'en choisit pas une autre ;
+           les créations passent par le menu du clic droit, comme Outlook) */
+        struct SlotVisual { Microsoft::UI::Xaml::Controls::Border border{ nullptr }; int64_t day_start{ 0 }; int64_t day_end{ 0 }; double hour_height{ 0 };
+                             Microsoft::UI::Xaml::UIElement top_grip{ nullptr }; Microsoft::UI::Xaml::UIElement bottom_grip{ nullptr };
+                             hstring calendar; /* panneau (calendrier) de la colonne, vide en mode superposé */ };
+        std::vector<SlotVisual> m_slot_visuals;	/* un rectangle de sélection par jour affiché */
+        int64_t m_slot_start{ 0 };	/* plage sélectionnée (secondes Unix), 0 : aucune */
+        int64_t m_slot_end{ 0 };
+        hstring m_slot_calendar;	/* panneau (calendrier) de la plage sélectionnée, vide en mode superposé */
+        hstring m_new_event_calendar;	/* calendrier du panneau où le prochain nouvel événement est créé */
+        void SelectCalendarSlot(int64_t start_unix, int64_t end_unix, hstring const& calendar = L"");
+        void UpdateSlotSelectionVisuals();
+        void ShowCalendarSlotMenu(Microsoft::UI::Xaml::UIElement const& anchor, Windows::Foundation::Point position);
+
+        /* Événement sélectionné dans la grille (contour d'accent, poignées d'étirement, Ctrl+C) */
+        struct EventVisual { Microsoft::UI::Xaml::Controls::Border border{ nullptr }; hstring key; Microsoft::UI::Xaml::Thickness thickness{}; Microsoft::UI::Xaml::Media::Brush brush{ nullptr };
+                             Microsoft::UI::Xaml::Media::Brush background{ nullptr }; Microsoft::UI::Xaml::UIElement top_grip{ nullptr }; Microsoft::UI::Xaml::UIElement bottom_grip{ nullptr }; };
+        std::vector<EventVisual> m_event_visuals;
+        hstring m_selected_event_key;	/* calendrier, identifiant et début de l'occurrence sélectionnée (vide : aucune) */
+        Windows::Data::Json::JsonObject m_selected_event{ nullptr };
+        void SelectCalendarEvent(Windows::Data::Json::JsonObject const& event);
+        void UpdateEventSelectionVisuals();
+        void RegisterCalendarEvent(Microsoft::UI::Xaml::UIElement const& element, Windows::Data::Json::JsonObject const& event,
+            Microsoft::UI::Xaml::UIElement const& top_grip, Microsoft::UI::Xaml::UIElement const& bottom_grip);
+
+        /* Copier / coller et déplacement d'un événement (MainWindow.EventMove.cpp) */
+        hstring m_event_clipboard_calendar;	/* événement copié (vide : rien) */
+        hstring m_event_clipboard_uid;
+        struct DraggedEvent { bool active{ false }; hstring calendar_uid; hstring uid; double grab_y{ 0 }; int64_t start{ 0 }; int64_t end{ 0 }; bool all_day{ false }; };
+        DraggedEvent m_dragged_event;	/* événement en cours de glisser depuis la grille */
+        void CopyCalendarEvent(Windows::Data::Json::JsonObject const& event);
+        void PasteCalendarEvent(int64_t start_unix, hstring const& calendar = L"");
+        void MoveCalendarEvent(hstring const& calendar_uid, hstring const& uid, int64_t new_start);
+        void ResizeCalendarEvent(hstring const& calendar_uid, hstring const& uid, int64_t start_delta, int64_t end_delta);
+        void ChangeCalendarEventTimes(hstring const& calendar_uid, hstring const& uid, int64_t new_start, int64_t start_delta, int64_t end_delta);
         hstring m_calendar_period{ L"week" };	/* "day", "week" ou "month" (calendar.period) */
         bool m_updating_period{ false };
         void SetCalendarPeriod(hstring const& period);
@@ -957,6 +1008,7 @@ namespace winrt::EvolutionWin::implementation
         hstring ActiveBookUid();
         void RebuildCalendarSourcesPanel();
         std::vector<hstring> VisibleCalendarUids();
+        void HideCalendar(hstring const& uid);
         hstring ActiveCalendarUid();
         void ShiftCalendarPeriod(int direction);
         /* vue Tâches : listes de tâches [{"uid", "name", "kind"}], toutes les

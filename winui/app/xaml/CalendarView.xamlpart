@@ -1,4 +1,9 @@
             <Grid x:Name="CalendarViewPane" Grid.Row="2" Visibility="Collapsed" Padding="24,16,24,16" ColumnSpacing="24">
+                <!-- Ctrl+C : copie l'événement sélectionné ; Ctrl+V : le colle à l'endroit de la plage sélectionnée -->
+                <Grid.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Control" Key="C" Invoked="OnCalendarCopyAccelerator" />
+                    <KeyboardAccelerator Modifiers="Control" Key="V" Invoked="OnCalendarPasteAccelerator" />
+                </Grid.KeyboardAccelerators>
 
                 <Grid.ColumnDefinitions>
 

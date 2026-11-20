@@ -8099,5 +8099,109 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Actualización cancelada: se denegó la elevación de permisos.</value>
     <comment>Mise à jour annulée : l'élévation des droits a été refusée.</comment>
   </data>
+  <data name="T_DB786584" xml:space="preserve">
+    <value>Haga clic o arrastre para seleccionar un intervalo; clic derecho para crear un evento</value>
+    <comment>Cliquer ou glisser pour sélectionner une plage ; clic droit pour créer un événement</comment>
+  </data>
+  <data name="T_B349B04E" xml:space="preserve">
+    <value>Nueva cita</value>
+    <comment>Nouveau rendez-vous</comment>
+  </data>
+  <data name="T_B159549F" xml:space="preserve">
+    <value>Nuevo evento de todo el día</value>
+    <comment>Nouvel événement d'une journée entière</comment>
+  </data>
+  <data name="T_1FFEFF35" xml:space="preserve">
+    <value>Nueva reunión de Teams</value>
+    <comment>Nouvelle réunion Teams</comment>
+  </data>
+  <data name="T_AFF62B9C" xml:space="preserve">
+    <value>Pegar</value>
+    <comment>Coller</comment>
+  </data>
+  <data name="T_6BBCD9D8" xml:space="preserve">
+    <value>Evento «{0}» copiado: clic derecho en un intervalo del calendario y luego «Pegar».</value>
+    <comment>Événement « {0} » copié : clic droit sur une plage du calendrier, puis « Coller ».</comment>
+  </data>
+  <data name="T_EE70597E" xml:space="preserve">
+    <value>Copia del evento: {0}</value>
+    <comment>Copie de l'événement : {0}</comment>
+  </data>
+  <data name="T_CF890C9D" xml:space="preserve">
+    <value>Pegado del evento: {0}</value>
+    <comment>Collage de l'événement : {0}</comment>
+  </data>
+  <data name="T_BFC4EAB5" xml:space="preserve">
+    <value>Evento pegado.</value>
+    <comment>Événement collé.</comment>
+  </data>
+  <data name="T_236FF748" xml:space="preserve">
+    <value>Movimiento del evento: {0}</value>
+    <comment>Déplacement de l'événement : {0}</comment>
+  </data>
+  <data name="T_610D26B1" xml:space="preserve">
+    <value>Un evento periódico no se mueve arrastrándolo: ábralo para modificar su periodicidad.</value>
+    <comment>Un événement périodique ne se déplace pas par glisser : ouvrez-le pour modifier sa récurrence.</comment>
+  </data>
+  <data name="T_8FD41460" xml:space="preserve">
+    <value>Este calendario es de solo lectura: el evento no se puede mover.</value>
+    <comment>Cet agenda est en lecture seule : l'événement ne peut pas être déplacé.</comment>
+  </data>
+  <data name="T_5266A585" xml:space="preserve">
+    <value>Seleccione primero un intervalo del calendario donde pegar el evento.</value>
+    <comment>Sélectionnez d'abord une plage du calendrier où coller l'événement.</comment>
+  </data>
+  <data name="T_D62A7806" xml:space="preserve">
+    <value>Ocultar este calendario</value>
+    <comment>Masquer ce calendrier</comment>
+  </data>
+  <data name="T_FF14A831" xml:space="preserve">
+    <value>{0} contacto(s) copiado(s): clic derecho en una libreta de direcciones y luego «Pegar».</value>
+    <comment>{0} contact(s) copié(s) : clic droit sur un carnet d'adresses, puis « Coller ».</comment>
+  </data>
+  <data name="T_37AE8658" xml:space="preserve">
+    <value>(copia)</value>
+    <comment>(copier)</comment>
+  </data>
+  <data name="T_B2ED2120" xml:space="preserve">
+    <value>Pegar en la misma libreta de direcciones</value>
+    <comment>Coller dans le même carnet d'adresses</comment>
+  </data>
+  <data name="T_9533B0FD" xml:space="preserve">
+    <value>Los contactos pegados proceden de esta libreta. ¿Añadir «{0}» al nombre de las copias para distinguirlas?</value>
+    <comment>Les contacts collés viennent de ce carnet. Ajouter « {0} » au nom des copies pour les distinguer ?</comment>
+  </data>
+  <data name="T_5D5D4F2F" xml:space="preserve">
+    <value>Renombrar las copias</value>
+    <comment>Renommer les copies</comment>
+  </data>
+  <data name="T_C2836B25" xml:space="preserve">
+    <value>Mantener los mismos nombres</value>
+    <comment>Garder les mêmes noms</comment>
+  </data>
+  <data name="T_7F78AB9D" xml:space="preserve">
+    <value>Contactos: {0} copiados, {1} con error ({2}).</value>
+    <comment>Contacts : {0} copié(s), {1} en échec ({2}).</comment>
+  </data>
+  <data name="T_A790DED2" xml:space="preserve">
+    <value>{0} contacto(s) movido(s) a «{1}».</value>
+    <comment>{0} contact(s) déplacé(s) vers « {1} ».</comment>
+  </data>
+  <data name="T_C2365BFD" xml:space="preserve">
+    <value>{0} contacto(s) pegado(s) en «{1}».</value>
+    <comment>{0} contact(s) collé(s) dans « {1} ».</comment>
+  </data>
+  <data name="T_FBA56A1B" xml:space="preserve">
+    <value>Mover a «{0}»</value>
+    <comment>Déplacer vers « {0} »</comment>
+  </data>
+  <data name="T_E306FE61" xml:space="preserve">
+    <value>Copiar a «{0}»</value>
+    <comment>Copier vers « {0} »</comment>
+  </data>
+  <data name="T_0B6AB6DE" xml:space="preserve">
+    <value>Libreta de direcciones del contacto</value>
+    <comment>Carnet d'adresses du contact</comment>
+  </data>
 </root>
 

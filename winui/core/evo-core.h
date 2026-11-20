@@ -1288,6 +1288,21 @@ void		evo_core_delete_contact		(EvoCore *core,
 						 EvoCoreResultFunc func,
 						 void *user_data);
 
+/* Copie (ou déplace) des contacts d'un carnet d'adresses vers un autre, ou vers le même carnet (doublons).
+ * Chaque copie est une nouvelle fiche qui garde tous les champs. Format attendu pour request_json :
+ * {"source_uid": "...", "target_uid": "...", "uids": ["..."], "rename_suffix": " (copier)", "move": false}
+ * "rename_suffix" (facultatif) est ajouté au nom complet des copies ; "move": true supprime l'original
+ * une fois la copie réussie (carnets différents seulement).
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   request_json : description de la copie au format JSON UTF-8
+ *   func         : rappel recevant {"copied": n, "failed": n, "removed": n, "error": "premier échec"}
+ *   user_data    : données utilisateur transmises au rappel */
+void		evo_core_copy_contacts		(EvoCore *core,
+						 const char *request_json,
+						 EvoCoreResultFunc func,
+						 void *user_data);
+
 /* Modifie un contact existant dans son carnet d'adresses.
  * Format attendu pour contact_json :
  * {"book_uid": "...", "uid": "...", "full_name": "...", "email": "...",

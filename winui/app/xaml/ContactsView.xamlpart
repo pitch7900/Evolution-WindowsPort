@@ -1,5 +1,11 @@
             <Grid x:Name="ContactsViewPane" Grid.Row="2" Visibility="Collapsed">
 
+                <!-- Ctrl+C : copie les contacts sélectionnés ; Ctrl+V : les colle dans le carnet actif -->
+                <Grid.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Control" Key="C" Invoked="OnContactsCopyAccelerator" />
+                    <KeyboardAccelerator Modifiers="Control" Key="V" Invoked="OnContactsPasteAccelerator" />
+                </Grid.KeyboardAccelerators>
+
                 <Grid.ColumnDefinitions>
 
                     <ColumnDefinition Width="260" />
@@ -77,7 +83,7 @@
 
                                     TextChanged="OnContactSearchChanged" QuerySubmitted="OnContactSearchSubmitted" />
 
-                    <ListView x:Name="ContactList" Grid.Row="2" SelectionMode="Single" SelectionChanged="OnContactSelectionChanged" />
+                    <ListView x:Name="ContactList" Grid.Row="2" SelectionMode="Extended" SelectionChanged="OnContactSelectionChanged" />
 
                 </Grid>
 
@@ -116,6 +122,8 @@
                             <TextBlock x:Name="ContactOrgText" IsTextSelectionEnabled="True" />
 
                         </StackPanel>
+
+                        <StackPanel x:Name="ContactBookRow" Orientation="Horizontal" Spacing="8" Visibility="Collapsed" ToolTipService.ToolTip="Carnet d'adresses du contact"><FontIcon Glyph="&#xE8F1;" FontSize="14" /><TextBlock x:Name="ContactBookText" IsTextSelectionEnabled="True" TextWrapping="Wrap" /></StackPanel>
 
                         <StackPanel x:Name="ContactAddressRow" Orientation="Horizontal" Spacing="8" Visibility="Collapsed"><FontIcon Glyph="&#xE707;" FontSize="14" /><TextBlock x:Name="ContactAddressText" IsTextSelectionEnabled="True" TextWrapping="Wrap" /></StackPanel>
 

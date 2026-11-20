@@ -943,3 +943,166 @@ evo_core_modify_contact (EvoCore *core,
 
 	core_submit (core, core_modify_contact_run, g_strdupv (args), func, user_data);
 }
+
+/* Copie ou déplace des contacts d'un carnet d'adresses vers un autre (ou le même : doublons).
+ * Chaque copie est une nouvelle fiche (nouvel identifiant) qui garde tous les champs, photo comprise.
+ * Paramètres :
+ *   core  : instance du moteur evo-core
+ *   args  : [0] = JSON {"source_uid", "target_uid", "uids": [...], "rename_suffix": " (copier)", "move": false}
+ *   error : emplacement pour une éventuelle erreur
+ * Retourne : {"copied": n, "failed": n, "removed": n, "error": "premier échec"} ou NULL. */
+static gchar *
+core_copy_contacts_run (EvoCore *core,
+			gchar **args,
+			GError **error)
+{
+	JsonNode *root;
+	JsonObject *object;
+	JsonArray *uids = NULL;
+	const gchar *source_uid, *target_uid, *suffix;
+	gboolean move, same_book;
+	ESource *source = NULL, *target = NULL;
+	EClient *source_client = NULL, *target_client = NULL;
+	guint ii, copied = 0, failed = 0, removed = 0;
+	gchar *first_error = NULL, *json = NULL;
+	JsonBuilder *builder;
+
+	root = json_from_string (args[0], error);
+	if (!root)
+		return NULL;
+
+	object = JSON_NODE_HOLDS_OBJECT (root) ? json_node_get_object (root) : NULL;
+	if (object && json_object_has_member (object, "uids") && JSON_NODE_HOLDS_ARRAY (json_object_get_member (object, "uids")))
+		uids = json_object_get_array_member (object, "uids");
+	if (!object || !uids) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Requête de copie de contacts invalide");
+		json_node_unref (root);
+		return NULL;
+	}
+
+	source_uid = json_object_get_string_member_with_default (object, "source_uid", "");
+	target_uid = json_object_get_string_member_with_default (object, "target_uid", "");
+	suffix = json_object_get_string_member_with_default (object, "rename_suffix", "");
+	move = json_object_get_boolean_member_with_default (object, "move", FALSE);
+	same_book = g_str_equal (source_uid, target_uid);
+
+	source = e_source_registry_ref_source (core->registry, source_uid);
+	target = e_source_registry_ref_source (core->registry, target_uid);
+	if (!source || !target || !e_source_has_extension (source, E_SOURCE_EXTENSION_ADDRESS_BOOK) ||
+	    !e_source_has_extension (target, E_SOURCE_EXTENSION_ADDRESS_BOOK)) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "Carnet d'adresses introuvable");
+		goto exit;
+	}
+
+	target_client = e_book_client_connect_sync (target, 5, core->cancellable, error);
+	if (!target_client)
+		goto exit;
+	if (same_book)
+		source_client = g_object_ref (target_client);
+	else {
+		source_client = e_book_client_connect_sync (source, 5, core->cancellable, error);
+		if (!source_client)
+			goto exit;
+	}
+
+	for (ii = 0; ii < json_array_get_length (uids) && !g_cancellable_is_cancelled (core->cancellable); ii++) {
+		const gchar *uid = json_array_get_string_element (uids, ii);
+		EContact *contact = NULL, *copy;
+		GError *local_error = NULL;
+		const gchar *name;
+
+		if (!uid || !*uid)
+			continue;
+
+		if (!e_book_client_get_contact_sync (E_BOOK_CLIENT (source_client), uid, &contact, core->cancellable, &local_error)) {
+			failed++;
+			if (!first_error)
+				first_error = g_strdup (local_error ? local_error->message : "Contact introuvable");
+			g_clear_error (&local_error);
+			continue;
+		}
+
+		copy = e_contact_duplicate (contact);
+		g_object_unref (contact);
+		e_contact_set (copy, E_CONTACT_UID, NULL);   /* nouvelle fiche : le carnet lui donne son identifiant */
+
+		if (*suffix) {
+			name = e_contact_get_const (copy, E_CONTACT_FULL_NAME);
+			if (name && *name) {
+				gchar *renamed = g_strconcat (name, suffix, NULL);
+
+				e_contact_set (copy, E_CONTACT_FULL_NAME, renamed);
+				g_free (renamed);
+			}
+			name = e_contact_get_const (copy, E_CONTACT_FILE_AS);
+			if (name && *name) {
+				gchar *renamed = g_strconcat (name, suffix, NULL);
+
+				e_contact_set (copy, E_CONTACT_FILE_AS, renamed);
+				g_free (renamed);
+			}
+		}
+
+		if (e_book_client_add_contact_sync (E_BOOK_CLIENT (target_client), copy, E_BOOK_OPERATION_FLAG_NONE,
+		    NULL, core->cancellable, &local_error)) {
+			copied++;
+			/* déplacement : l'original n'est supprimé qu'une fois la copie réussie */
+			if (move && !same_book) {
+				if (e_book_client_remove_contact_by_uid_sync (E_BOOK_CLIENT (source_client), uid,
+				    E_BOOK_OPERATION_FLAG_NONE, core->cancellable, &local_error))
+					removed++;
+				else {
+					failed++;
+					if (!first_error)
+						first_error = g_strdup (local_error ? local_error->message : "Suppression impossible");
+				}
+			}
+		} else {
+			failed++;
+			if (!first_error)
+				first_error = g_strdup (local_error ? local_error->message : "Ajout impossible");
+		}
+		g_clear_error (&local_error);
+		g_object_unref (copy);
+	}
+
+	builder = json_builder_new ();
+	json_builder_begin_object (builder);
+	builder_add_int (builder, "copied", copied);
+	builder_add_int (builder, "failed", failed);
+	builder_add_int (builder, "removed", removed);
+	if (first_error)
+		builder_add_string (builder, "error", first_error);
+	json_builder_end_object (builder);
+	json = json_from_builder (builder);
+	g_object_unref (builder);
+
+ exit:
+	g_free (first_error);
+	g_clear_object (&source_client);
+	g_clear_object (&target_client);
+	g_clear_object (&source);
+	g_clear_object (&target);
+	json_node_unref (root);
+
+	return json;
+}
+
+/* Soumet une requête de copie (ou de déplacement) de contacts d'un carnet vers un autre.
+ * Paramètres :
+ *   core         : instance du moteur evo-core
+ *   request_json : {"source_uid", "target_uid", "uids": [...], "rename_suffix": "", "move": false}
+ *   func         : rappel recevant {"copied", "failed", "removed", "error"}
+ *   user_data    : données utilisateur transmises au rappel */
+void
+evo_core_copy_contacts (EvoCore *core,
+			const char *request_json,
+			EvoCoreResultFunc func,
+			void *user_data)
+{
+	gchar *args[] = { (gchar *) request_json, NULL };
+
+	g_return_if_fail (request_json != NULL);
+
+	core_submit (core, core_copy_contacts_run, g_strdupv (args), func, user_data);
+}

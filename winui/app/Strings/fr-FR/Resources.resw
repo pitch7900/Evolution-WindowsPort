@@ -8099,5 +8099,109 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Mise à jour annulée : l'élévation des droits a été refusée.</value>
     <comment>Mise à jour annulée : l'élévation des droits a été refusée.</comment>
   </data>
+  <data name="T_DB786584" xml:space="preserve">
+    <value>Cliquer ou glisser pour sélectionner une plage ; clic droit pour créer un événement</value>
+    <comment>Cliquer ou glisser pour sélectionner une plage ; clic droit pour créer un événement</comment>
+  </data>
+  <data name="T_B349B04E" xml:space="preserve">
+    <value>Nouveau rendez-vous</value>
+    <comment>Nouveau rendez-vous</comment>
+  </data>
+  <data name="T_B159549F" xml:space="preserve">
+    <value>Nouvel événement d'une journée entière</value>
+    <comment>Nouvel événement d'une journée entière</comment>
+  </data>
+  <data name="T_1FFEFF35" xml:space="preserve">
+    <value>Nouvelle réunion Teams</value>
+    <comment>Nouvelle réunion Teams</comment>
+  </data>
+  <data name="T_AFF62B9C" xml:space="preserve">
+    <value>Coller</value>
+    <comment>Coller</comment>
+  </data>
+  <data name="T_6BBCD9D8" xml:space="preserve">
+    <value>Événement « {0} » copié : clic droit sur une plage du calendrier, puis « Coller ».</value>
+    <comment>Événement « {0} » copié : clic droit sur une plage du calendrier, puis « Coller ».</comment>
+  </data>
+  <data name="T_EE70597E" xml:space="preserve">
+    <value>Copie de l'événement : {0}</value>
+    <comment>Copie de l'événement : {0}</comment>
+  </data>
+  <data name="T_CF890C9D" xml:space="preserve">
+    <value>Collage de l'événement : {0}</value>
+    <comment>Collage de l'événement : {0}</comment>
+  </data>
+  <data name="T_BFC4EAB5" xml:space="preserve">
+    <value>Événement collé.</value>
+    <comment>Événement collé.</comment>
+  </data>
+  <data name="T_236FF748" xml:space="preserve">
+    <value>Déplacement de l'événement : {0}</value>
+    <comment>Déplacement de l'événement : {0}</comment>
+  </data>
+  <data name="T_610D26B1" xml:space="preserve">
+    <value>Un événement périodique ne se déplace pas par glisser : ouvrez-le pour modifier sa récurrence.</value>
+    <comment>Un événement périodique ne se déplace pas par glisser : ouvrez-le pour modifier sa récurrence.</comment>
+  </data>
+  <data name="T_8FD41460" xml:space="preserve">
+    <value>Cet agenda est en lecture seule : l'événement ne peut pas être déplacé.</value>
+    <comment>Cet agenda est en lecture seule : l'événement ne peut pas être déplacé.</comment>
+  </data>
+  <data name="T_5266A585" xml:space="preserve">
+    <value>Sélectionnez d'abord une plage du calendrier où coller l'événement.</value>
+    <comment>Sélectionnez d'abord une plage du calendrier où coller l'événement.</comment>
+  </data>
+  <data name="T_D62A7806" xml:space="preserve">
+    <value>Masquer ce calendrier</value>
+    <comment>Masquer ce calendrier</comment>
+  </data>
+  <data name="T_FF14A831" xml:space="preserve">
+    <value>{0} contact(s) copié(s) : clic droit sur un carnet d'adresses, puis « Coller ».</value>
+    <comment>{0} contact(s) copié(s) : clic droit sur un carnet d'adresses, puis « Coller ».</comment>
+  </data>
+  <data name="T_37AE8658" xml:space="preserve">
+    <value>(copier)</value>
+    <comment>(copier)</comment>
+  </data>
+  <data name="T_B2ED2120" xml:space="preserve">
+    <value>Coller dans le même carnet d'adresses</value>
+    <comment>Coller dans le même carnet d'adresses</comment>
+  </data>
+  <data name="T_9533B0FD" xml:space="preserve">
+    <value>Les contacts collés viennent de ce carnet. Ajouter « {0} » au nom des copies pour les distinguer ?</value>
+    <comment>Les contacts collés viennent de ce carnet. Ajouter « {0} » au nom des copies pour les distinguer ?</comment>
+  </data>
+  <data name="T_5D5D4F2F" xml:space="preserve">
+    <value>Renommer les copies</value>
+    <comment>Renommer les copies</comment>
+  </data>
+  <data name="T_C2836B25" xml:space="preserve">
+    <value>Garder les mêmes noms</value>
+    <comment>Garder les mêmes noms</comment>
+  </data>
+  <data name="T_7F78AB9D" xml:space="preserve">
+    <value>Contacts : {0} copié(s), {1} en échec ({2}).</value>
+    <comment>Contacts : {0} copié(s), {1} en échec ({2}).</comment>
+  </data>
+  <data name="T_A790DED2" xml:space="preserve">
+    <value>{0} contact(s) déplacé(s) vers « {1} ».</value>
+    <comment>{0} contact(s) déplacé(s) vers « {1} ».</comment>
+  </data>
+  <data name="T_C2365BFD" xml:space="preserve">
+    <value>{0} contact(s) collé(s) dans « {1} ».</value>
+    <comment>{0} contact(s) collé(s) dans « {1} ».</comment>
+  </data>
+  <data name="T_FBA56A1B" xml:space="preserve">
+    <value>Déplacer vers « {0} »</value>
+    <comment>Déplacer vers « {0} »</comment>
+  </data>
+  <data name="T_E306FE61" xml:space="preserve">
+    <value>Copier vers « {0} »</value>
+    <comment>Copier vers « {0} »</comment>
+  </data>
+  <data name="T_0B6AB6DE" xml:space="preserve">
+    <value>Carnet d'adresses du contact</value>
+    <comment>Carnet d'adresses du contact</comment>
+  </data>
 </root>
 
