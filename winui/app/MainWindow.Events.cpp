@@ -1062,6 +1062,61 @@ namespace winrt::EvolutionWin::implementation
         end_row.Children().Append(end_time);
         panel.Children().Append(end_row);
 
+        /* Cohérence début / fin, en direct :
+         *  - décaler le début (date ou heure) décale la fin du même écart, la durée est conservée ;
+         *  - une fin antérieure au début est ramenée au début. */
+        {
+            auto epoch_of = [](CalendarDatePicker const& date, TimePicker const& time) -> int64_t
+            {
+                time_t raw = winrt::clock::to_time_t(date.Date().Value());
+                struct tm local{};
+                localtime_s(&local, &raw);
+                local.tm_hour = 0;
+                local.tm_min = 0;
+                local.tm_sec = 0;
+                local.tm_isdst = -1;
+                return static_cast<int64_t>(mktime(&local)) + std::chrono::duration_cast<std::chrono::seconds>(time.Time()).count();
+            };
+            auto show_epoch = [time_of_day](CalendarDatePicker const& date, TimePicker const& time, int64_t epoch)
+            {
+                time_t raw = static_cast<time_t>(epoch);
+                date.Date(winrt::clock::from_time_t(raw));
+                time.Time(time_of_day(raw));
+            };
+            auto last_start = std::make_shared<int64_t>(start_date.Date() ? epoch_of(start_date, start_time) : 0);
+            auto busy = std::make_shared<bool>(false);
+
+            auto on_start_changed = [=](auto&&, auto&&)
+            {
+                if (*busy || !start_date.Date() || !end_date.Date())
+                    return;
+                int64_t start = epoch_of(start_date, start_time);
+                int64_t shift = start - *last_start;
+                *last_start = start;
+                if (shift == 0)
+                    return;
+                *busy = true;
+                show_epoch(end_date, end_time, epoch_of(end_date, end_time) + shift);
+                *busy = false;
+            };
+            start_date.DateChanged(on_start_changed);
+            start_time.TimeChanged(on_start_changed);
+
+            auto on_end_changed = [=](auto&&, auto&&)
+            {
+                if (*busy || !start_date.Date() || !end_date.Date())
+                    return;
+                int64_t start = epoch_of(start_date, start_time);
+                if (epoch_of(end_date, end_time) >= start)
+                    return;
+                *busy = true;
+                show_epoch(end_date, end_time, start);
+                *busy = false;
+            };
+            end_date.DateChanged(on_end_changed);
+            end_time.TimeChanged(on_end_changed);
+        }
+
         /* rappel (VALARM) : délai avant le début */
         static constexpr int reminder_values[] = { -1, 0, 5, 15, 30, 60, 120, 1440 };
         ComboBox reminder_combo;
