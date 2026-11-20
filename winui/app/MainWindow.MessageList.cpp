@@ -495,7 +495,7 @@ namespace winrt::EvolutionWin::implementation
             return;
         }
 
-        /* vue unifiée : rechargement habituel, qui garde la sélection */
+        /* vue unifiée : rechargement qui garde la sélection et n'applique que la différence */
         if (IsUnifiedView())
         {
             SetFolderLoading(false);
@@ -648,7 +648,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         RequestUnifiedMessages(role,
-            [this, account, role, selected, scroll_offset](hstring const& json, hstring const& error)
+            [this, account, role, selected, scroll_offset, keep_selection](hstring const& json, hstring const& error)
         {
             /* une autre vue a été choisie entre-temps */
             if (account != m_account || role != m_folder)
@@ -661,6 +661,18 @@ namespace winrt::EvolutionWin::implementation
                 ShowStatus(Tr(L"Vue unifiée : ", L"Unified view: ") + error, InfoBarSeverity::Error);
                 RevealMainWindow(L"erreur de la vue unifiée");
                 return;
+            }
+
+            /* simple rechargement (relève en fond d'un compte) : seule la différence est appliquée,
+               sinon la liste entière serait reconstruite à chaque événement et clignoterait */
+            if (keep_selection && m_all_messages)
+            {
+                JsonArray fresh{ nullptr };
+                if (JsonArray::TryParse(json, fresh))
+                {
+                    ApplyMessageDelta(fresh);
+                    return;
+                }
             }
 
             m_all_messages = JsonArray::Parse(json);

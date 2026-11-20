@@ -12,6 +12,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.3.3] — en cours
 
+### Corrigé
+
+- **Boîte de réception unifiée : la liste des messages ne clignote plus.** Chaque fin de relève en fond d'un compte reconstruisait entièrement la liste (vidage puis recréation de toutes les lignes), ce qui provoquait un clignotement toutes les secondes environ. La vue unifiée n'applique désormais que la différence, comme un dossier ordinaire : rien ne bouge si rien n'a changé, les indicateurs lu / suivi sont mis à jour en place, et la sélection et le défilement sont conservés.
+
 ### Modifié
 
 ## [1.3.2] — 2026-11-19
