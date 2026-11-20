@@ -579,7 +579,7 @@ namespace winrt::EvolutionWin::implementation
 
         /* poignées d'étirement du haut et du bas d'un événement horaire (visibles quand il est sélectionné) :
            on tire, le bloc suit au quart d'heure, et au relâchement l'heure de début ou de fin change */
-        auto make_event_grip = [this, body, HourHeight](Border const& block, JsonObject const& ev, bool top) -> UIElement
+        auto make_event_grip = [this, body, HourHeight](Grid const& group, Border const& block, JsonObject const& ev, bool top) -> UIElement
         {
             EvolutionWin::ResizeGrip grip;
             grip.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
@@ -589,11 +589,21 @@ namespace winrt::EvolutionWin::implementation
 
             hstring calendar_uid = ev.GetNamedString(L"calendar_uid", L"");
             hstring uid = ev.GetNamedString(L"uid", L"");
-            struct State { bool active{ false }; double y0{ 0 }; Thickness margin0{}; double height0{ 0 }; int64_t steps{ 0 }; };
+            struct State
+            {
+                bool active{ false };
+                double y0{ 0 };
+                Thickness block_margin0{};
+                double block_height0{ 0 };
+                Thickness group_margin0{};
+                double group_height0{ 0 };
+                int64_t steps{ 0 };
+            };
             auto state = std::make_shared<State>();
             double quarter = HourHeight / 4.0;
+            double day_height = 24 * HourHeight;
 
-            grip.PointerPressed([state, grip, body, block](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+            grip.PointerPressed([state, grip, body, block, group](IInspectable const&, Input::PointerRoutedEventArgs const& args)
             {
                 auto point = args.GetCurrentPoint(body);
                 if (!point.Properties().IsLeftButtonPressed())
@@ -601,48 +611,62 @@ namespace winrt::EvolutionWin::implementation
                 args.Handled(true);
                 state->active = true;
                 state->y0 = point.Position().Y;
-                state->margin0 = block.Margin();
-                state->height0 = block.Height();
+                state->block_margin0 = block.Margin();
+                state->block_height0 = block.Height();
+                state->group_margin0 = group.Margin();
+                state->group_height0 = group.Height();
                 state->steps = 0;
                 block.CanDrag(false);   /* le glisser d'étirement ne doit pas déclencher le glisser-déposer de l'événement */
+                Canvas::SetZIndex(group, 50);   /* l'événement étiré passe au-dessus de ses voisins */
                 grip.CapturePointer(args.Pointer());
             });
-            grip.PointerMoved([state, body, block, top, quarter](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+            grip.PointerMoved([state, body, block, group, top, quarter, day_height](IInspectable const&, Input::PointerRoutedEventArgs const& args)
             {
                 if (!state->active)
                     return;
                 double dy = args.GetCurrentPoint(body).Position().Y - state->y0;
                 int64_t steps = static_cast<int64_t>(std::llround(dy / quarter));
-                /* durée minimale : un quart d'heure */
-                int64_t quarters_total = static_cast<int64_t>(std::llround((state->height0 + 2) / quarter));
-                int64_t limit = (std::max<int64_t>)(quarters_total - 1, 0);
-                steps = top ? (std::min)(steps, limit) : (std::max)(steps, -limit);
+
+                /* positions dans la grille du jour : le bloc peut dépasser son groupe, qui s'agrandit avec lui */
+                double group_top0 = state->group_margin0.Top;
+                double group_bottom0 = group_top0 + state->group_height0;
+                double block_top0 = group_top0 + state->block_margin0.Top;
+                double block_bottom0 = block_top0 + state->block_height0 + 2;
+
+                /* durée minimale d'un quart d'heure, et le jour affiché pour limite */
+                int64_t min_steps = top ? static_cast<int64_t>(std::floor(-block_top0 / quarter)) : -static_cast<int64_t>(std::llround((state->block_height0 + 2) / quarter)) + 1;
+                int64_t max_steps = top ? static_cast<int64_t>(std::llround((state->block_height0 + 2) / quarter)) - 1 : static_cast<int64_t>(std::floor((day_height - block_bottom0) / quarter));
+                steps = (std::max)(min_steps, (std::min)(steps, max_steps));
                 state->steps = steps;
-                if (top)
-                {
-                    block.Margin(ThicknessHelper::FromLengths(state->margin0.Left, state->margin0.Top + steps * quarter, state->margin0.Right, state->margin0.Bottom));
-                    block.Height((std::max)(18.0, state->height0 - steps * quarter));
-                }
-                else
-                {
-                    block.Height((std::max)(18.0, state->height0 + steps * quarter));
-                }
+                double d = steps * quarter;
+
+                double block_top = top ? block_top0 + d : block_top0;
+                double block_bottom = top ? block_bottom0 : block_bottom0 + d;
+                double new_group_top = (std::min)(group_top0, block_top);
+                double new_group_bottom = (std::max)(group_bottom0, block_bottom);
+
+                group.Margin(ThicknessHelper::FromLengths(state->group_margin0.Left, new_group_top, state->group_margin0.Right, state->group_margin0.Bottom));
+                group.Height(new_group_bottom - new_group_top);
+                block.Margin(ThicknessHelper::FromLengths(state->block_margin0.Left, block_top - new_group_top, state->block_margin0.Right, state->block_margin0.Bottom));
+                block.Height((std::max)(18.0, block_bottom - block_top - 2));
             });
-            auto finish = [this, state, grip, block, top, calendar_uid, uid](IInspectable const&, Input::PointerRoutedEventArgs const& args)
+            auto finish = [this, state, grip, block, group, top, calendar_uid, uid](IInspectable const&, Input::PointerRoutedEventArgs const& args)
             {
                 if (!state->active)
                     return;
                 state->active = false;
                 grip.ReleasePointerCapture(args.Pointer());
                 block.CanDrag(true);
+                Canvas::SetZIndex(group, 0);
                 if (state->steps != 0)
                     ResizeCalendarEvent(calendar_uid, uid, top ? state->steps * 900 : 0, top ? 0 : state->steps * 900);
             };
             grip.PointerReleased(finish);
-            grip.PointerCanceled([state, block](IInspectable const&, Input::PointerRoutedEventArgs const&)
+            grip.PointerCanceled([state, block, group](IInspectable const&, Input::PointerRoutedEventArgs const&)
             {
                 state->active = false;
                 block.CanDrag(true);
+                Canvas::SetZIndex(group, 0);
             });
             return grip;
         };
@@ -936,12 +960,12 @@ namespace winrt::EvolutionWin::implementation
                     UIElement bottom_grip{ nullptr };
                     if (event_start >= day_starts[day])
                     {
-                        top_grip = make_event_grip(block, ev, true);
+                        top_grip = make_event_grip(group, block, ev, true);
                         shell.Children().Append(top_grip);
                     }
                     if (event_end <= day_starts[day + 1])
                     {
-                        bottom_grip = make_event_grip(block, ev, false);
+                        bottom_grip = make_event_grip(group, block, ev, false);
                         shell.Children().Append(bottom_grip);
                     }
                     block.Child(shell);
