@@ -12,6 +12,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.3.4] — en cours
 
+### Corrigé
+
+- **Fenêtre d'événement / invitation : début et fin restent cohérents.** Changer la date ou l'heure de début décale désormais la fin du même écart (14 h 30 – 15 h 30 passé à 16 h 30 donne 16 h 30 – 17 h 30), et une date ou une heure de fin antérieure au début est ramenée au début. Auparavant, la fin restait inchangée dans la fenêtre et n'était corrigée qu'à l'enregistrement.
+
 ### Modifié
 
 ## [1.3.3] — 2026-11-20
