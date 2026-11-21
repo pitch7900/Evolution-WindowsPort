@@ -75,7 +75,22 @@ namespace winrt::EvolutionWin::implementation
             m_core = std::make_shared<::EvolutionWin::CoreBridge>(
                 DispatcherQueue(),
                 [this](hstring const& event, hstring const& json) { OnCoreEvent(event, json); });
+            ApplyMailSyncInterval();
         }
+    }
+
+    /**
+     * @brief Applique au moteur le réglage « Vérification automatique du nouveau courrier »
+     *        (mail.sync-interval, en minutes ; 0 = manuellement uniquement).
+     */
+    void MainWindow::ApplyMailSyncInterval()
+    {
+        if (!m_core)
+            return;
+        int minutes = _wtoi(::EvolutionWin::Settings::Instance().GetString(L"mail.sync-interval", L"5").c_str());
+        if (minutes < 0)
+            minutes = 5;
+        m_core->SetRefreshInterval(static_cast<uint32_t>(minutes) * 60u);
     }
 
     /**

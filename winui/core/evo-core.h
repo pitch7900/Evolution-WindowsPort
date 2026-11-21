@@ -147,6 +147,11 @@ void		evo_core_refresh_all		(EvoCore *core);
  * du démarrage (evo_core_refresh_all () reste utilisée par « Tous les dossiers », F9). */
 void		evo_core_refresh_base		(EvoCore *core);
 
+/* Intervalle de la relève automatique du nouveau courrier, en secondes (défaut 300) ;
+ * 0 désactive la relève automatique (Envoyer/Recevoir manuel uniquement). Prend effet immédiatement. */
+void		evo_core_set_refresh_interval	(EvoCore *core,
+						 unsigned int seconds);
+
 /* Interrompt les opérations réseau ou de synchronisation actives
  * en annulant le GCancellable de la session, puis le réinitialise. */
 void		evo_core_cancel_operations	(EvoCore *core);

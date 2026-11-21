@@ -111,6 +111,12 @@ namespace EvolutionWin
             evo_core_refresh_base(m_core);
         }
 
+        /* Intervalle de la relève automatique du courrier (secondes ; 0 = manuelle uniquement). */
+        void SetRefreshInterval(uint32_t seconds)
+        {
+            evo_core_set_refresh_interval(m_core, seconds);
+        }
+
         /* Active ou désactive le mode hors connexion global du moteur.
          * Paramètres :
          *   offline : true pour travailler hors connexion, false pour se reconnecter */

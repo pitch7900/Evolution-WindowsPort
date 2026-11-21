@@ -26,6 +26,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 - **Nouveau message : compte affiché par défaut.** « Rédiger un nouveau mail » utilise désormais le compte du dossier affiché (et non plus le compte par
   défaut) ; le compte par défaut ne sert que si aucun compte n'est affiché (vue unifiée).
 
+- **Intervalle de vérification du courrier réellement appliqué.** Le réglage « Vérification automatique du nouveau
+  courrier » (Paramètres > Courrier > Réception : 1, 5, 15, 30 minutes ou manuellement uniquement) était affiché
+  mais sans effet : le moteur relevait toujours toutes les 5 minutes. Nouvelle fonction `evo_core_set_refresh_interval`
+  (evo-core) : le minuteur est recréé immédiatement au changement du réglage et au démarrage ; « Manuellement
+  uniquement » désactive la relève automatique (F9 reste disponible). Défaut inchangé : 5 minutes.
+
 ## [1.3.4] — 2026-11-20
 
 ### Corrigé
