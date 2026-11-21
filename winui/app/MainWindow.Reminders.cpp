@@ -3,6 +3,7 @@
 #include "MainWindow.Helpers.h"
 #include "Settings.h"
 #include "ErrorLog.h"
+#include "ToastNotifications.h"
 
 #include <chrono>
 #include <ctime>
@@ -146,38 +147,26 @@ namespace winrt::EvolutionWin::implementation
             auto manager = AppNotificationManager::Default();
             manager.NotificationInvoked([this](auto const&, AppNotificationActivatedEventArgs const& args)
             {
-                /* argument « action » = event pour un rappel de calendrier, absent pour un nouveau message ;
-                   « dismiss » (bouton Fermer) ne demande aucune navigation */
-                bool dismiss = false, is_event = false;
-                hstring action, account, folder, uid;
+                /* arguments du toast : « event » pour un rappel de calendrier, « delete » / « flag » pour les
+                   actions rapides (sans afficher la fenêtre), « dismiss » (bouton Fermer) sans navigation */
+                std::vector<std::pair<std::wstring, std::wstring>> pairs;
                 for (auto const& pair : args.Arguments())
-                {
-                    if (pair.Key() == L"action")
-                    {
-                        action = pair.Value();
-                        dismiss = pair.Value() == L"dismiss";
-                        is_event = pair.Value() == L"event";
-                    }
-                    else if (pair.Key() == L"account")
-                        account = pair.Value();
-                    else if (pair.Key() == L"folder")
-                        folder = pair.Value();
-                    else if (pair.Key() == L"uid")
-                        uid = pair.Value();
-                }
-                if (dismiss)
+                    pairs.emplace_back(std::wstring{ pair.Key() }, std::wstring{ pair.Value() });
+                auto parsed = ::EvolutionWin::Toast::ParseArguments(pairs);
+                using ::EvolutionWin::Toast::Action;
+                if (parsed.action == Action::Dismiss)
                     return;
 
-                DispatcherQueue().TryEnqueue([this, is_event, action, account, folder, uid]()
+                DispatcherQueue().TryEnqueue([this, parsed]()
                 {
-                    /* actions rapides du toast : traitées sans afficher la fenêtre */
-                    if (action == L"delete" || action == L"flag")
+                    hstring account{ parsed.account }, folder{ parsed.folder }, uid{ parsed.uid };
+                    if (parsed.action == Action::Delete || parsed.action == Action::Flag)
                     {
-                        ApplyToastMessageAction(action, account, folder, uid);
+                        ApplyToastMessageAction(parsed.action == Action::Delete ? L"delete" : L"flag", account, folder, uid);
                         return;
                     }
                     Activate();
-                    if (is_event)
+                    if (parsed.action == Action::Event)
                         SelectNavigationModule(L"calendar");
                     else
                         OpenMessageFromToast(account, folder, uid);

@@ -2,6 +2,7 @@
 #include "MainWindow.xaml.h"
 #include "WindowIcon.h"
 #include "Settings.h"
+#include "ToastNotifications.h"
 #include "MainWindow.Helpers.h"
 #include "UiTranslate.h"
 #if __has_include("MainWindow.g.cpp")
@@ -87,10 +88,8 @@ namespace winrt::EvolutionWin::implementation
     {
         if (!m_core)
             return;
-        int minutes = _wtoi(::EvolutionWin::Settings::Instance().GetString(L"mail.sync-interval", L"5").c_str());
-        if (minutes < 0)
-            minutes = 5;
-        m_core->SetRefreshInterval(static_cast<uint32_t>(minutes) * 60u);
+        m_core->SetRefreshInterval(::EvolutionWin::Toast::RefreshSeconds(
+            std::wstring_view{ ::EvolutionWin::Settings::Instance().GetString(L"mail.sync-interval", L"5") }));
     }
 
     /**

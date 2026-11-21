@@ -5,6 +5,7 @@
 #include "FollowUp.h"
 #include "WindowIcon.h"
 #include "Settings.h"
+#include "ToastNotifications.h"
 #include "ConversationThreads.h"
 #include "UnifiedViews.h"
 #include "CategoryStore.h"
@@ -2127,6 +2128,33 @@ namespace winrt::EvolutionWin::implementation
                 return;
         }
 
+        /* à l'arrivée, le résumé du message n'est parfois pas encore renseigné (expéditeur ou objet vides) :
+           ils sont alors lus dans le message lui-même avant d'afficher le toast (une seule fois) */
+        {
+            hstring raw_uid = object.GetNamedString(L"uid", L"");
+            if (m_core && !raw_uid.empty() && !object.GetNamedBoolean(L"resolved", false)
+                && (object.GetNamedString(L"from", L"").empty() || object.GetNamedString(L"subject", L"").empty()))
+            {
+                m_core->FetchMessage(msg_account, msg_folder, raw_uid, [this, object](hstring const& json, hstring const& error)
+                {
+                    JsonObject completed = JsonObject::Parse(object.Stringify());
+                    JsonObject message;
+                    if (error.empty() && JsonObject::TryParse(json, message))
+                    {
+                        hstring fetched_from = message.GetNamedString(L"from", L"");
+                        hstring fetched_subject = message.GetNamedString(L"subject", L"");
+                        if (!fetched_from.empty())
+                            completed.SetNamedValue(L"from", JsonValue::CreateStringValue(fetched_from));
+                        if (!fetched_subject.empty())
+                            completed.SetNamedValue(L"subject", JsonValue::CreateStringValue(fetched_subject));
+                    }
+                    completed.SetNamedValue(L"resolved", JsonValue::CreateBooleanValue(true));
+                    ShowNewMailNotification(completed);
+                });
+                return;
+            }
+        }
+
         int32_t count = static_cast<int32_t>(object.GetNamedNumber(L"count", 1));
         hstring from = SenderName(object.GetNamedString(L"from", Tr(L"Nouveau message")));
         hstring subject = object.GetNamedString(L"subject", Tr(L"(Sans objet)"));
@@ -2161,23 +2189,19 @@ namespace winrt::EvolutionWin::implementation
         /* Émission de la notification via les Toasts système Windows si activé globalement :
            titre = nombre de messages, puis l'expéditeur et l'objet du plus récent sur deux lignes */
         hstring toast_title = count > 1 ? Fmt(Tr(L"{0} nouveaux messages"), { to_hstring(count) }) : Tr(L"Nouveau message");
-        hstring toast_from = from;
-        hstring toast_subject = subject;
-        if (::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.confidential", false))
-        {
-            toast_from = body;
-            toast_subject = L"";
-        }
+        auto toast_lines = ::EvolutionWin::Toast::ComposeNewMail(std::wstring_view{ toast_title }, std::wstring_view{ from },
+            std::wstring_view{ subject }, ::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.confidential", false),
+            std::wstring_view{ body });
         /* Émission exclusive de la notification via les Toasts système Windows si activé globalement */
         if (::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.toast", true))
         {
             try
             {
                 Microsoft::Windows::AppNotifications::Builder::AppNotificationBuilder builder;
-                builder.AddText(toast_title);
-                builder.AddText(toast_from);
-                if (!toast_subject.empty())
-                    builder.AddText(toast_subject);
+                builder.AddText(hstring{ toast_lines.title });
+                builder.AddText(hstring{ toast_lines.first });
+                if (!toast_lines.second.empty())
+                    builder.AddText(hstring{ toast_lines.second });
                 if (!msg_account.empty())
                     builder.AddArgument(L"account", msg_account);
                 if (!msg_folder.empty())

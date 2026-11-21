@@ -120,6 +120,7 @@
     <ClInclude Include="Rules.h" />
     <ClInclude Include="ImmersiveReader.h" />
     <ClInclude Include="Mailto.h" />
+    <ClInclude Include="ToastNotifications.h" />
     <ClInclude Include="RuleStore.h" />
     <ClInclude Include="CategoryStore.h" />
     <ClInclude Include="Policy.h" />

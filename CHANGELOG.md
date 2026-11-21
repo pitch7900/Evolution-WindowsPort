@@ -45,6 +45,14 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   message (expéditeur, objet et `uid` propres) : un toast chacun, jusqu'à 5 ; les suivants sont regroupés dans un
   dernier toast « N nouveaux messages ».
 
+- **Toast de nouveau message : expéditeur et objet toujours renseignés.** À l'arrivée d'un message, le résumé n'est
+  parfois pas encore disponible et l'événement `new-mail` partait avec l'expéditeur et l'objet vides, d'où un toast
+  réduit à son titre. Ils sont maintenant lus dans le message avant l'affichage du toast.
+
+- **Campagne de tests : notifications système.** Nouvelle suite `test_toast.cpp` (arguments des toasts, actions
+  rapides, lignes du toast, intervalle de vérification du courrier) sur la logique extraite dans
+  `ToastNotifications.h`, et test du contrat de l'événement `new-mail` (un événement par message, avec `uid`).
+
 ## [1.3.4] — 2026-11-20
 
 ### Corrigé

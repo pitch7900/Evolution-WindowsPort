@@ -133,6 +133,16 @@ cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
         exit /b 1
     )
 
+rem Compilation des tests des notifications systeme de courrier (C++17 ; ToastNotifications.h)
+echo [toast] Compilation de test_toast.cpp ...
+cl.exe /nologo /std:c++17 /EHsc /utf-8 /W4 /O2 ^
+    "%EVO_WORKSPACE%\tests\unit\test_toast.cpp" ^
+    /Fe:"%TEST_BIN_DIR%\test_toast.exe" ^
+    /Fo:"%TEST_BIN_DIR%\test_toast.obj" || (
+        echo [ERREUR] Echec de la compilation de test_toast.cpp
+        exit /b 1
+    )
+
 rem Compilation des tests d'export / import du courrier et des contacts (C)
 echo [transfert] Compilation de test_transfer.c ...
 cl.exe /nologo /utf-8 /W4 /O2 ^
@@ -204,6 +214,10 @@ if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
 rem Execution de la suite : liens mailto:
 "%TEST_BIN_DIR%\test_mailto.exe"
+if !errorlevel! neq 0 set /a FAILED_SUITES+=1
+
+rem Execution de la suite : notifications systeme de courrier
+"%TEST_BIN_DIR%\test_toast.exe"
 if !errorlevel! neq 0 set /a FAILED_SUITES+=1
 
 rem Execution de la suite : export / import du courrier et des contacts
