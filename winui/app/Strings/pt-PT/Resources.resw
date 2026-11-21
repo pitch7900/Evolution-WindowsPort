@@ -8203,5 +8203,9 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Livro de endereços do contacto</value>
     <comment>Carnet d'adresses du contact</comment>
   </data>
+  <data name="T_86A7BBF8" xml:space="preserve">
+    <value>Erro</value>
+    <comment>Erreur</comment>
+  </data>
 </root>
 

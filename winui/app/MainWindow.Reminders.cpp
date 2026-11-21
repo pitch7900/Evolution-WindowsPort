@@ -2,6 +2,7 @@
 #include "MainWindow.xaml.h"
 #include "MainWindow.Helpers.h"
 #include "Settings.h"
+#include "ErrorLog.h"
 
 #include <chrono>
 #include <ctime>
@@ -134,6 +135,47 @@ namespace winrt::EvolutionWin::implementation
     }
 
     /**
+     * @brief Enregistre l'application auprès du centre de notifications Windows (indispensable en mode non
+     *        packagé : sans cet enregistrement, aucun toast n'est affiché) et traite le clic sur un toast.
+     */
+    void MainWindow::InstallToastSupport()
+    {
+        try
+        {
+            using namespace Microsoft::Windows::AppNotifications;
+            auto manager = AppNotificationManager::Default();
+            manager.NotificationInvoked([this](auto const&, AppNotificationActivatedEventArgs const& args)
+            {
+                /* argument « action » = event pour un rappel de calendrier, absent pour un nouveau message ;
+                   « dismiss » (bouton Fermer) ne demande aucune navigation */
+                bool dismiss = false, is_event = false;
+                for (auto const& pair : args.Arguments())
+                {
+                    if (pair.Key() == L"action")
+                    {
+                        dismiss = pair.Value() == L"dismiss";
+                        is_event = pair.Value() == L"event";
+                    }
+                }
+                if (dismiss)
+                    return;
+
+                DispatcherQueue().TryEnqueue([this, is_event]()
+                {
+                    Activate();
+                    SelectNavigationModule(is_event ? L"calendar" : L"mail");
+                });
+            });
+            manager.Register();
+        }
+        catch (winrt::hresult_error const& error)
+        {
+            evo_core_trace("interface : enregistrement des toasts impossible");
+            ::EvolutionWin::LogError(L"Toast", error.code(), error.message());
+        }
+    }
+
+    /**
      * @brief Notification Windows (toast) de rappel d'un événement.
      * @param event Événement (objet de evo_core_list_events).
      * @param seconds_left Secondes avant le début.
@@ -152,8 +194,7 @@ namespace winrt::EvolutionWin::implementation
         if (!location.empty())
             body += L" — " + std::wstring{ location };
 
-        AddNotificationItem(hstring{ title }, hstring{ body });
-
+        /* rappel signalé uniquement par un toast système Windows (pas par le bouton « Notifications » de l'application) */
         if (settings.GetBoolean(L"notifications.sound", true))
             ::EvolutionWin::Helpers::PlayNewMailSound(settings.GetString(L"notifications.sound-kind", L"windows"),
                 settings.GetString(L"notifications.custom-sound-path", L""));

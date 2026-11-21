@@ -620,6 +620,11 @@ namespace winrt::EvolutionWin::implementation
             return;
         }
 
+        /* les erreurs (connexion impossible, échec de synchronisation ou d'envoi…) sont conservées dans le
+           bouton « Notifications » ; un message identique consécutif n'est pas répété */
+        if (severity == InfoBarSeverity::Error && (m_notifications.empty() || m_notifications.front().body != message))
+            AddNotificationItem(Tr(L"Erreur"), message);
+
         /* message compact dans la barre d'état du bas : icône de gravité + texte sur une ligne
            (texte complet en infobulle), disparition automatique */
         auto resources = Application::Current().Resources();

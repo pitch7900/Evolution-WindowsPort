@@ -2092,8 +2092,7 @@ namespace winrt::EvolutionWin::implementation
     /* Étape 1 : Notifications Windows (toasts) et pièces jointes            */
     /* -------------------------------------------------------------------- */
 
-    /* Affiche une notification système Windows (toast) ainsi qu'un message
-     * dans la barre d'état à l'arrivée de nouveaux courriers non lus.
+    /* Affiche une notification système Windows (toast) à l'arrivée de nouveaux courriers non lus.
      * Paramètres :
      *   object : objet JSON décrivant les nouveaux messages ("from", "subject", "count") */
     void MainWindow::ShowNewMailNotification(JsonObject const& object)
@@ -2135,8 +2134,8 @@ namespace winrt::EvolutionWin::implementation
             body = count > 1 ? Tr(L"Ouvrez Evolution pour les lire.") : Tr(L"Ouvrez Evolution pour le lire.");
         }
 
-        /* Ajout dans l'historique du menu déroulant de la barre d'état (notifications discrètes) */
-        AddNotificationItem(title, body);
+        /* Les nouveaux messages sont signalés uniquement par les toasts système Windows :
+           le bouton « Notifications » de l'application est réservé aux notifications techniques. */
 
         /* Émission du signal sonore configuré si activé globalement et pour le compte */
         bool sound_global = ::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.sound", true);

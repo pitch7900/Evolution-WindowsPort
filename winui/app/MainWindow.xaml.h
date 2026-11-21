@@ -244,6 +244,7 @@ namespace winrt::EvolutionWin::implementation
 
         /* Liens mailto: et enregistrement système (MainWindow.Mailto.cpp ; logique pure dans Mailto.h) */
         void InstallMailtoSupport(winrt::hstring const& pending_url);
+        void InstallToastSupport();
         void HandleMailto(winrt::hstring const& url);
         void InitMailtoSettingsView();
         void OnMailtoRegisterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);

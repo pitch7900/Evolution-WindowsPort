@@ -14,6 +14,15 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Modifié
 
+- **Notifications : toasts Windows pour le courrier et les rappels, bouton interne réservé au technique.**
+  Les nouveaux messages et les rappels d'événements n'apparaissent plus dans le bouton « Notifications » de la
+  barre d'état : ils sont signalés uniquement par les notifications système (toasts) de Windows. L'application
+  s'enregistre désormais auprès du centre de notifications (`AppNotificationManager::Register()`, indispensable
+  en mode non packagé : sans cela les toasts étaient envoyés mais jamais affichés) et un clic sur un toast
+  ramène la fenêtre au premier plan sur le module Courrier ou Calendrier. Le bouton « Notifications » ne
+  conserve plus que les notifications techniques : toute erreur affichée dans la barre d'état (connexion
+  impossible, échec de synchronisation ou d'envoi…) y est historisée.
+
 ## [1.3.4] — 2026-11-20
 
 ### Corrigé
