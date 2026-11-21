@@ -42,7 +42,7 @@ typedef void (*EvoCoreResultFunc) (const char *json,
  *                                        changement sur un dossier ouvert
  *   "folders-updated" {"account": "..."} compteurs ou arborescence mis à jour
  *   "new-mail" {"account": "...", "folder": "...", "count": 2,
- *               "from": "...", "subject": "..."}
+ *               "from": "...", "subject": "...", "uid": "..."}   (uid : message le plus récent)
  *                                        nouveaux messages non lus dans la boîte de réception
  *   "sending" / "sent" {"subject": "..."} message en cours d'envoi / envoyé
  */

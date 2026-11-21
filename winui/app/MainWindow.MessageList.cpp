@@ -179,6 +179,17 @@ namespace winrt::EvolutionWin::implementation
                     m_reselecting = false;
                 }
             }
+            /* clic sur un toast de nouveau message : sélection (et lecture) du message annoncé */
+            if (!m_pending_open_uid.empty())
+            {
+                hstring wanted = m_pending_open_uid;
+                m_pending_open_uid = L"";
+                if (auto grid = FindMessageItem(wanted))
+                {
+                    MessageList().SelectedItem(grid);
+                    MessageList().ScrollIntoView(grid);
+                }
+            }
             /* rechargement silencieux : la liste garde sa position */
             RestoreListScroll(MessageList(), scroll_offset);
             UpdateFolderStatusText();
@@ -2147,14 +2158,26 @@ namespace winrt::EvolutionWin::implementation
             ::EvolutionWin::Helpers::PlayNewMailSound(sound_kind, custom_path);
         }
 
+        /* Émission de la notification via les Toasts système Windows si activé globalement :
+           titre = nombre de messages, puis l'expéditeur et l'objet du plus récent sur deux lignes */
+        hstring toast_title = count > 1 ? Fmt(Tr(L"{0} nouveaux messages"), { to_hstring(count) }) : Tr(L"Nouveau message");
+        hstring toast_from = from;
+        hstring toast_subject = subject;
+        if (::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.confidential", false))
+        {
+            toast_from = body;
+            toast_subject = L"";
+        }
         /* Émission exclusive de la notification via les Toasts système Windows si activé globalement */
         if (::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.toast", true))
         {
             try
             {
                 Microsoft::Windows::AppNotifications::Builder::AppNotificationBuilder builder;
-                builder.AddText(title);
-                builder.AddText(body);
+                builder.AddText(toast_title);
+                builder.AddText(toast_from);
+                if (!toast_subject.empty())
+                    builder.AddText(toast_subject);
                 if (!msg_account.empty())
                     builder.AddArgument(L"account", msg_account);
                 if (!msg_folder.empty())

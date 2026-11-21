@@ -32,6 +32,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   (evo-core) : le minuteur est recréé immédiatement au changement du réglage et au démarrage ; « Manuellement
   uniquement » désactive la relève automatique (F9 reste disponible). Défaut inchangé : 5 minutes.
 
+- **Toast de nouveau message : expéditeur, objet et ouverture du bon mail.** Le toast affiche désormais le titre
+  (« Nouveau message » ou « N nouveaux messages »), l'expéditeur puis l'objet du message le plus récent sur deux
+  lignes (mode confidentiel inchangé). L'événement `new-mail` d'evo-core transmet l'identifiant (`uid`) du message ;
+  un clic sur le toast ramène l'application au premier plan, ouvre le dossier concerné et sélectionne le message
+  (affiché dans le volet de lecture).
+
 ## [1.3.4] — 2026-11-20
 
 ### Corrigé

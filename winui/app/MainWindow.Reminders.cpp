@@ -149,6 +149,7 @@ namespace winrt::EvolutionWin::implementation
                 /* argument « action » = event pour un rappel de calendrier, absent pour un nouveau message ;
                    « dismiss » (bouton Fermer) ne demande aucune navigation */
                 bool dismiss = false, is_event = false;
+                hstring account, folder, uid;
                 for (auto const& pair : args.Arguments())
                 {
                     if (pair.Key() == L"action")
@@ -156,14 +157,23 @@ namespace winrt::EvolutionWin::implementation
                         dismiss = pair.Value() == L"dismiss";
                         is_event = pair.Value() == L"event";
                     }
+                    else if (pair.Key() == L"account")
+                        account = pair.Value();
+                    else if (pair.Key() == L"folder")
+                        folder = pair.Value();
+                    else if (pair.Key() == L"uid")
+                        uid = pair.Value();
                 }
                 if (dismiss)
                     return;
 
-                DispatcherQueue().TryEnqueue([this, is_event]()
+                DispatcherQueue().TryEnqueue([this, is_event, account, folder, uid]()
                 {
                     Activate();
-                    SelectNavigationModule(is_event ? L"calendar" : L"mail");
+                    if (is_event)
+                        SelectNavigationModule(L"calendar");
+                    else
+                        OpenMessageFromToast(account, folder, uid);
                 });
             });
             manager.Register();
@@ -173,6 +183,54 @@ namespace winrt::EvolutionWin::implementation
             evo_core_trace("interface : enregistrement des toasts impossible");
             ::EvolutionWin::LogError(L"Toast", error.code(), error.message());
         }
+    }
+
+    /**
+     * @brief Ouvre le message annoncé par un toast : module Courrier, dossier du message, puis sélection du
+     *        message (lu dans le volet de lecture). Sans message précis, affiche seulement le Courrier.
+     * @param account Compte du message (vide : non précisé).
+     * @param folder Dossier du message (vide : non précisé).
+     * @param uid Identifiant du message (vide : non précisé).
+     */
+    void MainWindow::OpenMessageFromToast(hstring const& account, hstring const& folder, hstring const& uid)
+    {
+        SelectNavigationModule(L"mail");
+        if (account.empty() || folder.empty() || uid.empty())
+            return;
+
+        /* déjà dans le bon dossier : sélection directe, après relecture si le message n'est pas encore listé */
+        if (!IsUnifiedView() && account == m_account && folder == m_folder)
+        {
+            if (auto grid = FindMessageItem(uid))
+            {
+                MessageList().SelectedItem(grid);
+                MessageList().ScrollIntoView(grid);
+                return;
+            }
+            m_pending_open_uid = uid;
+            LoadMessages(true);
+            return;
+        }
+
+        auto it = m_nodes.find(NodeKey(account, folder));
+        if (it == m_nodes.end())
+            return;
+        auto item = it->second.Content().try_as<EvolutionWin::FolderItem>();
+        if (!item)
+            return;
+
+        m_pending_open_uid = uid;
+        m_account = account;
+        m_folder = folder;
+        ++m_search_request;
+        FolderTree().SelectedNode(it->second);
+        FolderTitle().Text(item.Name());
+        LoadFolderSort();
+        LoadFolderConversations();
+        UpdateRibbon();
+        SearchBox().Text(L"");
+        UpdateOutOfOfficeBanner();
+        LoadMessages(false);
     }
 
     /**

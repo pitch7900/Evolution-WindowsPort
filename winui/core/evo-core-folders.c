@@ -462,6 +462,7 @@ core_folder_changed_cb (CamelFolder *folder,
 			json_builder_add_int_value (mail_builder, unread_added);
 			builder_add_string (mail_builder, "from", camel_message_info_get_from (newest));
 			builder_add_string (mail_builder, "subject", camel_message_info_get_subject (newest));
+			builder_add_string (mail_builder, "uid", camel_message_info_get_uid (newest));
 			core_emit_builder (core, "new-mail", mail_builder);
 		}
 

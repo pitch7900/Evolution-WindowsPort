@@ -246,6 +246,7 @@ namespace winrt::EvolutionWin::implementation
         void InstallMailtoSupport(winrt::hstring const& pending_url);
         void InstallToastSupport();
         void ApplyMailSyncInterval();
+        void OpenMessageFromToast(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& uid);
         void HandleMailto(winrt::hstring const& url);
         void InitMailtoSettingsView();
         void OnMailtoRegisterClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -883,6 +884,7 @@ namespace winrt::EvolutionWin::implementation
         Microsoft::UI::Xaml::Window m_immersive_window{ nullptr };
         /* lien mailto: reçu au lancement ou d'une autre instance, en attente du chargement des comptes */
         winrt::hstring m_pending_mailto;
+        winrt::hstring m_pending_open_uid; /* message à sélectionner dès que la liste du dossier est affichée (clic sur un toast) */
         Microsoft::UI::Xaml::DispatcherTimer m_mailto_timer{ nullptr };
 
         /* Bandeau d'information (vues Courrier et Calendrier) : avis identifiés,
