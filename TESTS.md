@@ -88,6 +88,16 @@ Tests the pure logic of [`ToastNotifications.h`](./winui/app/ToastNotifications.
 - **Mail check interval**: conversion of `mail.sync-interval` (minutes) to seconds for the engine (`0` = manual only, invalid value = 5 minutes, capped at 24 h).
 - The `new-mail` JSON event contract (one event per message, with `uid`) is covered by Suite 2.
 
+### Suite 5: Automated UI smoke test, read-only (`tests/ui/test_ui_smoke.ps1`)
+
+Run **manually** with EvolutionWin already started (real mailboxes connected): `powershell -ExecutionPolicy Bypass -File tests\ui\test_ui_smoke.ps1`. It uses Microsoft UI Automation and is strictly non-destructive:
+
+- no mouse movement and no keystroke: only the logical `SelectionItem` pattern is used;
+- strict allow-list (Mail / Calendar / Contacts navigation, Settings categories) and a deny-list (Send, Delete, Flag, Empty, Save, Reply, New...) that aborts the script rather than activating the element;
+- no message is selected (avoids the "read" flag), nothing is created, sent or modified; it returns to Mail at the end.
+
+It checks that the navigation items and settings categories exist, can be selected, and that the application stays responsive. Exit code `0` = success, `1` = failure, `2` = application not running.
+
 ### Suite 4: Binary integrity and ABI export (`test_abi_exports.ps1`)
 
 - Dynamically extracts all public function declarations from [`winui/core/evo-core.h`](./winui/core/evo-core.h) (`evo_core_*`).

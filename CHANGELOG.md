@@ -14,6 +14,8 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Modifié
 
+- **Tests : campagne UI automatisée en lecture seule** (`tests/ui/test_ui_smoke.ps1`, UI Automation, lancée manuellement) : navigation et catégories de Paramètres, sans souris ni clavier simulés, avec liste blanche et liste noire ; rien n'est envoyé, supprimé ni modifié.
+
 - **Notifications : toasts Windows pour le courrier et les rappels, bouton interne réservé au technique.**
   Les nouveaux messages et les rappels d'événements n'apparaissent plus dans le bouton « Notifications » de la
   barre d'état : ils sont signalés uniquement par les notifications système (toasts) de Windows. L'application
