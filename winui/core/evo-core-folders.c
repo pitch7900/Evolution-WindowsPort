@@ -6,6 +6,9 @@
 
 #include "evo-core-private.h"
 
+/* nombre maximal de toasts individuels pour une même relève (les suivants sont regroupés) */
+#define NEW_MAIL_MAX_EVENTS 5
+
 /* Rôle (dossier spécial) de chaque dossier d'un compte, pour ceux que le
  * serveur ne signale pas (IMAP sans SPECIAL-USE, par exemple) : dossiers
  * configurés dans le compte, sinon noms usuels. full_name -> type. */
@@ -427,8 +430,7 @@ core_folder_changed_cb (CamelFolder *folder,
 	    ((camel_folder_get_flags (folder) & CAMEL_FOLDER_TYPE_MASK) == CAMEL_FOLDER_TYPE_INBOX ||
 	     g_ascii_strcasecmp (camel_folder_get_full_name (folder), "INBOX") == 0)) {
 		guint ii, unread_added = 0;
-		CamelMessageInfo *newest = NULL;
-		gint64 newest_date = -1;
+		GPtrArray *unread_infos = g_ptr_array_new_with_free_func (g_object_unref);
 
 		for (ii = 0; ii < changes->uid_added->len; ii++) {
 			CamelMessageInfo *info = camel_folder_get_message_info (folder, changes->uid_added->pdata[ii]);
@@ -437,15 +439,8 @@ core_folder_changed_cb (CamelFolder *folder,
 
 			guint32 flags = camel_message_info_get_flags (info);
 			if (!(flags & CAMEL_MESSAGE_SEEN) && !(flags & CAMEL_MESSAGE_DELETED)) {
-				gint64 d = camel_message_info_get_date_received (info);
-				if (d <= 0)
-					d = camel_message_info_get_date_sent (info);
 				unread_added++;
-				if (!newest || d >= newest_date) {
-					g_clear_object (&newest);
-					newest = g_object_ref (info);
-					newest_date = d;
-				}
+				g_ptr_array_add (unread_infos, g_object_ref (info));
 			}
 			g_object_unref (info);
 		}
@@ -453,20 +448,27 @@ core_folder_changed_cb (CamelFolder *folder,
 		/* filtre anti-spam : classement des nouveaux messages vers Indésirables (en tâche de fond) */
 		core_spam_classify_added (core, folder, changes->uid_added);
 
-		if (unread_added > 0 && newest) {
+		/* un événement "new-mail" par message (un toast chacun), les NEW_MAIL_MAX_EVENTS premiers ;
+		 * les suivants sont regroupés dans un dernier événement (count = nombre restant) */
+		for (ii = 0; ii < unread_infos->len; ii++) {
+			CamelMessageInfo *info = g_ptr_array_index (unread_infos, ii);
 			JsonBuilder *mail_builder = core_event_builder ();
+			gboolean grouped = ii >= NEW_MAIL_MAX_EVENTS;
 
 			builder_add_string (mail_builder, "account", camel_service_get_uid (CAMEL_SERVICE (store)));
 			builder_add_string (mail_builder, "folder", camel_folder_get_full_name (folder));
 			json_builder_set_member_name (mail_builder, "count");
-			json_builder_add_int_value (mail_builder, unread_added);
-			builder_add_string (mail_builder, "from", camel_message_info_get_from (newest));
-			builder_add_string (mail_builder, "subject", camel_message_info_get_subject (newest));
-			builder_add_string (mail_builder, "uid", camel_message_info_get_uid (newest));
+			json_builder_add_int_value (mail_builder, grouped ? unread_infos->len - ii : 1);
+			builder_add_string (mail_builder, "from", camel_message_info_get_from (info));
+			builder_add_string (mail_builder, "subject", camel_message_info_get_subject (info));
+			builder_add_string (mail_builder, "uid", camel_message_info_get_uid (info));
 			core_emit_builder (core, "new-mail", mail_builder);
+
+			if (grouped)
+				break;
 		}
 
-		g_clear_object (&newest);
+		g_ptr_array_unref (unread_infos);
 	}
 }
 

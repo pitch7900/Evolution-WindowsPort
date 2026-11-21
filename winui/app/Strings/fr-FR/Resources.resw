@@ -8207,5 +8207,13 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Erreur</value>
     <comment>Erreur</comment>
   </data>
+  <data name="T_9E4DDDFA" xml:space="preserve">
+    <value>Marquer</value>
+    <comment>Marquer</comment>
+  </data>
+  <data name="T_8896D040" xml:space="preserve">
+    <value>Action sur le message impossible : {0}</value>
+    <comment>Action sur le message impossible : {0}</comment>
+  </data>
 </root>
 

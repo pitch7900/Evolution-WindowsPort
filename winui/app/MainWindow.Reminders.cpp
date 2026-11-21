@@ -149,11 +149,12 @@ namespace winrt::EvolutionWin::implementation
                 /* argument « action » = event pour un rappel de calendrier, absent pour un nouveau message ;
                    « dismiss » (bouton Fermer) ne demande aucune navigation */
                 bool dismiss = false, is_event = false;
-                hstring account, folder, uid;
+                hstring action, account, folder, uid;
                 for (auto const& pair : args.Arguments())
                 {
                     if (pair.Key() == L"action")
                     {
+                        action = pair.Value();
                         dismiss = pair.Value() == L"dismiss";
                         is_event = pair.Value() == L"event";
                     }
@@ -167,8 +168,14 @@ namespace winrt::EvolutionWin::implementation
                 if (dismiss)
                     return;
 
-                DispatcherQueue().TryEnqueue([this, is_event, account, folder, uid]()
+                DispatcherQueue().TryEnqueue([this, is_event, action, account, folder, uid]()
                 {
+                    /* actions rapides du toast : traitées sans afficher la fenêtre */
+                    if (action == L"delete" || action == L"flag")
+                    {
+                        ApplyToastMessageAction(action, account, folder, uid);
+                        return;
+                    }
                     Activate();
                     if (is_event)
                         SelectNavigationModule(L"calendar");
@@ -183,6 +190,36 @@ namespace winrt::EvolutionWin::implementation
             evo_core_trace("interface : enregistrement des toasts impossible");
             ::EvolutionWin::LogError(L"Toast", error.code(), error.message());
         }
+    }
+
+    /**
+     * @brief Action rapide d'un toast de nouveau message : suppression (Corbeille) ou marquage « suivi ».
+     * @param action « delete » ou « flag ».
+     * @param account Compte du message.
+     * @param folder Dossier du message.
+     * @param uid Identifiant du message.
+     */
+    void MainWindow::ApplyToastMessageAction(hstring const& action, hstring const& account, hstring const& folder, hstring const& uid)
+    {
+        if (!m_core || account.empty() || folder.empty() || uid.empty())
+            return;
+
+        auto done = [this, account, folder](hstring const&, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                ShowStatus(Fmt(Tr(L"Action sur le message impossible : {0}"), { error }), InfoBarSeverity::Error);
+                return;
+            }
+            /* la liste affichée reflète aussitôt l'action */
+            if (!IsUnifiedView() && account == m_account && folder == m_folder)
+                LoadMessages(true);
+        };
+
+        if (action == L"delete")
+            m_core->DeleteMessage(account, folder, uid, done);
+        else
+            m_core->SetMessageFlags(account, folder, uid, L"flagged", true, done);
     }
 
     /**

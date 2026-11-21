@@ -2184,7 +2184,25 @@ namespace winrt::EvolutionWin::implementation
                     builder.AddArgument(L"folder", msg_folder);
                 hstring uid = object.GetNamedString(L"uid", L"");
                 if (!uid.empty())
+                {
                     builder.AddArgument(L"uid", uid);
+
+                    /* actions rapides (comme Outlook) : les arguments du toast ne sont pas hérités par les
+                       boutons, chacun porte donc l'identification complète du message */
+                    using Microsoft::Windows::AppNotifications::Builder::AppNotificationButton;
+                    auto add_action = [&](hstring const& label, hstring const& action)
+                    {
+                        AppNotificationButton button{ label };
+                        button.AddArgument(L"action", action);
+                        button.AddArgument(L"account", msg_account);
+                        button.AddArgument(L"folder", msg_folder);
+                        button.AddArgument(L"uid", uid);
+                        builder.AddButton(button);
+                    };
+                    add_action(Tr(L"Supprimer"), L"delete");
+                    add_action(Tr(L"Marquer"), L"flag");
+                    builder.AddButton(AppNotificationButton(Tr(L"Fermer")).AddArgument(L"action", L"dismiss"));
+                }
                 Microsoft::Windows::AppNotifications::AppNotificationManager::Default().Show(builder.BuildNotification());
             }
             catch (...)

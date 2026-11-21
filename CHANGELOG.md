@@ -38,6 +38,13 @@ numérotation [SemVer](https://semver.org/lang/fr/).
   un clic sur le toast ramène l'application au premier plan, ouvre le dossier concerné et sélectionne le message
   (affiché dans le volet de lecture).
 
+- **Toasts de nouveau message : actions rapides et un toast par message.** Chaque toast propose les boutons
+  « Supprimer » (vers la Corbeille), « Marquer » (message suivi) et « Fermer », traités sans afficher la fenêtre ;
+  la liste du dossier affiché est rafraîchie ensuite et une erreur éventuelle apparaît dans le bouton
+  « Notifications ». Quand plusieurs messages arrivent en même temps, le moteur émet un événement `new-mail` par
+  message (expéditeur, objet et `uid` propres) : un toast chacun, jusqu'à 5 ; les suivants sont regroupés dans un
+  dernier toast « N nouveaux messages ».
+
 ## [1.3.4] — 2026-11-20
 
 ### Corrigé

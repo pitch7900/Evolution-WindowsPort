@@ -246,6 +246,7 @@ namespace winrt::EvolutionWin::implementation
         void InstallMailtoSupport(winrt::hstring const& pending_url);
         void InstallToastSupport();
         void ApplyMailSyncInterval();
+        void ApplyToastMessageAction(winrt::hstring const& action, winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& uid);
         void OpenMessageFromToast(winrt::hstring const& account, winrt::hstring const& folder, winrt::hstring const& uid);
         void HandleMailto(winrt::hstring const& url);
         void InitMailtoSettingsView();
