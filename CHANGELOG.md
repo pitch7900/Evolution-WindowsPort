@@ -10,9 +10,50 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
-## [1.3.5] — en cours
+## [1.3.5] — 2026-11-21
 
 ### Modifié
+
+- **Tests : campagne UI automatisée en lecture seule** (`tests/ui/test_ui_smoke.ps1`, UI Automation, lancée manuellement) : navigation et catégories de Paramètres, sans souris ni clavier simulés, avec liste blanche et liste noire ; rien n'est envoyé, supprimé ni modifié.
+
+- **Notifications : toasts Windows pour le courrier et les rappels, bouton interne réservé au technique.**
+  Les nouveaux messages et les rappels d'événements n'apparaissent plus dans le bouton « Notifications » de la
+  barre d'état : ils sont signalés uniquement par les notifications système (toasts) de Windows. L'application
+  s'enregistre désormais auprès du centre de notifications (`AppNotificationManager::Register()`, indispensable
+  en mode non packagé : sans cela les toasts étaient envoyés mais jamais affichés) et un clic sur un toast
+  ramène la fenêtre au premier plan sur le module Courrier ou Calendrier. Le bouton « Notifications » ne
+  conserve plus que les notifications techniques : toute erreur affichée dans la barre d'état (connexion
+  impossible, échec de synchronisation ou d'envoi…) y est historisée.
+
+- **Nouveau message : compte affiché par défaut.** « Rédiger un nouveau mail » utilise désormais le compte du dossier affiché (et non plus le compte par
+  défaut) ; le compte par défaut ne sert que si aucun compte n'est affiché (vue unifiée).
+
+- **Intervalle de vérification du courrier réellement appliqué.** Le réglage « Vérification automatique du nouveau
+  courrier » (Paramètres > Courrier > Réception : 1, 5, 15, 30 minutes ou manuellement uniquement) était affiché
+  mais sans effet : le moteur relevait toujours toutes les 5 minutes. Nouvelle fonction `evo_core_set_refresh_interval`
+  (evo-core) : le minuteur est recréé immédiatement au changement du réglage et au démarrage ; « Manuellement
+  uniquement » désactive la relève automatique (F9 reste disponible). Défaut inchangé : 5 minutes.
+
+- **Toast de nouveau message : expéditeur, objet et ouverture du bon mail.** Le toast affiche désormais le titre
+  (« Nouveau message » ou « N nouveaux messages »), l'expéditeur puis l'objet du message le plus récent sur deux
+  lignes (mode confidentiel inchangé). L'événement `new-mail` d'evo-core transmet l'identifiant (`uid`) du message ;
+  un clic sur le toast ramène l'application au premier plan, ouvre le dossier concerné et sélectionne le message
+  (affiché dans le volet de lecture).
+
+- **Toasts de nouveau message : actions rapides et un toast par message.** Chaque toast propose les boutons
+  « Supprimer » (vers la Corbeille), « Marquer » (message suivi) et « Fermer », traités sans afficher la fenêtre ;
+  la liste du dossier affiché est rafraîchie ensuite et une erreur éventuelle apparaît dans le bouton
+  « Notifications ». Quand plusieurs messages arrivent en même temps, le moteur émet un événement `new-mail` par
+  message (expéditeur, objet et `uid` propres) : un toast chacun, jusqu'à 5 ; les suivants sont regroupés dans un
+  dernier toast « N nouveaux messages ».
+
+- **Toast de nouveau message : expéditeur et objet toujours renseignés.** À l'arrivée d'un message, le résumé n'est
+  parfois pas encore disponible et l'événement `new-mail` partait avec l'expéditeur et l'objet vides, d'où un toast
+  réduit à son titre. Ils sont maintenant lus dans le message avant l'affichage du toast.
+
+- **Campagne de tests : notifications système.** Nouvelle suite `test_toast.cpp` (arguments des toasts, actions
+  rapides, lignes du toast, intervalle de vérification du courrier) sur la logique extraite dans
+  `ToastNotifications.h`, et test du contrat de l'événement `new-mail` (un événement par message, avec `uid`).
 
 ## [1.3.4] — 2026-11-20
 

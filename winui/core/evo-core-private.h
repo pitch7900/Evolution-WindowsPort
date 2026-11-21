@@ -58,6 +58,7 @@ struct _EvoCore {
 	GHashTable *folders;
 	GMutex folders_lock;
 	GSource *refresh_source;
+	guint refresh_interval;	/* secondes entre deux relèves automatiques (0 = désactivée) ; accès atomique */
 
 	/* connect_lock protège la table connect_locks (uid du magasin -> GMutex *) ;
 	 * core_ensure_connected () sérialise les connexions d'un même magasin, pas celles

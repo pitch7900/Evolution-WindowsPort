@@ -85,6 +85,7 @@ namespace winrt::EvolutionWin::implementation
         auto main_window = make<MainWindow>();
         winrt::get_self<MainWindow>(main_window)->SetSplashWindow(m_splash);
         window = main_window;
+        winrt::get_self<MainWindow>(main_window)->InstallToastSupport();
         winrt::get_self<MainWindow>(main_window)->InstallMailtoSupport(hstring{ mailto_url });
     }
 }

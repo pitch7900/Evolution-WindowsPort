@@ -2,6 +2,8 @@
 #include "MainWindow.xaml.h"
 #include "MainWindow.Helpers.h"
 #include "Settings.h"
+#include "ErrorLog.h"
+#include "ToastNotifications.h"
 
 #include <chrono>
 #include <ctime>
@@ -134,6 +136,130 @@ namespace winrt::EvolutionWin::implementation
     }
 
     /**
+     * @brief Enregistre l'application auprès du centre de notifications Windows (indispensable en mode non
+     *        packagé : sans cet enregistrement, aucun toast n'est affiché) et traite le clic sur un toast.
+     */
+    void MainWindow::InstallToastSupport()
+    {
+        try
+        {
+            using namespace Microsoft::Windows::AppNotifications;
+            auto manager = AppNotificationManager::Default();
+            manager.NotificationInvoked([this](auto const&, AppNotificationActivatedEventArgs const& args)
+            {
+                /* arguments du toast : « event » pour un rappel de calendrier, « delete » / « flag » pour les
+                   actions rapides (sans afficher la fenêtre), « dismiss » (bouton Fermer) sans navigation */
+                std::vector<std::pair<std::wstring, std::wstring>> pairs;
+                for (auto const& pair : args.Arguments())
+                    pairs.emplace_back(std::wstring{ pair.Key() }, std::wstring{ pair.Value() });
+                auto parsed = ::EvolutionWin::Toast::ParseArguments(pairs);
+                using ::EvolutionWin::Toast::Action;
+                if (parsed.action == Action::Dismiss)
+                    return;
+
+                DispatcherQueue().TryEnqueue([this, parsed]()
+                {
+                    hstring account{ parsed.account }, folder{ parsed.folder }, uid{ parsed.uid };
+                    if (parsed.action == Action::Delete || parsed.action == Action::Flag)
+                    {
+                        ApplyToastMessageAction(parsed.action == Action::Delete ? L"delete" : L"flag", account, folder, uid);
+                        return;
+                    }
+                    Activate();
+                    if (parsed.action == Action::Event)
+                        SelectNavigationModule(L"calendar");
+                    else
+                        OpenMessageFromToast(account, folder, uid);
+                });
+            });
+            manager.Register();
+        }
+        catch (winrt::hresult_error const& error)
+        {
+            evo_core_trace("interface : enregistrement des toasts impossible");
+            ::EvolutionWin::LogError(L"Toast", error.code(), error.message());
+        }
+    }
+
+    /**
+     * @brief Action rapide d'un toast de nouveau message : suppression (Corbeille) ou marquage « suivi ».
+     * @param action « delete » ou « flag ».
+     * @param account Compte du message.
+     * @param folder Dossier du message.
+     * @param uid Identifiant du message.
+     */
+    void MainWindow::ApplyToastMessageAction(hstring const& action, hstring const& account, hstring const& folder, hstring const& uid)
+    {
+        if (!m_core || account.empty() || folder.empty() || uid.empty())
+            return;
+
+        auto done = [this, account, folder](hstring const&, hstring const& error)
+        {
+            if (!error.empty())
+            {
+                ShowStatus(Fmt(Tr(L"Action sur le message impossible : {0}"), { error }), InfoBarSeverity::Error);
+                return;
+            }
+            /* la liste affichée reflète aussitôt l'action */
+            if (!IsUnifiedView() && account == m_account && folder == m_folder)
+                LoadMessages(true);
+        };
+
+        if (action == L"delete")
+            m_core->DeleteMessage(account, folder, uid, done);
+        else
+            m_core->SetMessageFlags(account, folder, uid, L"flagged", true, done);
+    }
+
+    /**
+     * @brief Ouvre le message annoncé par un toast : module Courrier, dossier du message, puis sélection du
+     *        message (lu dans le volet de lecture). Sans message précis, affiche seulement le Courrier.
+     * @param account Compte du message (vide : non précisé).
+     * @param folder Dossier du message (vide : non précisé).
+     * @param uid Identifiant du message (vide : non précisé).
+     */
+    void MainWindow::OpenMessageFromToast(hstring const& account, hstring const& folder, hstring const& uid)
+    {
+        SelectNavigationModule(L"mail");
+        if (account.empty() || folder.empty() || uid.empty())
+            return;
+
+        /* déjà dans le bon dossier : sélection directe, après relecture si le message n'est pas encore listé */
+        if (!IsUnifiedView() && account == m_account && folder == m_folder)
+        {
+            if (auto grid = FindMessageItem(uid))
+            {
+                MessageList().SelectedItem(grid);
+                MessageList().ScrollIntoView(grid);
+                return;
+            }
+            m_pending_open_uid = uid;
+            LoadMessages(true);
+            return;
+        }
+
+        auto it = m_nodes.find(NodeKey(account, folder));
+        if (it == m_nodes.end())
+            return;
+        auto item = it->second.Content().try_as<EvolutionWin::FolderItem>();
+        if (!item)
+            return;
+
+        m_pending_open_uid = uid;
+        m_account = account;
+        m_folder = folder;
+        ++m_search_request;
+        FolderTree().SelectedNode(it->second);
+        FolderTitle().Text(item.Name());
+        LoadFolderSort();
+        LoadFolderConversations();
+        UpdateRibbon();
+        SearchBox().Text(L"");
+        UpdateOutOfOfficeBanner();
+        LoadMessages(false);
+    }
+
+    /**
      * @brief Notification Windows (toast) de rappel d'un événement.
      * @param event Événement (objet de evo_core_list_events).
      * @param seconds_left Secondes avant le début.
@@ -152,8 +278,7 @@ namespace winrt::EvolutionWin::implementation
         if (!location.empty())
             body += L" — " + std::wstring{ location };
 
-        AddNotificationItem(hstring{ title }, hstring{ body });
-
+        /* rappel signalé uniquement par un toast système Windows (pas par le bouton « Notifications » de l'application) */
         if (settings.GetBoolean(L"notifications.sound", true))
             ::EvolutionWin::Helpers::PlayNewMailSound(settings.GetString(L"notifications.sound-kind", L"windows"),
                 settings.GetString(L"notifications.custom-sound-path", L""));

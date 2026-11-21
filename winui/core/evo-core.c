@@ -186,6 +186,38 @@ json_from_builder (JsonBuilder *builder)
 
 #define REFRESH_INTERVAL_SECONDS (5 * 60)
 
+/* (Re)crée la source périodique de relève selon core->refresh_interval ; à exécuter dans le
+ * contexte du moteur. Une source existante est remplacée ; intervalle 0 : plus de relève automatique. */
+static gboolean
+core_apply_refresh_interval (gpointer user_data)
+{
+	EvoCore *core = user_data;
+	guint interval = g_atomic_int_get (&core->refresh_interval);
+
+	if (core->refresh_source) {
+		g_source_destroy (core->refresh_source);
+		g_clear_pointer (&core->refresh_source, g_source_unref);
+	}
+
+	if (interval > 0) {
+		core->refresh_source = g_timeout_source_new_seconds (interval);
+		g_source_set_callback (core->refresh_source, core_refresh_timeout_cb, core, NULL);
+		g_source_attach (core->refresh_source, core->context);
+	}
+
+	return G_SOURCE_REMOVE;
+}
+
+void
+evo_core_set_refresh_interval (EvoCore *core,
+			       unsigned int seconds)
+{
+	g_return_if_fail (core != NULL);
+
+	g_atomic_int_set (&core->refresh_interval, seconds);
+	g_main_context_invoke (core->context, core_apply_refresh_interval, core);
+}
+
 static gpointer
 core_thread_func (gpointer user_data)
 {
@@ -233,9 +265,7 @@ core_thread_func (gpointer user_data)
 		/* new mail: now, then periodically */
 		evo_core_refresh (core);
 
-		core->refresh_source = g_timeout_source_new_seconds (REFRESH_INTERVAL_SECONDS);
-		g_source_set_callback (core->refresh_source, core_refresh_timeout_cb, core, NULL);
-		g_source_attach (core->refresh_source, core->context);
+		core_apply_refresh_interval (core);
 	}
 
 	g_main_loop_run (core->loop);
@@ -322,6 +352,7 @@ evo_core_new (EvoCoreEventFunc event_func,
 	core->event_func = event_func;
 	core->event_data = user_data;
 	core->context = g_main_context_new ();
+	core->refresh_interval = REFRESH_INTERVAL_SECONDS;
 	core->loop = g_main_loop_new (core->context, FALSE);
 	core->cancellable = g_cancellable_new ();
 	g_mutex_init (&core->lock);

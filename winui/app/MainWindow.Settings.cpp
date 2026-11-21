@@ -1967,7 +1967,12 @@ namespace winrt::EvolutionWin::implementation
 
                         ::EvolutionWin::Settings::Instance().SetString(key, val);
 
-                        if (key == L"layout.folder-pane")
+                        if (key == L"mail.sync-interval")
+                        {
+                            ApplyMailSyncInterval();
+                        }
+
+                        else if (key == L"layout.folder-pane")
 
                         {
 

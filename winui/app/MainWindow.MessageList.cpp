@@ -5,6 +5,7 @@
 #include "FollowUp.h"
 #include "WindowIcon.h"
 #include "Settings.h"
+#include "ToastNotifications.h"
 #include "ConversationThreads.h"
 #include "UnifiedViews.h"
 #include "CategoryStore.h"
@@ -177,6 +178,17 @@ namespace winrt::EvolutionWin::implementation
                     m_reselecting = true;
                     MessageList().SelectedItem(grid);
                     m_reselecting = false;
+                }
+            }
+            /* clic sur un toast de nouveau message : sélection (et lecture) du message annoncé */
+            if (!m_pending_open_uid.empty())
+            {
+                hstring wanted = m_pending_open_uid;
+                m_pending_open_uid = L"";
+                if (auto grid = FindMessageItem(wanted))
+                {
+                    MessageList().SelectedItem(grid);
+                    MessageList().ScrollIntoView(grid);
                 }
             }
             /* rechargement silencieux : la liste garde sa position */
@@ -2092,8 +2104,7 @@ namespace winrt::EvolutionWin::implementation
     /* Étape 1 : Notifications Windows (toasts) et pièces jointes            */
     /* -------------------------------------------------------------------- */
 
-    /* Affiche une notification système Windows (toast) ainsi qu'un message
-     * dans la barre d'état à l'arrivée de nouveaux courriers non lus.
+    /* Affiche une notification système Windows (toast) à l'arrivée de nouveaux courriers non lus.
      * Paramètres :
      *   object : objet JSON décrivant les nouveaux messages ("from", "subject", "count") */
     void MainWindow::ShowNewMailNotification(JsonObject const& object)
@@ -2117,6 +2128,33 @@ namespace winrt::EvolutionWin::implementation
                 return;
         }
 
+        /* à l'arrivée, le résumé du message n'est parfois pas encore renseigné (expéditeur ou objet vides) :
+           ils sont alors lus dans le message lui-même avant d'afficher le toast (une seule fois) */
+        {
+            hstring raw_uid = object.GetNamedString(L"uid", L"");
+            if (m_core && !raw_uid.empty() && !object.GetNamedBoolean(L"resolved", false)
+                && (object.GetNamedString(L"from", L"").empty() || object.GetNamedString(L"subject", L"").empty()))
+            {
+                m_core->FetchMessage(msg_account, msg_folder, raw_uid, [this, object](hstring const& json, hstring const& error)
+                {
+                    JsonObject completed = JsonObject::Parse(object.Stringify());
+                    JsonObject message;
+                    if (error.empty() && JsonObject::TryParse(json, message))
+                    {
+                        hstring fetched_from = message.GetNamedString(L"from", L"");
+                        hstring fetched_subject = message.GetNamedString(L"subject", L"");
+                        if (!fetched_from.empty())
+                            completed.SetNamedValue(L"from", JsonValue::CreateStringValue(fetched_from));
+                        if (!fetched_subject.empty())
+                            completed.SetNamedValue(L"subject", JsonValue::CreateStringValue(fetched_subject));
+                    }
+                    completed.SetNamedValue(L"resolved", JsonValue::CreateBooleanValue(true));
+                    ShowNewMailNotification(completed);
+                });
+                return;
+            }
+        }
+
         int32_t count = static_cast<int32_t>(object.GetNamedNumber(L"count", 1));
         hstring from = SenderName(object.GetNamedString(L"from", Tr(L"Nouveau message")));
         hstring subject = object.GetNamedString(L"subject", Tr(L"(Sans objet)"));
@@ -2135,8 +2173,8 @@ namespace winrt::EvolutionWin::implementation
             body = count > 1 ? Tr(L"Ouvrez Evolution pour les lire.") : Tr(L"Ouvrez Evolution pour le lire.");
         }
 
-        /* Ajout dans l'historique du menu déroulant de la barre d'état (notifications discrètes) */
-        AddNotificationItem(title, body);
+        /* Les nouveaux messages sont signalés uniquement par les toasts système Windows :
+           le bouton « Notifications » de l'application est réservé aux notifications techniques. */
 
         /* Émission du signal sonore configuré si activé globalement et pour le compte */
         bool sound_global = ::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.sound", true);
@@ -2148,21 +2186,47 @@ namespace winrt::EvolutionWin::implementation
             ::EvolutionWin::Helpers::PlayNewMailSound(sound_kind, custom_path);
         }
 
+        /* Émission de la notification via les Toasts système Windows si activé globalement :
+           titre = nombre de messages, puis l'expéditeur et l'objet du plus récent sur deux lignes */
+        hstring toast_title = count > 1 ? Fmt(Tr(L"{0} nouveaux messages"), { to_hstring(count) }) : Tr(L"Nouveau message");
+        auto toast_lines = ::EvolutionWin::Toast::ComposeNewMail(std::wstring_view{ toast_title }, std::wstring_view{ from },
+            std::wstring_view{ subject }, ::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.confidential", false),
+            std::wstring_view{ body });
         /* Émission exclusive de la notification via les Toasts système Windows si activé globalement */
         if (::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.toast", true))
         {
             try
             {
                 Microsoft::Windows::AppNotifications::Builder::AppNotificationBuilder builder;
-                builder.AddText(title);
-                builder.AddText(body);
+                builder.AddText(hstring{ toast_lines.title });
+                builder.AddText(hstring{ toast_lines.first });
+                if (!toast_lines.second.empty())
+                    builder.AddText(hstring{ toast_lines.second });
                 if (!msg_account.empty())
                     builder.AddArgument(L"account", msg_account);
                 if (!msg_folder.empty())
                     builder.AddArgument(L"folder", msg_folder);
                 hstring uid = object.GetNamedString(L"uid", L"");
                 if (!uid.empty())
+                {
                     builder.AddArgument(L"uid", uid);
+
+                    /* actions rapides (comme Outlook) : les arguments du toast ne sont pas hérités par les
+                       boutons, chacun porte donc l'identification complète du message */
+                    using Microsoft::Windows::AppNotifications::Builder::AppNotificationButton;
+                    auto add_action = [&](hstring const& label, hstring const& action)
+                    {
+                        AppNotificationButton button{ label };
+                        button.AddArgument(L"action", action);
+                        button.AddArgument(L"account", msg_account);
+                        button.AddArgument(L"folder", msg_folder);
+                        button.AddArgument(L"uid", uid);
+                        builder.AddButton(button);
+                    };
+                    add_action(Tr(L"Supprimer"), L"delete");
+                    add_action(Tr(L"Marquer"), L"flag");
+                    builder.AddButton(AppNotificationButton(Tr(L"Fermer")).AddArgument(L"action", L"dismiss"));
+                }
                 Microsoft::Windows::AppNotifications::AppNotificationManager::Default().Show(builder.BuildNotification());
             }
             catch (...)

@@ -2,6 +2,7 @@
 #include "MainWindow.xaml.h"
 #include "WindowIcon.h"
 #include "Settings.h"
+#include "ToastNotifications.h"
 #include "MainWindow.Helpers.h"
 #include "UiTranslate.h"
 #if __has_include("MainWindow.g.cpp")
@@ -75,7 +76,20 @@ namespace winrt::EvolutionWin::implementation
             m_core = std::make_shared<::EvolutionWin::CoreBridge>(
                 DispatcherQueue(),
                 [this](hstring const& event, hstring const& json) { OnCoreEvent(event, json); });
+            ApplyMailSyncInterval();
         }
+    }
+
+    /**
+     * @brief Applique au moteur le réglage « Vérification automatique du nouveau courrier »
+     *        (mail.sync-interval, en minutes ; 0 = manuellement uniquement).
+     */
+    void MainWindow::ApplyMailSyncInterval()
+    {
+        if (!m_core)
+            return;
+        m_core->SetRefreshInterval(::EvolutionWin::Toast::RefreshSeconds(
+            std::wstring_view{ ::EvolutionWin::Settings::Instance().GetString(L"mail.sync-interval", L"5") }));
     }
 
     /**
@@ -619,6 +633,11 @@ namespace winrt::EvolutionWin::implementation
             HideStatus();
             return;
         }
+
+        /* les erreurs (connexion impossible, échec de synchronisation ou d'envoi…) sont conservées dans le
+           bouton « Notifications » ; un message identique consécutif n'est pas répété */
+        if (severity == InfoBarSeverity::Error && (m_notifications.empty() || m_notifications.front().body != message))
+            AddNotificationItem(Tr(L"Erreur"), message);
 
         /* message compact dans la barre d'état du bas : icône de gravité + texte sur une ligne
            (texte complet en infobulle), disparition automatique */

@@ -42,7 +42,7 @@ typedef void (*EvoCoreResultFunc) (const char *json,
  *                                        changement sur un dossier ouvert
  *   "folders-updated" {"account": "..."} compteurs ou arborescence mis à jour
  *   "new-mail" {"account": "...", "folder": "...", "count": 2,
- *               "from": "...", "subject": "..."}
+ *               "from": "...", "subject": "...", "uid": "..."}   (uid : message le plus récent)
  *                                        nouveaux messages non lus dans la boîte de réception
  *   "sending" / "sent" {"subject": "..."} message en cours d'envoi / envoyé
  */
@@ -146,6 +146,11 @@ void		evo_core_refresh_all		(EvoCore *core);
  * ouverts. Les autres dossiers se synchronisent quand on les ouvre. Remplace la relève complète
  * du démarrage (evo_core_refresh_all () reste utilisée par « Tous les dossiers », F9). */
 void		evo_core_refresh_base		(EvoCore *core);
+
+/* Intervalle de la relève automatique du nouveau courrier, en secondes (défaut 300) ;
+ * 0 désactive la relève automatique (Envoyer/Recevoir manuel uniquement). Prend effet immédiatement. */
+void		evo_core_set_refresh_interval	(EvoCore *core,
+						 unsigned int seconds);
 
 /* Interrompt les opérations réseau ou de synchronisation actives
  * en annulant le GCancellable de la session, puis le réinitialise. */

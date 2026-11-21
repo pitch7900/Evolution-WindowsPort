@@ -8203,5 +8203,17 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Adressbuch des Kontakts</value>
     <comment>Carnet d'adresses du contact</comment>
   </data>
+  <data name="T_86A7BBF8" xml:space="preserve">
+    <value>Fehler</value>
+    <comment>Erreur</comment>
+  </data>
+  <data name="T_9E4DDDFA" xml:space="preserve">
+    <value>Markieren</value>
+    <comment>Marquer</comment>
+  </data>
+  <data name="T_8896D040" xml:space="preserve">
+    <value>Aktion für die Nachricht nicht möglich: {0}</value>
+    <comment>Action sur le message impossible : {0}</comment>
+  </data>
 </root>
 

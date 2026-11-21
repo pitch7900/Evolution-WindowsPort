@@ -301,6 +301,22 @@ static void test_json_event_contracts(void)
     }
     TEST_CASE_END();
 
+    TEST_CASE("Contrats JSON: Schema de l'evenement 'new-mail' (un evenement par message)");
+    {
+        /* un toast par message : expediteur, objet et identifiant propres a chaque evenement ;
+           count > 1 uniquement pour le dernier evenement regroupant les messages au-dela du plafond */
+        const char *sample_new_mail =
+            "{\"account\": \"compte-1\", \"folder\": \"INBOX\", \"count\": 1, \"from\": \"Alice <alice@example.com>\", "
+            "\"subject\": \"Reunion\", \"uid\": \"1234\"}";
+        ASSERT_CONTAINS(sample_new_mail, "\"account\":");
+        ASSERT_CONTAINS(sample_new_mail, "\"folder\":");
+        ASSERT_CONTAINS(sample_new_mail, "\"count\": 1");
+        ASSERT_CONTAINS(sample_new_mail, "\"from\":");
+        ASSERT_CONTAINS(sample_new_mail, "\"subject\":");
+        ASSERT_CONTAINS(sample_new_mail, "\"uid\":");
+    }
+    TEST_CASE_END();
+
     TEST_CASE("Contrats JSON: Schema de l'evenement 'folder-changed'");
     {
         const char *sample_folder_changed =

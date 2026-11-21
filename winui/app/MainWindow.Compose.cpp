@@ -39,10 +39,10 @@ namespace winrt::EvolutionWin::implementation
     {
         ::EvolutionWin::ComposeData data;
 
-        /* nouveau message : compte par défaut, sinon celui du dossier affiché
-         * (les réponses et transferts gardent le compte du message) */
-        data.account = m_account;
-        if (m_accounts)
+        /* nouveau message : compte du dossier affiché ; compte par défaut s'il n'y en a pas
+         * (vue unifiée, aucun dossier sélectionné). Les réponses et transferts gardent le compte du message */
+        data.account = IsUnifiedView() ? hstring{} : m_account;
+        if (data.account.empty() && m_accounts)
         {
             for (auto const& value : m_accounts)
             {
@@ -54,6 +54,8 @@ namespace winrt::EvolutionWin::implementation
                 }
             }
         }
+        if (data.account.empty())
+            data.account = m_account;
         OpenCompose(data);
     }
 
