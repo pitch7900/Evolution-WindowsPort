@@ -140,6 +140,31 @@ namespace
         return ev.GetNamedBoolean(L"all_day", false) || end - start >= 24 * 3600;
     }
 
+    /* Indicateurs d'un événement à la manière d'Outlook : double flèche s'il est périodique,
+     * cadenas s'il est privé. Le panneau est vide (et réduit) si aucun indicateur ne s'applique.
+     * Paramètres :
+     *   ev : événement (membres "recurring" et "private")
+     * Retourne : panneau horizontal d'icônes, à placer dans le coin du bloc */
+    StackPanel MakeEventBadges(JsonObject const& ev)
+    {
+        StackPanel badges;
+        badges.Orientation(Orientation::Horizontal);
+        badges.Spacing(3);
+        badges.IsHitTestVisible(false);
+        auto add = [&badges](wchar_t const* glyph)
+        {
+            FontIcon icon;
+            icon.Glyph(glyph);
+            icon.FontSize(12);
+            badges.Children().Append(icon);
+        };
+        if (ev.GetNamedBoolean(L"recurring", false))
+            add(L"\xE8EE");
+        if (ev.GetNamedBoolean(L"private", false))
+            add(L"\xE72E");
+        return badges;
+    }
+
     /* Texture « Afficher comme » à la manière d'Outlook, sur un bloc d'événement (Border) ou un bandeau
      * « journée entière » :
      *   free      : fond presque transparent, contour fin de la couleur du calendrier
@@ -561,7 +586,17 @@ namespace winrt::EvolutionWin::implementation
                     title.Text(ev.GetNamedString(L"summary", L""));
                     title.FontSize(12);
                     title.TextTrimming(TextTrimming::CharacterEllipsis);
-                    chip.Child(title);
+                    Grid chip_line;
+                    chip_line.ColumnDefinitions().Append(ColumnDefinition{});
+                    ColumnDefinition badge_column;
+                    badge_column.Width(GridLengthHelper::Auto());
+                    chip_line.ColumnDefinitions().Append(badge_column);
+                    chip_line.Children().Append(title);
+                    StackPanel chip_badges = MakeEventBadges(ev);
+                    chip_badges.VerticalAlignment(VerticalAlignment::Center);
+                    Grid::SetColumn(chip_badges, 1);
+                    chip_line.Children().Append(chip_badges);
+                    chip.Child(chip_line);
                     ApplyShowAsTexture(chip, ev, ::EvolutionWin::CategoryStore::EventColorHex(ev));
                     ToolTipService::SetToolTip(chip, box_value(ev.GetNamedString(L"summary", L"") + L"\n" +
                         ev.GetNamedString(L"calendar_name", L"")));
@@ -1028,6 +1063,12 @@ namespace winrt::EvolutionWin::implementation
                     content.Children().Append(details);
                     Grid shell;
                     shell.Children().Append(content);
+                    {
+                        StackPanel badges = MakeEventBadges(ev);
+                        badges.HorizontalAlignment(HorizontalAlignment::Right);
+                        badges.VerticalAlignment(VerticalAlignment::Bottom);
+                        shell.Children().Append(badges);
+                    }
                     UIElement top_grip{ nullptr };
                     UIElement bottom_grip{ nullptr };
                     if (event_start >= day_starts[day])
@@ -1263,6 +1304,7 @@ namespace winrt::EvolutionWin::implementation
                 title.FontSize(12);
                 title.TextTrimming(TextTrimming::CharacterEllipsis);
                 line.Children().Append(title);
+                line.Children().Append(MakeEventBadges(ev));
                 chip.Child(line);
                 if (all_day)
                     ApplyShowAsTexture(chip, ev, color);

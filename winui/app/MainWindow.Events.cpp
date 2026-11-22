@@ -1481,29 +1481,43 @@ namespace winrt::EvolutionWin::implementation
         recurrence_button.IsEnabled(!readonly);
         Flyout recurrence_flyout;
         {
-            ComboBox freq_combo;
-            freq_combo.Header(box_value(Tr(L"Répétition", L"Repeat")));
-            freq_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
-            for (auto const& label : { Tr(L"Aucune", L"None"), Tr(L"Tous les jours", L"Daily"), Tr(L"Toutes les semaines", L"Weekly"),
-                                       Tr(L"Tous les mois", L"Monthly"), Tr(L"Tous les ans", L"Yearly") })
-                freq_combo.Items().Append(box_value(label));
+            /* contrôles sans popup (RadioButtons, CalendarView en ligne) : une ComboBox ou un
+             * DatePicker dans un Flyout du CommandBar ne recevait pas les clics de sélection */
+            auto make_radios = [](hstring const& header, std::initializer_list<hstring> labels, int columns)
+            {
+                RadioButtons radios;
+                radios.Header(box_value(header));
+                radios.MaxColumns(columns);
+                for (auto const& label : labels)
+                    radios.Items().Append(box_value(label));
+                return radios;
+            };
+            RadioButtons freq_combo = make_radios(Tr(L"Répétition", L"Repeat"),
+                { Tr(L"Aucune", L"None"), Tr(L"Tous les jours", L"Daily"), Tr(L"Toutes les semaines", L"Weekly"),
+                  Tr(L"Tous les mois", L"Monthly"), Tr(L"Tous les ans", L"Yearly") }, 2);
             NumberBox interval_box;
             interval_box.Header(box_value(Tr(L"Tous les (intervalle)", L"Every (interval)")));
             interval_box.Minimum(1);
             interval_box.Maximum(99);
             interval_box.Value(1);
             interval_box.SpinButtonPlacementMode(NumberBoxSpinButtonPlacementMode::Inline);
-            ComboBox end_combo;
-            end_combo.Header(box_value(Tr(L"Fin", L"End")));
-            end_combo.HorizontalAlignment(HorizontalAlignment::Stretch);
-            end_combo.Items().Append(box_value(Tr(L"Jamais", L"Never")));
-            end_combo.Items().Append(box_value(Tr(L"Après un nombre d'occurrences", L"After a number of occurrences")));
+            RadioButtons end_combo = make_radios(Tr(L"Fin", L"End"),
+                { Tr(L"Jamais", L"Never"), Tr(L"Après un nombre d'occurrences", L"After a number of occurrences"),
+                  Tr(L"À une date de fin", L"On an end date") }, 1);
             NumberBox count_box;
             count_box.Header(box_value(Tr(L"Nombre d'occurrences", L"Number of occurrences")));
             count_box.Minimum(1);
             count_box.Maximum(999);
             count_box.Value(10);
             count_box.SpinButtonPlacementMode(NumberBoxSpinButtonPlacementMode::Inline);
+            CalendarView until_view;
+            until_view.SelectionMode(CalendarViewSelectionMode::Single);
+            until_view.HorizontalAlignment(HorizontalAlignment::Left);
+            {
+                auto first_day = start_date.Date() ? start_date.Date().Value() : winrt::clock::now();
+                until_view.SelectedDates().Append(first_day);
+                until_view.SetDisplayDate(first_day);
+            }
             TextBlock note;
             note.TextWrapping(TextWrapping::Wrap);
             note.MaxWidth(280);
@@ -1526,26 +1540,50 @@ namespace winrt::EvolutionWin::implementation
                 freq_combo.SelectedIndex(freq == L"DAILY" ? 1 : freq == L"WEEKLY" ? 2 : freq == L"MONTHLY" ? 3 : freq == L"YEARLY" ? 4 : 0);
                 if (!value_of(L"INTERVAL").empty())
                     interval_box.Value(_wtof(value_of(L"INTERVAL").c_str()));
+                std::wstring until = value_of(L"UNTIL");
                 if (!value_of(L"COUNT").empty())
                 {
                     end_combo.SelectedIndex(1);
                     count_box.Value(_wtof(value_of(L"COUNT").c_str()));
                 }
+                else if (until.size() >= 8)
+                {
+                    /* AAAAMMJJ[THHMMSSZ] : on retient le jour */
+                    std::tm day{};
+                    day.tm_year = _wtoi(until.substr(0, 4).c_str()) - 1900;
+                    day.tm_mon = _wtoi(until.substr(4, 2).c_str()) - 1;
+                    day.tm_mday = _wtoi(until.substr(6, 2).c_str());
+                    day.tm_hour = 12;
+                    day.tm_isdst = -1;
+                    auto until_time = winrt::clock::from_time_t(std::mktime(&day));
+                    end_combo.SelectedIndex(2);
+                    until_view.SelectedDates().Clear();
+                    until_view.SelectedDates().Append(until_time);
+                    until_view.SetDisplayDate(until_time);
+                }
                 else
                     end_combo.SelectedIndex(0);
-                if (!rule.empty() && (rule.find(L"BYDAY") != std::wstring::npos || rule.find(L"UNTIL") != std::wstring::npos ||
-                                      rule.find(L"BYMONTH") != std::wstring::npos || rule.find(L"BYSETPOS") != std::wstring::npos))
+                if (!rule.empty() && (rule.find(L"BYDAY") != std::wstring::npos || rule.find(L"BYMONTH") != std::wstring::npos ||
+                                      rule.find(L"BYSETPOS") != std::wstring::npos))
                     note.Text(Tr(L"Règle personnalisée : elle est conservée tant que vous ne modifiez pas ces réglages.",
                                  L"Custom rule: it is kept as long as you do not change these settings."));
             }
-            count_box.IsEnabled(end_combo.SelectedIndex() == 1);
+            auto sync_visibility = [freq_combo, interval_box, end_combo, count_box, until_view]()
+            {
+                bool repeats = freq_combo.SelectedIndex() > 0;
+                interval_box.IsEnabled(repeats);
+                end_combo.IsEnabled(repeats);
+                count_box.Visibility(end_combo.SelectedIndex() == 1 ? Visibility::Visible : Visibility::Collapsed);
+                until_view.Visibility(end_combo.SelectedIndex() == 2 ? Visibility::Visible : Visibility::Collapsed);
+            };
+            sync_visibility();
 
             /* recompose la règle à chaque changement */
-            auto rebuild = [rrule, rrule_touched, freq_combo, interval_box, end_combo, count_box, note]()
+            auto rebuild = [rrule, rrule_touched, freq_combo, interval_box, end_combo, count_box, until_view, note, sync_visibility]()
             {
                 *rrule_touched = true;
                 note.Text(L"");
-                count_box.IsEnabled(end_combo.SelectedIndex() == 1);
+                sync_visibility();
                 static const wchar_t* const freqs[] = { L"", L"DAILY", L"WEEKLY", L"MONTHLY", L"YEARLY" };
                 int index = freq_combo.SelectedIndex();
                 if (index <= 0 || index > 4)
@@ -1559,12 +1597,23 @@ namespace winrt::EvolutionWin::implementation
                     rule += L";INTERVAL=" + std::to_wstring(interval);
                 if (end_combo.SelectedIndex() == 1)
                     rule += L";COUNT=" + std::to_wstring(static_cast<int>(count_box.Value() >= 1 ? count_box.Value() : 1));
+                else if (end_combo.SelectedIndex() == 2 && until_view.SelectedDates().Size() > 0)
+                {
+                    /* date seule : le moteur la convertit en UTC d'après l'heure de début */
+                    std::time_t when = winrt::clock::to_time_t(until_view.SelectedDates().GetAt(0));
+                    std::tm day{};
+                    localtime_s(&day, &when);
+                    wchar_t buffer[16]{};
+                    swprintf_s(buffer, L"%04d%02d%02d", day.tm_year + 1900, day.tm_mon + 1, day.tm_mday);
+                    rule += std::wstring{ L";UNTIL=" } + buffer;
+                }
                 *rrule = rule;
             };
             freq_combo.SelectionChanged([rebuild](auto&&, auto&&) { rebuild(); });
             end_combo.SelectionChanged([rebuild](auto&&, auto&&) { rebuild(); });
             interval_box.ValueChanged([rebuild](auto&&, auto&&) { rebuild(); });
             count_box.ValueChanged([rebuild](auto&&, auto&&) { rebuild(); });
+            until_view.SelectedDatesChanged([rebuild](auto&&, auto&&) { rebuild(); });
 
             StackPanel flyout_panel;
             flyout_panel.Spacing(8);
@@ -1573,8 +1622,12 @@ namespace winrt::EvolutionWin::implementation
             flyout_panel.Children().Append(interval_box);
             flyout_panel.Children().Append(end_combo);
             flyout_panel.Children().Append(count_box);
+            flyout_panel.Children().Append(until_view);
             flyout_panel.Children().Append(note);
-            recurrence_flyout.Content(flyout_panel);
+            ScrollViewer flyout_scroll;
+            flyout_scroll.MaxHeight(620);
+            flyout_scroll.Content(flyout_panel);
+            recurrence_flyout.Content(flyout_scroll);
             recurrence_button.Flyout(recurrence_flyout);
         }
 

@@ -12,6 +12,12 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.3.7] — en cours
 
+### Périodicité des événements : sélection, date de fin, indicateurs
+
+- **Correctif** : dans l'éditeur d'événement, le panneau « Périodicité » ne permettait pas de choisir à la souris autre chose que « Aucune »/« Jamais » (les `ComboBox` ouvertes dans le `Flyout` du ruban ne recevaient pas les clics), donc le nombre d'occurrences restait sans effet. Les listes déroulantes sont remplacées par des `RadioButtons` sans popup.
+- **Date de fin** : nouvelle option « À une date de fin » (`CalendarView` en ligne, règle `UNTIL`), en plus de « Jamais » et « Après un nombre d'occurrences ». Le moteur (`evo-core-calendar.c`) convertit la date en UTC d'après l'heure de début (RFC 5545) ; `DTSTART` est désormais posé avant la règle. Les règles `UNTIL` existantes sont relues et ne sont plus signalées comme personnalisées.
+- **Indicateurs visuels** : les événements périodiques (double flèche) et privés (cadenas) affichent une icône dans leur bloc, à la manière d'Outlook (vues jour/semaine, bandeau « journée entière » et vue mois).
+
 ### Modifié
 
 - _(à venir)_
@@ -158,7 +164,6 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 - **Liens `mailto:`** (`Mailto.h`, `MainWindow.Mailto.cpp`) : Paramètres > Courrier > Liens de messagerie enregistre EvolutionWin comme application de messagerie Windows (clés `Software\Clients\Mail\EvolutionWin`, `RegisteredApplications`, protocole `mailto`, pour l'utilisateur courant) et ouvre « Applications par défaut ». Un lien reçu ouvre une rédaction préremplie (À, Cc, Cci, objet, corps ; décodage %XX UTF-8, sauts de ligne retirés des en-têtes). Si EvolutionWin est déjà ouvert, le lien lui est transmis (WM_COPYDATA) au lieu de lancer une seconde instance. `ComposeData` gagne le champ `bcc`.
 - **Tests** : `tests/unit/test_immersive.cpp` (29 vérifications) et `tests/unit/test_mailto.cpp` (49).
 - **Reste à valider à la main** : voir `VALIDATION.md`. L'option d'enregistrement `mailto:` à l'installation du MSI n'est pas faite.
-
 
 ### Déploiement d'entreprise : MSI silencieux avancé et stratégies de groupe
 
