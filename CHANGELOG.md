@@ -14,6 +14,7 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Modifié
 
+- **Correctif : mise à jour automatique, fermeture complète des processus d'Evolution.** Le script de fermeture de l'installeur ne visait pas `camel-index-control-1.2.exe` (nom exact différent) et ne couvrait que les processus WebView2 du dossier de données utilisateur. Il arrête maintenant tout processus lancé depuis le dossier d'installation (bin et libexec) et les processus WebView2 de l'ancien profil créé à côté de l'exécutable.
 - **Correctif : erreur Edge « Création du répertoire de données impossible » au démarrage.** Le profil WebView2 (volet de lecture, signature) était créé à côté de l'exécutable, dans « C:\Program Files », non inscriptible ; le dossier `%LOCALAPPDATA%\EvolutionWin\WebView2` n'était fixé qu'à l'ouverture d'une fenêtre de rédaction. Il est maintenant fixé dès le lancement de l'application.
 
 ## [1.3.5] — 2026-11-21
