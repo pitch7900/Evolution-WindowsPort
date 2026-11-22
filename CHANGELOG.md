@@ -14,7 +14,7 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Modifié
 
-- _(à venir)_
+- **Correctif : erreur Edge « Création du répertoire de données impossible » au démarrage.** Le profil WebView2 (volet de lecture, signature) était créé à côté de l'exécutable, dans « C:\Program Files », non inscriptible ; le dossier `%LOCALAPPDATA%\EvolutionWin\WebView2` n'était fixé qu'à l'ouverture d'une fenêtre de rédaction. Il est maintenant fixé dès le lancement de l'application.
 
 ## [1.3.5] — 2026-11-21
 

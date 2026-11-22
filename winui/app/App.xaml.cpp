@@ -67,6 +67,18 @@ namespace winrt::EvolutionWin::implementation
 
     void App::OnLaunched([[maybe_unused]] LaunchActivatedEventArgs const& e)
     {
+        /* profil WebView2 (volet de lecture, signature, éditeur) dans %LOCALAPPDATA% : par défaut il est créé à côté de
+           l'exécutable, donc dans « C:\Program Files », non inscriptible (erreur Edge « Création du répertoire de
+           données impossible »). À fixer avant la création de la première fenêtre. */
+        {
+            wchar_t local_app_data[MAX_PATH];
+            if (GetEnvironmentVariableW(L"LOCALAPPDATA", local_app_data, MAX_PATH))
+            {
+                std::wstring folder = std::wstring{ local_app_data } + L"\\EvolutionWin\\WebView2";
+                SetEnvironmentVariableW(L"WEBVIEW2_USER_DATA_FOLDER", folder.c_str());
+            }
+        }
+
         /* lien mailto: sur la ligne de commande (clic sur une adresse dans une autre application) :
            confié à l'instance déjà ouverte s'il y en a une, sinon ouvert par cette instance au démarrage */
         std::wstring mailto_url = ::EvolutionWin::Mailto::FindUrlInCommandLine(GetCommandLineW());
