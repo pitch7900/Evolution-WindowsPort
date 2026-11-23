@@ -10,7 +10,7 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
-## [1.3.7] — en cours
+## [1.3.7] — 2026-11-23
 
 ### Catégories : la couleur d'Outlook l'emporte
 
