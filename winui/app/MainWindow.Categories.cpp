@@ -691,8 +691,9 @@ namespace winrt::EvolutionWin::implementation
      * @brief Reprend dans le registre local les catégories des comptes Microsoft 365 et les libellés des comptes Gmail.
      *
      * Interroge chaque compte non local ; les comptes d'un autre type répondent
-     * « non pris en charge » et sont ignorés. Les catégories déjà présentes (même nom,
-     * sans tenir compte de la casse) gardent leur couleur locale.
+     * « non pris en charge » et sont ignorés. Pour les catégories déjà présentes (même nom,
+     * sans tenir compte de la casse), la couleur du compte l'emporte quand il en fournit une
+     * (Microsoft 365 ; Gmail n'en renvoie pas).
      *
      * @param button Bouton déclencheur, désactivé pendant la lecture.
      */
@@ -754,14 +755,21 @@ namespace winrt::EvolutionWin::implementation
                             name = Cat::TrimName(std::wstring_view{ name });
                             if (name.empty())
                                 continue;
-                            if (registry.Contains(name))
+                            uint8_t r = 0, g = 0, b = 0;
+                            if (auto const* known = registry.Find(name))
                             {
-                                /* déjà connue : on garde sa couleur, on la rattache au compte */
+                                /* déjà connue : on la rattache au compte, et la couleur du compte l'emporte */
+                                uint8_t remote_r = 0, remote_g = 0, remote_b = 0;
+                                if (Cat::ParseHexColor(std::wstring_view{ entry.GetNamedString(L"color", L"") }, remote_r, remote_g, remote_b)
+                                    && (known->r != remote_r || known->g != remote_g || known->b != remote_b))
+                                {
+                                    registry.SetColor(name, remote_r, remote_g, remote_b);
+                                    ++state->linked;
+                                }
                                 if (registry.AddAccount(name, std::wstring_view{ uid }))
                                     ++state->linked;
                                 continue;
                             }
-                            uint8_t r = 0, g = 0, b = 0;
                             if (!Cat::ParseHexColor(std::wstring_view{ entry.GetNamedString(L"color", L"") }, r, g, b))
                                 Cat::FallbackColor(name, r, g, b);
                             if (registry.Add(name, r, g, b))

@@ -12,6 +12,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.3.7] — en cours
 
+### Catégories : la couleur d'Outlook l'emporte
+
+- À la reprise des catégories d'un compte Microsoft 365 / Exchange Online, la couleur du compte remplace désormais la couleur locale d'une catégorie du même nom (auparavant la couleur locale était conservée, d'où des couleurs différentes de celles d'Outlook en ligne). Les modifications faites dans l'application continuent de remonter vers le compte. Gmail, qui ne fournit pas de couleur, n'est pas concerné.
+
 ### Calendrier : onglets de calendriers et mise à côté individuelle
 
 - Les calendriers cochés s'affichent maintenant sous forme d'onglets colorés au-dessus de la grille, comme Outlook, y compris en vue groupée (superposée) : un onglet par calendrier, avec son nom, une croix qui le décoche et une flèche **→** qui le met dans son propre panneau à côté du groupe. Dans un panneau à côté, la flèche **←** le replace dans le groupe. On peut ainsi garder des calendriers regroupés et un ou plusieurs autres à côté (quatre panneaux à côté au plus). Les calendriers mis à côté sont mémorisés (`calendar.detached`). Le bouton « Côte à côte » du ruban continue de tout séparer d'un coup ; « superposés » regroupe tout. La flèche → n'apparaît que si le groupe compte au moins deux calendriers. Un clic sur l'onglet d'un calendrier du groupe met ses événements en avant (bordure épaisse, fond plus marqué, au premier plan) et estompe ceux des autres calendriers du groupe ; un nouveau clic sur le même onglet retire la mise en avant (vues semaine et jour). Un nouvel événement créé dans le panneau groupé va au calendrier actif, dans un panneau à côté à son calendrier.
