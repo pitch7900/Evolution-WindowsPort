@@ -8227,5 +8227,13 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>You are about to show {0} calendars at once. Loading can take a very long time and may slow down or freeze the application. Continue?</value>
     <comment>Vous allez afficher {0} calendriers d'un coup. Le chargement peut être très long et ralentir ou figer l'application. Continuer ?</comment>
   </data>
+  <data name="T_0C12768C" xml:space="preserve">
+    <value>Too many calendars shown</value>
+    <comment>Trop de calendriers affichés</comment>
+  </data>
+  <data name="T_F7C1E516" xml:space="preserve">
+    <value>At most {0} calendars can be shown at the same time: beyond that, the view becomes unreadable and loading very slow. Uncheck other calendars first.</value>
+    <comment>Au plus {0} calendriers peuvent être affichés en même temps : au-delà, la vue devient illisible et le chargement très long. Décochez d'abord d'autres calendriers.</comment>
+  </data>
 </root>
 

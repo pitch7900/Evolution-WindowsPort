@@ -8227,5 +8227,13 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Sie sind dabei, {0} Kalender auf einmal anzuzeigen. Das Laden kann sehr lange dauern und die Anwendung verlangsamen oder einfrieren. Fortfahren?</value>
     <comment>Vous allez afficher {0} calendriers d'un coup. Le chargement peut être très long et ralentir ou figer l'application. Continuer ?</comment>
   </data>
+  <data name="T_0C12768C" xml:space="preserve">
+    <value>Zu viele Kalender angezeigt</value>
+    <comment>Trop de calendriers affichés</comment>
+  </data>
+  <data name="T_F7C1E516" xml:space="preserve">
+    <value>Es können höchstens {0} Kalender gleichzeitig angezeigt werden: darüber wird die Ansicht unleserlich und das Laden sehr langsam. Deaktivieren Sie zuerst andere Kalender.</value>
+    <comment>Au plus {0} calendriers peuvent être affichés en même temps : au-delà, la vue devient illisible et le chargement très long. Décochez d'abord d'autres calendriers.</comment>
+  </data>
 </root>
 
