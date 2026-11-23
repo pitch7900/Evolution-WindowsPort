@@ -12,6 +12,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.3.7] — en cours
 
+### Volets de calendriers et de carnets : case du compte sans gel
+
+- **Correctif** : la case d'un compte (ou d'un groupe) du volet Calendriers cochait TOUS ses calendriers dès qu'elle était dans l'état partiel (quelques calendriers cochés), ce qui lançait la lecture de dizaines de calendriers d'entreprise et figeait l'application. Désormais, dès qu'au moins un calendrier est affiché, un clic sur la case les décoche tous ; elle ne coche tout que depuis l'état vide, avec un avertissement (« Le chargement peut être très long… », Tout afficher / Annuler) quand le groupe compte plus de 5 éléments. Annuler remet la case dans son état. Même comportement pour les carnets d'adresses (`MainWindow.Sources.cpp`, `BuildSourcesPanel`).
+
 ### Toasts de nouveau message : compte de réception
 
 - Le toast Windows affiche désormais le compte d'arrivée (« Compte : … », texte d'attribution en bas du toast) en plus de l'expéditeur et de l'objet. Le mode « Notifications confidentielles » le masque comme le reste (rappel : tant qu'il est actif, le toast se limite à « Ouvrez Evolution pour le lire »).

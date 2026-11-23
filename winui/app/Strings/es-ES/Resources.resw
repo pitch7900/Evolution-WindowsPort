@@ -8219,5 +8219,13 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>En una fecha de finalización</value>
     <comment>À une date de fin</comment>
   </data>
+  <data name="T_E2049CD9" xml:space="preserve">
+    <value>¿Mostrar todos los calendarios?</value>
+    <comment>Afficher tous les calendriers ?</comment>
+  </data>
+  <data name="T_D5F0E5AA" xml:space="preserve">
+    <value>Va a mostrar {0} calendarios a la vez. La carga puede tardar mucho y ralentizar o bloquear la aplicación. ¿Continuar?</value>
+    <comment>Vous allez afficher {0} calendriers d'un coup. Le chargement peut être très long et ralentir ou figer l'application. Continuer ?</comment>
+  </data>
 </root>
 

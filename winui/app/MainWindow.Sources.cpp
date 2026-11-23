@@ -159,12 +159,37 @@ namespace winrt::EvolutionWin::implementation
                     group_check.IsChecked(false);
                 else
                     group_check.IsChecked(Windows::Foundation::IReference<bool>(nullptr));
-                bool all_shown = shown_count == group_uids.size() && !group_uids.empty();
+                /* un clic ne coche jamais « tout » à partir d'une sélection partielle : dès qu'au moins un
+                   élément est affiché, la case décoche tout ; elle ne coche tout que depuis l'état vide, et
+                   après avertissement si le groupe est grand (chaque calendrier affiché est lu sur le serveur) */
+                bool none_shown = shown_count == 0;
+                auto initial_state = group_check.IsChecked();
                 ToolTipService::SetToolTip(group_check, box_value(Tr(L"Afficher / masquer tout le groupe")));
                 group_check.Tapped([](IInspectable const&, Input::TappedRoutedEventArgs const& args) { args.Handled(true); });
-                group_check.Click([group_uids, all_shown, on_toggle_group](IInspectable const&, RoutedEventArgs const&)
+                group_check.Click([group_uids, none_shown, initial_state, on_toggle_group, group_check](IInspectable const&, RoutedEventArgs const&)
                 {
-                    on_toggle_group(group_uids, !all_shown);
+                    constexpr size_t kWarnAbove = 5;
+                    if (!none_shown || group_uids.size() <= kWarnAbove)
+                    {
+                        on_toggle_group(group_uids, none_shown);
+                        return;
+                    }
+
+                    ContentDialog dialog;
+                    dialog.XamlRoot(group_check.XamlRoot());
+                    dialog.Title(box_value(Tr(L"Afficher tous les calendriers ?")));
+                    dialog.Content(box_value(Fmt(Tr(L"Vous allez afficher {0} calendriers d'un coup. Le chargement peut être très long et ralentir ou figer l'application. Continuer ?"),
+                        { to_hstring(static_cast<uint32_t>(group_uids.size())) })));
+                    dialog.PrimaryButtonText(Tr(L"Tout afficher"));
+                    dialog.CloseButtonText(Tr(L"Annuler"));
+                    dialog.DefaultButton(ContentDialogButton::Close);
+                    dialog.ShowAsync().Completed([group_uids, initial_state, on_toggle_group, group_check](auto const& operation, AsyncStatus)
+                    {
+                        if (operation.GetResults() == ContentDialogResult::Primary)
+                            on_toggle_group(group_uids, true);
+                        else
+                            group_check.IsChecked(initial_state);   /* annulé : la case retrouve son état */
+                    });
                 });
                 Grid::SetColumn(group_check, 1);
                 header_row.Children().Append(group_check);
