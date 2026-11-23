@@ -398,6 +398,35 @@ namespace winrt::EvolutionWin::implementation
             panes.push_back({ hstring{}, grouped_tabs });
         for (auto const& tab : detached_tabs)
             panes.push_back({ tab.uid, { tab } });
+        /* calendrier du groupe mis en avant : ignoré s'il n'est plus dans le groupe (décoché ou mis à côté) */
+        hstring focus_uid;
+        for (auto const& tab : grouped_tabs)
+            if (tab.uid == m_focused_calendar_uid && grouped_tabs.size() > 1)
+                focus_uid = tab.uid;
+        /* met en avant les événements du calendrier cliqué : bordure épaisse, les autres du groupe s'estompent */
+        auto apply_focus = [focus_uid, grouped_tabs](Border const& block, JsonObject const& ev)
+        {
+            if (focus_uid.empty())
+                return;
+            hstring calendar = ev.GetNamedString(L"calendar_uid", L"");
+            bool in_group = false;
+            for (auto const& tab : grouped_tabs)
+                if (tab.uid == calendar)
+                    in_group = true;
+            if (!in_group)
+                return;
+            if (calendar == focus_uid)
+            {
+                auto thickness = block.BorderThickness();
+                thickness.Left = (std::max)(thickness.Left, 3.0) + 3.0;
+                block.BorderBrush(CalendarBrush(::EvolutionWin::CategoryStore::EventColorHex(ev), 0xFF));
+                block.BorderThickness(ThicknessHelper::FromLengths(thickness.Left, 2, 2, 2));
+                block.Background(CalendarBrush(::EvolutionWin::CategoryStore::EventColorHex(ev), 0xB0));
+                Canvas::SetZIndex(block, 10);
+            }
+            else
+                block.Opacity(0.3);
+        };
         const int total = static_cast<int>(panes.size()) * days;   /* colonnes de jours, tous panneaux confondus */
         auto in_pane = [detached_tabs](Pane const& pane, JsonObject const& ev)
         {
@@ -477,11 +506,29 @@ namespace winrt::EvolutionWin::implementation
 
             /* sortir l'unique calendrier du groupe n'apporterait rien : pas de flèche → dans ce cas */
             const bool can_detach = grouped_tabs.size() > 1 && detached_tabs.size() < 4;
-            auto make_tab = [this, set_detached](Tab const& tab, bool detached_pane, bool with_arrow) -> Border
+            auto make_tab = [this, set_detached, focus_uid](Tab const& tab, bool detached_pane, bool with_arrow) -> Border
             {
                 Border tab_box;
                 tab_box.Padding(ThicknessHelper::FromLengths(4, 4, 4, 4));
                 tab_box.CornerRadius(CornerRadiusHelper::FromUniformRadius(3));
+                if (!detached_pane)
+                {
+                    /* clic sur l'onglet d'un calendrier du groupe : met ses événements en avant (re-clic : retire) */
+                    const bool focused = tab.uid == focus_uid;
+                    if (focused)
+                    {
+                        tab_box.BorderThickness(ThicknessHelper::FromUniformLength(2));
+                        tab_box.BorderBrush(ThemeBrush(L"TextFillColorPrimaryBrush"));
+                    }
+                    else
+                        tab_box.BorderThickness(ThicknessHelper::FromUniformLength(0));
+                    hstring tab_uid = tab.uid;
+                    tab_box.Tapped([this, tab_uid, focused](IInspectable const&, Input::TappedRoutedEventArgs const&)
+                    {
+                        m_focused_calendar_uid = focused ? hstring{} : tab_uid;
+                        LoadEvents();
+                    });
+                }
                 /* bandeau à la couleur du calendrier, texte blanc ou noir selon la luminosité du fond */
                 tab_box.Background(CalendarBrush(tab.color, 0xFF));
                 auto fill = CalendarColor(tab.color);
@@ -702,6 +749,7 @@ namespace winrt::EvolutionWin::implementation
                     chip_line.Children().Append(chip_badges);
                     chip.Child(chip_line);
                     ApplyShowAsTexture(chip, ev, ::EvolutionWin::CategoryStore::EventColorHex(ev));
+                    apply_focus(chip, ev);
                     ToolTipService::SetToolTip(chip, box_value(ev.GetNamedString(L"summary", L"") + L"\n" +
                         ev.GetNamedString(L"calendar_name", L"")));
                     open_on_tap(chip, ev);
@@ -1187,6 +1235,7 @@ namespace winrt::EvolutionWin::implementation
                     }
                     block.Child(shell);
                     ApplyShowAsTexture(block, ev, color);
+                    apply_focus(block, ev);
 
                     ToolTipService::SetToolTip(block, box_value(ev.GetNamedString(L"summary", L"") + L"\n" + when +
                         (location.empty() ? hstring{} : L"\n" + location) + L"\n" + ev.GetNamedString(L"calendar_name", L"")));

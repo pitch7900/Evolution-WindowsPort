@@ -1001,6 +1001,8 @@ namespace winrt::EvolutionWin::implementation
         hstring m_calendar_search_query;
         /* calendriers affichés (calendar.visible) et actif (calendar.active) */
         Windows::Data::Json::JsonArray m_calendar_sources{ nullptr };
+        /** Calendrier du groupe mis en avant par un clic sur son onglet (vide : aucun). */
+        winrt::hstring m_focused_calendar_uid;
         void LoadCalendarSources(bool render = true);
         bool m_calendar_background_started{ false };
         fire_and_forget ShowAddCalendarDialogAsync();
