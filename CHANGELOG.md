@@ -12,6 +12,10 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ## [1.3.7] — en cours
 
+### Toasts de nouveau message : compte de réception
+
+- Le toast Windows affiche désormais le compte d'arrivée (« Compte : … », texte d'attribution en bas du toast) en plus de l'expéditeur et de l'objet. Le mode « Notifications confidentielles » le masque comme le reste (rappel : tant qu'il est actif, le toast se limite à « Ouvrez Evolution pour le lire »).
+
 ### Périodicité des événements : sélection, date de fin, indicateurs
 
 - **Correctif** : dans l'éditeur d'événement, le panneau « Périodicité » ne permettait pas de choisir à la souris autre chose que « Aucune »/« Jamais » (les `ComboBox` ouvertes dans le `Flyout` du ruban ne recevaient pas les clics), donc le nombre d'occurrences restait sans effet. Les listes déroulantes sont remplacées par des `RadioButtons` sans popup.

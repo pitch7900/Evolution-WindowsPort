@@ -2202,6 +2202,26 @@ namespace winrt::EvolutionWin::implementation
                 builder.AddText(hstring{ toast_lines.first });
                 if (!toast_lines.second.empty())
                     builder.AddText(hstring{ toast_lines.second });
+
+                /* compte de réception en texte d'attribution (ligne discrète en bas du toast) ;
+                   omis en mode confidentiel comme l'expéditeur et l'objet */
+                if (!msg_account.empty() && !::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.confidential", false))
+                {
+                    hstring account_name = msg_account;
+                    if (m_accounts)
+                    {
+                        for (auto const& entry : m_accounts)
+                        {
+                            auto account_object = entry.GetObject();
+                            if (account_object.GetNamedString(L"uid", L"") == msg_account)
+                            {
+                                account_name = account_object.GetNamedString(L"name", msg_account);
+                                break;
+                            }
+                        }
+                    }
+                    builder.SetAttributionText(Fmt(Tr(L"Compte : {0}"), { account_name }));
+                }
                 if (!msg_account.empty())
                     builder.AddArgument(L"account", msg_account);
                 if (!msg_folder.empty())
