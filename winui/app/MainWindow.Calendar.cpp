@@ -475,7 +475,8 @@ namespace winrt::EvolutionWin::implementation
                 LoadEvents();
             };
 
-            const bool can_detach = visible_total > 1 && detached_tabs.size() < 4;
+            /* sortir l'unique calendrier du groupe n'apporterait rien : pas de flèche → dans ce cas */
+            const bool can_detach = grouped_tabs.size() > 1 && detached_tabs.size() < 4;
             auto make_tab = [this, set_detached](Tab const& tab, bool detached_pane, bool with_arrow) -> Border
             {
                 Border tab_box;
