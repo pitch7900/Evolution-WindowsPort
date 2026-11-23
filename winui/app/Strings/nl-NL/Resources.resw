@@ -8215,5 +8215,33 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Actie op het bericht mislukt: {0}</value>
     <comment>Action sur le message impossible : {0}</comment>
   </data>
+  <data name="T_E8A7574B" xml:space="preserve">
+    <value>Op een einddatum</value>
+    <comment>À une date de fin</comment>
+  </data>
+  <data name="T_E2049CD9" xml:space="preserve">
+    <value>Alle agenda's tonen?</value>
+    <comment>Afficher tous les calendriers ?</comment>
+  </data>
+  <data name="T_D5F0E5AA" xml:space="preserve">
+    <value>U staat op het punt {0} agenda's tegelijk te tonen. Laden kan erg lang duren en de toepassing vertragen of laten vastlopen. Doorgaan?</value>
+    <comment>Vous allez afficher {0} calendriers d'un coup. Le chargement peut être très long et ralentir ou figer l'application. Continuer ?</comment>
+  </data>
+  <data name="T_0C12768C" xml:space="preserve">
+    <value>Te veel agenda's getoond</value>
+    <comment>Trop de calendriers affichés</comment>
+  </data>
+  <data name="T_F7C1E516" xml:space="preserve">
+    <value>Er kunnen maximaal {0} agenda's tegelijk worden getoond: daarboven wordt de weergave onleesbaar en het laden erg traag. Schakel eerst andere agenda's uit.</value>
+    <comment>Au plus {0} calendriers peuvent être affichés en même temps : au-delà, la vue devient illisible et le chargement très long. Décochez d'abord d'autres calendriers.</comment>
+  </data>
+  <data name="T_62348635" xml:space="preserve">
+    <value>Terugzetten in de agendagroep</value>
+    <comment>Replacer dans le groupe de calendriers</comment>
+  </data>
+  <data name="T_CC4CEC0C" xml:space="preserve">
+    <value>Deze agenda naast de andere tonen</value>
+    <comment>Afficher ce calendrier à côté</comment>
+  </data>
 </root>
 

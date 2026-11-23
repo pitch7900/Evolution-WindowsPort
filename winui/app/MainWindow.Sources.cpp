@@ -55,8 +55,22 @@ namespace winrt::EvolutionWin::implementation
         std::function<void(StackPanel const&, JsonObject const&)> group_footer = nullptr,
         wchar_t const* collapse_key = L"sources.collapsed",
         std::function<void(std::vector<hstring> const&, bool)> on_toggle_group = nullptr,
-        std::function<void(Grid const&, JsonObject const&)> decorate_row = nullptr)
+        std::function<void(Grid const&, JsonObject const&)> decorate_row = nullptr,
+        size_t max_shown = 0)
     {
+        /* plafond d'éléments affichés en même temps (0 : aucun) : au-delà, un avertissement explique le
+           refus (la vue devient illisible et le chargement très long) */
+        size_t visible_count = visible.size();
+        auto show_limit_dialog = [max_shown](UIElement const& anchor)
+        {
+            ContentDialog dialog;
+            dialog.XamlRoot(anchor.XamlRoot());
+            dialog.Title(box_value(Tr(L"Trop de calendriers affichés")));
+            dialog.Content(box_value(Fmt(Tr(L"Au plus {0} calendriers peuvent être affichés en même temps : au-delà, la vue devient illisible et le chargement très long. Décochez d'abord d'autres calendriers."),
+                { to_hstring(static_cast<uint32_t>(max_shown)) })));
+            dialog.CloseButtonText(Tr(L"OK"));
+            dialog.ShowAsync();
+        };
         auto children = panel.Children();
         children.Clear();
         hstring active_name;
@@ -159,12 +173,44 @@ namespace winrt::EvolutionWin::implementation
                     group_check.IsChecked(false);
                 else
                     group_check.IsChecked(Windows::Foundation::IReference<bool>(nullptr));
-                bool all_shown = shown_count == group_uids.size() && !group_uids.empty();
+                /* un clic ne coche jamais « tout » à partir d'une sélection partielle : dès qu'au moins un
+                   élément est affiché, la case décoche tout ; elle ne coche tout que depuis l'état vide, et
+                   après avertissement si le groupe est grand (chaque calendrier affiché est lu sur le serveur) */
+                bool none_shown = shown_count == 0;
+                auto initial_state = group_check.IsChecked();
                 ToolTipService::SetToolTip(group_check, box_value(Tr(L"Afficher / masquer tout le groupe")));
                 group_check.Tapped([](IInspectable const&, Input::TappedRoutedEventArgs const& args) { args.Handled(true); });
-                group_check.Click([group_uids, all_shown, on_toggle_group](IInspectable const&, RoutedEventArgs const&)
+                group_check.Click([group_uids, none_shown, initial_state, on_toggle_group, group_check, max_shown, visible_count, show_limit_dialog](IInspectable const&, RoutedEventArgs const&)
                 {
-                    on_toggle_group(group_uids, !all_shown);
+                    if (none_shown && max_shown > 0 && visible_count + group_uids.size() > max_shown)
+                    {
+                        group_check.IsChecked(initial_state);
+                        show_limit_dialog(group_check);
+                        return;
+                    }
+
+                    constexpr size_t kWarnAbove = 5;
+                    if (!none_shown || group_uids.size() <= kWarnAbove)
+                    {
+                        on_toggle_group(group_uids, none_shown);
+                        return;
+                    }
+
+                    ContentDialog dialog;
+                    dialog.XamlRoot(group_check.XamlRoot());
+                    dialog.Title(box_value(Tr(L"Afficher tous les calendriers ?")));
+                    dialog.Content(box_value(Fmt(Tr(L"Vous allez afficher {0} calendriers d'un coup. Le chargement peut être très long et ralentir ou figer l'application. Continuer ?"),
+                        { to_hstring(static_cast<uint32_t>(group_uids.size())) })));
+                    dialog.PrimaryButtonText(Tr(L"Tout afficher"));
+                    dialog.CloseButtonText(Tr(L"Annuler"));
+                    dialog.DefaultButton(ContentDialogButton::Close);
+                    dialog.ShowAsync().Completed([group_uids, initial_state, on_toggle_group, group_check](auto const& operation, AsyncStatus)
+                    {
+                        if (operation.GetResults() == ContentDialogResult::Primary)
+                            on_toggle_group(group_uids, true);
+                        else
+                            group_check.IsChecked(initial_state);   /* annulé : la case retrouve son état */
+                    });
                 });
                 Grid::SetColumn(group_check, 1);
                 header_row.Children().Append(group_check);
@@ -250,10 +296,17 @@ namespace winrt::EvolutionWin::implementation
                 shown.MinWidth(0);
                 shown.IsChecked(std::find(visible.begin(), visible.end(), uid) != visible.end());
                 ToolTipService::SetToolTip(shown, box_value(Tr(L"Afficher")));
-                shown.Click([uid, on_toggle](IInspectable const& sender, RoutedEventArgs const&)
+                shown.Click([uid, on_toggle, max_shown, visible_count, show_limit_dialog](IInspectable const& sender, RoutedEventArgs const&)
                 {
                     auto box = sender.as<CheckBox>();
-                    on_toggle(uid, box.IsChecked() && box.IsChecked().GetBoolean());
+                    bool wanted = box.IsChecked() && box.IsChecked().GetBoolean();
+                    if (wanted && max_shown > 0 && visible_count >= max_shown)
+                    {
+                        box.IsChecked(false);
+                        show_limit_dialog(box);
+                        return;
+                    }
+                    on_toggle(uid, wanted);
                 });
                 row.Children().Append(shown);
 
@@ -556,7 +609,8 @@ namespace winrt::EvolutionWin::implementation
                     SetUidVisible(m_calendar_sources, L"calendar.visible", uid, shown);
                 RebuildCalendarSourcesPanel();
                 LoadEvents();
-            });
+            },
+            nullptr, 10);
 
         ActiveCalendarText().Text(active_name.empty() ? hstring{}
             : Fmt(Tr(L"Nouveaux événements dans : {0}"), { active_name }));

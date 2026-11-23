@@ -140,6 +140,31 @@ namespace
         return ev.GetNamedBoolean(L"all_day", false) || end - start >= 24 * 3600;
     }
 
+    /* Indicateurs d'un événement à la manière d'Outlook : double flèche s'il est périodique,
+     * cadenas s'il est privé. Le panneau est vide (et réduit) si aucun indicateur ne s'applique.
+     * Paramètres :
+     *   ev : événement (membres "recurring" et "private")
+     * Retourne : panneau horizontal d'icônes, à placer dans le coin du bloc */
+    StackPanel MakeEventBadges(JsonObject const& ev)
+    {
+        StackPanel badges;
+        badges.Orientation(Orientation::Horizontal);
+        badges.Spacing(3);
+        badges.IsHitTestVisible(false);
+        auto add = [&badges](wchar_t const* glyph)
+        {
+            FontIcon icon;
+            icon.Glyph(glyph);
+            icon.FontSize(12);
+            badges.Children().Append(icon);
+        };
+        if (ev.GetNamedBoolean(L"recurring", false))
+            add(L"\xE8EE");
+        if (ev.GetNamedBoolean(L"private", false))
+            add(L"\xE72E");
+        return badges;
+    }
+
     /* Texture « Afficher comme » à la manière d'Outlook, sur un bloc d'événement (Border) ou un bandeau
      * « journée entière » :
      *   free      : fond presque transparent, contour fin de la couleur du calendrier
@@ -328,42 +353,90 @@ namespace winrt::EvolutionWin::implementation
         m_slot_visuals.clear();
         m_event_visuals.clear();
 
-        /* Panneaux : en mode « côte à côte » (calendar.layout-mode), un panneau par calendrier coché (quatre au plus) ;
-           sinon (ou avec un seul calendrier) un panneau unique où tous les calendriers sont superposés.
-           Les panneaux se suivent dans une même grille (colonne = panneau * jours + jour), donc partagent
-           l'échelle des heures et le défilement vertical. */
-        struct Pane { hstring uid; hstring title; hstring color; };
-        std::vector<Pane> panes;
-        if (::EvolutionWin::Settings::Instance().GetString(L"calendar.layout-mode", L"overlay") == L"side-by-side")
+        /* Panneaux : un panneau « groupe » où les calendriers cochés sont superposés (uid vide : un nouvel événement
+           va au calendrier actif) et, à côté, un panneau par calendrier détaché (calendar.detached, ou tous en mode
+           « côte à côte » de calendar.layout-mode ; quatre au plus). Les panneaux se suivent dans une même grille
+           (colonne = panneau * jours + jour), donc partagent l'échelle des heures et le défilement vertical. */
+        struct Tab { hstring uid; hstring title; hstring color; };
+        struct Pane { hstring uid; std::vector<Tab> tabs; };
+        std::vector<Tab> grouped_tabs;
+        std::vector<Tab> detached_tabs;
+        size_t visible_total = 0;
         {
-            for (auto const& uid : VisibleCalendarUids())
+            auto& calendar_settings = ::EvolutionWin::Settings::Instance();
+            const bool all_detached = calendar_settings.GetString(L"calendar.layout-mode", L"overlay") == L"side-by-side";
+            std::vector<hstring> detached_pref;
+            for (auto const& entry : calendar_settings.GetArray(L"calendar.detached"))
+                if (entry.ValueType() == JsonValueType::String)
+                    detached_pref.push_back(entry.GetString());
+
+            auto visible_uids = VisibleCalendarUids();
+            visible_total = visible_uids.size();
+            for (auto const& uid : visible_uids)
             {
-                if (panes.size() >= 4)
-                    break;
-                hstring title = uid;
-                hstring color;
+                Tab tab{ uid, uid, hstring{} };
                 for (auto const& value : m_calendar_sources ? m_calendar_sources : JsonArray{})
                 {
                     auto source = value.GetObject();
                     if (source.GetNamedString(L"uid", L"") == uid)
                     {
-                        title = source.GetNamedString(L"name", uid);
-                        color = source.GetNamedString(L"color", L"");
+                        tab.title = source.GetNamedString(L"name", uid);
+                        tab.color = source.GetNamedString(L"color", L"");
                     }
                 }
-                panes.push_back({ uid, title, color });
+                /* un calendrier seul reste dans le groupe : rien à mettre à côté */
+                bool detach = visible_total > 1
+                    && (all_detached || std::find(detached_pref.begin(), detached_pref.end(), uid) != detached_pref.end());
+                if (detach && detached_tabs.size() < 4)
+                    detached_tabs.push_back(tab);
+                else
+                    grouped_tabs.push_back(tab);
             }
         }
-        if (panes.size() < 2)
+        std::vector<Pane> panes;
+        if (!grouped_tabs.empty() || detached_tabs.empty())
+            panes.push_back({ hstring{}, grouped_tabs });
+        for (auto const& tab : detached_tabs)
+            panes.push_back({ tab.uid, { tab } });
+        /* calendrier du groupe mis en avant : ignoré s'il n'est plus dans le groupe (décoché ou mis à côté) */
+        hstring focus_uid;
+        for (auto const& tab : grouped_tabs)
+            if (tab.uid == m_focused_calendar_uid && grouped_tabs.size() > 1)
+                focus_uid = tab.uid;
+        /* met en avant les événements du calendrier cliqué : bordure épaisse, les autres du groupe s'estompent */
+        auto apply_focus = [focus_uid, grouped_tabs](Border const& block, JsonObject const& ev)
         {
-            panes.clear();
-            panes.push_back({ L"", L"", L"" });
-        }
-        const bool side_by_side = panes.size() > 1;
+            if (focus_uid.empty())
+                return;
+            hstring calendar = ev.GetNamedString(L"calendar_uid", L"");
+            bool in_group = false;
+            for (auto const& tab : grouped_tabs)
+                if (tab.uid == calendar)
+                    in_group = true;
+            if (!in_group)
+                return;
+            if (calendar == focus_uid)
+            {
+                auto thickness = block.BorderThickness();
+                thickness.Left = (std::max)(thickness.Left, 3.0) + 3.0;
+                block.BorderBrush(CalendarBrush(::EvolutionWin::CategoryStore::EventColorHex(ev), 0xFF));
+                block.BorderThickness(ThicknessHelper::FromLengths(thickness.Left, 2, 2, 2));
+                block.Background(CalendarBrush(::EvolutionWin::CategoryStore::EventColorHex(ev), 0xB0));
+                Canvas::SetZIndex(block, 10);
+            }
+            else
+                block.Opacity(0.3);
+        };
         const int total = static_cast<int>(panes.size()) * days;   /* colonnes de jours, tous panneaux confondus */
-        auto in_pane = [](Pane const& pane, JsonObject const& ev)
+        auto in_pane = [detached_tabs](Pane const& pane, JsonObject const& ev)
         {
-            return pane.uid.empty() || ev.GetNamedString(L"calendar_uid", L"") == pane.uid;
+            hstring calendar = ev.GetNamedString(L"calendar_uid", L"");
+            if (!pane.uid.empty())
+                return calendar == pane.uid;
+            for (auto const& tab : detached_tabs)
+                if (tab.uid == calendar)
+                    return false;
+            return true;
         };
 
         /* Configuration du second fuseau horaire dans la grille */
@@ -398,60 +471,163 @@ namespace winrt::EvolutionWin::implementation
             EnableEventExportDrag(element, ev);
         };
 
-        /* titres des panneaux (côte à côte) : nom du calendrier et croix qui le décoche */
-        if (side_by_side)
+        /* onglets des panneaux, comme Outlook : un onglet par calendrier à la couleur du calendrier, avec une
+           flèche qui le met à côté (→) ou le replace dans le groupe (←) et une croix qui le décoche */
+        if (visible_total > 0)
         {
+            /* met un calendrier à côté (detach) ou le replace dans le groupe ; depuis le mode « côte à côte »
+               global, tous les autres calendriers restent à côté individuellement */
+            auto set_detached = [this](hstring const& calendar_uid, bool detach)
+            {
+                auto& calendar_settings = ::EvolutionWin::Settings::Instance();
+                std::vector<hstring> list;
+                if (calendar_settings.GetString(L"calendar.layout-mode", L"overlay") == L"side-by-side")
+                {
+                    list = VisibleCalendarUids();
+                    calendar_settings.SetString(L"calendar.layout-mode", L"overlay");
+                    if (auto toggle = RibbonCalendarSideBySideToggle())
+                        toggle.IsChecked(false);
+                }
+                else
+                {
+                    for (auto const& entry : calendar_settings.GetArray(L"calendar.detached"))
+                        if (entry.ValueType() == JsonValueType::String)
+                            list.push_back(entry.GetString());
+                }
+                list.erase(std::remove(list.begin(), list.end(), calendar_uid), list.end());
+                if (detach)
+                    list.push_back(calendar_uid);
+                JsonArray stored;
+                for (auto const& uid : list)
+                    stored.Append(JsonValue::CreateStringValue(uid));
+                calendar_settings.Set(L"calendar.detached", stored);
+                LoadEvents();
+            };
+
+            /* sortir l'unique calendrier du groupe n'apporterait rien : pas de flèche → dans ce cas */
+            const bool can_detach = grouped_tabs.size() > 1 && detached_tabs.size() < 4;
+            auto make_tab = [this, set_detached, focus_uid](Tab const& tab, bool detached_pane, bool with_arrow) -> Border
+            {
+                Border tab_box;
+                tab_box.Padding(ThicknessHelper::FromLengths(4, 4, 4, 4));
+                tab_box.CornerRadius(CornerRadiusHelper::FromUniformRadius(3));
+                if (!detached_pane)
+                {
+                    /* clic sur l'onglet d'un calendrier du groupe : met ses événements en avant (re-clic : retire) */
+                    const bool focused = tab.uid == focus_uid;
+                    if (focused)
+                    {
+                        tab_box.BorderThickness(ThicknessHelper::FromUniformLength(2));
+                        tab_box.BorderBrush(ThemeBrush(L"TextFillColorPrimaryBrush"));
+                    }
+                    else
+                        tab_box.BorderThickness(ThicknessHelper::FromUniformLength(0));
+                    hstring tab_uid = tab.uid;
+                    tab_box.Tapped([this, tab_uid, focused](IInspectable const&, Input::TappedRoutedEventArgs const&)
+                    {
+                        m_focused_calendar_uid = focused ? hstring{} : tab_uid;
+                        LoadEvents();
+                    });
+                }
+                /* bandeau à la couleur du calendrier, texte blanc ou noir selon la luminosité du fond */
+                tab_box.Background(CalendarBrush(tab.color, 0xFF));
+                auto fill = CalendarColor(tab.color);
+                bool dark_fill = (0.299 * fill.R + 0.587 * fill.G + 0.114 * fill.B) < 150.0;
+                SolidColorBrush foreground{ dark_fill ? Microsoft::UI::Colors::White() : Microsoft::UI::Colors::Black() };
+
+                Grid line;
+                ColumnDefinition arrow_column;
+                arrow_column.Width(GridLengthHelper::Auto());
+                line.ColumnDefinitions().Append(arrow_column);
+                line.ColumnDefinitions().Append(ColumnDefinition{});
+                ColumnDefinition close_column;
+                close_column.Width(GridLengthHelper::Auto());
+                line.ColumnDefinitions().Append(close_column);
+
+                auto make_button = [&foreground](wchar_t const* glyph, hstring const& tip)
+                {
+                    Button button;
+                    FontIcon icon;
+                    icon.Glyph(glyph);
+                    icon.FontSize(10);
+                    icon.Foreground(foreground);
+                    button.Content(icon);
+                    button.Padding(ThicknessHelper::FromLengths(6, 4, 6, 4));
+                    button.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
+                    button.BorderThickness(ThicknessHelper::FromUniformLength(0));
+                    ToolTipService::SetToolTip(button, box_value(tip));
+                    return button;
+                };
+
+                hstring calendar_uid = tab.uid;
+                if (with_arrow)
+                {
+                    Button arrow = detached_pane
+                        ? make_button(L"\xE72B", Tr(L"Replacer dans le groupe de calendriers"))
+                        : make_button(L"\xE72A", Tr(L"Afficher ce calendrier à côté"));
+                    arrow.Click([set_detached, calendar_uid, detached_pane](IInspectable const&, RoutedEventArgs const&)
+                    {
+                        set_detached(calendar_uid, !detached_pane);
+                    });
+                    line.Children().Append(arrow);
+                }
+
+                TextBlock text;
+                text.Text(tab.title);
+                text.Foreground(foreground);
+                text.FontWeight(Microsoft::UI::Text::FontWeights::SemiBold());
+                text.TextTrimming(TextTrimming::CharacterEllipsis);
+                text.VerticalAlignment(VerticalAlignment::Center);
+                text.Margin(ThicknessHelper::FromLengths(with_arrow ? 2 : 6, 0, 4, 0));
+                Grid::SetColumn(text, 1);
+                line.Children().Append(text);
+
+                Button close = make_button(L"\xE711", Tr(L"Masquer ce calendrier"));
+                close.Click([this, calendar_uid](IInspectable const&, RoutedEventArgs const&)
+                {
+                    HideCalendar(calendar_uid);
+                });
+                Grid::SetColumn(close, 2);
+                line.Children().Append(close);
+
+                tab_box.Child(line);
+                return tab_box;
+            };
+
             Grid titles;
             add_columns(titles);
             titles.Padding(ThicknessHelper::FromLengths(0, 0, 0, 6));
             for (size_t index = 0; index < panes.size(); index++)
             {
-                Border title_box;
-                title_box.Margin(ThicknessHelper::FromLengths(index == 0 ? 0 : 3, 0, 0, 0));
-                title_box.Padding(ThicknessHelper::FromLengths(10, 4, 4, 4));
-                title_box.CornerRadius(CornerRadiusHelper::FromUniformRadius(3));
-                /* bandeau à la couleur du calendrier, texte blanc ou noir selon la luminosité du fond */
-                title_box.Background(CalendarBrush(panes[index].color, 0xFF));
-                auto fill = CalendarColor(panes[index].color);
-                bool dark_fill = (0.299 * fill.R + 0.587 * fill.G + 0.114 * fill.B) < 150.0;
-                SolidColorBrush title_foreground{ dark_fill ? Microsoft::UI::Colors::White() : Microsoft::UI::Colors::Black() };
-                Grid::SetColumn(title_box, 1 + static_cast<int>(index) * days);
-                Grid::SetColumnSpan(title_box, days);
+                Pane const& pane = panes[index];
+                if (pane.tabs.empty())
+                    continue;
 
-                Grid title_line;
-                title_line.ColumnDefinitions().Append(ColumnDefinition{});
-                ColumnDefinition close_column;
-                close_column.Width(GridLengthHelper::Auto());
-                title_line.ColumnDefinitions().Append(close_column);
-
-                TextBlock title_text;
-                title_text.Text(panes[index].title);
-                title_text.Foreground(title_foreground);
-                title_text.FontWeight(Microsoft::UI::Text::FontWeights::SemiBold());
-                title_text.TextTrimming(TextTrimming::CharacterEllipsis);
-                title_text.VerticalAlignment(VerticalAlignment::Center);
-                title_line.Children().Append(title_text);
-
-                Button close_button;
-                FontIcon close_icon;
-                close_icon.Glyph(L"\xE711");
-                close_icon.FontSize(10);
-                close_icon.Foreground(title_foreground);
-                close_button.Content(close_icon);
-                close_button.Padding(ThicknessHelper::FromLengths(6, 4, 6, 4));
-                close_button.Background(SolidColorBrush{ Microsoft::UI::Colors::Transparent() });
-                close_button.BorderThickness(ThicknessHelper::FromUniformLength(0));
-                ToolTipService::SetToolTip(close_button, box_value(Tr(L"Masquer ce calendrier")));
-                Grid::SetColumn(close_button, 1);
-                hstring pane_uid = panes[index].uid;
-                close_button.Click([this, pane_uid](IInspectable const&, RoutedEventArgs const&)
+                UIElement content{ nullptr };
+                if (!pane.uid.empty())
                 {
-                    HideCalendar(pane_uid);
-                });
-                title_line.Children().Append(close_button);
-
-                title_box.Child(title_line);
-                titles.Children().Append(title_box);
+                    content = make_tab(pane.tabs[0], true, true);
+                }
+                else
+                {
+                    /* groupe : un onglet par calendrier superposé, défilement horizontal s'ils sont nombreux */
+                    StackPanel strip;
+                    strip.Orientation(Orientation::Horizontal);
+                    strip.Spacing(3);
+                    for (auto const& tab : pane.tabs)
+                        strip.Children().Append(make_tab(tab, false, can_detach));
+                    ScrollViewer scroll;
+                    scroll.HorizontalScrollMode(ScrollMode::Enabled);
+                    scroll.HorizontalScrollBarVisibility(ScrollBarVisibility::Auto);
+                    scroll.VerticalScrollMode(ScrollMode::Disabled);
+                    scroll.VerticalScrollBarVisibility(ScrollBarVisibility::Disabled);
+                    scroll.Content(strip);
+                    content = scroll;
+                }
+                content.as<FrameworkElement>().Margin(ThicknessHelper::FromLengths(index == 0 ? 0 : 3, 0, 0, 0));
+                Grid::SetColumn(content.as<FrameworkElement>(), 1 + static_cast<int>(index) * days);
+                Grid::SetColumnSpan(content.as<FrameworkElement>(), days);
+                titles.Children().Append(content);
             }
             host.Children().Append(titles);
         }
@@ -561,8 +737,19 @@ namespace winrt::EvolutionWin::implementation
                     title.Text(ev.GetNamedString(L"summary", L""));
                     title.FontSize(12);
                     title.TextTrimming(TextTrimming::CharacterEllipsis);
-                    chip.Child(title);
+                    Grid chip_line;
+                    chip_line.ColumnDefinitions().Append(ColumnDefinition{});
+                    ColumnDefinition badge_column;
+                    badge_column.Width(GridLengthHelper::Auto());
+                    chip_line.ColumnDefinitions().Append(badge_column);
+                    chip_line.Children().Append(title);
+                    StackPanel chip_badges = MakeEventBadges(ev);
+                    chip_badges.VerticalAlignment(VerticalAlignment::Center);
+                    Grid::SetColumn(chip_badges, 1);
+                    chip_line.Children().Append(chip_badges);
+                    chip.Child(chip_line);
                     ApplyShowAsTexture(chip, ev, ::EvolutionWin::CategoryStore::EventColorHex(ev));
+                    apply_focus(chip, ev);
                     ToolTipService::SetToolTip(chip, box_value(ev.GetNamedString(L"summary", L"") + L"\n" +
                         ev.GetNamedString(L"calendar_name", L"")));
                     open_on_tap(chip, ev);
@@ -780,7 +967,7 @@ namespace winrt::EvolutionWin::implementation
             /* séparateur des jours (plus marqué entre deux panneaux) */
             Border separator;
             separator.BorderBrush(ThemeBrush(L"DividerStrokeColorDefaultBrush"));
-            separator.BorderThickness(ThicknessHelper::FromLengths(side_by_side && day == 0 && column > 0 ? 3 : 1, 0, 0, 0));
+            separator.BorderThickness(ThicknessHelper::FromLengths(panes.size() > 1 && day == 0 && column > 0 ? 3 : 1, 0, 0, 0));
             Grid::SetColumn(separator, column + 1);
             body.Children().Append(separator);
 
@@ -1028,6 +1215,12 @@ namespace winrt::EvolutionWin::implementation
                     content.Children().Append(details);
                     Grid shell;
                     shell.Children().Append(content);
+                    {
+                        StackPanel badges = MakeEventBadges(ev);
+                        badges.HorizontalAlignment(HorizontalAlignment::Right);
+                        badges.VerticalAlignment(VerticalAlignment::Bottom);
+                        shell.Children().Append(badges);
+                    }
                     UIElement top_grip{ nullptr };
                     UIElement bottom_grip{ nullptr };
                     if (event_start >= day_starts[day])
@@ -1042,6 +1235,7 @@ namespace winrt::EvolutionWin::implementation
                     }
                     block.Child(shell);
                     ApplyShowAsTexture(block, ev, color);
+                    apply_focus(block, ev);
 
                     ToolTipService::SetToolTip(block, box_value(ev.GetNamedString(L"summary", L"") + L"\n" + when +
                         (location.empty() ? hstring{} : L"\n" + location) + L"\n" + ev.GetNamedString(L"calendar_name", L"")));
@@ -1263,6 +1457,7 @@ namespace winrt::EvolutionWin::implementation
                 title.FontSize(12);
                 title.TextTrimming(TextTrimming::CharacterEllipsis);
                 line.Children().Append(title);
+                line.Children().Append(MakeEventBadges(ev));
                 chip.Child(line);
                 if (all_day)
                     ApplyShowAsTexture(chip, ev, color);
@@ -1451,6 +1646,9 @@ namespace winrt::EvolutionWin::implementation
             bool is_side_by_side = toggle.IsChecked() && toggle.IsChecked().Value();
             ::EvolutionWin::Settings::Instance().SetString(
                 L"calendar.layout-mode", is_side_by_side ? L"side-by-side" : L"overlay");
+            /* « superposés » regroupe aussi les calendriers mis à côté un par un depuis leur onglet */
+            if (!is_side_by_side)
+                ::EvolutionWin::Settings::Instance().Set(L"calendar.detached", JsonArray{});
             ApplyCalendarPreferences();
             ShowStatus(is_side_by_side ? Tr(L"Affichage des calendriers côte à côte.") : Tr(L"Affichage des calendriers superposés."), InfoBarSeverity::Informational);
         }

@@ -10,7 +10,30 @@ le fichier [`VERSION`](VERSION) ; c'est aussi celle de l'installeur
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 numérotation [SemVer](https://semver.org/lang/fr/).
 
-## [1.3.7] — en cours
+## [1.3.7] — 2026-11-23
+
+### Catégories : la couleur d'Outlook l'emporte
+
+- À la reprise des catégories d'un compte Microsoft 365 / Exchange Online, la couleur du compte remplace désormais la couleur locale d'une catégorie du même nom (auparavant la couleur locale était conservée, d'où des couleurs différentes de celles d'Outlook en ligne). Les modifications faites dans l'application continuent de remonter vers le compte. Gmail, qui ne fournit pas de couleur, n'est pas concerné.
+
+### Calendrier : onglets de calendriers et mise à côté individuelle
+
+- Les calendriers cochés s'affichent maintenant sous forme d'onglets colorés au-dessus de la grille, comme Outlook, y compris en vue groupée (superposée) : un onglet par calendrier, avec son nom, une croix qui le décoche et une flèche **→** qui le met dans son propre panneau à côté du groupe. Dans un panneau à côté, la flèche **←** le replace dans le groupe. On peut ainsi garder des calendriers regroupés et un ou plusieurs autres à côté (quatre panneaux à côté au plus). Les calendriers mis à côté sont mémorisés (`calendar.detached`). Le bouton « Côte à côte » du ruban continue de tout séparer d'un coup ; « superposés » regroupe tout. La flèche → n'apparaît que si le groupe compte au moins deux calendriers. Un clic sur l'onglet d'un calendrier du groupe met ses événements en avant (bordure épaisse, fond plus marqué, au premier plan) et estompe ceux des autres calendriers du groupe ; un nouveau clic sur le même onglet retire la mise en avant (vues semaine et jour). Un nouvel événement créé dans le panneau groupé va au calendrier actif, dans un panneau à côté à son calendrier.
+
+### Volets de calendriers et de carnets : case du compte sans gel
+
+- **Correctif** : la case d'un compte (ou d'un groupe) du volet Calendriers cochait TOUS ses calendriers dès qu'elle était dans l'état partiel (quelques calendriers cochés), ce qui lançait la lecture de dizaines de calendriers d'entreprise et figeait l'application. Désormais, dès qu'au moins un calendrier est affiché, un clic sur la case les décoche tous ; elle ne coche tout que depuis l'état vide, avec un avertissement (« Le chargement peut être très long… », Tout afficher / Annuler) quand le groupe compte plus de 5 éléments. Annuler remet la case dans son état. Même comportement pour les carnets d'adresses (`MainWindow.Sources.cpp`, `BuildSourcesPanel`).
+- **Plafond de 10 calendriers affichés en même temps** : cocher un calendrier (ou la case d'un compte / groupe) qui ferait dépasser 10 est refusé, avec un avertissement (« Trop de calendriers affichés… ») ; la case retrouve son état. Les carnets d'adresses ne sont pas plafonnés. Les calendriers déjà affichés au-delà de 10 le restent jusqu'à ce qu'on en décoche.
+
+### Toasts de nouveau message : compte de réception
+
+- Le toast Windows affiche désormais le compte d'arrivée (« Compte : … », texte d'attribution en bas du toast) en plus de l'expéditeur et de l'objet. Le mode « Notifications confidentielles » le masque comme le reste (rappel : tant qu'il est actif, le toast se limite à « Ouvrez Evolution pour le lire »).
+
+### Périodicité des événements : sélection, date de fin, indicateurs
+
+- **Correctif** : dans l'éditeur d'événement, le panneau « Périodicité » ne permettait pas de choisir à la souris autre chose que « Aucune »/« Jamais » (les `ComboBox` ouvertes dans le `Flyout` du ruban ne recevaient pas les clics), donc le nombre d'occurrences restait sans effet. Les listes déroulantes sont remplacées par des `RadioButtons` sans popup.
+- **Date de fin** : nouvelle option « À une date de fin » (`CalendarView` en ligne, règle `UNTIL`), en plus de « Jamais » et « Après un nombre d'occurrences ». Le moteur (`evo-core-calendar.c`) convertit la date en UTC d'après l'heure de début (RFC 5545) ; `DTSTART` est désormais posé avant la règle. Les règles `UNTIL` existantes sont relues et ne sont plus signalées comme personnalisées.
+- **Indicateurs visuels** : les événements périodiques (double flèche) et privés (cadenas) affichent une icône dans leur bloc, à la manière d'Outlook (vues jour/semaine, bandeau « journée entière » et vue mois).
 
 ### Modifié
 
@@ -158,7 +181,6 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 - **Liens `mailto:`** (`Mailto.h`, `MainWindow.Mailto.cpp`) : Paramètres > Courrier > Liens de messagerie enregistre EvolutionWin comme application de messagerie Windows (clés `Software\Clients\Mail\EvolutionWin`, `RegisteredApplications`, protocole `mailto`, pour l'utilisateur courant) et ouvre « Applications par défaut ». Un lien reçu ouvre une rédaction préremplie (À, Cc, Cci, objet, corps ; décodage %XX UTF-8, sauts de ligne retirés des en-têtes). Si EvolutionWin est déjà ouvert, le lien lui est transmis (WM_COPYDATA) au lieu de lancer une seconde instance. `ComposeData` gagne le champ `bcc`.
 - **Tests** : `tests/unit/test_immersive.cpp` (29 vérifications) et `tests/unit/test_mailto.cpp` (49).
 - **Reste à valider à la main** : voir `VALIDATION.md`. L'option d'enregistrement `mailto:` à l'installation du MSI n'est pas faite.
-
 
 ### Déploiement d'entreprise : MSI silencieux avancé et stratégies de groupe
 

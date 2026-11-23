@@ -3,6 +3,7 @@
 This document defines the development path to implement 100% of the remaining features of [TODO.md](TODO.md), starting from the current version **1.1.4** (in progress, defined in [VERSION](VERSION)).
 
 The plan is built around 5 progressive milestone versions:
+
 - **v0.9.8**: Online synchronization and data lifecycle (Microsoft 365 and Gmail)
 - **v1.0.0**: "Outlook replacement" demo parity (major milestone)
 - **v1.1.0**: Enterprise collaboration, delegated mailboxes and categories

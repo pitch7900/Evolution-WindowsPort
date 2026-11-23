@@ -114,6 +114,31 @@ event_apply_priority (ICalComponent *icomp,
 		i_cal_component_take_property (icomp, i_cal_property_new_priority (9));
 }
 
+/* Date de fin « UNTIL=AAAAMMJJ » (saisie de l'interface) : pour un événement horaire, la RFC 5545
+ * impose une date-heure UTC ; on garde l'heure de début de l'événement (le dernier jour inclus
+ * reste donc dans la série), convertie de son fuseau vers UTC. Sans effet pour un événement
+ * « toute la journée » ou si UNTIL est déjà une date-heure. DTSTART doit déjà être posé. */
+static void
+event_normalize_rrule_until (ICalComponent *icomp,
+			     ICalRecurrence *recurrence)
+{
+	ICalTime *until = i_cal_recurrence_get_until (recurrence);
+	ICalTime *start = i_cal_component_get_dtstart (icomp);
+
+	if (until && start && i_cal_time_is_date (until) && !i_cal_time_is_date (start)) {
+		ICalTimezone *zone = i_cal_time_get_timezone (start);
+		ICalTime *last = i_cal_time_clone (start);
+
+		i_cal_time_set_date (last, i_cal_time_get_year (until), i_cal_time_get_month (until), i_cal_time_get_day (until));
+		i_cal_time_convert_timezone (last, zone ? zone : i_cal_timezone_get_utc_timezone (), i_cal_timezone_get_utc_timezone ());
+		i_cal_time_set_timezone (last, i_cal_timezone_get_utc_timezone ());
+		i_cal_recurrence_set_until (recurrence, last);
+		g_object_unref (last);
+	}
+	g_clear_object (&until);
+	g_clear_object (&start);
+}
+
 /* Périodicité : applique le membre JSON "rrule" (« FREQ=WEEKLY;INTERVAL=2;COUNT=5 », "" : aucune)
  * s'il est présent ; une règle invalide est ignorée. */
 static void
@@ -131,6 +156,7 @@ event_apply_rrule (ICalComponent *icomp,
 		ICalRecurrence *recurrence = i_cal_recurrence_new_from_string (rule);
 
 		if (recurrence) {
+			event_normalize_rrule_until (icomp, recurrence);
 			i_cal_component_take_property (icomp, i_cal_property_new_rrule (recurrence));
 			g_object_unref (recurrence);
 		}
@@ -803,8 +829,8 @@ core_modify_event_run (EvoCore *core,
 	event_apply_class (icomp, object);
 	event_apply_transp (icomp, object);
 	event_apply_priority (icomp, object);
-	event_apply_rrule (icomp, object);
 	event_apply_times_and_attendees (E_CAL_CLIENT (client), icomp, object);
+	event_apply_rrule (icomp, object);
 
 	if (json_object_has_member (object, "reminder_minutes"))
 		event_set_reminder (icomp, (gint) json_object_get_int_member (object, "reminder_minutes"));
@@ -1164,8 +1190,8 @@ core_create_event_run (EvoCore *core,
 	event_apply_class (icomp, object);
 	event_apply_transp (icomp, object);
 	event_apply_priority (icomp, object);
-	event_apply_rrule (icomp, object);
 	event_apply_times_and_attendees (E_CAL_CLIENT (client), icomp, object);
+	event_apply_rrule (icomp, object);
 
 	if (json_object_has_member (object, "reminder_minutes"))
 		event_set_reminder (icomp, (gint) json_object_get_int_member (object, "reminder_minutes"));

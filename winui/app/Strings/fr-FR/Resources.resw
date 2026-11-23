@@ -8215,5 +8215,33 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Action sur le message impossible : {0}</value>
     <comment>Action sur le message impossible : {0}</comment>
   </data>
+  <data name="T_E8A7574B" xml:space="preserve">
+    <value>À une date de fin</value>
+    <comment>À une date de fin</comment>
+  </data>
+  <data name="T_E2049CD9" xml:space="preserve">
+    <value>Afficher tous les calendriers ?</value>
+    <comment>Afficher tous les calendriers ?</comment>
+  </data>
+  <data name="T_D5F0E5AA" xml:space="preserve">
+    <value>Vous allez afficher {0} calendriers d'un coup. Le chargement peut être très long et ralentir ou figer l'application. Continuer ?</value>
+    <comment>Vous allez afficher {0} calendriers d'un coup. Le chargement peut être très long et ralentir ou figer l'application. Continuer ?</comment>
+  </data>
+  <data name="T_0C12768C" xml:space="preserve">
+    <value>Trop de calendriers affichés</value>
+    <comment>Trop de calendriers affichés</comment>
+  </data>
+  <data name="T_F7C1E516" xml:space="preserve">
+    <value>Au plus {0} calendriers peuvent être affichés en même temps : au-delà, la vue devient illisible et le chargement très long. Décochez d'abord d'autres calendriers.</value>
+    <comment>Au plus {0} calendriers peuvent être affichés en même temps : au-delà, la vue devient illisible et le chargement très long. Décochez d'abord d'autres calendriers.</comment>
+  </data>
+  <data name="T_62348635" xml:space="preserve">
+    <value>Replacer dans le groupe de calendriers</value>
+    <comment>Replacer dans le groupe de calendriers</comment>
+  </data>
+  <data name="T_CC4CEC0C" xml:space="preserve">
+    <value>Afficher ce calendrier à côté</value>
+    <comment>Afficher ce calendrier à côté</comment>
+  </data>
 </root>
 
