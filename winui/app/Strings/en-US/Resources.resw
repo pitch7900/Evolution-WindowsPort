@@ -8235,5 +8235,13 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>At most {0} calendars can be shown at the same time: beyond that, the view becomes unreadable and loading very slow. Uncheck other calendars first.</value>
     <comment>Au plus {0} calendriers peuvent être affichés en même temps : au-delà, la vue devient illisible et le chargement très long. Décochez d'abord d'autres calendriers.</comment>
   </data>
+  <data name="T_62348635" xml:space="preserve">
+    <value>Move back into the calendar group</value>
+    <comment>Replacer dans le groupe de calendriers</comment>
+  </data>
+  <data name="T_CC4CEC0C" xml:space="preserve">
+    <value>Show this calendar side by side</value>
+    <comment>Afficher ce calendrier à côté</comment>
+  </data>
 </root>
 
