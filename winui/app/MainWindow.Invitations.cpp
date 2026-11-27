@@ -248,7 +248,7 @@ namespace winrt::EvolutionWin::implementation
         if (inv.GetNamedBoolean(L"all_day", false) || start <= 0 || end <= start || !inv.HasKey(L"day_events"))
             return;
 
-        constexpr double kPxPerHour = 44.0;
+        constexpr double kPxPerHour = 36.0;
 
         /* fenêtre : une heure avant, une heure et demie après, au quart d'heure près, 3 h au moins */
         double window_start = std::floor((start - 3600.0) / 1800.0) * 1800.0;
