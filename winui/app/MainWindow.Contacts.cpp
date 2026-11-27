@@ -198,6 +198,21 @@ namespace winrt::EvolutionWin::implementation
                 flyout.ShowAt(sender, options);
             });
 
+            /* clic simple : la ligne est rendue glissable (CanDrag), et un léger mouvement de souris pendant le clic
+               démarre alors un glisser au lieu de sélectionner la ligne (fiche qui ne s'affiche « pas toujours »).
+               Tapped n'est levé que pour un vrai clic : on sélectionne explicitement la ligne si elle ne l'est pas. */
+            row.Tapped([this, row](IInspectable const&, Input::TappedRoutedEventArgs const&)
+            {
+                auto down = [](int key) { return (GetKeyState(key) & 0x8000) != 0; };
+                bool selected = false;
+                for (auto const& item : ContactList().SelectedItems())
+                    selected = selected || item == row;
+                ::EvolutionWin::LogDebug(L"contacts", selected ? L"clic sur une ligne déjà sélectionnée"
+                    : L"clic sur une ligne non sélectionnée par la liste : sélection forcée");
+                if (!selected && !down(VK_CONTROL) && !down(VK_SHIFT))
+                    ContactList().SelectedItem(row);
+            });
+
             if (!m_gal_mode)
             {
                 /* un clic droit hors de la sélection sélectionne d'abord la ligne cliquée */
