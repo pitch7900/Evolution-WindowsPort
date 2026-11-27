@@ -2610,6 +2610,7 @@ namespace winrt::EvolutionWin::implementation
                 }
 
                 ContentDialog dialog;
+                dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
                 dialog.XamlRoot(Content().XamlRoot());
                 dialog.Title(box_value(Tr(L"Source brute MIME du message (RFC 822)")));
                 dialog.CloseButtonText(Tr(L"Fermer"));

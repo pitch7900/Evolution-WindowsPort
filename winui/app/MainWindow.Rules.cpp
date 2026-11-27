@@ -481,6 +481,7 @@ namespace winrt::EvolutionWin::implementation
             co_return;
         m_dialog_open = true;
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Envoyer les règles au serveur IMAP")));
         dialog.PrimaryButtonText(Tr(L"Envoyer et activer"));
@@ -620,6 +621,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(is_new ? Tr(L"Nouvelle règle") : Tr(L"Modifier la règle")));
         dialog.PrimaryButtonText(Tr(L"Enregistrer"));
@@ -992,6 +994,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Créer une règle")));
         dialog.PrimaryButtonText(Tr(L"Créer la règle"));

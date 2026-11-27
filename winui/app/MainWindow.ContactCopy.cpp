@@ -106,6 +106,7 @@ namespace winrt::EvolutionWin::implementation
             m_dialog_open = true;
 
             ContentDialog dialog;
+            dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
             dialog.XamlRoot(Content().XamlRoot());
             dialog.Title(box_value(Tr(L"Coller dans le même carnet d'adresses")));
             dialog.Content(box_value(Fmt(Tr(L"Les contacts collés viennent de ce carnet. Ajouter « {0} » au nom des copies pour les distinguer ?"),

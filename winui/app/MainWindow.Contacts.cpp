@@ -4,6 +4,7 @@
 #include "WindowIcon.h"
 #include "Settings.h"
 #include "CategoryStore.h"
+#include "ErrorLog.h"
 
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Storage.h>
@@ -66,8 +67,12 @@ namespace winrt::EvolutionWin::implementation
             return;
         }
 
-        m_core->ListBookContacts(query, hstring{ visible }, [this](hstring const& json, hstring const& error)
+        auto started = GetTickCount64();
+        ::EvolutionWin::LogDebug(L"contacts", Fmt(L"chargement demandé : filtre « {0} », carnets : {1}", { query, hstring{ visible } }).c_str());
+        m_core->ListBookContacts(query, hstring{ visible }, [this, started](hstring const& json, hstring const& error)
         {
+            ::EvolutionWin::LogDebug(L"contacts", Fmt(L"réponse du moteur après {0} ms : {1} octets{2}",
+                { to_hstring(GetTickCount64() - started), to_hstring(json.size()), error.empty() ? hstring{} : hstring{ L", erreur : " } + error }).c_str());
             if (!error.empty())
             {
                 ShowStatus(Fmt(Tr(L"Contacts : {0}"), { error }), InfoBarSeverity::Error);
@@ -95,6 +100,7 @@ namespace winrt::EvolutionWin::implementation
             if (!JsonArray::TryParse(json, contacts))
                 contacts = JsonArray{};
             m_all_contacts = contacts;
+            ::EvolutionWin::LogDebug(L"contacts", Fmt(L"{0} contact(s) reçu(s), affichage de la liste", { to_hstring(contacts.Size()) }).c_str());
             ShowContacts();
         });
     }
@@ -103,6 +109,7 @@ namespace winrt::EvolutionWin::implementation
      * des catégories et menu contextuel « Catégoriser ». */
     void MainWindow::ShowContacts()
     {
+        auto started = GetTickCount64();
         auto items = ContactList().Items();
         items.Clear();
         m_selected_contact = nullptr;
@@ -206,6 +213,8 @@ namespace winrt::EvolutionWin::implementation
             items.Append(row);
         }
 
+        ::EvolutionWin::LogDebug(L"contacts", Fmt(L"liste affichée : {0} ligne(s) sur {1} en {2} ms (la sélection est réinitialisée)",
+            { to_hstring(items.Size()), to_hstring(m_all_contacts.Size()), to_hstring(GetTickCount64() - started) }).c_str());
         if (items.Size() == 0 && m_all_contacts.Size() > 0)
         {
             TextBlock none;
@@ -240,63 +249,78 @@ namespace winrt::EvolutionWin::implementation
     /* Gestionnaire de sélection d'un contact dans la liste : affiche sa fiche détaillée. */
     void MainWindow::OnContactSelectionChanged(IInspectable const&, SelectionChangedEventArgs const&)
     {
-        auto panel = ContactList().SelectedItem().try_as<StackPanel>();
-        if (!panel)
+        auto started = GetTickCount64();
+        try
         {
-            m_selected_contact = nullptr;
-            ContactDetailPane().Visibility(Visibility::Collapsed);
-            ContactPlaceholder().Visibility(Visibility::Visible);
-            return;
-        }
-
-        hstring raw = unbox_value_or<hstring>(panel.Tag(), L"");
-        JsonObject contact;
-        if (!JsonObject::TryParse(raw, contact))
-            return;
-
-        m_selected_contact = contact;
-        ContactNameText().Text(contact.GetNamedString(L"full_name", L"(Sans nom)"));
-        ContactEmailText().Text(contact.GetNamedString(L"email", L"—"));
-        ContactPhoneText().Text(contact.GetNamedString(L"phone", L"—"));
-        ContactOrgText().Text(contact.GetNamedString(L"org", L"—"));
-
-        /* carnet d'adresses du contact (compte › carnet) */
-        {
-            hstring book_uid = contact.GetNamedString(L"book_uid", L"");
-            std::wstring book_text;
-            for (auto const& value : m_contact_books ? m_contact_books : JsonArray{})
+            auto panel = ContactList().SelectedItem().try_as<StackPanel>();
+            ::EvolutionWin::LogDebug(L"contacts", Fmt(L"sélection changée : {0} ligne(s) sélectionnée(s), ligne valide : {1}",
+                { to_hstring(ContactList().SelectedItems().Size()), panel ? L"oui" : L"non" }).c_str());
+            if (!panel)
             {
-                auto book = value.GetObject();
-                if (book_uid.empty() || book.GetNamedString(L"uid", L"") != book_uid)
-                    continue;
-                hstring account = book.GetNamedString(L"account", L"");
-                book_text = (account.empty() ? L"" : std::wstring{ account } + L" › ") + std::wstring{ book.GetNamedString(L"name", book_uid) };
+                m_selected_contact = nullptr;
+                ContactDetailPane().Visibility(Visibility::Collapsed);
+                ContactPlaceholder().Visibility(Visibility::Visible);
+                return;
             }
-            ContactBookText().Text(hstring{ book_text });
-            ContactBookRow().Visibility(book_text.empty() ? Visibility::Collapsed : Visibility::Visible);
+
+            hstring raw = unbox_value_or<hstring>(panel.Tag(), L"");
+            JsonObject contact;
+            if (!JsonObject::TryParse(raw, contact))
+            {
+                ::EvolutionWin::LogDebug(L"contacts", Fmt(L"fiche illisible (JSON invalide, {0} caractères)", { to_hstring(raw.size()) }).c_str());
+                return;
+            }
+
+            m_selected_contact = contact;
+            ContactNameText().Text(contact.GetNamedString(L"full_name", L"(Sans nom)"));
+            ContactEmailText().Text(contact.GetNamedString(L"email", L"—"));
+            ContactPhoneText().Text(contact.GetNamedString(L"phone", L"—"));
+            ContactOrgText().Text(contact.GetNamedString(L"org", L"—"));
+
+            /* carnet d'adresses du contact (compte › carnet) */
+            {
+                hstring book_uid = contact.GetNamedString(L"book_uid", L"");
+                std::wstring book_text;
+                for (auto const& value : m_contact_books ? m_contact_books : JsonArray{})
+                {
+                    auto book = value.GetObject();
+                    if (book_uid.empty() || book.GetNamedString(L"uid", L"") != book_uid)
+                        continue;
+                    hstring account = book.GetNamedString(L"account", L"");
+                    book_text = (account.empty() ? L"" : std::wstring{ account } + L" › ") + std::wstring{ book.GetNamedString(L"name", book_uid) };
+                }
+                ContactBookText().Text(hstring{ book_text });
+                ContactBookRow().Visibility(book_text.empty() ? Visibility::Collapsed : Visibility::Visible);
+            }
+            ContactNotesText().Text(contact.GetNamedString(L"notes", contact.GetNamedString(L"note", L"")));
+
+            hstring address = contact.GetNamedString(L"address", L"");
+            ContactAddressText().Text(address);
+            ContactAddressRow().Visibility(address.empty() ? Visibility::Collapsed : Visibility::Visible);
+            ShowDirectoryPhoto(contact);
+
+            /* pastilles de couleur des catégories sur la fiche */
+            auto card_categories = ::EvolutionWin::CategoryStore::CategoriesOf(contact);
+            if (card_categories.empty())
+            {
+                ContactCategoriesHost().Content(nullptr);
+                ContactCategoriesHost().Visibility(Visibility::Collapsed);
+            }
+            else
+            {
+                ContactCategoriesHost().Content(BuildCategoryChips(card_categories));
+                ContactCategoriesHost().Visibility(Visibility::Visible);
+            }
+
+            ContactPlaceholder().Visibility(Visibility::Collapsed);
+            ContactDetailPane().Visibility(Visibility::Visible);
+            ::EvolutionWin::LogDebug(L"contacts", Fmt(L"fiche affichée : « {0} » en {1} ms", { m_selected_contact.GetNamedString(L"full_name", L""), to_hstring(GetTickCount64() - started) }).c_str());
         }
-        ContactNotesText().Text(contact.GetNamedString(L"notes", contact.GetNamedString(L"note", L"")));
-
-        hstring address = contact.GetNamedString(L"address", L"");
-        ContactAddressText().Text(address);
-        ContactAddressRow().Visibility(address.empty() ? Visibility::Collapsed : Visibility::Visible);
-        ShowDirectoryPhoto(contact);
-
-        /* pastilles de couleur des catégories sur la fiche */
-        auto card_categories = ::EvolutionWin::CategoryStore::CategoriesOf(contact);
-        if (card_categories.empty())
+        catch (...)
         {
-            ContactCategoriesHost().Content(nullptr);
-            ContactCategoriesHost().Visibility(Visibility::Collapsed);
+            /* une exception ici laissait la fiche précédente (ou vide) à l'écran : on la trace */
+            ::EvolutionWin::LogCurrentException(L"contacts fiche");
         }
-        else
-        {
-            ContactCategoriesHost().Content(BuildCategoryChips(card_categories));
-            ContactCategoriesHost().Visibility(Visibility::Visible);
-        }
-
-        ContactPlaceholder().Visibility(Visibility::Collapsed);
-        ContactDetailPane().Visibility(Visibility::Visible);
     }
 
     /* Gestionnaire du bouton « Nouveau contact ». */
@@ -316,6 +340,7 @@ namespace winrt::EvolutionWin::implementation
         m_dialog_open = true;
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Nouveau contact")));
         dialog.PrimaryButtonText(Tr(L"Enregistrer"));
@@ -419,6 +444,7 @@ namespace winrt::EvolutionWin::implementation
         hstring current_notes = m_selected_contact.GetNamedString(L"notes", L"");
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Modifier le contact")));
         dialog.PrimaryButtonText(Tr(L"Enregistrer"));
@@ -528,6 +554,7 @@ namespace winrt::EvolutionWin::implementation
         m_dialog_open = true;
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Exporter les contacts")));
         dialog.PrimaryButtonText(Tr(L"Exporter"));

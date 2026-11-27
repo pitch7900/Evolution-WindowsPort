@@ -64,6 +64,7 @@ namespace winrt::EvolutionWin::implementation
         auto show_limit_dialog = [max_shown](UIElement const& anchor)
         {
             ContentDialog dialog;
+            dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
             dialog.XamlRoot(anchor.XamlRoot());
             dialog.Title(box_value(Tr(L"Trop de calendriers affichés")));
             dialog.Content(box_value(Fmt(Tr(L"Au plus {0} calendriers peuvent être affichés en même temps : au-delà, la vue devient illisible et le chargement très long. Décochez d'abord d'autres calendriers."),
@@ -197,6 +198,7 @@ namespace winrt::EvolutionWin::implementation
                     }
 
                     ContentDialog dialog;
+                    dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
                     dialog.XamlRoot(group_check.XamlRoot());
                     dialog.Title(box_value(Tr(L"Afficher tous les calendriers ?")));
                     dialog.Content(box_value(Fmt(Tr(L"Vous allez afficher {0} calendriers d'un coup. Le chargement peut être très long et ralentir ou figer l'application. Continuer ?"),
@@ -730,6 +732,7 @@ namespace winrt::EvolutionWin::implementation
         };
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Ajouter un calendrier")));
 
@@ -817,6 +820,7 @@ namespace winrt::EvolutionWin::implementation
             co_return;
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Calendriers Exchange Online")));
         dialog.PrimaryButtonText(Tr(L"Afficher la sélection"));

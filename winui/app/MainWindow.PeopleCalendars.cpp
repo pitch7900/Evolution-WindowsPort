@@ -129,6 +129,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Calendriers de personnes et d'équipes", L"People and team calendars")));
         dialog.PrimaryButtonText(Tr(L"Afficher la sélection", L"Show selection"));
@@ -471,6 +472,7 @@ namespace winrt::EvolutionWin::implementation
         while (!m_dialog_open)
         {
             ContentDialog dialog;
+            dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
             dialog.XamlRoot(Content().XamlRoot());
             dialog.Title(box_value(Tr(L"Autorisation Microsoft requise", L"Microsoft authorization required")));
             TextBlock text;

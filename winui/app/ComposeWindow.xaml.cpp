@@ -440,6 +440,7 @@ namespace winrt::EvolutionWin::implementation
         url_box.Text(L"https://");
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Insérer un lien hypertexte")));
         dialog.Content(url_box);
@@ -1130,6 +1131,7 @@ namespace winrt::EvolutionWin::implementation
         if (warn_empty_subject && subject_text.empty())
         {
             ContentDialog dialog;
+            dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
             dialog.XamlRoot(this->Content().XamlRoot());
             dialog.Title(box_value(Tr(L"Envoyer sans objet ?")));
             dialog.Content(box_value(Tr(L"Ce message ne comporte aucun objet.\n\nSouhaitez-vous vraiment l'envoyer tel quel ?")));
@@ -1154,6 +1156,7 @@ namespace winrt::EvolutionWin::implementation
             if (has_attachment_mention)
             {
                 ContentDialog dialog;
+                dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
                 dialog.XamlRoot(this->Content().XamlRoot());
                 dialog.Title(box_value(Tr(L"Pièce jointe manquante ?")));
                 dialog.Content(box_value(Tr(L"Votre message semble mentionner une pièce jointe, mais aucun fichier n'a été joint.\n\nSouhaitez-vous envoyer le message sans pièce jointe ?")));

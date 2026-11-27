@@ -52,6 +52,7 @@ namespace winrt::EvolutionWin::implementation
         m_dialog_open = true;
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Fmt(Tr(L"Délégations et autorisations - {0}"), { name })));
         dialog.CloseButtonText(Tr(L"Fermer", L"Close", L"Common_Close"));

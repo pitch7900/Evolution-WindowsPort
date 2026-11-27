@@ -103,6 +103,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(options.title));
         dialog.PrimaryButtonText(options.confirm_label);

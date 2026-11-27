@@ -104,6 +104,7 @@ namespace winrt::EvolutionWin::implementation
             && (!folder_mode || data.GetNamedBoolean(L"folder_supported", false));
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Fmt(Tr(L"Synchronisation hors connexion - {0}"), { name })));
         dialog.PrimaryButtonText(Tr(L"Enregistrer", L"Save", L"Common_Save"));

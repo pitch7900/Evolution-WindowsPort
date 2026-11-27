@@ -348,6 +348,7 @@ namespace winrt::EvolutionWin::implementation
             co_return;
 
         ContentDialog confirm;
+        confirm.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         confirm.XamlRoot(Content().XamlRoot());
         confirm.Title(box_value(Tr(L"Tout charger ?")));
         TextBlock text;
@@ -378,6 +379,7 @@ namespace winrt::EvolutionWin::implementation
                 co_return;
 
             ContentDialog confirm;
+            confirm.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
             confirm.XamlRoot(Content().XamlRoot());
             confirm.Title(box_value(Tr(L"Tout afficher ?")));
             TextBlock text;
@@ -2321,6 +2323,7 @@ namespace winrt::EvolutionWin::implementation
                 co_return;
 
             ContentDialog confirm;
+            confirm.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
             confirm.XamlRoot(Content().XamlRoot());
             confirm.Title(box_value(Tr(L"Supprimer définitivement ?")));
             TextBlock text;

@@ -312,6 +312,7 @@ namespace winrt::EvolutionWin::implementation
 
                 /* la suppression se répercute sur le serveur : confirmation */
                 ContentDialog dialog;
+                dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
                 dialog.XamlRoot(Content().XamlRoot());
                 dialog.Title(box_value(Tr(L"Supprimer la catégorie des comptes ?")));
                 dialog.Content(box_value(Fmt(Tr(L"La catégorie « {0} » sera aussi supprimée de la liste des catégories de ses comptes (Microsoft 365, Gmail). Les messages déjà classés la conservent."), { hstring{ *current } })));
