@@ -14,7 +14,7 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Modifié
 
-- **Messagerie — bandeau d'invitation plus compact** : les détails, les boutons Accepter / Provisoire / Refuser et la case « Envoyer une réponse » sont à gauche, la mini-grille de la journée passe à droite (300 px, 36 px par heure au lieu de 44) au lieu d'être empilée dessous. Le bandeau perd environ la moitié de sa hauteur et le contenu du message récupère l'espace.
+- **Messagerie — bandeau d'invitation plus compact (façon Outlook)** : le titre ne répète plus l'objet du message et porte l'état (« Acceptée le… ») sur sa ligne ; quand / lieu / organisateur / participants tiennent sur une seule ligne ; les boutons de réponse et la case « Envoyer une réponse » partagent une même ligne ; la mini-grille de la journée occupe toute la largeur sous forme de bandeau bas (30 px par heure). Le contenu du message récupère l'espace libéré.
 
 ## [1.3.7] — 2026-11-23
 

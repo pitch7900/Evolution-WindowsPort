@@ -141,9 +141,11 @@ namespace winrt::EvolutionWin::implementation
         hstring label = kind == Kind::Cancel ? Tr(L"Réunion annulée", L"Meeting cancelled")
             : kind == Kind::Reply ? Tr(L"Réponse à une invitation", L"Invitation response")
             : Tr(L"Invitation à une réunion", L"Meeting invitation");
-        InviteBar().Title(label + L" : " + summary);
+        InviteBar().Title(label);  /* l'objet est déjà affiché au-dessus : pas de répétition */
 
         /* quand / où / organisateur / participants */
+        /* une seule ligne, façon Outlook (elle passe à la ligne si le volet est étroit) */
+        std::wstring const kSep = L"   •   ";
         std::wstring details;
         std::wstring when = FormatWhen(inv.GetNamedNumber(L"start", 0), inv.GetNamedNumber(L"end", 0),
             inv.GetNamedBoolean(L"all_day", false));
@@ -160,7 +162,7 @@ namespace winrt::EvolutionWin::implementation
         if (kind == Kind::Request && attendee_count > 0)
             details += std::wstring{ Fmt(Tr(L"Participants : {0}", L"Attendees: {0}"), { to_hstring(attendee_count) }) } + L"\n";
         if (!details.empty())
-            details.pop_back();
+            details.erase(details.size() - kSep.size());
         InviteDetails().Text(hstring{ details });
         InviteDetails().Visibility(details.empty() ? Visibility::Collapsed : Visibility::Visible);
 
@@ -200,8 +202,7 @@ namespace winrt::EvolutionWin::implementation
         /* état dans l'agenda encore inconnu : on n'affirme rien (« Merci de répondre » serait faux pour une invitation déjà acceptée) */
         if (!calendar_checked && kind != Kind::Reply)
             status_text.clear();
-        InviteState().Text(hstring{ status_text });
-        InviteState().Visibility(status_text.empty() ? Visibility::Collapsed : Visibility::Visible);
+        InviteBar().Message(hstring{ status_text });
 
         /* boutons */
         auto show = [](Button const& button, bool visible, bool enabled)
@@ -248,7 +249,7 @@ namespace winrt::EvolutionWin::implementation
         if (inv.GetNamedBoolean(L"all_day", false) || start <= 0 || end <= start || !inv.HasKey(L"day_events"))
             return;
 
-        constexpr double kPxPerHour = 36.0;
+        constexpr double kPxPerHour = 30.0;
 
         /* fenêtre : une heure avant, une heure et demie après, au quart d'heure près, 3 h au moins */
         double window_start = std::floor((start - 3600.0) / 1800.0) * 1800.0;
