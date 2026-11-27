@@ -141,36 +141,58 @@ namespace winrt::EvolutionWin::implementation
             if (!categories.empty())
                 row.Children().Append(BuildCategoryChips(categories));
 
-            AttachCategoryContextMenu(row, categories, [this, contact](std::vector<std::wstring> const& names)
-            {
-                SetContactCategories(contact, names);
-            });
-
             if (!m_gal_mode)
-            {
                 EnableContactExportDrag(row, contact);
 
-                /* clic droit : Copier (les contacts sélectionnés) et Coller (dans le carnet de ce contact) */
-                if (auto flyout = row.ContextFlyout().try_as<MenuFlyout>())
+            /* menu contextuel construit au premier clic droit seulement : le bâtir pour chaque ligne
+               (une bascule par catégorie × milliers de contacts) gelait l'interface et rendait la sélection
+               d'un contact interminable */
+            row.ContextRequested([this, contact, categories](UIElement const& sender, Input::ContextRequestedEventArgs const& args)
+            {
+                args.Handled(true);
+                MenuFlyout flyout;
+                MenuFlyoutSubItem sub;
+                sub.Text(Tr(L"Catégoriser", L"Categorise"));
+                FontIcon sub_icon;
+                sub_icon.Glyph(L"èEC");
+                sub.Icon(sub_icon);
+                PopulateItemCategoryMenu(sub.Items(), categories, [this, contact](std::vector<std::wstring> const& names)
                 {
+                    SetContactCategories(contact, names);
+                });
+
+                if (!m_gal_mode)
+                {
+                    /* Copier (les contacts sélectionnés) et Coller (dans le carnet de ce contact) */
                     hstring book_uid = contact.GetNamedString(L"book_uid", L"");
                     MenuFlyoutItem copy_item;
                     copy_item.Text(Tr(L"Copier"));
                     FontIcon copy_icon;
-                    copy_icon.Glyph(L"\xE8C8");
+                    copy_icon.Glyph(L"èC8");
                     copy_item.Icon(copy_icon);
                     copy_item.Click([this](IInspectable const&, RoutedEventArgs const&) { CopySelectedContacts(); });
                     MenuFlyoutItem paste_item;
                     paste_item.Text(Tr(L"Coller"));
                     FontIcon paste_icon;
-                    paste_icon.Glyph(L"\xE77F");
+                    paste_icon.Glyph(L"ç7F");
                     paste_item.Icon(paste_icon);
+                    paste_item.IsEnabled(!m_contact_clipboard.empty());
                     paste_item.Click([this, book_uid](IInspectable const&, RoutedEventArgs const&) { PasteContactsAsync(book_uid); });
-                    flyout.Items().InsertAt(0, copy_item);
-                    flyout.Items().InsertAt(1, paste_item);
-                    flyout.Items().InsertAt(2, MenuFlyoutSeparator{});
-                    flyout.Opening([this, paste_item](IInspectable const&, IInspectable const&) { paste_item.IsEnabled(!m_contact_clipboard.empty()); });
+                    flyout.Items().Append(copy_item);
+                    flyout.Items().Append(paste_item);
+                    flyout.Items().Append(MenuFlyoutSeparator{});
                 }
+                flyout.Items().Append(sub);
+
+                Windows::Foundation::Point position{};
+                Primitives::FlyoutShowOptions options;
+                if (args.TryGetPosition(sender, position))
+                    options.Position(position);
+                flyout.ShowAt(sender, options);
+            });
+
+            if (!m_gal_mode)
+            {
                 /* un clic droit hors de la sélection sélectionne d'abord la ligne cliquée */
                 row.RightTapped([this, row](IInspectable const&, Input::RightTappedRoutedEventArgs const&)
                 {
@@ -253,7 +275,7 @@ namespace winrt::EvolutionWin::implementation
             ContactBookText().Text(hstring{ book_text });
             ContactBookRow().Visibility(book_text.empty() ? Visibility::Collapsed : Visibility::Visible);
         }
-        ContactNotesText().Text(contact.GetNamedString(L"note", L""));
+        ContactNotesText().Text(contact.GetNamedString(L"notes", contact.GetNamedString(L"note", L"")));
 
         hstring address = contact.GetNamedString(L"address", L"");
         ContactAddressText().Text(address);
