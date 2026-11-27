@@ -46,6 +46,12 @@ namespace EvolutionWin
         CloseHandle(file);
     }
 
+    /* Trace de diagnostic dans le même journal (code 0) : « [contacts] 0x00000000 message ». */
+    inline void LogDebug(wchar_t const* context, std::wstring_view message)
+    {
+        LogError(context, 0, message);
+    }
+
     /* À appeler dans un bloc catch (...) : journalise l'exception en cours. */
     inline void LogCurrentException(wchar_t const* context)
     {

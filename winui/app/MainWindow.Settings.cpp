@@ -2183,6 +2183,7 @@ namespace winrt::EvolutionWin::implementation
     {
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
 
         dialog.XamlRoot(this->Content().XamlRoot());
 

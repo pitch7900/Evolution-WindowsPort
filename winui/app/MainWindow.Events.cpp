@@ -153,6 +153,7 @@ namespace winrt::EvolutionWin::implementation
     fire_and_forget MainWindow::ShowGoToDateDialogAsync()
     {
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(this->Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Atteindre une date")));
         dialog.PrimaryButtonText(Tr(L"Atteindre"));
@@ -2213,6 +2214,7 @@ namespace winrt::EvolutionWin::implementation
         m_dialog_open = true;
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Exporter au format iCalendar")));
         dialog.PrimaryButtonText(Tr(L"Exporter"));

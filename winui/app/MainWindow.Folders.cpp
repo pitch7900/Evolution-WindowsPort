@@ -521,6 +521,7 @@ namespace winrt::EvolutionWin::implementation
             bool permanent = item.Glyph() == FolderGlyph(L"trash") || item.Glyph() == FolderGlyph(L"junk");
 
             ContentDialog confirm;
+            confirm.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
             confirm.XamlRoot(Content().XamlRoot());
             confirm.Title(box_value(permanent
                 ? Tr(L"Supprimer définitivement ?", L"Permanently delete?")
@@ -911,6 +912,7 @@ namespace winrt::EvolutionWin::implementation
         };
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(title));
         TextBox box;
@@ -1098,6 +1100,7 @@ namespace winrt::EvolutionWin::implementation
         {
             /* fusionner = reprendre un transfert interrompu : seuls les messages absents sont copiés */
             ContentDialog choice;
+            choice.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
             choice.XamlRoot(Content().XamlRoot());
             choice.Title(box_value(Tr(L"Dossier déjà existant")));
             TextBlock text;
@@ -1196,6 +1199,7 @@ namespace winrt::EvolutionWin::implementation
             co_return;
 
         ContentDialog confirm;
+        confirm.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         confirm.XamlRoot(Content().XamlRoot());
         confirm.Title(box_value(Tr(L"Supprimer le dossier ?")));
         TextBlock text;

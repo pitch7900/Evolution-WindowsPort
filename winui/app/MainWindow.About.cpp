@@ -620,6 +620,7 @@ namespace winrt::EvolutionWin::implementation
         m_dialog_open = true;
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Fmt(Tr(L"Téléchargement de {0}"), { m_update_tag })));
         dialog.CloseButtonText(Tr(L"Annuler"));
@@ -675,6 +676,7 @@ namespace winrt::EvolutionWin::implementation
         if (signature == SignatureState::Unsigned)
         {
             ContentDialog confirm;
+            confirm.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
             confirm.XamlRoot(Content().XamlRoot());
             confirm.Title(box_value(Tr(L"Installeur non signé")));
             confirm.Content(box_value(Tr(L"L'empreinte SHA-256 est correcte, mais l'installeur n'est pas signé (Authenticode). Installer quand même ?")));
@@ -691,6 +693,7 @@ namespace winrt::EvolutionWin::implementation
            automatique dès que l'installation est lancée */
         {
             ContentDialog warning;
+            warning.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
             warning.XamlRoot(Content().XamlRoot());
             warning.Title(box_value(Tr(L"Installer la mise à jour")));
             TextBlock warning_text;
@@ -795,6 +798,7 @@ namespace winrt::EvolutionWin::implementation
         ::EvolutionWin::Settings::Instance().SetString(UpdateNotifiedKey, m_update_tag);
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Nouvelle version disponible")));
         dialog.Content(box_value(Fmt(Tr(L"Evolution {0} est disponible. Vous utilisez la version {1}."), { m_update_tag, EVO_VERSION_W })));
@@ -859,6 +863,7 @@ namespace winrt::EvolutionWin::implementation
         m_dialog_open = true;
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Raccourcis clavier d'Evolution")));
         dialog.CloseButtonText(Tr(L"Fermer"));

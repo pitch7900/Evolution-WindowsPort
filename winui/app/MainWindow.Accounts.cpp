@@ -74,6 +74,7 @@ namespace winrt::EvolutionWin::implementation
         m_dialog_open = true;
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Authentification requise")));
         dialog.PrimaryButtonText(Tr(L"Valider"));
@@ -161,6 +162,7 @@ namespace winrt::EvolutionWin::implementation
         hstring errors = object.GetNamedString(L"errors", L"");
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Certificat TLS non vérifié")));
         dialog.PrimaryButtonText(Tr(L"Toujours approuver"));
@@ -300,6 +302,7 @@ namespace winrt::EvolutionWin::implementation
         m_dialog_open = true;
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(provider_index == 1
             ? Tr(L"Connexion OAuth2 — Microsoft 365")
@@ -462,6 +465,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Fmt(Tr(L"Connexion {0} — {1}"), { service, name })));
         dialog.CloseButtonText(Tr(L"Annuler"));
@@ -618,6 +622,7 @@ namespace winrt::EvolutionWin::implementation
 
         /* Boîte de dialogue d'attente conviviale */
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Fmt(Tr(L"Connexion Google — {0}"), { name })));
         dialog.SecondaryButtonText(Tr(L"Rouvrir le navigateur"));
@@ -1035,6 +1040,7 @@ namespace winrt::EvolutionWin::implementation
         m_dialog_open = true;
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Ajouter un compte")));
         dialog.PrimaryButtonText(Tr(L"Ajouter"));
@@ -1908,6 +1914,7 @@ namespace winrt::EvolutionWin::implementation
 
         /* Construction de la boîte de dialogue */
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Fmt(Tr(L"Propriétés du compte — {0}"), { display_name })));
         dialog.PrimaryButtonText(Tr(L"Enregistrer"));
@@ -2281,6 +2288,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Fmt(Tr(L"Espace de stockage — {0}"), { account_name })));
         dialog.CloseButtonText(Tr(L"Fermer"));
@@ -2371,6 +2379,7 @@ namespace winrt::EvolutionWin::implementation
             co_return;
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Ouvrir la boîte d'un autre utilisateur", L"Open another user's mailbox")));
         StackPanel panel;
@@ -2449,6 +2458,7 @@ namespace winrt::EvolutionWin::implementation
         }
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Fermer la boîte partagée", L"Close the shared mailbox")));
         TextBlock text;

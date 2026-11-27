@@ -240,6 +240,7 @@ namespace winrt::EvolutionWin::implementation
         hstring acc_name = AccountDisplayName(m_accounts, account);
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Fmt(Tr(L"Réponses automatiques (absence) - {0}", L"Automatic replies (out of office) - {0}"), { acc_name })));
         dialog.PrimaryButtonText(ARText(AR::Str::Save));

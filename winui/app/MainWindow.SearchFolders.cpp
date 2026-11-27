@@ -219,6 +219,7 @@ namespace winrt::EvolutionWin::implementation
             co_return;
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(definition.GetNamedString(L"id", L"").empty() ? Tr(L"Nouveau dossier de recherche", L"New search folder")
                                                                              : Tr(L"Dossier de recherche", L"Search folder")));

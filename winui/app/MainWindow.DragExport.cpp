@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
+#include "ErrorLog.h"
 #include "MainWindow.Helpers.h"
 
 #include <winrt/Windows.Storage.h>
@@ -127,8 +128,19 @@ namespace winrt::EvolutionWin::implementation
             return;
 
         element.CanDrag(true);
-        element.DragStarting([this, book_uid, uid, full_name](UIElement const&, DragStartingEventArgs const& args)
+        element.DragStarting([this, book_uid, uid, full_name](UIElement const& sender, DragStartingEventArgs const& args)
         {
+            /* un glisser démarré sur une ligne non sélectionnée la sélectionne (comme l'Explorateur) */
+            {
+                bool selected = false;
+                for (auto const& item : ContactList().SelectedItems())
+                    selected = selected || item == sender;
+                ::EvolutionWin::LogDebug(L"contacts", selected ? L"glisser démarré sur une ligne sélectionnée"
+                    : L"glisser démarré sur une ligne non sélectionnée : sélection forcée");
+                if (!selected)
+                    ContactList().SelectedItem(sender);
+            }
+
             if (!m_core)
             {
                 args.Cancel(true);

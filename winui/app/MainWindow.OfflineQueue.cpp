@@ -254,6 +254,7 @@ namespace winrt::EvolutionWin::implementation
         m_dialog_open = true;
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Conflit de modification")));
         dialog.PrimaryButtonText(Tr(L"Appliquer"));

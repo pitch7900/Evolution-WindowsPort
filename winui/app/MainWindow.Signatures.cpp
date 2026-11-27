@@ -497,6 +497,7 @@ namespace winrt::EvolutionWin::implementation
         url_box.Text(L"https://");
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Insérer un lien hypertexte")));
         dialog.Content(url_box);
@@ -614,6 +615,7 @@ namespace winrt::EvolutionWin::implementation
             co_return;
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Fmt(Tr(L"Supprimer la signature « {0} » ?"), { name })));
         dialog.Content(box_value(Tr(L"Les comptes qui l'utilisent n'auront plus de signature.")));

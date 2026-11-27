@@ -286,26 +286,43 @@
                         <InfoBar x:Name="MdnBar" IsOpen="False" IsClosable="True" Margin="0,4,0,0" Severity="Success" />
 
                         <!-- invitation iCalendar : Accepter / Provisoire / Refuser (MainWindow.Invitations.cpp) -->
-                        <InfoBar x:Name="InviteBar" IsOpen="False" IsClosable="False" Margin="0,4,0,0" Severity="Informational">
-                            <InfoBar.Content>
-                                <StackPanel Spacing="8" Margin="0,0,0,12">
-                                    <TextBlock x:Name="InviteDetails" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-                                    <TextBlock x:Name="InviteState" TextWrapping="Wrap" FontWeight="SemiBold" />
-                                    <!-- mini-grille de la journée autour de la réunion (MainWindow::RenderInvitationDayGrid) -->
-                                    <Border x:Name="InviteDayHost" Visibility="Collapsed" HorizontalAlignment="Left" MaxWidth="560"
-                                            BorderThickness="1" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" CornerRadius="4" Padding="0,6,0,6">
-                                        <Grid x:Name="InviteDayGrid" />
-                                    </Border>
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Button x:Name="InviteAcceptButton" Click="OnInviteAcceptClick" />
-                                        <Button x:Name="InviteTentativeButton" Click="OnInviteTentativeClick" />
-                                        <Button x:Name="InviteDeclineButton" Click="OnInviteDeclineClick" />
-                                        <Button x:Name="InviteRemoveButton" Click="OnInviteRemoveClick" />
+                        <Border x:Name="InviteBar" Visibility="Collapsed" Margin="0,2,0,0" Padding="16,10,16,10" CornerRadius="4"
+                                BorderThickness="1" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}">
+                            <StackPanel Spacing="8">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon x:Name="InviteIcon" Grid.Column="0" FontSize="16" VerticalAlignment="Top" Margin="0,2,0,0" />
+                                    <!-- titre + état, puis quand / lieu / organisateur / participants -->
+                                    <StackPanel Grid.Column="1" Spacing="6">
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <TextBlock x:Name="InviteTitle" FontWeight="SemiBold" />
+                                            <TextBlock x:Name="InviteState" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="InviteDetails" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                                     </StackPanel>
-                                    <CheckBox x:Name="InviteSendReplyCheck" IsChecked="True" />
-                                </StackPanel>
-                            </InfoBar.Content>
-                        </InfoBar>
+                                    <!-- réponse : coin supérieur droit -->
+                                    <StackPanel Grid.Column="2" Spacing="6" HorizontalAlignment="Right" VerticalAlignment="Top">
+                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                            <Button x:Name="InviteAcceptButton" Click="OnInviteAcceptClick" />
+                                            <Button x:Name="InviteTentativeButton" Click="OnInviteTentativeClick" />
+                                            <Button x:Name="InviteDeclineButton" Click="OnInviteDeclineClick" />
+                                            <Button x:Name="InviteRemoveButton" Click="OnInviteRemoveClick" />
+                                        </StackPanel>
+                                        <CheckBox x:Name="InviteSendReplyCheck" IsChecked="True" MinWidth="0" HorizontalAlignment="Right" />
+                                    </StackPanel>
+                                </Grid>
+                                <!-- mini-grille de la journée (MainWindow::RenderInvitationDayGrid), sur fond clair neutre -->
+                                <Border x:Name="InviteDayHost" Visibility="Collapsed" HorizontalAlignment="Stretch"
+                                        Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
+                                        BorderThickness="1" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" CornerRadius="4" Padding="0,2,0,2">
+                                    <Grid x:Name="InviteDayGrid" />
+                                </Border>
+                            </StackPanel>
+                        </Border>
 
                         <!-- contenu distant bloqué pour le message affiché -->
 

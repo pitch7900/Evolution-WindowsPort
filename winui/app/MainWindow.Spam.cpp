@@ -255,6 +255,7 @@ namespace winrt::EvolutionWin::implementation
             return;
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(Tr(L"Réinitialiser l'apprentissage ?")));
         dialog.Content(box_value(Tr(L"Tout ce que le filtre anti-spam a appris sera effacé. Il ne classera plus rien automatiquement avant d'avoir de nouveau appris sur vos messages.")));

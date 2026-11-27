@@ -80,19 +80,22 @@ namespace winrt::EvolutionWin::implementation
             return std::wstring{ ::EvolutionWin::Helpers::FormatDate(start) } + L" – " + std::wstring{ ::EvolutionWin::Helpers::FormatDate(end) };
         }
 
-        /** @brief Teinte du bandeau WinUI correspondant à une teinte logique. */
-        InfoBarSeverity SeverityOf(::EvolutionWin::Invitations::Tone tone)
+        /** @brief Glyphe, fond et couleur d'icône du bandeau pour une teinte logique (mêmes brosses que InfoBar). */
+        struct ToneStyle { wchar_t const* glyph; wchar_t const* background; wchar_t const* icon; };
+
+        ToneStyle StyleOf(::EvolutionWin::Invitations::Tone tone)
         {
             using ::EvolutionWin::Invitations::Tone;
-            return tone == Tone::Warning ? InfoBarSeverity::Warning
-                : tone == Tone::Success ? InfoBarSeverity::Success : InfoBarSeverity::Informational;
+            return tone == Tone::Warning ? ToneStyle{ L"", L"SystemFillColorCautionBackgroundBrush", L"SystemFillColorCautionBrush" }
+                : tone == Tone::Success ? ToneStyle{ L"", L"SystemFillColorSuccessBackgroundBrush", L"SystemFillColorSuccessBrush" }
+                : ToneStyle{ L"", L"SystemFillColorAttentionBackgroundBrush", L"SystemFillColorAttentionBrush" };
         }
     }
 
     /** @brief Referme le bandeau d'invitation. */
     void MainWindow::HideInvitationBar()
     {
-        InviteBar().IsOpen(false);
+        InviteBar().Visibility(Visibility::Collapsed);
     }
 
     /**
@@ -141,26 +144,28 @@ namespace winrt::EvolutionWin::implementation
         hstring label = kind == Kind::Cancel ? Tr(L"Réunion annulée", L"Meeting cancelled")
             : kind == Kind::Reply ? Tr(L"Réponse à une invitation", L"Invitation response")
             : Tr(L"Invitation à une réunion", L"Meeting invitation");
-        InviteBar().Title(label + L" : " + summary);
+        InviteTitle().Text(label);  /* l'objet est déjà affiché au-dessus : pas de répétition */
 
         /* quand / où / organisateur / participants */
+        /* une seule ligne, façon Outlook (elle passe à la ligne si le volet est étroit) */
+        std::wstring const kSep = L"   •   ";
         std::wstring details;
         std::wstring when = FormatWhen(inv.GetNamedNumber(L"start", 0), inv.GetNamedNumber(L"end", 0),
             inv.GetNamedBoolean(L"all_day", false));
         if (!when.empty())
             details += std::wstring{ inv.GetNamedBoolean(L"recurring", false)
                 ? Fmt(Tr(L"Quand : {0} (périodique)", L"When: {0} (recurring)"), { hstring{ when } })
-                : Fmt(Tr(L"Quand : {0}", L"When: {0}"), { hstring{ when } }) } + L"\n";
+                : Fmt(Tr(L"Quand : {0}", L"When: {0}"), { hstring{ when } }) } + kSep;
         hstring location = inv.GetNamedString(L"location", L"");
         if (!location.empty())
-            details += std::wstring{ Fmt(Tr(L"Lieu : {0}", L"Where: {0}"), { location }) } + L"\n";
+            details += std::wstring{ Fmt(Tr(L"Lieu : {0}", L"Where: {0}"), { location }) } + kSep;
         if (!organizer_name.empty())
-            details += std::wstring{ Fmt(Tr(L"Organisateur : {0}", L"Organizer: {0}"), { hstring{ organizer_name } }) } + L"\n";
+            details += std::wstring{ Fmt(Tr(L"Organisateur : {0}", L"Organizer: {0}"), { hstring{ organizer_name } }) } + kSep;
         uint32_t attendee_count = inv.GetNamedArray(L"attendees", JsonArray{}).Size();
         if (kind == Kind::Request && attendee_count > 0)
-            details += std::wstring{ Fmt(Tr(L"Participants : {0}", L"Attendees: {0}"), { to_hstring(attendee_count) }) } + L"\n";
+            details += std::wstring{ Fmt(Tr(L"Participants : {0}", L"Attendees: {0}"), { to_hstring(attendee_count) }) } + kSep;
         if (!details.empty())
-            details.pop_back();
+            details.erase(details.size() - kSep.size());
         InviteDetails().Text(hstring{ details });
         InviteDetails().Visibility(details.empty() ? Visibility::Collapsed : Visibility::Visible);
 
@@ -224,8 +229,11 @@ namespace winrt::EvolutionWin::implementation
 
         RenderInvitationDayGrid(inv);
 
-        InviteBar().Severity(SeverityOf(state.tone));
-        InviteBar().IsOpen(true);
+        auto style = StyleOf(state.tone);
+        InviteIcon().Glyph(style.glyph);
+        InviteIcon().Foreground(::EvolutionWin::Helpers::ThemedBrush(style.icon));
+        InviteBar().Background(::EvolutionWin::Helpers::ThemedBrush(style.background));
+        InviteBar().Visibility(Visibility::Visible);
     }
 
     /**
@@ -248,7 +256,7 @@ namespace winrt::EvolutionWin::implementation
         if (inv.GetNamedBoolean(L"all_day", false) || start <= 0 || end <= start || !inv.HasKey(L"day_events"))
             return;
 
-        constexpr double kPxPerHour = 44.0;
+        constexpr double kPxPerHour = 30.0;
 
         /* fenêtre : une heure avant, une heure et demie après, au quart d'heure près, 3 h au moins */
         double window_start = std::floor((start - 3600.0) / 1800.0) * 1800.0;
@@ -363,9 +371,9 @@ namespace winrt::EvolutionWin::implementation
             else
             {
                 bool free_time = item.show_as == L"free";
-                block.Background(free_time ? brush(L"LayerFillColorDefaultBrush") : brush(L"CardBackgroundFillColorSecondaryBrush"));
-                block.BorderBrush(brush(L"CardStrokeColorDefaultBrush"));
-                text.Opacity(free_time ? 0.7 : 1.0);
+                /* autres événements : occupé en ambre, libre en bleu clair */
+                block.Background(brush(free_time ? L"SystemFillColorAttentionBackgroundBrush" : L"SystemFillColorCautionBackgroundBrush"));
+                block.BorderBrush(brush(free_time ? L"SystemFillColorAttentionBrush" : L"SystemFillColorCautionBrush"));
             }
             text.Text(subject);
             block.Child(text);

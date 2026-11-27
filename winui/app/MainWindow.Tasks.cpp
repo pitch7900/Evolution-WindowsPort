@@ -1033,6 +1033,7 @@ namespace winrt::EvolutionWin::implementation
         auto secondary_brush = ::EvolutionWin::Helpers::ThemedBrush(L"TextFillColorSecondaryBrush");
 
         ContentDialog dialog;
+        dialog.RequestedTheme(::EvolutionWin::Helpers::AppElementTheme());  /* suit le thème choisi (clair / sombre) */
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(is_new ? Tr(L"Nouvelle tâche") : Tr(L"Modifier la tâche")));
         dialog.PrimaryButtonText(Tr(L"Enregistrer"));
