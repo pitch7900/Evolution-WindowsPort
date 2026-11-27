@@ -14,7 +14,7 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Modifié
 
-- **Messagerie — bandeau d'invitation plus compact (façon Outlook)** : le titre ne répète plus l'objet du message et porte l'état (« Acceptée le… ») sur sa ligne ; quand / lieu / organisateur / participants tiennent sur une seule ligne ; les boutons de réponse et la case « Envoyer une réponse » partagent une même ligne ; la mini-grille de la journée occupe toute la largeur sous forme de bandeau bas (30 px par heure). Le contenu du message récupère l'espace libéré.
+- **Messagerie — bandeau d'invitation plus compact (façon Outlook)** : le titre ne répète plus l'objet du message et porte l'état (« Acceptée le… ») sur sa ligne ; quand / lieu / organisateur / participants tiennent sur une seule ligne ; les boutons de réponse et la case « Envoyer une réponse » sont dans le coin supérieur droit du bandeau ; la mini-grille de la journée occupe toute la largeur (30 px par heure) sur un fond clair neutre, la réunion proposée reste en couleur d'accentuation et les autres événements sont colorés (ambre = occupé, bleu = libre). Le bandeau est désormais un cadre maison (icône + teinte par état) et non plus un InfoBar.
 
 ## [1.3.7] — 2026-11-23
 
