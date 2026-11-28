@@ -700,6 +700,11 @@ namespace winrt::EvolutionWin::implementation
 
         /* Étape 1 : Notifications Windows et pièces jointes */
         void ShowNewMailNotification(Windows::Data::Json::JsonObject const& object);
+        void FlushNewMailToasts();
+        void EmitNewMailToast(Windows::Data::Json::JsonObject const& object);
+        void PlayNewMailSoundIfEnabled(hstring const& account);
+        std::vector<Windows::Data::Json::JsonObject> m_toast_batch;   /* nouveaux messages en attente de toast (regroupement) */
+        Microsoft::UI::Dispatching::DispatcherQueueTimer m_toast_timer{ nullptr };
         void PopulateAttachments(Windows::Data::Json::JsonArray const& attachments);
         void UpdateSecurityBanner(Windows::Data::Json::JsonObject const& security);
         fire_and_forget SaveAttachmentAsync(uint32_t index, hstring filename);

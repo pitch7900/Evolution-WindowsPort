@@ -2157,6 +2157,86 @@ namespace winrt::EvolutionWin::implementation
             }
         }
 
+        /* regroupement : les arrivées sont accumulées sur une courte fenêtre ; au-delà de 3 messages, un seul toast
+           récapitulatif remplace les toasts individuels (ouverture du programme avec beaucoup de courrier) */
+        m_toast_batch.push_back(object);
+        if (!m_toast_timer)
+        {
+            m_toast_timer = DispatcherQueue().CreateTimer();
+            m_toast_timer.IsRepeating(false);
+            m_toast_timer.Interval(std::chrono::milliseconds(1500));
+            m_toast_timer.Tick([this](auto const&, auto const&) { FlushNewMailToasts(); });
+        }
+        if (!m_toast_timer.IsRunning())
+            m_toast_timer.Start();
+    }
+
+    /**
+     * @brief Vide le lot de nouveaux messages accumulé : toasts individuels jusqu'à 3 messages, au-delà un seul
+     *        toast « X nouveaux messages à lire » (et un seul signal sonore).
+     */
+    void MainWindow::FlushNewMailToasts()
+    {
+        constexpr int32_t kGroupThreshold = 3;
+
+        auto batch = std::move(m_toast_batch);
+        m_toast_batch.clear();
+        if (batch.empty())
+            return;
+
+        int32_t total = 0;
+        for (auto const& entry : batch)
+            total += (std::max)(1, static_cast<int32_t>(entry.GetNamedNumber(L"count", 1)));
+
+        if (total <= kGroupThreshold)
+        {
+            for (auto const& entry : batch)
+                EmitNewMailToast(entry);
+            return;
+        }
+
+        PlayNewMailSoundIfEnabled(hstring{});
+
+        if (!::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.toast", true))
+            return;
+        try
+        {
+            Microsoft::Windows::AppNotifications::Builder::AppNotificationBuilder builder;
+            builder.AddText(Fmt(Tr(L"{0} nouveaux messages à lire"), { to_hstring(total) }));
+            builder.AddText(Tr(L"Ouvrez Evolution pour les lire."));
+            using Microsoft::Windows::AppNotifications::Builder::AppNotificationButton;
+            builder.AddButton(AppNotificationButton(Tr(L"Fermer")).AddArgument(L"action", L"dismiss"));
+            Microsoft::Windows::AppNotifications::AppNotificationManager::Default().Show(builder.BuildNotification());
+        }
+        catch (...)
+        {
+        }
+    }
+
+    /**
+     * @brief Joue le signal sonore des nouveaux messages si le son est activé (globalement et pour le compte).
+     * @param account Compte concerné (vide : réglage global seulement).
+     */
+    void MainWindow::PlayNewMailSoundIfEnabled(hstring const& account)
+    {
+        bool sound_global = ::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.sound", true);
+        bool sound_account = account.empty() ? true : ::EvolutionWin::Settings::Instance().GetBoolean(L"account." + account + L".sound-enabled", true);
+        if (!sound_global || !sound_account)
+            return;
+        hstring sound_kind = ::EvolutionWin::Settings::Instance().GetString(L"notifications.sound-kind", L"windows");
+        hstring custom_path = ::EvolutionWin::Settings::Instance().GetString(L"notifications.custom-sound-path", L"");
+        ::EvolutionWin::Helpers::PlayNewMailSound(sound_kind, custom_path);
+    }
+
+    /**
+     * @brief Signale un nouveau message (ou un petit lot) par un toast système et un signal sonore.
+     * @param object Objet JSON de l'événement « new-mail » (account, folder, uid, from, subject, count).
+     */
+    void MainWindow::EmitNewMailToast(JsonObject const& object)
+    {
+        hstring msg_account = object.GetNamedString(L"account", L"");
+        hstring msg_folder = object.GetNamedString(L"folder", L"");
+
         int32_t count = static_cast<int32_t>(object.GetNamedNumber(L"count", 1));
         hstring from = SenderName(object.GetNamedString(L"from", Tr(L"Nouveau message")));
         hstring subject = object.GetNamedString(L"subject", Tr(L"(Sans objet)"));
@@ -2179,14 +2259,7 @@ namespace winrt::EvolutionWin::implementation
            le bouton « Notifications » de l'application est réservé aux notifications techniques. */
 
         /* Émission du signal sonore configuré si activé globalement et pour le compte */
-        bool sound_global = ::EvolutionWin::Settings::Instance().GetBoolean(L"notifications.sound", true);
-        bool sound_account = msg_account.empty() ? true : ::EvolutionWin::Settings::Instance().GetBoolean(L"account." + msg_account + L".sound-enabled", true);
-        if (sound_global && sound_account)
-        {
-            hstring sound_kind = ::EvolutionWin::Settings::Instance().GetString(L"notifications.sound-kind", L"windows");
-            hstring custom_path = ::EvolutionWin::Settings::Instance().GetString(L"notifications.custom-sound-path", L"");
-            ::EvolutionWin::Helpers::PlayNewMailSound(sound_kind, custom_path);
-        }
+        PlayNewMailSoundIfEnabled(msg_account);
 
         /* Émission de la notification via les Toasts système Windows si activé globalement :
            titre = nombre de messages, puis l'expéditeur et l'objet du plus récent sur deux lignes */

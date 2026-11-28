@@ -14,7 +14,7 @@ numérotation [SemVer](https://semver.org/lang/fr/).
 
 ### Modifié
 
-- _(à venir)_
+- **Notifications — regroupement des nouveaux messages** : les arrivées sont accumulées sur une fenêtre de 1,5 s. Jusqu'à 3 messages, les toasts restent individuels (expéditeur, objet, actions rapides) ; au-delà, un seul toast « X nouveaux messages à lire » (un seul signal sonore) remplace la rafale de toasts, par exemple à l'ouverture du programme. Un clic sur ce toast ouvre la messagerie.
 
 ## [1.3.8] — 2026-11-27
 

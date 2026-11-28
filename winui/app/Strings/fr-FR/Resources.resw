@@ -8243,5 +8243,9 @@ Vos comptes de messagerie et vos courriels ne seront pas supprimés.</comment>
     <value>Afficher ce calendrier à côté</value>
     <comment>Afficher ce calendrier à côté</comment>
   </data>
+  <data name="T_B9BAC3BE" xml:space="preserve">
+    <value>{0} nouveaux messages à lire</value>
+    <comment>{0} nouveaux messages à lire</comment>
+  </data>
 </root>
 
